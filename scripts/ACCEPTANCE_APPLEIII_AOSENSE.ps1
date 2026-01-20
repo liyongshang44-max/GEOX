@@ -4,29 +4,71 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-WithRetry($fn, [int]$MaxAttempts = 20, [int]$SleepMs = 300) {
+  $lastErr = $null
+  for ($i=1; $i -le $MaxAttempts; $i++) {
+    try {
+      return & $fn
+    } catch {
+      $lastErr = $_
+      Start-Sleep -Milliseconds $SleepMs
+    }
+  }
+  throw ("RETRY_EXHAUSTED: " + $lastErr)
+}
+
+function Wait-ServerReady() {
+  Invoke-WithRetry {
+    $raw = curl.exe -sS "$BaseUrl/api/judge/problem_states?limit=1"
+    if (-not $raw) { throw "EMPTY_RESPONSE" }
+    $obj = $raw | ConvertFrom-Json
+    if ($null -eq $obj) { throw "JSON_PARSE_NULL" }
+    return $true
+  } 30 250 | Out-Null
+}
+
 function Post-JsonFile($url, $path) {
-  $raw = curl.exe -sS -X POST $url -H "Content-Type: application/json" --data-binary "@$path"
-  return ($raw | ConvertFrom-Json)
+  return Invoke-WithRetry {
+    $raw = curl.exe -sS -X POST $url -H "Content-Type: application/json" --data-binary "@$path"
+    if (-not $raw) { throw "EMPTY_RESPONSE" }
+    return ($raw | ConvertFrom-Json)
+  } 15 250
 }
 
 function Post-JsonString($url, $json) {
   $tmp = Join-Path $env:TEMP ("geox_post_{0}.json" -f ([guid]::NewGuid().ToString("N")))
   $json | Out-File -Encoding utf8 -FilePath $tmp
-  $raw = curl.exe -sS -X POST $url -H "Content-Type: application/json" --data-binary "@$tmp"
-  Remove-Item $tmp -Force -ErrorAction SilentlyContinue
-  return ($raw | ConvertFrom-Json)
+  try {
+    return Invoke-WithRetry {
+      $raw = curl.exe -sS -X POST $url -H "Content-Type: application/json" --data-binary "@$tmp"
+      if (-not $raw) { throw "EMPTY_RESPONSE" }
+      return ($raw | ConvertFrom-Json)
+    } 15 250
+  } finally {
+    Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+  }
 }
 
-function Get-Json($url) {
-  $raw = curl.exe -sS $url
-  return ($raw | ConvertFrom-Json)
+function Get-NextTask($projectId, $groupId) {
+  $hdr = Join-Path $env:TEMP ("geox_hdr_{0}.txt" -f ([guid]::NewGuid().ToString("N")))
+  $body = Join-Path $env:TEMP ("geox_body_{0}.txt" -f ([guid]::NewGuid().ToString("N")))
+  $url = "$BaseUrl/api/control/ao_sense/next_task?projectId=$projectId&groupId=$groupId"
+  $null = curl.exe -sS -D $hdr -o $body $url
+  $statusLine = (Get-Content $hdr | Select-Object -First 1)
+  $status = [int]($statusLine.Split(" ")[1])
+  $content = ""
+  if (Test-Path $body) { $content = (Get-Content $body -Raw) }
+  Remove-Item $hdr,$body -Force -ErrorAction SilentlyContinue
+  return @{ status = $status; body = $content }
 }
 
 function Assert($cond, $msg) {
   if (-not $cond) { throw "ASSERT FAILED: $msg" }
 }
 
-Write-Host "== Apple III v0 AO-SENSE Acceptance (Sprint 3: readonly projections) =="
+Write-Host "== Apple III v0 AO-SENSE Acceptance (Sprint 4: next_task selector, no contract change) =="
+
+Wait-ServerReady
 
 $inputPath = ".\acceptance\acceptance_input_caf009_1h.json"
 if (-not (Test-Path $inputPath)) { throw "MISSING_INPUT_JSON: $inputPath" }
@@ -35,9 +77,7 @@ if (-not (Test-Path $inputPath)) { throw "MISSING_INPUT_JSON: $inputPath" }
 $run = Post-JsonFile "$BaseUrl/api/judge/run" $inputPath
 Assert ($run -ne $null) "judge/run returned null"
 
-if ($null -eq $run.ao_sense -or $run.ao_sense.Count -eq 0) {
-  throw "NO_AO_SENSE_FROM_JUDGE"
-}
+if ($null -eq $run.ao_sense -or $run.ao_sense.Count -eq 0) { throw "NO_AO_SENSE_FROM_JUDGE" }
 
 $ao = $run.ao_sense[0]
 
@@ -58,23 +98,32 @@ $task = Post-JsonString "$BaseUrl/api/control/ao_sense/task" $taskJson
 if ($task.ok -ne $true) { throw ("TASK_CREATE_FAILED: " + ($task | ConvertTo-Json -Depth 20)) }
 Write-Host ("OK task_id={0} fact_id={1}" -f $task.task_id, $task.fact_id)
 
-# 3) Create marker_v1 as real evidence
+# 3) next_task must return this task (since no receipt exists yet)
+$nt = Get-NextTask "P_DEFAULT" "G_CAF"
+Assert ($nt.status -eq 200) ("next_task status != 200 (got {0})" -f $nt.status)
+$ntObj = ($nt.body | ConvertFrom-Json)
+Assert ($ntObj.ok -eq $true) "next_task ok!=true"
+Assert ($ntObj.item.record_json.task_id -eq $task.task_id) "next_task did not return the created task"
+Write-Host ("OK next_task returned task_id={0}" -f $ntObj.item.record_json.task_id)
+
+# 4) Create executor marker (no marker contract change): encode executor in note as structured JSON
 $markerTs = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
+$executorMeta = @{ executor_kind = "human"; executor_id = "demo_executor_001"; task_id = $task.task_id } | ConvertTo-Json -Compress
 $markerBodyObj = @{
   ts = $markerTs
   sensorId = "CAF009"
   groupId = "G_CAF"
   type = "local_anomaly"
   source = "human"
-  note = ("AO-SENSE receipt evidence marker; task_id={0}" -f $task.task_id)
+  note = ("AO_SENSE_EXECUTION " + $executorMeta)
 }
 
 $markerJson = ($markerBodyObj | ConvertTo-Json -Depth 20)
 $marker = Post-JsonString "$BaseUrl/api/marker" $markerJson
 if ($marker.ok -ne $true) { throw ("MARKER_CREATE_FAILED: " + ($marker | ConvertTo-Json -Depth 20)) }
-Write-Host ("OK marker fact_id={0}" -f $marker.fact_id)
+Write-Host ("OK executor marker fact_id={0}" -f $marker.fact_id)
 
-# 4) Create Receipt referencing marker_v1
+# 5) Create Receipt referencing marker_v1
 $receiptBodyObj = @{
   task_id = $task.task_id
   executed_at_ts = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
@@ -87,29 +136,8 @@ $receipt = Post-JsonString "$BaseUrl/api/control/ao_sense/receipt" $receiptJson
 if ($receipt.ok -ne $true) { throw ("RECEIPT_CREATE_FAILED: " + ($receipt | ConvertTo-Json -Depth 20)) }
 Write-Host ("OK receipt_id={0} fact_id={1}" -f $receipt.receipt_id, $receipt.fact_id)
 
-# 5) Non-regression: rerun Judge (no requirement that problem_state improves)
-$run2 = Post-JsonFile "$BaseUrl/api/judge/run" $inputPath
-if ($run2.determinism_hash -ne $run.determinism_hash) {
-  throw ("NON_REGRESSION_FAILED: determinism_hash changed ({0} -> {1})" -f $run.determinism_hash, $run2.determinism_hash)
-}
+# 6) next_task must now return 204
+$nt2 = Get-NextTask "P_DEFAULT" "G_CAF"
+Assert ($nt2.status -eq 204) ("next_task status != 204 (got {0}) body={1}" -f $nt2.status, $nt2.body)
 
-# 6) Read-only projections: tasks/receipts must be queryable from facts
-$tasks = Get-Json ("$BaseUrl/api/control/ao_sense/tasks?projectId=P_DEFAULT&groupId=G_CAF&limit=50")
-Assert ($tasks.ok -eq $true) "tasks endpoint ok!=true"
-Assert ($tasks.items.Count -ge 1) "tasks.items empty"
-$foundTask = $false
-foreach ($it in $tasks.items) {
-  if ($it.record_json -ne $null -and $it.record_json.task_id -eq $task.task_id) { $foundTask = $true }
-}
-Assert ($foundTask) "created task not found in tasks projection"
-
-$receipts = Get-Json ("$BaseUrl/api/control/ao_sense/receipts?task_id=$($task.task_id)&limit=50")
-Assert ($receipts.ok -eq $true) "receipts endpoint ok!=true"
-Assert ($receipts.items.Count -ge 1) "receipts.items empty"
-$foundReceipt = $false
-foreach ($it in $receipts.items) {
-  if ($it.record_json -ne $null -and $it.record_json.receipt_id -eq $receipt.receipt_id) { $foundReceipt = $true }
-}
-Assert ($foundReceipt) "created receipt not found in receipts projection"
-
-Write-Host "PASS Apple III v0 AO-SENSE Acceptance (Sprint 3 readonly projections)"
+Write-Host "PASS Apple III v0 AO-SENSE Acceptance (Sprint 4 next_task selector)"

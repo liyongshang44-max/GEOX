@@ -3,20 +3,16 @@ import { Pool } from "pg";
 import { randomUUID } from "crypto";
 
 /**
- * Apple III v0 · AO-SENSE → Task → Receipt (+ Sprint 3 readonly projections)
+ * Apple III v0 · AO-SENSE → Task → Receipt (+ Sprint 4 next_task readonly selector)
  *
- * Responsibilities:
- * - Persist Judge AO-SENSE into append-only facts (ledger).
- * - Persist execution receipts into append-only facts.
- * - Provide read-only projection endpoints (query facts) for operational visibility.
+ * Sprint 4 constraints:
+ * - Do NOT change AO_SENSE_TASK_v1 / AO_SENSE_RECEIPT_v1 contracts.
+ * - Do NOT introduce mutable state tables (no task table, no status column).
+ * - Use read-only ledger joins on facts to determine "unclaimed task".
  *
- * Non-goals:
- * - No agronomy, no value judgement, no control optimization.
- * - No mutable task state tables; no updates/deletes.
- *
- * Storage constraints (from DB schema):
+ * DB reality:
  * - facts: (fact_id text PK, occurred_at timestamptz, source text, record_json text)
- * - Therefore we MUST insert fact_id/occurred_at/source/record_json explicitly.
+ * - record_json is stored as TEXT but is JSON; all filtering uses record_json::jsonb.
  */
 export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
   function checkNoExtraKeys(obj: any, allowed: string[]): string | null {
@@ -55,7 +51,6 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     }
   }
 
-  // Shared SQL (append-only insert; conflict ignored).
   const insertFactSql = `
     INSERT INTO facts (fact_id, occurred_at, source, record_json)
     VALUES ($1, $2, $3, $4)
@@ -63,10 +58,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     RETURNING fact_id
   `;
 
-  /**
-   * POST /api/control/ao_sense/task
-   * Creates an AO_SENSE_TASK_v1 ledger fact.
-   */
+  // POST /api/control/ao_sense/task
   app.post("/api/control/ao_sense/task", async (req, reply) => {
     const body: any = req.body;
 
@@ -79,7 +71,6 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       "supporting_problem_state_id",
       "supporting_determinism_hash",
       "supporting_effective_config_hash",
-      // Compatibility inputs (accepted, but never stored):
       "kind",
       "focus"
     ];
@@ -117,8 +108,8 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     if (!isIntMs(win.endTs)) return badRequest(reply, "MISSING_OR_INVALID:window.endTs");
     if (win.endTs < win.startTs) return badRequest(reply, "INVALID_WINDOW:endTs_lt_startTs");
 
-    const task_id = randomUUID(); // Unique task id.
-    const created_at_ts = Date.now(); // Creation time ms.
+    const task_id = randomUUID();
+    const created_at_ts = Date.now();
 
     const record_json = {
       type: "ao_sense_task_v1",
@@ -135,12 +126,11 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       supporting_effective_config_hash: body.supporting_effective_config_hash
     };
 
-    const fact_id = `ct_${task_id}`; // Stable mapping to task_id.
-    const occurred_at = new Date(created_at_ts).toISOString(); // ISO string for timestamptz.
-    const source = "control"; // Frozen: Apple III is control/orchestration layer.
+    const fact_id = `ct_${task_id}`;
+    const occurred_at = new Date(created_at_ts).toISOString();
+    const source = "control";
 
     const res = await pool.query(insertFactSql, [fact_id, occurred_at, source, JSON.stringify(record_json)]);
-
     if (!res.rows || res.rows.length < 1) {
       return reply.status(500).send({ ok: false, error: "FACT_INSERT_CONFLICT_OR_FAILED", fact_id });
     }
@@ -148,10 +138,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     return reply.send({ ok: true, task_id, fact_id });
   });
 
-  /**
-   * POST /api/control/ao_sense/receipt
-   * Creates an AO_SENSE_RECEIPT_v1 ledger fact.
-   */
+  // POST /api/control/ao_sense/receipt
   app.post("/api/control/ao_sense/receipt", async (req, reply) => {
     const body: any = req.body;
 
@@ -180,8 +167,8 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       if (!isNonEmptyString(er.ref_id)) return badRequest(reply, `evidence_refs[${i}].MISSING_OR_INVALID:ref_id`);
     }
 
-    const receipt_id = randomUUID(); // Unique receipt id.
-    const created_at_ts = Date.now(); // Creation time ms.
+    const receipt_id = randomUUID();
+    const created_at_ts = Date.now();
 
     const record_json = {
       type: "ao_sense_receipt_v1",
@@ -194,7 +181,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       evidence_refs: body.evidence_refs
     };
 
-    const fact_id = `cr_${receipt_id}`; // Stable mapping to receipt_id.
+    const fact_id = `cr_${receipt_id}`;
     const occurred_at = new Date(created_at_ts).toISOString();
     const source = "control";
 
@@ -206,15 +193,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     return reply.send({ ok: true, receipt_id, fact_id });
   });
 
-  /**
-   * GET /api/control/ao_sense/tasks
-   * Read-only projection of AO_SENSE_TASK_v1 from facts.
-   *
-   * Query params (all optional):
-   * - projectId: string
-   * - groupId: string
-   * - limit: integer (default 20, max 200)
-   */
+  // GET /api/control/ao_sense/tasks
   app.get("/api/control/ao_sense/tasks", async (req, reply) => {
     const q: any = (req as any).query ?? {};
     const limit = parseLimit(q.limit, 20, 200);
@@ -225,7 +204,6 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     const args: any[] = [];
     let i = 1;
 
-    // Filter by type.
     where.push(`(record_json::jsonb->>'type') = 'ao_sense_task_v1'`);
 
     if (projectId) {
@@ -251,7 +229,6 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     `;
 
     const res = await pool.query(sql, args);
-
     const items = (res.rows ?? []).map((r: any) => ({
       fact_id: r.fact_id,
       occurred_at: r.occurred_at,
@@ -262,14 +239,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     return reply.send({ ok: true, items });
   });
 
-  /**
-   * GET /api/control/ao_sense/receipts
-   * Read-only projection of AO_SENSE_RECEIPT_v1 from facts.
-   *
-   * Query params (all optional):
-   * - task_id: string
-   * - limit: integer (default 20, max 200)
-   */
+  // GET /api/control/ao_sense/receipts
   app.get("/api/control/ao_sense/receipts", async (req, reply) => {
     const q: any = (req as any).query ?? {};
     const limit = parseLimit(q.limit, 20, 200);
@@ -298,7 +268,6 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     `;
 
     const res = await pool.query(sql, args);
-
     const items = (res.rows ?? []).map((r: any) => ({
       fact_id: r.fact_id,
       occurred_at: r.occurred_at,
@@ -307,5 +276,59 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     }));
 
     return reply.send({ ok: true, items });
+  });
+
+  /**
+   * GET /api/control/ao_sense/next_task
+   *
+   * Frozen definition: "unclaimed task"
+   * - Task rows: facts where record_json.type == "ao_sense_task_v1"
+   * - Receipt rows: facts where record_json.type == "ao_sense_receipt_v1"
+   * - Receipt references task: receipt.record_json.task_id == task.record_json.task_id
+   * - Unclaimed task: no receipt exists for the task_id.
+   *
+   * Return policy:
+   * - Return exactly one task: highest record_json.created_at_ts among unclaimed tasks (descending).
+   * - If none: 204 No Content.
+   */
+  app.get("/api/control/ao_sense/next_task", async (req, reply) => {
+    const q: any = (req as any).query ?? {};
+    const projectId = isNonEmptyString(q.projectId) ? q.projectId : null;
+    const groupId = isNonEmptyString(q.groupId) ? q.groupId : null;
+
+    if (!projectId) return badRequest(reply, "MISSING_OR_INVALID:projectId");
+    if (!groupId) return badRequest(reply, "MISSING_OR_INVALID:groupId");
+
+    const sql = `
+      SELECT t.fact_id, t.occurred_at, t.source, t.record_json
+      FROM facts t
+      WHERE (t.record_json::jsonb->>'type') = 'ao_sense_task_v1'
+        AND (t.record_json::jsonb->'subjectRef'->>'projectId') = $1
+        AND (t.record_json::jsonb->'subjectRef'->>'groupId') = $2
+        AND NOT EXISTS (
+          SELECT 1
+          FROM facts r
+          WHERE (r.record_json::jsonb->>'type') = 'ao_sense_receipt_v1'
+            AND (r.record_json::jsonb->>'task_id') = (t.record_json::jsonb->>'task_id')
+        )
+      ORDER BY ((t.record_json::jsonb->>'created_at_ts')::bigint) DESC
+      LIMIT 1
+    `;
+
+    const res = await pool.query(sql, [projectId, groupId]);
+    if (!res.rows || res.rows.length < 1) {
+      return reply.status(204).send();
+    }
+
+    const row: any = res.rows[0];
+    return reply.send({
+      ok: true,
+      item: {
+        fact_id: row.fact_id,
+        occurred_at: row.occurred_at,
+        source: row.source,
+        record_json: safeJsonParse(row.record_json)
+      }
+    });
   });
 }
