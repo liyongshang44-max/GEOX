@@ -1,0 +1,42 @@
+{
+  "$id": "geox://schemas/apple_iii/ao_sense_receipt_v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AO_SENSE_RECEIPT_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema_version",
+    "receipt_id",
+    "created_at_ts",
+    "task_id",
+    "executed_at_ts",
+    "result",
+    "evidence_refs"
+  ],
+  "properties": {
+    "type": { "const": "ao_sense_receipt_v1" },
+    "schema_version": { "const": "1" },
+    "receipt_id": { "type": "string", "minLength": 1 },
+    "created_at_ts": { "type": "integer", "minimum": 1 },
+    "task_id": { "type": "string", "minLength": 1 },
+    "executed_at_ts": { "type": "integer", "minimum": 1 },
+    "result": { "type": "string", "enum": ["success", "fail", "partial"] },
+    "evidence_refs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref_id"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["raw_sample_v1", "marker_v1", "import_run_v1", "fact_id"]
+          },
+          "ref_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

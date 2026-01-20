@@ -1,0 +1,51 @@
+{
+  "$id": "geox://schemas/apple_iii/ao_sense_task_v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AO_SENSE_TASK_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema_version",
+    "task_id",
+    "created_at_ts",
+    "subjectRef",
+    "window",
+    "sense_kind",
+    "sense_focus",
+    "priority",
+    "supporting_problem_state_id",
+    "supporting_determinism_hash",
+    "supporting_effective_config_hash"
+  ],
+  "properties": {
+    "type": { "const": "ao_sense_task_v1" },
+    "schema_version": { "const": "1" },
+    "task_id": { "type": "string", "minLength": 1 },
+    "created_at_ts": { "type": "integer", "minimum": 1 },
+    "subjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId", "groupId"],
+      "properties": {
+        "projectId": { "type": "string", "minLength": 1 },
+        "groupId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startTs", "endTs"],
+      "properties": {
+        "startTs": { "type": "integer" },
+        "endTs": { "type": "integer" }
+      }
+    },
+    "sense_kind": { "type": "string", "minLength": 1 },
+    "sense_focus": { "type": "string", "minLength": 1 },
+    "priority": { "type": "string", "minLength": 1 },
+    "supporting_problem_state_id": { "type": "string", "minLength": 1 },
+    "supporting_determinism_hash": { "type": "string", "minLength": 1 },
+    "supporting_effective_config_hash": { "type": "string", "minLength": 1 }
+  }
+}
