@@ -3,10 +3,16 @@ import { Pool } from "pg";
 import { randomUUID } from "crypto";
 
 /**
- * Apple III v0 · AO-SENSE → Task → Receipt
- * Responsibility:
+ * Apple III v0 · AO-SENSE → Task → Receipt (+ Sprint 3 readonly projections)
+ *
+ * Responsibilities:
  * - Persist Judge AO-SENSE into append-only facts (ledger).
- * - No agronomy, no actuation, no attempt to force Judge output changes.
+ * - Persist execution receipts into append-only facts.
+ * - Provide read-only projection endpoints (query facts) for operational visibility.
+ *
+ * Non-goals:
+ * - No agronomy, no value judgement, no control optimization.
+ * - No mutable task state tables; no updates/deletes.
  *
  * Storage constraints (from DB schema):
  * - facts: (fact_id text PK, occurred_at timestamptz, source text, record_json text)
@@ -30,8 +36,23 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     return typeof v === "number" && Number.isFinite(v) && Math.floor(v) === v && v > 0;
   }
 
+  function parseLimit(v: any, def: number, max: number): number {
+    const n = Number(v);
+    if (!Number.isFinite(n) || Math.floor(n) !== n) return def;
+    if (n <= 0) return def;
+    return Math.min(n, max);
+  }
+
   function badRequest(reply: any, error: string) {
     return reply.status(400).send({ ok: false, error });
+  }
+
+  function safeJsonParse(text: string): any {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return null;
+    }
   }
 
   // Shared SQL (append-only insert; conflict ignored).
@@ -42,7 +63,10 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     RETURNING fact_id
   `;
 
-  // POST /api/control/ao_sense/task
+  /**
+   * POST /api/control/ao_sense/task
+   * Creates an AO_SENSE_TASK_v1 ledger fact.
+   */
   app.post("/api/control/ao_sense/task", async (req, reply) => {
     const body: any = req.body;
 
@@ -111,14 +135,12 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       supporting_effective_config_hash: body.supporting_effective_config_hash
     };
 
-    // Facts table requires explicit columns.
-    const fact_id = `ct_${task_id}`; // Deterministic mapping to task_id (unique).
+    const fact_id = `ct_${task_id}`; // Stable mapping to task_id.
     const occurred_at = new Date(created_at_ts).toISOString(); // ISO string for timestamptz.
     const source = "control"; // Frozen: Apple III is control/orchestration layer.
 
     const res = await pool.query(insertFactSql, [fact_id, occurred_at, source, JSON.stringify(record_json)]);
 
-    // If conflict ever happens (shouldn't), RETURNING may be empty; treat as failure for audit clarity.
     if (!res.rows || res.rows.length < 1) {
       return reply.status(500).send({ ok: false, error: "FACT_INSERT_CONFLICT_OR_FAILED", fact_id });
     }
@@ -126,7 +148,10 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     return reply.send({ ok: true, task_id, fact_id });
   });
 
-  // POST /api/control/ao_sense/receipt
+  /**
+   * POST /api/control/ao_sense/receipt
+   * Creates an AO_SENSE_RECEIPT_v1 ledger fact.
+   */
   app.post("/api/control/ao_sense/receipt", async (req, reply) => {
     const body: any = req.body;
 
@@ -169,7 +194,7 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
       evidence_refs: body.evidence_refs
     };
 
-    const fact_id = `cr_${receipt_id}`; // Unique mapping to receipt id.
+    const fact_id = `cr_${receipt_id}`; // Stable mapping to receipt_id.
     const occurred_at = new Date(created_at_ts).toISOString();
     const source = "control";
 
@@ -179,5 +204,108 @@ export function registerControlAoSenseRoutes(app: FastifyInstance, pool: Pool) {
     }
 
     return reply.send({ ok: true, receipt_id, fact_id });
+  });
+
+  /**
+   * GET /api/control/ao_sense/tasks
+   * Read-only projection of AO_SENSE_TASK_v1 from facts.
+   *
+   * Query params (all optional):
+   * - projectId: string
+   * - groupId: string
+   * - limit: integer (default 20, max 200)
+   */
+  app.get("/api/control/ao_sense/tasks", async (req, reply) => {
+    const q: any = (req as any).query ?? {};
+    const limit = parseLimit(q.limit, 20, 200);
+    const projectId = isNonEmptyString(q.projectId) ? q.projectId : null;
+    const groupId = isNonEmptyString(q.groupId) ? q.groupId : null;
+
+    const where: string[] = [];
+    const args: any[] = [];
+    let i = 1;
+
+    // Filter by type.
+    where.push(`(record_json::jsonb->>'type') = 'ao_sense_task_v1'`);
+
+    if (projectId) {
+      where.push(`(record_json::jsonb->'subjectRef'->>'projectId') = $${i}`);
+      args.push(projectId);
+      i++;
+    }
+
+    if (groupId) {
+      where.push(`(record_json::jsonb->'subjectRef'->>'groupId') = $${i}`);
+      args.push(groupId);
+      i++;
+    }
+
+    args.push(limit);
+
+    const sql = `
+      SELECT fact_id, occurred_at, source, record_json
+      FROM facts
+      WHERE ${where.join(" AND ")}
+      ORDER BY occurred_at DESC
+      LIMIT $${i}
+    `;
+
+    const res = await pool.query(sql, args);
+
+    const items = (res.rows ?? []).map((r: any) => ({
+      fact_id: r.fact_id,
+      occurred_at: r.occurred_at,
+      source: r.source,
+      record_json: safeJsonParse(r.record_json)
+    }));
+
+    return reply.send({ ok: true, items });
+  });
+
+  /**
+   * GET /api/control/ao_sense/receipts
+   * Read-only projection of AO_SENSE_RECEIPT_v1 from facts.
+   *
+   * Query params (all optional):
+   * - task_id: string
+   * - limit: integer (default 20, max 200)
+   */
+  app.get("/api/control/ao_sense/receipts", async (req, reply) => {
+    const q: any = (req as any).query ?? {};
+    const limit = parseLimit(q.limit, 20, 200);
+    const task_id = isNonEmptyString(q.task_id) ? q.task_id : null;
+
+    const where: string[] = [];
+    const args: any[] = [];
+    let i = 1;
+
+    where.push(`(record_json::jsonb->>'type') = 'ao_sense_receipt_v1'`);
+
+    if (task_id) {
+      where.push(`(record_json::jsonb->>'task_id') = $${i}`);
+      args.push(task_id);
+      i++;
+    }
+
+    args.push(limit);
+
+    const sql = `
+      SELECT fact_id, occurred_at, source, record_json
+      FROM facts
+      WHERE ${where.join(" AND ")}
+      ORDER BY occurred_at DESC
+      LIMIT $${i}
+    `;
+
+    const res = await pool.query(sql, args);
+
+    const items = (res.rows ?? []).map((r: any) => ({
+      fact_id: r.fact_id,
+      occurred_at: r.occurred_at,
+      source: r.source,
+      record_json: safeJsonParse(r.record_json)
+    }));
+
+    return reply.send({ ok: true, items });
   });
 }

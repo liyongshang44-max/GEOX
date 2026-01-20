@@ -17,13 +17,23 @@ function Post-JsonString($url, $json) {
   return ($raw | ConvertFrom-Json)
 }
 
-Write-Host "== Apple III v0 AO-SENSE Acceptance (Sprint 2: marker_v1 evidence) =="
+function Get-Json($url) {
+  $raw = curl.exe -sS $url
+  return ($raw | ConvertFrom-Json)
+}
+
+function Assert($cond, $msg) {
+  if (-not $cond) { throw "ASSERT FAILED: $msg" }
+}
+
+Write-Host "== Apple III v0 AO-SENSE Acceptance (Sprint 3: readonly projections) =="
 
 $inputPath = ".\acceptance\acceptance_input_caf009_1h.json"
 if (-not (Test-Path $inputPath)) { throw "MISSING_INPUT_JSON: $inputPath" }
 
 # 1) Judge run (source of AO-SENSE)
 $run = Post-JsonFile "$BaseUrl/api/judge/run" $inputPath
+Assert ($run -ne $null) "judge/run returned null"
 
 if ($null -eq $run.ao_sense -or $run.ao_sense.Count -eq 0) {
   throw "NO_AO_SENSE_FROM_JUDGE"
@@ -31,7 +41,7 @@ if ($null -eq $run.ao_sense -or $run.ao_sense.Count -eq 0) {
 
 $ao = $run.ao_sense[0]
 
-# 2) Create Task (Apple III responsibility: persist Judge output into facts)
+# 2) Create Task
 $taskBodyObj = @{
   subjectRef = $ao.subjectRef
   window = $ao.window
@@ -45,13 +55,10 @@ $taskBodyObj = @{
 
 $taskJson = ($taskBodyObj | ConvertTo-Json -Depth 20)
 $task = Post-JsonString "$BaseUrl/api/control/ao_sense/task" $taskJson
-
 if ($task.ok -ne $true) { throw ("TASK_CREATE_FAILED: " + ($task | ConvertTo-Json -Depth 20)) }
-
 Write-Host ("OK task_id={0} fact_id={1}" -f $task.task_id, $task.fact_id)
 
-# 3) Create a marker_v1 as "real new evidence" (Sprint 2 evidence policy)
-# Marker is a ledger fact and does not introduce agronomy/value judgement.
+# 3) Create marker_v1 as real evidence
 $markerTs = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
 $markerBodyObj = @{
   ts = $markerTs
@@ -64,12 +71,10 @@ $markerBodyObj = @{
 
 $markerJson = ($markerBodyObj | ConvertTo-Json -Depth 20)
 $marker = Post-JsonString "$BaseUrl/api/marker" $markerJson
-
 if ($marker.ok -ne $true) { throw ("MARKER_CREATE_FAILED: " + ($marker | ConvertTo-Json -Depth 20)) }
-
 Write-Host ("OK marker fact_id={0}" -f $marker.fact_id)
 
-# 4) Create Receipt (must reference evidence; Sprint 2 uses marker_v1 ref)
+# 4) Create Receipt referencing marker_v1
 $receiptBodyObj = @{
   task_id = $task.task_id
   executed_at_ts = [int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())
@@ -79,9 +84,7 @@ $receiptBodyObj = @{
 
 $receiptJson = ($receiptBodyObj | ConvertTo-Json -Depth 20)
 $receipt = Post-JsonString "$BaseUrl/api/control/ao_sense/receipt" $receiptJson
-
 if ($receipt.ok -ne $true) { throw ("RECEIPT_CREATE_FAILED: " + ($receipt | ConvertTo-Json -Depth 20)) }
-
 Write-Host ("OK receipt_id={0} fact_id={1}" -f $receipt.receipt_id, $receipt.fact_id)
 
 # 5) Non-regression: rerun Judge (no requirement that problem_state improves)
@@ -90,4 +93,23 @@ if ($run2.determinism_hash -ne $run.determinism_hash) {
   throw ("NON_REGRESSION_FAILED: determinism_hash changed ({0} -> {1})" -f $run.determinism_hash, $run2.determinism_hash)
 }
 
-Write-Host "PASS Apple III v0 AO-SENSE Acceptance (Sprint 2 marker evidence)"
+# 6) Read-only projections: tasks/receipts must be queryable from facts
+$tasks = Get-Json ("$BaseUrl/api/control/ao_sense/tasks?projectId=P_DEFAULT&groupId=G_CAF&limit=50")
+Assert ($tasks.ok -eq $true) "tasks endpoint ok!=true"
+Assert ($tasks.items.Count -ge 1) "tasks.items empty"
+$foundTask = $false
+foreach ($it in $tasks.items) {
+  if ($it.record_json -ne $null -and $it.record_json.task_id -eq $task.task_id) { $foundTask = $true }
+}
+Assert ($foundTask) "created task not found in tasks projection"
+
+$receipts = Get-Json ("$BaseUrl/api/control/ao_sense/receipts?task_id=$($task.task_id)&limit=50")
+Assert ($receipts.ok -eq $true) "receipts endpoint ok!=true"
+Assert ($receipts.items.Count -ge 1) "receipts.items empty"
+$foundReceipt = $false
+foreach ($it in $receipts.items) {
+  if ($it.record_json -ne $null -and $it.record_json.receipt_id -eq $receipt.receipt_id) { $foundReceipt = $true }
+}
+Assert ($foundReceipt) "created receipt not found in receipts projection"
+
+Write-Host "PASS Apple III v0 AO-SENSE Acceptance (Sprint 3 readonly projections)"
