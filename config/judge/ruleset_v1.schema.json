@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GEOX Judge Ruleset V1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "required_metrics",
+    "sufficiency",
+    "time_coverage",
+    "qc",
+    "marker",
+    "reference",
+    "conflict",
+    "determinism"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "required_metrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "sufficiency": {
+      "type": "object",
+      "required": [
+        "min_total_samples",
+        "min_samples_per_required_metric"
+      ],
+      "properties": {
+        "min_total_samples": {
+          "type": "number"
+        },
+        "min_samples_per_required_metric": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "time_coverage": {
+      "type": "object",
+      "required": [
+        "max_allowed_gap_ms",
+        "min_coverage_ratio"
+      ],
+      "properties": {
+        "max_allowed_gap_ms": {
+          "type": "number"
+        },
+        "min_coverage_ratio": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "qc": {
+      "type": "object",
+      "required": [
+        "bad_pct_threshold",
+        "suspect_pct_threshold"
+      ],
+      "properties": {
+        "bad_pct_threshold": {
+          "type": "number"
+        },
+        "suspect_pct_threshold": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "marker": {
+      "type": "object",
+      "required": [
+        "exclusion_kinds"
+      ],
+      "properties": {
+        "exclusion_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "reference": {
+      "type": "object",
+      "required": [
+        "enable",
+        "kinds_enabled"
+      ],
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "kinds_enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "conflict": {
+      "type": "object",
+      "required": [
+        "min_overlap_ratio",
+        "delta_numeric_threshold",
+        "min_points_in_overlap"
+      ],
+      "properties": {
+        "min_overlap_ratio": {
+          "type": "number"
+        },
+        "delta_numeric_threshold": {
+          "type": "number"
+        },
+        "min_points_in_overlap": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "determinism": {
+      "type": "object",
+      "required": [
+        "tie_breaker"
+      ],
+      "properties": {
+        "tie_breaker": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

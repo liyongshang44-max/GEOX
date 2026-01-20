@@ -1,0 +1,279 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://schemas/apple_ii/problem_state_v1.schema.json",
+  "title": "ProblemStateV1",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Apple II Judge core output. Neutral declaration of a ProblemState anchored to SpatialUnit + time window. MUST NOT contain any control/action/recommendation/diagnosis semantics. HARD RULE (code+fixtures): window.endTs must be > window.startTs.",
+  "required": [
+    "type",
+    "schema_version",
+    "problem_state_id",
+    "created_at_ts",
+    "subjectRef",
+    "scale",
+    "window",
+    "problem_type",
+    "confidence",
+    "uncertainty_sources",
+    "state_layer_hint",
+    "rate_class_hint",
+    "problem_scope"
+  ],
+  "properties": {
+    "type": {
+      "const": "problem_state_v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "problem_state_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "created_at_ts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "subjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId"
+      ],
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plotId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "description": "Identity anchoring only; no semantics fields allowed."
+    },
+    "scale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTs",
+        "endTs"
+      ],
+      "properties": {
+        "startTs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endTs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "problem_type": {
+      "type": "string",
+      "enum": [
+        "INSUFFICIENT_EVIDENCE",
+        "TIME_COVERAGE_GAPPY",
+        "EVIDENCE_STALE",
+        "EVIDENCE_CONFLICT",
+        "REFERENCE_CONFLICT",
+        "SENSOR_SUSPECT",
+        "SENSOR_HEALTH_DEGRADED",
+        "QC_CONTAMINATION",
+        "REFERENCE_MISSING",
+        "SCALE_POLICY_BLOCKED",
+        "WINDOW_NOT_SUPPORT",
+        "EXCLUSION_WINDOW_ACTIVE",
+        "MARKER_PRESENT"
+      ]
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "UNKNOWN"
+      ]
+    },
+    "uncertainty_sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "SPARSE_SAMPLING",
+          "MISSING_KEY_METRIC",
+          "TIME_GAPS",
+          "STALE_EVIDENCE",
+          "MULTI_SOURCE_CONFLICT",
+          "MULTI_METRIC_CONFLICT",
+          "QC_SUSPECT_OR_BAD",
+          "SENSOR_HEALTH_ISSUE",
+          "REFERENCE_NOT_AVAILABLE",
+          "SCALE_POLICY_LIMITATION",
+          "EXCLUSION_WINDOW",
+          "MARKER_DEPENDENCY"
+        ]
+      }
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 280
+    },
+    "metrics_involved": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "sensors_involved": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "supporting_evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      }
+    },
+    "state_inputs_used": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/StateInputRef"
+      }
+    },
+    "system_degraded": {
+      "type": "boolean"
+    },
+    "state_layer_hint": {
+      "type": "string",
+      "enum": [
+        "atomic",
+        "derived",
+        "memory",
+        "unknown"
+      ]
+    },
+    "rate_class_hint": {
+      "type": "string",
+      "enum": [
+        "fast",
+        "mid",
+        "slow",
+        "unknown"
+      ]
+    },
+    "problem_scope": {
+      "type": "string",
+      "enum": [
+        "sensor_point",
+        "spatial_unit",
+        "reference_view",
+        "unknown"
+      ]
+    }
+  },
+  "$defs": {
+    "EvidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref_id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ledger_slice",
+            "state_vector",
+            "reference_view",
+            "qc_summary"
+          ]
+        },
+        "ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 280
+        },
+        "time_range": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "startTs",
+            "endTs"
+          ],
+          "properties": {
+            "startTs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endTs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "StateInputRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "state_vector_version",
+        "fields_used"
+      ],
+      "properties": {
+        "metric": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state_vector_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields_used": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

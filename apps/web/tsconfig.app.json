@@ -1,0 +1,8 @@
+// GEOX/apps/web/tsconfig.app.json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true
+  },
+  "include": ["src"]
+}

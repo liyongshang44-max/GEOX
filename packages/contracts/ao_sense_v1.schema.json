@@ -1,0 +1,232 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://schemas/apple_ii/ao_sense_v1.schema.json",
+  "title": "AO_SENSE_V1",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Apple II derived sensing request. MUST be linked to ProblemState. MUST NOT request intervention/action/control.",
+  "required": [
+    "type",
+    "schema_version",
+    "ao_sense_id",
+    "created_at_ts",
+    "run_id",
+    "problem_state_id",
+    "subjectRef",
+    "scale",
+    "window",
+    "priority",
+    "target",
+    "method",
+    "uncertainty_targets"
+  ],
+  "properties": {
+    "type": {
+      "const": "ao_sense_v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "ao_sense_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "created_at_ts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 6
+    },
+    "problem_state_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "subjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId"
+      ],
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plotId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "scale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTs",
+        "endTs"
+      ],
+      "properties": {
+        "startTs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endTs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "LOW",
+        "MEDIUM",
+        "HIGH"
+      ]
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "ref"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "SPATIAL_UNIT",
+            "SENSOR_POINT",
+            "ROUTE",
+            "REFERENCE_POINT"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "PHOTO",
+        "FIELD_SCOUTING",
+        "SOIL_SAMPLE",
+        "HANDHELD_RECHECK",
+        "SENSOR_CALIBRATION",
+        "ADD_CONTROL_POINT"
+      ]
+    },
+    "metrics_requested": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "uncertainty_targets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "SPARSE_SAMPLING",
+          "MISSING_KEY_METRIC",
+          "TIME_GAPS",
+          "STALE_EVIDENCE",
+          "MULTI_SOURCE_CONFLICT",
+          "MULTI_METRIC_CONFLICT",
+          "QC_SUSPECT_OR_BAD",
+          "SENSOR_HEALTH_ISSUE",
+          "REFERENCE_NOT_AVAILABLE",
+          "SCALE_POLICY_LIMITATION",
+          "EXCLUSION_WINDOW",
+          "MARKER_DEPENDENCY"
+        ]
+      }
+    },
+    "supporting_evidence_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/EvidenceRef"
+      }
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 280
+    }
+  },
+  "$defs": {
+    "EvidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref_id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ledger_slice",
+            "state_vector",
+            "reference_view",
+            "qc_summary",
+            "series_query"
+          ]
+        },
+        "ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 280
+        },
+        "time_range": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "startTs",
+            "endTs"
+          ],
+          "properties": {
+            "startTs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endTs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}

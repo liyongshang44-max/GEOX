@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://schemas/apple_ii/lb_candidate_v1.schema.json",
+  "title": "LBCandidateV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema_version",
+    "lb_candidate_id",
+    "created_at_ts",
+    "run_id",
+    "subjectRef",
+    "scale",
+    "window",
+    "status_word"
+  ],
+  "properties": {
+    "type": { "const": "lb_candidate_v1" },
+    "schema_version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+$" },
+    "lb_candidate_id": { "type": "string", "minLength": 8 },
+    "created_at_ts": { "type": "integer", "minimum": 1 },
+    "run_id": { "type": "string", "minLength": 6 },
+    "problem_state_id": { "type": ["string", "null"], "minLength": 8 },
+    "subjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["projectId"],
+      "properties": {
+        "projectId": { "type": "string", "minLength": 1 },
+        "groupId": { "type": "string", "minLength": 1 },
+        "plotId": { "type": "string", "minLength": 1 },
+        "blockId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "scale": { "type": "string", "minLength": 1 },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startTs", "endTs"],
+      "properties": {
+        "startTs": { "type": "integer", "minimum": 1 },
+        "endTs": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "status_word": { "type": "string", "enum": ["STABLE", "DRIFTING", "UNSTABLE", "NEEDS_VERIFICATION"] },
+    "title": { "type": ["string", "null"], "maxLength": 120 },
+    "hypothesis": { "type": ["string", "null"], "maxLength": 800 },
+    "metric": { "type": ["string", "null"] },
+    "supporting_evidence_refs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/EvidenceRef" }
+    }
+  },
+  "$defs": {
+    "EvidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref_id"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ledger_slice", "state_vector", "reference_view", "qc_summary", "series_query"]
+        },
+        "ref_id": { "type": "string", "minLength": 1 },
+        "note": { "type": ["string", "null"], "maxLength": 280 },
+        "time_range": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["startTs", "endTs"],
+          "properties": {
+            "startTs": { "type": "integer", "minimum": 1 },
+            "endTs": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

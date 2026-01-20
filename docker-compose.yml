@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: geox-postgres
+    environment:
+      POSTGRES_USER: landos
+      POSTGRES_PASSWORD: landos_pwd
+      POSTGRES_DB: landos
+    ports:
+      - "5432:5432"
+    volumes:
+      - landos_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+
+  server:
+    image: node:20
+    container_name: geox-server
+    working_dir: /app
+    command:
+      - sh
+      - -lc
+      - |
+          set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+
+          pnpm -r install --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/server dev
+    volumes:
+      - ./:/app
+      - geox_node_modules:/app/node_modules
+      - geox_pnpm_store:/pnpm-store
+      - geox_pnpm_vstore:/pnpm-vstore
+    environment:
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DB_STRICT: "1"
+      NODE_ENV: development
+      CI: "1"
+      PNPM_STORE_DIR: /pnpm-store
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+
+volumes:
+  landos_pgdata:
+  geox_pnpm_store:
+  geox_pnpm_vstore:
+  geox_node_modules:

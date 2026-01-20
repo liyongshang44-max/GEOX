@@ -1,0 +1,41 @@
+{
+  "type": "problem_state_v1",
+  "schema_version": "1.0.0",
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "system_degraded": false,
+  "state_layer_hint": "unknown",
+  "rate_class_hint": "fast",
+  "problem_scope": "spatial_unit",
+  "problem_state_id": "psv1_demo_001",
+  "created_at_ts": 1767166658039,
+  "problem_type": "INSUFFICIENT_EVIDENCE",
+  "confidence": "HIGH",
+  "uncertainty_sources": [
+    "SPARSE_SAMPLING",
+    "MISSING_KEY_METRIC"
+  ],
+  "summary": "Evidence is insufficient to characterize the current window reliably.",
+  "metrics_involved": [
+    "soil_moisture_vwc",
+    "soil_temp_c"
+  ],
+  "sensors_involved": [
+    "sensor_A"
+  ],
+  "supporting_evidence_refs": [
+    {
+      "kind": "qc_summary",
+      "ref_id": "qc:window:1766556000000-1766561400000",
+      "note": "Low sample count in window."
+    }
+  ],
+  "state_inputs_used": []
+}

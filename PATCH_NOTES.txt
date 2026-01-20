@@ -1,0 +1,9 @@
+# Suggested wiring (manual patch)
+# 1) Add to apps/judge/package.json scripts:
+#   "gen:ruleset": "node ./scripts/gen_ruleset.mjs",
+#   "predev": "npm run gen:ruleset",
+#   "pretest": "npm run gen:ruleset"
+#
+# 2) Replace existing config load in apps/judge/src/config.ts (or wherever) with:
+#   import { getRuleset } from "./config/ruleset";
+#   const cfg = getRuleset();

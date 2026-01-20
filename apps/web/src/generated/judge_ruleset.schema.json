@@ -1,0 +1,317 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://judge/ruleset_v1.schema.json",
+  "title": "GEOX Judge Ruleset v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "name",
+    "required_metrics",
+    "evidence",
+    "sufficiency",
+    "time_coverage",
+    "qc",
+    "marker",
+    "determinism"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "required_metrics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "raw_sample",
+        "marker"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "raw_sample": {
+          "type": "object",
+          "required": [
+            "type",
+            "metric_field",
+            "ts_ms_field",
+            "quality_field",
+            "missing_origin_quality_values",
+            "missing_origin_exclude_from"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "metric_field": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "ts_ms_field": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "quality_field": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "missing_origin_quality_values": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "missing_origin_exclude_from": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "sufficiency",
+                  "coverage",
+                  "qc"
+                ]
+              }
+            }
+          }
+        },
+        "marker": {
+          "type": "object",
+          "required": [
+            "type",
+            "kind_field",
+            "ts_ms_field",
+            "range_fields",
+            "missing_value_kinds"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "kind_field": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "ts_ms_field": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            "range_fields": {
+              "type": "object",
+              "required": [
+                "start_ts_ms_field",
+                "end_ts_ms_field"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "start_ts_ms_field": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                },
+                "end_ts_ms_field": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1
+                }
+              }
+            },
+            "missing_value_kinds": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "sufficiency": {
+      "type": "object",
+      "required": [
+        "min_total_samples",
+        "min_samples_per_required_metric",
+        "metric_match"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "min_total_samples": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_samples_per_required_metric": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "metric_match": {
+          "type": "object",
+          "required": [
+            "mode",
+            "separator"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "exact",
+                "base_prefix"
+              ]
+            },
+            "separator": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "time_coverage": {
+      "type": "object",
+      "required": [
+        "expected_interval_ms",
+        "max_allowed_gap_ms",
+        "min_coverage_ratio",
+        "exclude_by_markers",
+        "exclusion_kinds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "expected_interval_ms": {
+          "type": "integer",
+          "minimum": 1000
+        },
+        "max_allowed_gap_ms": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "min_coverage_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "exclude_by_markers": {
+          "type": "boolean"
+        },
+        "exclusion_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "qc": {
+      "type": "object",
+      "required": [
+        "bad_pct_threshold",
+        "suspect_pct_threshold",
+        "exclude_missing_origin"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "bad_pct_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "suspect_pct_threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "exclude_missing_origin": {
+          "type": "boolean"
+        }
+      }
+    },
+    "marker": {
+      "type": "object",
+      "required": [
+        "exclusion_kinds"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "exclusion_kinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "min_overlap_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "delta_numeric_threshold": {
+          "type": "number"
+        },
+        "min_points_in_overlap": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "kinds_enabled": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "determinism": {
+      "type": "object",
+      "required": [
+        "tie_breaker"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tie_breaker": {
+          "enum": [
+            "LEXICOGRAPHIC"
+          ]
+        }
+      }
+    }
+  }
+}

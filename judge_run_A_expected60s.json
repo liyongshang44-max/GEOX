@@ -1,0 +1,146 @@
+﻿{
+    "run_id":  "3d653f15-3960-4aca-bb62-9496362813b9",
+    "determinism_hash":  "bf7d58c4f339abef5348771fc8ed11c882a498c7e1aaecc010d8c617d83aec4f",
+    "effective_config_hash":  "sha256:989c37f2187afa7adeed3046bb0fbd4848c30f9013f36f68ce8150e74b48ca2b",
+    "problem_states":  [
+                           {
+                               "type":  "problem_state_v1",
+                               "schema_version":  "1.0.0",
+                               "problem_state_id":  "ps_770cabf9ac42410f91e9a769",
+                               "created_at_ts":  1768322745908,
+                               "subjectRef":  {
+                                                  "projectId":  "P_DEFAULT",
+                                                  "groupId":  "G_CAF"
+                                              },
+                               "scale":  "group",
+                               "window":  {
+                                              "startTs":  1768300860000,
+                                              "endTs":  1768301160001
+                                          },
+                               "summary":  null,
+                               "metrics_involved":  [
+                                                        "soil_moisture_vwc_120cm",
+                                                        "soil_moisture_vwc_150cm",
+                                                        "soil_moisture_vwc_30cm",
+                                                        "soil_moisture_vwc_60cm",
+                                                        "soil_moisture_vwc_90cm",
+                                                        "soil_temp_c_120cm",
+                                                        "soil_temp_c_150cm",
+                                                        "soil_temp_c_30cm",
+                                                        "soil_temp_c_60cm",
+                                                        "soil_temp_c_90cm"
+                                                    ],
+                               "sensors_involved":  [
+                                                        "CAF010"
+                                                    ],
+                               "supporting_evidence_refs":  [
+                                                                {
+                                                                    "kind":  "ledger_slice",
+                                                                    "ref_id":  "ls_995544253f19770fee864e5d",
+                                                                    "note":  "canonical slice of input facts (deterministic)",
+                                                                    "time_range":  {
+                                                                                       "startTs":  1768300860000,
+                                                                                       "endTs":  1768301160001
+                                                                                   }
+                                                                }
+                                                            ],
+                               "state_inputs_used":  [
+
+                                                     ],
+                               "system_degraded":  false,
+                               "state_layer_hint":  "unknown",
+                               "rate_class_hint":  "unknown",
+                               "problem_scope":  "spatial_unit"
+                           }
+                       ],
+    "ao_sense":  [
+                     {
+                         "type":  "ao_sense_v1",
+                         "schema_version":  "1.0.0",
+                         "ao_sense_id":  "ao_ca75c85dd609bef9777072fe",
+                         "created_at_ts":  1768322745908,
+                         "run_id":  "3d653f15-3960-4aca-bb62-9496362813b9",
+                         "subjectRef":  {
+                                            "projectId":  "P_DEFAULT",
+                                            "groupId":  "G_CAF"
+                                        },
+                         "scale":  "group",
+                         "window":  {
+                                        "startTs":  1768300860000,
+                                        "endTs":  1768301160001
+                                    },
+                         "priority":  "MEDIUM",
+                         "sense_kind":  "VERIFY",
+                         "note":  "supporting evidence insufficient / conflict / policy limitation; request additional observation",
+                         "sense_focus":  "UNKNOWN",
+                         "supporting_problem_state_id":  "ps_770cabf9ac42410f91e9a769"
+                     }
+                 ],
+    "silent":  false,
+    "run_meta":  {
+                     "pipeline_version":  "judge_pipeline_v1",
+                     "config_profile":  "default"
+                 },
+    "input_fact_ids":  [
+                           "raw_00e9c5159c911feb6039f5db084592e7aa73b74f",
+                           "raw_129003beb4db53f1c8f9827af285d90d3f4805ce",
+                           "raw_146945bc88b62a1e69feb10c672c60a0034bbf94",
+                           "raw_2173009a8bba42e212059bbbbca2f5e6c5a71e8c",
+                           "raw_2bf86b2f7344ba25de9f813d60aae2e20227b50e",
+                           "raw_3f2fea42700df31a769bee1621d6f7066df8d0d2",
+                           "raw_3f4ae4fbaf79e26dbafced56a30c4a0f35c403e7",
+                           "raw_3fff651d20894c10bca470574ee14010a7de4c9d",
+                           "raw_4068059168162d34219dda309c9d840bebb716c2",
+                           "raw_43cf486ac6f96ff7e533b311fb7628decfe2d18a",
+                           "raw_492bbb6bed3e858c2ed3f785d067dd011424b529",
+                           "raw_55138af5c2cf6aa9ae6acd0e3b40170d79ec82a9",
+                           "raw_5941a6425ab504ca54a54e5343671ee56420ccba",
+                           "raw_5d909dbd7de59757ba304c97a3d1d60617774f00",
+                           "raw_63844876e32c6b298bf76ef94242d11e4616d751",
+                           "raw_76f807b562b95b7725d1738334beefb912f6ab61",
+                           "raw_77a4393ebb716f65d98c51d4c4d2fb732ddbb6ce",
+                           "raw_7de2a504320a7ddfb0abbe3da402c9db17c6f3e6",
+                           "raw_810c205a583fece4d3731f47e5293397de682680",
+                           "raw_824f4baa80b036968f32de5110497cd690e11759",
+                           "raw_8284345bf54650af3f87c003d5d568c1a7e36d54",
+                           "raw_850f51593973f3e41e0a7a9b16a130d851479c4b",
+                           "raw_851bf8dfe254ddaa245c9df59c5f39577b6bae4e",
+                           "raw_89e48633a01344b9538bfd225c885676feffc0f8",
+                           "raw_926b02c0a4f18ed0ed902b81f0db1e65a876ce7b",
+                           "raw_970bcbeabd950028d95dfe9f9a523552f5d28aca",
+                           "raw_9cab84de8c454150fc03b7843848edd760673660",
+                           "raw_9e6b73aa03039a3b5fc060aa4aaa998800f5d301",
+                           "raw_a1a16eecac9dd25e7057252eb091f8174c044858",
+                           "raw_a1ab1cf49c4840c16183eb689a6ebc8b867a2d92",
+                           "raw_a20f05593a483effb9dfa3d0c3250cd909ebd218",
+                           "raw_a8822d18eec94fbb30e8a4f3f74a9de4947cb47d",
+                           "raw_a88436abdbd87df8b78d6caaa45a32628c6e385e",
+                           "raw_ab6c3ed82e4d6a96bc98ed81edcd591a72b934f3",
+                           "raw_add60a41ae4f464c7b6b25a7aa775a201e92fab0",
+                           "raw_b3c53762641a5ddd28da4da1196c3a2ecc9b3685",
+                           "raw_b49a5c4a4f48efa1c064c54bf5bf4d59322afed0",
+                           "raw_b68f88b8295decda93d02a761d6db84c94778d26",
+                           "raw_b739a778beb25d0897254fec6118a7f18b247c0f",
+                           "raw_b764a05526c251c033a1014d98084931abb61cab",
+                           "raw_b7bdc31cb31ac80ab6035af94de330e8799b9a4d",
+                           "raw_b901ef8104940243f7948fa3aa5d1d85c818a3f1",
+                           "raw_c169a0404c941de5530bd7dedd513beb0dad6378",
+                           "raw_ce0568ef8b077f9fd12e6064db1fbb687505068c",
+                           "raw_cf97dfb716e52d6ff1908d7c8b3c653277470a25",
+                           "raw_d59420b273708abe4a1d397863836d9ccfaecd56",
+                           "raw_d5bace7726551dd834c231a093b04cfa22777461",
+                           "raw_d69187d251479c59a209dc421a4350c0c7185d84",
+                           "raw_d6a6715c18e5e71e6a79040b2a8e08f904fcc427",
+                           "raw_d7726aab8a7fe211b591f7ab9991c87aa39e3808",
+                           "raw_d835e59655c7db1421fbb6708bb10db630733e63",
+                           "raw_dda377012a880e51b366c9e958bee3bcac425943",
+                           "raw_df64ef7e7fc099cd812811a5bc16ee37d832fb54",
+                           "raw_e2a269e0695aef3b26b14d1a5afc8863d08527d5",
+                           "raw_e9db38a6df969c7916d465dff1e7074a0faf260d",
+                           "raw_ea987f3603131b42e7021e44e8269ff5c72b229d",
+                           "raw_ebe45c0af32ce7e4500958d0a6e17f81f2b58423",
+                           "raw_f03d1b7d1733fd83f6314c13eb882b5ca10531cd",
+                           "raw_f35bb077cfe2861368f957d63189e96cfd723c43",
+                           "raw_f617eb9f884173d7a6d8d75cf532818e5a24e098"
+                       ]
+}

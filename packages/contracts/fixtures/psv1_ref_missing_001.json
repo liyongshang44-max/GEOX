@@ -1,0 +1,33 @@
+{
+  "type": "problem_state_v1",
+  "schema_version": "1.0.0",
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "system_degraded": false,
+  "state_layer_hint": "unknown",
+  "rate_class_hint": "unknown",
+  "problem_scope": "reference_view",
+  "problem_state_id": "psv1_ref_missing_001",
+  "created_at_ts": 1767166658042,
+  "problem_type": "REFERENCE_MISSING",
+  "confidence": "HIGH",
+  "uncertainty_sources": [
+    "REFERENCE_NOT_AVAILABLE"
+  ],
+  "summary": "No eligible reference series could be constructed for this window.",
+  "supporting_evidence_refs": [
+    {
+      "kind": "qc_summary",
+      "ref_id": "qc:ref_missing:demo_001",
+      "note": "No configured reference available."
+    }
+  ],
+  "state_inputs_used": []
+}

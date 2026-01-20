@@ -1,0 +1,34 @@
+{
+  "type": "ao_sense_v1",
+  "schema_version": "1.0.0",
+  "ao_sense_id": "ao_demo_001",
+  "created_at_ts": 1767166658039,
+  "run_id": "run_demo_001",
+  "problem_state_id": "psv1_ref_missing_001",
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "priority": "MEDIUM",
+  "target": {
+    "type": "REFERENCE_POINT",
+    "ref": "control_point_candidate_001"
+  },
+  "method": "ADD_CONTROL_POINT",
+  "uncertainty_targets": [
+    "REFERENCE_NOT_AVAILABLE"
+  ],
+  "supporting_evidence_refs": [
+    {
+      "kind": "qc_summary",
+      "ref_id": "qc:ref_missing:demo_001",
+      "note": null
+    }
+  ],
+  "notes": "Add a control/reference point to enable replayable contrast in future windows."
+}

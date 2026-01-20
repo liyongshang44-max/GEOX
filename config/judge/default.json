@@ -1,0 +1,106 @@
+{
+  "schema_version": "1.0.0",
+  "name": "default",
+  "required_metrics": [
+    "soil_moisture_vwc",
+    "soil_temp_c"
+  ],
+  "evidence": {
+    "raw_sample": {
+      "type": "raw_sample_v1",
+      "metric_field": [
+        "payload",
+        "metric"
+      ],
+      "ts_ms_field": [
+        "payload",
+        "ts_ms"
+      ],
+      "quality_field": [
+        "payload",
+        "quality"
+      ],
+      "missing_origin_quality_values": [
+        "bad"
+      ],
+      "missing_origin_exclude_from": [
+        "sufficiency",
+        "coverage",
+        "qc"
+      ]
+    },
+    "marker": {
+      "type": "marker_v1",
+      "kind_field": [
+        "payload",
+        "kind"
+      ],
+      "ts_ms_field": [
+        "payload",
+        "ts_ms"
+      ],
+      "range_fields": {
+        "start_ts_ms_field": [
+          "payload",
+          "start_ts_ms"
+        ],
+        "end_ts_ms_field": [
+          "payload",
+          "end_ts_ms"
+        ]
+      },
+      "missing_value_kinds": [
+        "MISSING_VALUE"
+      ]
+    }
+  },
+  "sufficiency": {
+    "min_total_samples": 5,
+    "min_samples_per_required_metric": 2,
+    "metric_match": {
+      "mode": "base_prefix",
+      "separator": "_"
+    }
+  },
+  "time_coverage": {
+    "expected_interval_ms": 60000,
+    "max_allowed_gap_ms": 900000,
+    "min_coverage_ratio": 0.2,
+    "exclude_by_markers": true,
+    "exclusion_kinds": [
+      "MAINTENANCE",
+      "CALIBRATION",
+      "POST_RAIN",
+      "INTERVENTION"
+    ]
+  },
+  "qc": {
+    "bad_pct_threshold": 0.3,
+    "suspect_pct_threshold": 0.5,
+    "exclude_missing_origin": true
+  },
+  "marker": {
+    "exclusion_kinds": [
+      "MAINTENANCE",
+      "CALIBRATION",
+      "POST_RAIN",
+      "INTERVENTION"
+    ]
+  },
+  "conflict": {
+    "min_overlap_ratio": 0.3,
+    "delta_numeric_threshold": 2.0,
+    "min_points_in_overlap": 3
+  },
+  "reference": {
+    "enable": true,
+    "kinds_enabled": [
+      "WITHIN_UNIT_HISTORY",
+      "WITHIN_UNIT_CONTROL_SENSOR",
+      "NEIGHBOR_SAME_SCALE"
+    ]
+  },
+  "determinism": {
+    "tie_breaker": "LEXICOGRAPHIC"
+  }
+}

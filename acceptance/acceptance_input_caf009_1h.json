@@ -1,0 +1,15 @@
+﻿{
+    "subjectRef":  {
+                       "projectId":  "P_DEFAULT",
+                       "groupId":  "G_CAF"
+                   },
+    "scale":  "group",
+    "options":  {
+                    "include_reference_views":  true,
+                    "silent":  false
+                },
+    "window":  {
+                   "startTs":  1430294400000,
+                   "endTs":  1430298000000
+               }
+}

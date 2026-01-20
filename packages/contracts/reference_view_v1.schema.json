@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://schemas/apple_ii/reference_view_v1.schema.json",
+  "title": "ReferenceViewV1",
+  "type": "object",
+  "additionalProperties": false,
+  "description": "Apple II Judge read-only contrast view. Non-authoritative, replayable, append-only. MUST NOT express control, recommendation, diagnosis, or risk semantics.",
+  "required": [
+    "type",
+    "schema_version",
+    "reference_view_id",
+    "created_at_ts",
+    "subjectRef",
+    "scale",
+    "window",
+    "kind",
+    "metric",
+    "primary_series_ref",
+    "reference_series_ref"
+  ],
+  "properties": {
+    "type": {
+      "const": "reference_view_v1"
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "reference_view_id": {
+      "type": "string",
+      "minLength": 8
+    },
+    "created_at_ts": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "subjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "projectId"
+      ],
+      "properties": {
+        "projectId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plotId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blockId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "scale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "startTs",
+        "endTs"
+      ],
+      "properties": {
+        "startTs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endTs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "WITHIN_UNIT_HISTORY",
+        "WITHIN_UNIT_CONTROL_SENSOR",
+        "NEIGHBOR_SAME_SCALE",
+        "EXTERNAL_CONTEXT"
+      ]
+    },
+    "metric": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary_series_ref": {
+      "$ref": "#/$defs/EvidenceRef"
+    },
+    "reference_series_ref": {
+      "$ref": "#/$defs/EvidenceRef"
+    },
+    "comparison_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "overlap_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "primary_sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reference_sample_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "qc_mix_primary": {
+          "$ref": "#/$defs/QCMix"
+        },
+        "qc_mix_reference": {
+          "$ref": "#/$defs/QCMix"
+        },
+        "delta_hint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "aligned",
+                "diverging",
+                "unknown"
+              ]
+            },
+            "magnitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "conflict_hint": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "enum": [
+                "none",
+                "possible",
+                "clear",
+                "unknown"
+              ]
+            },
+            "basis_refs": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/EvidenceRef"
+              }
+            }
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 280
+    }
+  },
+  "$defs": {
+    "EvidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref_id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ledger_slice",
+            "series_query",
+            "qc_summary"
+          ]
+        },
+        "ref_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 280
+        },
+        "time_range": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "startTs",
+            "endTs"
+          ],
+          "properties": {
+            "startTs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "endTs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "QCMix": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ok_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "suspect_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "bad_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    }
+  }
+}

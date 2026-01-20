@@ -1,0 +1,42 @@
+{
+  "type": "problem_state_v1",
+  "schema_version": "1.0.0",
+  "problem_state_id": "psv1_demo_002",
+  "created_at_ts": 1766557000001,
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "problem_type": "EVIDENCE_CONFLICT",
+  "confidence": "MEDIUM",
+  "uncertainty_sources": [
+    "MULTI_SOURCE_CONFLICT",
+    "MULTI_METRIC_CONFLICT"
+  ],
+  "summary": "Evidence sources are conflicting within the window.",
+  "metrics_involved": [
+    "soil_moisture_vwc",
+    "air_temp_c"
+  ],
+  "sensors_involved": [
+    "sensor_A1",
+    "sensor_B1"
+  ],
+  "supporting_evidence_refs": [
+    {
+      "kind": "ledger_slice",
+      "ref_id": "ledger:fact_range:demo_range_001",
+      "note": "Conflicting readings observed in the same time window."
+    }
+  ],
+  "state_inputs_used": [],
+  "system_degraded": false,
+  "state_layer_hint": "unknown",
+  "rate_class_hint": "fast",
+  "problem_scope": "spatial_unit"
+}

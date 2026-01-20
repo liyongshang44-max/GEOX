@@ -1,0 +1,28 @@
+{
+  "name": "rv_demo_conflict_001",
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "config_profile": "default",
+  "expected": {
+    "reference_view": {
+      "kind": "WITHIN_UNIT_CONTROL_SENSOR",
+      "metric": "soil_moisture_vwc",
+      "comparison_summary": {
+        "conflict_hint": {
+          "label": "clear"
+        }
+      }
+    },
+    "problem_state": {
+      "problem_type": "REFERENCE_CONFLICT",
+      "uncertainty_sources_contains": []
+    }
+  }
+}

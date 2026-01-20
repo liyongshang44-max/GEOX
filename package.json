@@ -1,0 +1,28 @@
+{
+  "name": "geox",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0",
+    "@types/node": "^20.10.0",
+    "@types/pg": "^8.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^8.3.1",
+    "@fastify/static": "^7.0.4",
+    "better-sqlite3": "^9.4.0",
+    "fastify": "^4.25.0",
+    "pg": "^8.16.3"
+  },
+  "scripts": {
+    "build": "npm -ws run build",
+    "dev": "pnpm -r dev",
+    "guardrails": "npm --workspace @geox/guardrails run build && npm --workspace @geox/guardrails run check",
+    "import:caf": "ts-node ./scripts/loadfact.ts"
+  }
+}

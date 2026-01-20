@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0.0",
+  "required_metrics": [
+    "soil_moisture_vwc",
+    "soil_temp_c"
+  ],
+  "sufficiency": {
+    "min_total_samples": 5,
+    "min_samples_per_required_metric": 2
+  },
+  "time_coverage": {
+    "max_allowed_gap_ms": 900000,
+    "min_coverage_ratio": 0.2
+  },
+  "qc": {
+    "bad_pct_threshold": 0.3,
+    "suspect_pct_threshold": 0.5
+  },
+  "marker": {
+    "exclusion_kinds": [
+      "MAINTENANCE",
+      "CALIBRATION",
+      "POST_RAIN",
+      "INTERVENTION"
+    ]
+  },
+  "reference": {
+    "enable": true,
+    "kinds_enabled": [
+      "WITHIN_UNIT_HISTORY",
+      "WITHIN_UNIT_CONTROL_SENSOR",
+      "NEIGHBOR_SAME_SCALE"
+    ]
+  },
+  "conflict": {
+    "min_overlap_ratio": 0.3,
+    "delta_numeric_threshold": 2.0,
+    "min_points_in_overlap": 3
+  },
+  "determinism": {
+    "tie_breaker": "LEXICOGRAPHIC"
+  }
+}

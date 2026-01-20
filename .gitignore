@@ -1,0 +1,21 @@
+node_modules/
+dist/
+build/
+
+.env
+.env.*
+
+# local datasets / artifacts
+datasets/
+data/
+logs/
+
+# editor
+.vscode/
+.idea/
+.DS_Store
+$null
+-H
+
+_uploads/
+

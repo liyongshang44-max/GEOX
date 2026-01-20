@@ -1,0 +1,28 @@
+{
+  "type": "lb_candidate_v1",
+  "schema_version": "1.0.0",
+  "lb_candidate_id": "lb_demo_001",
+  "created_at_ts": 1767166658039,
+  "run_id": "run_demo_001",
+  "problem_state_id": "psv1_ref_missing_001",
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "status_word": "NEEDS_VERIFICATION",
+  "title": "Reference missing candidate",
+  "hypothesis": "Configured reference sources are absent for this unit/window; cannot form a contrast view.",
+  "metric": "soil_moisture_vwc",
+  "supporting_evidence_refs": [
+    {
+      "kind": "qc_summary",
+      "ref_id": "qc:ref_missing:demo_001",
+      "note": null
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "type": "reference_view_v1",
+  "schema_version": "1.0.0",
+  "reference_view_id": "rv1_demo_conflict_001",
+  "created_at_ts": 1767166658039,
+  "subjectRef": {
+    "projectId": "P_DEFAULT",
+    "groupId": "G_DEMO_30S"
+  },
+  "scale": "group",
+  "window": {
+    "startTs": 1766556000000,
+    "endTs": 1766561400000
+  },
+  "kind": "WITHIN_UNIT_CONTROL_SENSOR",
+  "metric": "soil_moisture_vwc",
+  "primary_series_ref": {
+    "kind": "series_query",
+    "ref_id": "series:group=G_DEMO_30S&metric=soil_moisture_vwc&sensor=sensor_A1&start=1766556000000&end=1766561400000"
+  },
+  "reference_series_ref": {
+    "kind": "series_query",
+    "ref_id": "series:group=G_DEMO_30S&metric=soil_moisture_vwc&sensor=sensor_B1&start=1766556000000&end=1766561400000"
+  },
+  "comparison_summary": {
+    "overlap_ratio": 0.9,
+    "primary_sample_count": 40,
+    "reference_sample_count": 42,
+    "qc_mix_primary": {
+      "ok_pct": 0.95,
+      "suspect_pct": 0.05,
+      "bad_pct": 0.0
+    },
+    "qc_mix_reference": {
+      "ok_pct": 0.96,
+      "suspect_pct": 0.04,
+      "bad_pct": 0.0
+    },
+    "delta_hint": {
+      "label": "diverging",
+      "magnitude": 0.12
+    },
+    "conflict_hint": {
+      "label": "clear",
+      "basis_refs": [
+        {
+          "kind": "ledger_slice",
+          "ref_id": "ledger:fact_range:demo_range_001",
+          "note": "Overlap segment used for delta estimate."
+        }
+      ]
+    }
+  },
+  "notes": null
+}
