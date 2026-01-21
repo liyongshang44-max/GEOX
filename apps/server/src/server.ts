@@ -57,6 +57,7 @@ import { registerJudgeRoutes } from "../../judge/src/routes";
 import { registerJudgeConfigRoutes } from "./routes/judge_config";
 import { registerSimConfigRoutes } from "./routes/sim_config";
 import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // Apple III v0: AO-SENSE -> Task/Receipt routes (append-only facts writes)
+import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // Apple IV v0: read-only agronomy report generation (no writes)
 
 type FactsSource = "device" | "gateway" | "system" | "human";
 type QcQuality = "unknown" | "ok" | "suspect" | "bad";
@@ -145,6 +146,7 @@ registerJudgeRoutes(app, judgeRuntime);
 registerJudgeConfigRoutes(app);
 registerSimConfigRoutes(app);
 registerControlAoSenseRoutes(app, pool); // Apple III v0: mount control routes after core runtime and before listen
+registerAgronomyV0Routes(app, pool); // Apple IV v0: mount read-only agronomy report routes
 
 app.register(multipart, {
   limits: {
