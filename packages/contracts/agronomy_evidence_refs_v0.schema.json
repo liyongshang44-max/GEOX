@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "agronomy_evidence_refs_v0",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema_version",
+    "report_id",
+    "determinism_hash",
+    "evidence_refs"
+  ],
+  "properties": {
+    "type": { "const": "agronomy_evidence_refs_v0" },
+    "schema_version": { "const": "0" },
+    "report_id": { "type": "string", "pattern": "^ar_[0-9a-f]{24}$" },
+    "determinism_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "ref_id"],
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "ref_id": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}
