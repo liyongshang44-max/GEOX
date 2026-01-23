@@ -1,21 +1,33 @@
+# dependencies
 node_modules/
+**/node_modules/
+
+# pnpm store should never be inside repo
+.pnpm-store/
+.pnpm-store-v3/
+
+# build outputs
 dist/
+**/dist/
 build/
+out/
+.next/
+coverage/
 
-.env
-.env.*
+# temp dirs
+tmp/
+temp/
 
-# local datasets / artifacts
-datasets/
-data/
-logs/
+# acceptance outputs / artifacts
+acceptance/
+*.zip
 
-# editor
-.vscode/
-.idea/
-.DS_Store
-$null
--H
+# runtime debug leftovers
+curl_trace.txt
+judge_raw.json
+judge_run.json
 
-_uploads/
-
+# sqlite runtime files
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
