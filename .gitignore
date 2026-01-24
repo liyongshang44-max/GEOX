@@ -31,3 +31,14 @@ judge_run.json
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
+# local env
+.env
+apps/*/.env
+
+# local datasets (do not ship in repo bundles)
+datasets/
+
+# accidental windows artifact
+\
+
+sim_config_manifest.json
