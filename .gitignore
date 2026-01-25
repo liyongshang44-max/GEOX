@@ -42,3 +42,7 @@ datasets/
 \
 
 sim_config_manifest.json
+
+# runtime media (do not commit)
+apps/server/media/
+
