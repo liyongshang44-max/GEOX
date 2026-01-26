@@ -1,0 +1,62 @@
+{
+  "name": "containment_merge",
+  "asOfTs": 110000,
+  "constants": {
+    "MERGE_OVERLAP_RATIO": 0.6,
+    "EXPIRY_BUFFER_MS": 0,
+    "REUSE_GRACE_MS": 0
+  },
+  "frozen_ids": [],
+  "problem_states": [
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_old",
+      "created_at_ts": 1000,
+      "subjectRef": { "projectId": "P_DEFAULT", "groupId": "G_DEMO" },
+      "scale": "group",
+      "window": { "startTs": 0, "endTs": 100000 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "HIGH",
+      "uncertainty_sources": ["SPARSE_SAMPLING"],
+      "summary": "old",
+      "metrics_involved": ["soil_moisture_vwc"],
+      "sensors_involved": ["sensor_A"],
+      "supporting_evidence_refs": [
+        { "kind": "qc_summary", "ref_id": "qc:old" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_new",
+      "created_at_ts": 2000,
+      "subjectRef": { "projectId": "P_DEFAULT", "groupId": "G_DEMO" },
+      "scale": "group",
+      "window": { "startTs": 0, "endTs": 120000 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "HIGH",
+      "uncertainty_sources": ["SPARSE_SAMPLING"],
+      "summary": "new",
+      "metrics_involved": ["soil_moisture_vwc"],
+      "sensors_involved": ["sensor_A"],
+      "supporting_evidence_refs": [
+        { "kind": "qc_summary", "ref_id": "qc:new" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    }
+  ],
+  "expected_index": [
+    { "problem_state_id": "ps_old", "lifecycle_state": "SUPERSEDED", "superseded_by": "ps_new" },
+    { "problem_state_id": "ps_new", "lifecycle_state": "ACTIVE", "superseded_by": null }
+  ]
+}

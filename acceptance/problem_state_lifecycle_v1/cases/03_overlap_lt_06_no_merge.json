@@ -1,0 +1,100 @@
+{
+  "name": "overlap_lt_06_no_merge",
+  "asOfTs": 100000,
+  "constants": {
+    "MERGE_OVERLAP_RATIO": 0.6,
+    "EXPIRY_BUFFER_MS": 0,
+    "REUSE_GRACE_MS": 0
+  },
+  "frozen_ids": [],
+  "problem_states": [
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_a",
+      "created_at_ts": 1000,
+      "subjectRef": {
+        "projectId": "P_DEFAULT",
+        "groupId": "G_DEMO"
+      },
+      "scale": "group",
+      "window": {
+        "startTs": 0,
+        "endTs": 100000
+      },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": [
+        "SPARSE_SAMPLING"
+      ],
+      "summary": "a",
+      "metrics_involved": [
+        "temp_c"
+      ],
+      "sensors_involved": [
+        "sensor_A"
+      ],
+      "supporting_evidence_refs": [
+        {
+          "kind": "ledger_slice",
+          "ref_id": "ls:a"
+        }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_b",
+      "created_at_ts": 2000,
+      "subjectRef": {
+        "projectId": "P_DEFAULT",
+        "groupId": "G_DEMO"
+      },
+      "scale": "group",
+      "window": {
+        "startTs": 60000,
+        "endTs": 150000
+      },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": [
+        "SPARSE_SAMPLING"
+      ],
+      "summary": "b",
+      "metrics_involved": [
+        "temp_c"
+      ],
+      "sensors_involved": [
+        "sensor_A"
+      ],
+      "supporting_evidence_refs": [
+        {
+          "kind": "ledger_slice",
+          "ref_id": "ls:b"
+        }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    }
+  ],
+  "expected_index": [
+    {
+      "problem_state_id": "ps_a",
+      "lifecycle_state": "ACTIVE",
+      "superseded_by": null
+    },
+    {
+      "problem_state_id": "ps_b",
+      "lifecycle_state": "ACTIVE",
+      "superseded_by": null
+    }
+  ]
+}

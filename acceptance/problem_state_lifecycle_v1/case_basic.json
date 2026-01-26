@@ -1,0 +1,152 @@
+{
+  "asOfTs": 150,
+  "problem_states": [
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_A",
+      "created_at_ts": 10,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 0, "endTs": 100 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_aaa" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_B",
+      "created_at_ts": 20,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 50, "endTs": 120 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_bbb" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_C",
+      "created_at_ts": 30,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 0, "endTs": 150 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_aaa" },
+        { "kind": "ledger_slice", "ref_id": "ls_bbb" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_D",
+      "created_at_ts": 40,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 200, "endTs": 300 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_ddd" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_E",
+      "created_at_ts": 50,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 240, "endTs": 340 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_eee" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    },
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_F",
+      "created_at_ts": 60,
+      "subjectRef": { "groupId": "G_CAF" },
+      "scale": "group",
+      "window": { "startTs": 10, "endTs": 50 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["EVIDENCE_TOO_THIN"],
+      "summary": null,
+      "metrics_involved": ["temp"],
+      "sensors_involved": ["CAF009"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls_fff" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    }
+  ],
+  "expected": [
+    { "problem_state_id": "ps_A", "lifecycle_state": "SUPERSEDED", "superseded_by": "ps_C" },
+    { "problem_state_id": "ps_B", "lifecycle_state": "SUPERSEDED", "superseded_by": "ps_C" },
+    { "problem_state_id": "ps_C", "lifecycle_state": "ACTIVE", "superseded_by": null },
+    { "problem_state_id": "ps_D", "lifecycle_state": "SUPERSEDED", "superseded_by": "ps_E" },
+    { "problem_state_id": "ps_E", "lifecycle_state": "ACTIVE", "superseded_by": null },
+    { "problem_state_id": "ps_F", "lifecycle_state": "EXPIRED", "superseded_by": null }
+  ]
+}

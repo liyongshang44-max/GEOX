@@ -1,0 +1,38 @@
+{
+  "name": "expire_by_asOfTs",
+  "asOfTs": 200000,
+  "constants": {
+    "MERGE_OVERLAP_RATIO": 0.6,
+    "EXPIRY_BUFFER_MS": 0,
+    "REUSE_GRACE_MS": 0
+  },
+  "frozen_ids": [],
+  "problem_states": [
+    {
+      "type": "problem_state_v1",
+      "schema_version": "1.0.0",
+      "problem_state_id": "ps_x",
+      "created_at_ts": 1000,
+      "subjectRef": { "projectId": "P_DEFAULT", "groupId": "G_DEMO" },
+      "scale": "group",
+      "window": { "startTs": 0, "endTs": 100000 },
+      "problem_type": "INSUFFICIENT_EVIDENCE",
+      "confidence": "LOW",
+      "uncertainty_sources": ["TIME_GAPS"],
+      "summary": "x",
+      "metrics_involved": ["temp_c"],
+      "sensors_involved": ["sensor_A"],
+      "supporting_evidence_refs": [
+        { "kind": "ledger_slice", "ref_id": "ls:x" }
+      ],
+      "state_inputs_used": [],
+      "system_degraded": false,
+      "state_layer_hint": "unknown",
+      "rate_class_hint": "unknown",
+      "problem_scope": "spatial_unit"
+    }
+  ],
+  "expected_index": [
+    { "problem_state_id": "ps_x", "lifecycle_state": "EXPIRED", "superseded_by": null }
+  ]
+}
