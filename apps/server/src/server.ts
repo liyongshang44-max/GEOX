@@ -223,6 +223,7 @@ function occurredAtToMs(occurred_at: unknown): number {
 
 // ---------- routes ----------
 app.get("/health", async () => ({ ok: true })); // 简单健康检查
+app.get("/api/health", async () => ({ ok: true })); // /api 兼容健康检查（用于 acceptance runner）
 
 app.get("/api/admin/healthz", async (req, reply) => {
   const requiredTables = ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members"]; // 必需表

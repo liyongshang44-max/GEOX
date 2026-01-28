@@ -1,50 +1,171 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "AO_ACT_TASK_v0",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ao_act_task_v0_record",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "type",
-    "schema_version",
-    "task_id",
-    "created_at_ts",
-    "subjectRef",
-    "window",
-    "act_kind",
-    "act_target",
-    "priority",
-    "supporting_problem_state_id",
-    "supporting_determinism_hash",
-    "supporting_effective_config_hash"
+    "payload"
   ],
   "properties": {
-    "type": { "const": "ao_act_task_v0" },
-    "schema_version": { "const": "0" },
-    "task_id": { "type": "string", "minLength": 1 },
-    "created_at_ts": { "type": "integer" },
-    "subjectRef": {
+    "type": {
+      "const": "ao_act_task_v0"
+    },
+    "payload": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["projectId", "groupId"],
+      "required": [
+        "act_task_id",
+        "issuer",
+        "action_type",
+        "target",
+        "time_window",
+        "parameter_schema",
+        "parameters",
+        "constraints",
+        "created_at_ts"
+      ],
       "properties": {
-        "projectId": { "type": "string", "minLength": 1 },
-        "groupId": { "type": "string", "minLength": 1 }
+        "act_task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "issuer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id",
+            "namespace"
+          ],
+          "properties": {
+            "kind": {
+              "const": "human"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "action_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "field",
+                "area",
+                "path"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "time_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "start_ts",
+            "end_ts"
+          ],
+          "properties": {
+            "start_ts": {
+              "type": "number"
+            },
+            "end_ts": {
+              "type": "number"
+            }
+          }
+        },
+        "parameter_schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "keys"
+          ],
+          "properties": {
+            "keys": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "type": {
+                    "enum": [
+                      "number",
+                      "boolean",
+                      "enum"
+                    ]
+                  },
+                  "min": {
+                    "type": "number"
+                  },
+                  "max": {
+                    "type": "number"
+                  },
+                  "enum": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean",
+            "string"
+            ]
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "boolean",
+            "string"
+            ]
+          }
+        },
+        "created_at_ts": {
+          "type": "number"
+        },
+        "meta": {
+          "type": "object"
+        }
       }
-    },
-    "window": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["startTs", "endTs"],
-      "properties": {
-        "startTs": { "type": "integer" },
-        "endTs": { "type": "integer" }
-      }
-    },
-    "act_kind": { "type": "string", "minLength": 1 },
-    "act_target": { "type": "string", "minLength": 1 },
-    "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
-    "supporting_problem_state_id": { "type": "string", "minLength": 1 },
-    "supporting_determinism_hash": { "type": "string", "minLength": 1 },
-    "supporting_effective_config_hash": { "type": "string", "minLength": 1 }
+    }
   }
 }
