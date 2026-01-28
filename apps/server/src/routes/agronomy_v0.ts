@@ -1,6 +1,11 @@
 import type { FastifyInstance, FastifyPluginAsync } from "fastify"; // Fastify types for plugin + instance.
 import type { Pool } from "pg"; // Postgres pool type for queries.
 import crypto from "node:crypto"; // Node crypto for deterministic SHA-256 hashing.
+import type { FastifyInstance, FastifyPluginAsync } from "fastify"; // Fastify types for plugin + instance.
+import type { Pool } from "pg"; // Postgres pool type for queries.
+import crypto from "node:crypto"; // Node crypto for deterministic SHA-256 hashing.
+import { randomUUID } from "node:crypto"; // Generate UUIDs for new facts written by Agronomy (append-only ledger).
+import { z } from "zod"; // Zod schema validation for request parsing.
 
 type SubjectRef = { projectId: string; groupId: string }; // Group-scoped subject reference for agronomy reads.
 type Window = { startTs: number; endTs: number }; // Time window in epoch milliseconds (inclusive bounds).
@@ -60,6 +65,21 @@ function parseRecordJson(rowValue: unknown): any { // Parse facts.record_json (m
   } catch {
     return null; // Fail-closed to null.
   }
+}
+async function fetchFactByFactId(pool: Pool, factId: string): Promise<any | null> { // Read a single fact row by fact_id (ledger read-only).
+  const sql = `SELECT fact_id, occurred_at, source, record_json FROM facts WHERE fact_id = $1 LIMIT 1`; // Simple primary-key lookup.
+  const r = await pool.query(sql, [factId]); // Execute query.
+  if (r.rowCount === 0) return null; // Not found.
+  const row: any = r.rows[0]; // Extract row.
+  const record = parseRecordJson(row.record_json); // Parse record_json.
+  if (!record) return null; // Fail-closed if JSON is malformed.
+  return { fact_id: String(row.fact_id), occurred_at: row.occurred_at, source: String(row.source), record_json: record }; // Return normalized row.
+}
+
+function buildDeterministicInterpretationId(receiptFactId: string, receiptRecordJson: any): string { // Compute a deterministic interpretation id from receipt fact.
+  const core = { receipt_fact_id: receiptFactId, receipt: receiptRecordJson }; // Deterministic core payload.
+  const h = sha256Hex(stableStringify(core)); // Deterministic hash.
+  return `agr_aoact_${h.slice(0, 24)}`; // Stable id with fixed prefix and hash prefix.
 }
 
 async function fetchRawSampleFacts(pool: Pool, subject: SubjectRef, window: Window): Promise<any[]> { // Load raw_sample_v1 facts from ledger for a window.
@@ -294,6 +314,83 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
         return reply.code(400).send({ ok: false, error: String(e?.message ?? e) }); // Return simple input/error payload.
       }
     });
+    app.post("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: write a read-only interpretation fact from an AO-ACT receipt (no AO-ACT mutation).
+  try {
+    const body = z
+      .object({
+        receipt_fact_id: z.string().min(1), // Receipt fact_id to interpret (ledger pointer).
+        meta: z.record(z.any()).optional() // Optional audit meta for this interpretation write.
+      })
+      .parse((req as any).body ?? {}); // Parse request body.
+
+    const receiptRow = await fetchFactByFactId(pool, body.receipt_fact_id); // Load receipt fact row from ledger.
+    if (!receiptRow) return reply.code(400).send({ ok: false, error: "UNKNOWN_RECEIPT_FACT" }); // Require receipt fact existence.
+
+    const receiptRecord = receiptRow.record_json; // Extract parsed receipt record_json.
+    if (receiptRecord?.type !== "ao_act_receipt_v0") return reply.code(400).send({ ok: false, error: "RECEIPT_FACT_TYPE_MISMATCH" }); // Enforce AO-ACT receipt type.
+
+    const interpretation_id = buildDeterministicInterpretationId(body.receipt_fact_id, receiptRecord); // Compute deterministic interpretation id.
+    const created_at_ts = Date.now(); // Local timestamp for audit (facts.occurred_at remains authoritative).
+
+    const record_json = {
+      type: "agronomy_ao_act_receipt_interpretation_v0", // New Sprint 13 fact type (Agronomy-only, append-only).
+      schema_version: "0", // Contract version marker.
+      payload: {
+        interpretation_id, // Deterministic interpretation id.
+        receipt_fact_id: body.receipt_fact_id, // Pointer to source receipt fact.
+        act_task_id: receiptRecord?.payload?.act_task_id ?? null, // Echo act_task_id if present (pointer-only).
+        status: receiptRecord?.payload?.status ?? null, // Echo receipt status if present.
+        execution_time: receiptRecord?.payload?.execution_time ?? null, // Echo execution time if present.
+        execution_coverage: receiptRecord?.payload?.execution_coverage ?? null, // Echo execution coverage if present.
+        constraint_check: receiptRecord?.payload?.constraint_check ?? null, // Echo constraint check if present.
+        observed_parameters: receiptRecord?.payload?.observed_parameters ?? null, // Echo observed parameters if present.
+        created_at_ts, // Interpretation creation time (ms).
+        meta: body.meta // Optional audit meta.
+      }
+    }; // Record payload is strictly derived from receipt + local audit meta.
+
+    const fact_id = randomUUID(); // New ledger fact_id (append-only).
+    const source = "agronomy_v0"; // facts.source marker for write provenance.
+
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", // Append-only write into ledger.
+      [fact_id, source, record_json] // Provide args (fact_id, source, record_json).
+    );
+
+    return reply.send({ ok: true, fact_id, interpretation_id }); // Return created fact pointer + deterministic id.
+  } catch (e: any) {
+    return reply.code(400).send({ ok: false, error: String(e?.message ?? e) }); // Return input/error payload.
+  }
+});
+
+app.get("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: read interpretations by interpretation_id (read-only query).
+  try {
+    const q = z
+      .object({ interpretation_id: z.string().min(1) })
+      .parse((req as any).query ?? {}); // Parse query.
+
+    const sql = `
+      SELECT fact_id, occurred_at, source, record_json
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'agronomy_ao_act_receipt_interpretation_v0'
+        AND (record_json::jsonb#>>'{payload,interpretation_id}') = $1
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 20
+    `; // Deterministic ordering for stable reads.
+
+    const r = await pool.query(sql, [q.interpretation_id]); // Execute read.
+    const rows = r.rows.map((row: any) => ({
+      fact_id: String(row.fact_id), // Fact id.
+      occurred_at: row.occurred_at, // Occurred at.
+      source: String(row.source), // Source.
+      record_json: parseRecordJson(row.record_json) // Parsed record_json.
+    }));
+    return reply.send({ ok: true, rows }); // Return rows.
+  } catch (e: any) {
+    return reply.code(400).send({ ok: false, error: String(e?.message ?? e) }); // Return error payload.
+  }
+});
+
 
   }; // End plugin function.
 
