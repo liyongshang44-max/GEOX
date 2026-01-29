@@ -23,6 +23,7 @@ import type {
 } from "@geox/contracts";
 import { isMarkerKind } from "@geox/contracts"; // marker kind 的 allowlist（合约侧）
 
+
 import { AppleIReader } from "../../judge/src/applei_reader"; // Judge 读事实（AppleIReader）
 import { JudgeRuntime } from "../../judge/src/runtime"; // Judge Runtime
 import { registerJudgeRoutes } from "../../judge/src/routes"; // Judge 路由
@@ -31,6 +32,7 @@ import { registerSimConfigRoutes } from "./routes/sim_config"; // sim config 路
 import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // AO-SENSE 控制路由
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
+import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1"; // 农艺解释 v1 路由
 
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
@@ -150,6 +152,8 @@ registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
 
 registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
+registerAgronomyInterpretationV1Routes(app, pool); // 注册 agronomy interpretation v1 路由
+
 
 app.register(multipart, {
   limits: {
