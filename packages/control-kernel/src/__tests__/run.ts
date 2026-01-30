@@ -8,6 +8,8 @@ import assert from "node:assert";
 import { evaluateControlV0 } from "../kernel";
 import type { ControlRuleSetV0 } from "../ruleset/types";
 
+import "./no_ruleset_loader";// 负向验收：禁止 runtime ruleset loader
+
 // Helper: expect a function to throw and match an error substring.
 function expectThrows(fn: () => void, contains: string): void {
   // Track if we observed a throw.
