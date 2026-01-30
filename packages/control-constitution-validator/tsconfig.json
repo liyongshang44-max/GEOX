@@ -3,11 +3,11 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "baseUrl": ".",
-    "paths": {},
-    "esModuleInterop": true
+
+    "resolveJsonModule": true, // 允许 TypeScript 将 .json 作为模块导入（供 tests 使用）
+    "esModuleInterop": true, // 兼容 CommonJS/ESM 互操作，确保 default import 行为稳定
+    "allowSyntheticDefaultImports": true, // 允许对没有 default export 的模块使用 default import（JSON 模块常见）
+    "moduleResolution": "node" // 使用 Node 模块解析规则，避免 ts-node 下解析差异
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

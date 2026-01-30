@@ -1,0 +1,19 @@
+{
+  "type": "control_ruleset_v0",
+  "schema_version": "0.1.0",
+  "ruleset_id": "bad_combine_strategy_001",
+  "action_code": "AO-SENSE",
+  "combine_strategy": "MOST_PERMISSIVE",
+  "default_verdict": "UNDETERMINED",
+  "inputs_used": ["problem_state.problem_type"],
+  "allowed_template_ids": ["FIELD_EXISTS"],
+  "rules": [
+    {
+      "rule_id": "r1",
+      "rule_version": "0.1.0",
+      "template_id": "FIELD_EXISTS",
+      "expr": { "template_id": "FIELD_EXISTS", "field_path": "problem_state.problem_type" },
+      "verdict": "DENY"
+    }
+  ]
+}
