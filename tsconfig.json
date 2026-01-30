@@ -10,7 +10,8 @@
 
     "baseUrl": ".",
     "paths": {
-      "@geox/contracts": ["packages/contracts/src/index.ts"]
+      "@geox/contracts": ["packages/contracts/src/index.ts"],
+      "@geox/control-kernel": ["packages/control-kernel/src/index.ts"]
     }
   }
 }

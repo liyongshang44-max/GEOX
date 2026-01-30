@@ -1,0 +1,19 @@
+{
+  "name": "@geox/control-kernel",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@geox/contracts": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "ts-node -P tsconfig.json src/__tests__/run.ts"
+  }
+}

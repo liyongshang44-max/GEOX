@@ -1,0 +1,17 @@
+﻿GEOX Freeze Export (Sprint16)
+Exported from: main
+Export file: GEOX_freeze_sprint16.zip
+
+Anchors (must verify):
+- main HEAD:
+  c46c69d81ccade172d5f3a89623863d72da8109a
+- tag sprint14_agronomy_interpretation_v1_explain_only:
+  da40538d9be982e50300bef35c3d893e5137f1a5
+- tag sprint16_decision_plan_v0_non_coupling:
+  c46c69d81ccade172d5f3a89623863d72da8109a
+
+Remote (optional):
+- origin/main:
+  c46c69d81ccade172d5f3a89623863d72da8109a
+ZIP_SHA256: 760431EE7BA293ADBB74DD7593CBCEF97B5C8A4E1530F69EDE1BD433016B6F1D
+
