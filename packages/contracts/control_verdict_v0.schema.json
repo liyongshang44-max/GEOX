@@ -12,45 +12,78 @@
     "subjectRef",
     "window",
     "action_code",
-    "verdict"
+    "verdict",
+    "ruleset_ref",
+    "ruleset_status"
   ],
   "properties": {
     "type": { "const": "control_verdict_v0" },
+
     "schema_version": {
       "type": "string",
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
     },
+
     "verdict_id": { "type": "string", "minLength": 1 },
-    "evaluated_at_ts": { "type": "integer" },
+
+    "evaluated_at_ts": { "type": "integer", "minimum": 0 },
+
     "subjectRef": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "projectId": { "type": "string" },
-        "groupId": { "type": "string" },
-        "plotId": { "type": "string" },
-        "blockId": { "type": "string" }
-      }
+        "projectId": { "type": "string", "minLength": 1 },
+        "groupId": { "type": "string", "minLength": 1 },
+        "plotId": { "type": "string", "minLength": 1 },
+        "blockId": { "type": "string", "minLength": 1 }
+      },
+      "anyOf": [
+        { "required": ["projectId"] },
+        { "required": ["groupId"] },
+        { "required": ["plotId"] },
+        { "required": ["blockId"] }
+      ]
     },
+
     "window": {
       "type": "object",
       "additionalProperties": false,
       "required": ["startTs", "endTs"],
       "properties": {
-        "startTs": { "type": "integer" },
-        "endTs": { "type": "integer" }
+        "startTs": { "type": "integer", "minimum": 0 },
+        "endTs": { "type": "integer", "minimum": 0 }
       }
     },
+
     "action_code": { "type": "string", "minLength": 1 },
+
     "verdict": {
       "type": "string",
       "enum": ["ALLOW", "DENY", "UNDETERMINED"]
     },
-    "rule_ref": { "type": "string" },
+
+    "rule_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Audit-only reference to a rule identifier (if applicable). Must not be consumed for gating, ordering, triggering, or scheduling."
+    },
+
     "input_refs": {
       "type": "array",
-      "items": { "type": "string" }
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Audit-only references to input evidence identifiers. Must not be consumed for gating, ordering, triggering, or scheduling."
+    },
+
+    "ruleset_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Audit-only reference to the ruleset version used for this verdict (e.g., git tag, commit sha, or bundle digest). Must not be consumed for gating, ordering, triggering, or scheduling."
+    },
+
+    "ruleset_status": {
+      "type": "string",
+      "enum": ["APPLIED", "MISSING", "INVALID"],
+      "description": "Audit-only ruleset application status. Must not be consumed for gating, ordering, triggering, or scheduling."
     }
   }
 }
-

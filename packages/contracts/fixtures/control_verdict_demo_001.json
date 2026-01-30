@@ -6,5 +6,7 @@
   "subjectRef": { "projectId": "demo_project" },
   "window": { "startTs": 1700000000000, "endTs": 1700000001000 },
   "action_code": "AO-SENSE",
-  "verdict": "UNDETERMINED"
+  "verdict": "UNDETERMINED",
+  "ruleset_ref": "control_ruleset_write_guard_v0",
+  "ruleset_status": "APPLIED"
 }
