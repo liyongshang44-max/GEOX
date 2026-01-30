@@ -1,0 +1,16 @@
+{
+  "name": "@geox/control-constitution-validator",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "ts-node -P tsconfig.json src/__tests__/run.ts"
+  },
+  "dependencies": {
+    "zod": "^3.23.0",
+    "@geox/contracts": "workspace:*",
+    "@geox/control-kernel": "workspace:*"
+  }
+}
