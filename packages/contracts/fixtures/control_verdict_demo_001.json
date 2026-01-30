@@ -1,0 +1,10 @@
+{
+  "type": "control_verdict_v0",
+  "schema_version": "0.1.0",
+  "verdict_id": "demo_verdict_001",
+  "evaluated_at_ts": 1700000000000,
+  "subjectRef": { "projectId": "demo_project" },
+  "window": { "startTs": 1700000000000, "endTs": 1700000001000 },
+  "action_code": "AO-SENSE",
+  "verdict": "UNDETERMINED"
+}
