@@ -1,0 +1,27 @@
+{
+  "type": "control_ruleset_v0",
+  "schema_version": "0.1.0",
+  "ruleset_id": "demo_ruleset_invalid_001",
+  "action_code": "AO-SENSE",
+  "combine_strategy": "DENY_OVERRIDES",
+  "default_verdict": "UNDETERMINED",
+  "inputs_used": [
+    "problem_state.problem_type"
+  ],
+  "allowed_template_ids": [
+    "FIELD_EQ"
+  ],
+  "rules": [
+    {
+      "rule_id": "r001",
+      "rule_version": "0.1.0",
+      "template_id": "FIELD_EQ",
+      "expr": {
+        "template_id": "FIELD_EQ",
+        "field_path": "problem_state.problem_type",
+        "value": 123
+      },
+      "verdict": "DENY"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "action_code": "AO-SENSE",
+  "problem_state": {
+    "subjectRef": { "projectId": "demo_project", "groupId": "demo_group" },
+    "window": { "startTs": 1700000000000, "endTs": 1700003600000 },
+    "problem_type": "DEMO"
+  },
+  "uncertainty_envelope": {
+    "problem_state_ref": "ps_demo_001",
+    "uncertainty_sources": [],
+    "supporting_evidence_refs": []
+  },
+  "permission_set": {
+    "subjectRef": { "projectId": "demo_project", "groupId": "demo_group" },
+    "window": { "startTs": 1700000000000, "endTs": 1700003600000 },
+    "candidate_actions": [{ "action_code": "AO-SENSE" }]
+  }
+}

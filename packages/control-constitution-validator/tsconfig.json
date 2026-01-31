@@ -1,13 +1,22 @@
-{
+﻿{
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@geox/control-kernel": ["../control-kernel/dist/index.d.ts"],
+      "@geox/control-kernel/*": ["../control-kernel/dist/*"]
+    },
 
-    "resolveJsonModule": true, // 允许 TypeScript 将 .json 作为模块导入（供 tests 使用）
-    "esModuleInterop": true, // 兼容 CommonJS/ESM 互操作，确保 default import 行为稳定
-    "allowSyntheticDefaultImports": true, // 允许对没有 default export 的模块使用 default import（JSON 模块常见）
-    "moduleResolution": "node" // 使用 Node 模块解析规则，避免 ts-node 下解析差异
+    "resolveJsonModule": true, // 鍏佽 TypeScript 灏?.json 浣滀负妯″潡瀵煎叆锛堜緵 tests 浣跨敤锛?
+    "esModuleInterop": true, // 鍏煎 CommonJS/ESM 浜掓搷浣滐紝纭繚 default import 琛屼负绋冲畾
+    "allowSyntheticDefaultImports": true, // 鍏佽瀵规病鏈?default export 鐨勬ā鍧椾娇鐢?default import锛圝SON 妯″潡甯歌锛?
+    "moduleResolution": "node" // 浣跨敤 Node 妯″潡瑙ｆ瀽瑙勫垯锛岄伩鍏?ts-node 涓嬭В鏋愬樊寮?
   },
   "include": ["src/**/*.ts"]
 }
+
+

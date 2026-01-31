@@ -46,3 +46,7 @@ sim_config_manifest.json
 # runtime media (do not commit)
 apps/server/media/
 
+
+# build artifacts accidentally emitted into src
+packages/control-kernel/src/**/*.js
+

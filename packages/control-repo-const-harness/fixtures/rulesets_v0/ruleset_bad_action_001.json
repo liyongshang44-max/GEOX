@@ -1,0 +1,22 @@
+{
+  "type": "control_ruleset_v0",
+  "schema_version": "0.1.0",
+  "ruleset_id": "ruleset_bad_action_001",
+  "action_code": "AO-UNKNOWN",
+  "combine_strategy": "DENY_OVERRIDES",
+  "default_verdict": "UNDETERMINED",
+  "inputs_used": ["problem_state.problem_type"],
+  "allowed_template_ids": ["FIELD_EXISTS"],
+  "rules": [
+    {
+      "rule_id": "r1",
+      "rule_version": "0.1.0",
+      "template_id": "FIELD_EXISTS",
+      "verdict": "DENY",
+      "template": {
+        "template_id": "FIELD_EXISTS",
+        "field_path": "problem_state.problem_type"
+      }
+    }
+  ]
+}

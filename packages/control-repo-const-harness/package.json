@@ -1,0 +1,15 @@
+{
+  "name": "@geox/control-repo-const-harness",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pretest": "pnpm -C ../control-kernel build && pnpm -C ../control-constitution-validator build",
+    "test": "ts-node -P tsconfig.json src/__tests__/run.ts"
+  }
+}
+
+

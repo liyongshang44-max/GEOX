@@ -1,0 +1,34 @@
+{
+  "type": "control_ruleset_v0",
+  "schema_version": "0.1.0",
+  "ruleset_id": "asset_ok_deny_demo_001",
+  "action_code": "AO-SENSE",
+  "combine_strategy": "DENY_OVERRIDES",
+  "default_verdict": "UNDETERMINED",
+  "inputs_used": [
+    "problem_state.problem_type",
+    "permission_set.candidate_actions[].action_code"
+  ],
+  "allowed_template_ids": [
+    "FIELD_EQ",
+    "FIELD_IN",
+    "FIELD_EXISTS",
+    "SET_INTERSECTS",
+    "WINDOW_MATCH",
+    "LOGICAL_AND",
+    "LOGICAL_OR_NOT"
+  ],
+  "rules": [
+    {
+      "rule_id": "r001",
+      "rule_version": "0.1.0",
+      "template_id": "FIELD_EQ",
+      "expr": {
+        "template_id": "FIELD_EQ",
+        "field_path": "problem_state.problem_type",
+        "value": "DEMO"
+      },
+      "verdict": "DENY"
+    }
+  ]
+}

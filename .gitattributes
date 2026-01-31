@@ -1,0 +1,14 @@
+﻿# GEOX: normalize text files to LF in repo
+* text=auto eol=lf
+
+# source + docs
+*.ts  text eol=lf
+*.tsx text eol=lf
+*.js  text eol=lf
+*.json text eol=lf
+*.md  text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# windows scripts can stay CRLF if you prefer (optional)
+*.ps1 text eol=crlf

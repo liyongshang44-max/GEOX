@@ -1,0 +1,26 @@
+﻿{
+    "extends":  "../../tsconfig.json",
+    "compilerOptions":  {
+                            "outDir":  "dist",
+                            "rootDir":  "src",
+                            "baseUrl":  ".",
+                            "paths":  {
+                                          "@geox/control-constitution-validator/*":  [
+                                                                                         "../control-constitution-validator/dist/*"
+                                                                                     ],
+                                          "@geox/control-kernel":  [
+                                                                       "../control-kernel/dist/index"
+                                                                   ],
+                                          "@geox/control-kernel/*":  [
+                                                                         "../control-kernel/dist/*"
+                                                                     ],
+                                          "@geox/control-constitution-validator":  [
+                                                                                       "../control-constitution-validator/dist/index"
+                                                                                   ]
+                                      }
+                        },
+    "include": ["src/**/*.ts"]
+}
+
+
+
