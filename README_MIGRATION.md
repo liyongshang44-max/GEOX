@@ -379,3 +379,24 @@ If a sprint has no dedicated tag, it must be anchored via explicit repo paths (i
 Any future sprint (e.g., Sprint 17 Execution Adapter v0) must follow the same discipline:
 
 Define tag + acceptance entrypoints + hard boundaries, all recorded here in the same commit.
+## Sprint 17 · Apple III · Execution Adapter v0
+
+Tag: apple_iii_execution_adapter_v0
+
+Scope:
+- AO-ACT executor adapter (runtime) established: explicit task → executor → receipt → facts
+- Two adapters: sim + device (device via internal gateway stub for acceptance/demo only)
+- No new governance, no new rules, no auto-decision, no ProblemState → AO-ACT auto-trigger
+
+Hard boundaries:
+- NOT a scheduler: default does not run; primary entry is explicit `--taskFactId` / `--actTaskId`
+- `--once` / index-pick mode is demo-only and fixed to: pick first task with no receipt (no other filtering)
+- Executor only calls AO-ACT endpoints: POST /task, POST /receipt, GET /index
+- No changes to AO-ACT v0 contracts/schemas; no changes to Judge/Agronomy semantics; no runtime ruleset discovery/loading
+
+Acceptance:
+- powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_EXECUTOR_V0.ps1
+
+Notes:
+- Server route registration for AO-ACT is required (apps/server/src/server.ts registers control_ao_act routes).
+Index-only update (post-tag). No code changes.
