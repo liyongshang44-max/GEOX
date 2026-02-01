@@ -1,0 +1,32 @@
+GEOX · Sprint 17 Patch (Implementation-only)
+
+This patch adds only new implementation-layer scripts + documentation.
+It does NOT modify:
+- AO-ACT v0 contracts/schemas
+- Judge/Agronomy read boundaries and determinism discipline
+- Repo-const ruleset governance or kernel loading discipline
+
+Added files
+- docs/controlplane/GEOX-CP-AO-ACT-ExecutorAdapter-v0.md
+- scripts/ao_act_executor/ao_act_client_v0.cjs
+- scripts/ao_act_executor/receipt_builder_v0.cjs
+- scripts/ao_act_executor/device_gateway_stub_v0.cjs
+- scripts/ao_act_executor/ao_act_executor_sim_v0.cjs
+- scripts/ao_act_executor/ao_act_executor_device_v0.cjs
+- scripts/ACCEPTANCE_AO_ACT_EXECUTOR_V0.ps1
+- scripts/ACCEPTANCE_AO_ACT_EXECUTOR_V0_RUNNER.cjs
+
+How to run acceptance (Windows / PowerShell)
+- Ensure apps/server is running and reachable.
+- powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_EXECUTOR_V0.ps1
+
+Expected outcome
+- Creates a task, runs sim executor to write a receipt, verifies via index.
+- Creates a task, runs device executor (with local stub gateway) to write a receipt, verifies via index.
+- Verifies a negative guard: only /task, /receipt, /index are called by the executor adapters (via shared request log).
+
+Artifacts
+- Acceptance writes under: acceptance/ao_act_executor_v0_<timestamp>/
+  - summary.json
+  - request_log.jsonl
+  - per-case stdout/stderr and task responses

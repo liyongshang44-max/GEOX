@@ -30,6 +30,7 @@ import { registerJudgeRoutes } from "../../judge/src/routes"; // Judge 路由
 import { registerJudgeConfigRoutes } from "./routes/judge_config"; // judge config 路由
 import { registerSimConfigRoutes } from "./routes/sim_config"; // sim config 路由
 import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // AO-SENSE 控制路由
+import { registerControlAoActRoutes } from "./routes/control_ao_act"; // AO-ACT 控制路由
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
 import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1"; // 农艺解释 v1 路由
@@ -151,6 +152,7 @@ registerSimConfigRoutes(app); // 注册 sim config 路由
 registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
 
 registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
+registerControlAoActRoutes(app, pool); // 注册 AO-ACT 控制路由
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app, pool); // 注册 agronomy interpretation v1 路由
 
