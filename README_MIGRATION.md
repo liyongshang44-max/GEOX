@@ -400,3 +400,129 @@ Acceptance:
 Notes:
 - Server route registration for AO-ACT is required (apps/server/src/server.ts registers control_ao_act routes).
 Index-only update (post-tag). No code changes.
+
+
+Sprint 18 · Apple III · AO-ACT Audit Tools v0 (Offline Evidence Pack + Integrity Check)
+
+Tag: apple_iii_ao_act_audit_tools_v0
+
+Scope (what is frozen)
+
+AO-ACT 的离线审计工具链，仅用于事实回放与一致性校验：
+
+Evidence Pack v0
+
+从 facts 账本中 离线导出 某一 act_task_id 对应的：
+
+task fact
+
+receipts（按冻结顺序规则）
+
+refs（仅指针集合，不解析内容）
+
+Integrity Check v0
+
+对同一 act_task_id 做 只读一致性校验
+
+输出独立的 integrity_report_v0
+
+该 Sprint 不新增任何 runtime 能力，仅提供 DB-only / offline audit tooling。
+
+What this Sprint explicitly adds (frozen)
+
+Offline tools (DB-only):
+
+scripts/audit/ao_act_evidence_pack_v0.cjs
+
+scripts/audit/ao_act_integrity_check_v0.cjs
+
+_env_v0.cjs / _db_v0.cjs（仅工具内部依赖）
+
+Acceptance (proof of invariants):
+
+scripts/ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
+
+scripts/ACCEPTANCE_AO_ACT_AUDIT_V0_RUNNER.cjs
+
+Governance documentation:
+
+docs/controlplane/GEOX-CP-AO-ACT-AuditTools-v0.md
+
+Explicit non-goals (hard boundaries)
+
+以下能力 明确不在本 Sprint 内，且被 acceptance 间接约束：
+
+NOT a server feature
+
+不新增 API endpoint
+
+不提供 list / queue / discovery
+
+不引入任何 audit HTTP 接口
+
+NOT runtime execution
+
+工具不参与任务执行
+
+不被 executor / scheduler 调用
+
+NOT governance mutation
+
+不写入任何新 fact type
+
+不影响 determinism_hash
+
+不进入 Judge / Agronomy 语义路径
+
+NOT interpretation
+
+不解析 logs / refs 内容
+
+只收集 pointer（existence-level）
+
+Acceptance / Reproducibility (frozen proof)
+
+Primary acceptance entrypoint:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
+
+
+Acceptance 证明以下不变量成立：
+
+Evidence Pack 类型、排序规则、字段结构固定
+
+Task / Receipt 事实来源于账本（append-only）
+
+Receipt 顺序规则冻结为 fact_id_lex_asc
+
+Integrity report 必须 ok = true 且 errors 为空
+
+工具链仅触达 AO-ACT 三个既有 server 端点（task / receipt / index）
+
+Ordering & determinism guarantees (frozen)
+
+Evidence Pack 类型：ao_act_receipt_evidence_pack_v0
+
+Receipt ordering rule：fact_id_lex_asc
+
+同一输入账本状态下，Evidence Pack 输出 确定性可重现
+
+Hard boundaries (must remain true)
+
+Audit Tools 只读 facts
+
+不产生 side effects
+
+不引入新的系统入口
+
+不改变任何已有 Sprint 的治理语义
+
+可随时删除、重跑、回放，不影响系统状态
+
+Notes
+
+本 Sprint 是 审计能力补齐，不是系统行为扩展
+
+所有 audit 输出均为 派生物（derived artifacts）
+
+若未来引入 audit API / audit fact，必须单独开 Sprint，并先冻结 Audit Non-Goals
