@@ -1,0 +1,45 @@
+GEOX · Sprint 18 · AO-ACT Audit Tools v0 (Evidence Pack + Integrity Check) — Patch Manifest
+
+1) Change list (新增/修改)
+
+新增（offline audit tools, DB-only）
+- scripts/audit/_env_v0.cjs
+- scripts/audit/_db_v0.cjs
+- scripts/audit/ao_act_evidence_pack_v0.cjs
+- scripts/audit/ao_act_integrity_check_v0.cjs
+
+新增（acceptance）
+- scripts/ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
+- scripts/ACCEPTANCE_AO_ACT_AUDIT_V0_RUNNER.cjs
+
+新增（docs）
+- docs/controlplane/GEOX-CP-AO-ACT-AuditTools-v0.md
+
+2) Run (最短运行方式)
+
+前置：server 已在 http://127.0.0.1:3000 运行，且 host 可连 Postgres 127.0.0.1:5432
+
+A) Acceptance（推荐）
+- powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
+
+可选：指定 baseUrl
+- $env:GEOX_BASE_URL = "http://127.0.0.1:3000"
+- powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
+
+B) 手动运行工具（DB-only）
+- node scripts/audit/ao_act_evidence_pack_v0.cjs --actTaskId <id> --out .\acceptance\evidence_pack.json
+- node scripts/audit/ao_act_integrity_check_v0.cjs --actTaskId <id> --out .\acceptance\integrity_report.json
+
+3) Risks (风险点 + 临时缓解)
+
+- 风险：host shell 未配置 DATABASE_URL，且 docker-compose 中 server 使用 postgres:5432（容器内），导致离线脚本无法连 DB。
+  缓解：在 host 设置 DATABASE_URL=postgres://landos:landos_pwd@127.0.0.1:5432/landos 或设置 PGHOST/PGPORT/PGDATABASE/PGUSER/PGPASSWORD。
+
+- 风险：Evidence pack 的 raw record_json 可能被误当成 runtime 依赖或 UI 工作流入口。
+  缓解：文档明确 non-goals：无 endpoint、无 list、无 discovery；acceptance 负向断言仅触 AO-ACT 三端点。
+
+4) Next (下一轮，不超过 3 条)
+
+1) 若要引入 server audit endpoint：必须先冻结“AO-ACT Audit API Non-Goals v0”并添加负向验收（禁止 list/queue/discovery）。
+2) 若要写 audit_report_v0 fact：需显式接受新 fact type，并冻结其不进入 Judge/Agronomy、且不参与 determinism hash。
+3) 若要扩展 refs 校验：只能做 pointer existence 的保守检查（不解析/不拉取内容）。
