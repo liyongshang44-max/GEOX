@@ -526,3 +526,42 @@ Notes
 所有 audit 输出均为 派生物（derived artifacts）
 
 若未来引入 audit API / audit fact，必须单独开 Sprint，并先冻结 Audit Non-Goals
+
+
+Sprint 19 · Apple III · AO-ACT AuthZ Contract v0 (Token/Scope + Revocation + Audit Fact)
+
+Purpose (scope)
+
+为 AO-ACT 引入最小商用安全边界：
+
+- Token/Scope：写 task / 写 receipt / 读 index 的最小授权
+- 默认 deny-all
+- 可撤销（撤销对后续请求立即生效）
+- 可追责：授权通过时写入 append-only 审计 fact（不修改 task/receipt contract）
+
+Key files (frozen paths)
+
+docs/controlplane/GEOX-CP-AO-ACT-AuthZ-Contract-v0.md
+
+config/auth/ao_act_tokens_v0.json
+
+apps/server/src/auth/ao_act_authz_v0.ts
+
+apps/server/src/routes/control_ao_act.ts
+
+packages/contracts/ao_act_authz_audit_v0.schema.json
+
+Acceptance / Reproducibility
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUTHZ_V0.ps1
+
+Negative guarantees (must remain true)
+
+- 无 token 不能写 task
+- 低权限 token 不能写 receipt
+- token 撤销后立即拒绝
+- 不引入 IAM / scheduler / auto-trigger / queue
+
+Tag (to be created after verification)
+
+apple_iii_ao_act_authz_v0

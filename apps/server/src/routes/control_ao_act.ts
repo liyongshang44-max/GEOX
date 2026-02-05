@@ -5,6 +5,8 @@ import type { Pool } from "pg"; // Postgres pool typing
 import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
 
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
+
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
 export const AO_ACT_ACTION_TYPE_ALLOWLIST_V0 = [
   "PLOW",
@@ -15,6 +17,8 @@ export const AO_ACT_ACTION_TYPE_ALLOWLIST_V0 = [
   "TRANSPORT",
   "HARVEST"
 ] as const; // Frozen minimal set
+
+const FACT_SOURCE_AO_ACT_V0 = "api/control/ao_act"; // Source label for facts written by AO-ACT routes (DB NOT NULL constraint).
 
 const FORBID_KEYS_V0 = new Set<string>([
   "problem_state_id",
@@ -162,12 +166,20 @@ function validateObservedParametersSubset(
   }
 }
 
+function normalizeRecordJson(v: unknown): any { // Normalize record_json returned by pg when column type may be jsonb or text.
+  if (v === null || v === undefined) return null; // Null-safe.
+  if (typeof v === "string") { // When record_json column is TEXT, pg returns string.
+    try { return JSON.parse(v); } catch { return null; } // Best-effort parse; invalid JSON treated as null.
+  }
+  return v; // For json/jsonb, pg already returns object.
+} // End normalizeRecordJson.
+
 async function findAoActTaskByActTaskId(pool: Pool, actTaskId: string): Promise<any | null> {
   const sql = `
-    SELECT fact_id, record_json
+    SELECT fact_id, (record_json::jsonb) AS record_json
     FROM facts
-    WHERE record_json->>'type' = 'ao_act_task_v0'
-      AND record_json#>>'{payload,act_task_id}' = $1
+    WHERE (record_json::jsonb)->> 'type' = 'ao_act_task_v0'
+      AND (record_json::jsonb)#>> '{payload,act_task_id}' = $1
     ORDER BY occurred_at DESC
     LIMIT 1
   `;
@@ -176,10 +188,40 @@ async function findAoActTaskByActTaskId(pool: Pool, actTaskId: string): Promise<
   return r.rows[0].record_json;
 }
 
+async function writeAoActAuthzAuditFactV0(
+  pool: Pool,
+  input: {
+    event: "task_write" | "receipt_write" | "index_read"; // Event type for audit trail.
+    actor_id: string; // Actor id from auth context.
+    token_id: string; // Token id from auth context.
+    target_fact_id?: string; // Optional created fact id.
+    act_task_id?: string; // Optional act_task_id related to the event.
+  }
+): Promise<void> {
+  const record_json = {
+    type: "ao_act_authz_audit_v0",
+    payload: {
+      event: input.event,
+      actor_id: input.actor_id,
+      token_id: input.token_id,
+      target_fact_id: input.target_fact_id ?? null,
+      act_task_id: input.act_task_id ?? null,
+      created_at_ts: Date.now()
+    }
+  };
+  const fact_id = randomUUID();
+  await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]);
+}
+
 export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
+  // No shared helper here; audit facts are written via writeAoActAuthzAuditFactV0(...) to keep schema stable.
+
   // POST /api/control/ao_act/task
   app.post("/api/control/ao_act/task", async (req, reply) => {
     try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      if (!auth) return;
+
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
 
@@ -255,9 +297,17 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
       const fact_id = randomUUID();
       await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, record_json) VALUES ($1, NOW(), $2::jsonb)",
-        [fact_id, record_json]
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]
       );
+
+      await writeAoActAuthzAuditFactV0(pool, {
+        event: "task_write",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        target_fact_id: fact_id,
+        act_task_id
+      });
 
       return reply.send({ ok: true, fact_id, act_task_id });
     } catch (e: any) {
@@ -268,6 +318,9 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
   // POST /api/control/ao_act/receipt
   app.post("/api/control/ao_act/receipt", async (req, reply) => {
     try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+      if (!auth) return;
+
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
 
@@ -335,9 +388,17 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
       const fact_id = randomUUID();
       await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, record_json) VALUES ($1, NOW(), $2::jsonb)",
-        [fact_id, record_json]
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]
       );
+
+      await writeAoActAuthzAuditFactV0(pool, {
+        event: "receipt_write",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        target_fact_id: fact_id,
+        act_task_id: body.act_task_id
+      });
 
       return reply.send({ ok: true, fact_id });
     } catch (e: any) {
@@ -346,6 +407,9 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
   });
 
   app.get("/api/control/ao_act/index", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Enforce token scope for index reads.
+    if (!auth) return; // Halt if missing/invalid/insufficient.
+
     const q = z
       .object({ act_task_id: z.string().optional() })
       .strict()
@@ -359,6 +423,12 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
     try {
       const out = await pool.query(viewSql, viewArgs);
+      await writeAoActAuthzAuditFactV0(pool, {
+        event: "index_read",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        act_task_id: q.act_task_id
+      });
       return reply.send({ ok: true, rows: out.rows });
     } catch (e: any) {
       // Fallback: compute index inline from facts if the view is not present (keeps acceptance runnable on existing DBs).
@@ -463,6 +533,12 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
       const inlineArgs = q.act_task_id ? [q.act_task_id] : [];
       const out = await pool.query(inlineSql, inlineArgs);
+      await writeAoActAuthzAuditFactV0(pool, {
+        event: "index_read",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        act_task_id: q.act_task_id
+      });
       return reply.send({ ok: true, rows: out.rows, note: "inline_fallback" });
     }
   });

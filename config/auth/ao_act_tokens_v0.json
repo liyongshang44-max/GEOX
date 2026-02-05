@@ -1,0 +1,26 @@
+{
+  "version": "ao_act_tokens_v0",
+  "tokens": [
+    {
+      "token": "dev_ao_act_admin_v0",
+      "token_id": "tok_dev_ao_act_admin_v0",
+      "actor_id": "dev",
+      "scopes": [
+        "ao_act.task.write",
+        "ao_act.receipt.write",
+        "ao_act.index.read"
+      ],
+      "revoked": false
+    },
+    {
+      "token": "dev_ao_act_task_only_v0",
+      "token_id": "tok_dev_ao_act_task_only_v0",
+      "actor_id": "dev",
+      "scopes": [
+        "ao_act.task.write",
+        "ao_act.index.read"
+      ],
+      "revoked": false
+    }
+  ]
+}
