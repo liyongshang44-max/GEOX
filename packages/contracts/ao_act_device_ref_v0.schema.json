@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ao_act_device_ref_v0_record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "payload"
+  ],
+  "properties": {
+    "type": {
+      "const": "ao_act_device_ref_v0"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executor_id",
+        "kind",
+        "content_type",
+        "content",
+        "created_at_ts"
+      ],
+      "properties": {
+        "executor_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id",
+            "namespace"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "human",
+                "script",
+                "device"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "namespace": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "log_text",
+            "trace_json",
+            "sensor_snippet_json",
+            "opaque"
+          ]
+        },
+        "content_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200000
+        },
+        "sha256": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 280
+        },
+        "created_at_ts": {
+          "type": "number"
+        },
+        "meta": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

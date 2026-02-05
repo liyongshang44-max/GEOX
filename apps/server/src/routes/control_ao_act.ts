@@ -252,6 +252,29 @@ async function writeAoActAuthzAuditFactV0(
   await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]);
 }
 
+async function assertAllDeviceRefsExistV0(
+  pool: Pool, // Postgres pool used to query the append-only facts ledger.
+  deviceRefs: Array<{ kind: string; ref: string }>
+): Promise<void> {
+  if (!Array.isArray(deviceRefs) || deviceRefs.length === 0) return; // Nothing to validate.
+
+  const ids = deviceRefs.map((r) => r.ref).filter((s) => typeof s === "string" && s.length > 0);
+  if (ids.length !== deviceRefs.length) throw new Error("DEVICE_REF_INVALID");
+
+  const sql = `
+    SELECT fact_id
+    FROM facts
+    WHERE fact_id = ANY($1::text[])
+      AND (record_json::jsonb)->> 'type' = 'ao_act_device_ref_v0'
+  `;
+  const r = await pool.query(sql, [ids]);
+  const found = new Set<string>((r.rows ?? []).map((row: any) => String(row.fact_id)));
+
+  for (const id of ids) {
+    if (!found.has(id)) throw new Error(`DEVICE_REF_NOT_FOUND:${id}`);
+  }
+}
+
 export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
   // No shared helper here; audit facts are written via writeAoActAuthzAuditFactV0(...) to keep schema stable.
 
@@ -285,6 +308,15 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
           }),
           parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
           constraints: z.record(z.union([z.number(), z.boolean(), z.string()])),
+          device_refs: z
+            .array(
+              z.object({
+                kind: z.literal("device_ref_fact"),
+                ref: z.string().min(8),
+                note: z.string().max(280).nullable().optional()
+              })
+            )
+            .optional(),
           meta: z.record(z.any()).optional()
         })
         .parse(req.body);
@@ -381,6 +413,15 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
           status: z.enum(["executed", "not_executed"]).optional(),
           constraint_check: z.object({ violated: z.boolean(), violations: z.array(z.string()) }),
           observed_parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
+          device_refs: z
+            .array(
+              z.object({
+                kind: z.literal("device_ref_fact"),
+                ref: z.string().min(8),
+                note: z.string().max(280).optional().nullable()
+              })
+            )
+            .optional(),
           meta: z.record(z.any()).optional()
         })
         
@@ -405,6 +446,11 @@ if (body.execution_time.start_ts > body.execution_time.end_ts) {
       
 const task = await findAoActTaskByActTaskId(pool, body.act_task_id);
 if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+
+// Sprint 21: device_refs are pointer-only. Validate existence only; never parse referenced content.
+if (Array.isArray((body as any).device_refs) && (body as any).device_refs.length > 0) {
+  await assertAllDeviceRefsExistV0(pool, (body as any).device_refs);
+}
 
 const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
   act_task_id: body.act_task_id, // Dedupe within this act_task_id.
@@ -440,6 +486,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           status: body.status,
           constraint_check: body.constraint_check,
           observed_parameters: body.observed_parameters,
+          device_refs: (body as any).device_refs,
           created_at_ts,
           meta: body.meta
         }

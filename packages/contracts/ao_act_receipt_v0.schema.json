@@ -189,6 +189,36 @@
         "created_at_ts": {
           "type": "number"
         },
+        "device_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "ref"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "device_ref_fact"
+                ]
+              },
+              "ref": {
+                "type": "string",
+                "minLength": 8
+              },
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 280
+              }
+            }
+          }
+        },
         "meta": {
           "type": "object"
         }

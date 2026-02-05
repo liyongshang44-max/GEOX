@@ -1,4 +1,4 @@
-﻿GEOX – Migration / Freeze Index (SSOT)
+GEOX – Migration / Freeze Index (SSOT)
 Constitution Role (SSOT)
 
 This file is the single, authoritative source of truth for:
@@ -601,3 +601,72 @@ Negative guarantees (must remain true)
 Tag (to be created after verification)
 
 apple_iii_ao_act_idempotency_v0
+
+Sprint 21 · Apple III · AO-ACT Device Adapter (L2) v0 (Protocol skeleton; pointer-only)
+
+Status
+
+- In progress (not frozen)
+
+Purpose (scope)
+
+为“真实设备接入”建立最小协议骨架：允许将设备侧材料作为 append-only facts 写入，并在 receipt 中以 refs 方式引用。
+
+Key behavior
+
+- 新增事实类型：ao_act_device_ref_v0（通过通用 /api/raw 写入）
+- ao_act_receipt_v0 可选字段 payload.device_refs[]：仅允许 kind=device_ref_fact + ref=fact_id
+- Server 端只做结构校验 + 存在性校验：ref 必须存在且 type=ao_act_device_ref_v0
+- 不解析 device_ref 的内容，不产生任何控制信号，不触碰 Judge/Agronomy
+
+Key files (draft paths)
+
+docs/controlplane/GEOX-CP-AO-ACT-DeviceAdapter-Contract-v0.md
+
+packages/contracts/ao_act_device_ref_v0.schema.json
+
+packages/contracts/ao_act_receipt_v0.schema.json
+
+apps/server/src/routes/control_ao_act.ts
+
+scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
+
+scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0_RUNNER.cjs
+
+Acceptance / Reproducibility
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
+
+Negative guarantees (must remain true)
+
+- 不引入实时控制 / 下发指令
+- 不解析 device_ref 内容
+- 不引入 scheduler / queue / auto-trigger
+- 不让设备结果写回 Judge
+
+Tag (to be created after verification)
+
+apple_iii_ao_act_device_adapter_v0
+
+GEOX 鈥?Sprint 21 AO-ACT Device Adapter v0 (L2) Freeze Snapshot (DRAFT)
+
+Tag: (pending)
+
+Purpose:
+Introduce a minimal, pointer-only device evidence contract for AO-ACT receipts without binding to any specific hardware and without introducing control/automation.
+
+Frozen files (SSOT):
+- docs/controlplane/GEOX-CP-AO-ACT-DeviceAdapter-Contract-v0.md
+- packages/contracts/ao_act_device_ref_v0.schema.json
+- packages/contracts/ao_act_receipt_v0.schema.json (adds optional device_refs[] pointer list)
+- apps/server/src/routes/control_ao_act.ts (receipt validates device_refs existence only)
+- scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
+- scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0_RUNNER.cjs
+
+Acceptance:
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0.ps1
+
+Hard boundaries (must remain true):
+- No device control, no realtime control, no scheduler/queue.
+- device_refs are pointers only; server does not parse device content.
+- No automatic writes into Judge or Agronomy as a side-effect of AO-ACT writes.
