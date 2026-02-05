@@ -188,6 +188,45 @@ async function findAoActTaskByActTaskId(pool: Pool, actTaskId: string): Promise<
   return r.rows[0].record_json;
 }
 
+
+async function findDuplicateAoActReceiptByIdempotencyKey(
+  pool: Pool, // Postgres pool used to query the append-only facts ledger.
+  input: { // Structured inputs used to scope the idempotency check.
+    act_task_id: string; // Target act_task_id to dedupe within.
+    executor_kind: string; // Executor kind for dedupe scope.
+    executor_id: string; // Executor id for dedupe scope.
+    executor_namespace: string; // Executor namespace for dedupe scope.
+    idempotency_key: string; // Executor-generated idempotency key (must be stable across retries).
+  } // Close input type.
+): Promise<{ fact_id: string } | null> { // Returns an existing fact_id if a duplicate is found.
+  const sql = `
+    SELECT fact_id
+    FROM facts
+    WHERE (record_json::jsonb)->> 'type' = 'ao_act_receipt_v0'
+      AND (record_json::jsonb)#>> '{payload,act_task_id}' = $1
+      AND (record_json::jsonb)#>> '{payload,executor_id,kind}' = $2
+      AND (record_json::jsonb)#>> '{payload,executor_id,id}' = $3
+      AND (record_json::jsonb)#>> '{payload,executor_id,namespace}' = $4
+      AND (record_json::jsonb)#>> '{payload,meta,idempotency_key}' = $5
+    ORDER BY occurred_at DESC
+    LIMIT 1
+  `; // Stable SQL that finds the most recent receipt matching the idempotency scope.
+
+  const r = await pool.query( // Execute query against ledger.
+    sql, // Provide SQL text.
+    [ // Provide positional args.
+      input.act_task_id, // Bind act_task_id.
+      input.executor_kind, // Bind executor kind.
+      input.executor_id, // Bind executor id.
+      input.executor_namespace, // Bind executor namespace.
+      input.idempotency_key // Bind idempotency key.
+    ] // End args.
+  ); // End query.
+  if (r.rowCount === 0) return null; // No duplicate found.
+  return { fact_id: String(r.rows[0].fact_id) }; // Return existing fact id for diagnostics.
+} // End findDuplicateAoActReceiptByIdempotencyKey.
+
+
 async function writeAoActAuthzAuditFactV0(
   pool: Pool,
   input: {
@@ -344,9 +383,16 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
           observed_parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
           meta: z.record(z.any()).optional()
         })
-        .parse(req.body);
+        
+  .parse(req.body);
 
-      if (body.execution_time.start_ts > body.execution_time.end_ts) {
+const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim(); // Read executor-generated idempotency key from receipt meta.
+if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
+  return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
+} // End idempotency key guard.
+
+if (body.execution_time.start_ts > body.execution_time.end_ts) {
+
         return reply.status(400).send({ ok: false, error: "EXECUTION_TIME_INVALID" });
       }
 
@@ -356,8 +402,21 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
       }
 
       // v0：observed_parameters 的 string(enum) 必须由 task.parameter_schema 定义（冻结规则 0.2）
-      const task = await findAoActTaskByActTaskId(pool, body.act_task_id);
-      if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+      
+const task = await findAoActTaskByActTaskId(pool, body.act_task_id);
+if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+
+const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
+  act_task_id: body.act_task_id, // Dedupe within this act_task_id.
+  executor_kind: body.executor_id.kind, // Dedupe scope: executor kind.
+  executor_id: body.executor_id.id, // Dedupe scope: executor id.
+  executor_namespace: body.executor_id.namespace, // Dedupe scope: executor namespace.
+  idempotency_key: idempotencyKey // Dedupe key: executor-generated idempotency key.
+});
+if (dup) { // If a duplicate exists, reject to avoid semantic pollution from retries.
+  return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT", existing_fact_id: dup.fact_id });
+}
+
       const schemaKeys = (task?.payload?.parameter_schema?.keys ?? []) as ParamDef[];
       if (!Array.isArray(schemaKeys) || schemaKeys.length === 0) {
         return reply.status(400).send({ ok: false, error: "TASK_PARAMETER_SCHEMA_MISSING" });

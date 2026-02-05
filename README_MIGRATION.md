@@ -565,3 +565,39 @@ Negative guarantees (must remain true)
 Tag (to be created after verification)
 
 apple_iii_ao_act_authz_v0
+
+Sprint 20 · Apple III · AO-ACT Receipt Idempotency v0 (Retry-safe receipt write)
+
+Purpose (scope)
+
+让客户“敢重试”。网络失败或重放不会造成 receipt 事实重复写入，从而污染语义。
+
+Key behavior
+
+- POST /api/control/ao_act/receipt 必须提供 meta.idempotency_key（非空字符串）
+- 服务器以 (act_task_id, executor_id.kind, executor_id.id, executor_id.namespace, meta.idempotency_key) 作为幂等去重范围
+- 若命中重复：HTTP 409，返回 existing_fact_id
+
+Key files (frozen paths)
+
+docs/controlplane/GEOX-CP-AO-ACT-Idempotency-Contract-v0.md
+
+apps/server/src/routes/control_ao_act.ts
+
+scripts/ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0.ps1
+
+scripts/ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0_RUNNER.cjs
+
+Acceptance / Reproducibility
+
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0.ps1
+
+Negative guarantees (must remain true)
+
+- 不引入 scheduler / queue
+- 不引入 server 端自动重试
+- 不修改 AuthZ 语义
+
+Tag (to be created after verification)
+
+apple_iii_ao_act_idempotency_v0
