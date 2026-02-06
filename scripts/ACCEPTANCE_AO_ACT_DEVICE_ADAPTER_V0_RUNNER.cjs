@@ -25,6 +25,8 @@ const args = parseArgs(process.argv); // Parse process argv.
 const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for server under test.
 console.log(`[INFO] Sprint21 Device Adapter acceptance (baseUrl=${baseUrl})`); // Print run header.
 
+const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
+
 const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with ao_act.task.write + ao_act.receipt.write.
 
 function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
@@ -90,6 +92,9 @@ function buildTaskBody() { // Build a minimally valid ao_act task body.
   const start = nowMs();
   const end = start + 60_000;
   return {
+    tenant_id: tenantA.tenant_id,
+    project_id: tenantA.project_id,
+    group_id: tenantA.group_id,
     issuer: { kind: "human", id: "dev", namespace: "local" },
     action_type: "PLOW",
     target: { kind: "field", ref: "field:demo" },
@@ -112,7 +117,7 @@ function buildDeviceRefRecord(factId) { // Build ao_act_device_ref_v0 record_jso
       sha256: null,
       note: "acceptance",
       created_at_ts: nowMs(),
-      meta: { hint: "pointer-only" },
+      meta: { hint: "pointer-only", tenant_id: tenantA.tenant_id, project_id: tenantA.project_id, group_id: tenantA.group_id },
     },
     _acceptance_fact_id: factId, // Not part of schema; used only by runner logic (not sent to server).
   };
@@ -131,6 +136,9 @@ function buildReceiptBody(actTaskId, deviceFactId, meta) { // Build a minimally 
   const start = nowMs();
   const end = start + 5_000;
   return {
+    tenant_id: tenantA.tenant_id,
+    project_id: tenantA.project_id,
+    group_id: tenantA.group_id,
     act_task_id: actTaskId,
     executor_id: { kind: "script", id: "sim_executor", namespace: "local" },
     execution_time: { start_ts: start, end_ts: end },

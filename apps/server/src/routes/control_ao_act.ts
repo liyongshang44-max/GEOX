@@ -47,6 +47,36 @@ const FORBID_KEYS_V0 = new Set<string>([
   "profit"
 ]); // Exact-match, case-sensitive
 
+type TenantTripleV0 = { // Sprint 22: hard isolation scope triple used across AO-ACT routes.
+  tenant_id: string; // Tenant isolation SSOT field; MUST be present on token + request.
+  project_id: string; // Project isolation field; MUST be present on token + request.
+  group_id: string; // Group isolation field; MUST be present on token + request.
+}; // End TenantTripleV0.
+
+function assertTenantFieldsPresentV0(input: any, label: string): TenantTripleV0 { // Parse + require tenant triple on inputs.
+  const out = z // Use Zod for deterministic runtime validation.
+    .object({
+      tenant_id: z.string().min(1), // Require non-empty tenant_id string.
+      project_id: z.string().min(1), // Require non-empty project_id string.
+      group_id: z.string().min(1) // Require non-empty group_id string.
+    })
+    .parse(input ?? {}); // Parse or throw.
+  return out as TenantTripleV0; // Return parsed triple.
+} // End assertTenantFieldsPresentV0.
+
+function requireTenantMatchOr404V0(
+  auth: { tenant_id: string; project_id: string; group_id: string }, // Auth triple from token record.
+  target: TenantTripleV0, // Target triple from request payload/query.
+  reply: any // Fastify reply object used to emit deterministic errors.
+): boolean {
+  // Sprint 22: cross-tenant access MUST be non-enumerable; mismatch returns 404 (contract).
+  if (auth.tenant_id !== target.tenant_id || auth.project_id !== target.project_id || auth.group_id !== target.group_id) {
+    reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Hide existence across tenants.
+    return false; // Halt handler.
+  }
+  return true; // Allow request to proceed.
+} // End requireTenantMatchOr404V0.
+
 function scanForForbiddenKeys(value: unknown): string | null {
   if (value === null || value === undefined) return null; // Nothing to scan
   if (Array.isArray(value)) {
@@ -174,24 +204,34 @@ function normalizeRecordJson(v: unknown): any { // Normalize record_json returne
   return v; // For json/jsonb, pg already returns object.
 } // End normalizeRecordJson.
 
-async function findAoActTaskByActTaskId(pool: Pool, actTaskId: string): Promise<any | null> {
+async function findAoActTaskByActTaskId(
+  pool: Pool, // Postgres pool used to query the append-only facts ledger.
+  actTaskId: string, // Target act_task_id to locate in the ledger.
+  tenant: TenantTripleV0 // Sprint 22: tenant triple used to hard-isolate task lookup.
+): Promise<any | null> {
   const sql = `
     SELECT fact_id, (record_json::jsonb) AS record_json
     FROM facts
     WHERE (record_json::jsonb)->> 'type' = 'ao_act_task_v0'
       AND (record_json::jsonb)#>> '{payload,act_task_id}' = $1
+      AND (record_json::jsonb)#>> '{payload,tenant_id}' = $2
+      AND (record_json::jsonb)#>> '{payload,project_id}' = $3
+      AND (record_json::jsonb)#>> '{payload,group_id}' = $4
     ORDER BY occurred_at DESC
     LIMIT 1
-  `;
-  const r = await pool.query(sql, [actTaskId]);
-  if (r.rowCount === 0) return null;
-  return r.rows[0].record_json;
+  `; // Filter by tenant triple to prevent cross-tenant act_task_id probing.
+  const r = await pool.query(sql, [actTaskId, tenant.tenant_id, tenant.project_id, tenant.group_id]); // Execute query.
+  if (r.rowCount === 0) return null; // No matching task in this tenant scope.
+  return r.rows[0].record_json; // Return task record_json for downstream schema checks.
 }
 
 
 async function findDuplicateAoActReceiptByIdempotencyKey(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
   input: { // Structured inputs used to scope the idempotency check.
+    tenant_id: string; // Sprint 22: tenant id bound into the dedupe domain.
+    project_id: string; // Sprint 22: project id bound into the dedupe domain.
+    group_id: string; // Sprint 22: group id bound into the dedupe domain.
     act_task_id: string; // Target act_task_id to dedupe within.
     executor_kind: string; // Executor kind for dedupe scope.
     executor_id: string; // Executor id for dedupe scope.
@@ -203,18 +243,24 @@ async function findDuplicateAoActReceiptByIdempotencyKey(
     SELECT fact_id
     FROM facts
     WHERE (record_json::jsonb)->> 'type' = 'ao_act_receipt_v0'
-      AND (record_json::jsonb)#>> '{payload,act_task_id}' = $1
-      AND (record_json::jsonb)#>> '{payload,executor_id,kind}' = $2
-      AND (record_json::jsonb)#>> '{payload,executor_id,id}' = $3
-      AND (record_json::jsonb)#>> '{payload,executor_id,namespace}' = $4
-      AND (record_json::jsonb)#>> '{payload,meta,idempotency_key}' = $5
+      AND (record_json::jsonb)#>> '{payload,tenant_id}' = $1
+      AND (record_json::jsonb)#>> '{payload,project_id}' = $2
+      AND (record_json::jsonb)#>> '{payload,group_id}' = $3
+      AND (record_json::jsonb)#>> '{payload,act_task_id}' = $4
+      AND (record_json::jsonb)#>> '{payload,executor_id,kind}' = $5
+      AND (record_json::jsonb)#>> '{payload,executor_id,id}' = $6
+      AND (record_json::jsonb)#>> '{payload,executor_id,namespace}' = $7
+      AND (record_json::jsonb)#>> '{payload,meta,idempotency_key}' = $8
     ORDER BY occurred_at DESC
     LIMIT 1
-  `; // Stable SQL that finds the most recent receipt matching the idempotency scope.
+  `; // Stable SQL that finds the most recent receipt matching the tenant-scoped idempotency domain.
 
   const r = await pool.query( // Execute query against ledger.
     sql, // Provide SQL text.
     [ // Provide positional args.
+      input.tenant_id, // Bind tenant id.
+      input.project_id, // Bind project id.
+      input.group_id, // Bind group id.
       input.act_task_id, // Bind act_task_id.
       input.executor_kind, // Bind executor kind.
       input.executor_id, // Bind executor id.
@@ -252,28 +298,37 @@ async function writeAoActAuthzAuditFactV0(
   await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]);
 }
 
-async function assertAllDeviceRefsExistV0(
+
+async function assertAllDeviceRefsExistAndMatchTenantV0(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
-  deviceRefs: Array<{ kind: string; ref: string }>
+  deviceRefs: Array<{ kind: string; ref: string }>, // Device reference pointers carried by receipt payload.
+  tenant: TenantTripleV0 // Sprint 22: tenant triple used to prevent cross-tenant evidence references.
 ): Promise<void> {
   if (!Array.isArray(deviceRefs) || deviceRefs.length === 0) return; // Nothing to validate.
 
-  const ids = deviceRefs.map((r) => r.ref).filter((s) => typeof s === "string" && s.length > 0);
-  if (ids.length !== deviceRefs.length) throw new Error("DEVICE_REF_INVALID");
+  const ids = deviceRefs.map((r) => r.ref).filter((s) => typeof s === "string" && s.length > 0); // Extract referenced fact ids.
+  if (ids.length !== deviceRefs.length) throw new Error("DEVICE_REF_INVALID"); // Reject invalid ref entries.
 
   const sql = `
-    SELECT fact_id
+    SELECT fact_id, (record_json::jsonb) AS record_json
     FROM facts
     WHERE fact_id = ANY($1::text[])
       AND (record_json::jsonb)->> 'type' = 'ao_act_device_ref_v0'
-  `;
-  const r = await pool.query(sql, [ids]);
-  const found = new Set<string>((r.rows ?? []).map((row: any) => String(row.fact_id)));
+  `; // Query only device_ref facts by id (append-only ledger).
+  const r = await pool.query(sql, [ids]); // Fetch matching records.
+  const rows = r.rows ?? []; // Normalize rows array.
+  const byId = new Map<string, any>(rows.map((row: any) => [String(row.fact_id), normalizeRecordJson(row.record_json)])); // Map by fact id.
 
-  for (const id of ids) {
-    if (!found.has(id)) throw new Error(`DEVICE_REF_NOT_FOUND:${id}`);
-  }
-}
+  for (const id of ids) { // Validate each referenced device_ref id.
+    const rec = byId.get(id); // Lookup record_json by id.
+    if (!rec) throw new Error(`DEVICE_REF_NOT_FOUND:${id}`); // Missing record => reject.
+    const meta = (rec?.payload?.meta ?? {}) as any; // Read meta object without parsing content.
+    // Sprint 22: device evidence must carry tenant triple in payload.meta and must match receipt tenant.
+    if (String(meta.tenant_id || "") !== tenant.tenant_id) throw new Error("NOT_FOUND"); // Mismatch => reject as non-enumerable 404.
+    if (String(meta.project_id || "") !== tenant.project_id) throw new Error("NOT_FOUND"); // Mismatch => reject as non-enumerable 404.
+    if (String(meta.group_id || "") !== tenant.group_id) throw new Error("NOT_FOUND"); // Mismatch => reject as non-enumerable 404.
+  } // End loop.
+} // End assertAllDeviceRefsExistAndMatchTenantV0.
 
 export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
   // No shared helper here; audit facts are written via writeAoActAuthzAuditFactV0(...) to keep schema stable.
@@ -289,6 +344,9 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
       const body = z
         .object({
+          tenant_id: z.string().min(1),
+          project_id: z.string().min(1),
+          group_id: z.string().min(1),
           issuer: z.object({ kind: z.literal("human"), id: z.string().min(1), namespace: z.string().min(1) }),
           action_type: z.string().min(1),
           target: z.object({ kind: z.enum(["field", "area", "path"]), ref: z.string().min(1) }),
@@ -320,6 +378,10 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
           meta: z.record(z.any()).optional()
         })
         .parse(req.body);
+
+const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
+if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
+
 
       if (!AO_ACT_ACTION_TYPE_ALLOWLIST_V0.includes(body.action_type as any)) {
         return reply.status(400).send({ ok: false, error: "ACTION_TYPE_NOT_ALLOWED" });
@@ -353,6 +415,9 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
       const record_json = {
         type: "ao_act_task_v0",
         payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
           act_task_id,
           issuer: body.issuer,
           action_type: body.action_type,
@@ -397,6 +462,9 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
 
       const body = z
         .object({
+          tenant_id: z.string().min(1),
+          project_id: z.string().min(1),
+          group_id: z.string().min(1),
           act_task_id: z.string().min(1),
           executor_id: z.object({ kind: z.enum(["human", "script", "device"]), id: z.string().min(1), namespace: z.string().min(1) }),
           execution_time: z.object({ start_ts: z.number(), end_ts: z.number() }),
@@ -427,6 +495,11 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
         
   .parse(req.body);
 
+
+const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
+if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
+
+
 const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim(); // Read executor-generated idempotency key from receipt meta.
 if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
   return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
@@ -444,15 +517,18 @@ if (body.execution_time.start_ts > body.execution_time.end_ts) {
 
       // v0：observed_parameters 的 string(enum) 必须由 task.parameter_schema 定义（冻结规则 0.2）
       
-const task = await findAoActTaskByActTaskId(pool, body.act_task_id);
+const task = await findAoActTaskByActTaskId(pool, body.act_task_id, tenant);
 if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
 
 // Sprint 21: device_refs are pointer-only. Validate existence only; never parse referenced content.
 if (Array.isArray((body as any).device_refs) && (body as any).device_refs.length > 0) {
-  await assertAllDeviceRefsExistV0(pool, (body as any).device_refs);
+  await assertAllDeviceRefsExistAndMatchTenantV0(pool, (body as any).device_refs, tenant);
 }
 
 const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
+  tenant_id: tenant.tenant_id,
+  project_id: tenant.project_id,
+  group_id: tenant.group_id,
   act_task_id: body.act_task_id, // Dedupe within this act_task_id.
   executor_kind: body.executor_id.kind, // Dedupe scope: executor kind.
   executor_id: body.executor_id.id, // Dedupe scope: executor id.
@@ -477,6 +553,9 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
       const record_json = {
         type: "ao_act_receipt_v0",
         payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
           act_task_id: body.act_task_id,
           executor_id: body.executor_id,
           execution_time: body.execution_time,
@@ -508,7 +587,9 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
 
       return reply.send({ ok: true, fact_id });
     } catch (e: any) {
-      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+      const msg = String(e?.message ?? "BAD_REQUEST"); // Normalize error message.
+      if (msg === "NOT_FOUND") return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Enforce non-enumerable cross-tenant failure.
+      return reply.status(400).send({ ok: false, error: msg });
     }
   });
 
@@ -517,135 +598,142 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
     if (!auth) return; // Halt if missing/invalid/insufficient.
 
     const q = z
-      .object({ act_task_id: z.string().optional() })
+      .object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), act_task_id: z.string().optional() })
       .strict()
       .parse((req as any).query ?? {});
 
-    const viewSql = q.act_task_id
-      ? "SELECT * FROM ao_act_index_v0 WHERE act_task_id = $1 ORDER BY act_task_id ASC"
-      : "SELECT * FROM ao_act_index_v0 ORDER BY act_task_id ASC";
 
-    const viewArgs = q.act_task_id ? [q.act_task_id] : [];
 
-    try {
-      const out = await pool.query(viewSql, viewArgs);
-      await writeAoActAuthzAuditFactV0(pool, {
-        event: "index_read",
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        act_task_id: q.act_task_id
-      });
-      return reply.send({ ok: true, rows: out.rows });
-    } catch (e: any) {
-      // Fallback: compute index inline from facts if the view is not present (keeps acceptance runnable on existing DBs).
-      const inlineSql = q.act_task_id
-        ? `WITH act_tasks AS (
-             SELECT
-               f.fact_id AS task_fact_id,
-               f.occurred_at AS task_occurred_at,
-               f.source AS task_source,
-               (f.record_json::jsonb) AS task_record_json,
-               ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-               ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
-             FROM facts f
-             WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
-           ),
-           act_receipts AS (
-             SELECT
-               f.fact_id AS receipt_fact_id,
-               f.occurred_at AS receipt_occurred_at,
-               f.source AS receipt_source,
-               (f.record_json::jsonb) AS receipt_record_json,
-               ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-               ((f.record_json::jsonb)->'payload'->>'status') AS status
-             FROM facts f
-             WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
-           ),
-           latest_receipt AS (
-             SELECT DISTINCT ON (r.act_task_id)
-               r.act_task_id,
-               r.receipt_fact_id,
-               r.receipt_occurred_at,
-               r.receipt_source,
-               r.status,
-               r.receipt_record_json
-             FROM act_receipts r
-             ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
-           )
-           SELECT
-             t.act_task_id,
-             t.action_type,
-             t.task_fact_id,
-             t.task_occurred_at,
-             t.task_source,
-             lr.receipt_fact_id,
-             lr.receipt_occurred_at,
-             lr.receipt_source,
-             lr.status,
-             t.task_record_json AS task_record_json,
-             lr.receipt_record_json AS receipt_record_json
-           FROM act_tasks t
-           LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
-           WHERE t.act_task_id = $1
-           ORDER BY t.act_task_id ASC`
-        : `WITH act_tasks AS (
-             SELECT
-               f.fact_id AS task_fact_id,
-               f.occurred_at AS task_occurred_at,
-               f.source AS task_source,
-               (f.record_json::jsonb) AS task_record_json,
-               ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-               ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
-             FROM facts f
-             WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
-           ),
-           act_receipts AS (
-             SELECT
-               f.fact_id AS receipt_fact_id,
-               f.occurred_at AS receipt_occurred_at,
-               f.source AS receipt_source,
-               (f.record_json::jsonb) AS receipt_record_json,
-               ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-               ((f.record_json::jsonb)->'payload'->>'status') AS status
-             FROM facts f
-             WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
-           ),
-           latest_receipt AS (
-             SELECT DISTINCT ON (r.act_task_id)
-               r.act_task_id,
-               r.receipt_fact_id,
-               r.receipt_occurred_at,
-               r.receipt_source,
-               r.status,
-               r.receipt_record_json
-             FROM act_receipts r
-             ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
-           )
-           SELECT
-             t.act_task_id,
-             t.action_type,
-             t.task_fact_id,
-             t.task_occurred_at,
-             t.task_source,
-             lr.receipt_fact_id,
-             lr.receipt_occurred_at,
-             lr.receipt_source,
-             lr.status,
-             t.task_record_json AS task_record_json,
-             lr.receipt_record_json AS receipt_record_json
-           FROM act_tasks t
-           LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
-           ORDER BY t.act_task_id ASC`;
+const tenant = assertTenantFieldsPresentV0(q, "query"); // Extract tenant triple from parsed query.
+if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
 
-      const inlineArgs = q.act_task_id ? [q.act_task_id] : [];
-      const out = await pool.query(inlineSql, inlineArgs);
-      await writeAoActAuthzAuditFactV0(pool, {
-        event: "index_read",
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        act_task_id: q.act_task_id
-      });
-      return reply.send({ ok: true, rows: out.rows, note: "inline_fallback" });
-    }
+
+// Sprint 22: always compute index inline and filter by tenant triple to avoid cross-tenant leakage via shared views.
+const inlineSql = q.act_task_id
+  ? `WITH act_tasks AS (
+       SELECT
+         f.fact_id AS task_fact_id,
+         f.occurred_at AS task_occurred_at,
+         f.source AS task_source,
+         (f.record_json::jsonb) AS task_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     act_receipts AS (
+       SELECT
+         f.fact_id AS receipt_fact_id,
+         f.occurred_at AS receipt_occurred_at,
+         f.source AS receipt_source,
+         (f.record_json::jsonb) AS receipt_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'status') AS status
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     latest_receipt AS (
+       SELECT DISTINCT ON (r.act_task_id)
+         r.act_task_id,
+         r.receipt_fact_id,
+         r.receipt_occurred_at,
+         r.receipt_source,
+         r.status,
+         r.receipt_record_json
+       FROM act_receipts r
+       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
+     )
+     SELECT
+       t.act_task_id,
+       t.action_type,
+       t.task_fact_id,
+       t.task_occurred_at,
+       t.task_source,
+       lr.receipt_fact_id,
+       lr.receipt_occurred_at,
+       lr.receipt_source,
+       lr.status,
+       t.task_record_json AS task_record_json,
+       lr.receipt_record_json AS receipt_record_json
+     FROM act_tasks t
+     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
+     WHERE t.act_task_id = $4
+     ORDER BY t.act_task_id ASC`
+  : `WITH act_tasks AS (
+       SELECT
+         f.fact_id AS task_fact_id,
+         f.occurred_at AS task_occurred_at,
+         f.source AS task_source,
+         (f.record_json::jsonb) AS task_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     act_receipts AS (
+       SELECT
+         f.fact_id AS receipt_fact_id,
+         f.occurred_at AS receipt_occurred_at,
+         f.source AS receipt_source,
+         (f.record_json::jsonb) AS receipt_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'status') AS status
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     latest_receipt AS (
+       SELECT DISTINCT ON (r.act_task_id)
+         r.act_task_id,
+         r.receipt_fact_id,
+         r.receipt_occurred_at,
+         r.receipt_source,
+         r.status,
+         r.receipt_record_json
+       FROM act_receipts r
+       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
+     )
+     SELECT
+       t.act_task_id,
+       t.action_type,
+       t.task_fact_id,
+       t.task_occurred_at,
+       t.task_source,
+       lr.receipt_fact_id,
+       lr.receipt_occurred_at,
+       lr.receipt_source,
+       lr.status,
+       t.task_record_json AS task_record_json,
+       lr.receipt_record_json AS receipt_record_json
+     FROM act_tasks t
+     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
+     ORDER BY t.act_task_id ASC`;
+
+const inlineArgs = q.act_task_id
+  ? [tenant.tenant_id, tenant.project_id, tenant.group_id, q.act_task_id]
+  : [tenant.tenant_id, tenant.project_id, tenant.group_id];
+
+const out = await pool.query(inlineSql, inlineArgs); // Execute tenant-filtered inline index query.
+
+await writeAoActAuthzAuditFactV0(pool, {
+  event: "index_read",
+  actor_id: auth.actor_id,
+  token_id: auth.token_id,
+  act_task_id: q.act_task_id
+});
+
+return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
+
   });
 }

@@ -26,6 +26,8 @@ const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for
 console.log(`[INFO] Sprint19 AuthZ acceptance (baseUrl=${baseUrl})`); // Print run header.
 
 // Token fixtures (must match config/auth/ao_act_tokens_v0.json).
+const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
+
 const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with all scopes.
 const taskOnlyToken = "dev_ao_act_task_only_v0"; // Token missing receipt.write scope.
 const invalidToken = "dev_ao_act_invalid_token_v0"; // Unknown token to trigger AUTH_INVALID.

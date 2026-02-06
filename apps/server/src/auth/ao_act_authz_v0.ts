@@ -14,6 +14,9 @@ type TokenRecordV0 = {
   token: string; // Bearer token secret string used in Authorization header.
   token_id: string; // Stable token identifier for audit logs.
   actor_id: string; // Stable actor identifier for audit logs.
+  tenant_id: string; // Tenant isolation SSOT field (Sprint 22 hard isolation).
+  project_id: string; // Project isolation field (Sprint 22 hard isolation).
+  group_id: string; // Group isolation field (Sprint 22 hard isolation).
   scopes: AoActScopeV0[]; // Allowed scopes for this token.
   revoked: boolean; // Revocation flag (true => deny immediately).
 };
@@ -26,6 +29,9 @@ type TokenFileV0 = {
 export type AoActAuthContextV0 = {
   actor_id: string; // Actor id derived from token.
   token_id: string; // Token id derived from token.
+  tenant_id: string; // Tenant isolation SSOT field used to hard-isolate requests.
+  project_id: string; // Project isolation field used to hard-isolate requests.
+  group_id: string; // Group isolation field used to hard-isolate requests.
 };
 
 function repoRootFromModule(): string {
@@ -85,5 +91,25 @@ export function requireAoActScopeV0(
     return null; // Halt.
   }
 
-  return { actor_id: rec.actor_id, token_id: rec.token_id }; // Return auth context for audit.
+  // Sprint 22: enforce that token records carry hard isolation fields; missing fields are treated as invalid tokens.
+  if (typeof rec.tenant_id !== "string" || rec.tenant_id.trim().length === 0) {
+    reply.status(401).send({ ok: false, error: "AUTH_INVALID" }); // Token record missing tenant_id.
+    return null; // Halt.
+  }
+  if (typeof rec.project_id !== "string" || rec.project_id.trim().length === 0) {
+    reply.status(401).send({ ok: false, error: "AUTH_INVALID" }); // Token record missing project_id.
+    return null; // Halt.
+  }
+  if (typeof rec.group_id !== "string" || rec.group_id.trim().length === 0) {
+    reply.status(401).send({ ok: false, error: "AUTH_INVALID" }); // Token record missing group_id.
+    return null; // Halt.
+  }
+
+  return {
+    actor_id: rec.actor_id, // Return actor id for audit.
+    token_id: rec.token_id, // Return token id for audit.
+    tenant_id: rec.tenant_id, // Return tenant id for hard isolation gating.
+    project_id: rec.project_id, // Return project id for hard isolation gating.
+    group_id: rec.group_id // Return group id for hard isolation gating.
+  }; // Return auth context for audit + isolation.
 }

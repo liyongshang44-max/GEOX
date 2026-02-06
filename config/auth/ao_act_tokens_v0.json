@@ -10,7 +10,10 @@
         "ao_act.receipt.write",
         "ao_act.index.read"
       ],
-      "revoked": false
+      "revoked": false,
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA"
     },
     {
       "token": "dev_ao_act_task_only_v0",
@@ -18,6 +21,23 @@
       "actor_id": "dev",
       "scopes": [
         "ao_act.task.write",
+        "ao_act.index.read"
+      ],
+      "revoked": false,
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA"
+    },
+    {
+      "token": "dev_ao_act_admin_tenantB_v0",
+      "token_id": "tok_dev_ao_act_admin_tenantB_v0",
+      "actor_id": "dev",
+      "tenant_id": "tenantB",
+      "project_id": "projectB",
+      "group_id": "groupB",
+      "scopes": [
+        "ao_act.task.write",
+        "ao_act.receipt.write",
         "ao_act.index.read"
       ],
       "revoked": false

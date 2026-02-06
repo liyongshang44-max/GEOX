@@ -27,7 +27,9 @@ services:
           export CI=1
           export PNPM_STORE_DIR=/pnpm-store
 
-          pnpm -r install --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          # NOTE: Sprint 22 patch may change workspace manifests; in CI mode pnpm defaults to frozen-lockfile.
+          # We explicitly disable frozen-lockfile here to keep local `docker compose up --build server` runnable.
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
           pnpm --filter @geox/contracts build
           pnpm --filter @geox/server dev
     volumes:

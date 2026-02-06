@@ -25,6 +25,8 @@ const args = parseArgs(process.argv); // Parse process argv.
 const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for server under test.
 console.log(`[INFO] Sprint20 Idempotency acceptance (baseUrl=${baseUrl})`); // Print run header.
 
+const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
+
 const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with ao_act.task.write + ao_act.receipt.write.
 
 function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
