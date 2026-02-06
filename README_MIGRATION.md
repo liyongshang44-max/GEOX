@@ -314,3 +314,35 @@ Hard boundaries:
 - No realtime control
 - No scheduler / queue
 - No Judge or Agronomy side effects
+
+---
+
+## Sprint 22 · Apple III · AO-ACT Multi-tenant Isolation v0
+
+Tag: apple_iii_ao_act_multitenant_isolation_v0
+
+Frozen scope:
+
+- Hard multi-tenant isolation enforced at AO-ACT boundaries
+- Isolation key is the strict triple: tenant_id + project_id + group_id
+- tenant_id is the only SSOT field name (namespace is forbidden as alias)
+- All AO-ACT entrypoints (task / receipt / index) require the full triple
+- receipt device evidence references must resolve within the same tenant triple
+
+Acceptance:
+
+- scripts/ACCEPTANCE_AO_ACT_MULTITENANT_ISOLATION_V0.ps1
+
+Return code semantics (frozen):
+
+- 401: missing or invalid token
+- 400: required tenant/project/group fields missing
+- 404: cross-tenant or cross-scope access (uniform, non-enumerable)
+
+Hard boundaries (must remain true):
+
+- No soft isolation (UI / convention-only isolation is forbidden)
+- No cross-tenant aggregation or views
+- No shared executors across tenant_id
+- No scheduler / queue / auto-trigger
+- No change to Sprint 19 AuthZ core semantics
