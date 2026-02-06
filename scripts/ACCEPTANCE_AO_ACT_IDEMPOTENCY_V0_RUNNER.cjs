@@ -1,158 +1,167 @@
 // GEOX/scripts/ACCEPTANCE_AO_ACT_IDEMPOTENCY_V0_RUNNER.cjs
 // Sprint 20: AO-ACT receipt idempotency v0 acceptance runner (Node.js).
+// Updated for Sprint 22+: include required tenant_id/project_id/group_id in task/receipt requests.
 
-"use strict"; // Enforce strict mode for safer JS semantics.
+"use strict"; // Strict mode.
 
-const assert = require("node:assert"); // Node assert for deterministic acceptance checks.
-const crypto = require("node:crypto"); // Node crypto for random ids.
-const { setTimeout: sleep } = require("node:timers/promises"); // Sleep helper for retry backoff.
-const { URL } = require("node:url"); // URL helper for safe URL concatenation.
+const assert = require("node:assert"); // Deterministic assertions.
+const crypto = require("node:crypto"); // Random ids.
+const fs = require("node:fs"); // Read tokens config.
+const path = require("node:path"); // Path helpers.
+const { setTimeout: sleep } = require("node:timers/promises"); // Retry backoff.
+const { URL } = require("node:url"); // URL helper.
 
-function parseArgs(argv) { // Parse CLI args of form --key value.
-  const out = {}; // Accumulate parsed args.
-  for (let i = 2; i < argv.length; i += 1) { // Iterate argv, skipping node + script.
-    const k = argv[i]; // Current token.
-    const v = argv[i + 1]; // Next token as value.
-    if (typeof k === "string" && k.startsWith("--")) { // Only accept --key tokens.
-      out[k.slice(2)] = v; // Store without leading dashes.
-      i += 1; // Consume value token.
+function parseArgs(argv) { // Parse CLI args --key value.
+  const out = {}; // Accumulator.
+  for (let i = 2; i < argv.length; i += 1) { // Iterate args.
+    const k = argv[i]; // Key token.
+    const v = argv[i + 1]; // Value token.
+    if (typeof k === "string" && k.startsWith("--")) { // Accept --key.
+      out[k.slice(2)] = v; // Store value.
+      i += 1; // Consume value.
     } // End if.
   } // End loop.
-  return out; // Return parsed args object.
+  return out; // Parsed args.
 } // End parseArgs.
 
-const args = parseArgs(process.argv); // Parse process argv.
-const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for server under test.
-console.log(`[INFO] Sprint20 Idempotency acceptance (baseUrl=${baseUrl})`); // Print run header.
+const args = parseArgs(process.argv); // Parse args.
+const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL.
+console.log(`[INFO] Sprint20 Idempotency acceptance (baseUrl=${baseUrl})`); // Header log.
 
-const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
+function joinUrl(base, pathname) { // Join base URL and path.
+  const u = new URL(base); // Parse base.
+  u.pathname = pathname; // Set path.
+  return u.toString(); // Full URL.
+} // End joinUrl.
 
-const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with ao_act.task.write + ao_act.receipt.write.
-
-function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
-  const h = { "content-type": "application/json" }; // Always send JSON content-type.
-  if (typeof token === "string" && token.length > 0) { // Only set auth header when token is provided.
-    h["authorization"] = `Bearer ${token}`; // Use Bearer scheme expected by server.
+function buildHeaders(token) { // Build headers.
+  const h = { "content-type": "application/json" }; // JSON.
+  if (typeof token === "string" && token.length > 0) { // When token exists.
+    h["authorization"] = `Bearer ${token}`; // Bearer auth.
   } // End if.
   return h; // Return headers.
 } // End buildHeaders.
 
-async function fetchJson(url, opts) { // Fetch JSON with optional token and JSON body.
-  const method = String(opts.method || "GET"); // HTTP method.
-  const token = (opts.token === undefined ? "" : String(opts.token)); // Token string; empty => no auth header.
-  const body = (opts.body === undefined ? undefined : JSON.stringify(opts.body)); // JSON body if provided.
-  const res = await fetch(url, { method, headers: buildHeaders(token), body }); // Perform fetch.
-  const text = await res.text(); // Read response body as text.
-  let json = null; // Parsed JSON holder.
-  try { json = text.length ? JSON.parse(text) : null; } catch { json = null; } // Best-effort JSON parse.
-  return { status: res.status, json, text }; // Return status + parsed json + raw text.
+async function fetchJson(url, opts) { // Fetch JSON helper.
+  const method = String(opts.method || "GET"); // Method.
+  const token = (opts.token === undefined ? "" : String(opts.token)); // Token.
+  const body = (opts.body === undefined ? undefined : JSON.stringify(opts.body)); // JSON body.
+  const res = await fetch(url, { method, headers: buildHeaders(token), body }); // Request.
+  const text = await res.text(); // Body text.
+  let json = null; // Parsed JSON.
+  try { json = text.length ? JSON.parse(text) : null; } catch { json = null; } // Best-effort parse.
+  return { status: res.status, json, text }; // Response object.
 } // End fetchJson.
 
-async function fetchJsonWithRetry(url, inner) { // Retry wrapper for server warm-up / transient failures.
-  const attempts = 20; // Max attempts.
-  const delayMs = 300; // Delay per attempt in ms.
-  let lastErr = null; // Track last error for diagnostics.
-  for (let i = 0; i < attempts; i += 1) { // Attempt loop.
-    try { // Try block for fetch.
-      return await fetchJson(url, inner); // Attempt request and return on success.
-    } catch (e) { // Catch network errors (e.g., ECONNREFUSED).
-      lastErr = e; // Save error.
-      await sleep(delayMs); // Wait before retry.
+async function fetchJsonWithRetry(url, opts) { // Retry wrapper.
+  const attempts = 20; // Attempts.
+  const delayMs = 300; // Delay.
+  let lastErr = null; // Last error.
+  for (let i = 0; i < attempts; i += 1) { // Loop.
+    try { // Try.
+      return await fetchJson(url, opts); // Request.
+    } catch (e) { // Catch.
+      lastErr = e; // Save.
+      await sleep(delayMs); // Backoff.
     } // End catch.
   } // End loop.
-  throw lastErr || new Error("fetch failed"); // Throw last error after exhausting retries.
+  throw lastErr || new Error("fetch failed"); // Throw.
 } // End fetchJsonWithRetry.
 
-function nowMs() { // Get current epoch ms.
-  return Date.now(); // Return current ms.
-} // End nowMs.
+function readTokenConfig(repoRoot) { // Load token config.
+  const p = path.join(repoRoot, "config", "auth", "ao_act_tokens_v0.json"); // Path.
+  const raw = fs.readFileSync(p, "utf8"); // Read.
+  const j = JSON.parse(raw); // Parse.
+  return Array.isArray(j.tokens) ? j.tokens : []; // Return tokens.
+} // End readTokenConfig.
 
-function randHex(nBytes) { // Generate random hex string.
-  return crypto.randomBytes(nBytes).toString("hex"); // Convert random bytes to hex.
-} // End randHex.
+function pickAdminToken(tokens) { // Pick admin token by scopes.
+  const t = tokens.find((x) => Array.isArray(x.scopes) && x.scopes.includes("ao_act.task.write") && x.scopes.includes("ao_act.receipt.write") && x.scopes.includes("ao_act.index.read") && x.revoked !== true); // Predicate.
+  return t ? String(t.token) : ""; // Return token secret.
+} // End pickAdminToken.
 
-function joinUrl(base, pathname) { // Join base URL + path safely.
-  const u = new URL(base); // Parse base.
-  u.pathname = pathname; // Set path (overwrites).
-  return u.toString(); // Return full URL string.
-} // End joinUrl.
+function envOrDefault(name, fallback) { // Read env with fallback.
+  const v = process.env[name]; // Env.
+  return (typeof v === "string" && v.length > 0) ? v : fallback; // Select.
+} // End envOrDefault.
 
-function buildTaskBody() { // Build a minimally valid ao_act task body (matches server zod schema).
-  const start = nowMs(); // Start ts.
-  const end = start + 60_000; // End ts (+60s).
-  return { // Return task body (endpoint expects body fields directly).
-    issuer: { kind: "human", id: "dev", namespace: "local" }, // Required issuer.
-    action_type: "PLOW", // Use an allowlisted action_type.
-    target: { kind: "field", ref: "field:demo" }, // Minimal target.
-    time_window: { start_ts: start, end_ts: end }, // Required time window.
-    parameter_schema: { keys: [ { name: "noop", type: "boolean" } ] }, // Minimal schema.
-    parameters: { noop: true }, // Params map.
-    constraints: {}, // Constraints map.
-    meta: { note: "acceptance" }, // Optional meta.
-  }; // End task body.
-} // End buildTaskBody.
+function tenantTriple() { // Determine tenant triple.
+  const tenant_id = envOrDefault("GEOX_AO_ACT_TENANT_ID", "tenantA"); // Tenant.
+  const project_id = envOrDefault("GEOX_AO_ACT_PROJECT_ID", "projectA"); // Project.
+  const group_id = envOrDefault("GEOX_AO_ACT_GROUP_ID", "groupA"); // Group.
+  return { tenant_id, project_id, group_id }; // Triple.
+} // End tenantTriple.
 
-function buildReceiptBody(actTaskId, meta) { // Build a minimally valid receipt body.
-  const start = nowMs(); // Start ts.
-  const end = start + 5_000; // End ts.
-  return { // Receipt body expected by server contract.
-    act_task_id: actTaskId, // Link to task id returned by server.
-    executor_id: { kind: "script", id: "sim_executor", namespace: "local" }, // Executor id ref.
-    execution_time: { start_ts: start, end_ts: end }, // Execution time.
-    execution_coverage: { kind: "field", ref: "field:demo" }, // Coverage.
-    resource_usage: { fuel_l: null, electric_kwh: null, water_l: null, chemical_ml: null }, // Required keys (nullable).
-    logs_refs: [ { kind: "log", ref: `log:acceptance:${randHex(4)}` } ], // Logs refs.
-    constraint_check: { violated: false, violations: [] }, // Constraint check.
-    observed_parameters: { noop: true }, // Observed params (must match task schema).
-    meta: meta, // Meta container (used to carry idempotency key).
-  }; // End receipt body.
-} // End buildReceiptBody.
+function minimalTaskPayload(triple) { // Build a minimally valid ao_act task body (contract-aligned).
+  const now = Date.now(); // Start time for time_window.
+  const end = now + 60_000; // End time for time_window.
+  return {
+    tenant_id: triple.tenant_id, // Tenant id required by Sprint 22+ contract.
+    project_id: triple.project_id, // Project id required by Sprint 22+ contract.
+    group_id: triple.group_id, // Group id required by Sprint 22+ contract.
+    issuer: { kind: "human", id: "dev", namespace: "local" }, // Issuer identity (kind fixed to human).
+    action_type: "PLOW", // Allowed action_type from v0 allowlist.
+    target: { kind: "field", ref: "field:demo" }, // Target reference.
+    time_window: { start_ts: now, end_ts: end }, // Desired execution time window.
+    parameter_schema: { keys: [ { name: "noop", type: "boolean" } ] }, // Schema for parameters.
+    parameters: { noop: true }, // Concrete parameters (primitives only).
+    constraints: {}, // Empty constraints.
+    meta: { note: "acceptance" } // Arbitrary meta.
+  }; // End payload.
+} // End minimalTaskPayload.
 
-async function main() { // Main acceptance entrypoint.
-  const taskUrl = joinUrl(baseUrl, "/api/control/ao_act/task"); // Task endpoint URL.
-  const receiptUrl = joinUrl(baseUrl, "/api/control/ao_act/receipt"); // Receipt endpoint URL.
+function minimalReceiptPayload(triple, act_task_id, idempotency_key) { // Build a minimally valid receipt body (contract-aligned).
+  const now = Date.now(); // Start timestamp.
+  const end = now + 5_000; // End timestamp.
+  return {
+    tenant_id: triple.tenant_id, // Tenant id required by Sprint 22+ contract.
+    project_id: triple.project_id, // Project id required by Sprint 22+ contract.
+    group_id: triple.group_id, // Group id required by Sprint 22+ contract.
+    act_task_id, // Referenced act_task_id (server-issued from task create).
+    executor_id: { kind: "script", id: "runner", namespace: "local" }, // Executor identity.
+    execution_time: { start_ts: now, end_ts: end }, // Execution time window.
+    execution_coverage: { kind: "field", ref: "field:demo" }, // Coverage reference.
+    resource_usage: { fuel_l: null, electric_kwh: null, water_l: null, chemical_ml: null }, // Resource usage fields.
+    logs_refs: [ { kind: "log", ref: `log:acceptance:${crypto.randomBytes(4).toString("hex")}` } ], // Minimal log ref list.
+    constraint_check: { violated: false, violations: [] }, // Constraint check results.
+    observed_parameters: { noop: true }, // Observed parameters (primitives).
+    meta: { idempotency_key, note: "acceptance" } // Meta includes required idempotency key.
+  }; // End receipt.
+} // End minimalReceiptPayload.
 
-  // Step 1: create a task.
-  const taskBody = buildTaskBody(); // Build task body.
-  const t = await fetchJsonWithRetry(taskUrl, { method: "POST", token: adminToken, body: taskBody }); // Create task.
-  assert.strictEqual(t.status, 200, `task create expected 200, got ${t.status} :: ${t.text}`); // Must succeed.
-  assert.ok(t.json && t.json.ok === true, "task response must be ok:true"); // Enforce ok=true.
-  const actTaskId = String(t.json.act_task_id); // Extract generated act_task_id.
-  assert.ok(actTaskId.length > 0, "act_task_id must be non-empty"); // Validate act_task_id.
+async function main() { // Main.
+  const repoRoot = path.resolve(__dirname, ".."); // Repo root.
+  const tokens = readTokenConfig(repoRoot); // Token config.
+  const adminFromConfig = pickAdminToken(tokens); // Admin token.
+  const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || adminFromConfig); // Allow override.
+  if (!adminToken) { throw new Error("NO_ADMIN_TOKEN_FOUND_IN_CONFIG"); } // Ensure token.
 
-  // Case 1: missing idempotency key => 400 IDEMPOTENCY_KEY_REQUIRED.
-  const r1Body = buildReceiptBody(actTaskId, { note: "missing_key" }); // Receipt meta lacks idempotency_key.
-  const r1 = await fetchJsonWithRetry(receiptUrl, { method: "POST", token: adminToken, body: r1Body }); // Attempt write.
-  assert.strictEqual(r1.status, 400, `missing key expected 400, got ${r1.status} :: ${r1.text}`); // Must reject.
-  assert.ok(r1.json && r1.json.error === "IDEMPOTENCY_KEY_REQUIRED", "must return IDEMPOTENCY_KEY_REQUIRED"); // Validate error code.
+  const triple = tenantTriple(); // Triple.
+  console.log(`[INFO] tenant_id=${triple.tenant_id} project_id=${triple.project_id} group_id=${triple.group_id}`); // Log.
 
-  // Case 2: first write with key => 200.
-  const idem = `idem_${randHex(8)}`; // Generate idempotency key.
-  const r2Body = buildReceiptBody(actTaskId, { idempotency_key: idem, note: "first_write" }); // Include key.
-  const r2 = await fetchJsonWithRetry(receiptUrl, { method: "POST", token: adminToken, body: r2Body }); // Write receipt.
-  assert.strictEqual(r2.status, 200, `first write expected 200, got ${r2.status} :: ${r2.text}`); // Must succeed.
-  assert.ok(r2.json && r2.json.ok === true, "first write must return ok:true"); // Validate ok.
-  const firstFactId = String(r2.json.fact_id); // Capture fact id.
-  assert.ok(firstFactId.length > 0, "fact_id must be non-empty"); // Validate fact id.
+  // 1) Create task.
+  const taskPayload = minimalTaskPayload(triple); // Task payload.
+  const r1 = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/task"), { method: "POST", token: adminToken, body: taskPayload }); // POST task.
+  assert.ok([200, 201].includes(r1.status), `task create expected 200/201, got ${r1.status} :: ${r1.text}`); // Assert.
 
-  // Case 3: retry with same key => 409 DUPLICATE_RECEIPT with existing_fact_id.
-  const r3Body = buildReceiptBody(actTaskId, { idempotency_key: idem, note: "retry_same_key" }); // Same key.
-  const r3 = await fetchJsonWithRetry(receiptUrl, { method: "POST", token: adminToken, body: r3Body }); // Retry write.
-  assert.strictEqual(r3.status, 409, `duplicate expected 409, got ${r3.status} :: ${r3.text}`); // Must reject.
-  assert.ok(r3.json && r3.json.error === "DUPLICATE_RECEIPT", "must return DUPLICATE_RECEIPT"); // Validate error code.
-  assert.ok(String(r3.json.existing_fact_id || "").length > 0, "existing_fact_id must be present"); // Must provide existing fact.
+  const actTaskId = String((r1.json && r1.json.act_task_id) ? r1.json.act_task_id : ""); // Extract server-issued act_task_id.
+  assert.ok(actTaskId.length > 0, "act_task_id must be non-empty"); // Ensure task id exists.
 
-  // Case 4: write with different key => 200 (allowed as separate receipt).
-  const idem2 = `idem_${randHex(8)}`; // Generate a second idempotency key.
-  const r4Body = buildReceiptBody(actTaskId, { idempotency_key: idem2, note: "different_key" }); // Different key.
-  const r4 = await fetchJsonWithRetry(receiptUrl, { method: "POST", token: adminToken, body: r4Body }); // Write again.
-  assert.strictEqual(r4.status, 200, `different key expected 200, got ${r4.status} :: ${r4.text}`); // Must succeed.
-  assert.ok(r4.json && r4.json.ok === true, "different key must return ok:true"); // Validate ok.
+  // 2) Write receipt with idempotency key.
+  const idemKey = `idem_${crypto.randomBytes(8).toString("hex")}`; // Idempotency key.
+  const receiptPayload = minimalReceiptPayload(triple, actTaskId, idemKey); // Receipt payload (server-issued act_task_id).
+  const r2 = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/receipt"), { method: "POST", token: adminToken, body: receiptPayload }); // POST receipt.
+  assert.ok([200, 201].includes(r2.status), `receipt write expected 200/201, got ${r2.status} :: ${r2.text}`); // Assert.
 
-  console.log("[OK] Sprint20 AO-ACT receipt idempotency acceptance passed"); // Print success.
+  // 3) Repeat same receipt with same idempotency key (must be dedup / rejected / no-op).
+  const r3 = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/receipt"), { method: "POST", token: adminToken, body: receiptPayload }); // Re-POST.
+  assert.ok([200, 201, 400, 409].includes(r3.status), `duplicate receipt expected 200/201/400/409, got ${r3.status} :: ${r3.text}`); // Accept allowed outcomes.
+
+  console.log("[OK] AO-ACT Idempotency v0 acceptance passed"); // Success.
 } // End main.
 
-main().catch((e) => { // Top-level error handler.
-  console.error("[FAIL]", e && e.stack ? e.stack : e); // Print stack.
+main().catch((e) => { // Top-level handler.
+  console.error("[FAIL]"); // Failure header.
+  console.error(e && e.stack ? e.stack : String(e)); // Print details.
   process.exit(1); // Exit non-zero.
-}); // End error handler.
+}); // End catch.

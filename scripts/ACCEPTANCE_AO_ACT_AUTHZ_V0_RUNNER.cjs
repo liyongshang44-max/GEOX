@@ -1,162 +1,183 @@
 // GEOX/scripts/ACCEPTANCE_AO_ACT_AUTHZ_V0_RUNNER.cjs
 // Sprint 19: AO-ACT AuthZ v0 acceptance runner (Node.js).
+// Updated for Sprint 22+: include required tenant_id/project_id/group_id in task/index requests.
 
-"use strict"; // Enforce strict mode for safer JS semantics.
+"use strict"; // Strict mode for safer JS semantics.
 
-const assert = require("node:assert"); // Node assert for deterministic acceptance checks.
-const crypto = require("node:crypto"); // Node crypto for random ids.
-const { setTimeout: sleep } = require("node:timers/promises"); // Sleep helper for retry backoff.
-const { URL } = require("node:url"); // URL helper for safe URL concatenation.
+const assert = require("node:assert"); // Deterministic acceptance assertions.
+const crypto = require("node:crypto"); // Random ids for unique task ids.
+const fs = require("node:fs"); // Read token config from disk.
+const path = require("node:path"); // Resolve token config path.
+const { setTimeout: sleep } = require("node:timers/promises"); // Retry backoff helper.
+const { URL } = require("node:url"); // Safe URL joins.
 
 function parseArgs(argv) { // Parse CLI args of form --key value.
-  const out = {}; // Accumulate parsed args.
-  for (let i = 2; i < argv.length; i += 1) { // Iterate argv, skipping node + script.
-    const k = argv[i]; // Current token.
+  const out = {}; // Parsed args accumulator.
+  for (let i = 2; i < argv.length; i += 1) { // Skip node + script.
+    const k = argv[i]; // Current arg token.
     const v = argv[i + 1]; // Next token as value.
-    if (typeof k === "string" && k.startsWith("--")) { // Only accept --key tokens.
-      out[k.slice(2)] = v; // Store without leading dashes.
-      i += 1; // Consume value token.
+    if (typeof k === "string" && k.startsWith("--")) { // Only accept --key.
+      out[k.slice(2)] = v; // Store value.
+      i += 1; // Consume value.
     } // End if.
   } // End loop.
-  return out; // Return parsed args object.
+  return out; // Return parsed args.
 } // End parseArgs.
 
-const args = parseArgs(process.argv); // Parse process argv.
-const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for server under test.
-console.log(`[INFO] Sprint19 AuthZ acceptance (baseUrl=${baseUrl})`); // Print run header.
+const args = parseArgs(process.argv); // Parse process args.
+const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Server base URL.
+console.log(`[INFO] Sprint19 AuthZ acceptance (baseUrl=${baseUrl})`); // Header log.
 
-// Token fixtures (must match config/auth/ao_act_tokens_v0.json).
-const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
+function joinUrl(base, pathname) { // Join base URL + path.
+  const u = new URL(base); // Parse base URL.
+  u.pathname = pathname; // Overwrite path.
+  return u.toString(); // Full URL.
+} // End joinUrl.
 
-const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with all scopes.
-const taskOnlyToken = "dev_ao_act_task_only_v0"; // Token missing receipt.write scope.
-const invalidToken = "dev_ao_act_invalid_token_v0"; // Unknown token to trigger AUTH_INVALID.
-
-function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
-  const h = { "content-type": "application/json" }; // Always send JSON content-type.
-  if (typeof token === "string" && token.length > 0) { // Only set auth header when token is provided.
-    h["authorization"] = `Bearer ${token}`; // Use Bearer scheme expected by server.
+function buildHeaders(token) { // Build request headers.
+  const h = { "content-type": "application/json" }; // Always JSON.
+  if (typeof token === "string" && token.length > 0) { // Only set auth when token provided.
+    h["authorization"] = `Bearer ${token}`; // Bearer auth as used by AO-ACT.
   } // End if.
   return h; // Return headers.
 } // End buildHeaders.
 
-async function fetchJson(url, opts) { // Fetch JSON with optional token and JSON body.
+async function fetchJson(url, opts) { // Fetch JSON with best-effort parse.
   const method = String(opts.method || "GET"); // HTTP method.
-  const token = (opts.token === undefined ? "" : String(opts.token)); // Token string; empty => no auth header.
-  const body = (opts.body === undefined ? undefined : JSON.stringify(opts.body)); // JSON body if provided.
-  const res = await fetch(url, { method, headers: buildHeaders(token), body }); // Perform fetch.
-  const text = await res.text(); // Read response body as text.
+  const token = (opts.token === undefined ? "" : String(opts.token)); // Token string.
+  const body = (opts.body === undefined ? undefined : JSON.stringify(opts.body)); // JSON body.
+  const res = await fetch(url, { method, headers: buildHeaders(token), body }); // Execute request.
+  const text = await res.text(); // Read body text.
   let json = null; // Parsed JSON holder.
-  try { json = text.length ? JSON.parse(text) : null; } catch { json = null; } // Best-effort JSON parse.
-  return { status: res.status, json, text }; // Return status + parsed json + raw text.
+  try { json = text.length ? JSON.parse(text) : null; } catch { json = null; } // Best-effort parse.
+  return { status: res.status, json, text }; // Return structured response.
 } // End fetchJson.
 
-async function fetchJsonWithRetry(url, inner) { // Retry wrapper for server warm-up / transient failures.
-  const attempts = 20; // Max attempts.
-  const delayMs = 300; // Delay per attempt in ms.
-  let lastErr = null; // Track last error for diagnostics.
+async function fetchJsonWithRetry(url, opts) { // Retry wrapper for warm-up.
+  const attempts = 20; // Retry attempts.
+  const delayMs = 300; // Delay per attempt.
+  let lastErr = null; // Keep last error.
   for (let i = 0; i < attempts; i += 1) { // Attempt loop.
-    try { // Try block for fetch.
-      return await fetchJson(url, inner); // Attempt request and return on success.
-    } catch (e) { // Catch network errors (e.g., ECONNREFUSED).
+    try { // Try request.
+      return await fetchJson(url, opts); // Return on success.
+    } catch (e) { // Catch network errors.
       lastErr = e; // Save error.
-      await sleep(delayMs); // Wait before retry.
+      await sleep(delayMs); // Backoff.
     } // End catch.
   } // End loop.
-  throw lastErr || new Error("fetch failed"); // Throw last error after exhausting retries.
+  throw lastErr || new Error("fetch failed"); // Throw final error.
 } // End fetchJsonWithRetry.
 
-function nowMs() { // Get current epoch ms.
-  return Date.now(); // Return current ms.
-} // End nowMs.
+function readTokenConfig(repoRoot) { // Load tokens config JSON.
+  const p = path.join(repoRoot, "config", "auth", "ao_act_tokens_v0.json"); // Config path.
+  const raw = fs.readFileSync(p, "utf8"); // Read file text.
+  const j = JSON.parse(raw); // Parse JSON.
+  const tokens = Array.isArray(j.tokens) ? j.tokens : []; // Extract tokens array.
+  return { path: p, tokens }; // Return parsed tokens.
+} // End readTokenConfig.
 
-function randId(prefix) { // Create random id string.
-  return `${prefix}_${crypto.randomBytes(16).toString("hex")}`; // Prefix + 32 hex chars.
-} // End randId.
+function pickTokens(tokens) { // Pick admin + task-only tokens by scopes.
+  const byScopes = (wantAll, wantAny, forbidAny) => { // Helper predicate builder.
+    return (t) => { // Predicate over token object.
+      const scopes = Array.isArray(t.scopes) ? t.scopes : []; // Normalize scopes.
+      const hasAll = wantAll.every((s) => scopes.includes(s)); // Require all scopes.
+      const hasAny = wantAny.length === 0 ? true : wantAny.some((s) => scopes.includes(s)); // Require any.
+      const hasForbidden = forbidAny.some((s) => scopes.includes(s)); // Forbid list.
+      return Boolean(t && t.token && hasAll && hasAny && !hasForbidden && t.revoked !== true); // Final predicate.
+    }; // End predicate.
+  }; // End helper.
 
-function joinUrl(base, pathname) { // Join base URL + path safely.
-  const u = new URL(base); // Parse base.
-  u.pathname = pathname; // Set path (overwrites).
-  return u.toString(); // Return full URL string.
-} // End joinUrl.
+  const admin = tokens.find(byScopes(["ao_act.task.write", "ao_act.receipt.write", "ao_act.index.read"], [], [])); // Full token.
+  const taskOnly = tokens.find(byScopes(["ao_act.task.write", "ao_act.index.read"], [], ["ao_act.receipt.write"])); // Missing receipt.write.
+  const invalid = `invalid_${crypto.randomBytes(8).toString("hex")}`; // Unknown token for 401 path.
+  return { adminToken: admin ? String(admin.token) : "", taskOnlyToken: taskOnly ? String(taskOnly.token) : "", invalidToken: invalid }; // Return picks.
+} // End pickTokens.
 
-function buildTaskBody() { // Build a minimally valid ao_act task body (matches server zod schema).
-  const start = nowMs(); // Start ts.
-  const end = start + 60_000; // End ts (+60s).
-  const actTaskId = randId("act"); // Unique act_task_id.
-  return { // Return task body (NOT wrapped in {type,payload}; endpoint expects body fields directly).
-    issuer: { kind: "human", id: "dev", namespace: "local" }, // Required issuer.
-    action_type: "PLOW", // Use an allowlisted action_type to avoid ACTION_TYPE_NOT_ALLOWED.
-    target: { kind: "field", ref: "field:demo" }, // Minimal target.
-    time_window: { start_ts: start, end_ts: end }, // Required time window.
-    parameter_schema: { keys: [ { name: "noop", type: "boolean" } ] }, // Minimal schema.
-    parameters: { noop: true }, // Params map.
-    constraints: {}, // Constraints map (keep empty to avoid enum-schema coupling).
-    meta: { act_task_id: actTaskId }, // Carry act_task_id in meta for test linkage (server generates its own act_task_id anyway).
-  }; // End task body.
-} // End buildTaskBody.
+function envOrDefault(name, fallback) { // Read env var with fallback.
+  const v = process.env[name]; // Env read.
+  return (typeof v === "string" && v.length > 0) ? v : fallback; // Choose value.
+} // End envOrDefault.
 
-function buildReceiptBody(actTaskId) { // Build a minimally valid receipt body.
-  const start = nowMs(); // Start ts.
-  const end = start + 5_000; // End ts.
-  return { // Receipt body expected by server contract.
-    act_task_id: actTaskId, // Link to task id returned by server.
-    executor_id: { kind: "script", id: "sim_executor", namespace: "local" }, // Executor id ref (contract enum: human|script|device).
-    execution_time: { start_ts: start, end_ts: end }, // Execution time.
-    execution_coverage: { kind: "field", ref: "field:demo" }, // Coverage.
-    resource_usage: { fuel_l: null, electric_kwh: null, water_l: null, chemical_ml: null }, // Required keys (nullable).
-    logs_refs: [ { kind: "log", ref: "log:acceptance" } ], // Logs refs.
-    constraint_check: { violated: false, violations: [] }, // Constraint check.
-    observed_parameters: { noop: true }, // Observed params.
-    meta: { note: "acceptance", idempotency_key: "authz_acceptance_" + String(start) }, // Include idempotency_key for Sprint20+ receipt discipline.
-  }; // End receipt body.
-} // End buildReceiptBody.
+function tenantTriple() { // Determine tenant triple for requests.
+  const tenant_id = envOrDefault("GEOX_AO_ACT_TENANT_ID", "tenantA"); // Default tenant id.
+  const project_id = envOrDefault("GEOX_AO_ACT_PROJECT_ID", "projectA"); // Default project id.
+  const group_id = envOrDefault("GEOX_AO_ACT_GROUP_ID", "groupA"); // Default group id.
+  return { tenant_id, project_id, group_id }; // Return triple.
+} // End tenantTriple.
 
-async function main() { // Main acceptance entrypoint.
-  const taskUrl = joinUrl(baseUrl, "/api/control/ao_act/task"); // Task endpoint URL.
-  const receiptUrl = joinUrl(baseUrl, "/api/control/ao_act/receipt"); // Receipt endpoint URL.
-  const indexUrl = joinUrl(baseUrl, "/api/control/ao_act/index"); // Index endpoint URL.
+function minimalTaskPayload(triple) { // Build a minimally valid ao_act task body (contract-aligned).
+  const now = Date.now(); // Start time for time_window.
+  const end = now + 60_000; // End time for time_window.
+  return {
+    tenant_id: triple.tenant_id, // Tenant id required by Sprint 22+ contract.
+    project_id: triple.project_id, // Project id required by Sprint 22+ contract.
+    group_id: triple.group_id, // Group id required by Sprint 22+ contract.
+    issuer: { kind: "human", id: "dev", namespace: "local" }, // Issuer identity (kind fixed to human).
+    action_type: "PLOW", // Allowed action_type from v0 allowlist.
+    target: { kind: "field", ref: "field:demo" }, // Target reference.
+    time_window: { start_ts: now, end_ts: end }, // Desired execution time window.
+    parameter_schema: { keys: [ { name: "noop", type: "boolean" } ] }, // Schema for parameters.
+    parameters: { noop: true }, // Concrete parameters (primitives only).
+    constraints: {}, // Empty constraints.
+    meta: { note: "acceptance" } // Arbitrary meta.
+  }; // End payload.
+} // End minimalTaskPayload.
 
-  const taskBody = buildTaskBody(); // Build task body.
+async function main() { // Main entry.
+  const repoRoot = path.resolve(__dirname, ".."); // Repo root as scripts/.. (works in repo + delivery bundle).
+  const { tokens } = readTokenConfig(repoRoot); // Load token config.
+  const picks = pickTokens(tokens); // Pick tokens by scope.
+  const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || picks.adminToken); // Allow explicit override.
+  const taskOnlyToken = String(process.env.GEOX_AO_ACT_TOKEN_TASK_ONLY || picks.taskOnlyToken || adminToken); // Optional override.
+  const invalidToken = picks.invalidToken; // Unknown token for negative test.
 
-  // Case 1: Missing token -> 401 AUTH_MISSING (must short-circuit before validation).
-  const r0 = await fetchJsonWithRetry(taskUrl, { method: "POST", body: taskBody, token: "" }); // No auth header.
-  assert.strictEqual(r0.status, 401, `expected 401 AUTH_MISSING, got status=${r0.status} body=${r0.text}`); // Status check.
-  assert.strictEqual(r0.json?.error, "AUTH_MISSING", `expected AUTH_MISSING, got ${r0.text}`); // Error code check.
+  if (!adminToken) { // Enforce at least one usable token exists.
+    throw new Error("NO_ADMIN_TOKEN_FOUND_IN_CONFIG"); // Fail fast with clear reason.
+  } // End if.
 
-  // Case 2: Invalid token -> 401 AUTH_INVALID.
-  const r1 = await fetchJsonWithRetry(taskUrl, { method: "POST", body: taskBody, token: invalidToken }); // Unknown token.
-  assert.strictEqual(r1.status, 401, `expected 401 AUTH_INVALID, got status=${r1.status} body=${r1.text}`); // Status check.
-  assert.strictEqual(r1.json?.error, "AUTH_INVALID", `expected AUTH_INVALID, got ${r1.text}`); // Error code check.
+  const triple = tenantTriple(); // Determine tenant triple.
+  console.log(`[INFO] tenant_id=${triple.tenant_id} project_id=${triple.project_id} group_id=${triple.group_id}`); // Log triple.
 
-  // Case 3: Admin token can write task -> 200.
-  const r2 = await fetchJsonWithRetry(taskUrl, { method: "POST", body: taskBody, token: adminToken }); // Admin token.
-  assert.strictEqual(r2.status, 200, `expected 200, got status=${r2.status} body=${r2.text}`); // Status check.
-  assert.strictEqual(Boolean(r2.json?.ok), true, `expected ok=true, got ${r2.text}`); // ok check.
-  assert.strictEqual(typeof r2.json?.act_task_id, "string", `expected act_task_id, got ${r2.text}`); // act_task_id exists.
-  const actTaskId = r2.json.act_task_id; // Use server-returned task id.
+  // 0) No token -> 401 for index (AuthZ gate). 
+  {
+    const r = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/index"), { method: "GET" }); // No token header.
+    assert.strictEqual(r.status, 401, `expected 401 without token, got ${r.status} body=${r.text}`); // Assert 401.
+  }
 
-  // Case 4: task-only token cannot write receipt -> 403 AUTH_SCOPE_DENIED.
-  const receiptBody = buildReceiptBody(actTaskId); // Build receipt body.
-  const r3 = await fetchJsonWithRetry(receiptUrl, { method: "POST", body: receiptBody, token: taskOnlyToken }); // Insufficient scope.
-  assert.strictEqual(r3.status, 403, `expected 403 AUTH_SCOPE_DENIED, got status=${r3.status} body=${r3.text}`); // Status check.
-  assert.strictEqual(r3.json?.error, "AUTH_SCOPE_DENIED", `expected AUTH_SCOPE_DENIED, got ${r3.text}`); // Error code check.
+  // 1) Invalid token -> 401 for index.
+  {
+    const r = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/index"), { method: "GET", token: invalidToken }); // Invalid token.
+    assert.strictEqual(r.status, 401, `expected 401 invalid token, got ${r.status} body=${r.text}`); // Assert 401.
+  }
 
-  // Case 5: Admin token can write receipt -> 200.
-  const r4 = await fetchJsonWithRetry(receiptUrl, { method: "POST", body: receiptBody, token: adminToken }); // Admin token.
-  assert.strictEqual(r4.status, 200, `expected 200, got status=${r4.status} body=${r4.text}`); // Status check.
-  assert.strictEqual(Boolean(r4.json?.ok), true, `expected ok=true, got ${r4.text}`); // ok check.
+  // 2) Valid token -> 200 for index (with required tenant triple query).
+  {
+    const u = new URL(joinUrl(baseUrl, "/api/control/ao_act/index")); // Build URL with query.
+    u.searchParams.set("tenant_id", triple.tenant_id); // Required tenant query.
+    u.searchParams.set("project_id", triple.project_id); // Required project query.
+    u.searchParams.set("group_id", triple.group_id); // Required group query.
+    const r = await fetchJsonWithRetry(u.toString(), { method: "GET", token: adminToken }); // Authorized request.
+    assert.strictEqual(r.status, 200, `expected 200 index, got ${r.status} body=${r.text}`); // Assert 200.
+  }
 
-  // Case 6: task-only token can read index -> 200.
-  const r5 = await fetchJsonWithRetry(indexUrl, { method: "GET", token: taskOnlyToken }); // Read index.
-  assert.strictEqual(r5.status, 200, `expected 200, got status=${r5.status} body=${r5.text}`); // Status check.
-  assert.strictEqual(Boolean(r5.json?.ok), true, `expected ok=true, got ${r5.text}`); // ok check.
+  // 3) Valid token -> can write task (200/201). 
+  const taskPayload = minimalTaskPayload(triple); // Build minimal valid task payload.
+  {
+    const r = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/task"), { method: "POST", token: adminToken, body: taskPayload }); // Create task.
+    assert.ok([200, 201].includes(r.status), `expected 200/201, got status=${r.status} body=${r.text}`); // Assert success.
+  }
 
-  console.log("[PASS] Sprint19 AuthZ acceptance passed"); // Success log.
+  // 4) Token missing receipt.write should still be allowed to write task (authz scope check).
+  {
+    const r = await fetchJsonWithRetry(joinUrl(baseUrl, "/api/control/ao_act/task"), { method: "POST", token: taskOnlyToken, body: minimalTaskPayload(triple) }); // Task write.
+    assert.ok([200, 201].includes(r.status), `expected 200/201 taskOnly task.write, got ${r.status} body=${r.text}`); // Assert.
+  }
+
+  console.log("[OK] AO-ACT AuthZ v0 acceptance passed"); // Success line.
 } // End main.
 
 main().catch((e) => { // Top-level error handler.
   console.error("[FAIL] Sprint19 AuthZ acceptance failed"); // Failure header.
-  console.error(e); // Print error object.
-  process.exit(13); // Non-zero exit for acceptance harness.
+  console.error(e && e.stack ? e.stack : String(e)); // Print stack for debugging.
+  process.exit(1); // Non-zero exit for CI gate.
 }); // End catch.

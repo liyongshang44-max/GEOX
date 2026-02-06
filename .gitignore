@@ -50,3 +50,7 @@ apps/server/media/
 # build artifacts accidentally emitted into src
 packages/control-kernel/src/**/*.js
 
+
+# Delivery artifacts (never commit)
+_exports/
+

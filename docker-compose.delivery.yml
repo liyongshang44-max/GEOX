@@ -1,0 +1,22 @@
+# GEOX/docker-compose.delivery.yml
+# Sprint 23: Delivery profile overlay.
+# NOTE: This file is governed by docs/delivery/GEOX-Delivery-Envelope-v0.md.
+# It MUST ONLY adjust mount boundaries / read-only flags / ports / resource limits.
+# It MUST NOT introduce new services or new system semantics.
+
+services:
+  server:
+    # Delivery: allow setting conservative resource bounds without changing code semantics.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2048M
+
+  postgres:
+    # Delivery: allow setting conservative resource bounds without changing DB semantics.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2048M
