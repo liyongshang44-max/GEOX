@@ -346,3 +346,132 @@ Hard boundaries (must remain true):
 - No shared executors across tenant_id
 - No scheduler / queue / auto-trigger
 - No change to Sprint 19 AuthZ core semantics
+Sprint 23 · Apple III · Delivery Envelope v0 (Acceptance & Evidence Export)
+
+Key anchors:
+
+Branch: main
+
+Tag: apple_iii_delivery_envelope_v0
+
+Commit: 1064e8b
+
+Frozen scope:
+
+Delivery-level envelope for AO-ACT acceptance and evidence export
+
+Single entry delivery compose (docker-compose.delivery.yml)
+
+Deterministic acceptance aggregation into acceptance_report_v0
+
+Explicit, opt-in evidence pack export for a single AO-ACT task
+
+No new runtime semantics introduced
+
+Included components (frozen):
+
+docker-compose.delivery.yml
+
+Delivery-only compose
+
+No new services
+
+No runtime behavior change
+
+scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
+
+scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0_RUNNER.cjs
+
+Executes existing acceptance scripts as a closed set
+
+Aggregates results into a single delivery report
+
+scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1
+
+scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0_RUNNER.cjs
+
+Explicit, manual export of evidence pack for a given act_task_id
+
+Requires explicit token with ao_act.index.read
+
+Produces file-system artifacts only
+
+docs/delivery/GEOX-Delivery-Envelope-v0.md
+
+Delivery contract (descriptive, non-authoritative)
+
+Derived view only
+
+Acceptance (delivery-level):
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts/DELIVERY/ACCEPTANCE_DELIVERY_ENVELOPE_V0.ps1
+
+
+Acceptance outputs (frozen semantics):
+
+_exports/delivery/acceptance_report_v0.json (SSOT, machine-readable)
+
+_exports/delivery/acceptance_report_v0.txt (human-readable mirror)
+
+_exports/delivery/cases/**/stdout.txt
+
+_exports/delivery/cases/**/stderr.txt
+
+Evidence export (explicit, non-automatic):
+
+$env:GEOX_AO_ACT_TOKEN_EXPORT="dev_ao_act_admin_v0"
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts/DELIVERY/EXPORT_EVIDENCE_PACK_V0.ps1 `
+  -TenantId <tenant_id> `
+  -ProjectId <project_id> `
+  -GroupId <group_id> `
+  -TaskId <act_task_id>
+
+
+Evidence export outputs (non-acceptance artifacts):
+
+_exports/delivery/evidence_pack_v0/<tenant>/<project>/<group>/<act_task_id>/
+
+_exports/delivery/evidence_pack_*.zip (best-effort, optional)
+
+Hard boundaries (must remain true):
+
+Delivery envelope introduces no new execution semantics
+
+No scheduler, queue, or background job
+
+No auto-export of evidence
+
+No side effects on AO-ACT runtime behavior
+
+No modification of Sprint 19 AuthZ semantics
+
+No modification of Sprint 20 idempotency semantics
+
+Evidence export is explicit, token-gated, and offline
+
+_exports/ is a delivery artifact directory and must never be committed
+
+Negative assertions (explicitly NOT included):
+
+No new AO-ACT endpoints
+
+No new token types or IAM features
+
+No batch or cross-task export
+
+No cross-tenant evidence aggregation
+
+No Judge or Agronomy coupling
+
+No UI-triggered delivery actions
+
+Governance meaning of tag:
+
+apple_iii_delivery_envelope_v0 freezes delivery mechanics only
+
+Runtime behavior, governance semantics, and execution authority remain unchanged
+
+This tag is safe to consume by external delivery / audit pipelines
