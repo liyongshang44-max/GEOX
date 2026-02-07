@@ -46,11 +46,11 @@ sim_config_manifest.json
 # runtime media (do not commit)
 apps/server/media/
 
-
-# build artifacts accidentally emitted into src
-packages/control-kernel/src/**/*.js
-
-
-# Delivery artifacts (never commit)
+# --- Sprint9: allow deterministic acceptance fixtures (whitelist) ---
+!acceptance/
+acceptance/*
+!acceptance/problem_state_lifecycle_v1/
+!acceptance/problem_state_lifecycle_v1/**
+artifacts/
 _exports/
 

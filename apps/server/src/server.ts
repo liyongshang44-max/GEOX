@@ -125,6 +125,14 @@ function multipartField(fields: any, key: string): string | undefined {
   return pick(v); // 非数组直接 pick
 }
 
+const GEOX_SYSTEM_PROFILE = process.env.GEOX_SYSTEM_PROFILE ?? "dev"; // 系统运行 profile（商用冻结期会注入 commercial_v0）
+const GEOX_DISABLE_APPLE_II = (process.env.GEOX_DISABLE_APPLE_II ?? "") === "1"; // 测试/负验收用：显式禁用 Apple II（仅非商用允许）
+if (GEOX_SYSTEM_PROFILE === "commercial_v0" && GEOX_DISABLE_APPLE_II) { // 商用态下，拿掉 Apple II 必须导致系统不可用（fail-fast）
+  // eslint-disable-next-line no-console
+  console.error("[FATAL] Apple II is required in commercial_v0 profile; refusing to start with GEOX_DISABLE_APPLE_II=1"); // 明确错误原因（便于审计/验收）
+  process.exit(12); // 非 0 退出码：系统级失败（商用冻结负验收）
+}
+
 const REPO_ROOT = path.resolve(process.cwd()); // 运行时 repo 根（容器内 /app）
 const MEDIA_DIR = path.join(REPO_ROOT, "media"); // media 根目录
 const CANOPY_DIR = path.join(MEDIA_DIR, "canopy"); // canopy 静态文件目录
@@ -146,8 +154,13 @@ const judgeDbUrl = resolveDatabaseUrl(); // Judge 使用的 DB URL（同库）
 const judgeReader = new AppleIReader(judgeDbUrl); // Judge Reader
 const judgeRuntime = new JudgeRuntime(judgeReader); // Judge Runtime
 
-registerJudgeRoutes(app, judgeRuntime); // 注册 judge 路由
-registerJudgeConfigRoutes(app); // 注册 judge config 路由
+if (!GEOX_DISABLE_APPLE_II) { // 允许在非商用 profile 下显式禁用 Apple II（用于系统级负验收）
+  registerJudgeRoutes(app, judgeRuntime); // 注册 judge 路由
+  registerJudgeConfigRoutes(app); // 注册 judge config 路由
+} else {
+  // eslint-disable-next-line no-console
+  console.warn("[WARN] Apple II routes disabled by GEOX_DISABLE_APPLE_II=1 (non-commercial only)"); // 提示当前运行态（不影响其它层）
+}
 registerSimConfigRoutes(app); // 注册 sim config 路由
 registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
 

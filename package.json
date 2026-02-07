@@ -22,6 +22,8 @@
   "scripts": {
     "build": "npm -ws run build",
     "dev": "pnpm -r dev",
+    "deploy:commercial:v0": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1",
+    "acceptance:system:commercial:v0": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1",
     "guardrails": "npm --workspace @geox/guardrails run build && npm --workspace @geox/guardrails run check",
     "import:caf": "ts-node ./scripts/loadfact.ts"
   }

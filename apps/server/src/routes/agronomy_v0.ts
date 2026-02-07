@@ -47,7 +47,15 @@ const AGRONOMY_INTERPRETATION_FORBID_KEYS = new Set<string>([ // Define forbidde
   "profit", // Block yield/profit objective coupling.
   "mode", // Block mode/preset semantics.
   "profile", // Block profile semantics.
-  "preset" // Block preset semantics.
+  "preset", // Block preset semantics.
+
+  // Sprint 24 (system-level): explicit AO-ACT semantic keys are forbidden in Agronomy outputs.
+  "ao_act", // Block encoding AO-ACT semantics.
+  "ao-act", // Block encoding AO-ACT semantics (dash variant).
+  "ao_act_task", // Block encoding AO-ACT task semantics.
+  "ao-act-task", // Block encoding AO-ACT task semantics (dash variant).
+  "ao_act_receipt", // Block encoding AO-ACT receipt semantics.
+  "ao-act-receipt" // Block encoding AO-ACT receipt semantics (dash variant).
 ]); // End forbidden key set.
 
 function scanForbiddenKeyRecursive(v: unknown): string | null { // Recursively scan a payload for forbidden keys (exact match, case-sensitive).

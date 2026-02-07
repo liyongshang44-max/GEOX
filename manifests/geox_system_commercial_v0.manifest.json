@@ -1,0 +1,80 @@
+{
+    "manifest_id":  "geox_system_commercial_v0",
+    "version":  "v0",
+    "git_commit":  "62f2b717f8bb22d19dd6f850ab6ae543ca242179",
+    "generated_at_ts":  1770481723842,
+    "profile":  "commercial_v0",
+    "hashes":  {
+                   "compose":  [
+                                   {
+                                       "sha256":  "0f6ba40ca559dacd69591f1ed2a9e9a44e57b67ead77a15b463302d53aceb372",
+                                       "path":  "docker-compose.yml"
+                                   },
+                                   {
+                                       "sha256":  "992427fa1d3df7f51e8eda134b1aa26d225d8173649890bbdafea43064fc3256",
+                                       "path":  "docker-compose.delivery.yml"
+                                   },
+                                   {
+                                       "sha256":  "361ef4d6ec6e57e2d88e23a5bfcd9a4491b7a3ff867727363fba3aa28486a107",
+                                       "path":  "docker-compose.commercial_v0.yml"
+                                   }
+                               ],
+                   "scripts":  [
+                                   {
+                                       "sha256":  "9b0c7ef657f3dc2fbafb59c13c6fc82e54a999155c5e674c9878fa4138c9d08f",
+                                       "path":  "scripts\\\\DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1"
+                                   },
+                                   {
+                                       "sha256":  "e1895c533650726218b19ecae94d23349885774df9d67c94f8b4aabedb2bbd2a",
+                                       "path":  "scripts\\\\ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1"
+                                   }
+                               ],
+                   "docs":  [
+                                {
+                                    "sha256":  "41633d3986b39efb317aa639657bb0749b7cc46bda97a247b0be529938fb9bbe",
+                                    "path":  "docs\\\\GEOX-Commercial-System-Freeze-v0.md"
+                                }
+                            ],
+                   "contracts":  [
+                                     {
+                                         "kind":  "dir_hash_v1",
+                                         "value":  {
+                                                       "dir":  "C:\\Users\\mylr1\\GEOX\\packages\\\\contracts\\\\src",
+                                                       "file_count":  16,
+                                                       "include":  [
+                                                                       "*.ts",
+                                                                       "*.json"
+                                                                   ],
+                                                       "sha256":  "244627dd3202336f8711699ac758867a37a2e7c10aca507f4078f53e18508f27"
+                                                   }
+                                     },
+                                     {
+                                         "kind":  "dir_hash_v1",
+                                         "value":  {
+                                                       "dir":  "C:\\Users\\mylr1\\GEOX\\packages\\\\contracts\\\\src\\\\schema",
+                                                       "file_count":  15,
+                                                       "include":  [
+                                                                       "*.ts",
+                                                                       "*.json"
+                                                                   ],
+                                                       "sha256":  "8df21ef63845a7f0f760ec63f6fdf0ef3ed1c7cc322509e4b9f52a16fd772a38"
+                                                   }
+                                     }
+                                 ],
+                   "acceptance_report":  {
+                                             "sha256":  "2cb3578884985b4100b6a7a3cff2a446038b06384ae1b2dc45e6c9ccde58c397",
+                                             "path":  "artifacts/system_acceptance/commercial_v0/system_acceptance_report.json"
+                                         }
+               },
+    "invariants":  [
+                       "Execution default-disabled (no auto-run)",
+                       "No Apple IV output enters AO-ACT",
+                       "No bypass of Apple II to drive execution",
+                       "No standalone deployment of Apple III for external use",
+                       "Constitution constraints must remain enabled"
+                   ],
+    "acceptance":  {
+                       "command":  "pnpm acceptance:system:commercial:v0",
+                       "report_path":  "artifacts/system_acceptance/commercial_v0/system_acceptance_report.json"
+                   }
+}

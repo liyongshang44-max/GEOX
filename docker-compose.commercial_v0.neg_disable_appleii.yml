@@ -1,0 +1,4 @@
+services:
+  server:
+    environment:
+      - GEOX_DISABLE_APPLE_II=1

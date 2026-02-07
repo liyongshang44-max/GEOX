@@ -1,0 +1,40 @@
+# GEOX/docker-compose.commercial_v0.yml  # File identity (audit).
+# Sprint 24: Commercial system freeze overlay (v0).  # Versioned overlay purpose.
+# Goal: pin a commercial profile flag + default-safe execution flag at deploy time.  # Explain intent.
+# Non-goal: introduce new services semantics or modify contracts.  # Guardrail statement.
+
+services:  # Compose service overlay root.
+  server:  # Overlay server service only (no new semantics).
+    environment:  # Inject commercial profile flags into runtime environment.
+      GEOX_SYSTEM_PROFILE: commercial_v0  # System profile marker used for fail-fast governance (Task 5).
+      GEOX_EXECUTION_DEFAULT_DISABLED: "1"  # Default-safe execution marker (enforced in code in Task 5).
+
+  web:  # Web UI service for full-stack commercial demo (Apple I–IV UI).
+    image: node:20  # Use Node 20 runtime for Vite dev server (delivery build comes later).
+    working_dir: /app  # Repo root mounted into /app.
+    command:  # Run Vite dev server for @geox/web.
+      - sh  # Shell entry.
+      - -lc  # Run login shell to allow pipe + set -e.
+      - |
+          set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/web dev -- --host 0.0.0.0 --port 5173
+    volumes:  # Mount repo + reuse pnpm caches to reduce cold start.
+      - ./:/app  # Repo mount for dev server.
+      - geox_node_modules:/app/node_modules  # Workspace node_modules cache volume.
+      - geox_pnpm_store:/pnpm-store  # pnpm store cache volume.
+      - geox_pnpm_vstore:/pnpm-vstore  # pnpm virtual store cache volume.
+    environment:  # Runtime env for web.
+      VITE_API_BASE: http://server:3000  # In-container base URL to the backend service.
+      GEOX_SYSTEM_PROFILE: commercial_v0  # Surface system profile to UI if needed (read-only).
+    ports:  # Expose web UI.
+      - "5173:5173"  # Host port mapping for the UI.
+    depends_on:  # Ensure backend exists before UI tries to query it.
+      - server  # Wait for server container creation.
+
