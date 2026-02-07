@@ -1,8 +1,8 @@
 {
     "manifest_id":  "geox_system_commercial_v0",
     "version":  "v0",
-    "git_commit":  "62f2b717f8bb22d19dd6f850ab6ae543ca242179",
-    "generated_at_ts":  1770481723842,
+    "git_commit":  "03748ee68cd122960ced78d739d8ffbaa1d19d94",
+    "generated_at_ts":  1770482816542,
     "profile":  "commercial_v0",
     "hashes":  {
                    "compose":  [
