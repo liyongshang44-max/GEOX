@@ -475,3 +475,90 @@ apple_iii_delivery_envelope_v0 freezes delivery mechanics only
 Runtime behavior, governance semantics, and execution authority remain unchanged
 
 This tag is safe to consume by external delivery / audit pipelines
+
+
+------------------------------------------------------------
+Sprint 25 · Approval Runtime v1 (Human-in-the-loop Workbench)
+------------------------------------------------------------
+
+Scope (what this Sprint adds)
+
+Adds a minimal, append-only “approval runtime” that productizes a human-in-the-loop approval flow without touching
+decision_plan_v0 (Sprint 16 sealed) and without changing AO-ACT semantics.
+
+New APIs (v1 only; v0 remains sealed)
+
+POST /api/control/approval_request/v1/request
+
+GET  /api/control/approval_request/v1/requests
+
+POST /api/control/approval_request/v1/approve
+
+Notes
+
+All approval endpoints reuse AO-ACT token/scope authorization (Sprint 19) and enforce Sprint 22 tenant triple isolation.
+
+Approval approval issues AO-ACT tasks by calling the existing AO-ACT endpoint internally, preserving AO-ACT audit behavior.
+
+Acceptance
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts/ACCEPTANCE_SPRINT25_APPROVAL_REQUEST_V1_SMOKE.ps1
+
+Hard boundaries (must remain true)
+
+Sprint 16 decision_plan_v0 remains sealed: NO decision_plan list/query APIs
+
+No scheduler, queue, or background executor is introduced
+
+No coupling to Judge/Agronomy and no mutation of existing facts
+
+
+------------------------------------------------------------
+Sprint 26 · Evidence Export API v1 (Async Jobs; keep evidence_pack_v0 offline)
+------------------------------------------------------------
+
+Scope (what this Sprint adds)
+
+Adds a service-facing evidence export API (v1) implemented as async jobs (reusing the existing importJobs pattern).
+This Sprint does NOT change or replace Sprint 23's offline evidence_pack_v0 script; v0 remains the offline delivery fallback.
+
+New APIs (v1)
+
+POST /api/delivery/evidence_export/v1/jobs
+
+GET  /api/delivery/evidence_export/v1/jobs/:job_id
+
+GET  /api/delivery/evidence_export/v1/jobs/:job_id/download
+
+New fact (v1)
+
+acceptance_result_v1 (append-only)
+- Minimal template in v1: ao_act_basic_v1 (task must exist => PASS else FAIL)
+- Binds acceptance_result_v1 to the produced artifact via artifact_sha256 and a deterministic_hash
+
+Notes
+
+All endpoints reuse AO-ACT token/scope auth with read-only scope (ao_act.index.read) and enforce Sprint 22 tenant triple isolation + 404 non-enumerability.
+
+Artifacts are written under runtime/evidence_exports_v1/ (runtime is excluded from git; safe for generated delivery artifacts).
+
+Acceptance
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts/ACCEPTANCE_SPRINT26_EVIDENCE_EXPORT_V1_SMOKE.ps1
+
+Hard boundaries (must remain true)
+
+evidence_pack_v0 remains an offline script with unchanged semantics
+
+No scheduler, no background executor, no coupling to Judge/ProblemState
+
+
+# Sprint 27 · Executor Runtime v1 (deployable adapter, not scheduler)
+
+- Added apps/executor (pnpm workspace app) with a run-once executor adapter.
+- Executor v1 reads AO-ACT index (tenant-filtered), appends ao_act_receipt_v0 for tasks without receipts, then triggers evidence_export_api_v1 job and waits for completion.
+- Added acceptance: scripts/ACCEPTANCE_SPRINT27_EXECUTOR_RUNTIME_V1_SMOKE.ps1 (creates approval_request_v1 -> approves -> runs executor -> verifies receipt).
+
+Governance: executor is explicit/run-once; no infinite auto-scheduling loop, and no cross-tenant enumeration.

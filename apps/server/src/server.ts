@@ -31,6 +31,8 @@ import { registerJudgeConfigRoutes } from "./routes/judge_config"; // judge conf
 import { registerSimConfigRoutes } from "./routes/sim_config"; // sim config 路由
 import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // AO-SENSE 控制路由
 import { registerControlAoActRoutes } from "./routes/control_ao_act"; // AO-ACT 控制路由
+import { registerControlApprovalRequestV1Routes } from "./routes/control_approval_request_v1"; // Sprint 25: Approval runtime v1 routes.
+import { registerDeliveryEvidenceExportV1Routes } from "./routes/delivery_evidence_export_v1"; // Sprint 26: Evidence export API v1 (async jobs).
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
 import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1"; // 农艺解释 v1 路由
@@ -166,6 +168,8 @@ registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
 
 registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
 registerControlAoActRoutes(app, pool); // 注册 AO-ACT 控制路由
+registerControlApprovalRequestV1Routes(app, pool); // Sprint 25: 注册 Approval runtime v1（人类在环审批）路由。
+registerDeliveryEvidenceExportV1Routes(app, pool); // Sprint 26: 注册 Evidence Export API v1（异步作业）路由。
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app, pool); // 注册 agronomy interpretation v1 路由
 

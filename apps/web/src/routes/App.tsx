@@ -10,6 +10,7 @@ import SimConfigPage from "../views/SimConfigPage";
 import AdminHealthPage from "../views/AdminHealthPage";
 import AdminImportPage from "../views/AdminImportPage";
 import AdminAcceptancePage from "../views/AdminAcceptancePage";
+import ApprovalRequestsPage from "../views/ApprovalRequestsPage";
 
 export default function App(): React.ReactElement {
   const [expert, setExpert] = React.useState<boolean>(() => {
@@ -43,6 +44,7 @@ export default function App(): React.ReactElement {
               <Link className="btn ghost" to="/admin/healthz">Healthz</Link>
               <Link className="btn ghost" to="/admin/import">Import</Link>
               <Link className="btn ghost" to="/admin/acceptance">Acceptance</Link>
+              <Link className="btn ghost" to="/control/approvals">Approvals</Link>
             </>
           ) : null}
 
@@ -75,6 +77,7 @@ export default function App(): React.ReactElement {
         <Route path="/admin/healthz" element={<AdminHealthPage />} />
         <Route path="/admin/import" element={<AdminImportPage />} />
         <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
+        <Route path="/control/approvals" element={<ApprovalRequestsPage />} />
       </Routes>
     </div>
   );

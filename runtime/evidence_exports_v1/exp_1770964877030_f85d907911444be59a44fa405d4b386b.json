@@ -1,0 +1,135 @@
+{
+  "type": "evidence_pack_export_v1",
+  "schema_version": "1",
+  "generated_at_ts": 1770964883650,
+  "deterministic_hash": "dc0d444c97de2f7d26ebd8c1232805962bbe2d2f02833253638632b09d4b62f7",
+  "payload": {
+    "tenant_id": "tenantA",
+    "project_id": "projectA",
+    "group_id": "groupA",
+    "act_task_id": "act_a0c47becc0a74b75ad4181f3fd16aadd",
+    "template": "ao_act_basic_v1",
+    "facts": {
+      "ao_act_task_v0": [
+        {
+          "fact_id": "a8c73f72-89ca-4904-8a26-770d86ad2dd1",
+          "occurred_at": "2026-02-13T06:41:12.800Z",
+          "source": "api/control/ao_act",
+          "record_json": {
+            "type": "ao_act_task_v0",
+            "payload": {
+              "meta": {},
+              "issuer": {
+                "id": "dev",
+                "kind": "human",
+                "namespace": "approval_request_v1"
+              },
+              "target": {
+                "ref": "fieldA",
+                "kind": "field"
+              },
+              "group_id": "groupA",
+              "tenant_id": "tenantA",
+              "parameters": {
+                "dry_run": true
+              },
+              "project_id": "projectA",
+              "act_task_id": "act_a0c47becc0a74b75ad4181f3fd16aadd",
+              "action_type": "PLOW",
+              "constraints": {},
+              "time_window": {
+                "end_ts": 1770964872609,
+                "start_ts": 1770961272609
+              },
+              "created_at_ts": 1770964872799,
+              "parameter_schema": {
+                "keys": [
+                  {
+                    "name": "dry_run",
+                    "type": "boolean"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "ao_act_receipt_v0": [],
+      "approval_decision_v1": [
+        {
+          "fact_id": "59be063a-b088-4c0f-b6a7-85881bfa00f3",
+          "occurred_at": "2026-02-13T06:41:12.811Z",
+          "source": "api/control/approval_request/v1",
+          "record_json": {
+            "type": "approval_decision_v1",
+            "payload": {
+              "actor_id": "dev",
+              "decision": "APPROVED",
+              "group_id": "groupA",
+              "token_id": "tok_dev_ao_act_admin_v0",
+              "tenant_id": "tenantA",
+              "project_id": "projectA",
+              "request_id": "apr_8c153155abb44386b1f6735af83439cb",
+              "act_task_id": "act_a0c47becc0a74b75ad4181f3fd16aadd",
+              "decision_id": "apd_86ebb0aab35645bcb5557613fd31bd88",
+              "created_at_ts": 1770964872811,
+              "ao_act_fact_id": "a8c73f72-89ca-4904-8a26-770d86ad2dd1"
+            }
+          }
+        }
+      ],
+      "approval_request_v1": [
+        {
+          "fact_id": "d053a300-9a12-4661-a344-e098cdaa626a",
+          "occurred_at": "2026-02-13T06:41:12.586Z",
+          "source": "api/control/approval_request/v1",
+          "record_json": {
+            "type": "approval_request_v1",
+            "payload": {
+              "status": "PENDING",
+              "actor_id": "dev",
+              "group_id": "groupA",
+              "proposal": {
+                "meta": null,
+                "issuer": "acceptance",
+                "target": "field:fieldA",
+                "parameters": {
+                  "dry_run": true
+                },
+                "action_type": "PLOW",
+                "constraints": [],
+                "time_window": {
+                  "end_ts": 1770964872609,
+                  "start_ts": 1770961272609
+                },
+                "parameter_schema": {
+                  "keys": [
+                    "dry_run"
+                  ]
+                }
+              },
+              "token_id": "tok_dev_ao_act_admin_v0",
+              "tenant_id": "tenantA",
+              "project_id": "projectA",
+              "request_id": "apr_8c153155abb44386b1f6735af83439cb",
+              "created_at_ts": 1770964872585
+            }
+          }
+        }
+      ]
+    },
+    "manifest": {
+      "counts": {
+        "ao_act_task_v0": 1,
+        "ao_act_receipt_v0": 0,
+        "approval_decision_v1": 1,
+        "approval_request_v1": 1
+      },
+      "evidence_fact_ids": [
+        "a8c73f72-89ca-4904-8a26-770d86ad2dd1",
+        "59be063a-b088-4c0f-b6a7-85881bfa00f3",
+        "d053a300-9a12-4661-a344-e098cdaa626a"
+      ]
+    }
+  }
+}
