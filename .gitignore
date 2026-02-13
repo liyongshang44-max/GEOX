@@ -54,3 +54,6 @@ acceptance/*
 artifacts/
 _exports/
 
+# Runtime artifacts (generated) ¡ª do not commit
+runtime/
+runtime/**
