@@ -8,7 +8,12 @@ import type { FastifyReply, FastifyRequest } from "fastify"; // Fastify request/
 export type AoActScopeV0 =
   | "ao_act.task.write" // Permission to create ao_act_task_v0 facts.
   | "ao_act.receipt.write" // Permission to create ao_act_receipt_v0 facts.
-  | "ao_act.index.read"; // Permission to read AO-ACT index.
+  | "ao_act.index.read" // Permission to read AO-ACT index.
+  | "telemetry.read" // Permission to read telemetry_index_v1 (Sprint A1).
+  | "devices.write" // Permission to register devices (Sprint A2).
+  | "devices.read" // Permission to read device projections (Sprint A2).
+  | "devices.credentials.write" // Permission to issue/rotate device credentials (Sprint A2).
+  | "devices.credentials.revoke"; // Permission to revoke device credentials (Sprint A2).
 
 type TokenRecordV0 = {
   token: string; // Bearer token secret string used in Authorization header.

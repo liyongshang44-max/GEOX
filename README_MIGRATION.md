@@ -562,3 +562,27 @@ No scheduler, no background executor, no coupling to Judge/ProblemState
 - Added acceptance: scripts/ACCEPTANCE_SPRINT27_EXECUTOR_RUNTIME_V1_SMOKE.ps1 (creates approval_request_v1 -> approves -> runs executor -> verifies receipt).
 
 Governance: executor is explicit/run-once; no infinite auto-scheduling loop, and no cross-tenant enumeration.
+
+
+# Sprint A1 · Telemetry MQTT Ingest v1 (MVP-观测)
+
+Scope
+
+- MQTT topic: telemetry/{tenant_id}/{device_id}
+- Ingest: mqtt → append-only telemetry facts (idempotent by (tenant_id,device_id,metric,ts_ms))
+- Projection: telemetry_index_v1 (query by device/metric/time)
+- Read API: GET /api/telemetry/v1/query
+
+Dev run (Windows minimal)
+
+- If you are on Windows + Node 24 without VS C++ Build Tools: use `pnpm ... --ignore-scripts` to bypass native module build for dev-only slices.
+- For Sprint A1 only, you may run server with Apple II disabled:
+
+  $env:GEOX_DISABLE_APPLE_II = "1"
+
+  (Commercial delivery must not disable Apple II.)
+
+Acceptance
+
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File scripts/ACCEPTANCE_SPRINTA1_TELEMETRY_MQTT_SMOKE.ps1

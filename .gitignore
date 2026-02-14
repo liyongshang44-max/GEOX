@@ -57,3 +57,7 @@ _exports/
 # Runtime artifacts (generated) ¡ª do not commit
 runtime/
 runtime/**
+
+# GEOX tmp
+_tmp/
+
