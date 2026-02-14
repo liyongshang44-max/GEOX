@@ -586,3 +586,24 @@ Acceptance
 
 powershell -NoProfile -ExecutionPolicy Bypass `
   -File scripts/ACCEPTANCE_SPRINTA1_TELEMETRY_MQTT_SMOKE.ps1
+## Sprint A1/A2 · Telemetry ingest + Devices/Credentials + Telemetry query (v1)
+
+本次交付新增了 Telemetry 侧闭环（MQTT→ingest→append-only facts→query），并引入 Devices/Credentials 管理接口。
+
+### 新增/变更点
+- 新增 API：
+  - POST /api/devices  （devices.write）
+  - GET  /api/devices/:device_id （devices.read）
+  - POST /api/devices/:device_id/credentials （devices.credentials.write）
+  - POST /api/devices/:device_id/credentials/:credential_id/revoke （devices.credentials.revoke）
+  - GET  /api/telemetry/v1/query （telemetry.read）
+- 新增 apps/telemetry-ingest（MQTT 订阅 + credential 校验 + 写入 telemetry facts）
+- 新增投影表：telemetry_index_v1 / device_index_v1（见 docker/postgres/init/008/009）
+
+### Token/Scope 说明（重要）
+为支持上述新增 API 与验收脚本，本次扩展了 ao_act_tokens_v0.json 的 scopes：
+- devices.write / devices.read
+- devices.credentials.write / devices.credentials.revoke
+- telemetry.read
+
+该扩展仅用于 Sprint A1/A2 的“观测闭环 + 设备凭据闭环”最小能力，不改变 AO-ACT task/receipt 的语义边界。
