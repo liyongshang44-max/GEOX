@@ -9,8 +9,8 @@
     "test": "ts-node -P tsconfig.json src/__tests__/run.ts"
   },
   "dependencies": {
-    "zod": "^3.23.0",
     "@geox/contracts": "workspace:*",
-    "@geox/control-kernel": "workspace:*"
+    "@geox/control-kernel": "workspace:*",
+    "zod": "^3.25.76"
   }
 }

@@ -61,3 +61,7 @@ runtime/**
 # GEOX tmp
 _tmp/
 
+
+# build artifacts
+apps/web/tsconfig.tsbuildinfo
+

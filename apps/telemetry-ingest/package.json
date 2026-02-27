@@ -1,20 +1,21 @@
 {
-  "name": "@geox/telemetry-ingest",
-  "version": "0.1.0",
-  "private": true,
-  "type": "commonjs",
-  "scripts": {
-    "dev": "tsx src/main.ts",
-    "once": "tsx src/main.ts --once"
-  },
-  "dependencies": {
-    "mqtt": "^5.10.4",
-    "pg": "^8.12.0",
-    "zod": "^3.25.76"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.10",
-    "tsx": "^4.21.0",
-    "typescript": "^5.4.5"
-  }
+    "name":  "@geox/telemetry-ingest",
+    "version":  "0.1.0",
+    "private":  true,
+    "type":  "commonjs",
+    "scripts":  {
+                    "dev":  "tsx src/main.ts",
+                    "once":  "tsx src/main.ts --once",
+                    "build":  "node -e \"process.exit(0)\""
+                },
+    "dependencies":  {
+                         "mqtt":  "^5.10.4",
+                         "pg":  "^8.12.0",
+                         "zod":  "^3.25.76"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^20.14.10",
+                            "tsx":  "^4.21.0",
+                            "typescript":  "^5.4.5"
+                        }
 }
