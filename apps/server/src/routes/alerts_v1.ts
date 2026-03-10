@@ -1,0 +1,731 @@
+// GEOX/apps/server/src/routes/alerts_v1.ts
+//
+// Sprint C1 + Sprint A1: Alerts API (rules + events) and offline / immediate evaluation helpers.
+//
+// Notes:
+// - Rule/event writes emit append-only facts and update projection tables.
+// - The offline alert worker raises events based on device_status_index_v1 freshness and DEVICE_OFFLINE rules.
+// - Sprint A1 adds list filters, rule disable, and immediate threshold evaluation against latest telemetry for DEVICE rules.
+// - Tenant isolation uses AoActAuthContextV0 (tenant_id from token is authoritative).
+
+import crypto from "node:crypto"; // Node crypto for deterministic hashes and stable event ids.
+import { randomUUID } from "node:crypto"; // UUID helper for rule_id and fact_id generation.
+import type { FastifyInstance } from "fastify"; // Fastify instance type.
+import type { Pool, PoolClient } from "pg"; // Postgres pool / transaction client types.
+
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth helper.
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
+
+type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
+type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
+type NotificationStatus = "RECORDED"; // Minimal notification lifecycle for Commercial v1.
+
+type LatestTelemetrySnapshot = { // Latest telemetry snapshot used for threshold evaluation.
+  ts_ms: number; // Telemetry timestamp in ms.
+  value_num: number | null; // Numeric value when present.
+  value_text: string | null; // Text value when present.
+  fact_id: string; // Source fact identifier.
+} | null; // Snapshot may be absent.
+
+function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
+  return typeof v === "string" && v.trim().length > 0; // Return true if string has content.
+} // End helper.
+
+function normalizeId(v: any): string | null { // Helper: normalize ids.
+  if (!isNonEmptyString(v)) return null; // Missing => null.
+  const s = String(v).trim(); // Trim.
+  if (s.length < 1 || s.length > 128) return null; // Length bound.
+  if (!/^[A-Za-z0-9_\-:.]+$/.test(s)) return null; // Safe charset.
+  return s; // Normalized.
+} // End helper.
+
+function sha256Hex(s: string): string { // Helper: sha256 hex digest.
+  return crypto.createHash("sha256").update(s, "utf8").digest("hex"); // Hash + hex.
+} // End helper.
+
+function badRequest(reply: any, error: string) { // Helper: 400 response.
+  return reply.status(400).send({ ok: false, error }); // Standard envelope.
+} // End helper.
+
+function notFound(reply: any) { // Helper: 404 response.
+  return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Non-enumerable response.
+} // End helper.
+
+function clampInt(v: any, def: number, min: number, max: number): number { // Helper: clamp integer inputs.
+  const n = (typeof v === "number" && Number.isFinite(v)) ? Math.trunc(v) : Number(String(v ?? "")); // Parse as number.
+  if (!Number.isFinite(n)) return def; // Fallback.
+  return Math.max(min, Math.min(max, Math.trunc(n))); // Clamp.
+} // End helper.
+
+function normalizeOperator(op: any): string | null { // Helper: normalize operator code.
+  const s = String(op ?? "").trim().toUpperCase(); // Normalize to upper.
+  if (["LT", "GT", "LTE", "GTE", "EQ"].includes(s)) return s; // Allowlist.
+  return null; // Invalid.
+} // End helper.
+
+function normalizeObjectType(t: any): string | null { // Helper: normalize object type.
+  const s = String(t ?? "").trim().toUpperCase(); // Normalize.
+  if (s === "DEVICE" || s === "FIELD") return s; // Allowlist.
+  return null; // Invalid.
+} // End helper.
+
+function normalizeRuleStatus(s: any): RuleStatus | null { // Helper: normalize rule status.
+  const t = String(s ?? "").trim().toUpperCase(); // Normalize.
+  if (t === "ACTIVE" || t === "DISABLED") return t as RuleStatus; // Allow.
+  return null; // Invalid.
+} // End helper.
+
+function normalizeEventStatus(s: any): EventStatus | null { // Helper: normalize event status.
+  const t = String(s ?? "").trim().toUpperCase(); // Normalize.
+  if (t === "OPEN" || t === "ACKED" || t === "CLOSED") return t as EventStatus; // Allow.
+  return null; // Invalid.
+} // End helper.
+
+function normalizeNotificationChannel(v: any): string | null { // Helper: normalize notification channel.
+  const s = String(v ?? "").trim().toUpperCase(); // Normalize.
+  if (["INAPP", "WEBHOOK"].includes(s)) return s; // Minimal allowlist for v1.
+  return null; // Invalid.
+} // End helper.
+
+function normalizeNotificationChannels(v: any): string[] { // Helper: normalize notification channel arrays.
+  if (!Array.isArray(v)) return []; // Missing => empty.
+  const out: string[] = []; // Output list.
+  const seen = new Set<string>(); // Deduplicate.
+  for (const item of v) { // Walk input values.
+    const normalized = normalizeNotificationChannel(item); // Normalize one value.
+    if (!normalized || seen.has(normalized)) continue; // Skip invalid/duplicate items.
+    seen.add(normalized); // Remember.
+    out.push(normalized); // Append.
+  } // End loop.
+  return out; // Return normalized list.
+} // End helper.
+
+function nowIso(ms: number): string { // Helper: ISO timestamp from ms.
+  return new Date(ms).toISOString(); // Convert.
+} // End helper.
+
+function compareWithOperator(operator: string, actual: number, threshold: number): boolean { // Compare numeric value with alert operator.
+  if (operator === "LT") return actual < threshold; // Less-than rule.
+  if (operator === "GT") return actual > threshold; // Greater-than rule.
+  if (operator === "LTE") return actual <= threshold; // Less-or-equal rule.
+  if (operator === "GTE") return actual >= threshold; // Greater-or-equal rule.
+  if (operator === "EQ") return actual === threshold; // Equal rule.
+  return false; // Unknown operator => safe false.
+} // End helper.
+
+async function fetchLatestTelemetrySnapshot(pool: Pool | PoolClient, tenant_id: string, device_id: string, metric: string): Promise<LatestTelemetrySnapshot> { // Load latest telemetry from projection or facts fallback.
+  const idxQ = await pool.query( // Prefer projection table for fast lookup.
+    `SELECT EXTRACT(EPOCH FROM ts) * 1000 AS ts_ms, value_num, value_text, fact_id
+       FROM telemetry_index_v1
+      WHERE tenant_id = $1 AND device_id = $2 AND metric = $3
+      ORDER BY ts DESC
+      LIMIT 1`,
+    [tenant_id, device_id, metric]
+  ); // End projection query.
+  if (idxQ.rowCount > 0) { // Projection hit.
+    const row: any = idxQ.rows[0]; // Read first row.
+    return { // Return normalized snapshot.
+      ts_ms: Number(row.ts_ms ?? 0), // Convert timestamp to number.
+      value_num: typeof row.value_num === "number" ? row.value_num : null, // Keep numeric value when present.
+      value_text: isNonEmptyString(row.value_text) ? String(row.value_text) : null, // Keep text value when present.
+      fact_id: String(row.fact_id ?? ""), // Fact id.
+    }; // End snapshot.
+  } // End projection branch.
+
+  const factsQ = await pool.query( // Fallback to append-only facts for compatibility with acceptance injection.
+    `SELECT fact_id,
+            COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, 0) AS ts_ms,
+            NULLIF(record_json::jsonb #>> '{payload,metric}', '') AS metric,
+            NULLIF(record_json::jsonb #>> '{payload,value}', '') AS raw_value_text
+       FROM facts
+      WHERE (record_json::jsonb ->> 'type') = 'raw_telemetry_v1'
+        AND (record_json::jsonb #>> '{entity,tenant_id}') = $1
+        AND (record_json::jsonb #>> '{entity,device_id}') = $2
+        AND (record_json::jsonb #>> '{payload,metric}') = $3
+      ORDER BY COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, 0) DESC, occurred_at DESC
+      LIMIT 1`,
+    [tenant_id, device_id, metric]
+  ); // End facts query.
+  if (factsQ.rowCount === 0) return null; // No telemetry available.
+  const row: any = factsQ.rows[0]; // Read latest fact row.
+  const rawValueText = isNonEmptyString(row.raw_value_text) ? String(row.raw_value_text) : null; // Keep raw payload value as text.
+  const parsedValueNum = rawValueText != null && Number.isFinite(Number(rawValueText)) ? Number(rawValueText) : null; // Parse numeric strings in Node for maximum compatibility.
+  return { // Return normalized snapshot.
+    ts_ms: Number(row.ts_ms ?? 0), // Telemetry timestamp.
+    value_num: parsedValueNum, // Numeric value parsed in application layer.
+    value_text: rawValueText, // Preserve original text value.
+    fact_id: String(row.fact_id ?? ""), // Fact id.
+  }; // End snapshot.
+} // End helper.
+
+async function ensureAlertsV1Schema(pool: Pool): Promise<void> { // Ensure alert rule/event schemas are forward-compatible.
+  await pool.query(`ALTER TABLE alert_rule_index_v1 ADD COLUMN IF NOT EXISTS notify_channels_json TEXT;`); // Rule notification channels.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alert_notification_index_v1 (
+      tenant_id TEXT NOT NULL,
+      notification_id TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      rule_id TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      status TEXT NOT NULL,
+      detail_json TEXT NULL,
+      created_ts_ms BIGINT NOT NULL,
+      delivered_ts_ms BIGINT NULL,
+      error TEXT NULL,
+      PRIMARY KEY (tenant_id, notification_id)
+    );
+  `); // Notification projection table.
+  await pool.query(`CREATE INDEX IF NOT EXISTS alert_notification_index_v1_lookup_idx ON alert_notification_index_v1 (tenant_id, event_id, rule_id, channel, created_ts_ms DESC);`); // Query support.
+} // End helper.
+
+async function insertNotificationRecordsForEvent(clientConn: PoolClient, params: { // Insert minimal notification records for an event.
+  tenant_id: string;
+  event_id: string;
+  rule_id: string;
+  object_type: string;
+  object_id: string;
+  metric: string;
+  now_ms: number;
+  last_value: Record<string, any>;
+}): Promise<void> {
+  const ruleQ = await clientConn.query(
+    `SELECT notify_channels_json FROM alert_rule_index_v1 WHERE tenant_id = $1 AND rule_id = $2 LIMIT 1`,
+    [params.tenant_id, params.rule_id]
+  );
+  if (ruleQ.rowCount === 0) return;
+  let channels: string[] = [];
+  try {
+    channels = normalizeNotificationChannels(JSON.parse(String(ruleQ.rows[0]?.notify_channels_json ?? "[]")));
+  } catch {
+    channels = [];
+  }
+  for (const channel of channels) {
+    const notification_id = `alnot_${randomUUID()}`;
+    const fact_id = `alnot_${randomUUID()}`;
+    const detail = { channel, object_type: params.object_type, object_id: params.object_id, metric: params.metric, last_value: params.last_value, status: "RECORDED" };
+    const record = {
+      type: "alert_notification_recorded_v1",
+      entity: { tenant_id: params.tenant_id, notification_id, event_id: params.event_id, rule_id: params.rule_id },
+      payload: { channel, status: "RECORDED", created_ts_ms: params.now_ms, detail },
+    };
+    await clientConn.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4)`,
+      [fact_id, nowIso(params.now_ms), "system", JSON.stringify(record)]
+    );
+    await clientConn.query(
+      `INSERT INTO alert_notification_index_v1
+        (tenant_id, notification_id, event_id, rule_id, channel, status, detail_json, created_ts_ms, delivered_ts_ms, error)
+       VALUES ($1,$2,$3,$4,$5,'RECORDED',$6,$7,NULL,NULL)
+       ON CONFLICT (tenant_id, notification_id) DO NOTHING`,
+      [params.tenant_id, notification_id, params.event_id, params.rule_id, channel, JSON.stringify(detail), params.now_ms]
+    );
+  }
+} // End helper.
+
+async function insertAlertEventIfMissing(clientConn: PoolClient, params: { // Insert OPEN event if the same rule/object has no OPEN/ACKED event.
+  tenant_id: string; // Tenant id.
+  rule_id: string; // Rule id.
+  object_type: string; // Object type.
+  object_id: string; // Object id.
+  metric: string; // Metric name.
+  now_ms: number; // Event time.
+  last_value: Record<string, any>; // Trigger snapshot.
+  source: string; // Worker or immediate source marker.
+}): Promise<{ inserted: boolean; event_id: string | null }> { // Return insertion result.
+  const openQ = await clientConn.query( // Guard against duplicate open events.
+    `SELECT 1
+       FROM alert_event_index_v1
+      WHERE tenant_id = $1 AND rule_id = $2 AND object_id = $3
+        AND status IN ('OPEN','ACKED')
+      LIMIT 1`,
+    [params.tenant_id, params.rule_id, params.object_id]
+  ); // End query.
+  if (openQ.rowCount > 0) return { inserted: false, event_id: null }; // Existing open event => no-op.
+
+  const event_id = `alev_${randomUUID()}`; // Use unique event ids to avoid same-minute collisions with previously closed events.
+  const fact_id = `alev_raise_${randomUUID()}`; // Fact id for raised event.
+  const record = { // Fact record.
+    type: "alert_event_raised_v1", // Fact type.
+    entity: { tenant_id: params.tenant_id, event_id, rule_id: params.rule_id }, // Entity envelope.
+    payload: { // Payload.
+      object_type: params.object_type, // Object type.
+      object_id: params.object_id, // Object id.
+      metric: params.metric, // Metric.
+      raised_ts_ms: params.now_ms, // Raised time.
+      last_value: params.last_value, // Trigger snapshot.
+      source: params.source, // Source marker.
+    }, // End payload.
+  }; // End record.
+
+  await clientConn.query( // Insert fact for audit.
+    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+     VALUES ($1, $2::timestamptz, $3, $4)`,
+    [fact_id, nowIso(params.now_ms), params.source === "worker" ? "system" : "control", JSON.stringify(record)]
+  ); // End insert.
+
+  const resolved_event_id = params.event_id ?? event_id; // Use caller-supplied or generated event id.
+  await clientConn.query( // Insert projection row; deterministic id keeps operation idempotent.
+    `INSERT INTO alert_event_index_v1
+      (tenant_id, event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json)
+     VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7,NULL,NULL,$8)
+     ON CONFLICT (tenant_id, event_id) DO NOTHING`,
+    [params.tenant_id, resolved_event_id, params.rule_id, params.object_type, params.object_id, params.metric, params.now_ms, JSON.stringify(params.last_value)]
+  ); // End insert.
+
+  await insertNotificationRecordsForEvent(clientConn, { // Record minimal notifications for configured channels.
+    tenant_id: params.tenant_id,
+    event_id: resolved_event_id,
+    rule_id: params.rule_id,
+    object_type: params.object_type,
+    object_id: params.object_id,
+    metric: params.metric,
+    now_ms: params.now_ms,
+    last_value: params.last_value,
+  });
+
+  return { inserted: true, event_id: resolved_event_id }; // Report inserted event.
+} // End helper.
+
+async function maybeRaiseImmediateMetricEvent(clientConn: PoolClient, params: { // Evaluate latest telemetry immediately after rule creation/update.
+  tenant_id: string; // Tenant id.
+  rule_id: string; // Rule id.
+  object_type: string; // Object type.
+  object_id: string; // Object id.
+  metric: string; // Metric name.
+  operator: string; // Rule operator.
+  threshold_num: number | null; // Numeric threshold.
+  now_ms: number; // Evaluation time.
+}): Promise<{ inserted: boolean; event_id: string | null }> { // Return evaluation result.
+  if (params.object_type !== "DEVICE") return { inserted: false, event_id: null }; // Only DEVICE telemetry is supported in A1.
+  if (params.metric === "DEVICE_OFFLINE") return { inserted: false, event_id: null }; // Offline is handled by worker.
+  if (typeof params.threshold_num !== "number" || !Number.isFinite(params.threshold_num)) return { inserted: false, event_id: null }; // Need numeric threshold.
+
+  const latest = await fetchLatestTelemetrySnapshot(clientConn, params.tenant_id, params.object_id, params.metric); // Load latest telemetry.
+  if (!latest) return { inserted: false, event_id: null }; // No telemetry => no event.
+  if (typeof latest.value_num !== "number" || !Number.isFinite(latest.value_num)) return { inserted: false, event_id: null }; // Only numeric comparisons in A1.
+
+  const breached = compareWithOperator(params.operator, latest.value_num, params.threshold_num); // Compare threshold.
+  if (!breached) return { inserted: false, event_id: null }; // Rule not breached.
+
+  return insertAlertEventIfMissing(clientConn, { // Create OPEN event when breached.
+    tenant_id: params.tenant_id, // Tenant id.
+    rule_id: params.rule_id, // Rule id.
+    object_type: params.object_type, // Object type.
+    object_id: params.object_id, // Device id.
+    metric: params.metric, // Metric name.
+    now_ms: params.now_ms, // Event time.
+    last_value: { ts_ms: latest.ts_ms, value_num: latest.value_num, value_text: latest.value_text, fact_id: latest.fact_id, threshold_num: params.threshold_num, operator: params.operator }, // Snapshot.
+    source: "immediate", // Immediate evaluation marker.
+  }); // End insert.
+} // End helper.
+
+export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Register alert endpoints.
+  app.addHook("onReady", async () => { await ensureAlertsV1Schema(pool); }); // Ensure forward-compatible alert schema before serving.
+  app.post("/api/v1/alerts/rules", async (req, reply) => { // Create an alert rule.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
+    if (!auth) return; // Auth responded.
+
+    const body: any = (req as any).body ?? {}; // Parse body.
+
+    const object_type = normalizeObjectType(body.object_type); // DEVICE|FIELD.
+    if (!object_type) return badRequest(reply, "MISSING_OR_INVALID:object_type"); // Validate.
+
+    const object_id = normalizeId(body.object_id); // Object id.
+    if (!object_id) return badRequest(reply, "MISSING_OR_INVALID:object_id"); // Validate.
+
+    const metric_candidate = (body.metric ?? body.rule_type) as any; // Prefer metric, fallback to legacy rule_type.
+    const metric = isNonEmptyString(metric_candidate) ? String(metric_candidate).trim().slice(0, 128) : null; // Metric name.
+    if (!metric) return badRequest(reply, "MISSING_OR_INVALID:metric"); // Validate.
+
+    const operator = normalizeOperator(body.operator) ?? (metric === "DEVICE_OFFLINE" ? "GTE" : null); // Operator code.
+    if (!operator) return badRequest(reply, "MISSING_OR_INVALID:operator"); // Validate.
+
+    const status: RuleStatus = (normalizeRuleStatus(body.status) ?? "ACTIVE") as RuleStatus; // Default ACTIVE.
+    const notify_channels = normalizeNotificationChannels(body.notify_channels); // Minimal notification config.
+    const window_sec = body.window_sec == null ? null : clampInt(body.window_sec, 0, 0, 24 * 3600); // Optional window.
+    const threshold_num = (typeof body.threshold_num === "number" && Number.isFinite(body.threshold_num)) ? body.threshold_num : null; // Numeric threshold.
+    let threshold_ms = (typeof body.threshold_ms === "number" && Number.isFinite(body.threshold_ms)) ? Math.trunc(body.threshold_ms) : null; // Millisecond threshold.
+    const offline_after_sec = (typeof body.offline_after_sec === "number" && Number.isFinite(body.offline_after_sec)) ? Math.trunc(body.offline_after_sec) : null; // Legacy seconds.
+    if (threshold_ms == null && metric === "DEVICE_OFFLINE" && offline_after_sec != null) threshold_ms = Math.max(0, offline_after_sec) * 1000; // Legacy mapping.
+
+    if (metric === "DEVICE_OFFLINE") { // Offline rule branch.
+      if (threshold_ms == null || threshold_ms < 60_000) return badRequest(reply, "MISSING_OR_INVALID:threshold_ms"); // Require >=1min.
+    } else { // Threshold rule branch.
+      if (threshold_num == null) return badRequest(reply, "MISSING_OR_INVALID:threshold_num"); // Require numeric threshold.
+    } // End validation.
+
+    if (object_type === "DEVICE") { // Device rule validation.
+      const devQ = await pool.query( // Check device exists.
+        `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2`,
+        [auth.tenant_id, object_id]
+      ); // End query.
+      if (devQ.rowCount === 0) return notFound(reply); // Device missing => 404.
+    } // End device check.
+    if (object_type === "FIELD") { // Field rule validation.
+      const fieldQ = await pool.query( // Check field exists.
+        `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+        [auth.tenant_id, object_id]
+      ); // End query.
+      if (fieldQ.rowCount === 0) return notFound(reply); // Field missing => 404.
+    } // End field check.
+
+    const now_ms = Date.now(); // Server time.
+    const rule_id = normalizeId(body.rule_id) ?? `rule_${randomUUID()}`; // Allow client-specified id for idempotency.
+    const fact_id = `alrule_${randomUUID()}`; // Unique fact id.
+
+    const record = { // Fact record.
+      type: "alert_rule_created_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, rule_id }, // Entity envelope.
+      payload: { // Payload.
+        status, // Rule status.
+        object_type, // Target object type.
+        object_id, // Target object id.
+        metric, // Metric.
+        operator, // Operator.
+        threshold_num, // Threshold number.
+        threshold_ms, // Threshold ms.
+        window_sec, // Optional evaluation window.
+        notify_channels, // Minimal notification channels.
+        created_ts_ms: now_ms, // Creation time.
+        updated_ts_ms: now_ms, // Update time.
+        actor_id: auth.actor_id, // Audit actor.
+        token_id: auth.token_id, // Audit token.
+      }, // End payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Transaction.
+      await clientConn.query("BEGIN"); // Begin.
+
+      await clientConn.query( // Insert fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, nowIso(now_ms), "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert rule projection.
+        `INSERT INTO alert_rule_index_v1
+          (tenant_id, rule_id, status, object_type, object_id, metric, operator, threshold_num, threshold_ms, window_sec, notify_channels_json, created_ts_ms, updated_ts_ms)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
+         ON CONFLICT (tenant_id, rule_id) DO UPDATE SET
+           status = EXCLUDED.status,
+           object_type = EXCLUDED.object_type,
+           object_id = EXCLUDED.object_id,
+           metric = EXCLUDED.metric,
+           operator = EXCLUDED.operator,
+           threshold_num = EXCLUDED.threshold_num,
+           threshold_ms = EXCLUDED.threshold_ms,
+           window_sec = EXCLUDED.window_sec,
+           notify_channels_json = EXCLUDED.notify_channels_json,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, rule_id, status, object_type, object_id, metric, operator, threshold_num, threshold_ms, window_sec, JSON.stringify(notify_channels), now_ms]
+      ); // End upsert.
+
+      let immediate_event_id: string | null = null; // Track auto-raised event id for response.
+      if (status === "ACTIVE") { // Only active rules can raise events.
+        const immediate = await maybeRaiseImmediateMetricEvent(clientConn, { // Evaluate current latest telemetry once.
+          tenant_id: auth.tenant_id, // Tenant id.
+          rule_id, // Rule id.
+          object_type, // Object type.
+          object_id, // Object id.
+          metric, // Metric.
+          operator, // Operator.
+          threshold_num, // Numeric threshold.
+          now_ms, // Evaluation time.
+        }); // End evaluation.
+        immediate_event_id = immediate.event_id; // Save event id when inserted.
+      } // End active branch.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true, rule_id, immediate_event_id }); // Return rule id and optional immediate event.
+    } catch (e: any) { // Error.
+      await clientConn.query("ROLLBACK"); // Rollback.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // 500.
+    } finally { // Release.
+      clientConn.release(); // Release.
+    } // End tx.
+  }); // End POST /api/v1/alerts/rules.
+
+  app.get("/api/v1/alerts/rules", async (req, reply) => { // List rules for tenant.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read"); // Require alerts.read.
+    if (!auth) return; // Auth responded.
+
+    const query: any = (req.query as any) ?? {}; // Read query object.
+    const statusFilter = normalizeRuleStatus(query.status); // Optional status filter.
+    const objectTypeFilter = normalizeObjectType(query.object_type); // Optional object type filter.
+    const objectIdFilter = normalizeId(query.object_id); // Optional object id filter.
+    const metricFilter = isNonEmptyString(query.metric) ? String(query.metric).trim().slice(0, 128) : null; // Optional metric filter.
+
+    const q = await pool.query( // Query rules with optional filters.
+      `SELECT rule_id, status, object_type, object_id, metric, operator, threshold_num, threshold_ms, window_sec, notify_channels_json, created_ts_ms, updated_ts_ms
+         FROM alert_rule_index_v1
+        WHERE tenant_id = $1
+          AND ($2::text IS NULL OR status = $2)
+          AND ($3::text IS NULL OR object_type = $3)
+          AND ($4::text IS NULL OR object_id = $4)
+          AND ($5::text IS NULL OR metric = $5)
+        ORDER BY updated_ts_ms DESC
+        LIMIT 500`,
+      [auth.tenant_id, statusFilter, objectTypeFilter, objectIdFilter, metricFilter]
+    ); // End query.
+
+    return reply.send({ ok: true, rules: q.rows }); // Return list.
+  }); // End GET rules.
+
+  app.post("/api/v1/alerts/rules/:rule_id/disable", async (req, reply) => { // Disable an alert rule.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
+    if (!auth) return; // Auth responded.
+
+    const rule_id = normalizeId((req.params as any)?.rule_id); // Parse rule id.
+    if (!rule_id) return notFound(reply); // Invalid => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const fact_id = `alrule_disable_${randomUUID()}`; // Fact id.
+    const record = { // Fact record.
+      type: "alert_rule_disabled_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, rule_id }, // Entity.
+      payload: { status: "DISABLED", updated_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Transaction.
+      await clientConn.query("BEGIN"); // Begin.
+
+      const upd = await clientConn.query( // Update rule status within tenant.
+        `UPDATE alert_rule_index_v1
+            SET status = 'DISABLED',
+                updated_ts_ms = $3
+          WHERE tenant_id = $1 AND rule_id = $2`,
+        [auth.tenant_id, rule_id, now_ms]
+      ); // End update.
+      if (upd.rowCount === 0) { // Missing rule.
+        await clientConn.query("ROLLBACK"); // Rollback.
+        return notFound(reply); // Hide non-owned rules.
+      } // End guard.
+
+      await clientConn.query( // Insert audit fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, nowIso(now_ms), "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true, rule_id, status: "DISABLED" }); // Return disabled result.
+    } catch (e: any) { // Error.
+      await clientConn.query("ROLLBACK"); // Rollback.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // 500.
+    } finally { // Release.
+      clientConn.release(); // Release.
+    } // End tx.
+  }); // End disable route.
+
+  app.get("/api/v1/alerts/events", async (req, reply) => { // List alert events for tenant.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read"); // Require alerts.read.
+    if (!auth) return; // Auth responded.
+
+    const query: any = (req.query as any) ?? {}; // Read query object.
+    const statusFilter = normalizeEventStatus(query.status); // Optional status filter.
+    const objectTypeFilter = normalizeObjectType(query.object_type); // Optional object type filter.
+    const objectIdFilter = normalizeId(query.object_id); // Optional object id filter.
+    const ruleIdFilter = normalizeId(query.rule_id); // Optional rule id filter.
+
+    const q = await pool.query( // Query events.
+      `SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND ($2::text IS NULL OR status = $2)
+          AND ($3::text IS NULL OR object_type = $3)
+          AND ($4::text IS NULL OR object_id = $4)
+          AND ($5::text IS NULL OR rule_id = $5)
+        ORDER BY raised_ts_ms DESC
+        LIMIT 1000`,
+      [auth.tenant_id, statusFilter, objectTypeFilter, objectIdFilter, ruleIdFilter]
+    ); // End query.
+
+    return reply.send({ ok: true, events: q.rows }); // Return events.
+  }); // End GET events.
+
+  app.get("/api/v1/alerts/notifications", async (req, reply) => { // List notification records for tenant.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read"); // Require alerts.read.
+    if (!auth) return;
+
+    const query: any = (req.query as any) ?? {};
+    const eventIdFilter = normalizeId(query.event_id);
+    const ruleIdFilter = normalizeId(query.rule_id);
+    const channelFilter = normalizeNotificationChannel(query.channel);
+
+    const q = await pool.query(
+      `SELECT notification_id, event_id, rule_id, channel, status, detail_json, created_ts_ms, delivered_ts_ms, error
+         FROM alert_notification_index_v1
+        WHERE tenant_id = $1
+          AND ($2::text IS NULL OR event_id = $2)
+          AND ($3::text IS NULL OR rule_id = $3)
+          AND ($4::text IS NULL OR channel = $4)
+        ORDER BY created_ts_ms DESC
+        LIMIT 1000`,
+      [auth.tenant_id, eventIdFilter, ruleIdFilter, channelFilter]
+    );
+
+    return reply.send({ ok: true, notifications: q.rows });
+  }); // End GET notifications.
+
+  app.post("/api/v1/alerts/events/:event_id/ack", async (req, reply) => { // Acknowledge an alert event.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
+    if (!auth) return; // Auth responded.
+
+    const event_id = normalizeId((req.params as any)?.event_id); // Parse event id.
+    if (!event_id) return notFound(reply); // Invalid => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const fact_id = `alev_ack_${randomUUID()}`; // Fact id.
+    const record = { // Fact record.
+      type: "alert_event_acknowledged_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, event_id }, // Entity.
+      payload: { acked_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Tx.
+      await clientConn.query("BEGIN"); // Begin.
+
+      const upd = await clientConn.query( // Update projection (only if exists in tenant).
+        `UPDATE alert_event_index_v1
+            SET status = 'ACKED',
+                acked_ts_ms = COALESCE(acked_ts_ms, $3)
+          WHERE tenant_id = $1 AND event_id = $2
+            AND status IN ('OPEN','ACKED')`,
+        [auth.tenant_id, event_id, now_ms]
+      ); // End update.
+      if (upd.rowCount === 0) { // Not found or closed.
+        await clientConn.query("ROLLBACK"); // Rollback.
+        return notFound(reply); // Return 404 to avoid leaking state outside tenant.
+      } // End guard.
+
+      await clientConn.query( // Insert fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, nowIso(now_ms), "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true }); // Ack ok.
+    } catch (e: any) { // Error.
+      await clientConn.query("ROLLBACK"); // Rollback.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // 500.
+    } finally { // Release.
+      clientConn.release(); // Release.
+    } // End tx.
+  }); // End ACK.
+
+  app.post("/api/v1/alerts/events/:event_id/close", async (req, reply) => { // Close an alert event.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
+    if (!auth) return; // Auth responded.
+
+    const event_id = normalizeId((req.params as any)?.event_id); // Parse event id.
+    if (!event_id) return notFound(reply); // Invalid => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const fact_id = `alev_close_${randomUUID()}`; // Fact id.
+    const record = { // Fact record.
+      type: "alert_event_closed_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, event_id }, // Entity.
+      payload: { closed_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Tx.
+      await clientConn.query("BEGIN"); // Begin.
+
+      const upd = await clientConn.query( // Update projection.
+        `UPDATE alert_event_index_v1
+            SET status = 'CLOSED',
+                closed_ts_ms = COALESCE(closed_ts_ms, $3)
+          WHERE tenant_id = $1 AND event_id = $2
+            AND status IN ('OPEN','ACKED')`,
+        [auth.tenant_id, event_id, now_ms]
+      ); // End update.
+      if (upd.rowCount === 0) { // Not found or already closed.
+        await clientConn.query("ROLLBACK"); // Rollback.
+        return notFound(reply); // 404.
+      } // End guard.
+
+      await clientConn.query( // Insert fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, nowIso(now_ms), "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true }); // Close ok.
+    } catch (e: any) { // Error.
+      await clientConn.query("ROLLBACK"); // Rollback.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // 500.
+    } finally { // Release.
+      clientConn.release(); // Release.
+    } // End tx.
+  }); // End CLOSE.
+} // End registerAlertsV1Routes.
+
+type OfflineWorkerOptions = { // Options for offline worker.
+  interval_ms: number; // Polling interval.
+  default_offline_after_ms: number; // Default threshold when rule missing threshold_ms.
+}; // End options.
+
+export function startOfflineAlertWorker(pool: Pool, opts?: Partial<OfflineWorkerOptions>) { // Start background worker in server process.
+  const interval_ms = opts?.interval_ms ?? 60_000; // Default: 60s.
+  const default_offline_after_ms = opts?.default_offline_after_ms ?? 15 * 60 * 1000; // Default: 15 min.
+
+  async function tick(): Promise<void> { // One worker tick.
+    const now_ms = Date.now(); // Current time in ms.
+
+    const rulesQ = await pool.query( // Load all ACTIVE DEVICE_OFFLINE rules.
+      `SELECT tenant_id, rule_id, object_id AS device_id, COALESCE(threshold_ms, $1::bigint) AS offline_after_ms
+         FROM alert_rule_index_v1
+        WHERE status = 'ACTIVE'
+          AND object_type = 'DEVICE'
+          AND metric = 'DEVICE_OFFLINE'`,
+      [default_offline_after_ms]
+    ); // End rule query.
+
+    for (const r of rulesQ.rows) { // Process each rule.
+      const tenant_id: string = r.tenant_id; // Tenant.
+      const device_id: string = r.device_id; // Device.
+      const rule_id: string = r.rule_id; // Rule.
+      const offline_after_ms: number = Number(r.offline_after_ms); // Threshold.
+
+      const stQ = await pool.query( // Load device status row.
+        `SELECT last_heartbeat_ts_ms
+           FROM device_status_index_v1
+          WHERE tenant_id = $1 AND device_id = $2`,
+        [tenant_id, device_id]
+      ); // End query.
+      if (stQ.rowCount === 0) continue; // No status => skip.
+      const last_hb = stQ.rows[0]?.last_heartbeat_ts_ms; // Last heartbeat.
+      if (typeof last_hb !== "number") continue; // Unknown => skip.
+      if ((now_ms - last_hb) <= offline_after_ms) continue; // Not offline enough => skip.
+
+      const clientConn = await pool.connect(); // Acquire connection for atomic insert/upsert.
+      try { // Tx.
+        await clientConn.query("BEGIN"); // Begin.
+        await insertAlertEventIfMissing(clientConn, { // Insert OPEN event if missing.
+          tenant_id, // Tenant id.
+          rule_id, // Rule id.
+          object_type: "DEVICE", // Object type.
+          object_id: device_id, // Device id.
+          metric: "DEVICE_OFFLINE", // Metric.
+          now_ms, // Event time.
+          last_value: { last_heartbeat_ts_ms: last_hb, offline_after_ms }, // Snapshot.
+          source: "worker", // Worker source.
+        }); // End insert.
+        await clientConn.query("COMMIT"); // Commit.
+      } catch { // Ignore worker errors.
+        await clientConn.query("ROLLBACK"); // Rollback.
+      } finally { // Release.
+        clientConn.release(); // Release.
+      } // End tx.
+    } // End for rules.
+  } // End tick.
+
+  const handle = setInterval(() => { tick().catch(() => void 0); }, interval_ms); // Schedule tick; swallow errors.
+  (handle as any).unref?.(); // Allow process to exit if this is the only active timer.
+} // End startOfflineAlertWorker.

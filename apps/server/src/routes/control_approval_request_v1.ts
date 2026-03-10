@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
+import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 
 type TenantTriple = {
   tenant_id: string; // Tenant isolation SSOT field.
@@ -14,6 +14,24 @@ type TenantTriple = {
 
 function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0; // Non-empty string guard.
+}
+
+function hasMeaningfulIssuer(v: unknown): boolean {
+  if (isNonEmptyString(v)) return true; // Accept legacy string issuer.
+  if (v && typeof v === "object") {
+    const id = String((v as any).id ?? "").trim(); // Object issuer must at least carry an id.
+    return id.length > 0;
+  }
+  return false;
+}
+
+function hasMeaningfulTarget(v: unknown): boolean {
+  if (isNonEmptyString(v)) return true; // Accept field:xxx shorthand string target.
+  if (v && typeof v === "object") {
+    const ref = String((v as any).ref ?? "").trim(); // Object target must at least carry a ref.
+    return ref.length > 0;
+  }
+  return false;
 }
 
 function badRequest(reply: any, error: string) {
@@ -123,6 +141,8 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write"); // Approval write requires the ability to write tasks.
       if (!auth) return;
+      if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+      if (!auth) return;
 
       const body: any = req.body ?? {};
       const tenant = assertTenantTriple(body);
@@ -134,9 +154,9 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
         if (body[k] === undefined) return badRequest(reply, `MISSING_FIELD:${k}`);
       }
 
-      if (!isNonEmptyString(body.issuer)) return badRequest(reply, "MISSING_OR_INVALID:issuer");
+      if (!hasMeaningfulIssuer(body.issuer)) return badRequest(reply, "MISSING_OR_INVALID:issuer");
       if (!isNonEmptyString(body.action_type)) return badRequest(reply, "MISSING_OR_INVALID:action_type");
-      if (!isNonEmptyString(body.target)) return badRequest(reply, "MISSING_OR_INVALID:target");
+      if (!hasMeaningfulTarget(body.target)) return badRequest(reply, "MISSING_OR_INVALID:target");
 
       const win = body.time_window;
       if (win === null || typeof win !== "object") return badRequest(reply, "MISSING_OR_INVALID:time_window");
@@ -229,6 +249,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
+      if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
       const body: any = req.body ?? {};
       if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");

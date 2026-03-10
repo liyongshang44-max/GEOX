@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "tenant_id": "tenantA",
+    "scope": {
+      "scope_type": "FIELD",
+      "scope_id": "field_001"
+    },
+    "from_ts_ms": 0,
+    "to_ts_ms": 1772726798648,
+    "built_at_ts_ms": 1772726738510
+  },
+  "snapshot": {
+    "field": {
+      "tenant_id": "tenantA",
+      "field_id": "field_001",
+      "name": "North Field",
+      "area_ha": "12.5",
+      "status": "ACTIVE",
+      "created_ts_ms": "1772692659723",
+      "updated_ts_ms": "1772726738075"
+    },
+    "field_polygon": {
+      "tenant_id": "tenantA",
+      "field_id": "field_001",
+      "geojson": "{\"properties\":{},\"type\":\"Feature\",\"geometry\":{\"coordinates\":[[116,39],[116.1,39],[116.1,39.1],[116,39.1],[116,39]],\"type\":\"Polygon\"}}",
+      "updated_ts_ms": "1772726738075"
+    },
+    "bound_devices": [
+      "dev_001"
+    ]
+  },
+  "facts": [
+    {
+      "fact_id": "evexp_done_1ed8303d-20d0-4760-88bf-75a6c4945741",
+      "occurred_at": "2026-03-05T14:48:24.356Z",
+      "source": "system",
+      "record_json": {
+        "type": "evidence_export_job_completed_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "job_id": "job_a956a093-d695-4cfe-a035-41f6c5314b3b"
+        },
+        "payload": {
+          "scope": {
+            "scope_type": "FIELD",
+            "scope_id": "field_001"
+          },
+          "from_ts_ms": 0,
+          "to_ts_ms": 1772722164155,
+          "status": "DONE",
+          "artifact_path": "/app/apps/server/runtime/evidence_exports_v1/evidence_job_a956a093-d695-4cfe-a035-41f6c5314b3b.json",
+          "artifact_sha256": "bc2aa90b2bcff42418a850e410cc11677f4f67e63bcdbf07fb29b208c38eadcc",
+          "completed_ts_ms": 1772722104356,
+          "started_ts_ms": 1772722104280
+        }
+      }
+    },
+    {
+      "fact_id": "evexp_create_561e1b96-e734-4e02-9420-7fbc8c1b971a",
+      "occurred_at": "2026-03-05T16:05:38.476Z",
+      "source": "control",
+      "record_json": {
+        "type": "evidence_export_job_created_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "job_id": "job_42789006-c835-43a4-bfb1-45a18f594302"
+        },
+        "payload": {
+          "scope": {
+            "scope_type": "FIELD",
+            "scope_id": "field_001"
+          },
+          "from_ts_ms": 0,
+          "to_ts_ms": 1772726798648,
+          "status": "QUEUED",
+          "created_ts_ms": 1772726738476,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "field_618568f008b77ef14e8c8831acc40a7d41ccf0f1db4d8dc9a0a7df0a35601621",
+      "occurred_at": "2026-03-05T06:37:39.723Z",
+      "source": "control",
+      "record_json": {
+        "type": "field_created_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "name": "North Field",
+          "area_ha": 12.5,
+          "status": "ACTIVE",
+          "created_ts_ms": 1772692659723,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "fieldpoly_b606a0aba6cefe186000b99bc60b840a806852c4ce0158748a9cf793838f2102",
+      "occurred_at": "2026-03-05T06:37:39.998Z",
+      "source": "control",
+      "record_json": {
+        "type": "field_polygon_set_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "geojson": "{\"properties\":{},\"type\":\"Feature\",\"geometry\":{\"coordinates\":[[116,39],[116.1,39],[116.1,39.1],[116,39.1],[116,39]],\"type\":\"Polygon\"}}",
+          "updated_ts_ms": 1772692659998,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "fieldpoly_e2dd066992e4ba03cfb471e40151d06349849f6e223adfb30e48c73b1af940fb",
+      "occurred_at": "2026-03-05T07:52:22.331Z",
+      "source": "control",
+      "record_json": {
+        "type": "field_polygon_set_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "geojson": "{\"properties\":{},\"type\":\"Feature\",\"geometry\":{\"coordinates\":[[116,39],[116.1,39],[116.1,39,0.1],[116,39,0.1],[116,39]],\"type\":\"Polygon\"}}",
+          "updated_ts_ms": 1772697142331,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "device_061fc6687bfab5feab2b8af94ec1bf5515d0c94f67bac5c7326e08d5abf4fb35",
+      "occurred_at": "2026-03-05T08:59:26.988Z",
+      "source": "control",
+      "record_json": {
+        "type": "device_registered_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "device_id": "dev_001"
+        },
+        "payload": {
+          "display_name": "",
+          "created_ts_ms": 1772701166988,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "bind_34fdc1783c6d438c852986ded73bf888a5fa23c48d80d814c9b294d6e202c1e0",
+      "occurred_at": "2026-03-05T08:59:27.146Z",
+      "source": "control",
+      "record_json": {
+        "type": "device_bound_to_field_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "device_id": "dev_001",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "bound_ts_ms": 1772701167146,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    }
+  ]
+}

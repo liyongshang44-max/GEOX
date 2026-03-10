@@ -4,7 +4,7 @@ import crypto from "node:crypto"; // Node crypto for deterministic ids and crede
 import type { FastifyInstance } from "fastify"; // Fastify app instance for route registration.
 import type { Pool } from "pg"; // Postgres connection pool for db access.
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
+import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
@@ -18,6 +18,14 @@ function normalizeId(v: any): string | null { // Helper: normalize an id-like st
   if (!/^[A-Za-z0-9_\-:.]+$/.test(s)) return null; // Allow only safe id characters (no spaces).
   return s; // Return normalized id.
 } // End helper.
+
+function normalizeDeviceId(v: any): string | null { // Helper: normalize device_id strings (alias of normalizeId).
+  return normalizeId(v); // Reuse shared id normalization rules.
+} // End normalizeDeviceId.
+
+function nowIso(ms: number): string { // Helper: convert ms to ISO string.
+  return new Date(ms).toISOString(); // Convert.
+} // End nowIso.
 
 function sha256Hex(s: string): string { // Helper: sha256 hex digest.
   return crypto.createHash("sha256").update(s, "utf8").digest("hex"); // Hash + hex.
@@ -107,7 +115,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
 
   app.post("/api/devices/:device_id/credentials", async (req, reply) => { // Issue a new credential for a registered device.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write"); // Enforce credential write scope.
-    if (!auth) return; // Auth helper already responded.
+    if (!auth) return;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_DEVICE_CREDENTIAL_ADMIN_REQUIRED" })) return; // Auth helper already responded.
 
     const params: any = (req as any).params ?? {}; // Read path params.
     const device_id = normalizeId(params.device_id); // Device id from path.
@@ -198,7 +207,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
 
   app.post("/api/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => { // Revoke a device credential.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.revoke"); // Enforce revoke scope.
-    if (!auth) return; // Auth helper already responded.
+    if (!auth) return;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_DEVICE_CREDENTIAL_ADMIN_REQUIRED" })) return; // Auth helper already responded.
 
     const params: any = (req as any).params ?? {}; // Params.
     const device_id = normalizeId(params.device_id); // Device id.
@@ -300,4 +310,267 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       last_credential_status: row.last_credential_status ?? null, // Last status.
     }); // End response.
   }); // End get route.
+
+
+  // ------------------------------
+  // Devices v1 (Sprint C2): API surface under /api/v1/devices
+  // NOTE: Keep existing /api/devices routes unchanged for backward compatibility.
+
+  app.post("/api/v1/devices/:device_id", async (req, reply) => { // Register a device (v1 alias of /api/devices/:device_id).
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write"); // Require devices.write.
+    if (!auth) return; // Auth handled response.
+
+    const params: any = (req as any).params ?? {}; // Params.
+    const device_id = normalizeDeviceId(params.device_id); // Normalize device id.
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
+
+    const body: any = (req as any).body ?? {}; // Body.
+    const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : ""; // Optional name.
+
+    const now_ms = Date.now(); // Server time.
+    const occurred_iso = nowIso(now_ms); // occurred_at.
+
+    const det = sha256Hex(`device_registered_v1|${auth.tenant_id}|${device_id}|${display_name}`); // Deterministic hash.
+    const fact_id = `device_${det}`; // Fact id.
+
+    const record = { // Append-only fact record.
+      type: "device_registered_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, device_id }, // Entity.
+      payload: { display_name, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire db connection.
+    try { // Tx.
+      await clientConn.query("BEGIN"); // Begin.
+
+      await clientConn.query( // Insert fact (idempotent by fact_id).
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurred_iso, "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert device projection.
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, NULL, NULL)
+         ON CONFLICT (tenant_id, device_id)
+         DO UPDATE SET display_name = EXCLUDED.display_name`,
+        [auth.tenant_id, device_id, display_name, now_ms]
+      ); // End upsert.
+
+      await clientConn.query("COMMIT"); // Commit.
+    } catch (e: any) { // Error.
+      try { await clientConn.query("ROLLBACK"); } catch {} // Rollback.
+      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) }); // Return.
+    } finally { // Release.
+      clientConn.release(); // Release.
+    } // End tx.
+
+    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, fact_id }); // Response.
+  }); // End /api/v1 register.
+
+  app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require devices.read.
+    if (!auth) return; // Auth handled.
+
+    const limit = 200; // Fixed list limit for commercial UI MVP.
+    const q = await pool.query(
+      `SELECT
+          d.tenant_id,
+          d.device_id,
+          d.display_name,
+          d.created_ts_ms,
+          d.last_credential_id,
+          d.last_credential_status,
+          b.field_id,
+          b.bound_ts_ms,
+          s.last_telemetry_ts_ms,
+          s.last_heartbeat_ts_ms,
+          s.battery_percent,
+          s.rssi_dbm,
+          s.fw_ver,
+          CASE
+            WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE'
+            ELSE 'OFFLINE'
+          END AS connection_status
+        FROM device_index_v1 d
+        LEFT JOIN device_binding_index_v1 b
+          ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+        LEFT JOIN device_status_index_v1 s
+          ON s.tenant_id = d.tenant_id AND s.device_id = d.device_id
+        WHERE d.tenant_id = $1
+        ORDER BY d.created_ts_ms DESC
+        LIMIT $2`,
+      [auth.tenant_id, limit, Date.now() - 15 * 60 * 1000]
+    ); // Query joined device summary.
+
+    return reply.send({ ok: true, devices: q.rows }); // Return summarized device list.
+  }); // End list.
+
+
+
+  app.get("/api/v1/devices/:device_id/console", async (req, reply) => { // Device integration console view: access info + credentials + recent command/receipt history.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require device read scope for console view.
+    if (!auth) return; // Auth helper already responded.
+
+    const params: any = (req as any).params ?? {}; // Read route params.
+    const device_id = normalizeDeviceId(params.device_id); // Normalize route device id.
+    if (!device_id) return notFound(reply); // Invalid ids are hidden behind 404.
+
+    const existsQ = await pool.query( // Ensure the device exists inside the caller tenant before exposing console data.
+      `SELECT tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status
+         FROM device_index_v1
+        WHERE tenant_id = $1 AND device_id = $2
+        LIMIT 1`,
+      [auth.tenant_id, device_id]
+    ); // End exists query.
+    if (existsQ.rowCount < 1) return notFound(reply); // Keep cross-tenant enumeration hidden.
+
+    const credentialsQ = await pool.query( // Recent credential summaries (hash never leaves the backend).
+      `SELECT credential_id, status, issued_ts_ms, revoked_ts_ms
+         FROM device_credential_index_v1
+        WHERE tenant_id = $1 AND device_id = $2
+        ORDER BY issued_ts_ms DESC, credential_id DESC
+        LIMIT 10`,
+      [auth.tenant_id, device_id]
+    ); // End credential query.
+
+    const commandsQ = await pool.query( // Recent dispatched commands targeted to this device.
+      `SELECT
+          dq.act_task_id,
+          dq.outbox_fact_id,
+          dq.device_id,
+          dq.downlink_topic,
+          dq.state,
+          dq.qos,
+          dq.retain,
+          dq.adapter_hint,
+          dq.attempt_count,
+          EXTRACT(EPOCH FROM dq.created_at) * 1000 AS created_ts_ms,
+          EXTRACT(EPOCH FROM dq.updated_at) * 1000 AS updated_ts_ms,
+          COALESCE((task_fact.record_json::jsonb #>> '{payload,action_type}'), '') AS action_type
+        FROM dispatch_queue_v1 dq
+        LEFT JOIN facts task_fact
+          ON task_fact.fact_id = dq.task_fact_id
+       WHERE dq.tenant_id = $1
+         AND dq.device_id = $2
+       ORDER BY dq.created_at DESC, dq.queue_id DESC
+       LIMIT 20`,
+      [auth.tenant_id, device_id]
+    ); // End command query.
+
+    const receiptsQ = await pool.query( // Recent device receipt/ack facts scoped to this device.
+      `SELECT
+          fact_id,
+          (record_json::jsonb #>> '{payload,act_task_id}') AS act_task_id,
+          (record_json::jsonb #>> '{payload,status}') AS status,
+          (record_json::jsonb #>> '{payload,uplink_topic}') AS uplink_topic,
+          (record_json::jsonb #>> '{payload,adapter_runtime}') AS adapter_runtime,
+          ((record_json::jsonb #>> '{payload,created_at_ts}'))::bigint AS created_ts_ms
+        FROM facts
+       WHERE (record_json::jsonb ->> 'type') = 'ao_act_device_ack_received_v1'
+         AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+         AND (record_json::jsonb #>> '{payload,device_id}') = $2
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 20`,
+      [auth.tenant_id, device_id]
+    ); // End receipt query.
+
+    const access_info = { // Deterministic integration hints used by the device console page.
+      device_id, // Device id echoed for convenience.
+      tenant_id: auth.tenant_id, // Tenant scope for topic derivation.
+      mqtt_client_id: `geox-${auth.tenant_id}-${device_id}`, // Recommended MQTT client id pattern.
+      telemetry_topic: `telemetry/${auth.tenant_id}/${device_id}`, // Recommended telemetry uplink topic.
+      heartbeat_topic: `heartbeat/${auth.tenant_id}/${device_id}`, // Recommended heartbeat uplink topic.
+      downlink_topic: `downlink/${auth.tenant_id}/${device_id}`, // Recommended command downlink topic.
+      receipt_topic: `receipt/${auth.tenant_id}/${device_id}`, // Recommended receipt uplink topic.
+      payload_contract_version: "v1", // Current commercial integration contract marker.
+      auth_mode: "DEVICE_CREDENTIAL_SECRET_ONCE", // Secret is shown only when issued and never returned again.
+      secret_warning: "设备密钥仅在签发时返回一次；平台只保存哈希，不保存明文 secret。", // Productized one-time secret warning.
+    }; // End access info.
+
+    return reply.send({ // Return console aggregate payload.
+      ok: true, // Success envelope.
+      device: existsQ.rows[0], // Base device summary.
+      access_info, // Integration hints and warnings.
+      credentials: credentialsQ.rows ?? [], // Recent credential summaries.
+      recent_commands: commandsQ.rows ?? [], // Recent command history.
+      recent_receipts: receiptsQ.rows ?? [], // Recent device receipt history.
+    }); // End response.
+  }); // End device console route.
+
+  app.get("/api/v1/devices/:device_id", async (req, reply) => { // Get a single device with绑定/状态/最近遥测摘要.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require devices.read.
+    if (!auth) return; // Auth handled.
+
+    const params: any = (req as any).params ?? {}; // Params.
+    const device_id = normalizeDeviceId(params.device_id); // Normalize.
+    if (!device_id) return notFound(reply); // Invalid -> 404.
+
+    const q = await pool.query(
+      `SELECT
+          d.tenant_id,
+          d.device_id,
+          d.display_name,
+          d.created_ts_ms,
+          d.last_credential_id,
+          d.last_credential_status,
+          b.field_id,
+          b.bound_ts_ms,
+          s.last_telemetry_ts_ms,
+          s.last_heartbeat_ts_ms,
+          s.battery_percent,
+          s.rssi_dbm,
+          s.fw_ver,
+          CASE
+            WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE'
+            ELSE 'OFFLINE'
+          END AS connection_status
+         FROM device_index_v1 d
+         LEFT JOIN device_binding_index_v1 b
+           ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+         LEFT JOIN device_status_index_v1 s
+           ON s.tenant_id = d.tenant_id AND s.device_id = d.device_id
+        WHERE d.tenant_id = $1 AND d.device_id = $2
+        LIMIT 1`,
+      [auth.tenant_id, device_id, Date.now() - 15 * 60 * 1000]
+    ); // Query joined detail row.
+    if (q.rowCount < 1) return notFound(reply); // Missing.
+
+    const latestTelemetryQ = await pool.query(
+      `SELECT metric, EXTRACT(EPOCH FROM ts) * 1000 AS ts_ms, value_num, value_text, fact_id
+         FROM telemetry_index_v1
+        WHERE tenant_id = $1 AND device_id = $2
+        ORDER BY ts DESC
+        LIMIT 12`,
+      [auth.tenant_id, device_id]
+    ); // Try projection path first for latest telemetry cards.
+
+    let latestTelemetryRows = latestTelemetryQ.rows ?? []; // Keep latest telemetry rows from projection.
+    if (latestTelemetryRows.length < 1) { // Fall back to SSOT facts when projection has no rows.
+      const fallbackQ = await pool.query(
+        `SELECT
+            (record_json::jsonb #>> '{payload,metric}') AS metric,
+            ((record_json::jsonb #>> '{payload,ts_ms}'))::bigint AS ts_ms,
+            (record_json::jsonb #>> '{payload,value}') AS value_text,
+            fact_id
+           FROM facts
+          WHERE (record_json::jsonb ->> 'type') = 'raw_telemetry_v1'
+            AND (record_json::jsonb #>> '{entity,tenant_id}') = $1
+            AND (record_json::jsonb #>> '{entity,device_id}') = $2
+          ORDER BY occurred_at DESC
+          LIMIT 12`,
+        [auth.tenant_id, device_id]
+      ); // Query SSOT telemetry facts for fallback.
+      latestTelemetryRows = (fallbackQ.rows ?? []).map((row: any) => ({
+        metric: row.metric,
+        ts_ms: Number(row.ts_ms),
+        value_num: row.value_text != null && Number.isFinite(Number(row.value_text)) ? Number(row.value_text) : null,
+        value_text: row.value_text == null ? null : String(row.value_text),
+        fact_id: String(row.fact_id),
+      })); // Normalize fallback rows.
+    } // End fallback.
+
+    return reply.send({ ok: true, device: q.rows[0], latest_telemetry: latestTelemetryRows }); // Return enriched detail.
+  }); // End get.
 } // End registration.

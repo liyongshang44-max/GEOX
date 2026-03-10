@@ -1,10 +1,12 @@
-// GEOX/apps/web/src/lib/api.ts
+﻿// GEOX/apps/web/src/lib/api.ts
 import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1 } from "./contracts";
+
 export type GroupsResponse = { groups: SensorGroupV1[] };
 
 export class ApiError extends Error {
   public status: number;
   public bodyText: string;
+
   constructor(status: number, bodyText: string) {
     super(`API ${status}`);
     this.status = status;
@@ -13,17 +15,40 @@ export class ApiError extends Error {
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const headers =
+    init?.body instanceof FormData
+      ? { ...(init?.headers ?? {}) }
+      : {
+          "Content-Type": "application/json",
+          ...(init?.headers ?? {}),
+        };
+
   const res = await fetch(url, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   const text = await res.text();
   if (!res.ok) throw new ApiError(res.status, text);
-  return JSON.parse(text) as T;
+  return text ? (JSON.parse(text) as T) : ({} as T);
+}
+
+function authHeaders(token: string): HeadersInit {
+  return { Authorization: `Bearer ${token}` };
+}
+
+function withQuery(path: string, params?: Record<string, unknown>): string {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params ?? {})) {
+    if (v === undefined || v === null || v === "") continue;
+    if (Array.isArray(v)) {
+      for (const item of v) q.append(k, String(item));
+      continue;
+    }
+    q.set(k, String(v));
+  }
+  const qs = q.toString();
+  return qs ? `${path}?${qs}` : path;
 }
 
 function uniqStrings(xs: unknown[]): string[] {
@@ -49,13 +74,9 @@ function toMsMaybe(v: unknown): number {
   return 0;
 }
 
-// 兼容后端两种形状：
-// A) contracts 形状：{ groupId, subjectRef, sensors, createdAt }
-// B) server.ts 当前形状：{ group_id, project_id, plot_id, block_id, members:[{sensor_id}], created_at }
 function normalizeGroup(x: any): SensorGroupV1 | null {
   if (!x || typeof x !== "object") return null;
 
-  // 已经是 contracts 形状
   if (typeof x.groupId === "string" && x.subjectRef && typeof x.subjectRef === "object" && Array.isArray(x.sensors)) {
     return {
       groupId: x.groupId,
@@ -69,7 +90,6 @@ function normalizeGroup(x: any): SensorGroupV1 | null {
     };
   }
 
-  // server.ts 形状
   const groupId = typeof x.group_id === "string" ? x.group_id.trim() : "";
   if (!groupId) return null;
 
@@ -79,8 +99,13 @@ function normalizeGroup(x: any): SensorGroupV1 | null {
 
   const members = Array.isArray(x.members) ? x.members : [];
   const sensors = uniqStrings(
-    members
-      .map((m: any) => (typeof m?.sensor_id === "string" ? m.sensor_id : typeof m?.sensorId === "string" ? m.sensorId : ""))
+    members.map((m: any) =>
+      typeof m?.sensor_id === "string"
+        ? m.sensor_id
+        : typeof m?.sensorId === "string"
+          ? m.sensorId
+          : "",
+    ),
   );
 
   return {
@@ -92,15 +117,9 @@ function normalizeGroup(x: any): SensorGroupV1 | null {
 }
 
 export async function fetchGroups(params: { projectId?: string; sensorId?: string }): Promise<GroupsResponse> {
-  const q = new URLSearchParams();
-  if (params.projectId) q.set("projectId", params.projectId);
-  if (params.sensorId) q.set("sensorId", params.sensorId);
-
-  const raw = await requestJson<any>(`/api/groups?${q.toString()}`);
-
+  const raw = await requestJson<any>(withQuery(`/api/groups`, params));
   const arr = Array.isArray(raw?.groups) ? raw.groups : [];
   const groups: SensorGroupV1[] = arr.map(normalizeGroup).filter(Boolean) as SensorGroupV1[];
-
   return { groups };
 }
 
@@ -112,14 +131,16 @@ export async function fetchSeries(params: {
   endTs: number;
   maxPoints?: number;
 }): Promise<SeriesResponseV1> {
-  const q = new URLSearchParams();
-  if (params.groupId) q.set("groupId", params.groupId);
-  if (params.sensorId) q.set("sensorId", params.sensorId);
-  q.set("metrics", params.metrics.join(","));
-  q.set("startTs", String(params.startTs));
-  q.set("endTs", String(params.endTs));
-  if (typeof params.maxPoints === "number") q.set("maxPoints", String(params.maxPoints));
-  return requestJson<SeriesResponseV1>(`/api/series?${q.toString()}`);
+  return requestJson<SeriesResponseV1>(
+    withQuery(`/api/series`, {
+      groupId: params.groupId,
+      sensorId: params.sensorId,
+      metrics: params.metrics.join(","),
+      startTs: params.startTs,
+      endTs: params.endTs,
+      maxPoints: params.maxPoints,
+    }),
+  );
 }
 
 export async function postMarker(body: {
@@ -140,13 +161,11 @@ export function stableOverlays(overlays: OverlaySegment[]): OverlaySegment[] {
 }
 
 export async function fetchOverlayExplain(id: string): Promise<ExplainOverlayV1> {
-  const q = new URLSearchParams();
-  q.set("id", id);
-  return requestJson<ExplainOverlayV1>(`/api/overlays/explain?${q.toString()}`);
+  return requestJson<ExplainOverlayV1>(withQuery(`/api/overlays/explain`, { id }));
 }
 
 // -----------------------------
-// Admin / New-device bootstrap APIs
+// Admin / bootstrap APIs
 // -----------------------------
 
 export type AdminHealthzResponse = {
@@ -160,11 +179,8 @@ export type AdminHealthzResponse = {
   };
 };
 
-export async function fetchAdminHealthz(): Promise<AdminHealthzResponse> {
-  return requestJson<AdminHealthzResponse>(`/api/admin/healthz`);
-}
-
 export type ImportJobState = "queued" | "running" | "done" | "error";
+
 export type ImportJob = {
   jobId: string;
   state: ImportJobState;
@@ -177,6 +193,10 @@ export type ImportJob = {
   stderrTail: string;
   error?: string;
 };
+
+export async function fetchAdminHealthz(): Promise<AdminHealthzResponse> {
+  return requestJson<AdminHealthzResponse>(`/api/admin/healthz`);
+}
 
 export async function postAdminImportCafHourly(params: {
   file: File;
@@ -195,7 +215,7 @@ export async function postAdminImportCafHourly(params: {
   const res = await fetch(`/api/admin/import/caf_hourly`, { method: "POST", body: fd });
   const text = await res.text();
   if (!res.ok) throw new ApiError(res.status, text);
-  return JSON.parse(text) as any;
+  return JSON.parse(text) as { ok: boolean; jobId: string; filePath: string };
 }
 
 export async function fetchAdminImportJob(jobId: string): Promise<{ ok: boolean; job: ImportJob }> {
@@ -218,7 +238,7 @@ export async function postAdminAcceptanceCaf0091h(params?: {
 }
 
 // -----------------------------
-// Apple II (Judge) APIs
+// Judge APIs
 // -----------------------------
 
 export type JudgeSubjectRef = {
@@ -228,23 +248,23 @@ export type JudgeSubjectRef = {
   blockId?: string;
 };
 
-export type JudgeWindow = { startTs: number; endTs: number };
+export type JudgeWindow = {
+  startTs: number;
+  endTs: number;
+};
 
-// JudgeConfigPatchV1 是前端唯一允许提交的“受限 patch”结构（replace-only）。
 export type JudgeConfigPatchOpV1 = {
   op: "replace";
   path: string;
   value: unknown;
 };
 
-// JudgeConfigPatchV1 必须携带 base.ssot_hash，用于后端静态拒绝（409）。
 export type JudgeConfigPatchV1 = {
   patch_version: "1.0.0";
   base: { ssot_hash: string };
   ops: JudgeConfigPatchOpV1[];
 };
 
-// JudgeConfigManifestItemV1 是 manifest.editable[] 的单项定义（前端 UI 的唯一可编辑来源）。
 export type JudgeConfigManifestItemV1 = {
   path: string;
   type: "int" | "number" | "bool" | "enum_list";
@@ -255,7 +275,6 @@ export type JudgeConfigManifestItemV1 = {
   description?: string;
 };
 
-// GET /api/judge/config 的响应结构（冻结规范 v1）。
 export type JudgeConfigManifestResponseV1 = {
   ssot: {
     source: string;
@@ -273,14 +292,12 @@ export type JudgeConfigManifestResponseV1 = {
   read_only_hints: string[];
 };
 
-// POST /api/judge/config/patch 的请求结构（dryRun=true/false）。
 export type JudgeConfigPatchRequestV1 = {
   base: { ssot_hash: string };
   patch: JudgeConfigPatchV1;
   dryRun: boolean;
 };
 
-// POST /api/judge/config/patch 的响应结构（preview/save 共用）。
 export type JudgeConfigPatchResponseV1 = {
   ok: boolean;
   ssot_hash: string;
@@ -305,8 +322,6 @@ export type JudgeRunRequest = {
   options?: JudgeRunOptions;
 };
 
-// Judge response schemas are owned by @geox/contracts, but the frontend can
-// remain permissive and render JSON to avoid drift during freeze.
 export type JudgeRunResponse = any;
 
 export async function postJudgeRun(body: JudgeRunRequest): Promise<JudgeRunResponse> {
@@ -316,12 +331,10 @@ export async function postJudgeRun(body: JudgeRunRequest): Promise<JudgeRunRespo
   });
 }
 
-// 获取 Judge Config Manifest（前端唯一可编辑来源）。
 export async function fetchJudgeConfigManifest(): Promise<JudgeConfigManifestResponseV1> {
   return requestJson<JudgeConfigManifestResponseV1>(`/api/judge/config`);
 }
 
-// 提交 Judge Config Patch（dryRun=true 用于权威校验；dryRun=false 用于保存/确认）。
 export async function postJudgeConfigPatch(req: JudgeConfigPatchRequestV1): Promise<JudgeConfigPatchResponseV1> {
   return requestJson<JudgeConfigPatchResponseV1>(`/api/judge/config/patch`, {
     method: "POST",
@@ -329,18 +342,14 @@ export async function postJudgeConfigPatch(req: JudgeConfigPatchRequestV1): Prom
   });
 }
 
-// -------------------- Simulator Config (manifest-driven) --------------------
-
 export type SimConfigManifestResponseV1 = any;
 export type SimConfigPatchRequestV1 = any;
 export type SimConfigPatchResponseV1 = any;
 
-// 获取 Simulator Config Manifest（前端唯一可编辑来源）。
 export async function fetchSimConfigManifest(): Promise<SimConfigManifestResponseV1> {
   return requestJson<SimConfigManifestResponseV1>(`/api/sim/config`);
 }
 
-// 提交 Simulator Config Patch（dryRun=true 用于权威校验；dryRun=false 用于保存/确认）。
 export async function postSimConfigPatch(req: SimConfigPatchRequestV1): Promise<SimConfigPatchResponseV1> {
   return requestJson<SimConfigPatchResponseV1>(`/api/sim/config/patch`, {
     method: "POST",
@@ -349,21 +358,425 @@ export async function postSimConfigPatch(req: SimConfigPatchRequestV1): Promise<
 }
 
 export async function fetchJudgeProblemStates(limit = 50): Promise<any> {
-  const q = new URLSearchParams();
-  q.set("limit", String(limit));
-  return requestJson<any>(`/api/judge/problem_states?${q.toString()}`);
+  return requestJson<any>(withQuery(`/api/judge/problem_states`, { limit }));
 }
 
 export async function fetchJudgeReferenceViews(limit = 50): Promise<any> {
-  const q = new URLSearchParams();
-  q.set("limit", String(limit));
-  return requestJson<any>(`/api/judge/reference_views?${q.toString()}`);
+  return requestJson<any>(withQuery(`/api/judge/reference_views`, { limit }));
 }
 
 export async function fetchJudgeAoSense(limit = 50): Promise<any> {
-  const q = new URLSearchParams();
-  q.set("limit", String(limit));
-  return requestJson<any>(`/api/judge/ao_sense?${q.toString()}`);
+  return requestJson<any>(withQuery(`/api/judge/ao_sense`, { limit }));
+}
+
+// -----------------------------
+// Common auth / settings types
+// -----------------------------
+
+export type AuthMe = {
+  ok: boolean;
+  actor_id: string;
+  token_id: string;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  role: string;
+  scopes: string[];
+};
+
+export async function fetchAuthMe(token: string): Promise<AuthMe> {
+  return requestJson<AuthMe>(`/api/v1/auth/me`, {
+    headers: authHeaders(token),
+  });
+}
+
+// -----------------------------
+// Alerts APIs
+// -----------------------------
+
+export type AlertRuleItem = any;
+export type AlertEventItem = any;
+export type AlertNotificationItem = any;
+
+export async function fetchAlertRules(token: string): Promise<AlertRuleItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: AlertRuleItem[] }>(`/api/v1/alerts/rules`, {
+    headers: authHeaders(token),
+  });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function createAlertRule(token: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/alerts/rules`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function disableAlertRule(token: string, ruleId: string): Promise<any> {
+  return requestJson<any>(`/api/v1/alerts/rules/${encodeURIComponent(ruleId)}/disable`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({}),
+  });
+}
+
+export async function fetchAlertEvents(token: string, params?: Record<string, unknown>): Promise<AlertEventItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: AlertEventItem[] }>(
+    withQuery(`/api/v1/alerts/events`, params),
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function ackAlertEvent(token: string, eventId: string, body?: any): Promise<any> {
+  return requestJson<any>(`/api/v1/alerts/events/${encodeURIComponent(eventId)}/ack`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export async function closeAlertEvent(token: string, eventId: string, body?: any): Promise<any> {
+  return requestJson<any>(`/api/v1/alerts/events/${encodeURIComponent(eventId)}/close`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export async function fetchAlertNotifications(token: string, params?: Record<string, unknown>): Promise<AlertNotificationItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: AlertNotificationItem[] }>(
+    withQuery(`/api/v1/alerts/notifications`, params),
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+// -----------------------------
+// Audit / export overview APIs
+// -----------------------------
+
+export type AuditExportOverview = any;
+
+export async function fetchAuditExportOverview(token: string): Promise<AuditExportOverview> {
+  return requestJson<AuditExportOverview>(`/api/v1/audit-export/overview`, {
+    headers: authHeaders(token),
+  });
+}
+
+// -----------------------------
+// Field APIs
+// -----------------------------
+
+export type FieldListItem = any;
+export type FieldBoundDevice = any;
+export type FieldPolygon = any;
+export type FieldSeason = any;
+export type FieldDetail = any;
+
+export async function fetchFields(token: string): Promise<FieldListItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: FieldListItem[] }>(`/api/v1/fields`, {
+    headers: authHeaders(token),
+  });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchFieldDetail(token: string, fieldId: string): Promise<FieldDetail> {
+  return requestJson<FieldDetail>(`/api/v1/fields/${encodeURIComponent(fieldId)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function createFieldSeason(token: string, fieldId: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/seasons`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+// -----------------------------
+// Device / telemetry APIs
+// -----------------------------
+
+export type DeviceListItem = any;
+export type DeviceDetail = any;
+export type DeviceStatus = any;
+export type DeviceConsoleView = any;
+export type TelemetryLatestItem = any;
+export type TelemetryMetricsItem = any;
+export type TelemetrySeriesResponse = any;
+
+export async function fetchDevices(token: string): Promise<DeviceListItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: DeviceListItem[] }>(`/api/devices`, {
+    headers: authHeaders(token),
+  });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchDeviceDetail(token: string, deviceId: string): Promise<DeviceDetail> {
+  return requestJson<DeviceDetail>(`/api/v1/devices/${encodeURIComponent(deviceId)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchDeviceStatus(token: string, deviceId: string): Promise<DeviceStatus> {
+  return requestJson<DeviceStatus>(`/api/v1/devices/${encodeURIComponent(deviceId)}/status`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchDeviceConsole(token: string, deviceId: string): Promise<DeviceConsoleView> {
+  return requestJson<DeviceConsoleView>(`/api/v1/devices/${encodeURIComponent(deviceId)}/console`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchTelemetryLatest(token: string, params?: Record<string, unknown>): Promise<TelemetryLatestItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: TelemetryLatestItem[] }>(
+    withQuery(`/api/v1/telemetry/latest`, params),
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchTelemetryMetrics(token: string, params?: Record<string, unknown>): Promise<TelemetryMetricsItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: TelemetryMetricsItem[] }>(
+    withQuery(`/api/v1/telemetry/metrics`, params),
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchTelemetrySeries(token: string, params?: Record<string, unknown>): Promise<TelemetrySeriesResponse> {
+  return requestJson<TelemetrySeriesResponse>(withQuery(`/api/v1/telemetry/series`, params), {
+    headers: authHeaders(token),
+  });
+}
+
+// -----------------------------
+// Evidence export APIs
+// -----------------------------
+
+export type EvidenceExportJob = any;
+
+export async function fetchEvidenceExportJobs(token: string, params?: Record<string, unknown>): Promise<EvidenceExportJob[]> {
+  const res = await requestJson<{ ok?: boolean; items?: EvidenceExportJob[] }>(
+    withQuery(`/api/v1/evidence-export/jobs`, params),
+    { headers: authHeaders(token) },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchEvidenceExportJob(token: string, jobId: string): Promise<EvidenceExportJob> {
+  return requestJson<EvidenceExportJob>(`/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function createEvidenceExportJob(token: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/evidence-export/jobs`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+// -----------------------------
+// Approval / AO-ACT APIs
+// -----------------------------
+
+export type OperationApprovalItem = any;
+export type OperationTaskItem = any;
+export type OperationDispatchItem = any;
+export type OperationReceiptItem = any;
+
+export async function fetchApprovals(token: string): Promise<OperationApprovalItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: OperationApprovalItem[] }>(`/api/v1/approvals`, {
+    headers: authHeaders(token),
+  });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function createApproval(token: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/approvals`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function decideApproval(token: string, requestId: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/approvals/${encodeURIComponent(requestId)}/decide`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchAoActTasks(token: string): Promise<OperationTaskItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: OperationTaskItem[] }>(`/api/v1/ao-act/tasks`, {
+    headers: authHeaders(token),
+  });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function dispatchAoActTask(token: string, actTaskId: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+// -----------------------------
+// Dashboard APIs
+// -----------------------------
+
+export type DashboardSummary = {
+  field_count: number;
+  online_device_count: number;
+  open_alert_count: number;
+  running_task_count: number;
+};
+
+export type DashboardTrendPoint = {
+  ts_ms: number;
+  avg_value_num: number | null;
+  sample_count: number;
+};
+
+export type DashboardTrendSeries = {
+  metric: string;
+  points: DashboardTrendPoint[];
+};
+
+export type DashboardAlertItem = {
+  event_id: string;
+  rule_id: string;
+  object_type: string;
+  object_id: string;
+  metric: string;
+  status: string;
+  raised_ts_ms: number;
+};
+
+export type DashboardReceiptItem = {
+  fact_id: string;
+  act_task_id: string | null;
+  device_id: string | null;
+  status: string | null;
+  occurred_at: string;
+  occurred_ts_ms: number;
+};
+
+export type DashboardQuickAction = {
+  key: string;
+  label: string;
+  to: string;
+};
+
+export type DashboardOverview = {
+  window: {
+    from_ts_ms: number;
+    to_ts_ms: number;
+  };
+  summary: DashboardSummary;
+  trend_series: DashboardTrendSeries[];
+  latest_alerts: DashboardAlertItem[];
+  latest_receipts: DashboardReceiptItem[];
+  quick_actions: DashboardQuickAction[];
+};
+
+export async function fetchDashboardOverview(
+  token: string,
+  params?: { from_ts_ms?: number; to_ts_ms?: number },
+): Promise<DashboardOverview> {
+  return requestJson<{ ok: boolean } & DashboardOverview>(
+    withQuery(`/api/v1/dashboard/overview`, params),
+    { headers: authHeaders(token) },
+  );
+}
+
+// -----------------------------
+// Operations console APIs
+// -----------------------------
+
+export type OperationsConsoleApprovalDetail = {
+  request_id: string | null;
+  status: string;
+  occurred_at: string;
+  action_type: string;
+  target: any;
+  device_id: string | null;
+  risk_hint: string;
+  impact_scope: any;
+  parameter_snapshot: any;
+  proposal_hash: string;
+  decision_present: boolean;
+  act_task_id: string | null;
+};
+
+export type OperationsConsoleMonitoringItem = {
+  act_task_id: string;
+  state: string;
+  action_type: string;
+  target: any;
+  device_id: string | null;
+  parameters: any;
+  parameters_hash: string;
+  dispatch_fact_id: string | null;
+  dispatch_occurred_at: string | null;
+  receipt_fact_id: string | null;
+  receipt_occurred_at: string | null;
+  latest_receipt_status: string | null;
+  retry_allowed: boolean;
+};
+
+export type OperationsConsoleResponse = {
+  summary: {
+    approvals_pending: number;
+    approvals_decided: number;
+    dispatch_queue: number;
+    receipts: number;
+    retryable_tasks: number;
+  };
+  approvals: OperationsConsoleApprovalDetail[];
+  monitoring: OperationsConsoleMonitoringItem[];
+  dispatches: OperationDispatchItem[];
+  receipts: OperationReceiptItem[];
+};
+
+export async function fetchOperationsConsole(token: string): Promise<OperationsConsoleResponse> {
+  const res = await requestJson<{ ok: boolean } & OperationsConsoleResponse>(`/api/v1/operations/console`, {
+    headers: authHeaders(token),
+  });
+
+  return {
+    summary: res.summary,
+    approvals: Array.isArray(res.approvals) ? res.approvals : [],
+    monitoring: Array.isArray(res.monitoring) ? res.monitoring : [],
+    dispatches: Array.isArray(res.dispatches) ? res.dispatches : [],
+    receipts: Array.isArray(res.receipts) ? res.receipts : [],
+  };
+}
+
+export async function retryAoActTask(
+  token: string,
+  actTaskId: string,
+  body: {
+    device_id?: string;
+    downlink_topic?: string;
+    retry_reason?: string;
+    adapter_hint?: string;
+  },
+): Promise<any> {
+  return requestJson<any>(`/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/retry`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
 }
 
 // --- compat exports for older UI code ---

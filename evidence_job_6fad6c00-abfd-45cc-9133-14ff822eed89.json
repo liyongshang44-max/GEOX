@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "tenant_id": "tenantA",
+    "scope": {
+      "scope_type": "FIELD",
+      "scope_id": "field_001"
+    },
+    "from_ts_ms": 0,
+    "to_ts_ms": 1772694021959,
+    "built_at_ts_ms": 1772693962930
+  },
+  "snapshot": {
+    "field": {
+      "tenant_id": "tenantA",
+      "field_id": "field_001",
+      "name": "North Field",
+      "area_ha": "12.5",
+      "status": "ACTIVE",
+      "created_ts_ms": "1772692659723",
+      "updated_ts_ms": "1772692659998"
+    },
+    "field_polygon": {
+      "tenant_id": "tenantA",
+      "field_id": "field_001",
+      "geojson": "{\"properties\":{},\"type\":\"Feature\",\"geometry\":{\"coordinates\":[[116,39],[116.1,39],[116.1,39.1],[116,39.1],[116,39]],\"type\":\"Polygon\"}}",
+      "updated_ts_ms": "1772692659998"
+    },
+    "bound_devices": []
+  },
+  "facts": [
+    {
+      "fact_id": "field_618568f008b77ef14e8c8831acc40a7d41ccf0f1db4d8dc9a0a7df0a35601621",
+      "occurred_at": "2026-03-05T06:37:39.723Z",
+      "source": "control",
+      "record_json": {
+        "type": "field_created_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "name": "North Field",
+          "area_ha": 12.5,
+          "status": "ACTIVE",
+          "created_ts_ms": 1772692659723,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    },
+    {
+      "fact_id": "fieldpoly_b606a0aba6cefe186000b99bc60b840a806852c4ce0158748a9cf793838f2102",
+      "occurred_at": "2026-03-05T06:37:39.998Z",
+      "source": "control",
+      "record_json": {
+        "type": "field_polygon_set_v1",
+        "entity": {
+          "tenant_id": "tenantA",
+          "field_id": "field_001"
+        },
+        "payload": {
+          "geojson": "{\"properties\":{},\"type\":\"Feature\",\"geometry\":{\"coordinates\":[[116,39],[116.1,39],[116.1,39.1],[116,39.1],[116,39]],\"type\":\"Polygon\"}}",
+          "updated_ts_ms": 1772692659998,
+          "actor_id": "dev",
+          "token_id": "tok_dev_ao_act_admin_v0"
+        }
+      }
+    }
+  ]
+}

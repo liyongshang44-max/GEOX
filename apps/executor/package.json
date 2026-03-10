@@ -1,18 +1,22 @@
 {
-    "name":  "@geox/executor",
-    "version":  "0.1.0",
-    "private":  true,
-    "type":  "commonjs",
-    "scripts":  {
-                    "once":  "tsx src/run_once.ts",
-                    "build":  "node -e \"process.exit(0)\""
-                },
-    "dependencies":  {
-
-                     },
-    "devDependencies":  {
-                            "@types/node":  "^20.14.10",
-                            "tsx":  "^4.21.0",
-                            "typescript":  "^5.4.5"
-                        }
+  "name": "@geox/executor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "once": "tsx src/run_once.ts",
+    "dispatch-once": "tsx src/run_dispatch_once.ts",
+    "build": "node -e \"process.exit(0)\"",
+    "dispatch-mqtt-once": "tsx src/run_mqtt_downlink_once.ts",
+    "device-sim-once": "tsx src/run_mqtt_device_sim_once.ts",
+    "receipt-uplink-once": "tsx src/run_mqtt_receipt_uplink_once.ts"
+  },
+  "dependencies": {
+    "mqtt": "^5.15.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "tsx": "^4.21.0",
+    "typescript": "^5.4.5"
+  }
 }

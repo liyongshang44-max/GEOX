@@ -1,0 +1,602 @@
+// GEOX/apps/server/src/routes/fields_v1.ts
+//
+// Sprint C1 + Sprint F1: Field/GIS routes, device binding, season projection, and field detail summary.
+//
+// Design notes:
+// - All writes emit append-only facts into facts(record_json).
+// - Projections are mutable read models rebuilt from facts when needed.
+// - Tenant isolation is enforced by AoActAuthContextV0 (tenant_id from token is authoritative).
+// - Missing or cross-tenant resources always return 404 to avoid enumeration leaks.
+
+import crypto from "node:crypto"; // Node crypto for deterministic hashes used in fact ids.
+import type { FastifyInstance } from "fastify"; // Fastify app instance type.
+import type { Pool } from "pg"; // Postgres pool type.
+
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
+
+function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
+  return typeof v === "string" && v.trim().length > 0; // True only when string has visible content.
+} // End helper.
+
+function normalizeId(v: any): string | null { // Helper: normalize id-like strings.
+  if (!isNonEmptyString(v)) return null; // Missing => invalid.
+  const s = String(v).trim(); // Trim whitespace.
+  if (s.length < 1 || s.length > 128) return null; // Enforce a conservative length bound.
+  if (!/^[A-Za-z0-9_\-:.]+$/.test(s)) return null; // Allow only a safe id character set.
+  return s; // Normalized id.
+} // End helper.
+
+function normalizeName(v: any, maxLen: number): string | null { // Helper: normalize human-readable names.
+  if (!isNonEmptyString(v)) return null; // Missing => null.
+  return String(v).trim().slice(0, maxLen); // Trim and cap length.
+} // End helper.
+
+function sha256Hex(s: string): string { // Helper: sha256 hex digest.
+  return crypto.createHash("sha256").update(s, "utf8").digest("hex"); // Hash and return hex.
+} // End helper.
+
+function badRequest(reply: any, error: string) { // Helper: standardized 400 response.
+  return reply.status(400).send({ ok: false, error }); // Standard envelope.
+} // End helper.
+
+function notFound(reply: any) { // Helper: standardized 404 response.
+  return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Non-enumerable response.
+} // End helper.
+
+function normalizeGeoJsonText(v: any): string | null { // Helper: validate and normalize GeoJSON input.
+  if (v == null) return null; // Missing => invalid.
+  let obj: any = null; // Parsed object placeholder.
+  if (typeof v === "string") { // If input is a JSON string.
+    const s = v.trim(); // Trim.
+    if (!s) return null; // Empty string => invalid.
+    try { obj = JSON.parse(s); } catch { return null; } // Must parse successfully.
+  } else if (typeof v === "object") { // If input is already an object.
+    obj = v; // Use object as-is.
+  } else { // Unsupported type.
+    return null; // Invalid.
+  } // End type branch.
+
+  if (!obj || typeof obj !== "object") return null; // Must be a JSON object.
+  const t = String((obj as any).type ?? ""); // Read GeoJSON type.
+  if (t !== "Polygon" && t !== "MultiPolygon" && t !== "Feature" && t !== "FeatureCollection") return null; // Conservative allowlist.
+  return JSON.stringify(obj); // Canonicalize to a JSON string.
+} // End helper.
+
+function normalizeSeasonStatus(v: any): "PLANNED" | "ACTIVE" | "CLOSED" | null { // Helper: normalize season lifecycle.
+  const s = String(v ?? "PLANNED").trim().toUpperCase(); // Normalize to upper-case.
+  if (s === "PLANNED" || s === "ACTIVE" || s === "CLOSED") return s as "PLANNED" | "ACTIVE" | "CLOSED"; // Allowlist.
+  return null; // Invalid status.
+} // End helper.
+
+function normalizeDateOnly(v: any): string | null { // Helper: normalize YYYY-MM-DD dates.
+  if (v == null || v === "") return null; // Empty => null.
+  if (!isNonEmptyString(v)) return null; // Must be a string.
+  const s = String(v).trim(); // Trim.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null; // Require date-only format.
+  return s; // Normalized date string.
+} // End helper.
+
+function parseJsonOrNull(v: any): any | null { // Helper: parse a JSON string when possible.
+  if (!isNonEmptyString(v)) return null; // Empty => null.
+  try { return JSON.parse(String(v)); } catch { return null; } // Best-effort parse.
+} // End helper.
+
+async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Startup helper: create season projection table for upgraded repos.
+  await pool.query( // Create field season projection table.
+    `CREATE TABLE IF NOT EXISTS field_season_index_v1 (
+       tenant_id text NOT NULL,
+       field_id text NOT NULL,
+       season_id text NOT NULL,
+       name text NOT NULL,
+       crop text NULL,
+       start_date text NULL,
+       end_date text NULL,
+       status text NOT NULL,
+       created_ts_ms bigint NOT NULL,
+       updated_ts_ms bigint NOT NULL,
+       PRIMARY KEY (tenant_id, field_id, season_id)
+     )`
+  ); // End create table.
+
+  await pool.query( // Create list index for tenant/field season lookups.
+    `CREATE INDEX IF NOT EXISTS field_season_index_v1_lookup_idx
+       ON field_season_index_v1 (tenant_id, field_id, updated_ts_ms DESC)`
+  ); // End create index.
+} // End helper.
+
+/**
+ * Register Field/GIS + Device Binding + Season routes.
+ */
+export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Route registration entry.
+  void ensureFieldSeasonProjectionV1(pool).catch((e: any) => { // Ensure upgraded repos also have the season table.
+    app.log.error({ err: e }, "failed_to_ensure_field_season_projection_v1"); // Log startup issue instead of crashing boot.
+  }); // End ensure table.
+
+  app.post("/api/v1/fields", async (req, reply) => { // Create a new field in the caller's tenant.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require fields.write scope.
+    if (!auth) return; // Auth helper already responded.
+
+    const body: any = (req as any).body ?? {}; // Read JSON body.
+    const field_id = normalizeId(body.field_id); // Required field id.
+    if (!field_id) return badRequest(reply, "MISSING_OR_INVALID:field_id"); // Validate field id.
+
+    const name = normalizeName(body.name, 256); // Required display name.
+    if (!name) return badRequest(reply, "MISSING_OR_INVALID:name"); // Validate name.
+
+    const area_ha = (typeof body.area_ha === "number" && Number.isFinite(body.area_ha)) ? body.area_ha : null; // Optional field area.
+
+    const now_ms = Date.now(); // Server time for auditing.
+    const occurredAtIso = new Date(now_ms).toISOString(); // ISO timestamp for facts.occurred_at.
+
+    const stable_id = sha256Hex(`field_created_v1|${auth.tenant_id}|${field_id}`); // Deterministic id for idempotent create.
+    const fact_id = `field_${stable_id}`; // Fact id prefix.
+
+    const record = { // Append-only fact payload.
+      type: "field_created_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, field_id }, // Entity envelope.
+      payload: { // Fact payload.
+        name, // Human-readable field name.
+        area_ha, // Optional area.
+        status: "ACTIVE", // v1 default lifecycle state.
+        created_ts_ms: now_ms, // Creation timestamp.
+        actor_id: auth.actor_id, // Audit actor.
+        token_id: auth.token_id, // Audit token id.
+      }, // End payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire DB connection.
+    try { // Transaction boundary.
+      await clientConn.query("BEGIN"); // Start transaction.
+
+      await clientConn.query( // Insert append-only fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert field projection.
+        `INSERT INTO field_index_v1 (tenant_id, field_id, name, area_ha, status, created_ts_ms, updated_ts_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, $6)
+         ON CONFLICT (tenant_id, field_id) DO UPDATE SET
+           name = EXCLUDED.name,
+           area_ha = EXCLUDED.area_ha,
+           status = EXCLUDED.status,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, field_id, name, area_ha, "ACTIVE", now_ms]
+      ); // End upsert.
+
+      await clientConn.query("COMMIT"); // Commit transaction.
+      return reply.send({ ok: true, field_id }); // Return created field.
+    } catch (e: any) { // Error path.
+      await clientConn.query("ROLLBACK"); // Roll back changes.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // Return 500.
+    } finally { // Always release.
+      clientConn.release(); // Release connection.
+    } // End try/finally.
+  }); // End POST /api/v1/fields.
+
+  app.get("/api/v1/fields", async (req, reply) => { // List fields within the caller's tenant.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
+    if (!auth) return; // Auth helper responded.
+
+    const limitRaw = Number((req.query as any)?.limit ?? 50); // Optional list limit.
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(500, Math.floor(limitRaw))) : 50; // Clamp limit.
+
+    const q = await pool.query( // Query field projection.
+      `SELECT tenant_id, field_id, name, area_ha, status, created_ts_ms, updated_ts_ms
+         FROM field_index_v1
+        WHERE tenant_id = $1
+        ORDER BY updated_ts_ms DESC
+        LIMIT $2`,
+      [auth.tenant_id, limit]
+    ); // End query.
+
+    return reply.send({ ok: true, fields: q.rows }); // Return list.
+  }); // End GET /api/v1/fields.
+
+  app.get("/api/v1/fields/:field_id", async (req, reply) => { // Get field detail including polygon, devices, seasons, and summary.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
+    if (!auth) return; // Auth helper responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id.
+    if (!field_id) return notFound(reply); // Invalid id => 404.
+
+    const fieldQ = await pool.query( // Load field record.
+      `SELECT tenant_id, field_id, name, area_ha, status, created_ts_ms, updated_ts_ms
+         FROM field_index_v1
+        WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Missing field => 404.
+
+    const polyQ = await pool.query( // Load polygon if present.
+      `SELECT geojson, updated_ts_ms
+         FROM field_polygon_v1
+        WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+
+    const devQ = await pool.query( // Load bound devices with latest status projection.
+      `SELECT b.device_id,
+              b.bound_ts_ms,
+              s.last_telemetry_ts_ms,
+              s.last_heartbeat_ts_ms,
+              s.battery_percent,
+              s.rssi_dbm,
+              s.fw_ver,
+              s.updated_ts_ms,
+              CASE
+                WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE'
+                ELSE 'STALE'
+              END AS connection_status
+         FROM device_binding_index_v1 b
+         LEFT JOIN device_status_index_v1 s
+           ON s.tenant_id = b.tenant_id AND s.device_id = b.device_id
+        WHERE b.tenant_id = $1 AND b.field_id = $2
+        ORDER BY b.bound_ts_ms DESC`,
+      [auth.tenant_id, field_id, Date.now() - 15 * 60 * 1000]
+    ); // End query.
+
+    const seasonsQ = await pool.query( // Load field seasons.
+      `SELECT season_id, name, crop, start_date, end_date, status, created_ts_ms, updated_ts_ms
+         FROM field_season_index_v1
+        WHERE tenant_id = $1 AND field_id = $2
+        ORDER BY updated_ts_ms DESC`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+
+    const bound_devices = devQ.rows; // Alias detail rows for readability.
+    const boundDeviceIds = bound_devices.map((row: any) => String(row.device_id ?? "")).filter(Boolean); // Field-bound device ids for downstream tabs.
+
+    const alertQ = await pool.query( // Count active alert events targeting this field or its bound devices.
+      `SELECT COUNT(*)::bigint AS active_alerts
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND status IN ('OPEN', 'ACKED')
+          AND (
+            (object_type = 'FIELD' AND object_id = $2)
+            OR (object_type = 'DEVICE' AND object_id = ANY($3::text[]))
+          )`,
+      [auth.tenant_id, field_id, boundDeviceIds.length ? boundDeviceIds : ["__none__"]]
+    ); // End query.
+
+    const seasons = seasonsQ.rows; // Alias season rows for readability.
+    const latest_telemetry_ts_ms = bound_devices.reduce((max: number | null, row: any) => { // Compute latest telemetry across bound devices.
+      const candidate = (typeof row.last_telemetry_ts_ms === "number" && Number.isFinite(row.last_telemetry_ts_ms)) ? row.last_telemetry_ts_ms : null; // Candidate ts.
+      if (candidate == null) return max; // Ignore missing values.
+      if (max == null) return candidate; // First value.
+      return Math.max(max, candidate); // Keep latest value.
+    }, null as number | null); // End reduce.
+    const online_device_count = bound_devices.filter((row: any) => row.connection_status === "ONLINE").length; // Count online devices.
+
+    const trendProjectionQ = boundDeviceIds.length > 0 ? await pool.query( // Prefer telemetry projection when available.
+      `SELECT metric,
+              (EXTRACT(EPOCH FROM date_trunc('hour', ts)) * 1000)::bigint AS bucket_ts_ms,
+              AVG(value_num) AS avg_value_num
+         FROM telemetry_index_v1
+        WHERE tenant_id = $1
+          AND device_id = ANY($2::text[])
+          AND metric = ANY($3::text[])
+          AND value_num IS NOT NULL
+          AND ts >= NOW() - INTERVAL '24 hours'
+        GROUP BY metric, date_trunc('hour', ts)
+        ORDER BY bucket_ts_ms ASC`,
+      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temp", "soil_temp_c"]]
+    ) : { rows: [] as any[] }; // End projection query.
+
+    const trendFactQ = trendProjectionQ.rows.length > 0 || boundDeviceIds.length === 0 ? { rows: [] as any[] } : await pool.query( // Fallback to raw facts when projection has not materialized yet.
+      `SELECT
+          (record_json::jsonb #>> '{payload,metric}') AS metric,
+          (((record_json::jsonb #>> '{payload,ts_ms}')::bigint / 3600000) * 3600000) AS bucket_ts_ms,
+          AVG(((record_json::jsonb #>> '{payload,value}')::double precision)) AS avg_value_num
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'raw_telemetry_v1'
+          AND (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+          AND (record_json::jsonb #>> '{payload,metric}') = ANY($3::text[])
+          AND ((record_json::jsonb #>> '{payload,ts_ms}')::bigint) >= $4
+        GROUP BY (record_json::jsonb #>> '{payload,metric}'), (((record_json::jsonb #>> '{payload,ts_ms}')::bigint / 3600000) * 3600000)
+        ORDER BY bucket_ts_ms ASC`,
+      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temp", "soil_temp_c"], Date.now() - 24 * 60 * 60 * 1000]
+    ); // End fallback query.
+
+    const trendRows = trendProjectionQ.rows.length > 0 ? trendProjectionQ.rows : trendFactQ.rows; // Pick projection first, facts second.
+    const normalizeMetric = (metric: string): string => metric === "soil_temp_c" ? "soil_temp" : metric; // Merge temp aliases into one commercial label.
+    const sensor_trends = { // Minimal field sensor tab payload.
+      soil_moisture: trendRows.filter((row: any) => String(row.metric) === 'soil_moisture').map((row: any) => ({ ts_ms: Number(row.bucket_ts_ms), value_num: row.avg_value_num == null ? null : Number(row.avg_value_num) })),
+      soil_temp: trendRows.filter((row: any) => normalizeMetric(String(row.metric)) === 'soil_temp').map((row: any) => ({ ts_ms: Number(row.bucket_ts_ms), value_num: row.avg_value_num == null ? null : Number(row.avg_value_num) })),
+    }; // End sensor trends.
+
+    const recentAlertsQ = await pool.query( // Show field alerts plus alerts raised on bound devices.
+      `SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND (
+            (object_type = 'FIELD' AND object_id = $2)
+            OR (object_type = 'DEVICE' AND object_id = ANY($3::text[]))
+          )
+        ORDER BY raised_ts_ms DESC
+        LIMIT 10`,
+      [auth.tenant_id, field_id, boundDeviceIds.length ? boundDeviceIds : ["__none__"]]
+    ); // End alerts query.
+
+    const recentTasksQ = boundDeviceIds.length > 0 ? await pool.query( // Load recent AO-ACT tasks targeting field-bound devices.
+      `SELECT fact_id, occurred_at, (record_json::jsonb) AS task_json
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
+          AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{payload,project_id}') = $2
+          AND (record_json::jsonb #>> '{payload,group_id}') = $3
+          AND COALESCE((record_json::jsonb #>> '{payload,meta,device_id}'), '') = ANY($4::text[])
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 10`,
+      [auth.tenant_id, auth.project_id, auth.group_id, boundDeviceIds]
+    ) : { rows: [] as any[] }; // End task query.
+
+    const recentReceiptsQ = boundDeviceIds.length > 0 ? await pool.query( // Load recent AO-ACT receipts targeting field-bound devices.
+      `SELECT fact_id, occurred_at, (record_json::jsonb) AS receipt_json
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'ao_act_receipt_v0'
+          AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{payload,project_id}') = $2
+          AND (record_json::jsonb #>> '{payload,group_id}') = $3
+          AND COALESCE((record_json::jsonb #>> '{payload,meta,device_id}'), '') = ANY($4::text[])
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 10`,
+      [auth.tenant_id, auth.project_id, auth.group_id, boundDeviceIds]
+    ) : { rows: [] as any[] }; // End receipt query.
+
+    return reply.send({ // Return detail payload.
+      ok: true, // Success flag.
+      field: fieldQ.rows[0], // Field projection.
+      polygon: polyQ.rowCount ? { ...polyQ.rows[0], geojson_json: parseJsonOrNull(polyQ.rows[0].geojson) } : null, // Polygon detail with parsed JSON convenience field.
+      bound_devices, // Device rows.
+      seasons, // Field seasons.
+      sensor_trends, // Sensor tab payload.
+      recent_alerts: recentAlertsQ.rows, // Alert tab payload.
+      recent_tasks: recentTasksQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), task: parseJsonOrNull(row.task_json) ?? row.task_json })), // Job tab tasks.
+      recent_receipts: recentReceiptsQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), receipt: parseJsonOrNull(row.receipt_json) ?? row.receipt_json, device_id: ((parseJsonOrNull(row.receipt_json) ?? row.receipt_json)?.payload?.meta?.device_id ?? null) })), // Job tab receipts.
+      summary: { // Aggregated summary for commercial UI.
+        device_count: bound_devices.length, // Total bound devices.
+        online_device_count, // Online device count.
+        active_alerts: Number(alertQ.rows?.[0]?.active_alerts ?? 0), // Open or acked alerts.
+        latest_telemetry_ts_ms, // Latest telemetry ts across devices.
+      }, // End summary.
+    }); // End response.
+  }); // End GET /api/v1/fields/:field_id.
+
+  app.post("/api/v1/fields/:field_id/polygon", async (req, reply) => { // Set or update a field polygon.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require fields.write.
+    if (!auth) return; // Auth helper responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id.
+    if (!field_id) return notFound(reply); // Invalid => 404.
+
+    const geojson = normalizeGeoJsonText((req as any).body); // Accept raw body as object or JSON string.
+    if (!geojson) return badRequest(reply, "MISSING_OR_INVALID:geojson"); // Validate body.
+
+    const existsQ = await pool.query( // Confirm field exists in tenant.
+      `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (existsQ.rowCount === 0) return notFound(reply); // Missing field => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const occurredAtIso = new Date(now_ms).toISOString(); // occurred_at.
+    const stable_id = sha256Hex(`field_polygon_set_v1|${auth.tenant_id}|${field_id}|${geojson}`); // Deterministic id per polygon payload.
+    const fact_id = `fieldpoly_${stable_id}`; // Fact id.
+
+    const record = { // Ledger record.
+      type: "field_polygon_set_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, field_id }, // Entity envelope.
+      payload: { geojson, updated_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Transaction.
+      await clientConn.query("BEGIN"); // Begin tx.
+
+      await clientConn.query( // Insert fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert polygon projection.
+        `INSERT INTO field_polygon_v1 (tenant_id, field_id, geojson, updated_ts_ms)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, field_id) DO UPDATE SET
+           geojson = EXCLUDED.geojson,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, field_id, geojson, now_ms]
+      ); // End upsert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true }); // Respond ok.
+    } catch (e: any) { // Error.
+      await clientConn.query("ROLLBACK"); // Roll back changes.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // Return 500.
+    } finally { // Always release.
+      clientConn.release(); // Release connection.
+    } // End try/finally.
+  }); // End POST /api/v1/fields/:field_id/polygon.
+
+  app.post("/api/v1/fields/:field_id/seasons", async (req, reply) => { // Create or update a minimal field season.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require fields.write.
+    if (!auth) return; // Auth helper responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id.
+    if (!field_id) return notFound(reply); // Invalid => 404.
+
+    const body: any = (req as any).body ?? {}; // Parse body.
+    const season_id = normalizeId(body.season_id); // Required season id.
+    if (!season_id) return badRequest(reply, "MISSING_OR_INVALID:season_id"); // Validate season id.
+
+    const name = normalizeName(body.name, 256); // Required season name.
+    if (!name) return badRequest(reply, "MISSING_OR_INVALID:name"); // Validate season name.
+
+    const crop = normalizeName(body.crop, 128); // Optional crop label.
+    const start_date = normalizeDateOnly(body.start_date); // Optional start date.
+    const end_date = normalizeDateOnly(body.end_date); // Optional end date.
+    const status = normalizeSeasonStatus(body.status); // Optional lifecycle status.
+    if (!status) return badRequest(reply, "MISSING_OR_INVALID:status"); // Validate status.
+    if (start_date && end_date && start_date > end_date) return badRequest(reply, "INVALID_RANGE:start_date>end_date"); // Enforce basic date range sanity.
+
+    const fieldQ = await pool.query( // Confirm target field exists in tenant.
+      `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Missing field => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const occurredAtIso = new Date(now_ms).toISOString(); // occurred_at.
+    const stable_id = sha256Hex(`field_season_upsert_v1|${auth.tenant_id}|${field_id}|${season_id}|${name}|${crop ?? ""}|${start_date ?? ""}|${end_date ?? ""}|${status}`); // Deterministic id per final season content.
+    const fact_id = `fieldseason_${stable_id}`; // Fact id.
+
+    const record = { // Append-only fact record.
+      type: "field_season_upserted_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, field_id, season_id }, // Entity envelope.
+      payload: { // Payload.
+        name, // Season name.
+        crop, // Optional crop.
+        start_date, // Optional start date.
+        end_date, // Optional end date.
+        status, // Lifecycle state.
+        updated_ts_ms: now_ms, // Update time.
+        actor_id: auth.actor_id, // Audit actor.
+        token_id: auth.token_id, // Audit token.
+      }, // End payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Transaction.
+      await clientConn.query("BEGIN"); // Begin tx.
+
+      const existingQ = await clientConn.query( // Check whether season already exists for created_ts_ms preservation.
+        `SELECT created_ts_ms FROM field_season_index_v1
+          WHERE tenant_id = $1 AND field_id = $2 AND season_id = $3`,
+        [auth.tenant_id, field_id, season_id]
+      ); // End query.
+      const created_ts_ms = (typeof existingQ.rows?.[0]?.created_ts_ms === "number" && Number.isFinite(existingQ.rows[0].created_ts_ms)) ? existingQ.rows[0].created_ts_ms : now_ms; // Preserve creation time on updates.
+
+      await clientConn.query( // Insert append-only fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert season projection.
+        `INSERT INTO field_season_index_v1 (tenant_id, field_id, season_id, name, crop, start_date, end_date, status, created_ts_ms, updated_ts_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (tenant_id, field_id, season_id) DO UPDATE SET
+           name = EXCLUDED.name,
+           crop = EXCLUDED.crop,
+           start_date = EXCLUDED.start_date,
+           end_date = EXCLUDED.end_date,
+           status = EXCLUDED.status,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, field_id, season_id, name, crop, start_date, end_date, status, created_ts_ms, now_ms]
+      ); // End upsert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true, field_id, season_id }); // Return updated season id.
+    } catch (e: any) { // Error path.
+      await clientConn.query("ROLLBACK"); // Roll back transaction.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // Return 500.
+    } finally { // Always release.
+      clientConn.release(); // Release connection.
+    } // End try/finally.
+  }); // End POST /api/v1/fields/:field_id/seasons.
+
+  app.get("/api/v1/fields/:field_id/seasons", async (req, reply) => { // List seasons for a field.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
+    if (!auth) return; // Auth helper responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id.
+    if (!field_id) return notFound(reply); // Invalid => 404.
+
+    const fieldQ = await pool.query( // Confirm field exists under tenant.
+      `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Missing => 404.
+
+    const q = await pool.query( // Load seasons.
+      `SELECT season_id, name, crop, start_date, end_date, status, created_ts_ms, updated_ts_ms
+         FROM field_season_index_v1
+        WHERE tenant_id = $1 AND field_id = $2
+        ORDER BY updated_ts_ms DESC`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+
+    return reply.send({ ok: true, field_id, seasons: q.rows }); // Return season list.
+  }); // End GET /api/v1/fields/:field_id/seasons.
+
+  app.post("/api/v1/devices/:device_id/bind-field", async (req, reply) => { // Bind a device to a field.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.bind"); // Require devices.bind scope.
+    if (!auth) return; // Auth helper responded.
+
+    const device_id = normalizeId((req.params as any)?.device_id); // Parse device id.
+    if (!device_id) return notFound(reply); // Invalid => 404.
+
+    const body: any = (req as any).body ?? {}; // Parse body.
+    const field_id = normalizeId(body.field_id); // Parse field id.
+    if (!field_id) return badRequest(reply, "MISSING_OR_INVALID:field_id"); // Validate field id.
+
+    const devQ = await pool.query( // Confirm device exists in tenant.
+      `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2`,
+      [auth.tenant_id, device_id]
+    ); // End query.
+    if (devQ.rowCount === 0) return notFound(reply); // Missing device => 404.
+
+    const fieldQ = await pool.query( // Confirm field exists in tenant.
+      `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Missing field => 404.
+
+    const now_ms = Date.now(); // Server time.
+    const occurredAtIso = new Date(now_ms).toISOString(); // occurred_at.
+    const stable_id = sha256Hex(`device_bound_to_field_v1|${auth.tenant_id}|${device_id}|${field_id}`); // Deterministic binding id.
+    const fact_id = `bind_${stable_id}`; // Fact id.
+
+    const record = { // Ledger record.
+      type: "device_bound_to_field_v1", // Fact type.
+      entity: { tenant_id: auth.tenant_id, device_id, field_id }, // Entity envelope.
+      payload: { bound_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+    }; // End record.
+
+    const clientConn = await pool.connect(); // Acquire connection.
+    try { // Transaction.
+      await clientConn.query("BEGIN"); // Begin tx.
+
+      await clientConn.query( // Insert append-only fact.
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+      ); // End insert.
+
+      await clientConn.query( // Upsert current device binding.
+        `INSERT INTO device_binding_index_v1 (tenant_id, device_id, field_id, bound_ts_ms)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+           field_id = EXCLUDED.field_id,
+           bound_ts_ms = EXCLUDED.bound_ts_ms`,
+        [auth.tenant_id, device_id, field_id, now_ms]
+      ); // End upsert.
+
+      await clientConn.query("COMMIT"); // Commit.
+      return reply.send({ ok: true, device_id, field_id }); // Return binding result.
+    } catch (e: any) { // Error path.
+      await clientConn.query("ROLLBACK"); // Roll back transaction.
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) }); // Return 500.
+    } finally { // Always release.
+      clientConn.release(); // Release connection.
+    } // End try/finally.
+  }); // End POST /api/v1/devices/:device_id/bind-field.
+} // End registerFieldsV1Routes.

@@ -15,6 +15,11 @@ import { buildHistoryReference, type ReferenceViewV1 } from "./reference/referen
 import { makeProblemStateBase, type ProblemStateV1, type EvidenceRef } from "./problem_state";
 import { deriveAoSense, type AoSenseV1 } from "./ao_sense";
 import { deriveLBCandidates, type LBCandidateV1 } from "./lb_candidate";
+import {
+  queryAoActLatestReceiptIndexV0,
+  shouldExplainAoActReadModelV0,
+  summarizeAoActIndexForLogV0,
+} from "./ao_act_readmodel"; // AO-ACT read model (Sprint 12: explain-only; no judgment dependency)
 
 export type JudgeRunInput = {
   subjectRef: any;
@@ -186,6 +191,23 @@ export class JudgePipelineV1 {
     });
     const { samples, markers, factIds } = splitEvidence(rows);
     const ledgerRef = this.makeLedgerSliceRef(factIds, window);
+        // Sprint 12: AO-ACT ReadModel is allowed only as an explain/debug mirror. // Must not affect judgment outputs
+    if (shouldExplainAoActReadModelV0()) {
+      try {
+        const idx = await queryAoActLatestReceiptIndexV0(this.reader, {
+          startTsMs: window.startTs,
+          endTsMs: window.endTs,
+        }); // Query AO-ACT facts in the same time window (read-only)
+
+        // Log a bounded, stable summary (not returned to callers). // Prevent accidental API coupling
+        // eslint-disable-next-line no-console
+        console.log("[judge][explain][ao_act_readmodel_v0]", summarizeAoActIndexForLogV0(idx));
+      } catch (e: any) {
+        // eslint-disable-next-line no-console
+        console.warn("[judge][explain][ao_act_readmodel_v0][error]", String(e?.message ?? e));
+      }
+    }
+
 
     // ✅ Deterministic rollups for ProblemState fields.
     //    These must be defined in the function scope (NOT inside a conditional block),

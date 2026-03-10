@@ -31,9 +31,18 @@ import { registerControlApprovalRequestV1Routes } from "./routes/control_approva
 import { registerDeliveryEvidenceExportV1Routes } from "./routes/delivery_evidence_export_v1"; // Sprint 26: Evidence export API v1 (async jobs).
 import { registerTelemetryV1Routes } from "./routes/telemetry_v1"; // Sprint A1: Telemetry query routes (read-only).
 import { registerDevicesV1Routes } from "./routes/devices_v1"; // Sprint A2: Devices registration + credentials routes (P0).
+import { registerFieldsV1Routes } from "./routes/fields_v1"; // Sprint C1: Field/GIS + Device Binding routes.
+import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
+import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
+import { registerAlertsV1Routes, startOfflineAlertWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
+import { registerEvidenceExportJobsV1Routes } from "./routes/evidence_export_jobs_v1"; // Sprint C1: Persisted evidence export jobs.
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
 import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1"; // 农艺解释 v1 路由
+import { registerControlPlaneV1Routes } from "./routes/controlplane_v1"; // Control-2: stable Commercial REST v1 wrappers + dispatch outbox.
+import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprint W1: unified audit/export overview.
+import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
+import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
 
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
@@ -176,11 +185,20 @@ registerSimConfigRoutes(app); // 注册 sim config 路由
 registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
 registerTelemetryV1Routes(app, pool); // Sprint A1: 注册 Telemetry v1 查询路由（只读投影）。
 registerDevicesV1Routes(app, pool); // Sprint A2: 注册设备注册/凭据路由（设备身份 P0）。
+registerFieldsV1Routes(app, pool); // Sprint C1: 注册 Field/GIS + Device Binding（地块化基座）。
+registerDeviceHeartbeatV1Routes(app, pool); // Sprint C2: Register Device Heartbeat ingest (POST /api/v1/devices/:device_id/heartbeat).
+registerDeviceStatusV1Routes(app, pool); // Sprint C1: 注册 Device Status（心跳/在线状态）。
+registerAlertsV1Routes(app, pool); // Sprint C1: 注册 Alerts（告警规则 + 事件）。
+registerEvidenceExportJobsV1Routes(app, pool); // Sprint C1: 注册 Evidence Export Jobs（持久化作业）。
 
 registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
 registerControlAoActRoutes(app, pool); // 注册 AO-ACT 控制路由
 registerControlApprovalRequestV1Routes(app, pool); // Sprint 25: 注册 Approval runtime v1（人类在环审批）路由。
 registerDeliveryEvidenceExportV1Routes(app, pool); // Sprint 26: 注册 Evidence Export API v1（异步作业）路由。
+registerControlPlaneV1Routes(app, pool); // Control-2: 注册 Commercial REST v1（审批/任务/dispatch outbox/receipt 查询）路由。
+registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
+registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
+registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app, pool); // 注册 agronomy interpretation v1 路由
 
@@ -1563,6 +1581,8 @@ app.get("/api/overlays/explain", async (req, reply) => {
 });
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // 端口
+
+startOfflineAlertWorker(pool); // Sprint C1: 启动离线告警后台扫描（DEVICE_OFFLINE）。
 
 app.listen({ port: PORT, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err); // 打印错误

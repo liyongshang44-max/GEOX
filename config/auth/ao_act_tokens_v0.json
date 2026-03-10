@@ -2,56 +2,131 @@
   "version": "ao_act_tokens_v0",
   "tokens": [
     {
-      "token": "dev_ao_act_admin_v0",
+      "token": "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4",
       "token_id": "tok_dev_ao_act_admin_v0",
       "actor_id": "dev",
       "scopes": [
-        "ao_act.task.write",
-        "ao_act.receipt.write",
+        "alerts.read",
+        "alerts.write",
         "ao_act.index.read",
-        "devices.write",
-        "devices.credentials.write",
+        "ao_act.receipt.write",
+        "ao_act.task.write",
+        "devices.bind",
         "devices.credentials.revoke",
+        "devices.credentials.write",
         "devices.read",
+        "devices.status.read",
+        "devices.write",
+        "evidence_export.read",
+        "evidence_export.write",
+        "fields.read",
+        "fields.write",
         "telemetry.read"
       ],
       "revoked": false,
       "tenant_id": "tenantA",
       "project_id": "projectA",
-      "group_id": "groupA"
+      "group_id": "groupA",
+      "role": "admin"
     },
     {
-      "token": "dev_ao_act_task_only_v0",
+      "token": "geox_dev_SLFlJzm7k_FValz_m5epN4EwsdQCLod1iMiDpslI1FE",
       "token_id": "tok_dev_ao_act_task_only_v0",
       "actor_id": "dev",
       "scopes": [
+        "alerts.read",
+        "alerts.write",
         "ao_act.index.read",
         "ao_act.receipt.write",
         "ao_act.task.write",
+        "devices.bind",
         "devices.credentials.revoke",
         "devices.credentials.write",
         "devices.read",
+        "devices.status.read",
         "devices.write",
+        "evidence_export.read",
+        "evidence_export.write",
+        "fields.read",
+        "fields.write",
         "telemetry.read"
       ],
       "revoked": false,
       "tenant_id": "tenantA",
       "project_id": "projectA",
-      "group_id": "groupA"
+      "group_id": "groupA",
+      "role": "admin"
     },
     {
-      "token": "dev_ao_act_admin_tenantB_v0",
+      "token": "geox_dev_Vwed2B4l4HeVcqxG0gYPCd6eectSYr1KolcWL617p54",
       "token_id": "tok_dev_ao_act_admin_tenantB_v0",
       "actor_id": "dev",
       "tenant_id": "tenantB",
       "project_id": "projectB",
       "group_id": "groupB",
       "scopes": [
-        "ao_act.task.write",
+        "alerts.read",
+        "alerts.write",
+        "ao_act.index.read",
         "ao_act.receipt.write",
-        "ao_act.index.read"
+        "ao_act.task.write",
+        "devices.bind",
+        "devices.status.read",
+        "evidence_export.read",
+        "evidence_export.write",
+        "fields.read",
+        "fields.write"
       ],
-      "revoked": false
+      "revoked": false,
+      "role": "admin"
+    },
+    {
+      "token": "geox_op_tenantA_3n2QnT9Yj0F6mXcR8LkP4sVuWbHdZe7q1aBcDfGhJkM",
+      "token_id": "tok_operator_tenantA_v1",
+      "actor_id": "operator_a",
+      "role": "operator",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "revoked": false,
+      "scopes": [
+        "alerts.read",
+        "alerts.write",
+        "ao_act.index.read",
+        "ao_act.receipt.write",
+        "ao_act.task.write",
+        "devices.bind",
+        "devices.status.read",
+        "devices.read",
+        "evidence_export.read",
+        "evidence_export.write",
+        "fields.read",
+        "telemetry.read"
+      ]
+    },
+    {
+      "token": "geox_op_tenantB_7kLpQ2mNv9XsCd4FgHt6JwErTyUiOpAaSsDdFfGgHhJ",
+      "token_id": "tok_operator_tenantB_v1",
+      "actor_id": "operator_b",
+      "role": "operator",
+      "tenant_id": "tenantB",
+      "project_id": "projectB",
+      "group_id": "groupB",
+      "revoked": false,
+      "scopes": [
+        "alerts.read",
+        "alerts.write",
+        "ao_act.index.read",
+        "ao_act.receipt.write",
+        "ao_act.task.write",
+        "devices.bind",
+        "devices.status.read",
+        "devices.read",
+        "evidence_export.read",
+        "evidence_export.write",
+        "fields.read",
+        "telemetry.read"
+      ]
     }
   ]
 }

@@ -1,6 +1,7 @@
 // GEOX/apps/web/src/views/ApprovalRequestsPage.tsx
 
 import React from "react";
+import { fetchAuthMe } from "../lib/api";
 
 type ApiItem = {
   fact_id: string;
@@ -30,6 +31,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
 
   const [items, setItems] = React.useState<ApiItem[]>([]);
   const [status, setStatus] = React.useState<string>("");
+  const [role, setRole] = React.useState<string>("admin");
 
   function authHeader(): Record<string, string> {
     return { Authorization: `Bearer ${token}` };
@@ -54,6 +56,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
   async function createRequest(): Promise<void> {
     setStatus("Creating...");
     try {
+      if (role === "operator") throw new Error("当前操作员角色不能发起或审批请求");
       try {
         localStorage.setItem("geox_ao_act_token", token);
       } catch {
@@ -89,6 +92,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
   }
 
   async function approve(requestId: string): Promise<void> {
+    if (role === "operator") { setStatus("当前操作员角色不能审批"); return; }
     setStatus(`Approving ${requestId}...`);
     try {
       const resp = await fetch(`/api/control/approval_request/v1/approve`, {
@@ -106,6 +110,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
   }
 
   React.useEffect(() => {
+    fetchAuthMe(token).then((me) => setRole(me.role)).catch(() => setRole("admin"));
     void refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -114,7 +119,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
     <div className="page">
       <h2>Approval Requests (v1)</h2>
       <p className="muted">
-        Sprint 25: human-in-the-loop approval runtime v1. Requires AO-ACT token (scopes: ao_act.index.read, ao_act.task.write).
+        Sprint 25: human-in-the-loop approval runtime v1。当前角色：{role === "operator" ? "操作员" : "管理员"}。操作员不可审批。
       </p>
 
       <div className="card">
@@ -172,7 +177,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
             end_ts
             <input value={endTs} onChange={(e) => setEndTs(e.target.value)} style={{ width: 180 }} />
           </label>
-          <button className="btn" onClick={() => void createRequest()}>
+          <button className="btn" onClick={() => void createRequest()} disabled={role === "operator"}>
             Create
           </button>
         </div>
@@ -204,7 +209,7 @@ export default function ApprovalRequestsPage(): React.ReactElement {
                   <td>{rid}</td>
                   <td>{st}</td>
                   <td>
-                    <button className="btn" onClick={() => void approve(rid)} disabled={!rid || st !== "PENDING"}>
+                    <button className="btn" onClick={() => void approve(rid)} disabled={role === "operator" || !rid || st !== "PENDING"}>
                       Approve + Issue AO-ACT
                     </button>
                   </td>
