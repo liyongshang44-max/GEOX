@@ -509,10 +509,21 @@ export type TelemetryMetricsItem = any;
 export type TelemetrySeriesResponse = any;
 
 export async function fetchDevices(token: string): Promise<DeviceListItem[]> {
-  const res = await requestJson<{ ok?: boolean; items?: DeviceListItem[] }>(`/api/devices`, {
+  try {
+    const res = await requestJson<{ ok?: boolean; items?: DeviceListItem[]; devices?: DeviceListItem[] }>(`/api/devices`, {
+      headers: authHeaders(token),
+    });
+    if (Array.isArray(res.items)) return res.items;
+    if (Array.isArray(res.devices)) return res.devices;
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+  }
+
+  const v1 = await requestJson<{ ok?: boolean; items?: DeviceListItem[]; devices?: DeviceListItem[] }>(`/api/v1/devices`, {
     headers: authHeaders(token),
   });
-  return Array.isArray(res.items) ? res.items : [];
+  if (Array.isArray(v1.items)) return v1.items;
+  return Array.isArray(v1.devices) ? v1.devices : [];
 }
 
 export async function fetchDeviceDetail(token: string, deviceId: string): Promise<DeviceDetail> {
