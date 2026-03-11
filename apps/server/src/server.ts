@@ -34,7 +34,7 @@ import { registerDevicesV1Routes } from "./routes/devices_v1"; // Sprint A2: Dev
 import { registerFieldsV1Routes } from "./routes/fields_v1"; // Sprint C1: Field/GIS + Device Binding routes.
 import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
 import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
-import { registerAlertsV1Routes, startOfflineAlertWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
+import { registerAlertsV1Routes, startOfflineAlertWorker, startAlertNotificationWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
 import { registerEvidenceExportJobsV1Routes } from "./routes/evidence_export_jobs_v1"; // Sprint C1: Persisted evidence export jobs.
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
@@ -1585,6 +1585,7 @@ app.get("/api/overlays/explain", async (req, reply) => {
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // 端口
 
 startOfflineAlertWorker(pool); // Sprint C1: 启动离线告警后台扫描（DEVICE_OFFLINE）。
+startAlertNotificationWorker(pool); // Sprint C3: 启动告警通知分发后台任务（短信/邮件/企业微信/钉钉/WEBHOOK）。
 
 app.listen({ port: PORT, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err); // 打印错误
