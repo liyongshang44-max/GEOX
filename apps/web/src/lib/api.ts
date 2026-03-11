@@ -549,18 +549,90 @@ export async function revokeDeviceCredential(token: string, deviceId: string, cr
   });
 }
 
+function isNotFoundApiError(err: unknown): boolean {
+  if (!(err instanceof ApiError)) return false;
+  if (err.status === 404) return true;
+  return err.bodyText.includes('"statusCode":404') || err.bodyText.includes('NOT_FOUND') || err.bodyText.includes('Not Found');
+}
+
 export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string }): Promise<any> {
-  return requestJson<any>(`/api/v1/devices/register`, {
+  try {
+    return await requestJson<any>(`/api/v1/devices/onboarding/register`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    });
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+    try {
+      return await requestJson<any>(`/api/v1/devices/register`, {
+        method: "POST",
+        headers: authHeaders(token),
+        body: JSON.stringify(body),
+      });
+    } catch (e2: unknown) {
+      if (!isNotFoundApiError(e2)) throw e2;
+    }
+  }
+
+  // Fallback for mixed backend versions: create device + issue credential via stable legacy endpoints.
+  await requestJson<any>(`/api/devices`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify(body),
+    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name }),
   });
+
+  const created = await requestJson<any>(`/api/devices/${encodeURIComponent(body.device_id)}/credentials`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body.credential_id ? { credential_id: body.credential_id } : {}),
+  });
+
+  return {
+    ok: true,
+    device_id: body.device_id,
+    display_name: body.display_name ?? null,
+    credential_id: created?.credential_id ?? null,
+    credential_secret: created?.credential_secret ?? null,
+    credential_hash: created?.credential_hash ?? null,
+    access_info: {
+      mqtt_client_id: `geox-<tenant>-${body.device_id}`,
+      telemetry_topic: `telemetry/<tenant>/${body.device_id}`,
+      heartbeat_topic: `heartbeat/<tenant>/${body.device_id}`,
+    },
+  };
 }
 
 export async function fetchDeviceOnboardingStatus(token: string, deviceId: string): Promise<any> {
-  return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/onboarding-status`, {
-    headers: authHeaders(token),
-  });
+  try {
+    return await requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/onboarding-status`, {
+      headers: authHeaders(token),
+    });
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+  }
+
+  // Fallback for backends that do not yet expose onboarding-status.
+  const [detail, consoleView] = await Promise.all([
+    requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}`, { headers: authHeaders(token) }),
+    requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/console`, { headers: authHeaders(token) }).catch(() => null),
+  ]);
+
+  const device = detail?.device ?? {};
+  return {
+    ok: true,
+    device_id: device.device_id ?? deviceId,
+    display_name: device.display_name ?? null,
+    registration_completed: !!device.device_id,
+    credential_ready: typeof device.last_credential_id === "string" && (device.last_credential_status ?? "") === "ACTIVE",
+    first_telemetry_uploaded: typeof device.last_telemetry_ts_ms === "number" && Number.isFinite(device.last_telemetry_ts_ms),
+    created_ts_ms: device.created_ts_ms ?? null,
+    last_credential_id: device.last_credential_id ?? null,
+    last_credential_status: device.last_credential_status ?? null,
+    last_heartbeat_ts_ms: device.last_heartbeat_ts_ms ?? null,
+    last_telemetry_ts_ms: device.last_telemetry_ts_ms ?? null,
+    access_info: consoleView?.access_info ?? null,
+  };
 }
 
 export async function bindDeviceToField(token: string, deviceId: string, body: { field_id: string }): Promise<any> {

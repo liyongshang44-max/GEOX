@@ -338,6 +338,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const params: any = (req as any).params ?? {}; // Params.
     const device_id = normalizeDeviceId(params.device_id); // Normalize device id.
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
+    if (device_id === "register") return badRequest(reply, "RESERVED_DEVICE_ID:register"); // Avoid confusion with onboarding register endpoint.
 
     const body: any = (req as any).body ?? {}; // Body.
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : ""; // Optional name.
@@ -577,6 +578,93 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
 
     return reply.send({ ok: true, device: q.rows[0], latest_telemetry: latestTelemetryRows }); // Return enriched detail.
   }); // End get.
+
+  app.post("/api/v1/devices/onboarding/register", async (req, reply) => { // Stable onboarding endpoint that cannot collide with :device_id route.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+    if (!auth) return;
+
+    const body: any = (req as any).body ?? {};
+    const device_id = normalizeDeviceId(body.device_id);
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+
+    const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : "";
+    const requested_credential_id = normalizeId(body.credential_id);
+    const credential_id = requested_credential_id ?? `cred_${sha256Hex(`${auth.tenant_id}|${device_id}|${Date.now()}|${Math.random()}`).slice(0, 16)}`;
+    const secret = randomSecret();
+    const credential_hash = sha256Hex(secret);
+
+    const now_ms = Date.now();
+    const occurred_iso = nowIso(now_ms);
+    const register_fact_id = `device_${sha256Hex(`device_registered_v1|${auth.tenant_id}|${device_id}|${display_name}`)}`;
+    const credential_fact_id = `devcred_${sha256Hex(`device_credential_issued_v1|${auth.tenant_id}|${device_id}|${credential_id}|${credential_hash}`)}`;
+
+    const register_record = {
+      type: "device_registered_v1",
+      entity: { tenant_id: auth.tenant_id, device_id },
+      payload: { display_name, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+    };
+
+    const credential_record = {
+      type: "device_credential_issued_v1",
+      entity: { tenant_id: auth.tenant_id, device_id },
+      payload: { credential_id, credential_hash, issued_ts_ms: now_ms, status: "ACTIVE", actor_id: auth.actor_id, token_id: auth.token_id },
+    };
+
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [register_fact_id, occurred_iso, "control", JSON.stringify(register_record)]
+      );
+
+      await clientConn.query(
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
+         ON CONFLICT (tenant_id, device_id)
+         DO UPDATE SET display_name = EXCLUDED.display_name, last_credential_id = EXCLUDED.last_credential_id, last_credential_status = EXCLUDED.last_credential_status`,
+        [auth.tenant_id, device_id, display_name, now_ms, credential_id]
+      );
+
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [credential_fact_id, occurred_iso, "control", JSON.stringify(credential_record)]
+      );
+
+      await clientConn.query(
+        `INSERT INTO device_credential_index_v1 (tenant_id, device_id, credential_id, credential_hash, status, issued_ts_ms, revoked_ts_ms)
+         VALUES ($1, $2, $3, $4, 'ACTIVE', $5, NULL)
+         ON CONFLICT (tenant_id, device_id, credential_id)
+         DO UPDATE SET credential_hash = EXCLUDED.credential_hash, status = 'ACTIVE', issued_ts_ms = EXCLUDED.issued_ts_ms, revoked_ts_ms = NULL`,
+        [auth.tenant_id, device_id, credential_id, credential_hash, now_ms]
+      );
+
+      await clientConn.query("COMMIT");
+    } catch (e: any) {
+      try { await clientConn.query("ROLLBACK"); } catch {}
+      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
+
+    return reply.send({
+      ok: true,
+      tenant_id: auth.tenant_id,
+      device_id,
+      display_name,
+      credential_id,
+      credential_secret: secret,
+      credential_hash,
+      access_info: buildAccessInfo(auth.tenant_id, device_id),
+      register_fact_id,
+      credential_fact_id,
+    });
+  });
 
   app.post("/api/v1/devices/register", async (req, reply) => { // Device onboarding helper: register + issue credential in one step.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
