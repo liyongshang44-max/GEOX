@@ -18,7 +18,7 @@ import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth conte
 
 type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
 type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
-type NotificationStatus = "RECORDED"; // Minimal notification lifecycle for Commercial v1.
+type NotificationStatus = "PENDING" | "DELIVERED" | "FAILED"; // Notification lifecycle with delivery attempts.
 
 type LatestTelemetrySnapshot = { // Latest telemetry snapshot used for threshold evaluation.
   ts_ms: number; // Telemetry timestamp in ms.
@@ -104,6 +104,95 @@ function nowIso(ms: number): string { // Helper: ISO timestamp from ms.
   return new Date(ms).toISOString(); // Convert.
 } // End helper.
 
+type NotificationDispatchResult = { // Dispatch result for one notification record.
+  status: NotificationStatus;
+  delivered_ts_ms: number | null;
+  error: string | null;
+  provider_response: Record<string, any> | null;
+};
+
+function readEnv(name: string): string | null { // Read optional environment variable.
+  const v = process.env[name];
+  if (!isNonEmptyString(v)) return null;
+  return String(v).trim();
+}
+
+async function postJson(url: string, body: Record<string, any>): Promise<Record<string, any>> { // Minimal JSON POST helper.
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`HTTP_${res.status}:${text.slice(0, 300)}`);
+  try { return text ? JSON.parse(text) : {}; } catch { return { raw: text }; }
+}
+
+async function sendSmsViaTwilio(payload: Record<string, any>): Promise<Record<string, any>> { // Send SMS via Twilio REST helper.
+  const accountSid = readEnv("TWILIO_ACCOUNT_SID");
+  const authToken = readEnv("TWILIO_AUTH_TOKEN");
+  const from = readEnv("TWILIO_FROM_NUMBER");
+  const to = readEnv("ALERT_SMS_TO");
+  if (!accountSid || !authToken || !from || !to) {
+    throw new Error("TWILIO_ENV_MISSING");
+  }
+  const mod: any = await (new Function("return import(\"twilio\")")() as Promise<any>);
+  const twilioFactory = mod?.default ?? mod;
+  const client = twilioFactory(accountSid, authToken);
+  const message = await client.messages.create({
+    body: `告警触发: rule=${payload.rule_id} object=${payload.object_id} metric=${payload.metric}`,
+    from,
+    to,
+  });
+  return { sid: String(message?.sid ?? ""), status: String(message?.status ?? "") };
+}
+
+async function dispatchAlertNotification(channel: string, payload: Record<string, any>, now_ms: number): Promise<NotificationDispatchResult> { // Dispatch one channel message.
+  try {
+    if (channel === "INAPP") {
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: { mode: "inapp" } };
+    }
+    if (channel === "WEBHOOK") {
+      const url = readEnv("ALERT_WEBHOOK_URL");
+      if (!url) throw new Error("ALERT_WEBHOOK_URL_MISSING");
+      const response = await postJson(url, payload);
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
+    }
+    if (channel === "EMAIL") {
+      const url = readEnv("ALERT_EMAIL_WEBHOOK_URL");
+      const to = readEnv("ALERT_EMAIL_TO");
+      if (!url || !to) throw new Error("ALERT_EMAIL_CONFIG_MISSING");
+      const response = await postJson(url, { to, subject: `告警通知 ${payload.rule_id}`, text: JSON.stringify(payload) });
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
+    }
+    if (channel === "WECHAT") {
+      const url = readEnv("ALERT_WECHAT_WEBHOOK_URL");
+      if (!url) throw new Error("ALERT_WECHAT_WEBHOOK_URL_MISSING");
+      const response = await postJson(url, { msgtype: "text", text: { content: `告警通知
+rule=${payload.rule_id}
+object=${payload.object_id}
+metric=${payload.metric}` } });
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
+    }
+    if (channel === "DINGTALK") {
+      const url = readEnv("ALERT_DINGTALK_WEBHOOK_URL");
+      if (!url) throw new Error("ALERT_DINGTALK_WEBHOOK_URL_MISSING");
+      const response = await postJson(url, { msgtype: "text", text: { content: `告警通知
+rule=${payload.rule_id}
+object=${payload.object_id}
+metric=${payload.metric}` } });
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
+    }
+    if (channel === "SMS") {
+      const response = await sendSmsViaTwilio(payload);
+      return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
+    }
+    throw new Error("CHANNEL_NOT_SUPPORTED");
+  } catch (e: any) {
+    return { status: "FAILED", delivered_ts_ms: null, error: String(e?.message ?? e), provider_response: null };
+  }
+}
+
 function compareWithOperator(operator: string, actual: number, threshold: number): boolean { // Compare numeric value with alert operator.
   if (operator === "LT") return actual < threshold; // Less-than rule.
   if (operator === "GT") return actual > threshold; // Greater-than rule.
@@ -122,7 +211,7 @@ async function fetchLatestTelemetrySnapshot(pool: Pool | PoolClient, tenant_id: 
       LIMIT 1`,
     [tenant_id, device_id, metric]
   ); // End projection query.
-  if (idxQ.rowCount > 0) { // Projection hit.
+  if ((idxQ.rowCount ?? 0) > 0) { // Projection hit.
     const row: any = idxQ.rows[0]; // Read first row.
     return { // Return normalized snapshot.
       ts_ms: Number(row.ts_ms ?? 0), // Convert timestamp to number.
@@ -202,11 +291,11 @@ async function insertNotificationRecordsForEvent(clientConn: PoolClient, params:
   for (const channel of channels) {
     const notification_id = `alnot_${randomUUID()}`;
     const fact_id = `alnot_${randomUUID()}`;
-    const detail = { channel, object_type: params.object_type, object_id: params.object_id, metric: params.metric, last_value: params.last_value, status: "RECORDED" };
+    const detail = { channel, object_type: params.object_type, object_id: params.object_id, metric: params.metric, last_value: params.last_value, status: "PENDING" };
     const record = {
       type: "alert_notification_recorded_v1",
       entity: { tenant_id: params.tenant_id, notification_id, event_id: params.event_id, rule_id: params.rule_id },
-      payload: { channel, status: "RECORDED", created_ts_ms: params.now_ms, detail },
+      payload: { channel, status: "PENDING", created_ts_ms: params.now_ms, detail },
     };
     await clientConn.query(
       `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4)`,
@@ -215,12 +304,70 @@ async function insertNotificationRecordsForEvent(clientConn: PoolClient, params:
     await clientConn.query(
       `INSERT INTO alert_notification_index_v1
         (tenant_id, notification_id, event_id, rule_id, channel, status, detail_json, created_ts_ms, delivered_ts_ms, error)
-       VALUES ($1,$2,$3,$4,$5,'RECORDED',$6,$7,NULL,NULL)
+       VALUES ($1,$2,$3,$4,$5,'PENDING',$6,$7,NULL,NULL)
        ON CONFLICT (tenant_id, notification_id) DO NOTHING`,
       [params.tenant_id, notification_id, params.event_id, params.rule_id, channel, JSON.stringify(detail), params.now_ms]
     );
   }
 } // End helper.
+
+async function dispatchPendingNotifications(pool: Pool, limit: number = 50): Promise<void> { // Best-effort dispatcher for pending notifications.
+  const q = await pool.query(
+    `SELECT tenant_id, notification_id, event_id, rule_id, channel, detail_json, created_ts_ms
+       FROM alert_notification_index_v1
+      WHERE status = 'PENDING'
+      ORDER BY created_ts_ms ASC
+      LIMIT $1`,
+    [limit]
+  );
+  for (const row of q.rows ?? []) {
+    const now_ms = Date.now();
+    let detail: Record<string, any> = {};
+    try { detail = JSON.parse(String(row.detail_json ?? "{}")); } catch { detail = {}; }
+    const payload = {
+      tenant_id: String(row.tenant_id),
+      notification_id: String(row.notification_id),
+      event_id: String(row.event_id),
+      rule_id: String(row.rule_id),
+      channel: String(row.channel),
+      ...detail,
+    };
+    const result = await dispatchAlertNotification(String(row.channel), payload, now_ms);
+    const fact_id = `alnot_dispatch_${randomUUID()}`;
+    const record = {
+      type: "alert_notification_dispatched_v1",
+      entity: { tenant_id: String(row.tenant_id), notification_id: String(row.notification_id), event_id: String(row.event_id), rule_id: String(row.rule_id) },
+      payload: {
+        channel: String(row.channel),
+        status: result.status,
+        delivered_ts_ms: result.delivered_ts_ms,
+        error: result.error,
+        provider_response: result.provider_response,
+      },
+    };
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+      await clientConn.query(
+        `UPDATE alert_notification_index_v1
+            SET status = $4, delivered_ts_ms = $5, error = $6,
+                detail_json = COALESCE(detail_json, '{}')::jsonb || $7::jsonb
+          WHERE tenant_id = $1 AND notification_id = $2 AND status = 'PENDING' AND channel = $3`,
+        [String(row.tenant_id), String(row.notification_id), String(row.channel), result.status, result.delivered_ts_ms, result.error, JSON.stringify({ provider_response: result.provider_response })]
+      );
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, nowIso(now_ms), "system", JSON.stringify(record)]
+      );
+      await clientConn.query("COMMIT");
+    } catch {
+      try { await clientConn.query("ROLLBACK"); } catch {}
+    } finally {
+      clientConn.release();
+    }
+  }
+}
 
 async function insertAlertEventIfMissing(clientConn: PoolClient, params: { // Insert OPEN event if the same rule/object has no OPEN/ACKED event.
   tenant_id: string; // Tenant id.
@@ -231,6 +378,7 @@ async function insertAlertEventIfMissing(clientConn: PoolClient, params: { // In
   now_ms: number; // Event time.
   last_value: Record<string, any>; // Trigger snapshot.
   source: string; // Worker or immediate source marker.
+  event_id?: string; // Optional caller-provided event id for idempotent replay paths.
 }): Promise<{ inserted: boolean; event_id: string | null }> { // Return insertion result.
   const openQ = await clientConn.query( // Guard against duplicate open events.
     `SELECT 1
@@ -240,7 +388,7 @@ async function insertAlertEventIfMissing(clientConn: PoolClient, params: { // In
       LIMIT 1`,
     [params.tenant_id, params.rule_id, params.object_id]
   ); // End query.
-  if (openQ.rowCount > 0) return { inserted: false, event_id: null }; // Existing open event => no-op.
+  if ((openQ.rowCount ?? 0) > 0) return { inserted: false, event_id: null }; // Existing open event => no-op.
 
   const event_id = `alev_${randomUUID()}`; // Use unique event ids to avoid same-minute collisions with previously closed events.
   const fact_id = `alev_raise_${randomUUID()}`; // Fact id for raised event.
@@ -665,6 +813,19 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
     } // End tx.
   }); // End CLOSE.
 } // End registerAlertsV1Routes.
+
+type AlertNotificationWorkerOptions = {
+  interval_ms: number;
+};
+
+export function startAlertNotificationWorker(pool: Pool, opts?: Partial<AlertNotificationWorkerOptions>) {
+  const interval_ms = opts?.interval_ms ?? 15_000;
+  const tick = async (): Promise<void> => {
+    try { await dispatchPendingNotifications(pool, 100); } catch { /* swallow */ }
+  };
+  const handle = setInterval(() => { void tick(); }, interval_ms);
+  (handle as any).unref?.();
+}
 
 type OfflineWorkerOptions = { // Options for offline worker.
   interval_ms: number; // Polling interval.

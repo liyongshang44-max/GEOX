@@ -84,7 +84,33 @@ function parseJsonOrNull(v: any): any | null { // Helper: parse a JSON string wh
 
 type FieldMapMarkerV1 = { device_id: string; lat: number; lon: number; source: string; ts_ms: number | null; }; // Latest resolved device marker for map tab.
 type FieldMapHeatPointV1 = { object_id: string; metric: string; count: number; last_raised_ts_ms: number; }; // Aggregated recent alert heat row.
+type FieldTrajectoryPointV1 = { lat: number; lon: number; ts_ms: number; }; // Ordered trajectory point.
+type FieldDeviceTrajectoryV1 = { device_id: string; points: FieldTrajectoryPointV1[]; geojson: any; }; // Device trajectory payload.
 
+
+function toGeoJsonTrajectory(device_id: string, points: FieldTrajectoryPointV1[]): any { // Build GeoJSON feature from device trajectory points.
+  return {
+    type: "Feature",
+    properties: { device_id, point_count: points.length },
+    geometry: {
+      type: "LineString",
+      coordinates: points.map((pt) => [pt.lon, pt.lat]),
+    },
+  };
+} // End helper.
+
+function toHeatGeoJson(points: FieldMapHeatPointV1[], markerByDevice: Map<string, FieldMapMarkerV1>, fieldMarker: FieldMapMarkerV1 | null): any { // Convert aggregated heat rows into GeoJSON points.
+  const features = points.map((p) => {
+    const marker = markerByDevice.get(p.object_id) || fieldMarker;
+    if (!marker) return null;
+    return {
+      type: "Feature",
+      properties: { object_id: p.object_id, metric: p.metric, count: p.count, intensity: p.count, last_raised_ts_ms: p.last_raised_ts_ms },
+      geometry: { type: "Point", coordinates: [marker.lon, marker.lat] },
+    };
+  }).filter(Boolean);
+  return { type: "FeatureCollection", features };
+} // End helper.
 function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null { // Normalize several geo payload shapes from device uplinks.
   if (!raw || typeof raw !== "object") return null; // Missing object.
   const latCandidates = [raw.lat, raw.latitude, raw?.location?.lat, raw?.location?.latitude]; // Supported lat aliases.
@@ -371,6 +397,21 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       [auth.tenant_id, boundDeviceIds]
     ) : { rows: [] as any[] }; // End geo marker query.
 
+    const trajectoryFactsQ = boundDeviceIds.length > 0 ? await pool.query( // Build recent per-device trajectory from raw telemetry.
+      `SELECT (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+              COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+              (record_json::jsonb #> '{payload,geo}') AS geo_json
+         FROM facts
+        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+          AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+          AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) >= $3
+        ORDER BY device_id ASC, ts_ms ASC
+        LIMIT 5000`,
+      [auth.tenant_id, boundDeviceIds, Date.now() - 7 * 24 * 60 * 60 * 1000]
+    ) : { rows: [] as any[] }; // End trajectory query.
+
     const heatRowsQ = await pool.query( // Aggregate recent alert density for the field map tab.
       `SELECT object_id, metric, COUNT(*)::int AS count, MAX(raised_ts_ms)::bigint AS last_raised_ts_ms
          FROM alert_event_index_v1
@@ -412,6 +453,46 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       last_raised_ts_ms: Number(row.last_raised_ts_ms ?? 0),
     })); // End map heat points.
 
+    const trajectoryByDevice = new Map<string, FieldTrajectoryPointV1[]>(); // Group trajectory points by device id.
+    for (const row of trajectoryFactsQ.rows ?? []) {
+      const device_id = String(row.device_id ?? '');
+      if (!device_id) continue;
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      const ts_ms = Number(row.ts_ms ?? 0);
+      if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) continue;
+      const points = trajectoryByDevice.get(device_id) || [];
+      points.push({ lat: geo.lat, lon: geo.lon, ts_ms });
+      trajectoryByDevice.set(device_id, points);
+    }
+
+    const trajectories: FieldDeviceTrajectoryV1[] = Array.from(trajectoryByDevice.entries()).map(([device_id, points]) => ({
+      device_id,
+      points,
+      geojson: toGeoJsonTrajectory(device_id, points),
+    }));
+    const trajectory_geojson = { type: "FeatureCollection", features: trajectories.map((t) => t.geojson) };
+
+    const markerByDevice = new Map<string, FieldMapMarkerV1>();
+    for (const marker of map_markers) markerByDevice.set(marker.device_id, marker);
+    const fieldMarker = map_markers[0] || null;
+    const alert_heat_geojson = toHeatGeoJson(heat_points, markerByDevice, fieldMarker);
+
+    const job_history = (recentTasksQ.rows ?? []).map((row: any, idx: number) => {
+      const task = parseJsonOrNull(row.task_json) ?? row.task_json;
+      const payload = task?.payload ?? {};
+      const device_id = String(payload?.meta?.device_id ?? '');
+      const marker = markerByDevice.get(device_id) || null;
+      const trajectory = trajectories.find((x) => x.device_id === device_id);
+      return {
+        id: String(row.fact_id ?? idx),
+        task_type: payload?.task_type || payload?.action_type || 'AO-ACT',
+        device_id: device_id || null,
+        ts_ms: Number(Date.parse(String(row.occurred_at ?? ''))) || null,
+        location: marker ? { lat: marker.lat, lon: marker.lon } : null,
+        trajectory_points: trajectory?.points?.length || 0,
+      };
+    });
+
     return reply.send({ // Return detail payload.
       ok: true, // Success flag.
       field: fieldQ.rows[0], // Field projection.
@@ -422,7 +503,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       recent_alerts: recentAlertsQ.rows, // Alert tab payload.
       recent_tasks: recentTasksQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), task: parseJsonOrNull(row.task_json) ?? row.task_json })), // Job tab tasks.
       recent_receipts: recentReceiptsQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), receipt: parseJsonOrNull(row.receipt_json) ?? row.receipt_json, device_id: ((parseJsonOrNull(row.receipt_json) ?? row.receipt_json)?.payload?.meta?.device_id ?? null) })), // Job tab receipts.
-      map_layers: { markers: map_markers, heat_points, telemetry_geo_enabled: map_markers.length > 0 }, // Map tab payload from latest geo + recent alert density.
+      map_layers: { markers: map_markers, heat_points, telemetry_geo_enabled: map_markers.length > 0, trajectories, trajectory_geojson, alert_heat_geojson, job_history }, // Map tab payload from latest geo + recent alert density + trajectories/history.
       summary: { // Aggregated summary for commercial UI.
         device_count: bound_devices.length, // Total bound devices.
         online_device_count, // Online device count.
