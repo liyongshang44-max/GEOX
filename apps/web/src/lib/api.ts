@@ -549,6 +549,20 @@ export async function revokeDeviceCredential(token: string, deviceId: string, cr
   });
 }
 
+export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string }): Promise<any> {
+  return requestJson<any>(`/api/v1/devices/register`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchDeviceOnboardingStatus(token: string, deviceId: string): Promise<any> {
+  return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/onboarding-status`, {
+    headers: authHeaders(token),
+  });
+}
+
 export async function bindDeviceToField(token: string, deviceId: string, body: { field_id: string }): Promise<any> {
   return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/bind-field`, {
     method: "POST",
