@@ -1,0 +1,13 @@
+services:
+  server:
+    environment:
+      GEOX_RUNTIME_ENV: dev
+      GEOX_EXPORTS_ROOT: /app/runtime/exports/dev
+      GEOX_TOKEN_SSOT_PATH: /app/config/environments/dev/ao_act_tokens_v0.example.json
+    volumes:
+      - ./:/app
+      - geox_node_modules:/app/node_modules
+      - geox_pnpm_store:/pnpm-store
+      - geox_pnpm_vstore:/pnpm-vstore
+    ports:
+      - "3001:3000"

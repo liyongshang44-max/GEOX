@@ -1,0 +1,17 @@
+{
+  "environment": "dev",
+  "description": "Example AO-ACT token layout for dev. Commit example only; never commit live secrets.",
+  "live_secret_policy": "external_injection_only",
+  "tokens": [
+    {
+      "token_id": "replace_dev_admin_token_id",
+      "tenant_id": "replace_dev_tenant",
+      "role": "admin",
+      "token": "REPLACE_OUTSIDE_GIT",
+      "revoked": false
+    }
+  ],
+  "evidence_export_root": "./runtime/dev/evidence",
+  "postgres_database": "geox_dev",
+  "compose_project_name": "geox-dev"
+}

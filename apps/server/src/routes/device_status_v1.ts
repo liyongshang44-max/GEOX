@@ -1,4 +1,4 @@
-// GEOX/apps/server/src/routes/device_status_v1.ts
+﻿// GEOX/apps/server/src/routes/device_status_v1.ts
 //
 // Sprint C1/C2: Device status read API.
 //
@@ -106,8 +106,7 @@ async function ensureDeviceStatusIndexV1Schema(pool: Pool): Promise<void> {
     `ALTER TABLE device_status_index_v1 ADD COLUMN IF NOT EXISTS tenant_id TEXT;`,
   ];
   for (const q of alters) {
-    try {
-      await pool.query(q);
+    try {      await pool.query(q);
     } catch {
       // Ignore; this is best-effort to keep server running.
     }
@@ -128,7 +127,6 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
       if (!device_id) return reply.code(400).send({ ok: false, error: "BAD_REQUEST", message: "invalid device_id" });
 
       const offline_after_ms = 5 * 60 * 1000; // Default: 5 minutes.
-
       const q = await pool.query(
         `SELECT device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms, status
            FROM device_status_index_v1
@@ -166,3 +164,12 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
     }
   });
 }
+
+
+
+
+
+
+
+
+

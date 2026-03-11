@@ -82,6 +82,22 @@ function parseJsonOrNull(v: any): any | null { // Helper: parse a JSON string wh
   try { return JSON.parse(String(v)); } catch { return null; } // Best-effort parse.
 } // End helper.
 
+type FieldMapMarkerV1 = { device_id: string; lat: number; lon: number; source: string; ts_ms: number | null; }; // Latest resolved device marker for map tab.
+type FieldMapHeatPointV1 = { object_id: string; metric: string; count: number; last_raised_ts_ms: number; }; // Aggregated recent alert heat row.
+
+function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null { // Normalize several geo payload shapes from device uplinks.
+  if (!raw || typeof raw !== "object") return null; // Missing object.
+  const latCandidates = [raw.lat, raw.latitude, raw?.location?.lat, raw?.location?.latitude]; // Supported lat aliases.
+  const lonCandidates = [raw.lon, raw.lng, raw.longitude, raw?.location?.lon, raw?.location?.lng, raw?.location?.longitude]; // Supported lon aliases.
+  let lat: number | null = null; // Selected latitude.
+  let lon: number | null = null; // Selected longitude.
+  for (const v of latCandidates) { const n = Number(v); if (Number.isFinite(n)) { lat = n; break; } } // Pick first finite latitude.
+  for (const v of lonCandidates) { const n = Number(v); if (Number.isFinite(n)) { lon = n; break; } } // Pick first finite longitude.
+  if (lat == null || lon == null) return null; // Require both coordinates.
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null; // Reject invalid coordinates.
+  return { lat, lon }; // Normalized point.
+} // End helper.
+
 async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Startup helper: create season projection table for upgraded repos.
   await pool.query( // Create field season projection table.
     `CREATE TABLE IF NOT EXISTS field_season_index_v1 (
@@ -335,6 +351,41 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       [auth.tenant_id, auth.project_id, auth.group_id, boundDeviceIds]
     ) : { rows: [] as any[] }; // End task query.
 
+    const mapMarkerFactsQ = boundDeviceIds.length > 0 ? await pool.query( // Best-effort latest geo markers from telemetry / heartbeat facts.
+      `SELECT DISTINCT ON ((record_json::jsonb #>> '{entity,device_id}'))
+          (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+          (record_json::jsonb ->> 'type') AS fact_type,
+          COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+          (record_json::jsonb #> '{payload,geo}') AS geo_json,
+          occurred_at
+         FROM facts
+        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+          AND (
+            (record_json::jsonb ->> 'type') = 'raw_telemetry_v1'
+            OR (record_json::jsonb ->> 'type') = 'device_heartbeat_v1'
+          )
+          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+        ORDER BY (record_json::jsonb #>> '{entity,device_id}'), COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) DESC, occurred_at DESC
+        LIMIT 100`,
+      [auth.tenant_id, boundDeviceIds]
+    ) : { rows: [] as any[] }; // End geo marker query.
+
+    const heatRowsQ = await pool.query( // Aggregate recent alert density for the field map tab.
+      `SELECT object_id, metric, COUNT(*)::int AS count, MAX(raised_ts_ms)::bigint AS last_raised_ts_ms
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND raised_ts_ms >= $2
+          AND (
+            (object_type = 'FIELD' AND object_id = $3)
+            OR (object_type = 'DEVICE' AND object_id = ANY($4::text[]))
+          )
+        GROUP BY object_id, metric
+        ORDER BY count DESC, last_raised_ts_ms DESC
+        LIMIT 20`,
+      [auth.tenant_id, Date.now() - 7 * 24 * 60 * 60 * 1000, field_id, boundDeviceIds.length ? boundDeviceIds : ["__none__"]]
+    ); // End heat query.
+
     const recentReceiptsQ = boundDeviceIds.length > 0 ? await pool.query( // Load recent AO-ACT receipts targeting field-bound devices.
       `SELECT fact_id, occurred_at, (record_json::jsonb) AS receipt_json
          FROM facts
@@ -348,6 +399,19 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       [auth.tenant_id, auth.project_id, auth.group_id, boundDeviceIds]
     ) : { rows: [] as any[] }; // End receipt query.
 
+    const map_markers: FieldMapMarkerV1[] = (mapMarkerFactsQ.rows ?? []).map((row: any) => { // Normalize latest device markers.
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json); // Parse geo object.
+      if (!geo) return null; // Skip malformed payloads.
+      return { device_id: String(row.device_id ?? ''), lat: geo.lat, lon: geo.lon, source: String(row.fact_type ?? ''), ts_ms: Number(row.ts_ms ?? 0) || null }; // Normalized marker.
+    }).filter(Boolean) as FieldMapMarkerV1[]; // Remove nulls.
+
+    const heat_points: FieldMapHeatPointV1[] = (heatRowsQ.rows ?? []).map((row: any) => ({ // Normalize alert heat rows.
+      object_id: String(row.object_id ?? ''),
+      metric: String(row.metric ?? ''),
+      count: Number(row.count ?? 0),
+      last_raised_ts_ms: Number(row.last_raised_ts_ms ?? 0),
+    })); // End map heat points.
+
     return reply.send({ // Return detail payload.
       ok: true, // Success flag.
       field: fieldQ.rows[0], // Field projection.
@@ -358,6 +422,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       recent_alerts: recentAlertsQ.rows, // Alert tab payload.
       recent_tasks: recentTasksQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), task: parseJsonOrNull(row.task_json) ?? row.task_json })), // Job tab tasks.
       recent_receipts: recentReceiptsQ.rows.map((row: any) => ({ fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), receipt: parseJsonOrNull(row.receipt_json) ?? row.receipt_json, device_id: ((parseJsonOrNull(row.receipt_json) ?? row.receipt_json)?.payload?.meta?.device_id ?? null) })), // Job tab receipts.
+      map_layers: { markers: map_markers, heat_points, telemetry_geo_enabled: map_markers.length > 0 }, // Map tab payload from latest geo + recent alert density.
       summary: { // Aggregated summary for commercial UI.
         device_count: bound_devices.length, // Total bound devices.
         online_device_count, // Online device count.

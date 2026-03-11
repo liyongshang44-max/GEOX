@@ -1,0 +1,17 @@
+{
+  "environment": "prod",
+  "description": "Example AO-ACT token layout for prod. Commit example only; never commit live secrets.",
+  "live_secret_policy": "external_injection_only",
+  "tokens": [
+    {
+      "token_id": "replace_prod_admin_token_id",
+      "tenant_id": "replace_prod_tenant",
+      "role": "admin",
+      "token": "REPLACE_OUTSIDE_GIT",
+      "revoked": false
+    }
+  ],
+  "evidence_export_root": "./runtime/prod/evidence",
+  "postgres_database": "geox_prod",
+  "compose_project_name": "geox-prod"
+}

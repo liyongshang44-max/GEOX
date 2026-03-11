@@ -43,6 +43,7 @@ import { registerControlPlaneV1Routes } from "./routes/controlplane_v1"; // Cont
 import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprint W1: unified audit/export overview.
 import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
 import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
+import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
 
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
@@ -199,6 +200,7 @@ registerControlPlaneV1Routes(app, pool); // Control-2: 注册 Commercial REST v1
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
+registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app, pool); // 注册 agronomy interpretation v1 路由
 

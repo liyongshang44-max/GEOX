@@ -28,7 +28,7 @@ import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth conte
 
 type JobStatus = "QUEUED" | "RUNNING" | "DONE" | "ERROR"; // Job status enum.
 
-type ExportFormat = "JSON" | "CSV"; // Supported export file formats for v1.1.
+type ExportFormat = "JSON" | "CSV" | "PDF"; // Supported export file formats for v1.2.
 type ExportLanguage = "zh-CN" | "en-US"; // UI-selected export language metadata for delivery.
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
@@ -45,7 +45,9 @@ function normalizeId(v: any): string | null { // Helper: normalize id-like strin
 
 function normalizeExportFormat(v: any): ExportFormat { // Helper: normalize requested export format.
   const s = String(v ?? "JSON").trim().toUpperCase(); // Normalize text.
-  return s === "CSV" ? "CSV" : "JSON"; // Only CSV is newly added in v1.1.
+  if (s === "CSV") return "CSV"; // CSV delivery view.
+  if (s === "PDF") return "PDF"; // PDF delivery view.
+  return "JSON"; // Default JSON delivery view.
 } // End helper.
 
 function normalizeExportLanguage(v: any): ExportLanguage { // Helper: normalize requested export language.
@@ -54,11 +56,15 @@ function normalizeExportLanguage(v: any): ExportLanguage { // Helper: normalize 
 } // End helper.
 
 function bundleFileNameForFormat(export_format: ExportFormat): string { // Helper: bundle filename by format.
-  return export_format === "CSV" ? "bundle.csv" : "bundle.json"; // Stable filenames per format.
+  if (export_format === "CSV") return "bundle.csv"; // CSV bundle filename.
+  if (export_format === "PDF") return "bundle.pdf"; // PDF bundle filename.
+  return "bundle.json"; // JSON bundle filename.
 } // End helper.
 
 function bundleContentTypeForFormat(export_format: ExportFormat): string { // Helper: content type by format.
-  return export_format === "CSV" ? "text/csv; charset=utf-8" : "application/json"; // Supported content types.
+  if (export_format === "CSV") return "text/csv; charset=utf-8"; // CSV content type.
+  if (export_format === "PDF") return "application/pdf"; // PDF content type.
+  return "application/json"; // JSON content type.
 } // End helper.
 
 function badRequest(reply: any, error: string) { // Helper: 400 response.
@@ -124,6 +130,38 @@ async function ensureEvidenceExportJobIndexV1Schema(pool: Pool): Promise<void> {
   await pool.query(`ALTER TABLE evidence_export_job_index_v1 ADD COLUMN IF NOT EXISTS export_language  TEXT;`);
 }
 
+async function ensureEvidencePackIndexV1Schema(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS evidence_pack_index_v1 (
+      tenant_id                  TEXT   NOT NULL,
+      job_id                     TEXT   NOT NULL,
+      storage_mode               TEXT   NOT NULL,
+      object_store_key           TEXT   NOT NULL,
+      object_store_bundle_path   TEXT,
+      object_store_manifest_path TEXT,
+      object_store_checksums_path TEXT,
+      export_format              TEXT   NOT NULL,
+      export_language            TEXT   NOT NULL,
+      built_at_ts_ms             BIGINT NOT NULL,
+      bundle_sha256              TEXT,
+      manifest_sha256            TEXT,
+      checksums_sha256           TEXT,
+      PRIMARY KEY (tenant_id, job_id)
+    );
+  `);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS storage_mode TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS object_store_key TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS object_store_bundle_path TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS object_store_manifest_path TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS object_store_checksums_path TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS export_format TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS export_language TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS built_at_ts_ms BIGINT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS bundle_sha256 TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS manifest_sha256 TEXT;`);
+  await pool.query(`ALTER TABLE evidence_pack_index_v1 ADD COLUMN IF NOT EXISTS checksums_sha256 TEXT;`);
+}
+
 
 type ExportScope = { scope_type: "TENANT" | "DEVICE" | "FIELD"; scope_id: string | null }; // Scope descriptor.
 
@@ -136,11 +174,19 @@ type EvidencePackFileSummary = { // Evidence pack file summary for API responses
   download_part: "bundle" | "manifest" | "checksums";
 };
 
+type EvidencePackDeliverySummary = { // Delivery metadata for current and future storage backends.
+  storage_mode: "LOCAL_FILE" | "LOCAL_MIRROR" | "OBJECT_STORAGE_PLACEHOLDER";
+  object_store_key: string;
+  object_store_presign_supported: boolean;
+  object_store_download_url: string | null;
+};
+
 type EvidencePackSummary = { // Evidence pack summary exposed via list/detail endpoints.
   format: string;
   export_format: ExportFormat;
   export_language: ExportLanguage;
   pack_dir: string;
+  delivery: EvidencePackDeliverySummary;
   files: EvidencePackFileSummary[];
 };
 
@@ -148,8 +194,34 @@ function getFileSizeMaybe(fp: string): number | null { // Helper: return file si
   try { return fs.statSync(fp).size; } catch { return null; }
 } // End helper.
 
-function buildPackSummaryFromArtifactPath(artifact_path: string | null | undefined, export_format_raw?: string | null, export_language_raw?: string | null): EvidencePackSummary | null { // Helper: derive evidence pack summary from the canonical artifact path.
-  if (!artifact_path || typeof artifact_path !== "string") return null; // Missing path => no summary.
+function deriveObjectStoreKey(tenant_id_raw: string | null | undefined, job_id_raw: string | null | undefined, export_format_raw?: string | null): string { // Helper: derive a stable future object-store key without enabling object storage yet.
+  const tenant_id = normalizeId(tenant_id_raw) ?? "tenant_unknown"; // Stable tenant-safe segment.
+  const job_id = normalizeId(job_id_raw) ?? "job_unknown"; // Stable job-safe segment.
+  const export_format = normalizeExportFormat(export_format_raw); // Normalize extension source.
+  const ext = export_format === "CSV" ? "csv" : export_format === "PDF" ? "pdf" : "json"; // Map to extension.
+  return `evidence-exports-v1/${tenant_id}/${job_id}/bundle.${ext}`; // Future object-store key contract.
+} // End helper.
+
+function getEvidenceStorageMode(): "LOCAL_FILE" | "LOCAL_MIRROR" { // Helper: normalize storage mode from env.
+  return String(process.env.GEOX_EVIDENCE_STORAGE_MODE ?? "LOCAL_FILE").trim().toUpperCase() === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : "LOCAL_FILE"; // Default local file mode.
+} // End helper.
+
+function getEvidenceObjectRootDir(): string { // Helper: root directory for local mirror object storage.
+  return path.resolve(process.cwd(), process.env.GEOX_EVIDENCE_OBJECT_ROOT || path.join("runtime", "evidence_object_store_v1")); // Configurable root.
+} // End helper.
+
+function copyFileWithParents(src: string, dst: string) { // Helper: copy file and ensure parent exists.
+  ensureDir(path.dirname(dst)); // Ensure parent exists.
+  fs.copyFileSync(src, dst); // Copy bytes.
+} // End helper.
+
+function buildObjectStoreDownloadPath(job_id_raw: string | null | undefined, part: "bundle" | "manifest" | "checksums"): string { // Helper: stable API path for mirrored object storage downloads.
+  return `/api/v1/evidence-export/jobs/${encodeURIComponent(String(job_id_raw ?? ""))}/download?source=object_store&part=${encodeURIComponent(part)}`; // Authorized API path.
+} // End helper.
+
+function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null { // Helper: derive evidence pack summary from canonical artifact path plus optional pack index metadata.
+  const artifact_path = typeof row?.artifact_path === "string" ? row.artifact_path : null; // Runtime artifact path.
+  if (!artifact_path) return null; // Missing path => no summary.
   const pack_dir = path.dirname(artifact_path); // Pack directory is the parent of bundle.json.
   const bundle_path = artifact_path; // Canonical artifact path may be bundle.json or bundle.csv.
   const bundle_name = path.basename(bundle_path); // Runtime primary artifact filename.
@@ -158,8 +230,8 @@ function buildPackSummaryFromArtifactPath(artifact_path: string | null | undefin
   if (!fs.existsSync(bundle_path) || !fs.existsSync(manifest_path) || !fs.existsSync(checksums_path)) return null; // Pack incomplete.
 
   let format = "geox_evidence_pack_v1"; // Default format for Sprint C3/C4 packs.
-  let export_format: ExportFormat = normalizeExportFormat(export_format_raw); // Default export format from job row.
-  let export_language: ExportLanguage = normalizeExportLanguage(export_language_raw); // Default export language from job row.
+  let export_format: ExportFormat = normalizeExportFormat(row?.export_format); // Default export format from job row.
+  let export_language: ExportLanguage = normalizeExportLanguage(row?.export_language); // Default export language from job row.
   try { // Best-effort parse manifest for explicit format.
     const manifest = JSON.parse(fs.readFileSync(manifest_path, "utf8"));
     if (typeof manifest?.format === "string" && manifest.format.trim()) format = manifest.format.trim();
@@ -169,11 +241,21 @@ function buildPackSummaryFromArtifactPath(artifact_path: string | null | undefin
     // Ignore parse errors and fall back to default format.
   }
 
+  const storage_mode = String(row?.pack_storage_mode ?? "LOCAL_FILE") === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : "LOCAL_FILE"; // Storage mode from pack index.
+  const object_store_key = typeof row?.pack_object_store_key === "string" && row.pack_object_store_key.trim() ? row.pack_object_store_key.trim() : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format); // Stable object store key.
+  const object_store_download_url = storage_mode === "LOCAL_MIRROR" ? buildObjectStoreDownloadPath(row?.job_id, "bundle") : null; // Authorized mirror bundle URL.
+
   return {
     format,
     export_format,
     export_language,
     pack_dir,
+    delivery: {
+      storage_mode,
+      object_store_key,
+      object_store_presign_supported: false,
+      object_store_download_url,
+    },
     files: [
       { name: bundle_name, sha256: sha256FileHex(bundle_path), content_type: bundleContentTypeForFormat(export_format), size_bytes: getFileSizeMaybe(bundle_path), download_part: "bundle" },
       { name: "manifest.json", sha256: sha256FileHex(manifest_path), content_type: "application/json", size_bytes: getFileSizeMaybe(manifest_path), download_part: "manifest" },
@@ -183,7 +265,7 @@ function buildPackSummaryFromArtifactPath(artifact_path: string | null | undefin
 } // End helper.
 
 function enrichJobRow(row: any): any { // Helper: attach evidence pack summary and download urls to a job row.
-  const pack = buildPackSummaryFromArtifactPath(row?.artifact_path, row?.export_format, row?.export_language); // Derive pack metadata from runtime files.
+  const pack = buildPackSummaryFromArtifactPath(row); // Derive pack metadata from runtime files plus optional pack-index metadata.
   const out = { ...row }; // Shallow clone row.
   if (!pack) return out; // Return row unchanged when files are unavailable.
   return {
@@ -192,6 +274,7 @@ function enrichJobRow(row: any): any { // Helper: attach evidence pack summary a
       format: pack.format,
       export_format: pack.export_format,
       export_language: pack.export_language,
+      delivery: pack.delivery,
       files: pack.files.map((f) => ({
         name: f.name,
         sha256: f.sha256,
@@ -401,6 +484,56 @@ function buildEvidenceCsv(bundle: any): string { // Helper: flatten evidence fac
   return rows.join("\n") + "\n"; // Final CSV file.
 } // End helper.
 
+function pdfEscapeText(s: string): string { // Helper: escape PDF text control characters.
+  return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)"); // Escape backslash and parens.
+} // End helper.
+
+function buildEvidencePdf(bundle: any, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_language: ExportLanguage): Buffer { // Helper: generate a minimal one-page PDF summary.
+  const facts = Array.isArray(bundle?.facts) ? bundle.facts : []; // Facts list.
+  const title = export_language === "en-US" ? "GEOX Evidence Export Summary" : "GEOX Evidence Export Summary"; // Localized title kept ASCII-safe for the built-in font.
+  const lines = [ // Human-readable summary lines.
+    title,
+    `Tenant: ${bundle?.meta?.tenant_id ?? "-"}`,
+    `Scope: ${scope.scope_type}${scope.scope_id ? `:${scope.scope_id}` : ""}`,
+    `Window: ${new Date(from_ts_ms).toISOString()} -> ${new Date(to_ts_ms).toISOString()}`,
+    `Facts exported: ${facts.length}`,
+    `Language: ${export_language}`,
+    `Built at: ${new Date(bundle?.meta?.built_at_ts_ms ?? Date.now()).toISOString()}`,
+  ]; // End lines.
+
+  const streamLines: string[] = ["BT", "/F1 18 Tf", "50 780 Td"]; // PDF text operators.
+  for (let i = 0; i < lines.length; i += 1) { // Emit lines top-to-bottom.
+    const text = pdfEscapeText(String(lines[i] ?? "")); // Escape text for PDF literal string.
+    if (i > 0) streamLines.push("0 -24 Td"); // Move down for each next line.
+    streamLines.push(`(${text}) Tj`); // Draw one text line.
+  } // End loop.
+  streamLines.push("ET"); // End text block.
+  const stream = streamLines.join("\n"); // Final page content stream.
+
+  const objects = [ // Minimal PDF object list.
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj",
+    `5 0 obj\n<< /Length ${Buffer.byteLength(stream, "utf8")} >>\nstream\n${stream}\nendstream\nendobj`,
+  ]; // End object list.
+
+  let pdf = "%PDF-1.4\n"; // PDF header.
+  const offsets: number[] = [0]; // xref requires object offsets with index 0 reserved.
+  for (const obj of objects) { // Append each object and capture its byte offset.
+    offsets.push(Buffer.byteLength(pdf, "utf8")); // Offset before appending current object.
+    pdf += `${obj}\n`; // Append object body.
+  } // End append loop.
+  const xrefOffset = Buffer.byteLength(pdf, "utf8"); // Offset where xref starts.
+  pdf += `xref\n0 ${objects.length + 1}\n`; // Cross-reference header.
+  pdf += "0000000000 65535 f \n"; // Free object 0 entry.
+  for (let i = 1; i < offsets.length; i += 1) { // Emit each xref entry.
+    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`; // Fixed-width xref row.
+  } // End xref loop.
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`; // Trailer.
+  return Buffer.from(pdf, "utf8"); // Return PDF bytes.
+} // End helper.
+
 async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_format: ExportFormat, export_language: ExportLanguage): Promise<void> { // Execute job in-process.
   const started_ms = Date.now(); // Start time.
 
@@ -425,6 +558,8 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
     const bundle_path = path.join(pack_dir, bundle_name); // Canonical bundle payload.
     if (export_format === "CSV") { // CSV delivery view.
       fs.writeFileSync(bundle_path, buildEvidenceCsv(bundle), "utf8"); // Write CSV artifact.
+    } else if (export_format === "PDF") { // PDF delivery view.
+      fs.writeFileSync(bundle_path, buildEvidencePdf(bundle, scope, from_ts_ms, to_ts_ms, export_language)); // Write PDF artifact.
     } else { // JSON delivery view.
       fs.writeFileSync(bundle_path, JSON.stringify(bundle, null, 2), "utf8"); // Write JSON artifact.
     }
@@ -435,7 +570,7 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
     ];
 
     const manifest = { // Self-describing evidence pack manifest.
-      format: export_format === "CSV" ? "geox_evidence_pack_csv_v1" : "geox_evidence_pack_v1",
+      format: export_format === "CSV" ? "geox_evidence_pack_csv_v1" : export_format === "PDF" ? "geox_evidence_pack_pdf_v1" : "geox_evidence_pack_v1",
       export_format,
       export_language,
       job_id,
@@ -460,11 +595,31 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
     fs.writeFileSync(checksums_path, checksums_text, "utf8"); // Write checksums.
     const checksums_sha256 = sha256TextHex(checksums_text); // Digest for checksums file content.
 
+    const object_store_key = deriveObjectStoreKey(tenant_id, job_id, export_format); // Stable object-store key contract.
+    const storage_mode = getEvidenceStorageMode(); // Effective storage mode.
+    let object_store_bundle_path: string | null = null; // Mirrored bundle path when enabled.
+    let object_store_manifest_path: string | null = null; // Mirrored manifest path when enabled.
+    let object_store_checksums_path: string | null = null; // Mirrored checksums path when enabled.
+    if (storage_mode === "LOCAL_MIRROR") { // Optional local mirror backend for object-storage-like delivery.
+      const object_root = getEvidenceObjectRootDir(); // Mirror root.
+      object_store_bundle_path = path.join(object_root, object_store_key); // Bundle mirror path.
+      object_store_manifest_path = path.join(path.dirname(object_store_bundle_path), "manifest.json"); // Manifest mirror path.
+      object_store_checksums_path = path.join(path.dirname(object_store_bundle_path), "sha256.txt"); // Checksums mirror path.
+      copyFileWithParents(bundle_path, object_store_bundle_path); // Mirror bundle.
+      copyFileWithParents(manifest_path, object_store_manifest_path); // Mirror manifest.
+      copyFileWithParents(checksums_path, object_store_checksums_path); // Mirror checksums.
+    }
+
     const pack_summary = { // Summary exposed through job projection/facts.
       pack_dir,
       bundle_path,
       manifest_path,
       checksums_path,
+      storage_mode,
+      object_store_key,
+      object_store_bundle_path,
+      object_store_manifest_path,
+      object_store_checksums_path,
       files: [
         { name: bundle_name, sha256: bundle_sha256 },
         { name: "manifest.json", sha256: manifest_sha256 },
@@ -513,6 +668,25 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
           WHERE tenant_id = $1 AND job_id = $2`,
         [tenant_id, job_id, done_ms, artifact_path, digest]
       ); // End update.
+      await clientConn.query( // Upsert evidence pack delivery index.
+        `INSERT INTO evidence_pack_index_v1
+          (tenant_id, job_id, storage_mode, object_store_key, object_store_bundle_path, object_store_manifest_path, object_store_checksums_path, export_format, export_language, built_at_ts_ms, bundle_sha256, manifest_sha256, checksums_sha256)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+         ON CONFLICT (tenant_id, job_id)
+         DO UPDATE SET
+           storage_mode = EXCLUDED.storage_mode,
+           object_store_key = EXCLUDED.object_store_key,
+           object_store_bundle_path = EXCLUDED.object_store_bundle_path,
+           object_store_manifest_path = EXCLUDED.object_store_manifest_path,
+           object_store_checksums_path = EXCLUDED.object_store_checksums_path,
+           export_format = EXCLUDED.export_format,
+           export_language = EXCLUDED.export_language,
+           built_at_ts_ms = EXCLUDED.built_at_ts_ms,
+           bundle_sha256 = EXCLUDED.bundle_sha256,
+           manifest_sha256 = EXCLUDED.manifest_sha256,
+           checksums_sha256 = EXCLUDED.checksums_sha256`,
+        [tenant_id, job_id, storage_mode, object_store_key, object_store_bundle_path, object_store_manifest_path, object_store_checksums_path, export_format, export_language, done_ms, bundle_sha256, manifest_sha256, checksums_sha256]
+      ); // End pack index upsert.
       await clientConn.query("COMMIT"); // Commit.
     } catch { // Ignore.
       await clientConn.query("ROLLBACK"); // Rollback.
@@ -556,8 +730,9 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
 const running = new Set<string>(); // In-memory guard to prevent duplicate in-process execution per (tenant_id, job_id).
 
 export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: Pool) { // Register evidence export routes.
-  // Schema-compat: make sure evidence_export_job_index_v1 exists and has required columns.
+  // Schema-compat: make sure evidence_export_job_index_v1 and evidence_pack_index_v1 exist and have required columns.
   void ensureEvidenceExportJobIndexV1Schema(pool);
+  void ensureEvidencePackIndexV1Schema(pool);
 
   app.post("/api/v1/evidence-export/jobs", async (req, reply) => { // Create a new export job.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "evidence_export.write"); // Require write scope.
@@ -651,10 +826,17 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
 
     const limit = 200; // Fixed limit for MVP.
     const q = await pool.query(
-      `SELECT job_id, scope_type, scope_id, from_ts_ms, to_ts_ms, status, created_ts_ms, updated_ts_ms, artifact_path, artifact_sha256, error, export_format, export_language
-         FROM evidence_export_job_index_v1
-        WHERE tenant_id = $1
-        ORDER BY updated_ts_ms DESC
+      `SELECT j.tenant_id, j.job_id, j.scope_type, j.scope_id, j.from_ts_ms, j.to_ts_ms, j.status, j.created_ts_ms, j.updated_ts_ms, j.artifact_path, j.artifact_sha256, j.error, j.export_format, j.export_language,
+              p.storage_mode AS pack_storage_mode,
+              p.object_store_key AS pack_object_store_key,
+              p.object_store_bundle_path,
+              p.object_store_manifest_path,
+              p.object_store_checksums_path
+         FROM evidence_export_job_index_v1 j
+         LEFT JOIN evidence_pack_index_v1 p
+           ON p.tenant_id = j.tenant_id AND p.job_id = j.job_id
+        WHERE j.tenant_id = $1
+        ORDER BY j.updated_ts_ms DESC
         LIMIT $2`,
       [auth.tenant_id, limit]
     ); // End query.
@@ -670,9 +852,16 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     if (!job_id) return notFound(reply); // Invalid.
 
     const q = await pool.query(
-      `SELECT job_id, scope_type, scope_id, from_ts_ms, to_ts_ms, status, created_ts_ms, updated_ts_ms, artifact_path, artifact_sha256, error, export_format, export_language
-         FROM evidence_export_job_index_v1
-        WHERE tenant_id = $1 AND job_id = $2`,
+      `SELECT j.tenant_id, j.job_id, j.scope_type, j.scope_id, j.from_ts_ms, j.to_ts_ms, j.status, j.created_ts_ms, j.updated_ts_ms, j.artifact_path, j.artifact_sha256, j.error, j.export_format, j.export_language,
+              p.storage_mode AS pack_storage_mode,
+              p.object_store_key AS pack_object_store_key,
+              p.object_store_bundle_path,
+              p.object_store_manifest_path,
+              p.object_store_checksums_path
+         FROM evidence_export_job_index_v1 j
+         LEFT JOIN evidence_pack_index_v1 p
+           ON p.tenant_id = j.tenant_id AND p.job_id = j.job_id
+        WHERE j.tenant_id = $1 AND j.job_id = $2`,
       [auth.tenant_id, job_id]
     ); // End query.
     if (q.rowCount === 0) return notFound(reply); // Missing.
@@ -688,9 +877,15 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     if (!job_id) return notFound(reply); // Invalid.
 
     const q = await pool.query(
-      `SELECT artifact_path, status
-         FROM evidence_export_job_index_v1
-        WHERE tenant_id = $1 AND job_id = $2`,
+      `SELECT j.artifact_path, j.status,
+              p.storage_mode AS pack_storage_mode,
+              p.object_store_bundle_path,
+              p.object_store_manifest_path,
+              p.object_store_checksums_path
+         FROM evidence_export_job_index_v1 j
+         LEFT JOIN evidence_pack_index_v1 p
+           ON p.tenant_id = j.tenant_id AND p.job_id = j.job_id
+        WHERE j.tenant_id = $1 AND j.job_id = $2`,
       [auth.tenant_id, job_id]
     ); // End query.
     if (q.rowCount === 0) return notFound(reply); // Missing.
@@ -699,19 +894,21 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     if (status !== "DONE" || !artifact_path) return reply.status(409).send({ ok: false, error: "NOT_READY" }); // Not ready.
 
     const partRaw = String((req.query as any)?.part ?? "bundle").trim().toLowerCase(); // Requested file within the evidence pack.
+    const sourceRaw = String((req.query as any)?.source ?? "local").trim().toLowerCase(); // Optional source selector.
     const pack_dir = path.dirname(String(artifact_path)); // Pack directory for sidecar files.
+    const useObjectStore = sourceRaw === "object_store" && String(q.rows[0]?.pack_storage_mode ?? "") === "LOCAL_MIRROR"; // Mirror path allowed when configured.
 
-    let download_path = String(artifact_path); // Default keeps backward compatibility (bundle.*).
+    let download_path = useObjectStore ? String(q.rows[0]?.object_store_bundle_path ?? artifact_path) : String(artifact_path); // Default keeps backward compatibility (bundle.*).
     const bundle_ext = path.extname(download_path).toLowerCase(); // Infer artifact extension.
-    let content_type = bundle_ext === ".csv" ? "text/csv; charset=utf-8" : "application/json"; // Default content type.
+    let content_type = bundle_ext === ".csv" ? "text/csv; charset=utf-8" : bundle_ext === ".pdf" ? "application/pdf" : "application/json"; // Default content type.
     let filename = `evidence_${job_id}${bundle_ext || ".json"}`; // Default download name.
 
     if (partRaw === "manifest") { // Download manifest.json explicitly.
-      download_path = path.join(pack_dir, "manifest.json");
+      download_path = useObjectStore ? String(q.rows[0]?.object_store_manifest_path ?? path.join(pack_dir, "manifest.json")) : path.join(pack_dir, "manifest.json");
       content_type = "application/json";
       filename = `evidence_${job_id}_manifest.json`;
     } else if (partRaw === "checksums" || partRaw === "sha256") { // Download sha256 sidecar file explicitly.
-      download_path = path.join(pack_dir, "sha256.txt");
+      download_path = useObjectStore ? String(q.rows[0]?.object_store_checksums_path ?? path.join(pack_dir, "sha256.txt")) : path.join(pack_dir, "sha256.txt");
       content_type = "text/plain; charset=utf-8";
       filename = `evidence_${job_id}_sha256.txt`;
     }

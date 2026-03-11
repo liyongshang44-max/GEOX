@@ -1,0 +1,8 @@
+services:
+  server:
+    environment:
+      GEOX_RUNTIME_ENV: staging
+      GEOX_EXPORTS_ROOT: /app/runtime/exports/staging
+      GEOX_TOKEN_SSOT_PATH: /run/secrets/geox_ao_act_tokens_staging.json
+    ports:
+      - "3101:3000"

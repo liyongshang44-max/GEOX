@@ -43,6 +43,8 @@ export default function ExportJobsPage(): React.ReactElement {
   const [fromTs, setFromTs] = React.useState<string>(defaultWindowStart());
   const [toTs, setToTs] = React.useState<string>(defaultWindowEnd());
   const [jobs, setJobs] = React.useState<EvidenceExportJob[]>([]);
+  const [exportFormat, setExportFormat] = React.useState<"JSON" | "CSV" | "PDF">("PDF");
+  const [exportLanguage, setExportLanguage] = React.useState<"zh-CN" | "en-US">("zh-CN");
   const [role, setRole] = React.useState<string>("admin");
   const [selectedJobId, setSelectedJobId] = React.useState<string>("");
   const [detail, setDetail] = React.useState<EvidenceExportJob | null>(null);
@@ -110,6 +112,8 @@ export default function ExportJobsPage(): React.ReactElement {
         scope_id: scopeType === "TENANT" ? null : scopeId,
         from_ts_ms,
         to_ts_ms,
+        export_format: exportFormat,
+        export_language: exportLanguage,
       });
       setStatus(`已创建导出任务 ${jobId}。`);
       await refresh(true);
@@ -133,7 +137,7 @@ export default function ExportJobsPage(): React.ReactElement {
           <div className="eyebrow">Audit & Export</div>
           <h2 className="heroTitle">证据导出</h2>
           <p className="heroText">
-            当前已支持 evidence-export job 的创建、列表、详情查看，以及 JSON / CSV 主产物与 manifest / sha256 下载入口。
+            当前已支持 evidence-export job 的创建、列表、详情查看，以及 JSON / CSV / PDF 主产物与 manifest / sha256 下载入口。
           </p>
         </div>
         <div className="heroActions">
@@ -176,6 +180,23 @@ export default function ExportJobsPage(): React.ReactElement {
               执行
               <button className="btn primary" onClick={() => void createJob()} disabled={busy}>创建导出任务</button>
             </div>
+          </div>
+          <div className="formGrid twoCols" style={{ marginTop: 12 }}>
+            <label className="field">
+              导出格式
+              <select className="select" value={exportFormat} onChange={(e) => setExportFormat(e.target.value as "JSON" | "CSV" | "PDF")}>
+                <option value="PDF">PDF（最小摘要报告）</option>
+                <option value="CSV">CSV（事实清单）</option>
+                <option value="JSON">JSON（完整证据包）</option>
+              </select>
+            </label>
+            <label className="field">
+              导出语言
+              <select className="select" value={exportLanguage} onChange={(e) => setExportLanguage(e.target.value as "zh-CN" | "en-US")}>
+                <option value="zh-CN">中文</option>
+                <option value="en-US">English</option>
+              </select>
+            </label>
           </div>
           <div className="formGrid twoCols" style={{ marginTop: 12 }}>
             <label className="field">
@@ -249,6 +270,11 @@ export default function ExportJobsPage(): React.ReactElement {
               <div className="kv"><span className="k">任务 ID</span><span className="v">{detail.job_id}</span></div>
               <div className="kv"><span className="k">导出范围</span><span className="v">{detail.scope_type}:{detail.scope_id || "-"}</span></div>
               <div className="kv"><span className="k">时间窗口</span><span className="v">{fmtTs(detail.from_ts_ms)} → {fmtTs(detail.to_ts_ms)}</span></div>
+              <div className="kv"><span className="k">导出格式</span><span className="v">{detail.evidence_pack?.export_format || "-"}</span></div>
+              <div className="kv"><span className="k">导出语言</span><span className="v">{detail.evidence_pack?.export_language || "-"}</span></div>
+              <div className="kv"><span className="k">存储模式</span><span className="v">{detail.evidence_pack?.delivery?.storage_mode || "-"}</span></div>
+              <div className="kv"><span className="k">对象键</span><span className="v mono">{detail.evidence_pack?.delivery?.object_store_key || "-"}</span></div>
+              <div className="kv"><span className="k">镜像下载</span><span className="v">{detail.evidence_pack?.delivery?.object_store_download_url ? <a href={detail.evidence_pack.delivery.object_store_download_url} target="_blank" rel="noreferrer">打开镜像下载</a> : "-"}</span></div>
               <div className="kv"><span className="k">产物摘要</span><span className="v">{detail.artifact_sha256 || "-"}</span></div>
               <div className="kv"><span className="k">错误信息</span><span className="v">{detail.error || "-"}</span></div>
               <div style={{ marginTop: 14 }}>

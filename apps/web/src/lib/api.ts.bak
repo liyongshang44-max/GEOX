@@ -533,30 +533,6 @@ export async function fetchDeviceConsole(token: string, deviceId: string): Promi
   });
 }
 
-
-export async function issueDeviceCredential(token: string, deviceId: string, body?: { credential_id?: string }): Promise<any> {
-  return requestJson<any>(`/api/devices/${encodeURIComponent(deviceId)}/credentials`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify(body ?? {}),
-  });
-}
-
-export async function revokeDeviceCredential(token: string, deviceId: string, credentialId: string): Promise<any> {
-  return requestJson<any>(`/api/devices/${encodeURIComponent(deviceId)}/credentials/${encodeURIComponent(credentialId)}/revoke`, {
-    method: "POST",
-    headers: authHeaders(token),
-  });
-}
-
-export async function bindDeviceToField(token: string, deviceId: string, body: { field_id: string }): Promise<any> {
-  return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/bind-field`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify(body),
-  });
-}
-
 export async function fetchTelemetryLatest(token: string, params?: Record<string, unknown>): Promise<TelemetryLatestItem[]> {
   const res = await requestJson<{ ok?: boolean; items?: TelemetryLatestItem[] }>(
     withQuery(`/api/v1/telemetry/latest`, params),

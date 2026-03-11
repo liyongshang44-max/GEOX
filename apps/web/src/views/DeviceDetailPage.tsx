@@ -1,6 +1,7 @@
 ﻿import React from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  bindDeviceToField,
   fetchDeviceConsole,
   fetchDeviceDetail,
   fetchDeviceStatus,
@@ -10,6 +11,8 @@ import {
   fetchTelemetryLatest,
   fetchTelemetryMetrics,
   fetchTelemetrySeries,
+  issueDeviceCredential,
+  revokeDeviceCredential,
   type DeviceConsoleView,
   type DeviceDetail,
   type DeviceListItem,
@@ -76,6 +79,11 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [series, setSeries] = React.useState<Record<string, Array<{ ts_ms: number; value_num: number | null; value_text: string | null; fact_id: string }>>>({});
   const [busy, setBusy] = React.useState<boolean>(false);
   const [status, setStatus] = React.useState<string>("正在准备设备详情...");
+  const [availableFields, setAvailableFields] = React.useState<FieldListItem[]>([]);
+  const [bindFieldId, setBindFieldId] = React.useState<string>("");
+  const [newCredentialId, setNewCredentialId] = React.useState<string>("");
+  const [issuedSecret, setIssuedSecret] = React.useState<string>("");
+  const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
 
   function persistToken(next: string): void {
     setToken(next);
@@ -93,34 +101,23 @@ export default function DeviceDetailPage(): React.ReactElement {
     setStatus(`正在读取设备 ${deviceId} ...`);
 
     try {
-      const [
-        nextDetail,
-        nextConsole,
-        nextStatus,
-        nextLatest,
-        nextMetrics,
-        nextSeries,
-        nextDevices,
-      ] = await Promise.all([
+      const [nextDetail, nextConsole, nextStatus, nextLatest, nextMetrics, nextSeries, nextDevices, nextFields] = await Promise.all([
         fetchDeviceDetail(token, deviceId),
         fetchDeviceConsole(token, deviceId),
         fetchDeviceStatus(token, deviceId),
-        fetchTelemetryLatest(token, deviceId),
-        fetchTelemetryMetrics(token, deviceId),
-        fetchTelemetrySeries(token, deviceId),
+        fetchTelemetryLatest(token, { device_id: deviceId }),
+        fetchTelemetryMetrics(token, { device_id: deviceId }),
+        fetchTelemetrySeries(token, { device_id: deviceId }),
         fetchDevices(token),
+        fetchFields(token).catch(() => []),
       ]);
 
-      const matchedDevice = nextDevices.find((item) => item.device_id === deviceId) || null;
-
+      const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
       let boundFieldInfo: BoundFieldInfo = {
         field_id: matchedDevice?.field_id || nextDetail?.device?.field_id || null,
         bound_ts_ms: matchedDevice?.bound_ts_ms || nextDetail?.device?.bound_ts_ms || null,
       };
-
-      if (!boundFieldInfo.field_id) {
-        boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
-      }
+      if (!boundFieldInfo.field_id) boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
 
       setDetail(nextDetail);
       setConsoleView(nextConsole);
@@ -129,10 +126,62 @@ export default function DeviceDetailPage(): React.ReactElement {
       setResolvedBoundField(boundFieldInfo);
       setLatest(nextLatest);
       setMetrics(nextMetrics);
-      setSeries(nextSeries);
+      setSeries((nextSeries as any)?.series || (nextSeries as any) || {});
+      setAvailableFields(nextFields as FieldListItem[]);
+      setBindFieldId(String(boundFieldInfo.field_id || ""));
       setStatus(`设备 ${deviceId} 已加载。`);
     } catch (e: any) {
-      setStatus(`读取失败：${e?.message || String(e)}`);
+      setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleIssueCredential(): Promise<void> {
+    if (!deviceId) return;
+    setBusy(true);
+    setIssuedSecret("");
+    setIssuedCredentialId("");
+    setStatus(`正在为 ${deviceId} 签发凭据...`);
+    try {
+      const created = await issueDeviceCredential(token, deviceId, newCredentialId.trim() ? { credential_id: newCredentialId.trim() } : {});
+      setIssuedSecret(String(created?.credential_secret || ""));
+      setIssuedCredentialId(String(created?.credential_id || ""));
+      setNewCredentialId("");
+      await refresh();
+      setStatus(`凭据已签发：${created?.credential_id}`);
+    } catch (e: any) {
+      setStatus(`签发失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRevokeCredential(credentialId: string): Promise<void> {
+    if (!deviceId || !credentialId) return;
+    setBusy(true);
+    setStatus(`正在撤销凭据 ${credentialId} ...`);
+    try {
+      await revokeDeviceCredential(token, deviceId, credentialId);
+      await refresh();
+      setStatus(`凭据已撤销：${credentialId}`);
+    } catch (e: any) {
+      setStatus(`撤销失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleBindField(): Promise<void> {
+    if (!deviceId || !bindFieldId.trim()) return;
+    setBusy(true);
+    setStatus(`正在绑定到田块 ${bindFieldId} ...`);
+    try {
+      await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() });
+      await refresh();
+      setStatus(`设备已绑定到田块：${bindFieldId}`);
+    } catch (e: any) {
+      setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`);
     } finally {
       setBusy(false);
     }
@@ -240,14 +289,53 @@ export default function DeviceDetailPage(): React.ReactElement {
         <section className="card sectionBlock">
           <div className="sectionHeader">
             <div>
-              <div className="sectionTitle">凭据管理说明</div>
-              <div className="sectionDesc">真正的签发 / 撤销动作仍走现有 admin API。</div>
+              <div className="sectionTitle">凭据与接入向导</div>
+              <div className="sectionDesc">直接在设备详情页完成签发、撤销与绑定，减少交付同学来回跳页。</div>
             </div>
           </div>
 
           <div className="emptyState" style={{ marginBottom: 12 }}>
             {consoleView?.access_info?.secret_warning || "设备密钥仅在签发时显示一次。"}
           </div>
+
+          <div className="formGridTwo" style={{ marginBottom: 12 }}>
+            <label className="field">
+              <span>新凭据 ID（可选）</span>
+              <input className="input" value={newCredentialId} onChange={(e) => setNewCredentialId(e.target.value)} placeholder="cred_dev_demo_001" />
+            </label>
+            <div className="field">
+              <span>签发动作</span>
+              <div className="heroActions">
+                <button className="btn primary" onClick={() => void handleIssueCredential()} disabled={busy}>签发一次性密钥</button>
+              </div>
+            </div>
+            <label className="field">
+              <span>绑定田块</span>
+              <select className="select" value={bindFieldId} onChange={(e) => setBindFieldId(e.target.value)}>
+                <option value="">选择田块</option>
+                {availableFields.map((field: any) => <option key={String(field.field_id)} value={String(field.field_id)}>{String(field.name || field.field_id)}</option>)}
+              </select>
+            </label>
+            <div className="field">
+              <span>绑定动作</span>
+              <div className="heroActions">
+                <button className="btn" onClick={() => void handleBindField()} disabled={busy || !bindFieldId.trim()}>绑定到田块</button>
+              </div>
+            </div>
+          </div>
+
+          {issuedSecret ? (
+            <div className="infoCard" style={{ marginBottom: 12 }}>
+              <div className="jobTitleRow">
+                <div>
+                  <div className="title">新凭据已签发：{issuedCredentialId || '-'}</div>
+                  <div className="metaText">请立即复制并下发到设备侧，平台不会再次返回明文 secret。</div>
+                </div>
+                <div className="pill tone-warn">仅显示一次</div>
+              </div>
+              <pre className="jsonPreview">{issuedSecret}</pre>
+            </div>
+          ) : null}
 
           <div className="list modernList">
             {(consoleView?.credentials || []).map((item) => (
@@ -259,6 +347,9 @@ export default function DeviceDetailPage(): React.ReactElement {
                 <div className="meta">
                   <span>签发：{fmtTs(item.issued_ts_ms)}</span>
                   <span>撤销：{fmtTs(item.revoked_ts_ms)}</span>
+                </div>
+                <div className="heroActions" style={{ marginTop: 8 }}>
+                  <button className="btn" onClick={() => void handleRevokeCredential(String(item.credential_id))} disabled={busy || item.status !== 'ACTIVE'}>撤销凭据</button>
                 </div>
               </div>
             ))}

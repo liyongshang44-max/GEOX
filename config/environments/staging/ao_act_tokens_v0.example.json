@@ -1,0 +1,17 @@
+{
+  "environment": "staging",
+  "description": "Example AO-ACT token layout for staging. Commit example only; never commit live secrets.",
+  "live_secret_policy": "external_injection_only",
+  "tokens": [
+    {
+      "token_id": "replace_staging_admin_token_id",
+      "tenant_id": "replace_staging_tenant",
+      "role": "admin",
+      "token": "REPLACE_OUTSIDE_GIT",
+      "revoked": false
+    }
+  ],
+  "evidence_export_root": "./runtime/staging/evidence",
+  "postgres_database": "geox_staging",
+  "compose_project_name": "geox-staging"
+}

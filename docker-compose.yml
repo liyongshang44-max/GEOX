@@ -55,6 +55,8 @@ services:
       CI: "1"
       PNPM_STORE_DIR: /pnpm-store
       GEOX_INTERNAL_BASE_URL: http://127.0.0.1:3000
+      GEOX_EVIDENCE_STORAGE_MODE: LOCAL_MIRROR  # Add this line
+      GEOX_EVIDENCE_OBJECT_ROOT: runtime/evidence_object_store_v1  # Add this line
 
     ports:
       - "3001:3000"

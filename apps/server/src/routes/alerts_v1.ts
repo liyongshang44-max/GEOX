@@ -83,7 +83,7 @@ function normalizeEventStatus(s: any): EventStatus | null { // Helper: normalize
 
 function normalizeNotificationChannel(v: any): string | null { // Helper: normalize notification channel.
   const s = String(v ?? "").trim().toUpperCase(); // Normalize.
-  if (["INAPP", "WEBHOOK"].includes(s)) return s; // Minimal allowlist for v1.
+  if (["INAPP", "WEBHOOK", "EMAIL", "SMS", "WECHAT", "DINGTALK"].includes(s)) return s; // Commercial v1.1 allowlist keeps storage generic while channels remain delivery placeholders.
   return null; // Invalid.
 } // End helper.
 
