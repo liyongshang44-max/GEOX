@@ -18,6 +18,7 @@ import FieldsPage from "../views/FieldsPage";
 import FieldDetailPage from "../views/FieldDetailPage";
 import DevicesPage from "../views/DevicesPage";
 import DeviceDetailPage from "../views/DeviceDetailPage";
+import DeviceOnboardingPage from "../views/DeviceOnboardingPage";
 import OperationsPage from "../views/OperationsPage";
 import AlertsPage from "../views/AlertsPage";
 import AuditExportPage from "../views/AuditExportPage";
@@ -35,6 +36,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/fields") return "田块与 GIS";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备中心";
+  if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
   if (pathname.startsWith("/operations")) return "作业控制";
   if (pathname.startsWith("/alerts")) return "告警中心";
@@ -50,6 +52,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
+  if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
   if (pathname.startsWith("/operations")) return "围绕审批、任务、调度与回执形成中文作业控制工作面。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
@@ -65,6 +68,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
+  if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "作业控制" }];
   if (pathname.startsWith("/alerts")) return [{ label: "总览", to: "/dashboard" }, { label: "告警中心" }];
@@ -118,6 +122,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/dashboard" label="总览" />
           <SidebarLink to="/fields" label="田块与 GIS" />
           <SidebarLink to="/devices" label="设备中心" />
+          <SidebarLink to="/devices/onboarding" label="设备接入向导" />
           <SidebarLink to="/operations" label="作业控制" />
           <SidebarLink to="/alerts" label="告警中心" />
           <SidebarLink to="/audit-export" label="审计与导出" />
@@ -171,6 +176,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/fields" element={<FieldsPage />} />
             <Route path="/fields/:fieldId" element={<FieldDetailPage />} />
             <Route path="/devices" element={<DevicesPage />} />
+            <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/operations" element={<OperationsPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
