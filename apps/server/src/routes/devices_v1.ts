@@ -753,6 +753,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     });
   });
 
+  app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => { // Alias: issue credential under /api/v1 namespace.
    app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => { // Alias: issue credential under /api/v1 namespace.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write");
     if (!auth) return;
