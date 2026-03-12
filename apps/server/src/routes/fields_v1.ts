@@ -219,6 +219,94 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     } // End try/finally.
   }); // End POST /api/v1/fields.
 
+  app.put("/api/v1/fields/:field_id", async (req, reply) => { // Update field base info (name/area/status) and optional polygon.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write");
+    if (!auth) return;
+
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+
+    const body: any = (req as any).body ?? {};
+    const nextName = body.name === undefined ? undefined : normalizeName(body.name, 256);
+    const nextArea = body.area_ha === undefined ? undefined : ((typeof body.area_ha === "number" && Number.isFinite(body.area_ha)) ? body.area_ha : null);
+    const nextStatus = body.status === undefined ? undefined : (isNonEmptyString(body.status) ? String(body.status).trim().toUpperCase().slice(0, 32) : null);
+    const polygonGeojson = body.geojson === undefined && body.polygon_geojson === undefined
+      ? undefined
+      : normalizeGeoJsonText(body.polygon_geojson ?? body.geojson);
+
+    if (body.name !== undefined && !nextName) return badRequest(reply, "MISSING_OR_INVALID:name");
+    if (body.status !== undefined && !nextStatus) return badRequest(reply, "MISSING_OR_INVALID:status");
+    if ((body.geojson !== undefined || body.polygon_geojson !== undefined) && !polygonGeojson) return badRequest(reply, "MISSING_OR_INVALID:geojson");
+    if (nextName === undefined && nextArea === undefined && nextStatus === undefined && polygonGeojson === undefined) {
+      return badRequest(reply, "MISSING_OR_INVALID:update_body");
+    }
+
+    const now_ms = Date.now();
+    const occurredAtIso = new Date(now_ms).toISOString();
+
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+
+      const existsQ = await clientConn.query(
+        `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`,
+        [auth.tenant_id, field_id]
+      );
+      if ((existsQ.rowCount ?? 0) === 0) {
+        await clientConn.query("ROLLBACK");
+        return notFound(reply);
+      }
+
+      const fact_id = `field_update_${sha256Hex(`field_updated_v1|${auth.tenant_id}|${field_id}|${now_ms}|${Math.random()}`)}`;
+      const record = {
+        type: "field_updated_v1",
+        entity: { tenant_id: auth.tenant_id, field_id },
+        payload: {
+          name: nextName ?? null,
+          area_ha: nextArea ?? null,
+          status: nextStatus ?? null,
+          polygon_geojson: polygonGeojson ?? null,
+          updated_ts_ms: now_ms,
+          actor_id: auth.actor_id,
+          token_id: auth.token_id,
+        },
+      };
+
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)`,
+        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+      );
+
+      await clientConn.query(
+        `UPDATE field_index_v1
+            SET name = COALESCE($3, name),
+                area_ha = CASE WHEN $4::boolean THEN $5 ELSE area_ha END,
+                status = COALESCE($6, status),
+                updated_ts_ms = $7
+          WHERE tenant_id = $1 AND field_id = $2`,
+        [auth.tenant_id, field_id, nextName ?? null, nextArea !== undefined, nextArea ?? null, nextStatus ?? null, now_ms]
+      );
+
+      if (polygonGeojson !== undefined) {
+        await clientConn.query(
+          `INSERT INTO field_polygon_v1 (tenant_id, field_id, geojson, updated_ts_ms)
+           VALUES ($1, $2, $3::jsonb, $4)
+           ON CONFLICT (tenant_id, field_id) DO UPDATE SET geojson = EXCLUDED.geojson, updated_ts_ms = EXCLUDED.updated_ts_ms`,
+          [auth.tenant_id, field_id, polygonGeojson, now_ms]
+        );
+      }
+
+      await clientConn.query("COMMIT");
+      return reply.send({ ok: true, field_id, updated_ts_ms: now_ms });
+    } catch (e: any) {
+      await clientConn.query("ROLLBACK");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
+  }); // End PUT /api/v1/fields/:field_id.
+
   app.get("/api/v1/fields", async (req, reply) => { // List fields within the caller's tenant.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
     if (!auth) return; // Auth helper responded.

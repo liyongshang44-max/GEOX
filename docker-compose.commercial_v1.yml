@@ -1,0 +1,173 @@
+# GEOX Commercial v1 compose baseline.
+# Includes: postgres + server + web + mqtt + worker + minio.
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: geox-v1-postgres
+    environment:
+      POSTGRES_USER: landos
+      POSTGRES_PASSWORD: landos_pwd
+      POSTGRES_DB: landos
+    ports:
+      - "5433:5432"
+    volumes:
+      - geox_v1_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U landos -d landos -h 127.0.0.1 -p 5432"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: geox-v1-mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  minio:
+    image: minio/minio:latest
+    container_name: geox-v1-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9002:9001"
+    volumes:
+      - geox_v1_minio_data:/data
+
+  server:
+    image: node:20
+    container_name: geox-v1-server
+    working_dir: /app
+    init: true
+    restart: unless-stopped
+    command:
+      - sh
+      - -lc
+      - |
+          set -e
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+          npm install -g pnpm@9.15.4
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/server exec tsx src/server.ts
+    volumes:
+      - ./:/app
+      - geox_v1_node_modules:/app/node_modules
+      - geox_v1_pnpm_store:/pnpm-store
+      - geox_v1_pnpm_vstore:/pnpm-vstore
+    environment:
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DB_STRICT: "1"
+      NODE_ENV: development
+      GEOX_SYSTEM_PROFILE: commercial_v1
+      GEOX_INTERNAL_BASE_URL: http://127.0.0.1:3000
+      ALERT_WEBHOOK_URL: ""
+      ALERT_WECHAT_WEBHOOK_URL: ""
+      ALERT_DINGTALK_WEBHOOK_URL: ""
+      ALERT_EMAIL_WEBHOOK_URL: ""
+      ALERT_EMAIL_TO: ""
+      TWILIO_ACCOUNT_SID: ""
+      TWILIO_AUTH_TOKEN: ""
+      TWILIO_FROM_NUMBER: ""
+      ALERT_SMS_TO: ""
+      MINIO_ENDPOINT: minio:9000
+      MINIO_BUCKET: geox
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    ports:
+      - "3001:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mqtt:
+        condition: service_started
+      minio:
+        condition: service_started
+
+  worker:
+    image: node:20
+    container_name: geox-v1-worker
+    working_dir: /app
+    init: true
+    restart: unless-stopped
+    command:
+      - sh
+      - -lc
+      - |
+          set -e
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+          npm install -g pnpm@9.15.4
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
+          pnpm --filter @geox/server exec tsx src/server.ts
+    volumes:
+      - ./:/app
+      - geox_v1_node_modules:/app/node_modules
+      - geox_v1_pnpm_store:/pnpm-store
+      - geox_v1_pnpm_vstore:/pnpm-vstore
+    environment:
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
+      DB_STRICT: "1"
+      NODE_ENV: development
+      GEOX_SYSTEM_PROFILE: commercial_v1
+      GEOX_WORKER_ROLE: "1"
+      GEOX_INTERNAL_BASE_URL: http://server:3000
+      ALERT_WEBHOOK_URL: ""
+      ALERT_WECHAT_WEBHOOK_URL: ""
+      ALERT_DINGTALK_WEBHOOK_URL: ""
+      ALERT_EMAIL_WEBHOOK_URL: ""
+      ALERT_EMAIL_TO: ""
+      TWILIO_ACCOUNT_SID: ""
+      TWILIO_AUTH_TOKEN: ""
+      TWILIO_FROM_NUMBER: ""
+      ALERT_SMS_TO: ""
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started
+
+  web:
+    image: node:20
+    container_name: geox-v1-web
+    working_dir: /app
+    command:
+      - sh
+      - -lc
+      - |
+          set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/web dev -- --host 0.0.0.0 --port 5173
+    volumes:
+      - ./:/app
+      - geox_v1_node_modules:/app/node_modules
+      - geox_v1_pnpm_store:/pnpm-store
+      - geox_v1_pnpm_vstore:/pnpm-vstore
+    environment:
+      VITE_API_BASE: http://server:3000
+      GEOX_SYSTEM_PROFILE: commercial_v1
+    ports:
+      - "5173:5173"
+    depends_on:
+      - server
+
+volumes:
+  geox_v1_pgdata:
+  geox_v1_minio_data:
+  geox_v1_node_modules:
+  geox_v1_pnpm_store:
+  geox_v1_pnpm_vstore:

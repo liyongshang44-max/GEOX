@@ -355,4 +355,57 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }
   });
+
+  // /api/v1 aliases to keep naming consistent without breaking legacy control path.
+  app.post("/api/v1/approval-requests", async (req, reply) => {
+    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
+    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
+    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/request`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: String((req.headers as any)?.authorization ?? ""),
+      },
+      body: JSON.stringify((req as any).body ?? {}),
+    });
+    const text = await delegated.text();
+    let parsed: any = {};
+    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+    return reply.status(delegated.status).send(parsed);
+  });
+
+  app.get("/api/v1/approval-requests", async (req, reply) => {
+    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
+    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
+    const qs = new URLSearchParams((req.query as any) ?? {}).toString();
+    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/requests${qs ? `?${qs}` : ""}`, {
+      method: "GET",
+      headers: {
+        authorization: String((req.headers as any)?.authorization ?? ""),
+      },
+    });
+    const text = await delegated.text();
+    let parsed: any = {};
+    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+    return reply.status(delegated.status).send(parsed);
+  });
+
+  app.post("/api/v1/approval-requests/:request_id/approve", async (req, reply) => {
+    const request_id = String((req.params as any)?.request_id ?? "").trim();
+    if (!request_id) return badRequest(reply, "MISSING_OR_INVALID:request_id");
+    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
+    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
+    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/approve`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: String((req.headers as any)?.authorization ?? ""),
+      },
+      body: JSON.stringify({ ...((req as any).body ?? {}), request_id }),
+    });
+    const text = await delegated.text();
+    let parsed: any = {};
+    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+    return reply.status(delegated.status).send(parsed);
+  });
 }
