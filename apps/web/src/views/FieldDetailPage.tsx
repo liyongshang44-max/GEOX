@@ -1,69 +1,171 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { createFieldSeason, fetchFieldDetail, type FieldSeason, type FieldDetail } from "../lib/api";
+import FieldGisMap from "../components/FieldGisMap";
+import { createFieldSeason, fetchFieldDetail } from "../lib/api";
 
-function fmtTs(ms: number | null | undefined): string { if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "-"; return new Date(ms).toLocaleString(); }
-function fmtIso(ts: string | null | undefined): string { if (!ts) return "-"; const ms = Date.parse(ts); return Number.isFinite(ms) ? new Date(ms).toLocaleString() : String(ts); }
-function prettyJson(v: unknown): string { try { return JSON.stringify(v, null, 2); } catch { return String(v ?? ""); } }
-function seasonTone(status: string): string { if (status === "ACTIVE") return "ok"; if (status === "CLOSED") return "default"; return "warn"; }
-function nextSeasonId(fieldId: string): string { const year = new Date().getFullYear(); return `${fieldId}_season_${year}`; }
-function miniSeries(points: Array<{ ts_ms: number; value_num: number | null }>): string { if (!Array.isArray(points) || points.length === 0) return "暂无数据"; return points.slice(-8).map((point) => `${new Date(point.ts_ms).getHours()}:00 ${point.value_num == null ? "-" : Number(point.value_num).toFixed(1)}`).join("  |  "); }
-function extractPolygonRings(geojson: any): number[][][] { if (!geojson || typeof geojson !== "object") return []; if (geojson.type === "Polygon" && Array.isArray(geojson.coordinates)) return geojson.coordinates as number[][][]; if (geojson.type === "MultiPolygon" && Array.isArray(geojson.coordinates) && Array.isArray(geojson.coordinates[0])) return geojson.coordinates[0] as number[][][]; return []; }
-function projectPoint(lon: number, lat: number, bounds: { minLon: number; maxLon: number; minLat: number; maxLat: number }): { x: number; y: number } { const width = 320; const height = 220; const lonSpan = Math.max(0.00001, bounds.maxLon - bounds.minLon); const latSpan = Math.max(0.00001, bounds.maxLat - bounds.minLat); return { x: 16 + ((lon - bounds.minLon) / lonSpan) * (width - 32), y: 16 + (1 - (lat - bounds.minLat) / latSpan) * (height - 32) }; }
-function buildPolygonPreview(geojson: any): { path: string; bounds: { minLon: number; maxLon: number; minLat: number; maxLat: number } | null } { const rings = extractPolygonRings(geojson); const outer = rings[0] || []; if (!outer.length) return { path: '', bounds: null }; const lons = outer.map((p) => Number(p?.[0])).filter(Number.isFinite); const lats = outer.map((p) => Number(p?.[1])).filter(Number.isFinite); if (!lons.length || !lats.length) return { path: '', bounds: null }; const bounds = { minLon: Math.min(...lons), maxLon: Math.max(...lons), minLat: Math.min(...lats), maxLat: Math.max(...lats) }; const path = outer.map((p, idx) => { const pt = projectPoint(Number(p[0]), Number(p[1]), bounds); return `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`; }).join(' ') + ' Z'; return { path, bounds }; }
-type FieldTab = "overview" | "map" | "sensors" | "jobs" | "alerts";
+function fmtTs(ms: number | null | undefined): string {
+  if (!ms || !Number.isFinite(ms)) return "-";
+  return new Date(ms).toLocaleString();
+}
+function fmtIso(ts: string | null | undefined): string {
+  if (!ts) return "-";
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) ? new Date(ms).toLocaleString() : ts;
+}
+function nextSeasonId(fieldId: string): string {
+  return `${fieldId}_season_${new Date().getFullYear()}`;
+}
+
+type FieldTab = "overview" | "map" | "jobs" | "alerts";
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
-  const [token, setToken] = React.useState<string>(() => { try { return localStorage.getItem("geox_ao_act_token") || "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4"; } catch { return "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4"; } });
-  const [detail, setDetail] = React.useState<FieldDetail | null>(null);
-  const [status, setStatus] = React.useState<string>("");
-  const [busy, setBusy] = React.useState<boolean>(false);
+  const [token, setToken] = React.useState<string>(() => localStorage.getItem("geox_ao_act_token") || "");
+  const [detail, setDetail] = React.useState<any>(null);
+  const [busy, setBusy] = React.useState(false);
+  const [status, setStatus] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
-  const [seasonId, setSeasonId] = React.useState<string>(() => nextSeasonId(fieldId || "field"));
-  const [seasonName, setSeasonName] = React.useState<string>("春季作业季");
-  const [seasonCrop, setSeasonCrop] = React.useState<string>("水稻");
-  const [seasonStatus, setSeasonStatus] = React.useState<"PLANNED" | "ACTIVE" | "CLOSED">("PLANNED");
-  const [seasonStartDate, setSeasonStartDate] = React.useState<string>(`${new Date().getFullYear()}-03-01`);
-  const [seasonEndDate, setSeasonEndDate] = React.useState<string>(`${new Date().getFullYear()}-09-30`);
 
-  function persistToken(next: string): void { setToken(next); try { localStorage.setItem("geox_ao_act_token", next); } catch {} }
-  async function refresh(): Promise<void> {
-    if (!fieldId) return;
-    setBusy(true); setStatus(`正在读取田块 ${fieldId} ...`);
-    try { const nextDetail = await fetchFieldDetail(token, fieldId); setDetail(nextDetail); setStatus(`田块 ${fieldId} 已加载。`); }
-    catch (e: any) { setStatus(`读取失败：${e?.message || String(e)}`); }
-    finally { setBusy(false); }
-  }
-  async function submitSeason(): Promise<void> {
-    if (!fieldId) return;
-    setBusy(true); setStatus(`正在保存季节 ${seasonId} ...`);
+  const [seasonId, setSeasonId] = React.useState(nextSeasonId(fieldId || "field"));
+  const [seasonName, setSeasonName] = React.useState("春季作业季");
+  const [seasonCrop, setSeasonCrop] = React.useState("水稻");
+  const [seasonStatus, setSeasonStatus] = React.useState<"PLANNED" | "ACTIVE" | "CLOSED">("PLANNED");
+
+  const persistToken = (v: string) => {
+    setToken(v);
+    localStorage.setItem("geox_ao_act_token", v);
+  };
+
+  const refresh = React.useCallback(async () => {
+    if (!fieldId || !token) return;
+    setBusy(true);
+    setStatus("加载中...");
     try {
-      await createFieldSeason(token, fieldId, { season_id: seasonId, name: seasonName, crop: seasonCrop || null, start_date: seasonStartDate || null, end_date: seasonEndDate || null, status: seasonStatus });
-      setStatus(`季节 ${seasonId} 已保存。`); await refresh();
-    } catch (e: any) { setStatus(`保存失败：${e?.message || String(e)}`); }
-    finally { setBusy(false); }
-  }
-  React.useEffect(() => { if (fieldId) setSeasonId(nextSeasonId(fieldId)); void refresh(); }, [fieldId]);
-  const seasons: FieldSeason[] = detail?.seasons || [];
-  const polygonJson = detail?.polygon?.geojson_json ?? null;
-  const tabs: Array<{ key: FieldTab; label: string }> = [{ key: "overview", label: "概览" }, { key: "map", label: "地图" }, { key: "sensors", label: "传感器" }, { key: "jobs", label: "作业" }, { key: "alerts", label: "告警" }];
-  const tempSeries = (detail?.sensor_trends?.soil_temp_c?.length ? detail.sensor_trends.soil_temp_c : (detail?.sensor_trends?.soil_temp || []));
-  const polygonPreview = buildPolygonPreview(polygonJson || detail?.polygon?.geojson_json || detail?.polygon?.geojson);
-  const mapMarkers = Array.isArray((detail as any)?.map_layers?.markers) ? (detail as any).map_layers.markers : [];
-  const heatPoints = Array.isArray((detail as any)?.map_layers?.heat_points) ? (detail as any).map_layers.heat_points : [];
+      const next = await fetchFieldDetail(token, fieldId);
+      setDetail(next);
+      setStatus("加载成功");
+    } catch (e: any) {
+      setStatus(`加载失败：${e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }, [fieldId, token]);
+
+  React.useEffect(() => {
+    setSeasonId(nextSeasonId(fieldId || "field"));
+    void refresh();
+  }, [fieldId, refresh]);
+
+  const submitSeason = async () => {
+    if (!fieldId) return;
+    setBusy(true);
+    try {
+      await createFieldSeason(token, fieldId, {
+        season_id: seasonId,
+        name: seasonName,
+        crop: seasonCrop,
+        status: seasonStatus,
+      });
+      setStatus(`季节 ${seasonId} 已保存`);
+      await refresh();
+    } catch (e: any) {
+      setStatus(`保存失败：${e?.message || String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const tabs: FieldTab[] = ["overview", "map", "jobs", "alerts"];
+  const polygonGeo = detail?.polygon?.geojson_json;
+  const mapMarkers = detail?.map_layers?.markers || [];
+  const trajectoryGeo = detail?.map_layers?.trajectory_geojson || { type: "FeatureCollection", features: [] };
+  const heatGeo = detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] };
+  const jobHistory = detail?.map_layers?.job_history || [];
 
   return (
-    <div className="consolePage">
-      <section className="hero card compactHero"><div><div className="eyebrow">Field Detail · Sprint F2</div><h2 className="heroTitle">{detail?.field?.name || fieldId || "田块详情"}</h2><p className="heroText">本轮把田块页收口到 Commercial v1 的 5 Tab 最小版：概览、地图、传感器、作业、告警。重点是把设备、遥测、作业与告警都挂到同一地块上下文里。</p></div><div className="heroActions"><Link className="btn" to="/fields">返回田块列表</Link><button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新详情</button></div></section>
-      <div className="summaryGrid"><div className="metricCard card"><div className="metricLabel">绑定设备</div><div className="metricValue">{detail?.summary?.device_count ?? "-"}</div><div className="metricHint">在线 {detail?.summary?.online_device_count ?? 0} 台</div></div><div className="metricCard card"><div className="metricLabel">活跃告警</div><div className="metricValue">{detail?.summary?.active_alerts ?? "-"}</div><div className="metricHint">FIELD 维度 OPEN / ACKED</div></div><div className="metricCard card"><div className="metricLabel">最近作业回执</div><div className="metricValue">{detail?.recent_receipts?.length ?? 0}</div><div className="metricHint">最近 10 条 field 相关执行回执</div></div><div className="metricCard card"><div className="metricLabel">运行状态</div><div className="metricValue">{detail?.field?.status || "-"}</div><div className="metricHint">{status || "等待同步"}</div></div></div>
-      <section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">田块工作台</div><div className="sectionDesc">在同一详情页内切换地块主数据、边界、传感器趋势、作业与告警，降低一线巡检与演示切屏成本。</div></div></div><div className="heroActions" style={{ marginBottom: 16, flexWrap: "wrap" }}>{tabs.map((tab) => (<button key={tab.key} className={`btn ${activeTab === tab.key ? "primary" : ""}`} onClick={() => setActiveTab(tab.key)}>{tab.label}</button>))}</div>
-      {activeTab === "overview" ? <div className="contentGridTwo alignStart"><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">地块概览</div><div className="sectionDesc">主数据、摘要、设备与 season 的组合视图。</div></div></div><label className="field">访问令牌<input className="input" value={token} onChange={(e) => persistToken(e.target.value)} /></label><div className="kv"><span className="k">田块 ID</span><span className="v">{detail?.field?.field_id || fieldId || "-"}</span></div><div className="kv"><span className="k">面积</span><span className="v">{typeof detail?.field?.area_ha === "number" ? `${detail.field.area_ha} ha` : "-"}</span></div><div className="kv"><span className="k">创建时间</span><span className="v">{fmtTs(detail?.field?.created_ts_ms)}</span></div><div className="kv"><span className="k">更新时间</span><span className="v">{fmtTs(detail?.field?.updated_ts_ms)}</span></div><div className="kv"><span className="k">最近遥测</span><span className="v">{fmtTs(detail?.summary?.latest_telemetry_ts_ms)}</span></div><div className="kv"><span className="k">季节数量</span><span className="v">{seasons.length}</span></div></section><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">绑定设备</div><div className="sectionDesc">显示设备绑定、在线状态与最近心跳。</div></div></div><div className="list modernList">{(detail?.bound_devices || []).map((device) => (<div key={device.device_id} className="infoCard"><div className="jobTitleRow"><div className="title">{device.device_id}</div><div className={`pill tone-${device.connection_status === "ONLINE" ? "ok" : "warn"}`}>{device.connection_status}</div></div><div className="meta"><span>绑定：{fmtTs(device.bound_ts_ms)}</span><span>心跳：{fmtTs(device.last_heartbeat_ts_ms)}</span><span>电量：{typeof device.battery_percent === "number" ? `${device.battery_percent}%` : "-"}</span><span>固件：{device.fw_ver || "-"}</span></div></div>))}{!detail?.bound_devices?.length ? <div className="emptyState">当前田块还没有绑定设备。</div> : null}</div></section><section className="card sectionBlock" style={{ gridColumn: "1 / -1" }}><div className="sectionHeader"><div><div className="sectionTitle">田块季节</div><div className="sectionDesc">最小 season 创建与查看，支撑按季归档与导出。</div></div></div><div className="formGrid twoCols"><label className="field">季节 ID<input className="input" value={seasonId} onChange={(e) => setSeasonId(e.target.value)} /></label><label className="field">季节名称<input className="input" value={seasonName} onChange={(e) => setSeasonName(e.target.value)} /></label><label className="field">作物<input className="input" value={seasonCrop} onChange={(e) => setSeasonCrop(e.target.value)} /></label><label className="field">状态<select className="select" value={seasonStatus} onChange={(e) => setSeasonStatus(e.target.value as any)}><option value="PLANNED">PLANNED</option><option value="ACTIVE">ACTIVE</option><option value="CLOSED">CLOSED</option></select></label><label className="field">开始日期<input className="input" value={seasonStartDate} onChange={(e) => setSeasonStartDate(e.target.value)} /></label><label className="field">结束日期<input className="input" value={seasonEndDate} onChange={(e) => setSeasonEndDate(e.target.value)} /></label></div><div style={{ marginTop: 12 }}><button className="btn primary" onClick={() => void submitSeason()} disabled={busy}>保存季节</button></div><div className="seasonList">{seasons.map((season) => (<div key={season.season_id} className="seasonCard"><div className="jobTitleRow"><div className="title">{season.name}</div><div className={`pill tone-${seasonTone(season.status)}`}>{season.status}</div></div><div className="meta"><span>ID：{season.season_id}</span><span>作物：{season.crop || "-"}</span><span>日期：{season.start_date || "-"} → {season.end_date || "-"}</span><span>更新：{fmtTs(season.updated_ts_ms)}</span></div></div>))}{!seasons.length ? <div className="emptyState">当前还没有季节记录。</div> : null}</div></section></div> : null}
-      {activeTab === "map" ? <div className="contentGridTwo alignStart"><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">地图预览</div><div className="sectionDesc">当前以轻量 SVG 预览地块边界，并叠加设备最近定位点；真实底图组件可以在此稳定数据面上继续替换。</div></div></div>{detail?.polygon ? <><div className="kv"><span className="k">最近更新</span><span className="v">{fmtTs(detail.polygon.updated_ts_ms)}</span></div><div className="kv"><span className="k">GeoJSON 类型</span><span className="v">{polygonJson?.type || "-"}</span></div><div style={{ borderRadius: 16, border: '1px solid rgba(0,0,0,0.08)', background: '#f8fafc', padding: 12, marginTop: 12 }}><svg viewBox="0 0 320 220" style={{ width: '100%', height: 260 }}>{polygonPreview.path ? <path d={polygonPreview.path} fill="rgba(37,99,235,0.12)" stroke="currentColor" strokeWidth="2" /> : null}{polygonPreview.bounds ? mapMarkers.map((marker: any) => { const pt = projectPoint(Number(marker.lon), Number(marker.lat), polygonPreview.bounds!); return <g key={`${marker.device_id}_${marker.ts_ms || 0}`}><circle cx={pt.x} cy={pt.y} r="5" /><text x={pt.x + 8} y={pt.y - 8} fontSize="12">{marker.device_id}</text></g>; }) : null}</svg></div><div className="meta wrapMeta" style={{ marginTop: 12 }}><span>设备定位点：{mapMarkers.length}</span><span>最近 7 天告警热区：{heatPoints.length}</span><span>轨迹底数：当前使用最近定位点，后续可接作业轨迹流</span></div></> : <div className="emptyState">当前田块还没有边界。</div>}</section><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">图层摘要</div><div className="sectionDesc">把地图相关的设备点位与告警热度拆成清晰表述，方便没有 GIS 组件时也能看懂。</div></div></div><div className="list modernList">{mapMarkers.map((marker: any) => (<div key={`${marker.device_id}_${marker.ts_ms || 0}`} className="infoCard"><div className="jobTitleRow"><div className="title">{marker.device_id}</div><div className="pill tone-info">{marker.source || 'geo'}</div></div><div className="meta"><span>纬度：{Number(marker.lat).toFixed(6)}</span><span>经度：{Number(marker.lon).toFixed(6)}</span><span>时间：{fmtTs(marker.ts_ms)}</span></div></div>))}{!mapMarkers.length ? <div className="emptyState">当前还没有设备上报 geo 点位；地图预览仍保留边界层。</div> : null}</div><div className="list modernList" style={{ marginTop: 12 }}>{heatPoints.map((item: any) => (<div key={`${item.object_id}_${item.metric}`} className="infoCard"><div className="jobTitleRow"><div className="title">{item.metric || 'alert'}</div><div className="pill tone-warn">{item.count} 次</div></div><div className="meta"><span>对象：{item.object_id}</span><span>最近触发：{fmtTs(item.last_raised_ts_ms)}</span></div></div>))}{!heatPoints.length ? <div className="emptyState">最近 7 天暂无地图热区数据。</div> : null}</div></section></div> : null}
-      {activeTab === "sensors" ? <div className="contentGridTwo alignStart"><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">土壤湿度趋势</div><div className="sectionDesc">过去 24 小时按小时聚合。</div></div></div><div className="metricValue">{detail?.sensor_trends?.soil_moisture?.length ?? 0}</div><div className="metricHint">小时点位数</div><pre className="jsonPreview">{miniSeries(detail?.sensor_trends?.soil_moisture || [])}</pre></section><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">土壤温度趋势</div><div className="sectionDesc">过去 24 小时按小时聚合。</div></div></div><div className="metricValue">{tempSeries.length}</div><div className="metricHint">小时点位数</div><pre className="jsonPreview">{miniSeries(tempSeries)}</pre></section></div> : null}
-      {activeTab === "jobs" ? <div className="contentGridTwo alignStart"><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">最近作业</div><div className="sectionDesc">展示命中当前地块绑定设备的最近 AO-ACT 任务。</div></div></div><div className="list modernList">{(detail?.recent_tasks || []).map((item) => (<div key={item.fact_id} className="infoCard"><div className="jobTitleRow"><div className="title">{item.task?.payload?.task_type || item.task?.payload?.action_type || "AO-ACT"}</div><div className="pill tone-default">{item.task?.payload?.act_task_id || item.fact_id}</div></div><div className="meta"><span>时间：{fmtIso(item.occurred_at)}</span><span>设备：{item.task?.payload?.meta?.device_id || "-"}</span><span>状态：{item.task?.payload?.status || "CREATED"}</span></div></div>))}{!detail?.recent_tasks?.length ? <div className="emptyState">当前地块还没有匹配的作业记录。</div> : null}</div></section><section className="card sectionBlock"><div className="sectionHeader"><div><div className="sectionTitle">最近回执</div><div className="sectionDesc">显示设备执行回执。</div></div></div><div className="list modernList">{(detail?.recent_receipts || []).map((item) => (<div key={item.fact_id} className="infoCard"><div className="jobTitleRow"><div className="title">{item.receipt?.payload?.act_task_id || item.fact_id}</div><div className="pill tone-ok">{item.receipt?.payload?.status || item.receipt?.payload?.receipt_type || "RECEIPT"}</div></div><div className="meta"><span>时间：{fmtIso(item.occurred_at)}</span><span>设备：{item.device_id || item.receipt?.payload?.device_id || "-"}</span></div></div>))}{!detail?.recent_receipts?.length ? <div className="emptyState">当前地块还没有匹配的设备回执。</div> : null}</div></section></div> : null}
-      {activeTab === "alerts" ? <div className="contentGridTwo alignStart"><section className="card sectionBlock" style={{ gridColumn: "1 / -1" }}><div className="sectionHeader"><div><div className="sectionTitle">最近告警</div><div className="sectionDesc">字段维度最近 10 条告警。</div></div></div><div className="list modernList">{(detail?.recent_alerts || []).map((event) => (<div key={event.event_id} className="infoCard"><div className="jobTitleRow"><div className="title">{event.metric || "alert"}</div><div className={`pill tone-${event.status === "OPEN" ? "warn" : event.status === "ACKED" ? "default" : "ok"}`}>{event.status}</div></div><div className="meta"><span>事件：{event.event_id}</span><span>规则：{event.rule_id}</span><span>触发：{fmtTs(event.raised_ts_ms)}</span></div></div>))}{!detail?.recent_alerts?.length ? <div className="emptyState">当前地块还没有告警事件。</div> : null}</div></section></div> : null}
+    <div className="layoutStack">
+      <div className="pageHeaderRow">
+        <div>
+          <h1 className="pageTitle">田块详情</h1>
+          <div className="pageSubtitle">{fieldId || "-"}</div>
+        </div>
+        <Link className="btn ghost" to="/fields">返回列表</Link>
+      </div>
+
+      <section className="card sectionBlock">
+        <div className="fieldRow">
+          <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="AO-ACT Token" />
+          <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
+          <span className="muted">{status}</span>
+        </div>
+      </section>
+
+      <section className="card sectionBlock">
+        <div className="tabBar">{tabs.map((t) => (
+          <button key={t} className={`tabBtn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>{t}</button>
+        ))}</div>
+
+        {activeTab === "overview" && (
+          <div className="contentGridTwo alignStart">
+            <div className="infoCard">
+              <div>名称：{detail?.field?.name || "-"}</div>
+              <div>面积：{detail?.field?.area_ha ?? "-"} ha</div>
+              <div>状态：{detail?.field?.status || "-"}</div>
+              <div>设备数：{detail?.summary?.device_count ?? 0}</div>
+            </div>
+            <div className="infoCard">
+              <div className="fieldRow">
+                <input className="input" value={seasonId} onChange={(e) => setSeasonId(e.target.value)} placeholder="season_id" />
+                <input className="input" value={seasonName} onChange={(e) => setSeasonName(e.target.value)} placeholder="季节名称" />
+                <input className="input" value={seasonCrop} onChange={(e) => setSeasonCrop(e.target.value)} placeholder="作物" />
+                <select className="input" value={seasonStatus} onChange={(e) => setSeasonStatus(e.target.value as any)}>
+                  <option value="PLANNED">PLANNED</option><option value="ACTIVE">ACTIVE</option><option value="CLOSED">CLOSED</option>
+                </select>
+                <button className="btn" onClick={() => void submitSeason()}>保存季节</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "map" && (
+          <div className="layoutStack">
+            <FieldGisMap polygonGeoJson={polygonGeo} trajectoryGeoJson={trajectoryGeo} heatGeoJson={heatGeo} markers={mapMarkers} />
+            <div className="meta wrapMeta">
+              <span>设备轨迹：{trajectoryGeo?.features?.length || 0}</span>
+              <span>设备定位点：{mapMarkers.length}</span>
+              <span>告警热力点：{heatGeo?.features?.length || 0}</span>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "jobs" && (
+          <div className="list modernList">
+            {jobHistory.map((item: any) => (
+              <div key={item.id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">{item.task_type || "作业"}</div><div className="pill tone-default">{item.device_id || "-"}</div></div>
+                <div className="meta">
+                  <span>时间：{fmtTs(item.ts_ms)}</span>
+                  <span>位置：{item.location ? `${item.location.lat.toFixed(5)}, ${item.location.lon.toFixed(5)}` : "-"}</span>
+                  <span>轨迹点：{item.trajectory_points ?? 0}</span>
+                </div>
+              </div>
+            ))}
+            {!jobHistory.length && <div className="emptyState">暂无作业历史轨迹数据</div>}
+          </div>
+        )}
+
+        {activeTab === "alerts" && (
+          <div className="list modernList">
+            {(detail?.recent_alerts || []).map((event: any) => (
+              <div key={event.event_id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">{event.metric || "alert"}</div><div className="pill tone-warn">{event.status}</div></div>
+                <div className="meta"><span>对象：{event.object_id}</span><span>触发：{fmtTs(event.raised_ts_ms)}</span><span>时间：{fmtIso(event.raised_at)}</span></div>
+              </div>
+            ))}
+            {!detail?.recent_alerts?.length && <div className="emptyState">暂无告警</div>}
+          </div>
+        )}
       </section>
     </div>
   );
