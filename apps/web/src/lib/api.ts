@@ -613,7 +613,6 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
     },
   };
 }
-
 export async function fetchDeviceOnboardingStatus(token: string, deviceId: string): Promise<any> {
   try {
     return await requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/onboarding-status`, {
