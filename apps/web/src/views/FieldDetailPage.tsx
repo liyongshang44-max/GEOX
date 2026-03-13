@@ -18,6 +18,13 @@ function nextSeasonId(fieldId: string): string {
 
 type FieldTab = "overview" | "map" | "jobs" | "alerts";
 
+const FIELD_TAB_LABELS: Record<FieldTab, string> = {
+  overview: "概览",
+  map: "地图",
+  jobs: "作业",
+  alerts: "告警",
+};
+
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
@@ -103,7 +110,7 @@ export default function FieldDetailPage(): React.ReactElement {
 
       <section className="card sectionBlock">
         <div className="tabBar">{tabs.map((t) => (
-          <button key={t} className={`tabBtn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>{t}</button>
+          <button key={t} className={`tabBtn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>{FIELD_TAB_LABELS[t]}</button>
         ))}</div>
 
         {activeTab === "overview" && (
@@ -148,6 +155,8 @@ export default function FieldDetailPage(): React.ReactElement {
                   <span>时间：{fmtTs(item.ts_ms)}</span>
                   <span>位置：{item.location ? `${item.location.lat.toFixed(5)}, ${item.location.lon.toFixed(5)}` : "-"}</span>
                   <span>轨迹点：{item.trajectory_points ?? 0}</span>
+                  <span>轨迹窗口：{item.trajectory_window_start_ts_ms ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}` : "-"}</span>
+                  <span>时间来源：{item.timing_source || "-"}</span>
                 </div>
               </div>
             ))}

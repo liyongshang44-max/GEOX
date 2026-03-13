@@ -82,7 +82,7 @@ export class JudgeRuntime {
       }
     }
 
-    return { run_id, ...output };
+    return output;
   }
 
   listProblemStates(limit = 100): any[] {

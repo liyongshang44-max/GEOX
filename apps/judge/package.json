@@ -4,6 +4,7 @@
     "private":  true,
     "main":  "dist/server.js",
     "types":  "dist/server.d.ts",
+    "type": "module",  
     "dependencies":  {
                          "fastify":  "^4.28.1",
                          "pg":  "^8.12.0",
@@ -15,9 +16,11 @@
                             "@types/node":  "^20.14.10",
                             "@types/pg":  "^8.10.0"
                         },
-    "scripts":  {
-                    "dev":  "tsx watch src/server.ts",
-                    "start":  "node dist/server.js",
-                    "build":  "node -e \"process.exit(0)\""
-                }
+   
+  "scripts": {
+    "dev": "pnpm -w exec tsx watch apps/judge/src/server.ts",
+    "build": "pnpm -w exec tsc -p apps/judge/tsconfig.json",
+    "typecheck": "pnpm -w exec tsc --noEmit -p apps/judge/tsconfig.json"
+  }
+
 }

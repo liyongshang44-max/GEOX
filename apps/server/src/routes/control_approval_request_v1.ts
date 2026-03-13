@@ -133,6 +133,12 @@ function parseRecordJsonMaybe(v: any): any {
   return null;
 }
 
+function buildInternalBaseUrl(req: any): string {
+  const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http"); // Prefer forwarded proto when present.
+  const localPortRaw = Number((req.socket as any)?.localPort ?? 3000); // Actual listener port on this process/container.
+  const localPort = Number.isFinite(localPortRaw) && localPortRaw > 0 ? localPortRaw : 3000; // Safe fallback.
+  return `${proto}://127.0.0.1:${localPort}`; // Loop back into the same server instance.
+}
 
 export function registerControlApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
   // POST /api/control/approval_request/v1/request
@@ -289,8 +295,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
       if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
 
       // Issue AO-ACT task by calling the existing endpoint with the same Authorization header.
-      const host = String((req.headers as any).host ?? "127.0.0.1:3000");
-      const url = `http://${host}/api/control/ao_act/task`;
+      const url = `${buildInternalBaseUrl(req)}/api/control/ao_act/task`;
       const authz = String((req.headers as any)["authorization"] ?? "");
 
       const aoActBody = {
@@ -358,9 +363,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
 
   // /api/v1 aliases to keep naming consistent without breaking legacy control path.
   app.post("/api/v1/approval-requests", async (req, reply) => {
-    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
-    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
-    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/request`, {
+    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/request`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -375,10 +378,8 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
   });
 
   app.get("/api/v1/approval-requests", async (req, reply) => {
-    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
-    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
     const qs = new URLSearchParams((req.query as any) ?? {}).toString();
-    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/requests${qs ? `?${qs}` : ""}`, {
+    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/requests${qs ? `?${qs}` : ""}`, {
       method: "GET",
       headers: {
         authorization: String((req.headers as any)?.authorization ?? ""),
@@ -393,9 +394,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
   app.post("/api/v1/approval-requests/:request_id/approve", async (req, reply) => {
     const request_id = String((req.params as any)?.request_id ?? "").trim();
     if (!request_id) return badRequest(reply, "MISSING_OR_INVALID:request_id");
-    const host = String((req.headers as any)?.host ?? "127.0.0.1:3000");
-    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
-    const delegated = await fetch(`${proto}://${host}/api/control/approval_request/v1/approve`, {
+    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/approve`, {
       method: "POST",
       headers: {
         "content-type": "application/json",

@@ -83,10 +83,13 @@ function parseJsonOrNull(v: any): any | null { // Helper: parse a JSON string wh
 } // End helper.
 
 type FieldMapMarkerV1 = { device_id: string; lat: number; lon: number; source: string; ts_ms: number | null; }; // Latest resolved device marker for map tab.
-type FieldMapHeatPointV1 = { object_id: string; metric: string; count: number; last_raised_ts_ms: number; }; // Aggregated recent alert heat row.
+type FieldMapHeatPointV1 = { object_id: string; object_type: "FIELD" | "DEVICE"; metric: string; count: number; last_raised_ts_ms: number; }; // Aggregated recent alert heat row.
 type FieldTrajectoryPointV1 = { lat: number; lon: number; ts_ms: number; }; // Ordered trajectory point.
 type FieldDeviceTrajectoryV1 = { device_id: string; points: FieldTrajectoryPointV1[]; geojson: any; }; // Device trajectory payload.
 
+type GeoPointV1 = { lat: number; lon: number; }; // Generic geographic point.
+
+type TaskTimingV1 = { anchor_ts_ms: number | null; start_ts_ms: number | null; end_ts_ms: number | null; source: string; }; // Best-effort task timing metadata.
 
 function toGeoJsonTrajectory(device_id: string, points: FieldTrajectoryPointV1[]): any { // Build GeoJSON feature from device trajectory points.
   return {
@@ -99,17 +102,87 @@ function toGeoJsonTrajectory(device_id: string, points: FieldTrajectoryPointV1[]
   };
 } // End helper.
 
-function toHeatGeoJson(points: FieldMapHeatPointV1[], markerByDevice: Map<string, FieldMapMarkerV1>, fieldMarker: FieldMapMarkerV1 | null): any { // Convert aggregated heat rows into GeoJSON points.
+function collectCoordinatePairs(raw: any, out: Array<[number, number]>): void { // Recursively collect [lon,lat] pairs from GeoJSON coordinates.
+  if (!Array.isArray(raw)) return; // Ignore non-arrays.
+  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) { // Detect a coordinate pair.
+    out.push([Number(raw[0]), Number(raw[1])]); // Store normalized pair.
+    return; // Stop descending at the pair level.
+  }
+  for (const item of raw) collectCoordinatePairs(item, out); // Recurse through nested coordinate arrays.
+} // End helper.
+
+function extractGeoPoints(geo: any): GeoPointV1[] { // Flatten supported GeoJSON shapes into lat/lon points.
+  if (!geo || typeof geo !== "object") return []; // Missing => empty.
+  const type = String((geo as any).type ?? ""); // GeoJSON discriminator.
+  if (type === "Feature") return extractGeoPoints((geo as any).geometry); // Unwrap feature.
+  if (type === "FeatureCollection") return Array.isArray((geo as any).features) ? (geo as any).features.flatMap((f: any) => extractGeoPoints(f)) : []; // Flatten collection.
+  const pairs: Array<[number, number]> = []; // Coordinate pairs accumulator.
+  if (type === "Point") {
+    const coordinates = (geo as any).coordinates; // Point coordinates.
+    if (Array.isArray(coordinates) && coordinates.length >= 2) pairs.push([Number(coordinates[0]), Number(coordinates[1])]); // Add point when valid.
+  } else if (type === "Polygon" || type === "MultiPolygon" || type === "LineString" || type === "MultiLineString") {
+    collectCoordinatePairs((geo as any).coordinates, pairs); // Flatten supported coordinate containers.
+  }
+  return pairs.filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180).map(([lon, lat]) => ({ lat, lon })); // Return normalized valid points.
+} // End helper.
+
+function computeCentroid(geo: any): GeoPointV1 | null { // Compute a simple centroid from flattened GeoJSON coordinates.
+  const points = extractGeoPoints(geo); // Flatten available coordinates.
+  if (points.length === 0) return null; // No geometry => no centroid.
+  const totals = points.reduce((acc, pt) => ({ lat: acc.lat + pt.lat, lon: acc.lon + pt.lon }), { lat: 0, lon: 0 }); // Sum coordinates.
+  return { lat: totals.lat / points.length, lon: totals.lon / points.length }; // Arithmetic centroid is sufficient for field-scale maps.
+} // End helper.
+
+function toHeatGeoJson(points: FieldMapHeatPointV1[], markerByDevice: Map<string, FieldMapMarkerV1>, fieldPoint: GeoPointV1 | null): any { // Convert aggregated heat rows into GeoJSON points.
   const features = points.map((p) => {
-    const marker = markerByDevice.get(p.object_id) || fieldMarker;
-    if (!marker) return null;
+    const geo = p.object_type === "DEVICE" ? markerByDevice.get(p.object_id) ?? null : fieldPoint; // DEVICE alerts require a real device marker; FIELD alerts use field centroid.
+    if (!geo) return null; // Skip unresolved positions instead of fabricating a point.
     return {
       type: "Feature",
-      properties: { object_id: p.object_id, metric: p.metric, count: p.count, intensity: p.count, last_raised_ts_ms: p.last_raised_ts_ms },
-      geometry: { type: "Point", coordinates: [marker.lon, marker.lat] },
+      properties: { object_id: p.object_id, object_type: p.object_type, metric: p.metric, count: p.count, intensity: p.count, last_raised_ts_ms: p.last_raised_ts_ms },
+      geometry: { type: "Point", coordinates: [geo.lon, geo.lat] },
     };
   }).filter(Boolean);
   return { type: "FeatureCollection", features };
+} // End helper.
+
+function buildTaskTiming(task: any, receipt: any, fallback_ts_ms: number | null): TaskTimingV1 { // Build a best-effort task timing window using task and receipt payloads.
+  const taskPayload = task?.payload ?? {}; // Task payload envelope.
+  const receiptPayload = receipt?.payload ?? {}; // Receipt payload envelope.
+  const taskWindowStart = Number(taskPayload?.time_window?.start_ts ?? 0); // Planned window start.
+  const taskWindowEnd = Number(taskPayload?.time_window?.end_ts ?? 0); // Planned window end.
+  const receiptStart = Number(receiptPayload?.execution_time?.start_ts ?? 0); // Actual execution start.
+  const receiptEnd = Number(receiptPayload?.execution_time?.end_ts ?? 0); // Actual execution end.
+  const start_ts_ms = Number.isFinite(receiptStart) && receiptStart > 0 ? receiptStart : (Number.isFinite(taskWindowStart) && taskWindowStart > 0 ? taskWindowStart : null); // Prefer actual execution start.
+  const end_ts_ms = Number.isFinite(receiptEnd) && receiptEnd > 0 ? receiptEnd : (Number.isFinite(taskWindowEnd) && taskWindowEnd > 0 ? taskWindowEnd : null); // Prefer actual execution end.
+  const anchor_ts_ms = end_ts_ms ?? start_ts_ms ?? fallback_ts_ms ?? null; // Anchor at task end, then start, then fact time.
+  const source = end_ts_ms != null ? (receiptEnd > 0 ? "receipt.execution_time.end_ts" : "task.time_window.end_ts") : (start_ts_ms != null ? (receiptStart > 0 ? "receipt.execution_time.start_ts" : "task.time_window.start_ts") : (fallback_ts_ms != null ? "fact.occurred_at" : "none")); // Audit source of timing.
+  return { anchor_ts_ms, start_ts_ms, end_ts_ms, source };
+} // End helper.
+
+function findNearestPoint(points: FieldTrajectoryPointV1[], anchor_ts_ms: number | null, maxDistanceMs: number): FieldTrajectoryPointV1 | null { // Find the nearest point to a timestamp within a conservative tolerance.
+  if (!points.length || anchor_ts_ms == null || !Number.isFinite(anchor_ts_ms)) return null; // Require data and anchor.
+  let best: FieldTrajectoryPointV1 | null = null; // Best candidate so far.
+  let bestDelta = Number.POSITIVE_INFINITY; // Smallest distance so far.
+  for (const pt of points) {
+    const delta = Math.abs(pt.ts_ms - anchor_ts_ms); // Absolute time delta.
+    if (delta <= maxDistanceMs && delta < bestDelta) { best = pt; bestDelta = delta; } // Keep closer point within tolerance.
+  }
+  return best; // Null when no point is close enough.
+} // End helper.
+
+function filterTrajectoryPointsForWindow(points: FieldTrajectoryPointV1[], start_ts_ms: number | null, end_ts_ms: number | null, anchor_ts_ms: number | null): FieldTrajectoryPointV1[] { // Filter trajectory points to the best available task window.
+  if (!points.length) return []; // Empty device trajectory => empty result.
+  if (start_ts_ms != null && end_ts_ms != null && end_ts_ms >= start_ts_ms) { // Use the explicit task window when valid.
+    const paddedStart = start_ts_ms - (10 * 60 * 1000); // Pad slightly to capture pre/post motion around the task.
+    const paddedEnd = end_ts_ms + (10 * 60 * 1000); // Symmetric end padding.
+    return points.filter((pt) => pt.ts_ms >= paddedStart && pt.ts_ms <= paddedEnd); // Window-filtered points.
+  }
+  if (anchor_ts_ms != null) { // Fall back to an anchor-centered window when only a single timestamp is known.
+    const span = 2 * 60 * 60 * 1000; // 2h centered fallback window.
+    return points.filter((pt) => Math.abs(pt.ts_ms - anchor_ts_ms) <= span); // Keep nearby points.
+  }
+  return []; // No usable timing metadata.
 } // End helper.
 function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null { // Normalize several geo payload shapes from device uplinks.
   if (!raw || typeof raw !== "object") return null; // Missing object.
@@ -486,22 +559,29 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     ) : { rows: [] as any[] }; // End geo marker query.
 
     const trajectoryFactsQ = boundDeviceIds.length > 0 ? await pool.query( // Build recent per-device trajectory from raw telemetry.
-      `SELECT (record_json::jsonb #>> '{entity,device_id}') AS device_id,
-              COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
-              (record_json::jsonb #> '{payload,geo}') AS geo_json
-         FROM facts
-        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
-          AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
-          AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
-          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
-          AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) >= $3
-        ORDER BY device_id ASC, ts_ms ASC
-        LIMIT 5000`,
+      `SELECT device_id, ts_ms, geo_json
+         FROM (
+           SELECT (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+                  COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+                  (record_json::jsonb #> '{payload,geo}') AS geo_json,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY (record_json::jsonb #>> '{entity,device_id}')
+                    ORDER BY COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) DESC, occurred_at DESC
+                  ) AS rn
+             FROM facts
+            WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+              AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+              AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+              AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+              AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) >= $3
+         ) ranked
+        WHERE rn <= 1500
+        ORDER BY device_id ASC, ts_ms ASC`,
       [auth.tenant_id, boundDeviceIds, Date.now() - 7 * 24 * 60 * 60 * 1000]
     ) : { rows: [] as any[] }; // End trajectory query.
 
     const heatRowsQ = await pool.query( // Aggregate recent alert density for the field map tab.
-      `SELECT object_id, metric, COUNT(*)::int AS count, MAX(raised_ts_ms)::bigint AS last_raised_ts_ms
+      `SELECT object_type, object_id, metric, COUNT(*)::int AS count, MAX(raised_ts_ms)::bigint AS last_raised_ts_ms
          FROM alert_event_index_v1
         WHERE tenant_id = $1
           AND raised_ts_ms >= $2
@@ -509,7 +589,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
             (object_type = 'FIELD' AND object_id = $3)
             OR (object_type = 'DEVICE' AND object_id = ANY($4::text[]))
           )
-        GROUP BY object_id, metric
+        GROUP BY object_type, object_id, metric
         ORDER BY count DESC, last_raised_ts_ms DESC
         LIMIT 20`,
       [auth.tenant_id, Date.now() - 7 * 24 * 60 * 60 * 1000, field_id, boundDeviceIds.length ? boundDeviceIds : ["__none__"]]
@@ -536,6 +616,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
 
     const heat_points: FieldMapHeatPointV1[] = (heatRowsQ.rows ?? []).map((row: any) => ({ // Normalize alert heat rows.
       object_id: String(row.object_id ?? ''),
+      object_type: String(row.object_type ?? '').toUpperCase() === 'FIELD' ? 'FIELD' : 'DEVICE',
       metric: String(row.metric ?? ''),
       count: Number(row.count ?? 0),
       last_raised_ts_ms: Number(row.last_raised_ts_ms ?? 0),
@@ -562,22 +643,48 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
 
     const markerByDevice = new Map<string, FieldMapMarkerV1>();
     for (const marker of map_markers) markerByDevice.set(marker.device_id, marker);
-    const fieldMarker = map_markers[0] || null;
-    const alert_heat_geojson = toHeatGeoJson(heat_points, markerByDevice, fieldMarker);
+    const fieldCentroid = computeCentroid(parseJsonOrNull(polyQ.rows?.[0]?.geojson) ?? polyQ.rows?.[0]?.geojson ?? null); // Derive a stable field-level fallback point from the polygon.
+    const alert_heat_geojson = toHeatGeoJson(heat_points, markerByDevice, fieldCentroid);
+
+    const trajectoryLookup = new Map<string, FieldDeviceTrajectoryV1>(); // Fast lookup for per-device trajectories.
+    for (const trajectory of trajectories) trajectoryLookup.set(trajectory.device_id, trajectory);
+
+    const recentReceipts = recentReceiptsQ.rows.map((row: any) => ({ // Normalize receipts for task association.
+      fact_id: String(row.fact_id ?? ''),
+      occurred_at_ms: Number(Date.parse(String(row.occurred_at ?? ''))) || null,
+      receipt: parseJsonOrNull(row.receipt_json) ?? row.receipt_json,
+    }));
+    const latestReceiptByTaskId = new Map<string, { receipt: any; occurred_at_ms: number | null }>(); // Latest receipt keyed by act_task_id.
+    for (const item of recentReceipts) {
+      const act_task_id = String(item.receipt?.payload?.act_task_id ?? '').trim();
+      if (!act_task_id) continue;
+      if (!latestReceiptByTaskId.has(act_task_id)) latestReceiptByTaskId.set(act_task_id, { receipt: item.receipt, occurred_at_ms: item.occurred_at_ms });
+    }
 
     const job_history = (recentTasksQ.rows ?? []).map((row: any, idx: number) => {
       const task = parseJsonOrNull(row.task_json) ?? row.task_json;
       const payload = task?.payload ?? {};
       const device_id = String(payload?.meta?.device_id ?? '');
-      const marker = markerByDevice.get(device_id) || null;
-      const trajectory = trajectories.find((x) => x.device_id === device_id);
+      const act_task_id = String(payload?.act_task_id ?? '').trim();
+      const taskOccurredAtMs = Number(Date.parse(String(row.occurred_at ?? ''))) || null;
+      const receiptEntry = act_task_id ? latestReceiptByTaskId.get(act_task_id) ?? null : null;
+      const timing = buildTaskTiming(task, receiptEntry?.receipt ?? null, taskOccurredAtMs);
+      const trajectory = device_id ? trajectoryLookup.get(device_id) ?? null : null;
+      const filteredPoints = trajectory ? filterTrajectoryPointsForWindow(trajectory.points, timing.start_ts_ms, timing.end_ts_ms, timing.anchor_ts_ms) : [];
+      const nearestPoint = trajectory ? findNearestPoint(trajectory.points, timing.anchor_ts_ms, 6 * 60 * 60 * 1000) : null;
       return {
         id: String(row.fact_id ?? idx),
+        act_task_id: act_task_id || null,
         task_type: payload?.task_type || payload?.action_type || 'AO-ACT',
         device_id: device_id || null,
-        ts_ms: Number(Date.parse(String(row.occurred_at ?? ''))) || null,
-        location: marker ? { lat: marker.lat, lon: marker.lon } : null,
-        trajectory_points: trajectory?.points?.length || 0,
+        ts_ms: timing.anchor_ts_ms,
+        start_ts_ms: timing.start_ts_ms,
+        end_ts_ms: timing.end_ts_ms,
+        timing_source: timing.source,
+        location: nearestPoint ? { lat: nearestPoint.lat, lon: nearestPoint.lon, ts_ms: nearestPoint.ts_ms } : null,
+        trajectory_points: filteredPoints.length,
+        trajectory_window_start_ts_ms: filteredPoints.length > 0 ? filteredPoints[0].ts_ms : null,
+        trajectory_window_end_ts_ms: filteredPoints.length > 0 ? filteredPoints[filteredPoints.length - 1].ts_ms : null,
       };
     });
 

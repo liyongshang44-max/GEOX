@@ -155,7 +155,6 @@ export function UPlotSeries(props: {
         scales: {
           x: {
             time: true,
-            incrs,
             // ✅ 强制 X 轴覆盖请求窗口（铺满）
             range: (_u, _min, _max) => {
               if (wantStartSec == null || wantEndSec == null) return [_min, _max];
@@ -199,7 +198,7 @@ export function UPlotSeries(props: {
                 syncingRef.current = true;
                 for (const other of plotsRef.current) {
                   if (other === u) continue;
-                  other.setCursor({ left: u.cursor.left, top: other.cursor.top });
+                  if (typeof u.cursor.left === "number" && typeof other.cursor.top === "number") other.setCursor({ left: u.cursor.left, top: other.cursor.top });
                 }
                 syncingRef.current = false;
               }
@@ -213,7 +212,8 @@ export function UPlotSeries(props: {
               for (let si = 1; si < u.series.length; si++) {
                 const v = u.data[si][idx];
                 if (typeof v !== "number") continue;
-                const sensorId = u.series[si].label ?? "";
+                const sensorIdLabel = u.series[si].label;
+                const sensorId = typeof sensorIdLabel === "string" ? sensorIdLabel : String(sensorIdLabel ?? "");
                 values.push({ sensorId, metric, value: v });
               }
 

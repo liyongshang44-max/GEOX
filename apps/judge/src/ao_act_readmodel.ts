@@ -28,7 +28,7 @@ export async function queryAoActLatestReceiptIndexV0(
   q: AoActReadModelQueryV0
 ): Promise<AoActLatestReceiptIndexRowV0[]> {
   // Delegate to the reader so SQL stays out of the pipeline. // Keeps pipeline logic pure
-  const rows = await reader.queryAoActIndexV0({ startTsMs: q.startTsMs, endTsMs: q.endTsMs }); // Read-only ledger query
+  const rows = await (reader as any).queryAoActIndexV0({ startTsMs: q.startTsMs, endTsMs: q.endTsMs }); // Read-only ledger query
   return rows as AoActLatestReceiptIndexRowV0[]; // Narrow to the exported row type
 }
 

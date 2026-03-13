@@ -23,7 +23,7 @@ import OperationsPage from "../views/OperationsPage";
 import AlertsPage from "../views/AlertsPage";
 import AuditExportPage from "../views/AuditExportPage";
 import SettingsPage from "../views/SettingsPage";
-import { fetchAuthMe, type AuthMe } from "../lib/api";
+import { fetchAuthMe, readStoredAoActToken, type AuthMe } from "../lib/api";
 
 type BreadcrumbItem = {
   label: string;
@@ -98,12 +98,10 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   const crumbs = breadcrumbsForPath(pathname);
   const [session, setSession] = React.useState<AuthMe | null>(null);
 
-  React.useEffect(() => {
-    const token = (() => {
-      try { return localStorage.getItem("geox_ao_act_token") || ""; } catch { return ""; }
-    })();
-    if (!token) { setSession(null); return; }
-    fetchAuthMe(token).then(setSession).catch(() => setSession(null));
+    React.useEffect(() => {
+    const token = readStoredAoActToken(); // Resolve the shared AO-ACT token from storage helpers.
+    if (!token) { setSession(null); return; } // Clear the session badge when no token is available.
+    fetchAuthMe(token).then(setSession).catch(() => setSession(null)); // Refresh the visible session badge on route changes.
   }, [location.pathname]);
 
   return (

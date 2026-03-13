@@ -123,7 +123,7 @@ export function baseMetricOf(metric: string, requiredBases: readonly string[], s
 }
 
 export function isMissingOriginQuality(q: unknown): boolean {
-  return RULESET_V1.evidence.raw_sample.missing_origin_quality_values.includes(String(q));
+  return RULESET_V1.evidence.raw_sample.missing_origin_quality_values.includes(String(q) as any);
 }
 
 export function shouldExcludeMissingOriginFrom(kind: "sufficiency"|"coverage"|"qc"): boolean {
@@ -131,5 +131,5 @@ export function shouldExcludeMissingOriginFrom(kind: "sufficiency"|"coverage"|"q
 }
 
 export function isExclusionMarkerKind(kind: unknown): boolean {
-  return RULESET_V1.marker.exclusion_kinds.includes(String(kind));
+  return RULESET_V1.marker.exclusion_kinds.includes(String(kind) as any);
 }

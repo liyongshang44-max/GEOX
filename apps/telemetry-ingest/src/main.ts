@@ -49,8 +49,37 @@ function parseTopicWithKind(topic: string): { kind: "telemetry" | "heartbeat"; t
   const tenant_id = parts[1]; // Extract tenant id.
   const device_id = parts[2]; // Extract device id.
   if (!tenant_id || !device_id) return null; // Validate.
-  return { kind: kind as any, tenant_id, device_id }; // Return parsed info.
+  return { kind: kind as "telemetry" | "heartbeat", tenant_id, device_id }; // Return parsed info.
 } // End helper.
+
+const recentSeen = new Map<string, number>(); // In-memory recent log suppression map.
+
+function seenRecently(key: string, ttlMs: number): boolean { // Deduplicate repeated warning logs for QoS redelivery.
+  const now = Date.now(); // Current timestamp.
+  const prev = recentSeen.get(key); // Previous timestamp.
+  if (typeof prev === "number" && (now - prev) < ttlMs) return true; // Suppress if still within TTL.
+  recentSeen.set(key, now); // Record fresh timestamp.
+  if (recentSeen.size > 2000) { // Bound map growth in long-running process.
+    for (const [k, ts] of recentSeen) { // Scan current entries.
+      if ((now - ts) > (ttlMs * 4)) recentSeen.delete(k); // Drop stale entries.
+      if (recentSeen.size <= 1500) break; // Stop once map shrinks enough.
+    } // End cleanup scan.
+  } // End size guard.
+  return false; // Caller should emit log.
+} // End helper.
+
+async function main() { // Main bootstrap for telemetry + heartbeat ingest.
+  const databaseUrl = resolveDatabaseUrl(); // Resolve Postgres connection string.
+  if (!databaseUrl) throw new Error("DATABASE_URL_NOT_CONFIGURED"); // Require database before starting.
+
+  const mqttUrl = process.env.MQTT_URL || "mqtt://127.0.0.1:1883"; // Resolve MQTT broker URL with local default.
+  const topicFilter = process.env.TELEMETRY_TOPIC_FILTER || "telemetry/+/+"; // Telemetry topic wildcard.
+  const heartbeatFilter = process.env.HEARTBEAT_TOPIC_FILTER || "heartbeat/+/+"; // Heartbeat topic wildcard.
+  const once = process.argv.includes("--once"); // One-shot mode for smoke tests.
+
+  const pool = new Pool({ connectionString: databaseUrl }); // Create Postgres pool.
+  const client = mqtt.connect(mqttUrl); // Connect to MQTT broker.
+  let ready = false; // Gate message handling until subscribe callback succeeds.
 
   client.on("connect", () => { // MQTT connect handler.
     client.subscribe([topicFilter, heartbeatFilter], (err) => { // Subscribe to telemetry + heartbeat topics.
@@ -59,12 +88,14 @@ function parseTopicWithKind(topic: string): { kind: "telemetry" | "heartbeat"; t
         console.error("[telemetry-ingest] subscribe_error", err); // Log error.
         ready = false; // Do not process messages until a successful subscribe.
         return; // Abort.
-      }
+      } // End error branch.
       // Important: print these logs only after subscription callback completes, so they never appear after ok/drop.
       // eslint-disable-next-line no-console
       console.log(`[telemetry-ingest] connected mqtt=${mqttUrl}`); // Log connection (after subscribe confirms).
       // eslint-disable-next-line no-console
-      console.log(`[telemetry-ingest] subscribed ${topicFilter}`); // Log subscription success.
+      console.log(`[telemetry-ingest] subscribed ${topicFilter}`); // Log telemetry subscription success.
+      // eslint-disable-next-line no-console
+      console.log(`[telemetry-ingest] subscribed ${heartbeatFilter}`); // Log heartbeat subscription success.
       ready = true; // Enable message handling only after subscribe is confirmed.
     }); // End subscribe.
   }); // End connect handler.
@@ -87,74 +118,69 @@ function parseTopicWithKind(topic: string): { kind: "telemetry" | "heartbeat"; t
     } // End parse.
 
     let kindPayload: any = null; // Placeholder for validated payload (telemetry or heartbeat).
-if (parsed.kind === "telemetry") { // Telemetry branch.
-  const parsedPayload = TelemetryPayloadSchema.safeParse(payloadJson); // Validate telemetry schema.
-  if (!parsedPayload.success) { // Schema validation failed.
-    // eslint-disable-next-line no-console
-    console.warn("[telemetry-ingest] drop_invalid_schema", { topic, issues: parsedPayload.error.issues }); // Log issues.
-    return; // Drop invalid message.
-  } // End schema check.
-  kindPayload = parsedPayload.data; // Extract validated telemetry payload.
-} else { // Heartbeat branch.
-  const parsedPayload = HeartbeatPayloadSchema.safeParse(payloadJson); // Validate heartbeat schema.
-  if (!parsedPayload.success) { // Schema validation failed.
-    // eslint-disable-next-line no-console
-    console.warn("[telemetry-ingest] drop_invalid_schema", { topic, issues: parsedPayload.error.issues }); // Log issues.
-    return; // Drop invalid message.
-  } // End schema check.
-  kindPayload = parsedPayload.data; // Extract validated heartbeat payload.
-} // End kind branch.
+    if (parsed.kind === "telemetry") { // Telemetry branch.
+      const parsedPayload = TelemetryPayloadSchema.safeParse(payloadJson); // Validate telemetry schema.
+      if (!parsedPayload.success) { // Schema validation failed.
+        // eslint-disable-next-line no-console
+        console.warn("[telemetry-ingest] drop_invalid_schema", { topic, issues: parsedPayload.error.issues }); // Log issues.
+        return; // Drop invalid message.
+      } // End schema check.
+      kindPayload = parsedPayload.data; // Extract validated telemetry payload.
+    } else { // Heartbeat branch.
+      const parsedPayload = HeartbeatPayloadSchema.safeParse(payloadJson); // Validate heartbeat schema.
+      if (!parsedPayload.success) { // Schema validation failed.
+        // eslint-disable-next-line no-console
+        console.warn("[telemetry-ingest] drop_invalid_schema", { topic, issues: parsedPayload.error.issues }); // Log issues.
+        return; // Drop invalid message.
+      } // End schema check.
+      kindPayload = parsedPayload.data; // Extract validated heartbeat payload.
+    } // End kind branch.
 
-const p = kindPayload; // Unified validated payload.
+    const p = kindPayload; // Unified validated payload.
     const occurredAtIso = new Date(p.ts_ms).toISOString(); // Convert ts_ms to ISO string.
+    const provided_hash = sha256Hex(String(p.credential)); // Hash provided credential for comparison (secret never stored).
 
-const provided_hash = sha256Hex(String(p.credential)); // Hash provided credential for comparison (secret never stored).
-
-// Build deterministic ids and record payload depending on message kind.
-let fact_id = ""; // Fact id (deterministic for idempotency).
-let record: any = null; // Record_json object to append.
-if (parsed.kind === "telemetry") { // Telemetry event.
-  const telemetry_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|${(p as any).metric}|${p.ts_ms}`); // Deterministic telemetry id.
-  fact_id = `tel_${telemetry_id}`; // Fact id for telemetry.
-  record = { // Telemetry record.
-    type: "raw_telemetry_v1", // Fact type identifier.
-    entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
-    payload: { // Payload.
-      metric: (p as any).metric, // Metric name.
-      value: (p as any).value, // Metric value.
-      ts_ms: p.ts_ms, // Timestamp ms.
-      telemetry_id, // Deterministic telemetry id.
-      credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
-    }, // End payload.
-  }; // End record.
-} else { // Heartbeat event.
-  const heartbeat_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|hb|${p.ts_ms}`); // Deterministic heartbeat id.
-  fact_id = `hb_${heartbeat_id}`; // Fact id for heartbeat.
-  record = { // Heartbeat record.
-    type: "device_heartbeat_v1", // Heartbeat fact type.
-    entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
-    payload: { // Payload.
-      ts_ms: p.ts_ms, // Timestamp ms.
-      battery_percent: (p as any).battery_percent ?? null, // Battery percent (nullable).
-      rssi_dbm: (p as any).rssi_dbm ?? null, // RSSI (nullable).
-      fw_ver: (p as any).fw_ver ?? null, // Firmware version (nullable).
-      heartbeat_id, // Deterministic heartbeat id.
-      credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
-    }, // End payload.
-  }; // End record.
-} // End kind branch.
+    let fact_id = ""; // Fact id (deterministic for idempotency).
+    let record: any = null; // Record_json object to append.
+    if (parsed.kind === "telemetry") { // Telemetry event.
+      const telemetry_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|${(p as any).metric}|${p.ts_ms}`); // Deterministic telemetry id.
+      fact_id = `tel_${telemetry_id}`; // Fact id for telemetry.
+      record = { // Telemetry record.
+        type: "raw_telemetry_v1", // Fact type identifier.
+        entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
+        payload: { // Payload.
+          metric: (p as any).metric, // Metric name.
+          value: (p as any).value, // Metric value.
+          ts_ms: p.ts_ms, // Timestamp ms.
+          telemetry_id, // Deterministic telemetry id.
+          credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
+        }, // End payload.
+      }; // End record.
+    } else { // Heartbeat event.
+      const heartbeat_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|hb|${p.ts_ms}`); // Deterministic heartbeat id.
+      fact_id = `hb_${heartbeat_id}`; // Fact id for heartbeat.
+      record = { // Heartbeat record.
+        type: "device_heartbeat_v1", // Heartbeat fact type.
+        entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
+        payload: { // Payload.
+          ts_ms: p.ts_ms, // Timestamp ms.
+          battery_percent: (p as any).battery_percent ?? null, // Battery percent (nullable).
+          rssi_dbm: (p as any).rssi_dbm ?? null, // RSSI (nullable).
+          fw_ver: (p as any).fw_ver ?? null, // Firmware version (nullable).
+          heartbeat_id, // Deterministic heartbeat id.
+          credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
+        }, // End payload.
+      }; // End record.
+    } // End kind branch.
 
     const recordText = JSON.stringify(record); // Serialize record_json for ledger insert.
+    const value_num = typeof (p as any).value === "number" && Number.isFinite((p as any).value) ? (p as any).value : null; // Numeric value if finite.
+    const value_text = (p as any).value === undefined || (p as any).value === null ? null : String((p as any).value); // Text representation for projection.
 
-    // Normalize value for projection (both numeric and text representations).
-    const value_num = typeof p.value === "number" && Number.isFinite(p.value) ? p.value : null; // Numeric value if finite.
-    const value_text = p.value === null ? null : String(p.value); // Text representation (null stays null).
-
-    const clientConn = await pool.connect(); // Acquire a db connection for transaction. // Acquire a db connection for transaction.
+    const clientConn = await pool.connect(); // Acquire a db connection for transaction.
     try { // Transaction scope.
       await clientConn.query("BEGIN"); // Start transaction.
 
-      // Enforce device registration (Sprint A2).
       const devExists = await clientConn.query(
         `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
         [parsed.tenant_id, parsed.device_id]
@@ -165,17 +191,16 @@ if (parsed.kind === "telemetry") { // Telemetry event.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
           console.warn("[telemetry-ingest] drop_unregistered_device", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
-        }
+        } // End dedupe branch.
         return; // Stop processing.
       } // End registration gate.
 
-      // Enforce an active credential match (Sprint A2).
       const credRow = await clientConn.query(
         `SELECT credential_hash, credential_id
-         FROM device_credential_index_v1
-         WHERE tenant_id = $1 AND device_id = $2 AND status = 'ACTIVE'
-         ORDER BY issued_ts_ms DESC
-         LIMIT 1`,
+           FROM device_credential_index_v1
+          WHERE tenant_id = $1 AND device_id = $2 AND status = 'ACTIVE'
+          ORDER BY issued_ts_ms DESC
+          LIMIT 1`,
         [parsed.tenant_id, parsed.device_id]
       ); // Load most recent ACTIVE credential.
       if ((credRow.rows ?? []).length < 1) { // No active credential.
@@ -184,7 +209,7 @@ if (parsed.kind === "telemetry") { // Telemetry event.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
           console.warn("[telemetry-ingest] drop_missing_active_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id }); // Log drop.
-        }
+        } // End dedupe branch.
         return; // Stop processing.
       } // End credential presence gate.
 
@@ -195,150 +220,151 @@ if (parsed.kind === "telemetry") { // Telemetry event.
         if (!seenRecently(k, 2000)) { // Avoid duplicate logs from QoS redelivery.
           // eslint-disable-next-line no-console
           console.warn("[telemetry-ingest] drop_bad_credential", { tenant_id: parsed.tenant_id, device_id: parsed.device_id, credential_id: String(credRow.rows[0].credential_id) }); // Log drop.
-        }
+        } // End dedupe branch.
         return; // Stop processing.
       } // End credential match gate.
 
-      // Insert into append-only ledger (facts).
       await clientConn.query(
         `INSERT INTO facts (fact_id, occurred_at, source, record_json)
          VALUES ($1, $2::timestamptz, $3, $4)
          ON CONFLICT (fact_id) DO NOTHING`,
         [fact_id, occurredAtIso, "gateway", recordText]
-      ); // End ledger insert.
+      ); // Insert append-only fact.
 
       let projInserted = false; // Whether a projection row was inserted (telemetry) or updated (heartbeat).
-if (parsed.kind === "telemetry") { // Telemetry projection path.
-  // Insert into telemetry projection for fast querying.
-  const projRes = await clientConn.query(
-    `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
-     VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
-     ON CONFLICT (tenant_id, device_id, metric, ts) DO NOTHING
-     RETURNING fact_id`,
-    [parsed.tenant_id, parsed.device_id, (p as any).metric, occurredAtIso, value_num, value_text, fact_id]
-  ); // End telemetry projection insert.
+      if (parsed.kind === "telemetry") { // Telemetry projection path.
+        const projRes = await clientConn.query(
+          `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
+           VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
+           ON CONFLICT (tenant_id, device_id, metric, ts) DO NOTHING
+           RETURNING fact_id`,
+          [parsed.tenant_id, parsed.device_id, (p as any).metric, occurredAtIso, value_num, value_text, fact_id]
+        ); // Insert into telemetry projection.
 
-  // Update device status projection (last telemetry time).
-  await clientConn.query(
-    `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-     VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, $4)
-     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
-       last_telemetry_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_telemetry_ts_ms, 0), EXCLUDED.last_telemetry_ts_ms),
-       updated_ts_ms = EXCLUDED.updated_ts_ms`,
-    [parsed.tenant_id, parsed.device_id, p.ts_ms, Date.now()]
-  ); // End status update.
+        await clientConn.query(
+          `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+           VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, $4)
+           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+             last_telemetry_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_telemetry_ts_ms, 0), EXCLUDED.last_telemetry_ts_ms),
+             updated_ts_ms = EXCLUDED.updated_ts_ms`,
+          [parsed.tenant_id, parsed.device_id, p.ts_ms, Date.now()]
+        ); // Update last telemetry status projection.
 
-  projInserted = (projRes.rows ?? []).length > 0; // True if insert happened.
-} else { // Heartbeat projection path.
-  // Update device status projection (last heartbeat time + signal/battery/fw).
-  await clientConn.query(
-    `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-     VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)
-     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
-       last_heartbeat_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_heartbeat_ts_ms, 0), EXCLUDED.last_heartbeat_ts_ms),
-       battery_percent = COALESCE(EXCLUDED.battery_percent, device_status_index_v1.battery_percent),
-       rssi_dbm = COALESCE(EXCLUDED.rssi_dbm, device_status_index_v1.rssi_dbm),
-       fw_ver = COALESCE(EXCLUDED.fw_ver, device_status_index_v1.fw_ver),
-       updated_ts_ms = EXCLUDED.updated_ts_ms`,
-    [parsed.tenant_id, parsed.device_id, p.ts_ms, (p as any).battery_percent ?? null, (p as any).rssi_dbm ?? null, (p as any).fw_ver ?? null, Date.now()]
-  ); // End status update.
+        projInserted = (projRes.rows ?? []).length > 0; // True if insert happened.
+      } else { // Heartbeat projection path.
+        await clientConn.query(
+          `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+           VALUES ($1, $2, NULL, $3, $4, $5, $6, $7)
+           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+             last_heartbeat_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_heartbeat_ts_ms, 0), EXCLUDED.last_heartbeat_ts_ms),
+             battery_percent = COALESCE(EXCLUDED.battery_percent, device_status_index_v1.battery_percent),
+             rssi_dbm = COALESCE(EXCLUDED.rssi_dbm, device_status_index_v1.rssi_dbm),
+             fw_ver = COALESCE(EXCLUDED.fw_ver, device_status_index_v1.fw_ver),
+             updated_ts_ms = EXCLUDED.updated_ts_ms`,
+          [parsed.tenant_id, parsed.device_id, p.ts_ms, (p as any).battery_percent ?? null, (p as any).rssi_dbm ?? null, (p as any).fw_ver ?? null, Date.now()]
+        ); // Update heartbeat status projection.
 
-  projInserted = true; // For heartbeat, treat as inserted/processed.
-} // End kind branch.
+        projInserted = true; // For heartbeat, treat as processed.
+      } // End kind branch.
 
-await clientConn.query("COMMIT"); // Commit transaction.
+      await clientConn.query("COMMIT"); // Commit transaction.
 
-      // If telemetry projection insert was a no-op, this message is a duplicate delivery. Stay silent.
-      if (parsed.kind === "telemetry" && !projInserted) { return; } // Duplicate telemetry event => no log.
+      if (parsed.kind === "telemetry" && !projInserted) { return; } // Duplicate telemetry event => no success log.
 
       // eslint-disable-next-line no-console
-      console.log("[telemetry-ingest] ok", { kind: parsed.kind, tenant_id: parsed.tenant_id, device_id: parsed.device_id, metric: (p as any).metric ?? "HEARTBEAT", ts_ms: p.ts_ms }); // Log success.
+      console.log("[telemetry-ingest] ok", {
+        kind: parsed.kind,
+        tenant_id: parsed.tenant_id,
+        device_id: parsed.device_id,
+        metric: (p as any).metric ?? "HEARTBEAT",
+        ts_ms: p.ts_ms,
+      }); // Log success after commit.
 
+      if (parsed.kind === "telemetry" && projInserted) { // Only evaluate alerts for new telemetry points.
+        try { // Best-effort alert evaluation.
+          const rulesQ = await pool.query(
+            `SELECT tenant_id, rule_id, operator, threshold_num, window_sec
+               FROM alert_rule_index_v1
+              WHERE tenant_id = $1
+                AND status = 'ACTIVE'
+                AND object_type = 'DEVICE'
+                AND object_id = $2
+                AND metric = $3`,
+            [parsed.tenant_id, parsed.device_id, (p as any).metric]
+          ); // Load matching rules.
 
-// Evaluate telemetry-based alert rules (DEVICE scope) after successful ingest.
-if (parsed.kind === "telemetry" && projInserted) { // Only evaluate for new telemetry points.
-  try { // Best-effort alert evaluation (must not break ingest).
-    const rulesQ = await pool.query(
-      `SELECT tenant_id, rule_id, operator, threshold_num, window_sec
-         FROM alert_rule_index_v1
-        WHERE tenant_id = $1
-          AND status = 'ACTIVE'
-          AND object_type = 'DEVICE'
-          AND object_id = $2
-          AND metric = $3`,
-      [parsed.tenant_id, parsed.device_id, (p as any).metric]
-    ); // Load matching rules.
-    for (const r of rulesQ.rows) { // Iterate rules.
-      const op = String(r.operator ?? "").toUpperCase(); // Operator.
-      const thr = (typeof r.threshold_num === "number") ? r.threshold_num : Number(r.threshold_num); // Threshold.
-      const val = (typeof (p as any).value === "number") ? (p as any).value : Number((p as any).value); // Coerce numeric value.
-      if (!Number.isFinite(val) || !Number.isFinite(thr)) continue; // Skip non-numeric values.
-      const ok = (op === "GT") ? (val > thr)
-        : (op === "GTE") ? (val >= thr)
-        : (op === "LT") ? (val < thr)
-        : (op === "LTE") ? (val <= thr)
-        : (op === "EQ") ? (val === thr)
-        : false; // Evaluate.
-      if (!ok) continue; // Not triggered.
+          for (const r of rulesQ.rows) { // Iterate rules.
+            const op = String(r.operator ?? "").toUpperCase(); // Operator.
+            const thr = typeof r.threshold_num === "number" ? r.threshold_num : Number(r.threshold_num); // Threshold.
+            const val = typeof (p as any).value === "number" ? (p as any).value : Number((p as any).value); // Numeric value.
+            if (!Number.isFinite(val) || !Number.isFinite(thr)) continue; // Skip non-numeric values.
 
-      const bucket_ms = Math.max(60_000, (Number(r.window_sec) || 60) * 1000); // Bucket for event id stability.
-      const bucket = Math.floor(p.ts_ms / bucket_ms); // Bucket index.
-      const event_id = `alev_${sha256Hex("tel|" + parsed.tenant_id + "|" + r.rule_id + "|" + parsed.device_id + "|" + String(bucket))}`; // Deterministic event id.
+            const triggered =
+              op === "GT" ? (val > thr) :
+              op === "GTE" ? (val >= thr) :
+              op === "LT" ? (val < thr) :
+              op === "LTE" ? (val <= thr) :
+              op === "EQ" ? (val === thr) :
+              false; // Evaluate rule.
+            if (!triggered) continue; // Skip when not triggered.
 
-      const existQ = await pool.query(
-        `SELECT 1 FROM alert_event_index_v1 WHERE tenant_id = $1 AND event_id = $2 LIMIT 1`,
-        [parsed.tenant_id, event_id]
-      ); // Check already exists.
-      if (existQ.rowCount > 0) continue; // Already raised.
+            const bucket_ms = Math.max(60_000, (Number(r.window_sec) || 60) * 1000); // Stable event bucket size.
+            const bucket = Math.floor(p.ts_ms / bucket_ms); // Bucket index.
+            const event_id = `alev_${sha256Hex("tel|" + parsed.tenant_id + "|" + r.rule_id + "|" + parsed.device_id + "|" + String(bucket))}`; // Deterministic event id.
 
-      const fact_id2 = `alev_raise_${randomUUID()}`; // Fact id.
-      const record2 = { // Fact record.
-        type: "alert_event_raised_v1", // Fact type.
-        entity: { tenant_id: parsed.tenant_id, event_id, rule_id: r.rule_id }, // Entity.
-        payload: { // Payload.
-          object_type: "DEVICE", // Object type.
-          object_id: parsed.device_id, // Object id.
-          metric: (p as any).metric, // Metric name.
-          raised_ts_ms: Date.now(), // Raised time.
-          last_value: { value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms }, // Snapshot.
-          source: "telemetry-ingest", // Source marker.
-        }, // End payload.
-      }; // End record.
+            const existQ = await pool.query(
+              `SELECT 1 FROM alert_event_index_v1 WHERE tenant_id = $1 AND event_id = $2 LIMIT 1`,
+              [parsed.tenant_id, event_id]
+            ); // Check if already raised.
+            if (existQ.rowCount > 0) continue; // Skip existing event.
 
-      const c2 = await pool.connect(); // Connection for atomic insert.
-      try { // Tx.
-        await c2.query("BEGIN"); // Begin.
-        await c2.query(
-          `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-           VALUES ($1, $2::timestamptz, $3, $4)`,
-          [fact_id2, new Date(Date.now()).toISOString(), "system", JSON.stringify(record2)]
-        ); // Insert fact.
-        await c2.query(
-          `INSERT INTO alert_event_index_v1
-            (tenant_id, event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json)
-           VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7,NULL,NULL,$8)
-           ON CONFLICT (tenant_id, event_id) DO NOTHING`,
-          [parsed.tenant_id, event_id, r.rule_id, "DEVICE", parsed.device_id, (p as any).metric, Date.now(), JSON.stringify({ value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms })]
-        ); // Insert event projection.
-        await c2.query("COMMIT"); // Commit.
-      } catch { // Swallow tx errors.
-        await c2.query("ROLLBACK"); // Rollback.
-      } finally { // Release.
-        c2.release(); // Release.
-      } // End tx.
-    } // End for.
-  } catch { // Swallow evaluation errors.
-    // No-op.
-  } // End try/catch.
-} // End alert evaluation.
+            const fact_id2 = `alev_raise_${randomUUID()}`; // Fact id for alert event.
+            const record2 = {
+              type: "alert_event_raised_v1",
+              entity: { tenant_id: parsed.tenant_id, event_id, rule_id: r.rule_id },
+              payload: {
+                object_type: "DEVICE",
+                object_id: parsed.device_id,
+                metric: (p as any).metric,
+                raised_ts_ms: Date.now(),
+                last_value: { value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms },
+                source: "telemetry-ingest",
+              },
+            }; // Alert fact record.
 
+            const c2 = await pool.connect(); // Separate connection for alert tx.
+            try { // Alert tx scope.
+              await c2.query("BEGIN"); // Start alert tx.
+              await c2.query(
+                `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+                 VALUES ($1, $2::timestamptz, $3, $4)`,
+                [fact_id2, new Date(Date.now()).toISOString(), "system", JSON.stringify(record2)]
+              ); // Insert alert fact.
+              await c2.query(
+                `INSERT INTO alert_event_index_v1
+                  (tenant_id, event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json)
+                 VALUES ($1,$2,$3,$4,$5,$6,'OPEN',$7,NULL,NULL,$8)
+                 ON CONFLICT (tenant_id, event_id) DO NOTHING`,
+                [parsed.tenant_id, event_id, r.rule_id, "DEVICE", parsed.device_id, (p as any).metric, Date.now(), JSON.stringify({ value_num: val, threshold_num: thr, operator: op, ts_ms: p.ts_ms })]
+              ); // Insert alert projection.
+              await c2.query("COMMIT"); // Commit alert tx.
+            } catch { // Swallow alert tx errors.
+              await c2.query("ROLLBACK"); // Rollback alert tx.
+            } finally { // Always release alert tx connection.
+              c2.release(); // Release connection.
+            } // End alert tx scope.
+          } // End rules loop.
+        } catch { // Swallow alert evaluation errors.
+          // No-op.
+        } // End alert evaluation try/catch.
+      } // End alert evaluation.
 
-      if (once) { // If running in one-shot mode, exit after first success.
+      if (once) { // Exit after first successful message in one-shot mode.
         client.end(true); // Disconnect MQTT client immediately.
         await pool.end(); // Close Postgres pool.
         process.exit(0); // Exit process successfully.
       } // End once mode.
-    } catch (e: any) { // Error handler.
+    } catch (e: any) { // Message handler db/tx error.
       try { // Attempt rollback if needed.
         await clientConn.query("ROLLBACK"); // Rollback transaction.
       } catch { // Ignore rollback errors.

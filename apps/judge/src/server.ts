@@ -52,7 +52,7 @@ app.addHook("onRequest", async (req, reply) => {
 });
 
 async function main(): Promise<void> {
-  const reader = new AppleIReader(DATABASE_URL);
+  const reader = new AppleIReader(DATABASE_URL ?? "");
   await reader.ping();
   const runtime = new JudgeRuntime(reader);
   registerJudgeRoutes(app, runtime);

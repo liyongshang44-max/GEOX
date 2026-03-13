@@ -4,6 +4,7 @@
   "private": true,
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
+  "type": "module",
   "dependencies": {
     "@fastify/multipart": "^8.3.1",
     "@fastify/static": "^7.0.4",
@@ -19,9 +20,9 @@
     "tsx": "^4.21.0",
     "typescript": "^5.4.5"
   },
-  "scripts": {
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/server.js"
+   "scripts": {
+    "dev": "pnpm -w exec tsx watch apps/server/src/server.ts",
+    "build": "pnpm -w exec tsc -p apps/server/tsconfig.json",
+    "typecheck": "pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json"
   }
 }

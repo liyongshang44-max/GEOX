@@ -1,13 +1,22 @@
 param(
-  [string]$BaseUrl = "http://127.0.0.1:3000",              # HTTP base URL of apps/server
-  [string]$MqttUrl = "mqtt://127.0.0.1:1883",              # MQTT broker URL
-  [string]$TenantId = "tenantA"                            # Tenant used in telemetry topic
+  [string]$BaseUrl = "http://127.0.0.1:3001",               # HTTP base URL of apps/server.
+  [string]$MqttUrl  = "mqtt://127.0.0.1:1883",              # MQTT broker URL.
+  [string]$TenantId = "tenantA"                              # Tenant used in telemetry topic.
 )
 
-Set-StrictMode -Version Latest                              # Enforce strict variable usage
-$ErrorActionPreference = "Stop"                             # Fail fast on errors
+Set-StrictMode -Version Latest                               # Enforce strict variable usage.
+$ErrorActionPreference = "Stop"                              # Fail fast on errors.
 
-function Fail([string]$m) { throw ("[FAIL] " + $m) }         # Unified failure helper
+if (-not $env:DATABASE_URL) {                                # Provide a sane local default for child ingest process.
+  if (-not $env:PGHOST) { $env:PGHOST = "127.0.0.1" }        # Local Postgres host for docker-mapped DB.
+  if (-not $env:PGPORT) { $env:PGPORT = "5433" }             # Local mapped Postgres port.
+  if (-not $env:PGUSER) { $env:PGUSER = "landos" }           # Local Postgres user.
+  if (-not $env:PGPASSWORD) { $env:PGPASSWORD = "landos_pwd" } # Local Postgres password.
+  if (-not $env:PGDATABASE) { $env:PGDATABASE = "landos" }   # Local Postgres database.
+  $env:DATABASE_URL = "postgres://$($env:PGUSER):$($env:PGPASSWORD)@$($env:PGHOST):$($env:PGPORT)/$($env:PGDATABASE)" # Explicit DSN for child ingest process.
+}
+
+function Fail([string]$m) { throw ("[FAIL] " + $m) }         # Unified failure helper.
 
 function HasProp([object]$o, [string]$name) {                # Safe property existence check
   if ($null -eq $o) { return $false }                        # Null object => no prop

@@ -15,7 +15,7 @@ export default function AddMarkerModal(props: {
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
 
-  const markerTypes = useMemo(() => MARKER_KIND_ALLOWLIST.slice(), []);
+  const markerTypes = useMemo(() => [...MARKER_KIND_ALLOWLIST], []);
 
   async function submit(): Promise<void> {
     setErr(null);
@@ -66,7 +66,7 @@ export default function AddMarkerModal(props: {
             <div style={{ display: "flex", flexDirection: "column", gap: 6, width: 220 }}>
               <div className="muted">type</div>
               <select className="select" value={type} onChange={(e) => setType(e.target.value)}>
-                {markerTypes.map((k) => (
+                {markerTypes.map((k: string) => (
                   <option key={k} value={k}>{k}</option>
                 ))}
               </select>

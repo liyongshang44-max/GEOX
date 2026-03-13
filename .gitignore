@@ -54,7 +54,7 @@ acceptance/*
 artifacts/
 _exports/
 
-# Runtime artifacts (generated) ¡ª do not commit
+# Runtime artifacts (generated) ï¿½ï¿½ do not commit
 runtime/
 runtime/**
 
@@ -64,4 +64,8 @@ _tmp/
 
 # build artifacts
 apps/web/tsconfig.tsbuildinfo
+
+# compiled js accidentally written into source
+**/src/**/*.js
+**/src/**/*.js.map
 

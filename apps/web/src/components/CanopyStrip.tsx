@@ -1,11 +1,19 @@
 // GEOX/apps/web/src/components/CanopyStrip.tsx
 import React, { useMemo, useState } from "react";
-import type { CanopyFrameV1 } from "@geox/contracts";
+import type { CanopyFrameV1 } from "../lib/contracts";
 import { fmtTs } from "../lib/time";
 import { withMediaBase } from "../lib/api";
 
 function thumbUrl(frame: CanopyFrameV1): string {
   return withMediaBase(frame.url);
+}
+
+function frameKey(frame: CanopyFrameV1): string {
+  return String(frame.frameId ?? `${frame.storage_key}_${frame.ts}`);
+}
+
+function frameCamera(frame: CanopyFrameV1): string {
+  return String(frame.cameraId ?? frame.camera_id ?? "-");
 }
 
 export default function CanopyStrip(props: {
@@ -28,7 +36,7 @@ export default function CanopyStrip(props: {
         ) : (
           frames.map((f) => (
             <button
-              key={f.frameId}
+              key={frameKey(f)}
               className="canopyThumb"
               onClick={() => {
                 setActive(f);
@@ -36,7 +44,7 @@ export default function CanopyStrip(props: {
               }}
               title={fmtTs(f.ts)}
             >
-              <img src={thumbUrl(f)} alt={String(f.frameId)} loading="lazy" />
+              <img src={thumbUrl(f)} alt={frameKey(f)} loading="lazy" />
               <div className="canopyTs mono">{fmtTs(f.ts)}</div>
             </button>
           ))
@@ -48,13 +56,13 @@ export default function CanopyStrip(props: {
           <div className="modal" style={{ maxWidth: 980 }} onClick={(e) => e.stopPropagation()}>
             <div className="modalHeader">
               <div>
-                <div className="h3">Frame {active.frameId}</div>
-                <div className="muted mono">{fmtTs(active.ts)} · {active.cameraId} · {active.source}</div>
+                <div className="h3">Frame {frameKey(active)}</div>
+                <div className="muted mono">{fmtTs(active.ts)} · {frameCamera(active)} · {active.source}</div>
               </div>
               <button className="btn" onClick={() => setActive(null)}>Close</button>
             </div>
             <div className="modalBody" style={{ paddingTop: 10 }}>
-              <img src={thumbUrl(active)} alt={String(active.frameId)} style={{ width: "100%", borderRadius: 12 }} />
+              <img src={thumbUrl(active)} alt={frameKey(active)} style={{ width: "100%", borderRadius: 12 }} />
             </div>
           </div>
         </div>

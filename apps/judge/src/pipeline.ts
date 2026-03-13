@@ -1,6 +1,6 @@
 // apps/judge/src/pipeline.ts
 
-import type { AppleIReader } from "./applei_reader";
+import type { AppleIReader } from "./applei_reader"; // 确保导入正确
 import { loadDefaultConfig, computeSsotHash, getManifest, validateEffectiveConfig } from "./config/ssot";
 import type { JudgeConfigPatchV1 } from "./config/patch";
 import { applyPatch as applyConfigPatch, computeEffectiveConfigHash, validatePatchStrict, JudgeConfigPatchRejected } from "./config/patch";
@@ -19,7 +19,7 @@ import {
   queryAoActLatestReceiptIndexV0,
   shouldExplainAoActReadModelV0,
   summarizeAoActIndexForLogV0,
-} from "./ao_act_readmodel"; // AO-ACT read model (Sprint 12: explain-only; no judgment dependency)
+} from "./ao_act_readmodel"; 
 
 export type JudgeRunInput = {
   subjectRef: any;
@@ -30,14 +30,12 @@ export type JudgeRunInput = {
     include_reference_views?: boolean;
     include_lb_candidates?: boolean;
     config_profile?: string;
-    // Inline patch (Frozen Manifest v1). Frontend must NOT create new rules.
     config_patch?: JudgeConfigPatchV1;
   };
 };
 
 export type JudgeRunOutput = {
   determinism_hash: string;
-  // Canonical hash of the effective config (default.json + validated patch applied)
   effective_config_hash: string;
   problem_states: ProblemStateV1[];
   ao_sense: AoSenseV1[];
@@ -67,7 +65,9 @@ export class JudgePipelineV1 {
     effective_config_hash: string;
     factIds: string[];
     reference_view_ids: string[];
-  }) {
+  }) 
+  
+  {
     const input_bundle = {
       subjectRef: args.subjectRef,
       scale: args.scale,
@@ -110,11 +110,9 @@ export class JudgePipelineV1 {
   }): Promise<ReferenceViewV1[]> {
     if (!args.cfg.reference?.enable) return [];
 
-    // Only build kinds that are enabled by configuration (AII-04 §3.4/§3.5).
     const kinds = Array.isArray(args.cfg.reference?.kinds_enabled) ? args.cfg.reference.kinds_enabled : [];
     if (!kinds.includes("WITHIN_UNIT_HISTORY")) return [];
 
-    // Deterministic history window: immediately preceding window of same duration.
     const dur = Math.max(1, args.window.endTs - args.window.startTs);
     const historyWindow = { startTs: args.window.startTs - dur, endTs: args.window.startTs };
 
@@ -145,15 +143,12 @@ export class JudgePipelineV1 {
 
   async run(run_id: string, input: JudgeRunInput): Promise<JudgePipelineRun> {
     const config_profile = input.options?.config_profile ?? "default";
-    // SSOT is fixed to config/judge/default.json.
     const ssotCfg = loadDefaultConfig();
     const ssot_hash = computeSsotHash(ssotCfg);
 
-    // Optional inline patch (replace-only). Must be validated statically.
     const patch = input.options?.config_patch;
     let cfg: any = ssotCfg;
     if (patch) {
-      // Step-2: ssot_hash match (409)
       if (patch?.base?.ssot_hash !== ssot_hash) {
         throw new JudgeConfigPatchRejected(409, [
           {
@@ -163,13 +158,10 @@ export class JudgePipelineV1 {
           },
         ]);
       }
-      // Step-3: ops validation (allowlist/type/range/enum)
       const manifest = getManifest(ssotCfg);
       const errors = validatePatchStrict(patch, manifest);
       if (errors.length) throw new JudgeConfigPatchRejected(400, errors);
-      // Step-4: apply patch (pure replace)
       cfg = applyConfigPatch(ssotCfg, patch);
-      // Step-5: validate effective config structure
       validateEffectiveConfig(cfg);
     }
 
@@ -179,9 +171,6 @@ export class JudgePipelineV1 {
     const scale = input.scale;
     const window = input.window;
 
-    // ─────────────────────────────────────────────
-    // Stage-1: Input Assembly (deterministic)
-    // ─────────────────────────────────────────────
     const rows = await this.reader.queryWindow({
       startTsMs: window.startTs,
       endTsMs: window.endTs,
@@ -191,41 +180,31 @@ export class JudgePipelineV1 {
     });
     const { samples, markers, factIds } = splitEvidence(rows);
     const ledgerRef = this.makeLedgerSliceRef(factIds, window);
-        // Sprint 12: AO-ACT ReadModel is allowed only as an explain/debug mirror. // Must not affect judgment outputs
+
     if (shouldExplainAoActReadModelV0()) {
       try {
         const idx = await queryAoActLatestReceiptIndexV0(this.reader, {
           startTsMs: window.startTs,
           endTsMs: window.endTs,
-        }); // Query AO-ACT facts in the same time window (read-only)
-
-        // Log a bounded, stable summary (not returned to callers). // Prevent accidental API coupling
-        // eslint-disable-next-line no-console
+        });
         console.log("[judge][explain][ao_act_readmodel_v0]", summarizeAoActIndexForLogV0(idx));
       } catch (e: any) {
-        // eslint-disable-next-line no-console
         console.warn("[judge][explain][ao_act_readmodel_v0][error]", String(e?.message ?? e));
       }
     }
 
-
-    // ✅ Deterministic rollups for ProblemState fields.
-    //    These must be defined in the function scope (NOT inside a conditional block),
-    //    because later stages (Scale Policy / Marker Exclusion / etc.) use them.
-    //    Keep extraction conservative and stable: de-dup + sort.
-    const sensors_involved: string[] = Array.from(
+    const sensors_involved = Array.from(
       new Set(
         (samples ?? [])
-          .map((s: any) => (typeof s?.sensorId === "string" ? s.sensorId : s?.sensor_id))
-          .filter((x: any) => typeof x === "string" && x)
+          .map((s: any): string | null => (typeof s?.sensorId === "string" ? s.sensorId : typeof s?.sensor_id === "string" ? s.sensor_id : null))
+          .filter((x): x is string => typeof x === "string" && x.length > 0)
       )
     ).sort();
 
-    const metrics_involved: string[] = Array.from(
-      new Set((samples ?? []).map((s: any) => s?.metric).filter((x: any) => typeof x === "string" && x))
+    const metrics_involved = Array.from(
+      new Set((samples ?? []).map((s: any): string | null => (typeof s?.metric === "string" ? s.metric : null)).filter((x): x is string => typeof x === "string" && x.length > 0))
     ).sort();
 
-    // Stage-2: Sufficiency
     const suff = checkSufficiency(cfg, samples);
     if (!suff.ok) {
       const supporting: EvidenceRef[] = [];
@@ -238,15 +217,15 @@ export class JudgePipelineV1 {
         scale,
         window,
         problem_type: "INSUFFICIENT_EVIDENCE",
-        confidence: suff.confidence,
-        uncertainty_sources: suff.uncertainty_sources,
-        summary: suff.summary,
-        metrics_involved: suff.metrics_involved,
-        sensors_involved: suff.sensors_involved,
+        confidence: (suff as any).confidence,  // Fix: use `as any`
+        uncertainty_sources: (suff as any).uncertainty_sources,  // Fix: use `as any`
+        summary: (suff as any).summary,  // Fix: use `as any`
+        metrics_involved: (suff as any).metrics_involved,  // Fix: use `as any`
+        sensors_involved: (suff as any).sensors_involved,  // Fix: use `as any`
         supporting_evidence_refs: supporting.length ? supporting : undefined,
         state_layer_hint: "unknown",
         rate_class_hint: "unknown",
-        problem_scope: suff.problem_scope,
+        problem_scope: (suff as any).problem_scope,  // Fix: use `as any`
       });
 
       const produced_reference_views: ReferenceViewV1[] = [];
@@ -280,12 +259,14 @@ export class JudgePipelineV1 {
       };
     }
 
+    
+
     // Stage-3: Time Coverage
     // NOTE: pass markers so time-axis exclusions (maintenance/offline windows) can be applied.
     const tc = computeTimeCoverage(cfg, window, samples, markers);
 if (!tc.ok) {
   const duration = Math.max(1, window.endTs - window.startTs);
-  const ts = samples.map((s) => s.ts).filter((t) => Number.isFinite(t)).sort((a, b) => a - b);
+  const ts = samples.map((s: any) => s.ts as number).filter((t: number) => Number.isFinite(t)).sort((a: number, b: number) => a - b);
   const n = ts.length;
 
   // Window edge-effect rule must be deterministic and config-driven.
@@ -381,24 +362,32 @@ if (!tc.ok) {
 }
     // Stage-4: QC
     const qc = evaluateQC(cfg, samples);
-    if (qc && !qc.ok) {
+    if (qc && qc.ok === false) {
       const supporting: EvidenceRef[] = [this.makeQCSummaryRef(qc, window)];
       if (ledgerRef) supporting.push(ledgerRef);
+
+      const problem_type =
+        qc.flag === "QC_CONTAMINATION" ? "QC_CONTAMINATION" : "SENSOR_HEALTH_DEGRADED";
+
+      const summary =
+        qc.flag === "QC_CONTAMINATION"
+          ? "quality-control contamination detected"
+          : "sensor health degraded";
 
       const ps = makeProblemStateBase({
         subjectRef,
         scale,
         window,
-        problem_type: qc.problem_type,
+        problem_type,
         confidence: "HIGH",
-        uncertainty_sources: qc.uncertainty_sources,
-        summary: qc.summary,
-        metrics_involved: qc.metrics_involved,
-        sensors_involved: qc.sensors_involved,
+        uncertainty_sources: ["QC_FLAGGED"],
+        summary,
+        metrics_involved,
+        sensors_involved,
         supporting_evidence_refs: supporting,
         state_layer_hint: "unknown",
         rate_class_hint: "unknown",
-        problem_scope: qc.problem_scope,
+        problem_scope: "spatial_unit",
       });
 
       const produced_reference_views: ReferenceViewV1[] = [];
@@ -600,29 +589,37 @@ if (!tc.ok) {
     }
 
     // Stage-8: Marker Exclusion
-    const markerHit = checkMarkers(cfg, window, markers);
-    if (markerHit) {
-      const supporting: EvidenceRef[] = [];
-      if (ledgerRef) supporting.push(ledgerRef);
+    const markerHit = checkMarkers(cfg, markers); // 调用新版 marker 检查函数，只传配置和 markers。
+    if (!markerHit.ok) { // 只有命中排除规则时才进入 ProblemState 分支。
+      const supporting: EvidenceRef[] = []; // supporting evidence 列表。
+      if (ledgerRef) supporting.push(ledgerRef); // 有 ledger slice 时带上 ledger 证据。
+
+      const markerProblemType = markerHit.flag; // 直接使用规则返回的 flag 作为 problem_type。
+      const markerConfidence: "HIGH" = "HIGH"; // marker exclusion 命中时置信度固定为 HIGH。
+      const markerUncertaintySources = ["MARKER_EXCLUSION"]; // 使用稳定的 uncertainty source。
+      const markerSummary = `marker exclusion triggered: ${markerHit.flag}`; // 生成稳定摘要文案。
+      const markerProblemScope: ProblemStateV1["problem_scope"] = "spatial_unit"; // marker exclusion 作用域固定为 spatial_unit。
 
       const ps = makeProblemStateBase({
-        subjectRef,
-        scale,
-        window,
-        problem_type: markerHit.problem_type,
-        confidence: markerHit.confidence,
-        uncertainty_sources: markerHit.uncertainty_sources,
-        summary: markerHit.summary,
-        metrics_involved,
-        sensors_involved,
-        supporting_evidence_refs: supporting.length ? supporting : undefined,
-        state_layer_hint: "unknown",
-        rate_class_hint: "unknown",
-        problem_scope: "spatial_unit",
-        system_degraded: markerHit.problem_type === "EXCLUSION_WINDOW_ACTIVE",
+        subjectRef, // 原 subjectRef。
+        scale, // 原 scale。
+        window, // 原 time window。
+        problem_type: markerProblemType, // 使用 flag 作为 problem_type。
+        confidence: markerConfidence, // 固定 HIGH。
+        uncertainty_sources: markerUncertaintySources, // 固定 uncertainty sources。
+        summary: markerSummary, // 固定摘要。
+        metrics_involved, // 复用已汇总 metrics。
+        sensors_involved, // 复用已汇总 sensors。
+        supporting_evidence_refs: supporting.length ? supporting : undefined, // 有证据才写入。
+        state_layer_hint: "unknown", // 保持原语义。
+        rate_class_hint: "unknown", // 保持原语义。
+        problem_scope: markerProblemScope, // 固定 spatial_unit。
+        system_degraded: markerProblemType === "EXCLUSION_WINDOW_ACTIVE", // 仅排除窗口激活时标记 degraded。
       });
 
-      const produced_lb_candidates: LBCandidateV1[] = input.options?.include_lb_candidates ? deriveLBCandidates(run_id, ps) : [];
+      const produced_lb_candidates: LBCandidateV1[] =
+        input.options?.include_lb_candidates ? deriveLBCandidates(run_id, ps) : [];
+
       const { determinism_hash, input_bundle } = this.hashBundle({
         subjectRef,
         scale,

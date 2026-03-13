@@ -1,12 +1,35 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "CommonJS",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "rootDir": "../..",
     "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "baseUrl": "../..",
+    "paths": {
+      "@geox/contracts": ["packages/contracts/src/index.ts"],
+      "@geox/control-kernel": ["packages/control-kernel/src/index.ts"]
+    }
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "../judge/src/**/*.ts",
+    "../../packages/contracts/src/**/*.ts",
+    "../../packages/control-kernel/src/**/*.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "../judge/dist/**/*",
+    "../../packages/**/dist/**/*",
+    "../../node_modules/**/*"
+  ]
 }

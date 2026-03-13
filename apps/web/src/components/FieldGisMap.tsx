@@ -1,44 +1,95 @@
 import React from "react";
 
-type Props = {
+type Marker = { device_id: string; lat: number; lon: number; ts_ms?: number | null };
+
+type ViewPoint = { lon: number; lat: number };
+type Bounds = { minLon: number; maxLon: number; minLat: number; maxLat: number };
+
+function collectCoordinatePairs(raw: any, out: Array<[number, number]>): void {
+  if (!Array.isArray(raw)) return;
+  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
+    out.push([Number(raw[0]), Number(raw[1])]);
+    return;
+  }
+  for (const item of raw) collectCoordinatePairs(item, out);
+}
+
+function extractGeoPoints(geo: any): ViewPoint[] {
+  if (!geo || typeof geo !== "object") return [];
+  const type = String(geo?.type ?? "");
+  if (type === "Feature") return extractGeoPoints(geo?.geometry);
+  if (type === "FeatureCollection") return Array.isArray(geo?.features) ? geo.features.flatMap((f: any) => extractGeoPoints(f)) : [];
+  const pairs: Array<[number, number]> = [];
+  if (type === "Point") {
+    const coordinates = geo?.coordinates;
+    if (Array.isArray(coordinates) && coordinates.length >= 2) pairs.push([Number(coordinates[0]), Number(coordinates[1])]);
+  } else if (type === "Polygon" || type === "MultiPolygon" || type === "LineString" || type === "MultiLineString") {
+    collectCoordinatePairs(geo?.coordinates, pairs);
+  }
+  return pairs
+    .filter(([lon, lat]) => Number.isFinite(lon) && Number.isFinite(lat) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180)
+    .map(([lon, lat]) => ({ lon, lat }));
+}
+
+function toBounds(points: ViewPoint[]): Bounds | null {
+  if (!points.length) return null;
+  return {
+    minLon: Math.min(...points.map((p) => p.lon)),
+    maxLon: Math.max(...points.map((p) => p.lon)),
+    minLat: Math.min(...points.map((p) => p.lat)),
+    maxLat: Math.max(...points.map((p) => p.lat)),
+  };
+}
+
+function expandBounds(bounds: Bounds): Bounds {
+  const lonSpan = Math.max(0.0005, bounds.maxLon - bounds.minLon);
+  const latSpan = Math.max(0.0005, bounds.maxLat - bounds.minLat);
+  const lonPad = lonSpan * 0.08;
+  const latPad = latSpan * 0.08;
+  return {
+    minLon: bounds.minLon - lonPad,
+    maxLon: bounds.maxLon + lonPad,
+    minLat: bounds.minLat - latPad,
+    maxLat: bounds.maxLat + latPad,
+  };
+}
+
+function extractPolygonRings(geo: any): Array<Array<[number, number]>> {
+  if (!geo || typeof geo !== "object") return [];
+  const type = String(geo?.type ?? "");
+  if (type === "Feature") return extractPolygonRings(geo?.geometry);
+  if (type === "FeatureCollection") return Array.isArray(geo?.features) ? geo.features.flatMap((f: any) => extractPolygonRings(f)) : [];
+  if (type === "Polygon") {
+    return (Array.isArray(geo?.coordinates) ? geo.coordinates : []).flatMap((ring: any) => {
+      const pairs: Array<[number, number]> = [];
+      collectCoordinatePairs(ring, pairs);
+      return pairs.length ? [pairs] : [];
+    });
+  }
+  if (type === "MultiPolygon") {
+    return (Array.isArray(geo?.coordinates) ? geo.coordinates : []).flatMap((polygon: any) => extractPolygonRings({ type: "Polygon", coordinates: polygon }));
+  }
+  return [];
+}
+
+export default function FieldGisMap({
+  polygonGeoJson,
+  trajectoryGeoJson,
+  heatGeoJson,
+  markers,
+}: {
   polygonGeoJson: any;
   trajectoryGeoJson: any;
   heatGeoJson: any;
-  markers: Array<{ device_id: string; lat: number; lon: number; ts_ms?: number | null }>;
-};
-
-type Pt = { lat: number; lon: number };
-
-function collectPoints(polygonGeoJson: any, trajectoryGeoJson: any, heatGeoJson: any, markers: Props["markers"]): Pt[] {
-  const out: Pt[] = [];
-  const push = (lon: any, lat: any) => {
-    const x = Number(lon);
-    const y = Number(lat);
-    if (Number.isFinite(x) && Number.isFinite(y)) out.push({ lon: x, lat: y });
-  };
-
-  if (polygonGeoJson?.type === "Polygon") {
-    for (const ring of polygonGeoJson.coordinates || []) for (const pt of ring || []) push(pt?.[0], pt?.[1]);
-  }
-  if (polygonGeoJson?.type === "MultiPolygon") {
-    for (const poly of polygonGeoJson.coordinates || []) for (const ring of poly || []) for (const pt of ring || []) push(pt?.[0], pt?.[1]);
-  }
-  for (const f of trajectoryGeoJson?.features || []) for (const pt of f?.geometry?.coordinates || []) push(pt?.[0], pt?.[1]);
-  for (const f of heatGeoJson?.features || []) push(f?.geometry?.coordinates?.[0], f?.geometry?.coordinates?.[1]);
-  for (const m of markers) push(m.lon, m.lat);
-  return out;
-}
-
-export default function FieldGisMap({ polygonGeoJson, trajectoryGeoJson, heatGeoJson, markers }: Props): React.ReactElement {
-  const points = collectPoints(polygonGeoJson, trajectoryGeoJson, heatGeoJson, markers);
-  const bounds = points.length
-    ? {
-      minLon: Math.min(...points.map((p) => p.lon)),
-      maxLon: Math.max(...points.map((p) => p.lon)),
-      minLat: Math.min(...points.map((p) => p.lat)),
-      maxLat: Math.max(...points.map((p) => p.lat)),
-    }
-    : { minLon: 120.9, maxLon: 121.1, minLat: 31.1, maxLat: 31.3 };
+  markers: Marker[];
+}): React.ReactElement {
+  const polygonPoints = extractGeoPoints(polygonGeoJson);
+  const trajectoryPoints = extractGeoPoints(trajectoryGeoJson);
+  const heatPoints = extractGeoPoints(heatGeoJson);
+  const markerPoints = markers.map((m) => ({ lon: Number(m.lon), lat: Number(m.lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const allBoundsPoints = [...polygonPoints, ...trajectoryPoints, ...heatPoints, ...markerPoints];
+  const computedBounds = toBounds(allBoundsPoints);
+  const bounds = computedBounds ? expandBounds(computedBounds) : { minLon: 120.9, maxLon: 121.1, minLat: 31.1, maxLat: 31.3 };
 
   const w = 820;
   const h = 420;
@@ -52,27 +103,25 @@ export default function FieldGisMap({ polygonGeoJson, trajectoryGeoJson, heatGeo
     };
   };
 
-  const polygonPath = (() => {
-    if (polygonGeoJson?.type !== "Polygon" || !polygonGeoJson?.coordinates?.[0]?.length) return "";
-    const ring = polygonGeoJson.coordinates[0];
-    return ring.map((pt: any, i: number) => {
-      const p = proj(Number(pt?.[0]), Number(pt?.[1]));
+  const polygonPaths = extractPolygonRings(polygonGeoJson).map((ring) => {
+    return ring.map((pt, i) => {
+      const p = proj(Number(pt[0]), Number(pt[1]));
       return `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
     }).join(" ") + " Z";
-  })();
+  }).filter(Boolean);
 
   return (
     <div style={{ width: "100%", borderRadius: 12, overflow: "hidden", border: "1px solid #e5e7eb", background: "#f8fafc" }}>
       <svg viewBox={`0 0 ${w} ${h}`} style={{ width: "100%", height: 420 }}>
         <rect x="0" y="0" width={w} height={h} fill="#f8fafc" />
-        {polygonPath ? <path d={polygonPath} fill="rgba(14,165,233,0.12)" stroke="#0284c7" strokeWidth="2" /> : null}
+        {polygonPaths.map((path, i) => <path key={`poly_${i}`} d={path} fill="rgba(14,165,233,0.12)" stroke="#0284c7" strokeWidth="2" />)}
         {(trajectoryGeoJson?.features || []).map((f: any, i: number) => {
-          const coords = f?.geometry?.coordinates || [];
+          const coords = Array.isArray(f?.geometry?.coordinates) ? f.geometry.coordinates : [];
           const d = coords.map((pt: any, idx: number) => {
             const p = proj(Number(pt?.[0]), Number(pt?.[1]));
             return `${idx === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
           }).join(" ");
-          return <path key={i} d={d} fill="none" stroke="#2563eb" strokeWidth="2.5" opacity="0.9" />;
+          return d ? <path key={i} d={d} fill="none" stroke="#2563eb" strokeWidth="2.5" opacity="0.9" /> : null;
         })}
         {(heatGeoJson?.features || []).map((f: any, i: number) => {
           const c = f?.geometry?.coordinates || [];

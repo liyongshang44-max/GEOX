@@ -100,7 +100,7 @@ export default function JudgeProblemCard(props: {
 
         {/* 基于什么 */}
         <div className="judgeSection">
-          <div className="judgeSectionTitle" title={ruleForSection("evidence")}>系统基于什么说这句话</div>
+          <div className="judgeSectionTitle" title={ruleForSection("based_on")}>系统基于什么说这句话</div>
           {evidences.length ? (
             <ul className="judgeList">
               {evidences.map((x) => (

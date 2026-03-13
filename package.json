@@ -9,25 +9,30 @@
     "@types/better-sqlite3": "^7.6.0",
     "@types/node": "^20.10.0",
     "@types/pg": "^8.10.0",
+    "@vitejs/plugin-react": "^4.3.1",
     "mqtt": "5.15.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.0"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@fastify/multipart": "^8.3.1",
     "@fastify/static": "^7.0.4",
     "better-sqlite3": "^9.4.0",
     "fastify": "^4.25.0",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "zod": "^3.25.76"
   },
+  
   "scripts": {
-    "build": "npm -ws run build",
-    "dev": "pnpm -r dev",
-    "deploy:commercial:v0": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\DEPLOY_GEOX_SYSTEM_COMMERCIAL_V0.ps1",
-    "acceptance:system:commercial:v0": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\ACCEPTANCE_GEOX_SYSTEM_COMMERCIAL_V0.ps1",
-    "guardrails": "npm --workspace @geox/guardrails run build && npm --workspace @geox/guardrails run check",
-    "import:caf": "ts-node ./scripts/loadfact.ts",
-    "acceptance:system:commercial:v1": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts\\ACCEPTANCE_COMMERCIAL_V1_ALL.ps1"
+    "dev:server": "pnpm --filter @geox/server dev",
+    "dev:web": "pnpm --filter @geox/web dev",
+    "dev:judge": "pnpm --filter @geox/judge dev",
+    "typecheck:server": "pnpm --filter @geox/server typecheck",
+    "typecheck:web": "pnpm --filter @geox/web typecheck",
+    "typecheck:judge": "pnpm --filter @geox/judge typecheck",
+    "build:server": "pnpm --filter @geox/server build",
+    "build:web": "pnpm --filter @geox/web build",
+    "build:judge": "pnpm --filter @geox/judge build"
   },
   "volta": {
     "node": "20.11.1"

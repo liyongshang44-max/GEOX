@@ -96,6 +96,41 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       { bearerAuth: [] }
     ],
     paths: {
+      "/api/v1/auth/login": {
+        post: {
+          tags: ["auth"],
+          summary: "Login via local allowlist or external IdP",
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { type: "object" }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Login response returned successfully" }
+          }
+        }
+      },
+      "/api/v1/auth/logout": {
+        post: {
+          tags: ["auth"],
+          summary: "Logout current session",
+          responses: {
+            "200": { description: "Logout response returned successfully" }
+          }
+        }
+      },
+      "/api/v1/auth/providers": {
+        get: {
+          tags: ["auth"],
+          summary: "Read configured auth providers",
+          responses: {
+            "200": { description: "Provider info returned successfully" }
+          }
+        }
+      },
       "/api/v1/auth/me": {
         get: {
           tags: ["auth"],
@@ -126,6 +161,25 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         post: {
           tags: ["devices"],
           summary: "Issue a device credential",
+          parameters: [
+            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Credential issued successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceCredentialIssueResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/devices/{device_id}/credentials": {
+        post: {
+          tags: ["devices"],
+          summary: "Issue a device credential via v1 alias",
           parameters: [
             { name: "device_id", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -204,6 +258,33 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         }
       },
       "/api/v1/fields/{field_id}": {
+        put: {
+          tags: ["fields"],
+          summary: "Update field base info and optional polygon",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    area_ha: { type: "number" },
+                    status: { type: "string" },
+                    geojson: { type: "object" },
+                    polygon_geojson: { type: "object" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Field updated successfully" }
+          }
+        },
         get: {
           tags: ["fields"],
           summary: "Read field workbench detail",
@@ -348,10 +429,54 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/approval-requests": {
+        post: {
+          tags: ["operations"],
+          summary: "Create approval request",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { type: "object" }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Approval request created successfully" }
+          }
+        },
+        get: {
+          tags: ["operations"],
+          summary: "Read approval request list",
+          responses: {
+            "200": { description: "Approval request list returned successfully" }
+          }
+        }
+      },
+      "/api/v1/approval-requests/{request_id}/approve": {
+        post: {
+          tags: ["operations"],
+          summary: "Approve or reject an approval request",
+          parameters: [
+            { name: "request_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { type: "object" }
+              }
+            }
+          },
+          responses: {
+            "200": { description: "Approval request decision recorded successfully" }
+          }
+        }
+      },
       "/api/v1/control/approval-requests": {
         post: {
           tags: ["operations"],
-          summary: "Create an approval request",
+          summary: "Create an approval request via legacy control path",
           responses: {
             "200": { description: "Approval request created successfully" }
           }

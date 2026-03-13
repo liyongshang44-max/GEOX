@@ -1,7 +1,14 @@
 ﻿// GEOX/apps/web/src/lib/api.ts
-import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1 } from "./contracts";
+import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1, MarkerKind } from "./contracts";
 
 export type GroupsResponse = { groups: SensorGroupV1[] };
+
+
+export function withMediaBase(url: string): string {
+  if (!url) return url;
+  if (/^https?:\/\//i.test(url)) return url;
+  return url.startsWith("/") ? url : `/${url}`;
+}
 
 export class ApiError extends Error {
   public status: number;
@@ -12,6 +19,29 @@ export class ApiError extends Error {
     this.status = status;
     this.bodyText = bodyText;
   }
+}
+
+const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4"; // Default dev token for local acceptance and demo flows.
+
+export function readStoredAoActToken(): string { // Read the AO-ACT token from shared browser storage with a safe dev fallback.
+  try {
+    const local = localStorage.getItem("geox_ao_act_token"); // Preferred persistent token location.
+    if (typeof local === "string" && local.trim()) return local.trim(); // Return local token when present.
+  } catch {}
+
+  try {
+    const session = sessionStorage.getItem("geox_ao_act_token"); // Session fallback for tabs that only persist session state.
+    if (typeof session === "string" && session.trim()) return session.trim(); // Return session token when present.
+  } catch {}
+
+  return DEFAULT_AO_ACT_TOKEN; // Fall back to the built-in dev token for local commercial console usage.
+}
+
+export function persistAoActToken(next: string): string { // Persist the AO-ACT token into both local and session storage.
+  const token = String(next ?? "").trim() || DEFAULT_AO_ACT_TOKEN; // Normalize empty input back to the default dev token.
+  try { localStorage.setItem("geox_ao_act_token", token); } catch {}
+  try { sessionStorage.setItem("geox_ao_act_token", token); } catch {}
+  return token;
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -85,6 +115,7 @@ function normalizeGroup(x: any): SensorGroupV1 | null {
         plotId: x.subjectRef.plotId ? String(x.subjectRef.plotId) : undefined,
         blockId: x.subjectRef.blockId ? String(x.subjectRef.blockId) : undefined,
       },
+      displayName: typeof x.displayName === "string" && x.displayName.trim() ? x.displayName.trim() : String(x.groupId),
       sensors: uniqStrings(x.sensors),
       createdAt: typeof x.createdAt === "number" ? x.createdAt : 0,
     };
@@ -111,6 +142,7 @@ function normalizeGroup(x: any): SensorGroupV1 | null {
   return {
     groupId,
     subjectRef: { projectId, plotId, blockId },
+    displayName: typeof x.display_name === "string" && x.display_name.trim() ? x.display_name.trim() : groupId,
     sensors,
     createdAt: toMsMaybe(x.created_at),
   };
@@ -146,7 +178,7 @@ export async function fetchSeries(params: {
 export async function postMarker(body: {
   ts: number;
   sensorId: string;
-  type: "device_fault" | "local_anomaly";
+  type: MarkerKind;
   note?: string | null;
   source: "device" | "gateway" | "system";
 }): Promise<{ ok: true }> {
@@ -394,12 +426,15 @@ export async function fetchAuthMe(token: string): Promise<AuthMe> {
 // Alerts APIs
 // -----------------------------
 
+export type AlertRuleStatus = "ACTIVE" | "DISABLED" | "ALL";
+export type AlertEventStatus = "OPEN" | "ACKED" | "CLOSED" | "ALL";
+export type AlertObjectType = "DEVICE" | "FIELD" | "TENANT" | "ALL";
 export type AlertRuleItem = any;
 export type AlertEventItem = any;
 export type AlertNotificationItem = any;
 
-export async function fetchAlertRules(token: string): Promise<AlertRuleItem[]> {
-  const res = await requestJson<{ ok?: boolean; items?: AlertRuleItem[] }>(`/api/v1/alerts/rules`, {
+export async function fetchAlertRules(token: string, params?: Record<string, unknown>): Promise<AlertRuleItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: AlertRuleItem[] }>(withQuery(`/api/v1/alerts/rules`, params), {
     headers: authHeaders(token),
   });
   return Array.isArray(res.items) ? res.items : [];
@@ -457,10 +492,11 @@ export async function fetchAlertNotifications(token: string, params?: Record<str
 // Audit / export overview APIs
 // -----------------------------
 
+export type AuditOverviewObjectType = "ALL" | "EXPORT" | "ALERT" | "RECEIPT" | "APPROVAL" | "DISPATCH";
 export type AuditExportOverview = any;
 
-export async function fetchAuditExportOverview(token: string): Promise<AuditExportOverview> {
-  return requestJson<AuditExportOverview>(`/api/v1/audit-export/overview`, {
+export async function fetchAuditExportOverview(token: string, params?: Record<string, unknown>): Promise<AuditExportOverview> {
+  return requestJson<AuditExportOverview>(withQuery(`/api/v1/audit-export/overview`, params), {
     headers: authHeaders(token),
   });
 }
@@ -475,11 +511,12 @@ export type FieldPolygon = any;
 export type FieldSeason = any;
 export type FieldDetail = any;
 
-export async function fetchFields(token: string): Promise<FieldListItem[]> {
-  const res = await requestJson<{ ok?: boolean; items?: FieldListItem[] }>(`/api/v1/fields`, {
+export async function fetchFields(token: string): Promise<FieldListItem[]> { // Load field list from Commercial v1 fields API.
+  const res = await requestJson<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>(`/api/v1/fields`, {
     headers: authHeaders(token),
   });
-  return Array.isArray(res.items) ? res.items : [];
+  if (Array.isArray(res.items)) return res.items;
+  return Array.isArray(res.fields) ? res.fields : [];
 }
 
 export async function fetchFieldDetail(token: string, fieldId: string): Promise<FieldDetail> {
@@ -680,6 +717,7 @@ export async function fetchTelemetrySeries(token: string, params?: Record<string
 // Evidence export APIs
 // -----------------------------
 
+export type EvidenceExportScopeType = "TENANT" | "FIELD" | "DEVICE";
 export type EvidenceExportJob = any;
 
 export async function fetchEvidenceExportJobs(token: string, params?: Record<string, unknown>): Promise<EvidenceExportJob[]> {

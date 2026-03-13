@@ -35,9 +35,9 @@ export function buildP5Support(args: {
 
   const byKeySamples = new Map<string, RawSampleV1[]>();
   for (const s of args.samples) {
-    if (!args.sensorIds.includes(s.sensor_id)) continue;
+    if (!args.sensorIds.includes(s.sensorId)) continue;
     if (!args.metrics.includes(s.metric)) continue;
-    const key = `${s.sensor_id}|${s.metric}`;
+    const key = `${s.sensorId}|${s.metric}`;
     const arr = byKeySamples.get(key) ?? [];
     arr.push(s);
     byKeySamples.set(key, arr);
@@ -46,7 +46,7 @@ export function buildP5Support(args: {
 
   const byKeyOverlays = new Map<string, OverlaySegment[]>();
   for (const o of args.overlays) {
-    const key = `${o.sensor_id}|${o.metric}`;
+    const key = `${o.sensorId}|${o.metric}`;
     const arr = byKeyOverlays.get(key) ?? [];
     arr.push(o);
     byKeyOverlays.set(key, arr);
@@ -100,8 +100,7 @@ export function buildP5Support(args: {
           .filter((o) => o.kind === "step_candidate" || o.kind === "drift_candidate")
           .sort((a, b) => b.endTs - a.endTs)[0];
         if (!cand) return null;
-        const sev = cand.severity ? ` • ${cand.severity}` : "";
-        return `${cand.kind}${sev} @ ${new Date(cand.startTs).toISOString().slice(0, 10)}`;
+        return `${cand.kind} @ ${new Date(cand.startTs).toISOString().slice(0, 10)}`;
       })();
 
       const window_status = (() => {
