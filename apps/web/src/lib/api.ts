@@ -511,12 +511,18 @@ export type FieldPolygon = any;
 export type FieldSeason = any;
 export type FieldDetail = any;
 
-export async function fetchFields(token: string): Promise<FieldListItem[]> { // Load field list from Commercial v1 fields API.
+export async function fetchFields(token: string): Promise<FieldListItem[]> {
   const res = await requestJson<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>(`/api/v1/fields`, {
     headers: authHeaders(token),
   });
-  if (Array.isArray(res.items)) return res.items;
-  return Array.isArray(res.fields) ? res.fields : [];
+  console.log("fetchFields raw res", res);
+  if (Array.isArray(res.items)) {
+    console.log("fetchFields return items", res.items.length, res.items);
+    return res.items;
+  }
+  const out = Array.isArray(res.fields) ? res.fields : [];
+  console.log("fetchFields return fields", out.length, out);
+  return out;
 }
 
 export async function fetchFieldDetail(token: string, fieldId: string): Promise<FieldDetail> {
@@ -547,7 +553,7 @@ export type TelemetrySeriesResponse = any;
 
 export async function fetchDevices(token: string): Promise<DeviceListItem[]> {
   try {
-    const res = await requestJson<{ ok?: boolean; items?: DeviceListItem[]; devices?: DeviceListItem[] }>(`/api/devices`, {
+    const res = await requestJson<{ ok?: boolean; items?: DeviceListItem[]; devices?: DeviceListItem[] }>(`/api/v1/devices`, {
       headers: authHeaders(token),
     });
     if (Array.isArray(res.items)) return res.items;
@@ -583,7 +589,7 @@ export async function fetchDeviceConsole(token: string, deviceId: string): Promi
 
 
 export async function issueDeviceCredential(token: string, deviceId: string, body?: { credential_id?: string }): Promise<any> {
-  return requestJson<any>(`/api/devices/${encodeURIComponent(deviceId)}/credentials`, {
+  return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/credentials`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body ?? {}),
@@ -591,7 +597,7 @@ export async function issueDeviceCredential(token: string, deviceId: string, bod
 }
 
 export async function revokeDeviceCredential(token: string, deviceId: string, credentialId: string): Promise<any> {
-  return requestJson<any>(`/api/devices/${encodeURIComponent(deviceId)}/credentials/${encodeURIComponent(credentialId)}/revoke`, {
+  return requestJson<any>(`/api/v1/devices/${encodeURIComponent(deviceId)}/credentials/${encodeURIComponent(credentialId)}/revoke`, {
     method: "POST",
     headers: authHeaders(token),
   });
@@ -624,13 +630,13 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
   }
 
   // Fallback for mixed backend versions: create device + issue credential via stable legacy endpoints.
-  await requestJson<any>(`/api/devices`, {
+    await requestJson<any>(`/api/v1/devices`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name }),
   });
 
-  const created = await requestJson<any>(`/api/devices/${encodeURIComponent(body.device_id)}/credentials`, {
+  const created = await requestJson<any>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/credentials`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body.credential_id ? { credential_id: body.credential_id } : {}),

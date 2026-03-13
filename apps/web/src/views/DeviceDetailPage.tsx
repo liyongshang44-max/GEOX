@@ -46,20 +46,43 @@ type BoundFieldInfo = {
   bound_ts_ms: number | null;
 };
 
+type NamedSettled<T = unknown> =
+  | { name: string; status: "fulfilled"; value: T }
+  | { name: string; status: "rejected"; reason: unknown };
+
+function withTimeout<T>(name: string, promise: Promise<T>, ms = 8000): Promise<NamedSettled<T>> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve({ name, status: "rejected", reason: new Error(`TIMEOUT:${name}`) });
+    }, ms);
+
+    promise
+      .then((value) => {
+        clearTimeout(timer);
+        resolve({ name, status: "fulfilled", value });
+      })
+      .catch((reason) => {
+        clearTimeout(timer);
+        resolve({ name, status: "rejected", reason });
+      });
+  });
+}
+
 async function resolveBoundFieldFromFields(token: string, deviceId: string): Promise<BoundFieldInfo> {
   const fields: FieldListItem[] = await fetchFields(token);
+  console.log("resolveBoundFieldFromFields fields", fields.length, fields);
   for (const field of fields) {
     try {
       const detail: FieldDetail = await fetchFieldDetail(token, field.field_id);
-      const matched = (detail.bound_devices || []).find((item) => item.device_id === deviceId);
+      const matched = (detail.bound_devices || []).find((item: any) => item.device_id === deviceId);
       if (matched) {
         return {
           field_id: field.field_id,
           bound_ts_ms: matched.bound_ts_ms ?? null,
         };
       }
-    } catch {
-      // ignore single-field lookup failure and continue scanning other fields
+    } catch (e) {
+      console.warn("resolveBoundFieldFromFields single field failed", field.field_id, e);
     }
   }
   return { field_id: null, bound_ts_ms: null };
@@ -97,27 +120,70 @@ export default function DeviceDetailPage(): React.ReactElement {
   async function refresh(): Promise<void> {
     if (!deviceId) return;
 
+    console.log("refresh start", deviceId);
     setBusy(true);
     setStatus(`正在读取设备 ${deviceId} ...`);
 
     try {
-      const [nextDetail, nextConsole, nextStatus, nextLatest, nextMetrics, nextSeries, nextDevices, nextFields] = await Promise.all([
-        fetchDeviceDetail(token, deviceId),
-        fetchDeviceConsole(token, deviceId),
-        fetchDeviceStatus(token, deviceId),
-        fetchTelemetryLatest(token, { device_id: deviceId }),
-        fetchTelemetryMetrics(token, { device_id: deviceId }),
-        fetchTelemetrySeries(token, { device_id: deviceId }),
-        fetchDevices(token),
-        fetchFields(token).catch(() => []),
+      const results = await Promise.all([
+        withTimeout("fetchDeviceDetail", fetchDeviceDetail(token, deviceId)),
+        withTimeout("fetchDeviceConsole", fetchDeviceConsole(token, deviceId)),
+        withTimeout("fetchDeviceStatus", fetchDeviceStatus(token, deviceId)),
+        withTimeout("fetchTelemetryLatest", fetchTelemetryLatest(token, { device_id: deviceId })),
+        withTimeout("fetchTelemetryMetrics", fetchTelemetryMetrics(token, { device_id: deviceId })),
+        withTimeout("fetchTelemetrySeries", fetchTelemetrySeries(token, { device_id: deviceId })),
+        withTimeout("fetchDevices", fetchDevices(token)),
+        withTimeout("fetchFields", fetchFields(token)),
       ]);
 
-      const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
+      console.log("refresh named results", results);
+
+      const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
+
+      const nextDetail =
+        byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
+
+      const nextConsole =
+        byName.fetchDeviceConsole?.status === "fulfilled" ? byName.fetchDeviceConsole.value : null;
+
+      const nextStatus =
+        byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
+
+      const nextLatest =
+        byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
+
+      const nextMetrics =
+        byName.fetchTelemetryMetrics?.status === "fulfilled" ? byName.fetchTelemetryMetrics.value : [];
+
+      const nextSeries =
+        byName.fetchTelemetrySeries?.status === "fulfilled"
+          ? ((byName.fetchTelemetrySeries.value as any)?.series || (byName.fetchTelemetrySeries.value as any) || {})
+          : {};
+
+      const nextDevices =
+        byName.fetchDevices?.status === "fulfilled" ? byName.fetchDevices.value : [];
+
+      const nextFields =
+        byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
+
+      console.log("refresh nextFields", nextFields, Array.isArray(nextFields), nextFields.length);
+
+      const matchedDevice =
+        nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
+
       let boundFieldInfo: BoundFieldInfo = {
-        field_id: matchedDevice?.field_id || nextDetail?.device?.field_id || null,
-        bound_ts_ms: matchedDevice?.bound_ts_ms || nextDetail?.device?.bound_ts_ms || null,
+        field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null,
+        bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null,
       };
-      if (!boundFieldInfo.field_id) boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
+
+      console.log("refresh matchedDevice", matchedDevice);
+      console.log("refresh initial boundFieldInfo", boundFieldInfo);
+
+      if (!boundFieldInfo.field_id && nextFields.length) {
+        console.log("refresh resolving bound field from fields");
+        boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
+        console.log("refresh resolved boundFieldInfo", boundFieldInfo);
+      }
 
       setDetail(nextDetail);
       setConsoleView(nextConsole);
@@ -126,11 +192,13 @@ export default function DeviceDetailPage(): React.ReactElement {
       setResolvedBoundField(boundFieldInfo);
       setLatest(nextLatest);
       setMetrics(nextMetrics);
-      setSeries((nextSeries as any)?.series || (nextSeries as any) || {});
+      setSeries(nextSeries);
       setAvailableFields(nextFields as FieldListItem[]);
+      console.log("after setAvailableFields", nextFields.length);
       setBindFieldId(String(boundFieldInfo.field_id || ""));
       setStatus(`设备 ${deviceId} 已加载。`);
     } catch (e: any) {
+      console.error("refresh failed", e);
       setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
     } finally {
       setBusy(false);
@@ -144,12 +212,16 @@ export default function DeviceDetailPage(): React.ReactElement {
     setIssuedCredentialId("");
     setStatus(`正在为 ${deviceId} 签发凭据...`);
     try {
-      const created = await issueDeviceCredential(token, deviceId, newCredentialId.trim() ? { credential_id: newCredentialId.trim() } : {});
+      const created = await issueDeviceCredential(
+        token,
+        deviceId,
+        newCredentialId.trim() ? { credential_id: newCredentialId.trim() } : {},
+      );
       setIssuedSecret(String(created?.credential_secret || ""));
       setIssuedCredentialId(String(created?.credential_id || ""));
       setNewCredentialId("");
       await refresh();
-      setStatus(`凭据已签发：${created?.credential_id}`);
+      setStatus(`凭据已签发：${created?.credential_id || "-"}`);
     } catch (e: any) {
       setStatus(`签发失败：${e?.bodyText || e?.message || String(e)}`);
     } finally {
@@ -191,16 +263,20 @@ export default function DeviceDetailPage(): React.ReactElement {
     void refresh();
   }, [deviceId]);
 
+  React.useEffect(() => {
+    console.log("availableFields state", availableFields.length, availableFields);
+  }, [availableFields]);
+
   const boundFieldId =
     resolvedBoundField.field_id ||
     deviceListItem?.field_id ||
-    detail?.device?.field_id ||
+    (detail as any)?.device?.field_id ||
     null;
 
   const boundTsMs =
     resolvedBoundField.bound_ts_ms ||
     deviceListItem?.bound_ts_ms ||
-    detail?.device?.bound_ts_ms ||
+    (detail as any)?.device?.bound_ts_ms ||
     null;
 
   return (
@@ -208,7 +284,7 @@ export default function DeviceDetailPage(): React.ReactElement {
       <section className="hero card compactHero">
         <div>
           <div className="eyebrow">Device Detail · Sprint D2</div>
-          <h2 className="heroTitle">{detail?.device?.display_name || deviceId || "设备详情"}</h2>
+          <h2 className="heroTitle">{(detail as any)?.device?.display_name || deviceId || "设备详情"}</h2>
           <p className="heroText">
             本轮把设备详情收口成“接入与执行控制台”：不仅看状态和遥测，还能查看接入 topic、凭据生命周期提示，以及最近命令与设备回执。
           </p>
@@ -259,10 +335,10 @@ export default function DeviceDetailPage(): React.ReactElement {
             <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} />
           </label>
 
-          <div className="kv"><span className="k">设备 ID</span><span className="v">{detail?.device?.device_id || deviceId || "-"}</span></div>
-          <div className="kv"><span className="k">显示名称</span><span className="v">{detail?.device?.display_name || "-"}</span></div>
-          <div className="kv"><span className="k">最新凭据</span><span className="v">{detail?.device?.last_credential_id || "-"}</span></div>
-          <div className="kv"><span className="k">凭据状态</span><span className="v">{detail?.device?.last_credential_status || "-"}</span></div>
+          <div className="kv"><span className="k">设备 ID</span><span className="v">{(detail as any)?.device?.device_id || deviceId || "-"}</span></div>
+          <div className="kv"><span className="k">显示名称</span><span className="v">{(detail as any)?.device?.display_name || "-"}</span></div>
+          <div className="kv"><span className="k">最新凭据</span><span className="v">{(detail as any)?.device?.last_credential_id || "-"}</span></div>
+          <div className="kv"><span className="k">凭据状态</span><span className="v">{(detail as any)?.device?.last_credential_status || "-"}</span></div>
           <div className="kv"><span className="k">页面状态</span><span className="v">{status}</span></div>
           <div className="kv"><span className="k">绑定田块</span><span className="v">{boundFieldId || "未绑定"}</span></div>
           <div className="kv"><span className="k">绑定时间</span><span className="v">{fmtTs(boundTsMs)}</span></div>
@@ -303,19 +379,29 @@ export default function DeviceDetailPage(): React.ReactElement {
               <span>新凭据 ID（可选）</span>
               <input className="input" value={newCredentialId} onChange={(e) => setNewCredentialId(e.target.value)} placeholder="cred_dev_demo_001" />
             </label>
+
             <div className="field">
               <span>签发动作</span>
               <div className="heroActions">
                 <button className="btn primary" onClick={() => void handleIssueCredential()} disabled={busy}>签发一次性密钥</button>
               </div>
             </div>
+
             <label className="field">
               <span>绑定田块</span>
+              <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
+                availableFields.length = {availableFields.length}
+              </div>
               <select className="select" value={bindFieldId} onChange={(e) => setBindFieldId(e.target.value)}>
                 <option value="">选择田块</option>
-                {availableFields.map((field: any) => <option key={String(field.field_id)} value={String(field.field_id)}>{String(field.name || field.field_id)}</option>)}
+                {availableFields.map((field: any) => (
+                  <option key={String(field.field_id)} value={String(field.field_id)}>
+                    {String(field.name || field.field_id)}
+                  </option>
+                ))}
               </select>
             </label>
+
             <div className="field">
               <span>绑定动作</span>
               <div className="heroActions">
@@ -328,7 +414,7 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="infoCard" style={{ marginBottom: 12 }}>
               <div className="jobTitleRow">
                 <div>
-                  <div className="title">新凭据已签发：{issuedCredentialId || '-'}</div>
+                  <div className="title">新凭据已签发：{issuedCredentialId || "-"}</div>
                   <div className="metaText">请立即复制并下发到设备侧，平台不会再次返回明文 secret。</div>
                 </div>
                 <div className="pill tone-warn">仅显示一次</div>
@@ -349,7 +435,7 @@ export default function DeviceDetailPage(): React.ReactElement {
                   <span>撤销：{fmtTs(item.revoked_ts_ms)}</span>
                 </div>
                 <div className="heroActions" style={{ marginTop: 8 }}>
-                  <button className="btn" onClick={() => void handleRevokeCredential(String(item.credential_id))} disabled={busy || item.status !== 'ACTIVE'}>撤销凭据</button>
+                  <button className="btn" onClick={() => void handleRevokeCredential(String(item.credential_id))} disabled={busy || item.status !== "ACTIVE"}>撤销凭据</button>
                 </div>
               </div>
             ))}
