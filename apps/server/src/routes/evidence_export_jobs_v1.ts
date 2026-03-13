@@ -19,6 +19,8 @@
 import fs from "node:fs"; // Filesystem for writing and streaming artifacts.
 import path from "node:path"; // Path utilities for safe joins.
 import crypto from "node:crypto"; // Crypto for sha256.
+import http from "node:http"; // HTTP client for S3-compatible object storage uploads.
+import https from "node:https"; // HTTPS client for S3-compatible object storage uploads.
 import { randomUUID } from "node:crypto"; // UUIDs for job ids and fact ids.
 import type { FastifyInstance } from "fastify"; // Fastify instance.
 import type { Pool } from "pg"; // Postgres pool.
@@ -175,7 +177,7 @@ type EvidencePackFileSummary = { // Evidence pack file summary for API responses
 };
 
 type EvidencePackDeliverySummary = { // Delivery metadata for current and future storage backends.
-  storage_mode: "LOCAL_FILE" | "LOCAL_MIRROR" | "OBJECT_STORAGE_PLACEHOLDER";
+  storage_mode: "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT";
   object_store_key: string;
   object_store_presign_supported: boolean;
   object_store_download_url: string | null;
@@ -202,9 +204,119 @@ function deriveObjectStoreKey(tenant_id_raw: string | null | undefined, job_id_r
   return `evidence-exports-v1/${tenant_id}/${job_id}/bundle.${ext}`; // Future object-store key contract.
 } // End helper.
 
-function getEvidenceStorageMode(): "LOCAL_FILE" | "LOCAL_MIRROR" { // Helper: normalize storage mode from env.
-  return String(process.env.GEOX_EVIDENCE_STORAGE_MODE ?? "LOCAL_FILE").trim().toUpperCase() === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : "LOCAL_FILE"; // Default local file mode.
+function getEvidenceStorageMode(): "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT" { // Helper: normalize storage mode from env.
+  const m = String(process.env.GEOX_EVIDENCE_STORAGE_MODE ?? "LOCAL_FILE").trim().toUpperCase(); // Read mode from env.
+  if (m === "LOCAL_MIRROR") return "LOCAL_MIRROR"; // Local mirror mode.
+  if (m === "S3_COMPAT") return "S3_COMPAT"; // Real object storage mode.
+  return "LOCAL_FILE"; // Default local file mode.
 } // End helper.
+
+type S3CompatConfig = { // S3-compatible object storage runtime config.
+  endpoint: string;
+  bucket: string;
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  forcePathStyle: boolean;
+  presignTtlSec: number;
+};
+
+function getS3CompatConfig(): S3CompatConfig | null { // Helper: load S3-compatible config from env when enabled.
+  const endpoint = String(process.env.GEOX_EVIDENCE_S3_ENDPOINT ?? "").trim();
+  const bucket = String(process.env.GEOX_EVIDENCE_S3_BUCKET ?? "").trim();
+  const region = String(process.env.GEOX_EVIDENCE_S3_REGION ?? "us-east-1").trim() || "us-east-1";
+  const accessKeyId = String(process.env.GEOX_EVIDENCE_S3_ACCESS_KEY_ID ?? "").trim();
+  const secretAccessKey = String(process.env.GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY ?? "").trim();
+  if (!endpoint || !bucket || !accessKeyId || !secretAccessKey) return null; // Missing required config.
+  const forcePathStyle = String(process.env.GEOX_EVIDENCE_S3_FORCE_PATH_STYLE ?? "true").trim().toLowerCase() !== "false";
+  const ttlRaw = Number(process.env.GEOX_EVIDENCE_S3_PRESIGN_TTL_SEC ?? 900);
+  const presignTtlSec = Number.isFinite(ttlRaw) && ttlRaw > 0 ? Math.min(Math.trunc(ttlRaw), 7 * 24 * 3600) : 900;
+  return { endpoint, bucket, region, accessKeyId, secretAccessKey, forcePathStyle, presignTtlSec };
+} // End helper.
+
+function hmacSha256(key: Buffer | string, value: string): Buffer { return crypto.createHmac("sha256", key).update(value, "utf8").digest(); }
+function s3UriEncode(s: string): string { return encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`); }
+
+function signV4Key(secretAccessKey: string, shortDate: string, region: string, service: string): Buffer { // Helper: AWS SigV4 signing key.
+  const kDate = hmacSha256(`AWS4${secretAccessKey}`, shortDate);
+  const kRegion = hmacSha256(kDate, region);
+  const kService = hmacSha256(kRegion, service);
+  return hmacSha256(kService, "aws4_request");
+}
+
+function parseS3Target(cfg: S3CompatConfig, objectKey: string): { endpoint: URL; host: string; pathName: string } { // Helper: derive host/path from endpoint + key.
+  const endpoint = new URL(cfg.endpoint);
+  const encodedKey = objectKey.split("/").map((x) => s3UriEncode(x)).join("/");
+  if (cfg.forcePathStyle) return { endpoint, host: endpoint.host, pathName: `/${s3UriEncode(cfg.bucket)}/${encodedKey}` };
+  return { endpoint, host: `${s3UriEncode(cfg.bucket)}.${endpoint.host}`, pathName: `/${encodedKey}` };
+}
+
+async function s3PutObjectFromFile(cfg: S3CompatConfig, objectKey: string, filePath: string, contentType: string): Promise<void> { // Helper: upload one file into S3-compatible storage.
+  const body = fs.readFileSync(filePath);
+  const bodySha256 = crypto.createHash("sha256").update(body).digest("hex");
+  const now = new Date();
+  const iso = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const shortDate = iso.slice(0, 8);
+  const { endpoint, host, pathName } = parseS3Target(cfg, objectKey);
+  const canonicalHeaders = `host:${host}\nx-amz-content-sha256:${bodySha256}\nx-amz-date:${iso}\n`;
+  const signedHeaders = "host;x-amz-content-sha256;x-amz-date";
+  const canonicalRequest = ["PUT", pathName, "", canonicalHeaders, signedHeaders, bodySha256].join("\n");
+  const scope = `${shortDate}/${cfg.region}/s3/aws4_request`;
+  const stringToSign = ["AWS4-HMAC-SHA256", iso, scope, crypto.createHash("sha256").update(canonicalRequest, "utf8").digest("hex")].join("\n");
+  const signature = crypto.createHmac("sha256", signV4Key(cfg.secretAccessKey, shortDate, cfg.region, "s3")).update(stringToSign, "utf8").digest("hex");
+  const authorization = `AWS4-HMAC-SHA256 Credential=${cfg.accessKeyId}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const options = {
+    method: "PUT",
+    protocol: endpoint.protocol,
+    hostname: cfg.forcePathStyle ? endpoint.hostname : `${s3UriEncode(cfg.bucket)}.${endpoint.hostname}`,
+    port: endpoint.port || undefined,
+    path: pathName,
+    headers: {
+      host,
+      "content-type": contentType,
+      "content-length": String(body.length),
+      "x-amz-content-sha256": bodySha256,
+      "x-amz-date": iso,
+      authorization,
+    } as Record<string, string>,
+  };
+
+  await new Promise<void>((resolve, reject) => {
+    const req = (endpoint.protocol === "http:" ? http : https).request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on("data", (c) => chunks.push(Buffer.isBuffer(c) ? c : Buffer.from(c)));
+      res.on("end", () => {
+        const status = Number(res.statusCode ?? 0);
+        if (status >= 200 && status < 300) return resolve();
+        reject(new Error(`S3_UPLOAD_FAILED:${status}:${Buffer.concat(chunks).toString("utf8").slice(0, 200)}`));
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function buildS3PresignedGetUrl(cfg: S3CompatConfig, objectKey: string): string { // Helper: generate SigV4 presigned GET URL.
+  const now = new Date();
+  const iso = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const shortDate = iso.slice(0, 8);
+  const { endpoint, host, pathName } = parseS3Target(cfg, objectKey);
+  const scope = `${shortDate}/${cfg.region}/s3/aws4_request`;
+  const queryParams = [
+    ["X-Amz-Algorithm", "AWS4-HMAC-SHA256"],
+    ["X-Amz-Credential", `${cfg.accessKeyId}/${scope}`],
+    ["X-Amz-Date", iso],
+    ["X-Amz-Expires", String(cfg.presignTtlSec)],
+    ["X-Amz-SignedHeaders", "host"],
+  ].sort((a, b) => a[0].localeCompare(b[0]));
+  const canonicalQuery = queryParams.map(([k, v]) => `${s3UriEncode(k)}=${s3UriEncode(v)}`).join("&");
+  const canonicalRequest = ["GET", pathName, canonicalQuery, `host:${host}\n`, "host", "UNSIGNED-PAYLOAD"].join("\n");
+  const stringToSign = ["AWS4-HMAC-SHA256", iso, scope, crypto.createHash("sha256").update(canonicalRequest, "utf8").digest("hex")].join("\n");
+  const signature = crypto.createHmac("sha256", signV4Key(cfg.secretAccessKey, shortDate, cfg.region, "s3")).update(stringToSign, "utf8").digest("hex");
+  return `${endpoint.protocol}//${host}${pathName}?${canonicalQuery}&X-Amz-Signature=${signature}`;
+}
 
 function getEvidenceObjectRootDir(): string { // Helper: root directory for local mirror object storage.
   return path.resolve(process.cwd(), process.env.GEOX_EVIDENCE_OBJECT_ROOT || path.join("runtime", "evidence_object_store_v1")); // Configurable root.
@@ -241,9 +353,15 @@ function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null 
     // Ignore parse errors and fall back to default format.
   }
 
-  const storage_mode = String(row?.pack_storage_mode ?? "LOCAL_FILE") === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : "LOCAL_FILE"; // Storage mode from pack index.
+  const storage_mode_raw = String(row?.pack_storage_mode ?? "LOCAL_FILE").trim().toUpperCase(); // Storage mode from pack index.
+  const storage_mode: "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT" = storage_mode_raw === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : storage_mode_raw === "S3_COMPAT" ? "S3_COMPAT" : "LOCAL_FILE";
   const object_store_key = typeof row?.pack_object_store_key === "string" && row.pack_object_store_key.trim() ? row.pack_object_store_key.trim() : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format); // Stable object store key.
-  const object_store_download_url = storage_mode === "LOCAL_MIRROR" ? buildObjectStoreDownloadPath(row?.job_id, "bundle") : null; // Authorized mirror bundle URL.
+  const s3cfg = storage_mode === "S3_COMPAT" ? getS3CompatConfig() : null; // S3 config for presigned URLs.
+  const object_store_download_url = storage_mode === "LOCAL_MIRROR"
+    ? buildObjectStoreDownloadPath(row?.job_id, "bundle")
+    : storage_mode === "S3_COMPAT" && s3cfg
+      ? buildS3PresignedGetUrl(s3cfg, object_store_key)
+      : null; // Authorized download URL.
 
   return {
     format,
@@ -253,7 +371,7 @@ function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null 
     delivery: {
       storage_mode,
       object_store_key,
-      object_store_presign_supported: false,
+      object_store_presign_supported: storage_mode === "S3_COMPAT",
       object_store_download_url,
     },
     files: [
@@ -597,6 +715,8 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
 
     const object_store_key = deriveObjectStoreKey(tenant_id, job_id, export_format); // Stable object-store key contract.
     const storage_mode = getEvidenceStorageMode(); // Effective storage mode.
+    const s3cfg = storage_mode === "S3_COMPAT" ? getS3CompatConfig() : null; // S3-compatible config for object storage mode.
+    if (storage_mode === "S3_COMPAT" && !s3cfg) throw new Error("S3_CONFIG_MISSING"); // Fail fast on invalid object storage config.
     let object_store_bundle_path: string | null = null; // Mirrored bundle path when enabled.
     let object_store_manifest_path: string | null = null; // Mirrored manifest path when enabled.
     let object_store_checksums_path: string | null = null; // Mirrored checksums path when enabled.
@@ -608,6 +728,17 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
       copyFileWithParents(bundle_path, object_store_bundle_path); // Mirror bundle.
       copyFileWithParents(manifest_path, object_store_manifest_path); // Mirror manifest.
       copyFileWithParents(checksums_path, object_store_checksums_path); // Mirror checksums.
+    } else if (storage_mode === "S3_COMPAT" && s3cfg) { // Upload evidence pack files to S3-compatible object storage.
+      const keyPrefix = object_store_key.split("/").slice(0, -1).join("/"); // Prefix for sidecar files.
+      const bundleKey = object_store_key;
+      const manifestKey = `${keyPrefix}/manifest.json`;
+      const checksumsKey = `${keyPrefix}/sha256.txt`;
+      await s3PutObjectFromFile(s3cfg, bundleKey, bundle_path, bundleContentTypeForFormat(export_format));
+      await s3PutObjectFromFile(s3cfg, manifestKey, manifest_path, "application/json");
+      await s3PutObjectFromFile(s3cfg, checksumsKey, checksums_path, "text/plain; charset=utf-8");
+      object_store_bundle_path = `s3://${s3cfg.bucket}/${bundleKey}`;
+      object_store_manifest_path = `s3://${s3cfg.bucket}/${manifestKey}`;
+      object_store_checksums_path = `s3://${s3cfg.bucket}/${checksumsKey}`;
     }
 
     const pack_summary = { // Summary exposed through job projection/facts.
