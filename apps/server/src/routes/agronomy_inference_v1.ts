@@ -17,6 +17,40 @@ function normalizeTaskType(v: unknown): InferenceTaskTypeV1 {
   return "classification";
 }
 
+function parseJsonSafe(v: unknown): any {
+  if (v == null) return null;
+  if (typeof v === "object") return v;
+  if (typeof v !== "string") return null;
+  try { return JSON.parse(v); } catch { return null; }
+}
+
+function formatInferenceRow(row: any): any {
+  const labels = parseJsonSafe(row.labels_json);
+  const rawSummary = parseJsonSafe(row.raw_output_summary_json);
+  const inferenceTsMs = Number(row.inference_ts_ms);
+  const inferenceTsIso = Number.isFinite(inferenceTsMs) ? new Date(inferenceTsMs).toISOString() : null;
+  return {
+    tenant_id: String(row.tenant_id),
+    inference_id: String(row.inference_id),
+    observation_id: String(row.observation_id),
+    media_key: String(row.media_key),
+    field_id: String(row.field_id),
+    season_id: row.season_id == null ? null : String(row.season_id),
+    device_id: row.device_id == null ? null : String(row.device_id),
+    model_name: String(row.model_name),
+    model_version: String(row.model_version),
+    task_type: String(row.task_type),
+    labels: Array.isArray(labels) ? labels : [],
+    confidence: Number(row.confidence),
+    health_score: row.health_score == null ? null : Number(row.health_score),
+    pest_detected: Boolean(row.pest_detected),
+    disease_detected: Boolean(row.disease_detected),
+    inference_ts_ms: Number.isFinite(inferenceTsMs) ? inferenceTsMs : null,
+    inference_ts: inferenceTsIso,
+    raw_output_summary: rawSummary ?? {},
+  };
+}
+
 async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS agronomy_inference_index_v1 (
@@ -206,7 +240,42 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       [tenant_id, inference_id]
     );
     if ((r.rowCount ?? 0) < 1) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
-    return reply.send({ ok: true, inference: r.rows[0] });
+    return reply.send({ ok: true, inference: formatInferenceRow(r.rows[0]) });
+  });
+
+  app.get("/api/v1/agronomy/inference", async (req, reply) => {
+    const q: any = (req as any).query ?? {};
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const observation_id = normalizeString(q.observation_id, 128);
+    const media_key = normalizeString(q.media_key, 512);
+    if (!observation_id && !media_key) {
+      return reply.code(400).send({ ok: false, error: "MISSING:observation_id_or_media_key" });
+    }
+
+    const where: string[] = ["tenant_id = $1"];
+    const values: any[] = [tenant_id];
+    let i = 2;
+    if (observation_id) {
+      where.push(`observation_id = $${i++}`);
+      values.push(observation_id);
+    }
+    if (media_key) {
+      where.push(`media_key = $${i++}`);
+      values.push(media_key);
+    }
+
+    const r = await pool.query(
+      `SELECT tenant_id, inference_id, observation_id, media_key, field_id, season_id, device_id,
+              model_name, model_version, task_type, labels_json, confidence, health_score,
+              pest_detected, disease_detected, inference_ts_ms, raw_output_summary_json
+         FROM agronomy_inference_index_v1
+        WHERE ${where.join(" AND ")}
+        ORDER BY inference_ts_ms DESC
+        LIMIT 50`,
+      values
+    );
+
+    return reply.send({ ok: true, count: r.rowCount ?? 0, items: (r.rows ?? []).map((row: any) => formatInferenceRow(row)) });
   });
 
   app.get("/api/v1/agronomy/inputs/:field_id", async (req, reply) => {
@@ -228,7 +297,8 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
 
     const inferenceQ = await pool.query(
       `SELECT inference_id, observation_id, model_name, model_version, task_type,
-              labels_json, confidence, health_score, pest_detected, disease_detected, inference_ts_ms
+              labels_json, confidence, health_score, pest_detected, disease_detected, inference_ts_ms,
+              tenant_id, media_key, field_id, season_id, device_id, raw_output_summary_json
          FROM agronomy_inference_index_v1
         WHERE tenant_id = $1 AND field_id = $2
         ORDER BY inference_ts_ms DESC
@@ -288,7 +358,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       tenant_id,
       field_id,
       recent_observations: observationsQ.rows ?? [],
-      recent_inference_results: inferenceQ.rows ?? [],
+      recent_inference_results: (inferenceQ.rows ?? []).map((row: any) => formatInferenceRow(row)),
       telemetry_summary: telemetrySummary,
     });
   });
