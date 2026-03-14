@@ -14,7 +14,7 @@ export const RawSampleV1Schema = z
     groupId: z.string().min(1).optional(),
     metric: z.string().min(1),
     value: z.number().finite(),
-    unit: z.string().min(1).optional(),
+    unit: z.string().min(1).optional(), // Required for catalogued metrics; must match canonical unit.
     quality: z.enum(["unknown", "ok", "suspect", "bad"]).default("unknown"),
     // Align facts/source with observed system reality.
     source: z
@@ -36,7 +36,13 @@ export const RawSampleV1Schema = z
     if (isTelemetryMetricNameV1(v.metric)) {
       const metricName = v.metric as keyof typeof TELEMETRY_METRIC_CATALOG_V1;
       const spec = TELEMETRY_METRIC_CATALOG_V1[metricName];
-      if (typeof v.unit === "string" && v.unit.trim() && v.unit !== spec.unit) {
+      if (typeof v.unit !== "string" || !v.unit.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Metric ${v.metric} requires unit ${spec.unit}`,
+          path: ["unit"],
+        });
+      } else if (v.unit !== spec.unit) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: `Metric ${v.metric} unit must be ${spec.unit} (got: ${v.unit})`,
