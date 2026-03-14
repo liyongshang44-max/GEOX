@@ -53,6 +53,58 @@ function formatInferenceRow(row: any): any {
 
 async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS agronomy_inference_result_v1 (
+      tenant_id text NOT NULL,
+      inference_id text NOT NULL,
+      fact_id text NOT NULL,
+      occurred_at timestamptz NOT NULL,
+      observation_id text NOT NULL,
+      media_key text NOT NULL,
+      field_id text NOT NULL,
+      season_id text NULL,
+      device_id text NULL,
+      model_name text NOT NULL,
+      model_version text NOT NULL,
+      task_type text NOT NULL,
+      labels_json jsonb NOT NULL,
+      confidence numeric(6,5) NOT NULL,
+      health_score numeric(6,2) NULL,
+      pest_detected boolean NOT NULL,
+      disease_detected boolean NOT NULL,
+      inference_ts_ms bigint NOT NULL,
+      raw_output_summary_json jsonb NOT NULL,
+      created_ts_ms bigint NOT NULL,
+      updated_ts_ms bigint NOT NULL,
+      PRIMARY KEY (tenant_id, inference_id),
+      UNIQUE (tenant_id, fact_id)
+    )
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_result_v1_observation_idx
+    ON agronomy_inference_result_v1 (tenant_id, observation_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_result_v1_field_idx
+    ON agronomy_inference_result_v1 (tenant_id, field_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_result_v1_season_idx
+    ON agronomy_inference_result_v1 (tenant_id, season_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_result_v1_device_idx
+    ON agronomy_inference_result_v1 (tenant_id, device_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_result_v1_media_idx
+    ON agronomy_inference_result_v1 (tenant_id, media_key, inference_ts_ms DESC)
+  `);
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS agronomy_inference_index_v1 (
       tenant_id text NOT NULL,
       inference_id text NOT NULL,
@@ -85,6 +137,21 @@ async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
   await pool.query(`
     CREATE INDEX IF NOT EXISTS agronomy_inference_index_v1_observation_lookup_idx
     ON agronomy_inference_index_v1 (tenant_id, observation_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_index_v1_media_lookup_idx
+    ON agronomy_inference_index_v1 (tenant_id, media_key, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_index_v1_season_lookup_idx
+    ON agronomy_inference_index_v1 (tenant_id, season_id, inference_ts_ms DESC)
+  `);
+
+  await pool.query(`
+    CREATE INDEX IF NOT EXISTS agronomy_inference_index_v1_device_lookup_idx
+    ON agronomy_inference_index_v1 (tenant_id, device_id, inference_ts_ms DESC)
   `);
 
   await pool.query(`ALTER TABLE agronomy_inference_index_v1 ALTER COLUMN health_score TYPE numeric(6,2)`);
@@ -183,6 +250,36 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
         `INSERT INTO facts (fact_id, occurred_at, source, record_json)
          VALUES ($1, $2::timestamptz, $3, $4::jsonb)`,
         [fact_id, occurred_at, "agronomy_inference_v1", JSON.stringify(record)]
+      );
+
+      await conn.query(
+        `INSERT INTO agronomy_inference_result_v1 (
+           tenant_id, inference_id, fact_id, occurred_at, observation_id, media_key, field_id, season_id, device_id,
+           model_name, model_version, task_type, labels_json, confidence, health_score,
+           pest_detected, disease_detected, inference_ts_ms, raw_output_summary_json, created_ts_ms, updated_ts_ms
+         ) VALUES ($1,$2,$3,$4::timestamptz,$5,$6,$7,$8,$9,$10,$11,$12,$13::jsonb,$14,$15,$16,$17,$18,$19::jsonb,$20,$20)`,
+        [
+          tenant_id,
+          inference_id,
+          fact_id,
+          occurred_at,
+          String(row.observation_id),
+          String(row.media_key),
+          String(row.field_id),
+          row.season_id == null ? null : String(row.season_id),
+          row.device_id == null ? null : String(row.device_id),
+          output.model_name,
+          output.model_version,
+          output.task_type,
+          JSON.stringify(output.labels),
+          output.confidence,
+          output.health_score,
+          output.pest_detected,
+          output.disease_detected,
+          inference_ts_ms,
+          JSON.stringify(output.raw_output_summary),
+          inference_ts_ms,
+        ]
       );
 
       await conn.query(
