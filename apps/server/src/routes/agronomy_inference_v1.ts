@@ -3,6 +3,7 @@ import type { Pool } from "pg";
 
 import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } from "@geox/contracts";
 import { runAgronomyInferenceV1, type InferenceTaskTypeV1 } from "../services/agronomy_inference_service_v1";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 
 function normalizeString(v: unknown, maxLen = 128): string | null {
   if (typeof v !== "string") return null;
@@ -203,8 +204,11 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
   });
 
   app.post("/api/v1/agronomy/inference/run", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
     const body: any = (req as any).body ?? {};
-    const tenant_id = normalizeString(body.tenant_id, 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(body.tenant_id, 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const observation_id = normalizeString(body.observation_id, 128);
     const media_key = normalizeString(body.media_key, 512);
     if (!observation_id && !media_key) return reply.code(400).send({ ok: false, error: "MISSING:observation_id_or_media_key" });
@@ -361,9 +365,12 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
   });
 
   app.get("/api/v1/agronomy/inference/:inference_id", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
     const p: any = (req as any).params ?? {};
     const q: any = (req as any).query ?? {};
-    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const inference_id = normalizeString(p.inference_id, 128);
     if (!inference_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:inference_id" });
 
@@ -381,8 +388,11 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
   });
 
   app.get("/api/v1/agronomy/inference", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
     const q: any = (req as any).query ?? {};
-    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const observation_id = normalizeString(q.observation_id, 128);
     const media_key = normalizeString(q.media_key, 512);
     const season_id = normalizeString(q.season_id, 128);
@@ -426,9 +436,12 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
   });
 
   app.get("/api/v1/agronomy/inputs/:field_id", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
     const p: any = (req as any).params ?? {};
     const q: any = (req as any).query ?? {};
-    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const field_id = normalizeString(p.field_id, 128);
     if (!field_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:field_id" });
 

@@ -14,6 +14,10 @@ type RecommendationV1 = {
   season_id: string;
   device_id: string;
   recommendation_type: RecommendationTypeV1;
+  status: "proposed" | "approved" | "rejected" | "executed";
+  reason_codes: string[];
+  evidence_refs: string[];
+  rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
   suggested_action: {
     action_type: string;
@@ -110,6 +114,13 @@ function buildRecommendations(body: any): RecommendationV1[] {
       season_id,
       device_id,
       recommendation_type: "irrigation_recommendation_v1",
+      status: "proposed",
+      reason_codes: ["soil_moisture_low_or_heat_stress"],
+      evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
+      rule_hit: [
+        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < 35 : false, threshold: 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
+        { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
+      ],
       confidence,
       suggested_action: {
         action_type: "irrigation.start",
@@ -139,6 +150,12 @@ function buildRecommendations(body: any): RecommendationV1[] {
       season_id,
       device_id,
       recommendation_type: "crop_health_alert_v1",
+      status: "proposed",
+      reason_codes: ["image_health_risk_high"],
+      evidence_refs: ["image:disease_score", "image:pest_risk_score", "image:stress_score"],
+      rule_hit: [
+        { rule_id: "crop_health_risk_rule_v1", matched: healthRisk >= 0.7, threshold: 0.7, actual: healthRisk }
+      ],
       confidence,
       suggested_action: {
         action_type: "crop.health.alert",
@@ -193,7 +210,80 @@ async function assertApprovedForTask(pool: Pool, tenant: TenantTriple, act_task_
   return res.rows.length > 0;
 }
 
+
+async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
+  const res = await pool.query(
+    `SELECT fact_id, occurred_at, record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'decision_recommendation_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT $4`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]
+  );
+  return (res.rows ?? []).map((row: any) => ({
+    fact_id: String(row.fact_id),
+    occurred_at: String(row.occurred_at),
+    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
+  }));
+}
+
+function normalizeRecommendationOutput(row: any): any {
+  const payload = row?.record_json?.payload ?? {};
+  return {
+    fact_id: row.fact_id,
+    occurred_at: row.occurred_at,
+    recommendation_id: payload.recommendation_id ?? null,
+    field_id: payload.field_id ?? null,
+    season_id: payload.season_id ?? null,
+    device_id: payload.device_id ?? null,
+    recommendation_type: payload.recommendation_type ?? null,
+    status: payload.status ?? "proposed",
+    reason_codes: Array.isArray(payload.reason_codes) ? payload.reason_codes : [],
+    evidence_refs: Array.isArray(payload.evidence_refs) ? payload.evidence_refs : [],
+    rule_hit: Array.isArray(payload.rule_hit) ? payload.rule_hit : [],
+    confidence: payload.confidence ?? null,
+    model_version: payload.model_version ?? null,
+    suggested_action: payload.suggested_action ?? null,
+  };
+}
+
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/agronomy/recommendations", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
+    const rows = await loadRecommendations(pool, tenant, limit);
+    return reply.send({ ok: true, items: rows.map(normalizeRecommendationOutput), count: rows.length });
+  });
+
+  app.get("/api/v1/agronomy/recommendations/:recommendation_id", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const p: any = (req as any).params ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const recommendation_id = String(p.recommendation_id ?? "").trim();
+    if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
+    const row = await loadRecommendationById(pool, recommendation_id, tenant);
+    if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
+    return reply.send({ ok: true, item: normalizeRecommendationOutput(row) });
+  });
+
   app.post("/api/v1/recommendations/generate", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
