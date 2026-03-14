@@ -331,7 +331,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       `SELECT tenant_id, inference_id, observation_id, media_key, field_id, season_id, device_id,
               model_name, model_version, task_type, labels_json, confidence, health_score,
               pest_detected, disease_detected, inference_ts_ms, raw_output_summary_json
-         FROM agronomy_inference_index_v1
+         FROM agronomy_inference_result_v1
         WHERE tenant_id = $1 AND inference_id = $2
         LIMIT 1`,
       [tenant_id, inference_id]
@@ -345,8 +345,10 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
     const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
     const observation_id = normalizeString(q.observation_id, 128);
     const media_key = normalizeString(q.media_key, 512);
-    if (!observation_id && !media_key) {
-      return reply.code(400).send({ ok: false, error: "MISSING:observation_id_or_media_key" });
+    const season_id = normalizeString(q.season_id, 128);
+    const device_id = normalizeString(q.device_id, 128);
+    if (!observation_id && !media_key && !season_id && !device_id) {
+      return reply.code(400).send({ ok: false, error: "MISSING:observation_id_or_media_key_or_season_id_or_device_id" });
     }
 
     const where: string[] = ["tenant_id = $1"];
@@ -360,12 +362,20 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       where.push(`media_key = $${i++}`);
       values.push(media_key);
     }
+    if (season_id) {
+      where.push(`season_id = $${i++}`);
+      values.push(season_id);
+    }
+    if (device_id) {
+      where.push(`device_id = $${i++}`);
+      values.push(device_id);
+    }
 
     const r = await pool.query(
       `SELECT tenant_id, inference_id, observation_id, media_key, field_id, season_id, device_id,
               model_name, model_version, task_type, labels_json, confidence, health_score,
               pest_detected, disease_detected, inference_ts_ms, raw_output_summary_json
-         FROM agronomy_inference_index_v1
+         FROM agronomy_inference_result_v1
         WHERE ${where.join(" AND ")}
         ORDER BY inference_ts_ms DESC
         LIMIT 50`,
@@ -396,7 +406,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       `SELECT inference_id, observation_id, model_name, model_version, task_type,
               labels_json, confidence, health_score, pest_detected, disease_detected, inference_ts_ms,
               tenant_id, media_key, field_id, season_id, device_id, raw_output_summary_json
-         FROM agronomy_inference_index_v1
+         FROM agronomy_inference_result_v1
         WHERE tenant_id = $1 AND field_id = $2
         ORDER BY inference_ts_ms DESC
         LIMIT 10`,
