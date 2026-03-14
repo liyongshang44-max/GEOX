@@ -26,7 +26,7 @@ export type AgronomyInferenceResultV1 = {
     task_type: AgronomyInferenceTaskTypeV1;
     labels: AgronomyInferenceLabelV1[];
     confidence: number;
-    health_score?: number | null;
+    health_score?: number | null; // 0-100
     pest_detected: boolean;
     disease_detected: boolean;
     inference_ts: string;

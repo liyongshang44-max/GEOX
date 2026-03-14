@@ -2,7 +2,14 @@ import crypto from "node:crypto";
 
 export type InferenceTaskTypeV1 = "detection" | "classification" | "segmentation";
 
-export type InferenceInputV1 = {
+type InferenceLabelV1 = {
+  label: string;
+  confidence: number;
+  bbox?: { x: number; y: number; w: number; h: number } | null;
+  mask_ref?: string | null;
+};
+
+export type InferenceRequestV1 = {
   observation_id: string;
   media_key: string;
   observation_type: string;
@@ -14,27 +21,22 @@ export type InferenceInputV1 = {
   inference_ts_ms: number;
 };
 
-export type InferenceLabelV1 = {
-  label: string;
-  confidence: number;
-  bbox?: { x: number; y: number; w: number; h: number } | null;
-  mask_ref?: string | null;
-};
-
-export type InferenceOutputV1 = {
+export type InferenceResultPayloadV1 = {
+  model_name: string;
+  model_version: string;
+  task_type: InferenceTaskTypeV1;
   labels: InferenceLabelV1[];
   confidence: number;
-  health_score: number | null;
+  health_score: number | null; // 0-100
   pest_detected: boolean;
   disease_detected: boolean;
+  inference_ts: string;
   raw_output_summary: Record<string, unknown>;
 };
 
-function clamp01(v: number): number {
-  if (!Number.isFinite(v)) return 0;
-  if (v < 0) return 0;
-  if (v > 1) return 1;
-  return Number(v.toFixed(4));
+function clamp(v: number, min: number, max: number): number {
+  if (!Number.isFinite(v)) return min;
+  return Math.max(min, Math.min(max, v));
 }
 
 function hashToUnitInterval(seed: string): number {
@@ -53,15 +55,13 @@ function defaultLabelByObservation(observationType: string): string {
   return "agronomy_signal";
 }
 
-export function runAgronomyInferenceV1(input: InferenceInputV1): InferenceOutputV1 {
-  const seed = `${input.observation_id}|${input.media_key}|${input.model_name}|${input.model_version}|${input.inference_ts_ms}`;
+function runStubInference(req: InferenceRequestV1): InferenceResultPayloadV1 {
+  const seed = `${req.observation_id}|${req.media_key}|${req.model_name}|${req.model_version}|${req.inference_ts_ms}`;
   const base = hashToUnitInterval(seed);
-  const confidence = clamp01(0.55 + base * 0.4);
-  const label = defaultLabelByObservation(input.observation_type);
-  const pest_detected = label.includes("pest") || base > 0.82;
-  const disease_detected = label.includes("disease") || (label === "crop_vigor" && base < 0.23);
+  const label = defaultLabelByObservation(req.observation_type);
+  const confidence = Number(clamp(0.55 + base * 0.4, 0, 1).toFixed(4));
 
-  const bbox = input.task_type === "detection"
+  const bbox = req.task_type === "detection"
     ? {
       x: Number((0.05 + (base * 0.2)).toFixed(4)),
       y: Number((0.08 + (base * 0.15)).toFixed(4)),
@@ -69,27 +69,38 @@ export function runAgronomyInferenceV1(input: InferenceInputV1): InferenceOutput
       h: Number((0.2 + (base * 0.25)).toFixed(4)),
     }
     : null;
+  const mask_ref = req.task_type === "segmentation" ? `mask://${req.observation_id}/${Math.round(base * 10000)}` : null;
 
-  const mask_ref = input.task_type === "segmentation" ? `mask://${input.observation_id}/${Math.round(base * 10000)}` : null;
-
-  const health_score = label === "crop_vigor"
-    ? clamp01(0.5 + (1 - base) * 0.45)
-    : clamp01(0.25 + (1 - confidence) * 0.5);
+  const pest_detected = label.includes("pest") || base > 0.82;
+  const disease_detected = label.includes("disease") || (label === "crop_vigor" && base < 0.23);
+  const health_score = Number(clamp(label === "crop_vigor" ? (50 + (1 - base) * 45) : (25 + (1 - confidence) * 50), 0, 100).toFixed(2));
 
   return {
+    model_name: req.model_name,
+    model_version: req.model_version,
+    task_type: req.task_type,
     labels: [{ label, confidence, bbox, mask_ref }],
     confidence,
     health_score,
     pest_detected,
     disease_detected,
+    inference_ts: new Date(req.inference_ts_ms).toISOString(),
     raw_output_summary: {
-      engine: "agronomy_inference_stub_v1",
+      provider: "stub",
+      engine: "agronomy_inference_stub_v2",
       digest: crypto.createHash("sha1").update(seed).digest("hex"),
-      mime: input.mime,
-      note_present: Boolean(input.note && input.note.trim()),
-      task_type: input.task_type,
+      mime: req.mime,
+      note_present: Boolean(req.note && req.note.trim()),
       top_label: label,
       top_confidence: confidence,
     },
   };
+}
+
+export async function runAgronomyInferenceV1(req: InferenceRequestV1): Promise<InferenceResultPayloadV1> {
+  // In future this can route to external model providers (YOLO/ResNet endpoints) without local file dependency.
+  // Example switch point:
+  // const backend = (process.env.GEOX_AGRONOMY_INFERENCE_BACKEND ?? "stub").toLowerCase();
+  // if (backend === "http") { ...call external model service with media_key... }
+  return runStubInference(req);
 }

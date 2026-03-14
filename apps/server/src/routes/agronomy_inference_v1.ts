@@ -32,7 +32,7 @@ async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
       task_type text NOT NULL,
       labels_json jsonb NOT NULL,
       confidence numeric(6,5) NOT NULL,
-      health_score numeric(6,5) NULL,
+      health_score numeric(6,2) NULL,
       pest_detected boolean NOT NULL,
       disease_detected boolean NOT NULL,
       inference_ts_ms bigint NOT NULL,
@@ -52,6 +52,8 @@ async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
     CREATE INDEX IF NOT EXISTS agronomy_inference_index_v1_observation_lookup_idx
     ON agronomy_inference_index_v1 (tenant_id, observation_id, inference_ts_ms DESC)
   `);
+
+  await pool.query(`ALTER TABLE agronomy_inference_index_v1 ALTER COLUMN health_score TYPE numeric(6,2)`);
 }
 
 export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -93,7 +95,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
 
     const row: any = lookup.rows[0];
     const inference_ts_ms = Date.now();
-    const output = runAgronomyInferenceV1({
+    const output = await runAgronomyInferenceV1({
       observation_id: String(row.observation_id),
       media_key: String(row.media_key),
       observation_type: String(row.observation_type ?? ""),
@@ -106,7 +108,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
     });
 
     const inference_id = `inf_${inference_ts_ms}_${Math.random().toString(16).slice(2, 10)}`;
-    const occurred_at = new Date(inference_ts_ms).toISOString();
+    const occurred_at = output.inference_ts;
     const fact_id = `fact_inf_${Math.random().toString(16).slice(2, 12)}`;
 
     const record = {
@@ -123,15 +125,15 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
         media_key: String(row.media_key),
       },
       payload: {
-        model_name,
-        model_version,
-        task_type,
+        model_name: output.model_name,
+        model_version: output.model_version,
+        task_type: output.task_type,
         labels: output.labels,
         confidence: output.confidence,
         health_score: output.health_score,
         pest_detected: output.pest_detected,
         disease_detected: output.disease_detected,
-        inference_ts: occurred_at,
+        inference_ts: output.inference_ts,
         raw_output_summary: output.raw_output_summary,
       },
       refs: {
@@ -163,9 +165,9 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
           String(row.field_id),
           row.season_id == null ? null : String(row.season_id),
           row.device_id == null ? null : String(row.device_id),
-          model_name,
-          model_version,
-          task_type,
+          output.model_name,
+          output.model_version,
+          output.task_type,
           JSON.stringify(output.labels),
           output.confidence,
           output.health_score,
@@ -185,6 +187,26 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
     }
 
     return reply.send({ ok: true, inference_id, fact_id, result: record });
+  });
+
+  app.get("/api/v1/agronomy/inference/:inference_id", async (req, reply) => {
+    const p: any = (req as any).params ?? {};
+    const q: any = (req as any).query ?? {};
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const inference_id = normalizeString(p.inference_id, 128);
+    if (!inference_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:inference_id" });
+
+    const r = await pool.query(
+      `SELECT tenant_id, inference_id, observation_id, media_key, field_id, season_id, device_id,
+              model_name, model_version, task_type, labels_json, confidence, health_score,
+              pest_detected, disease_detected, inference_ts_ms, raw_output_summary_json
+         FROM agronomy_inference_index_v1
+        WHERE tenant_id = $1 AND inference_id = $2
+        LIMIT 1`,
+      [tenant_id, inference_id]
+    );
+    if ((r.rowCount ?? 0) < 1) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, inference: r.rows[0] });
   });
 
   app.get("/api/v1/agronomy/inputs/:field_id", async (req, reply) => {
