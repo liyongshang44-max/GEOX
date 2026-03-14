@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } from "./telemetry_metric_catalog_v1";
+import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1, isValidTelemetryUnitV1 } from "./telemetry_metric_catalog_v1";
 
 /**
  * RawSampleV1Schema
@@ -14,7 +14,7 @@ export const RawSampleV1Schema = z
     groupId: z.string().min(1).optional(),
     metric: z.string().min(1),
     value: z.number().finite(),
-    unit: z.string().min(1).optional(),
+    unit: z.string().min(1).optional(), // Required for catalogued metrics; must match canonical unit.
     quality: z.enum(["unknown", "ok", "suspect", "bad"]).default("unknown"),
     // Align facts/source with observed system reality.
     source: z
@@ -36,10 +36,17 @@ export const RawSampleV1Schema = z
     if (isTelemetryMetricNameV1(v.metric)) {
       const metricName = v.metric as keyof typeof TELEMETRY_METRIC_CATALOG_V1;
       const spec = TELEMETRY_METRIC_CATALOG_V1[metricName];
-      if (typeof v.unit === "string" && v.unit.trim() && v.unit !== spec.unit) {
+      if (typeof v.unit !== "string" || !v.unit.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Metric ${v.metric} unit must be ${spec.unit} (got: ${v.unit})`,
+          message: `Metric ${v.metric} requires unit ${spec.unit}`,
+          path: ["unit"],
+        });
+      } else if (!isValidTelemetryUnitV1(metricName, v.unit)) {
+        const allowed = [spec.unit, ...(spec.aliases ?? [])].join("/");
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Metric ${v.metric} unit must be one of [${allowed}] (got: ${v.unit})`,
           path: ["unit"],
         });
       }

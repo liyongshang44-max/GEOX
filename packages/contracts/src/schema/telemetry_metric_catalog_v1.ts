@@ -1,18 +1,56 @@
 export type TelemetryMetricNameV1 = "air_temperature" | "air_humidity" | "soil_moisture" | "light_lux";
 
 export type TelemetryMetricSpecV1 = {
+  /** Canonical metric unit used across ingest, storage and downstream fusion. */
   unit: string;
+  /** Additional accepted unit aliases that are semantically equivalent. */
+  aliases?: string[];
+  /** Inclusive lower bound for valid numeric sensor values. */
   min: number;
+  /** Inclusive upper bound for valid numeric sensor values. */
   max: number;
+  /** Human-readable metric description. */
+  description: string;
 };
 
 export const TELEMETRY_METRIC_CATALOG_V1: Record<TelemetryMetricNameV1, TelemetryMetricSpecV1> = {
-  air_temperature: { unit: "°C", min: -40, max: 85 },
-  air_humidity: { unit: "%RH", min: 0, max: 100 },
-  soil_moisture: { unit: "%VWC", min: 0, max: 100 },
-  light_lux: { unit: "lux", min: 0, max: 200000 },
+  air_temperature: {
+    unit: "°C",
+    aliases: ["C", "celsius"],
+    min: -40,
+    max: 85,
+    description: "Air temperature in degrees Celsius",
+  },
+  air_humidity: {
+    unit: "%RH",
+    aliases: ["%", "RH%"],
+    min: 0,
+    max: 100,
+    description: "Relative air humidity percentage",
+  },
+  soil_moisture: {
+    unit: "%VWC",
+    aliases: ["%", "VWC%"],
+    min: 0,
+    max: 100,
+    description: "Volumetric soil moisture percentage",
+  },
+  light_lux: {
+    unit: "lux",
+    min: 0,
+    max: 200000,
+    description: "Ambient light intensity in lux",
+  },
 };
 
 export function isTelemetryMetricNameV1(v: unknown): v is TelemetryMetricNameV1 {
   return typeof v === "string" && Object.prototype.hasOwnProperty.call(TELEMETRY_METRIC_CATALOG_V1, v);
+}
+
+export function isValidTelemetryUnitV1(metric: TelemetryMetricNameV1, unit: string): boolean {
+  const s = TELEMETRY_METRIC_CATALOG_V1[metric];
+  const normalized = unit.trim();
+  if (!normalized) return false;
+  if (normalized === s.unit) return true;
+  return Array.isArray(s.aliases) ? s.aliases.includes(normalized) : false;
 }
