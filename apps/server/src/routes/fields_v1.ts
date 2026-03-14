@@ -84,6 +84,7 @@ function parseJsonOrNull(v: any): any | null { // Helper: parse a JSON string wh
 
 type FieldMapMarkerV1 = { device_id: string; lat: number; lon: number; source: string; ts_ms: number | null; }; // Latest resolved device marker for map tab.
 type FieldMapHeatPointV1 = { object_id: string; object_type: "FIELD" | "DEVICE"; metric: string; count: number; last_raised_ts_ms: number; }; // Aggregated recent alert heat row.
+type FieldAlertHeatBucketV1 = { lat: number; lon: number; weight: number; metric: string; object_type: "FIELD" | "DEVICE" | "MIXED"; last_raised_ts_ms: number; object_ids: string[]; }; // Bucketed heat point for map overlay / heat layer.
 type FieldTrajectoryPointV1 = { lat: number; lon: number; ts_ms: number; }; // Ordered trajectory point.
 type FieldDeviceTrajectoryV1 = { device_id: string; points: FieldTrajectoryPointV1[]; geojson: any; }; // Device trajectory payload.
 
@@ -195,6 +196,70 @@ function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null { // N
   if (lat == null || lon == null) return null; // Require both coordinates.
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null; // Reject invalid coordinates.
   return { lat, lon }; // Normalized point.
+} // End helper.
+
+function normalizeAlertObjectType(v: any): "FIELD" | "DEVICE" | "ALL" { // Normalize alert heat object type filter.
+  const s = String(v ?? "ALL").trim().toUpperCase(); // Normalize input.
+  if (s === "FIELD" || s === "DEVICE") return s as "FIELD" | "DEVICE"; // Allow concrete filters.
+  return "ALL"; // Fallback keeps both object classes.
+} // End helper.
+
+function clampInteger(v: any, fallback: number, min: number, max: number): number { // Normalize bounded integer query params.
+  const n = Number(v); // Coerce query value.
+  if (!Number.isFinite(n)) return fallback; // Invalid => default.
+  return Math.max(min, Math.min(max, Math.round(n))); // Clamp to safe range.
+} // End helper.
+
+function bucketAlertHeatPoints(points: Array<{ lat: number; lon: number; weight: number; metric: string; object_type: "FIELD" | "DEVICE"; last_raised_ts_ms: number; object_id: string; }>, precision: number): FieldAlertHeatBucketV1[] { // Bucket raw alert points into rounded lat/lon cells.
+  const digits = clampInteger(precision, 3, 2, 6); // Keep grid precision bounded.
+  const buckets = new Map<string, FieldAlertHeatBucketV1 & { metricSet: Set<string> }>(); // Aggregate by geo bucket.
+  for (const point of points) {
+    const lat = Number(point.lat); // Normalize latitude.
+    const lon = Number(point.lon); // Normalize longitude.
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue; // Skip invalid coordinates.
+    const bucketLat = Number(lat.toFixed(digits)); // Rounded latitude bucket.
+    const bucketLon = Number(lon.toFixed(digits)); // Rounded longitude bucket.
+    const key = `${bucketLat}|${bucketLon}`; // Bucket key.
+    const found = buckets.get(key); // Existing bucket if present.
+    if (!found) {
+      buckets.set(key, {
+        lat: bucketLat,
+        lon: bucketLon,
+        weight: Number(point.weight ?? 0) || 0,
+        metric: point.metric || "mixed",
+        object_type: point.object_type,
+        last_raised_ts_ms: Number(point.last_raised_ts_ms ?? 0) || 0,
+        object_ids: point.object_id ? [point.object_id] : [],
+        metricSet: new Set(point.metric ? [point.metric] : []),
+      });
+      continue;
+    }
+    found.weight += Number(point.weight ?? 0) || 0;
+    found.last_raised_ts_ms = Math.max(found.last_raised_ts_ms, Number(point.last_raised_ts_ms ?? 0) || 0);
+    if (point.object_id && !found.object_ids.includes(point.object_id)) found.object_ids.push(point.object_id);
+    if (point.metric) found.metricSet.add(point.metric);
+    if (found.object_type !== point.object_type) found.object_type = "MIXED";
+  }
+  return Array.from(buckets.values()).map((bucket) => ({
+    lat: bucket.lat,
+    lon: bucket.lon,
+    weight: bucket.weight,
+    metric: bucket.metricSet.size === 1 ? Array.from(bucket.metricSet)[0] : "mixed",
+    object_type: bucket.object_type,
+    last_raised_ts_ms: bucket.last_raised_ts_ms,
+    object_ids: bucket.object_ids,
+  })).sort((a, b) => b.weight - a.weight || b.last_raised_ts_ms - a.last_raised_ts_ms);
+} // End helper.
+
+function toBucketHeatGeoJson(points: FieldAlertHeatBucketV1[]): any { // Convert bucketed heat points into GeoJSON for the web map.
+  return {
+    type: "FeatureCollection",
+    features: points.map((point) => ({
+      type: "Feature",
+      properties: { weight: point.weight, intensity: point.weight, metric: point.metric, object_type: point.object_type, last_raised_ts_ms: point.last_raised_ts_ms, object_ids: point.object_ids },
+      geometry: { type: "Point", coordinates: [point.lon, point.lat] },
+    })),
+  };
 } // End helper.
 
 async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Startup helper: create season projection table for upgraded repos.
@@ -398,6 +463,91 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
 
     return reply.send({ ok: true, fields: q.rows }); // Return list.
   }); // End GET /api/v1/fields.
+
+  app.get("/api/v1/fields/:field_id/trajectory-series", async (req, reply) => { // Return ordered per-device trajectory points for replay controls.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read for field-scoped history.
+    if (!auth) return; // Auth helper responded.
+    const authTelemetry: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read because this endpoint exposes raw movement history.
+    if (!authTelemetry) return; // Auth helper responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id from the path.
+    if (!field_id) return notFound(reply); // Invalid ids stay non-enumerable.
+
+    const fieldQ = await pool.query( // Confirm the target field exists in the caller tenant.
+      `SELECT 1 FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Cross-tenant and missing fields both return 404.
+
+    const rawFrom = Number((req.query as any)?.from_ts_ms ?? (Date.now() - 24 * 60 * 60 * 1000)); // Default replay window start: last 24h.
+    const rawTo = Number((req.query as any)?.to_ts_ms ?? Date.now()); // Default replay window end: now.
+    const from_ts_ms = Number.isFinite(rawFrom) ? Math.floor(rawFrom) : NaN; // Normalize lower bound.
+    const to_ts_ms = Number.isFinite(rawTo) ? Math.floor(rawTo) : NaN; // Normalize upper bound.
+    if (!Number.isFinite(from_ts_ms) || !Number.isFinite(to_ts_ms) || from_ts_ms <= 0 || to_ts_ms <= 0 || from_ts_ms > to_ts_ms) { // Validate the requested time window.
+      return badRequest(reply, "INVALID_RANGE:from_ts_ms_to_ts_ms"); // Reject malformed replay ranges.
+    }
+
+    const rawLimit = Number((req.query as any)?.limit_points_per_device ?? 2000); // Optional per-device cap.
+    const limit_points_per_device = Number.isFinite(rawLimit) ? Math.max(50, Math.min(5000, Math.floor(rawLimit))) : 2000; // Clamp to a conservative safe range.
+
+    const devQ = await pool.query( // Load device ids currently bound to the field.
+      `SELECT device_id
+         FROM device_binding_index_v1
+        WHERE tenant_id = $1 AND field_id = $2
+        ORDER BY bound_ts_ms DESC`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    const boundDeviceIds = devQ.rows.map((row: any) => String(row.device_id ?? "")).filter(Boolean); // Normalize bound device ids for downstream queries.
+    if (boundDeviceIds.length === 0) { // Empty field => empty replay payload.
+      return reply.send({ ok: true, field_id, from_ts_ms, to_ts_ms, devices: [] }); // Keep the replay response shape stable.
+    }
+
+    const pointsQ = await pool.query( // Pull ordered replay points for all bound devices in one pass.
+      `SELECT device_id, ts_ms, geo_json
+         FROM (
+           SELECT (f.record_json::jsonb #>> '{entity,device_id}') AS device_id,
+                  COALESCE((f.record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM f.occurred_at) * 1000)::bigint) AS ts_ms,
+                  (f.record_json::jsonb #> '{payload,geo}') AS geo_json,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY (f.record_json::jsonb #>> '{entity,device_id}')
+                    ORDER BY COALESCE((f.record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM f.occurred_at) * 1000)::bigint) ASC, f.fact_id ASC
+                  ) AS rn
+             FROM facts f
+            WHERE (f.record_json::jsonb #>> '{entity,tenant_id}') = $1
+              AND (f.record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+              AND (f.record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+              AND (f.record_json::jsonb #> '{payload,geo}') IS NOT NULL
+              AND COALESCE((f.record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM f.occurred_at) * 1000)::bigint) >= $3
+              AND COALESCE((f.record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM f.occurred_at) * 1000)::bigint) <= $4
+         ) ranked
+        WHERE rn <= $5
+        ORDER BY device_id ASC, ts_ms ASC`,
+      [auth.tenant_id, boundDeviceIds, from_ts_ms, to_ts_ms, limit_points_per_device]
+    ); // End query.
+
+    const grouped = new Map<string, FieldTrajectoryPointV1[]>(); // Group replay points by device id.
+    for (const row of pointsQ.rows ?? []) { // Normalize each replay row.
+      const device_id = String(row.device_id ?? ""); // Device id string.
+      if (!device_id) continue; // Skip malformed rows.
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json); // Parse geo JSON from Postgres json/jsonb output.
+      const ts_ms = Number(row.ts_ms ?? 0); // Normalize timestamp.
+      if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) continue; // Require valid point + timestamp.
+      const points = grouped.get(device_id) ?? []; // Reuse or create the device point list.
+      const prev = points.length > 0 ? points[points.length - 1] : null; // Read the last emitted point for cheap de-duplication.
+      if (prev && prev.ts_ms === ts_ms && prev.lat === geo.lat && prev.lon === geo.lon) continue; // Skip exact duplicate points.
+      points.push({ lat: geo.lat, lon: geo.lon, ts_ms }); // Append the normalized replay point.
+      grouped.set(device_id, points); // Write back the grouped array.
+    }
+
+    const devices = Array.from(grouped.entries()).map(([device_id, points]) => ({ // Build the replay response devices array.
+      device_id, // Device identity.
+      points: points.map((pt) => ({ ts_ms: pt.ts_ms, lat: pt.lat, lon: pt.lon })), // Plain ordered point list for the web replay timer.
+      point_count: points.length, // Convenience counter for UI/debug panels.
+      trajectory_geojson: toGeoJsonTrajectory(device_id, points), // GeoJSON convenience payload for direct map rendering.
+    })); // End devices array.
+
+    return reply.send({ ok: true, field_id, from_ts_ms, to_ts_ms, devices }); // Return the replay payload.
+  }); // End GET /api/v1/fields/:field_id/trajectory-series.
 
   app.get("/api/v1/fields/:field_id", async (req, reply) => { // Get field detail including polygon, devices, seasons, and summary.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
@@ -707,6 +857,93 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }, // End summary.
     }); // End response.
   }); // End GET /api/v1/fields/:field_id.
+
+  app.get("/api/v1/fields/:field_id/alert-heat", async (req, reply) => { // Query alert heat points for a field map time window.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require field read access.
+    if (!auth) return; // Auth helper already responded.
+
+    const field_id = normalizeId((req.params as any)?.field_id); // Parse field id path param.
+    if (!field_id) return notFound(reply); // Invalid path => 404.
+
+    const fieldQ = await pool.query( // Confirm field belongs to caller tenant.
+      `SELECT field_id, tenant_id FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    if (fieldQ.rowCount === 0) return notFound(reply); // Hide missing/cross-tenant field ids.
+
+    const q: any = (req as any).query ?? {}; // Query string params.
+    const now_ms = Date.now(); // Reference time for default window.
+    const to_ts_ms = clampInteger(q.to_ts_ms, now_ms, 0, 9999999999999); // Default to now.
+    const requested_from = clampInteger(q.from_ts_ms, to_ts_ms - 7 * 24 * 60 * 60 * 1000, 0, 9999999999999); // Default 7d lookback.
+    const from_ts_ms = Math.min(requested_from, to_ts_ms); // Keep window ordered.
+    const metric = isNonEmptyString(q.metric) ? String(q.metric).trim() : null; // Optional metric filter.
+    const object_type = normalizeAlertObjectType(q.object_type); // Optional object type filter.
+    const precision = clampInteger(q.precision, 3, 2, 6); // Coordinate bucket precision.
+
+    const boundDevicesQ = await pool.query( // Resolve field-bound devices for DEVICE alert inclusion.
+      `SELECT device_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND field_id = $2 ORDER BY device_id ASC`,
+      [auth.tenant_id, field_id]
+    ); // End query.
+    const boundDeviceIds = boundDevicesQ.rows.map((row: any) => String(row.device_id ?? '')).filter(Boolean); // Bound device ids.
+
+    const latestMarkersQ = boundDeviceIds.length > 0 ? await pool.query( // Resolve latest geo markers so device alerts can be mapped to coordinates.
+      `SELECT device_id, fact_type, ts_ms, geo_json
+         FROM (
+           SELECT (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+                  (record_json::jsonb ->> 'type') AS fact_type,
+                  COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+                  (record_json::jsonb #> '{payload,geo}') AS geo_json,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY (record_json::jsonb #>> '{entity,device_id}')
+                    ORDER BY COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) DESC, occurred_at DESC
+                  ) AS rn
+             FROM facts
+            WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+              AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+              AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+              AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+         ) ranked
+        WHERE rn = 1`,
+      [auth.tenant_id, boundDeviceIds]
+    ) : { rows: [] as any[] };
+
+    const fieldPolygonQ = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2 LIMIT 1`, [auth.tenant_id, field_id]);
+
+    const markerByDevice = new Map<string, FieldMapMarkerV1>();
+    for (const row of latestMarkersQ.rows ?? []) {
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      if (!geo) continue;
+      markerByDevice.set(String(row.device_id ?? ''), { device_id: String(row.device_id ?? ''), lat: geo.lat, lon: geo.lon, source: String(row.fact_type ?? ''), ts_ms: Number(row.ts_ms ?? 0) || null });
+    }
+    const fieldCentroid = computeCentroid(parseJsonOrNull(fieldPolygonQ.rows?.[0]?.geojson) ?? fieldPolygonQ.rows?.[0]?.geojson ?? null);
+
+    const alertRowsQ = await pool.query(
+      `SELECT object_type, object_id, metric, COUNT(*)::int AS count, MAX(raised_ts_ms)::bigint AS last_raised_ts_ms
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND raised_ts_ms >= $2
+          AND raised_ts_ms <= $3
+          AND ($4::text IS NULL OR metric = $4)
+          AND (
+            ($5::text = 'ALL' AND ((object_type = 'FIELD' AND object_id = $6) OR (object_type = 'DEVICE' AND object_id = ANY($7::text[]))))
+            OR ($5::text = 'FIELD' AND object_type = 'FIELD' AND object_id = $6)
+            OR ($5::text = 'DEVICE' AND object_type = 'DEVICE' AND object_id = ANY($7::text[]))
+          )
+        GROUP BY object_type, object_id, metric
+        ORDER BY count DESC, last_raised_ts_ms DESC
+        LIMIT 500`,
+      [auth.tenant_id, from_ts_ms, to_ts_ms, metric, object_type, field_id, boundDeviceIds.length ? boundDeviceIds : ["__none__"]]
+    );
+
+    const rawHeatPoints = (alertRowsQ.rows ?? []).map((row: any) => {
+      const resolved = String(row.object_type ?? '').toUpperCase() === 'FIELD' ? fieldCentroid : markerByDevice.get(String(row.object_id ?? '')) ?? null;
+      if (!resolved) return null;
+      return { lat: resolved.lat, lon: resolved.lon, weight: Number(row.count ?? 0), metric: String(row.metric ?? ''), object_type: String(row.object_type ?? '').toUpperCase() === 'FIELD' ? 'FIELD' : 'DEVICE', last_raised_ts_ms: Number(row.last_raised_ts_ms ?? 0), object_id: String(row.object_id ?? '') };
+    }).filter(Boolean) as Array<{ lat: number; lon: number; weight: number; metric: string; object_type: "FIELD" | "DEVICE"; last_raised_ts_ms: number; object_id: string; }>;
+
+    const points = bucketAlertHeatPoints(rawHeatPoints, precision);
+    return reply.send({ ok: true, field_id, from_ts_ms, to_ts_ms, metric, object_type, precision, points, heat_geojson: toBucketHeatGeoJson(points) });
+  }); // End GET /api/v1/fields/:field_id/alert-heat.
 
   app.post("/api/v1/fields/:field_id/polygon", async (req, reply) => { // Set or update a field polygon.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require fields.write.

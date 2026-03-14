@@ -38,6 +38,7 @@ import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprin
 import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
 import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
 import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
+import { registerWsTelemetryV1Routes } from "./routes/ws_telemetry_v1"; // Stage 1 GIS: field-scoped WebSocket live telemetry stream.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -261,6 +262,7 @@ registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总�
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
 registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
+registerWsTelemetryV1Routes(app, pool); // Stage 1 GIS: 注册 field live telemetry WebSocket 通道。
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app); // 注册 agronomy interpretation v1 路由
 

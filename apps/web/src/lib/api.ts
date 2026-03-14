@@ -509,6 +509,29 @@ export type FieldListItem = any;
 export type FieldBoundDevice = any;
 export type FieldPolygon = any;
 export type FieldSeason = any;
+export type FieldAlertHeatPoint = { lat: number; lon: number; weight: number; metric: string; object_type: "FIELD" | "DEVICE" | "MIXED"; last_raised_ts_ms: number; object_ids: string[] }; // Alert heat bucket point.
+export type FieldAlertHeatResponse = { ok: boolean; field_id: string; from_ts_ms: number; to_ts_ms: number; metric: string | null; object_type: "ALL" | "FIELD" | "DEVICE"; precision: number; points: FieldAlertHeatPoint[]; heat_geojson: any; }; // Alert heat API response.
+
+export type FieldTrajectoryReplayPoint = { // One ordered replay point returned by the field trajectory-series API.
+  ts_ms: number; // Point timestamp in milliseconds.
+  lat: number; // Latitude.
+  lon: number; // Longitude.
+};
+
+export type FieldTrajectoryReplayDevice = { // Replay trajectory grouped by device.
+  device_id: string; // Device id.
+  points: FieldTrajectoryReplayPoint[]; // Ordered replay points.
+  point_count?: number; // Optional server-side count convenience field.
+  trajectory_geojson?: any; // Optional GeoJSON convenience payload.
+};
+
+export type FieldTrajectorySeriesResponse = { // Field replay response envelope.
+  ok: boolean; // Success flag.
+  field_id: string; // Field id.
+  from_ts_ms: number; // Effective lower bound.
+  to_ts_ms: number; // Effective upper bound.
+  devices: FieldTrajectoryReplayDevice[]; // Replay data grouped by device.
+};
 export type FieldDetail = any;
 
 export async function fetchFields(token: string): Promise<FieldListItem[]> {
@@ -531,11 +554,27 @@ export async function fetchFieldDetail(token: string, fieldId: string): Promise<
   });
 }
 
+export async function fetchFieldTrajectorySeries(token: string, fieldId: string, params: { from_ts_ms: number; to_ts_ms: number; limit_points_per_device?: number; }): Promise<FieldTrajectorySeriesResponse> { // Load ordered per-device trajectory points for map replay.
+  return requestJson<FieldTrajectorySeriesResponse>(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectory-series`, {
+    from_ts_ms: params.from_ts_ms,
+    to_ts_ms: params.to_ts_ms,
+    limit_points_per_device: params.limit_points_per_device,
+  }), {
+    headers: authHeaders(token),
+  });
+}
+
 export async function createFieldSeason(token: string, fieldId: string, body: any): Promise<any> {
   return requestJson<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/seasons`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body),
+  });
+}
+
+export async function fetchFieldAlertHeat(token: string, fieldId: string, params?: { from_ts_ms?: number; to_ts_ms?: number; metric?: string | null; object_type?: "ALL" | "FIELD" | "DEVICE"; precision?: number; }): Promise<FieldAlertHeatResponse> {
+  return requestJson<FieldAlertHeatResponse>(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/alert-heat`, params as any), {
+    headers: authHeaders(token),
   });
 }
 

@@ -25,7 +25,7 @@ export type AoActScopeV0 =
 
 export type AoActRoleV0 = "admin" | "operator";
 
-type TokenRecordV0 = {
+export type TokenRecordV0 = {
   token: string; // Bearer token secret string used in Authorization header.
   token_id: string; // Stable token identifier for audit logs.
   actor_id: string; // Stable actor identifier for audit logs.
@@ -96,6 +96,25 @@ function authContextFromRecord(rec: TokenRecordV0): AoActAuthContextV0 {
     role: roleFromRecord(rec),
     scopes: Array.isArray(rec.scopes) ? rec.scopes.slice() : []
   };
+}
+
+export function findAoActTokenRecordV0(token: string, opts: { tokenFilePath?: string } = {}): TokenRecordV0 | null { // Resolve a bearer token against the current SSOT token file without mutating reply state.
+  const tok = String(token ?? "").trim(); // Normalize the candidate token string.
+  if (!tok) return null; // Empty token strings can never authenticate.
+  const fp = opts.tokenFilePath ?? defaultAoActTokenFilePathV0(); // Resolve the token file path with the same default as HTTP auth.
+  const tf = readTokenFileV0(fp); // Re-read the token SSOT file so revocation applies immediately.
+  const rec = tf.tokens.find((item) => item.token === tok) ?? null; // Exact token match only.
+  if (!rec || rec.revoked) return null; // Hide revoked tokens from callers to keep the API simple.
+  if (typeof rec.tenant_id !== "string" || rec.tenant_id.trim().length === 0) return null; // Require tenant isolation context.
+  if (typeof rec.project_id !== "string" || rec.project_id.trim().length === 0) return null; // Require project isolation context.
+  if (typeof rec.group_id !== "string" || rec.group_id.trim().length === 0) return null; // Require group isolation context.
+  return rec; // Return the validated token record for downstream scope checks.
+}
+
+export function authContextFromTokenV0(token: string, opts: { tokenFilePath?: string } = {}): AoActAuthContextV0 | null { // Convert a raw token string into an auth context for non-HTTP transports such as WebSocket upgrade.
+  const rec = findAoActTokenRecordV0(token, opts); // Resolve the token record first.
+  if (!rec) return null; // Unknown or revoked token => unauthenticated.
+  return authContextFromRecord(rec); // Reuse the same normalized auth context as HTTP handlers.
 }
 
 export function requireAoActAuthV0(
