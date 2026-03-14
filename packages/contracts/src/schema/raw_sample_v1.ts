@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } from "./telemetry_metric_catalog_v1";
 
 /**
  * RawSampleV1Schema
@@ -28,6 +29,25 @@ export const RawSampleV1Schema = z
           code: z.ZodIssueCode.custom,
           message: `EC metric unit must be dS/m (got: ${v.unit ?? "undefined"})`,
           path: ["unit"],
+        });
+      }
+    }
+
+    if (isTelemetryMetricNameV1(v.metric)) {
+      const metricName = v.metric as keyof typeof TELEMETRY_METRIC_CATALOG_V1;
+      const spec = TELEMETRY_METRIC_CATALOG_V1[metricName];
+      if (typeof v.unit === "string" && v.unit.trim() && v.unit !== spec.unit) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Metric ${v.metric} unit must be ${spec.unit} (got: ${v.unit})`,
+          path: ["unit"],
+        });
+      }
+      if (typeof v.value === "number" && (v.value < spec.min || v.value > spec.max)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Metric ${v.metric} value out of range [${spec.min}, ${spec.max}] (got: ${v.value})`,
+          path: ["value"],
         });
       }
     }

@@ -10,3 +10,6 @@ export * from "./schema/overlay_explain_v1";
 export * from "./schema/control_verdict_v0"; // 导出 ControlVerdict v0：供 kernel/validator 使用
 
 export * from "./schema/canopy_frame_v1";
+export * from "./schema/agronomy_observation_v1";
+export * from "./schema/agronomy_inference_result_v1";
+export * from "./schema/telemetry_metric_catalog_v1";

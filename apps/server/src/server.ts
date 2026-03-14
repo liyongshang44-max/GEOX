@@ -38,6 +38,8 @@ import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprin
 import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
 import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
 import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
+import { registerAgronomyMediaV1Routes } from "./routes/agronomy_media_v1"; // Agronomy media ingest + normalized observation routes.
+import { registerAgronomyInferenceV1Routes } from "./routes/agronomy_inference_v1"; // Agronomy inference + aggregated inputs routes.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -263,6 +265,9 @@ registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路�
 registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
 registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
 registerAgronomyInterpretationV1Routes(app); // 注册 agronomy interpretation v1 路由
+
+registerAgronomyMediaV1Routes(app, pool, MEDIA_DIR); // Stage-1: agronomy media ingest + normalized observations.
+registerAgronomyInferenceV1Routes(app, pool); // Stage-1b: inference and aggregated agronomy inputs.
 
 app.register(multipart, {
   limits: {
