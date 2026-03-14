@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 
 type ObservationTypeV1 = "DISEASE_SPOT" | "PEST" | "CROP_VIGOR" | "LODGING" | "MISSING_SEEDLINGS";
 type AgriMediaTypeV1 = "LEAF_IMAGE" | "FIELD_IMAGE" | "FIELD_VIDEO" | "UAV_SCOUT_IMAGE" | "UAV_SCOUT_VIDEO";
@@ -95,6 +96,8 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
   });
 
   app.post("/api/v1/agronomy/observations/media", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
     const parts = (req as any).parts();
     const fields = new Map<string, string>();
     let fileBuf: Buffer | null = null;
@@ -114,7 +117,8 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
 
     if (!fileBuf) return reply.code(400).send({ ok: false, error: "MISSING_FILE" });
 
-    const tenant_id = normalizeString(fields.get("tenant_id"), 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(fields.get("tenant_id"), 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const field_id = normalizeString(fields.get("field_id"), 128);
     if (!field_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:field_id" });
 
@@ -249,9 +253,12 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
   });
 
   app.get("/api/v1/agronomy/observations/:observation_id", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
     const p = (req as any).params ?? {};
     const q = (req as any).query ?? {};
-    const tenant_id = normalizeString(q.tenant_id, 128) ?? "T_DEFAULT";
+    const tenant_id = normalizeString(q.tenant_id, 128) ?? auth.tenant_id;
+    if (tenant_id !== auth.tenant_id) return reply.code(404).send({ ok: false, error: "NOT_FOUND" });
     const observation_id = normalizeString(p.observation_id, 128);
     if (!observation_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:observation_id" });
 

@@ -125,12 +125,36 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     requestFacts.push(...rows); // Append results.
   } // End request loop.
 
-  // 5) Build evidence bundle (artifact) as a single JSON file (minimal serviceable v1).
+  // 5) Extend chain: recommendation-approval links and recommendation facts.
+  const recommendationLinkFacts: any[] = []; // Link facts from recommendation to approval requests.
+  for (const rid of requestIds) { // Find link facts by approval_request_id.
+    const rows = await fetchFactsByJsonPath(
+      pool,
+      "(record_json::jsonb->>'type')='decision_recommendation_approval_link_v1' AND (record_json::jsonb#>>'{payload,approval_request_id}')=$1",
+      [rid]
+    );
+    recommendationLinkFacts.push(...rows);
+  }
+
+  const recommendationIds = Array.from(new Set(recommendationLinkFacts.map((x: any) => String(x.record_json?.payload?.recommendation_id ?? "")).filter(Boolean)));
+  const recommendationFacts: any[] = [];
+  for (const recId of recommendationIds) {
+    const rows = await fetchFactsByJsonPath(
+      pool,
+      "(record_json::jsonb->>'type')='decision_recommendation_v1' AND (record_json::jsonb#>>'{payload,recommendation_id}')=$1",
+      [recId]
+    );
+    recommendationFacts.push(...rows);
+  }
+
+  // 6) Build evidence bundle (artifact) as a single JSON file (minimal serviceable v1).
   const evidence_fact_ids = [ // Build evidence fact id list (for acceptance_result_v1 refs).
     ...taskFacts.map((x: any) => x.fact_id), // Task fact ids.
     ...receiptFacts.map((x: any) => x.fact_id), // Receipt fact ids.
     ...decisionFacts.map((x: any) => x.fact_id), // Decision fact ids.
-    ...requestFacts.map((x: any) => x.fact_id) // Request fact ids.
+    ...requestFacts.map((x: any) => x.fact_id), // Request fact ids.
+    ...recommendationLinkFacts.map((x: any) => x.fact_id), // Link fact ids.
+    ...recommendationFacts.map((x: any) => x.fact_id) // Recommendation fact ids.
   ]; // End list.
 
   const artifact_core = { // Define deterministic core (excludes generated_at_ts and sha256 fields).
@@ -143,14 +167,18 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
       ao_act_task_v0: taskFacts, // Task facts list.
       ao_act_receipt_v0: receiptFacts, // Receipt facts list.
       approval_decision_v1: decisionFacts, // Decision facts list.
-      approval_request_v1: requestFacts // Request facts list.
+      approval_request_v1: requestFacts, // Request facts list.
+      decision_recommendation_approval_link_v1: recommendationLinkFacts, // Recommendation->approval link facts.
+      decision_recommendation_v1: recommendationFacts // Recommendation facts.
     }, // End facts bundle.
     manifest: { // Minimal manifest for human inspection.
       counts: { // Counts of each fact type included.
         ao_act_task_v0: taskFacts.length, // Count task facts.
         ao_act_receipt_v0: receiptFacts.length, // Count receipt facts.
         approval_decision_v1: decisionFacts.length, // Count decision facts.
-        approval_request_v1: requestFacts.length // Count request facts.
+        approval_request_v1: requestFacts.length, // Count request facts.
+        decision_recommendation_approval_link_v1: recommendationLinkFacts.length, // Count link facts.
+        decision_recommendation_v1: recommendationFacts.length // Count recommendation facts.
       }, // End counts.
       evidence_fact_ids // Flat list of all fact ids referenced by the artifact.
     } // End manifest.

@@ -13,3 +13,6 @@ export * from "./schema/canopy_frame_v1";
 export * from "./schema/agronomy_observation_v1";
 export * from "./schema/agronomy_inference_result_v1";
 export * from "./schema/telemetry_metric_catalog_v1";
+export * from "./schema/agronomy_decision_context_v1";
+export * from "./schema/agronomy_recommendation_v1";
+export * from "./schema/actuator_adapter_v1";

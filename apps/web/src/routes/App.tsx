@@ -22,6 +22,7 @@ import DeviceOnboardingPage from "../views/DeviceOnboardingPage";
 import OperationsPage from "../views/OperationsPage";
 import AlertsPage from "../views/AlertsPage";
 import AuditExportPage from "../views/AuditExportPage";
+import AgronomyRecommendationsPage from "../views/AgronomyRecommendationsPage";
 import SettingsPage from "../views/SettingsPage";
 import { fetchAuthMe, readStoredAoActToken, type AuthMe } from "../lib/api";
 
@@ -39,6 +40,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
   if (pathname.startsWith("/operations")) return "作业控制";
+  if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
   if (pathname.startsWith("/alerts")) return "告警中心";
   if (pathname.startsWith("/audit-export")) return "审计与导出";
   if (pathname.startsWith("/settings")) return "系统设置";
@@ -55,6 +57,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
   if (pathname.startsWith("/operations")) return "围绕审批、任务、调度与回执形成中文作业控制工作面。";
+  if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
   if (pathname.startsWith("/audit-export")) return "按对象和时间范围汇总导出、告警、回执与控制动作。";
   if (pathname.startsWith("/settings")) return "查看当前会话、角色、令牌与最小门禁约束。";
@@ -71,6 +74,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "作业控制" }];
+  if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
   if (pathname.startsWith("/alerts")) return [{ label: "总览", to: "/dashboard" }, { label: "告警中心" }];
   if (pathname.startsWith("/audit-export")) return [{ label: "总览", to: "/dashboard" }, { label: "审计与导出" }];
   if (pathname.startsWith("/settings")) return [{ label: "总览", to: "/dashboard" }, { label: "系统设置" }];
@@ -122,6 +126,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/devices" label="设备中心" />
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
           <SidebarLink to="/operations" label="作业控制" />
+          <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
           <SidebarLink to="/audit-export" label="审计与导出" />
           <SidebarLink to="/delivery/export-jobs" label="证据导出" />
@@ -177,6 +182,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/operations" element={<OperationsPage />} />
+            <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />
             <Route path="/alerts" element={<AlertsPage />} />
             <Route path="/audit-export" element={<AuditExportPage />} />
             <Route path="/settings" element={<SettingsPage />} />

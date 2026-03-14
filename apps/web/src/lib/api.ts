@@ -947,3 +947,51 @@ export async function retryAoActTask(
 // --- compat exports for older UI code ---
 export { fetchSeries as getSeries };
 export type PostMarkerBody = Parameters<typeof postMarker>[0];
+
+export type AgronomyRecommendationItemV1 = {
+  fact_id: string;
+  occurred_at: string;
+  recommendation_id: string;
+  field_id: string | null;
+  season_id: string | null;
+  device_id: string | null;
+  recommendation_type: string | null;
+  status: string;
+  reason_codes: string[];
+  evidence_refs: string[];
+  rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
+  confidence: number | null;
+  model_version: string | null;
+  suggested_action: { action_type: string; summary: string; parameters: Record<string, unknown> } | null;
+};
+
+export async function fetchAgronomyRecommendations(params: {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  limit?: number;
+  token?: string;
+}): Promise<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }> {
+  const token = params.token ?? readStoredAoActToken();
+  return requestJson<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }>(withQuery('/api/v1/agronomy/recommendations', {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+    limit: params.limit ?? 50,
+  }), { headers: authHeaders(token) });
+}
+
+export async function fetchAgronomyRecommendationDetail(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  token?: string;
+}): Promise<{ ok: boolean; item: AgronomyRecommendationItemV1 }> {
+  const token = params.token ?? readStoredAoActToken();
+  return requestJson<{ ok: boolean; item: AgronomyRecommendationItemV1 }>(withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}`, {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+  }), { headers: authHeaders(token) });
+}
