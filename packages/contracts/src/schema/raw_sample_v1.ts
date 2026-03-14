@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } from "./telemetry_metric_catalog_v1";
+import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1, isValidTelemetryUnitV1 } from "./telemetry_metric_catalog_v1";
 
 /**
  * RawSampleV1Schema
@@ -42,10 +42,11 @@ export const RawSampleV1Schema = z
           message: `Metric ${v.metric} requires unit ${spec.unit}`,
           path: ["unit"],
         });
-      } else if (v.unit !== spec.unit) {
+      } else if (!isValidTelemetryUnitV1(metricName, v.unit)) {
+        const allowed = [spec.unit, ...(spec.aliases ?? [])].join("/");
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Metric ${v.metric} unit must be ${spec.unit} (got: ${v.unit})`,
+          message: `Metric ${v.metric} unit must be one of [${allowed}] (got: ${v.unit})`,
           path: ["unit"],
         });
       }
