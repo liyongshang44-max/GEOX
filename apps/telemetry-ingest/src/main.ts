@@ -12,6 +12,10 @@ const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload sc
   value: z.union([z.number(), z.string(), z.boolean(), z.null()]), // Metric value (simple scalar types).
   ts_ms: z.number().int().positive(), // Event timestamp in epoch milliseconds.
   credential: z.string().min(1), // Device credential secret (issued by /api/devices/:id/credentials).
+  geo: z.object({ // Optional geographic point for GIS marker / trajectory extraction.
+    lat: z.number().finite(), // Latitude in decimal degrees.
+    lon: z.number().finite(), // Longitude in decimal degrees.
+  }).optional(), // Omit when telemetry has no location.
 }); // End schema.
 
 const HeartbeatPayloadSchema = z.object({ // Define minimal heartbeat payload schema.
@@ -145,17 +149,24 @@ async function main() { // Main bootstrap for telemetry + heartbeat ingest.
     if (parsed.kind === "telemetry") { // Telemetry event.
       const telemetry_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|${(p as any).metric}|${p.ts_ms}`); // Deterministic telemetry id.
       fact_id = `tel_${telemetry_id}`; // Fact id for telemetry.
-      record = { // Telemetry record.
-        type: "raw_telemetry_v1", // Fact type identifier.
-        entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
-        payload: { // Payload.
-          metric: (p as any).metric, // Metric name.
-          value: (p as any).value, // Metric value.
-          ts_ms: p.ts_ms, // Timestamp ms.
-          telemetry_id, // Deterministic telemetry id.
-          credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
-        }, // End payload.
-      }; // End record.
+      const geo = (p as any).geo && typeof (p as any).geo === "object"
+  && Number.isFinite((p as any).geo.lat)
+  && Number.isFinite((p as any).geo.lon)
+  ? { lat: Number((p as any).geo.lat), lon: Number((p as any).geo.lon) }
+  : null; // Normalize optional geo payload for field GIS markers / trajectories.
+
+record = { // Telemetry record.
+  type: "raw_telemetry_v1", // Fact type identifier.
+  entity: { tenant_id: parsed.tenant_id, device_id: parsed.device_id }, // Entity envelope.
+  payload: {
+    metric: (p as any).metric, // Metric name.
+    value: (p as any).value, // Metric value.
+    ts_ms: p.ts_ms, // Timestamp ms.
+    telemetry_id, // Deterministic telemetry id.
+    credential_hash: provided_hash, // Credential hash used for auth (secret never stored).
+    geo, // Optional geo point for GIS marker / trajectory extraction.
+  }, // End payload.
+}; // End record.
     } else { // Heartbeat event.
       const heartbeat_id = sha256Hex(`${parsed.tenant_id}|${parsed.device_id}|hb|${p.ts_ms}`); // Deterministic heartbeat id.
       fact_id = `hb_${heartbeat_id}`; // Fact id for heartbeat.
