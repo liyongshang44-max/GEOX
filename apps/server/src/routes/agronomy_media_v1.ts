@@ -71,6 +71,7 @@ async function ensureAgronomyObservationIndexV1(pool: Pool): Promise<void> {
       media_type text NOT NULL,
       device_type text NOT NULL,
       source_type text NOT NULL,
+      device_id text NULL,
       severity numeric(6,2) NULL,
       confidence numeric(6,2) NULL,
       note text NULL,
@@ -84,6 +85,8 @@ async function ensureAgronomyObservationIndexV1(pool: Pool): Promise<void> {
     CREATE INDEX IF NOT EXISTS agronomy_observation_index_v1_lookup_idx
     ON agronomy_observation_index_v1 (tenant_id, field_id, observed_ts_ms DESC)
   `);
+
+  await pool.query(`ALTER TABLE agronomy_observation_index_v1 ADD COLUMN IF NOT EXISTS device_id text NULL`);
 }
 
 export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, mediaRootDir: string): void {
@@ -205,9 +208,9 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
       await conn.query(
         `INSERT INTO agronomy_observation_index_v1 (
            tenant_id, observation_id, field_id, season_id, telemetry_id, media_key,
-           observed_ts_ms, observation_type, media_type, device_type, source_type,
+           observed_ts_ms, observation_type, media_type, device_type, source_type, device_id,
            severity, confidence, note, created_ts_ms, updated_ts_ms
-         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$15)`,
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$16)`,
         [
           tenant_id,
           observation_id,
@@ -220,6 +223,7 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
           media_type,
           device_type,
           source_type,
+          device_id,
           severity,
           confidence,
           note,
@@ -252,7 +256,7 @@ export function registerAgronomyMediaV1Routes(app: FastifyInstance, pool: Pool, 
     if (!observation_id) return reply.code(400).send({ ok: false, error: "MISSING_OR_INVALID:observation_id" });
 
     const r = await pool.query(
-      `SELECT tenant_id, observation_id, field_id, season_id, telemetry_id, media_key,
+      `SELECT tenant_id, observation_id, field_id, season_id, telemetry_id, media_key, device_id,
               observed_ts_ms, observation_type, media_type, device_type, source_type,
               severity, confidence, note, created_ts_ms, updated_ts_ms
          FROM agronomy_observation_index_v1
