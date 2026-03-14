@@ -51,6 +51,46 @@ function formatInferenceRow(row: any): any {
   };
 }
 
+function buildAgronomyDecisionInput(recentInferenceResults: any[], telemetrySummary: any[]): any {
+  const latestInference = recentInferenceResults[0] ?? null;
+  const telemetryByMetric = new Map<string, any>((telemetrySummary ?? []).map((item: any) => [String(item.metric), item]));
+
+  const airTemperature = telemetryByMetric.get("air_temperature") ?? null;
+  const airHumidity = telemetryByMetric.get("air_humidity") ?? null;
+  const soilMoisture = telemetryByMetric.get("soil_moisture") ?? null;
+  const lightLux = telemetryByMetric.get("light_lux") ?? null;
+
+  const stressSignals: string[] = [];
+  if (airTemperature?.value_in_range === false) stressSignals.push("air_temperature_out_of_range");
+  if (airHumidity?.value_in_range === false) stressSignals.push("air_humidity_out_of_range");
+  if (soilMoisture?.value_in_range === false) stressSignals.push("soil_moisture_out_of_range");
+  if (lightLux?.value_in_range === false) stressSignals.push("light_lux_out_of_range");
+  if (latestInference?.disease_detected === true) stressSignals.push("disease_detected");
+  if (latestInference?.pest_detected === true) stressSignals.push("pest_detected");
+
+  const confidence = typeof latestInference?.confidence === "number" ? latestInference.confidence : null;
+  const telemetryCoverage = [airTemperature, airHumidity, soilMoisture, lightLux].filter(Boolean).length;
+
+  return {
+    generated_ts_ms: Date.now(),
+    inference: latestInference,
+    telemetry: {
+      air_temperature: airTemperature,
+      air_humidity: airHumidity,
+      soil_moisture: soilMoisture,
+      light_lux: lightLux,
+      coverage: telemetryCoverage,
+    },
+    stress_signals: stressSignals,
+    readiness: {
+      has_inference: Boolean(latestInference),
+      has_minimum_telemetry: telemetryCoverage >= 2,
+      confidence_ok: confidence == null ? false : confidence >= 0.6,
+    },
+  };
+}
+
+
 async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS agronomy_inference_result_v1 (
@@ -460,13 +500,17 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       });
     }
 
+    const recentInferenceResults = (inferenceQ.rows ?? []).map((row: any) => formatInferenceRow(row));
+    const decision_input = buildAgronomyDecisionInput(recentInferenceResults, telemetrySummary);
+
     return reply.send({
       ok: true,
       tenant_id,
       field_id,
       recent_observations: observationsQ.rows ?? [],
-      recent_inference_results: (inferenceQ.rows ?? []).map((row: any) => formatInferenceRow(row)),
+      recent_inference_results: recentInferenceResults,
       telemetry_summary: telemetrySummary,
+      decision_input,
     });
   });
 }
