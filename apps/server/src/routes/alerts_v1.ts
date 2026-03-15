@@ -1,4 +1,4 @@
-// GEOX/apps/server/src/routes/alerts_v1.ts
+﻿// GEOX/apps/server/src/routes/alerts_v1.ts
 //
 // Sprint C1 + Sprint A1: Alerts API (rules + events) and offline / immediate evaluation helpers.
 //
@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto"; // UUID helper for rule_id and fact_id
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
 import type { Pool, PoolClient } from "pg"; // Postgres pool / transaction client types.
 
+import { dispatchAlertNotifications } from "../alerts/notification_dispatcher_v1"; // Dispatch alert notifications through configured adapters.
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
 
@@ -140,7 +141,7 @@ async function sendSmsViaTwilio(payload: Record<string, any>): Promise<Record<st
   const twilioFactory = mod?.default ?? mod;
   const client = twilioFactory(accountSid, authToken);
   const message = await client.messages.create({
-    body: `告警触发: rule=${payload.rule_id} object=${payload.object_id} metric=${payload.metric}`,
+    body: `鍛婅瑙﹀彂: rule=${payload.rule_id} object=${payload.object_id} metric=${payload.metric}`,
     from,
     to,
   });
@@ -162,13 +163,13 @@ async function dispatchAlertNotification(channel: string, payload: Record<string
       const url = readEnv("ALERT_EMAIL_WEBHOOK_URL");
       const to = readEnv("ALERT_EMAIL_TO");
       if (!url || !to) throw new Error("ALERT_EMAIL_CONFIG_MISSING");
-      const response = await postJson(url, { to, subject: `告警通知 ${payload.rule_id}`, text: JSON.stringify(payload) });
+      const response = await postJson(url, { to, subject: `鍛婅閫氱煡 ${payload.rule_id}`, text: JSON.stringify(payload) });
       return { status: "DELIVERED", delivered_ts_ms: now_ms, error: null, provider_response: response };
     }
     if (channel === "WECHAT") {
       const url = readEnv("ALERT_WECHAT_WEBHOOK_URL");
       if (!url) throw new Error("ALERT_WECHAT_WEBHOOK_URL_MISSING");
-      const response = await postJson(url, { msgtype: "text", text: { content: `告警通知
+      const response = await postJson(url, { msgtype: "text", text: { content: `鍛婅閫氱煡
 rule=${payload.rule_id}
 object=${payload.object_id}
 metric=${payload.metric}` } });
@@ -177,7 +178,7 @@ metric=${payload.metric}` } });
     if (channel === "DINGTALK") {
       const url = readEnv("ALERT_DINGTALK_WEBHOOK_URL");
       if (!url) throw new Error("ALERT_DINGTALK_WEBHOOK_URL_MISSING");
-      const response = await postJson(url, { msgtype: "text", text: { content: `告警通知
+      const response = await postJson(url, { msgtype: "text", text: { content: `鍛婅閫氱煡
 rule=${payload.rule_id}
 object=${payload.object_id}
 metric=${payload.metric}` } });
@@ -282,13 +283,16 @@ async function insertNotificationRecordsForEvent(clientConn: PoolClient, params:
     [params.tenant_id, params.rule_id]
   );
   if (ruleQ.rowCount === 0) return;
-  let channels: string[] = [];
+  let channelsRaw: any[] = [];
   try {
-    channels = normalizeNotificationChannels(JSON.parse(String(ruleQ.rows[0]?.notify_channels_json ?? "[]")));
+    const parsed = JSON.parse(String(ruleQ.rows[0]?.notify_channels_json ?? "[]"));
+    channelsRaw = Array.isArray(parsed) ? parsed : [];
   } catch {
-    channels = [];
+    channelsRaw = [];
   }
-  for (const channel of channels) {
+  for (const channelEntry of channelsRaw) {
+    const channel = typeof channelEntry === "string" ? channelEntry : String(channelEntry?.type ?? "").trim().toLowerCase();
+    if (!channel) continue;
     const notification_id = `alnot_${randomUUID()}`;
     const fact_id = `alnot_${randomUUID()}`;
     const detail = { channel, object_type: params.object_type, object_id: params.object_id, metric: params.metric, last_value: params.last_value, status: "PENDING" };
@@ -890,3 +894,4 @@ export function startOfflineAlertWorker(pool: Pool, opts?: Partial<OfflineWorker
   const handle = setInterval(() => { tick().catch(() => void 0); }, interval_ms); // Schedule tick; swallow errors.
   (handle as any).unref?.(); // Allow process to exit if this is the only active timer.
 } // End startOfflineAlertWorker.
+

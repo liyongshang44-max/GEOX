@@ -21,7 +21,7 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4"; // Default dev token for local acceptance and demo flows.
+const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4"; // Default dev token for local acceptance and demo flows.
 
 export function readStoredAoActToken(): string { // Read the AO-ACT token from shared browser storage with a safe dev fallback.
   try {
@@ -45,7 +45,11 @@ export function persistAoActToken(next: string): string { // Persist the AO-ACT 
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const headers =
+  const token = readStoredAoActToken();
+  const apiBase = "http://127.0.0.1:3001";
+  const finalUrl = /^https?:\/\//i.test(url) ? url : `${apiBase}${url}`;
+
+  const baseHeaders =
     init?.body instanceof FormData
       ? { ...(init?.headers ?? {}) }
       : {
@@ -53,7 +57,12 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
           ...(init?.headers ?? {}),
         };
 
-  const res = await fetch(url, {
+  const headers: HeadersInit = {
+    ...baseHeaders,
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(finalUrl, {
     ...init,
     headers,
   });

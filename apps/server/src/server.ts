@@ -290,7 +290,7 @@ app.register(fastifyStatic, {
 
 app.addHook("onRequest", async (req, reply) => {
   reply.header("Access-Control-Allow-Origin", "*"); // 允许跨域
-  reply.header("Access-Control-Allow-Headers", "content-type"); // 允许 content-type
+  reply.header("Access-Control-Allow-Headers", "content-type, authorization"); // 允许 content-type
   reply.header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS"); // 允许方法
   if (req.method === "OPTIONS") return reply.code(204).send(); // 预检请求直接 204
 });
