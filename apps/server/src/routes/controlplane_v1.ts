@@ -59,6 +59,54 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id; // Return created fact id.
 }
 
+async function bridgePlanDecisionToExecution(
+  pool: Pool,
+  tenant: TenantTriple,
+  request_id: string,
+  decision: "APPROVE" | "REJECT",
+  act_task_id: string | null,
+  auth: AoActAuthContextV0,
+): Promise<{ plan_id: string; bridged_status: string } | null> {
+  const planQ = await pool.query(
+    `SELECT plan_id, status
+       FROM operation_plan_index_v1
+      WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND approval_request_id = $4
+      ORDER BY updated_ts_ms DESC, plan_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, request_id]
+  ).catch(() => ({ rowCount: 0, rows: [] as any[] }));
+  if (((planQ as any).rowCount ?? 0) < 1) return null;
+  const plan_id = String((planQ as any).rows[0]?.plan_id ?? "").trim();
+  if (!plan_id) return null;
+  const now_ms = Date.now();
+  const bridged_status = decision === "APPROVE" ? "TASK_CREATED" : "REJECTED";
+  const factType = decision === "APPROVE" ? "operation_plan_task_linked_v1" : "operation_plan_rejected_v1";
+  await insertFact(pool, "api/v1/approvals/decide/bridge-plan", {
+    type: factType,
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      plan_id,
+      approval_request_id: request_id,
+      act_task_id,
+      decision,
+      bridged_status,
+      actor_id: auth.actor_id,
+      token_id: auth.token_id,
+      updated_ts_ms: now_ms,
+    }
+  });
+  await pool.query(
+    `UPDATE operation_plan_index_v1
+        SET status = $5,
+            updated_ts_ms = $6
+      WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND plan_id = $4`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, plan_id, bridged_status, now_ms]
+  );
+  return { plan_id, bridged_status };
+}
+
 let ensureDispatchQueueRuntimePromise: Promise<void> | null = null; // Process-local one-time runtime table init.
 
 async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
@@ -699,19 +747,50 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
-      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        issuer: proposal.issuer,
-        action_type: proposal.action_type,
-        target: proposal.target,
-        time_window: proposal.time_window,
-        parameter_schema: proposal.parameter_schema,
-        parameters: proposal.parameters,
-        constraints: proposal.constraints,
-        meta: proposal.meta ?? {}
-      });
+      const normalizedIssuer = (() => {
+  if (proposal?.issuer && typeof proposal.issuer === "object") {
+    const kind = String((proposal.issuer as any).kind ?? "human").trim() || "human";
+    const id = String((proposal.issuer as any).id ?? auth.actor_id ?? auth.token_id ?? "unknown").trim() || "unknown";
+    const namespace = String((proposal.issuer as any).namespace ?? "approval_decision_v1").trim() || "approval_decision_v1";
+    return { kind, id, namespace };
+  }
+  return {
+    kind: "human",
+    id: String(auth.actor_id ?? auth.token_id ?? "unknown").trim() || "unknown",
+    namespace: "approval_decision_v1"
+  };
+})();
+
+const normalizedTarget = (() => {
+  if (proposal?.target && typeof proposal.target === "object") {
+    const kind = String((proposal.target as any).kind ?? "field").trim() || "field";
+    const ref = String((proposal.target as any).ref ?? "").trim();
+    if (ref) return { kind, ref };
+  }
+  const raw = String(proposal?.target ?? "").trim();
+  const m = /^([a-zA-Z]+)\:(.+)$/.exec(raw);
+  if (m) {
+    const kindRaw = String(m[1]).toLowerCase();
+    const ref = String(m[2]).trim() || raw;
+    const kind = (kindRaw === "field" || kindRaw === "area" || kindRaw === "path") ? kindRaw : "field";
+    return { kind, ref };
+  }
+  return { kind: "field", ref: raw || "unknown" };
+})();
+
+const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
+  tenant_id: tenant.tenant_id,
+  project_id: tenant.project_id,
+  group_id: tenant.group_id,
+  issuer: normalizedIssuer,
+  action_type: proposal.action_type,
+  target: normalizedTarget,
+  time_window: proposal.time_window,
+  parameter_schema: proposal.parameter_schema,
+  parameters: proposal.parameters,
+  constraints: proposal.constraints,
+  meta: proposal.meta ?? {}
+});
       if (!delegated.ok || !delegated.json?.ok) {
         return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_CREATE_FAILED", detail: delegated.json ?? null });
       }
@@ -752,7 +831,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
 
-    return reply.send({ ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id });
+    const bridgedPlan = await bridgePlanDecisionToExecution(pool, tenant, request_id, decision as any, act_task_id, auth);
+
+    return reply.send({ ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id, bridged_plan: bridgedPlan });
   });
 
   // POST /api/v1/ao-act/tasks

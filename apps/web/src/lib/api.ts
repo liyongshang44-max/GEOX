@@ -22,6 +22,7 @@ export class ApiError extends Error {
 }
 
 const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4"; // Default dev token for local acceptance and demo flows.
+const DEFAULT_API_BASE = "http://127.0.0.1:3001"; // Default dev API base for docker-first local workflows.
 
 export function readStoredAoActToken(): string { // Read the AO-ACT token from shared browser storage with a safe dev fallback.
   try {
@@ -37,6 +38,26 @@ export function readStoredAoActToken(): string { // Read the AO-ACT token from s
   return DEFAULT_AO_ACT_TOKEN; // Fall back to the built-in dev token for local commercial console usage.
 }
 
+export function readStoredApiBase(): string { // Resolve the commercial API base with a local override for side-by-side dev servers.
+  try {
+    const local = localStorage.getItem("geox_api_base");
+    if (typeof local === "string" && local.trim()) return local.trim();
+  } catch {}
+  try {
+    const session = sessionStorage.getItem("geox_api_base");
+    if (typeof session === "string" && session.trim()) return session.trim();
+  } catch {}
+  const envBase = typeof import.meta !== "undefined" ? String((import.meta as any).env?.VITE_GEOX_API_BASE ?? "").trim() : "";
+  return envBase || DEFAULT_API_BASE;
+}
+
+export function persistApiBase(next: string): string { // Persist API base so the web console can target local tsx watch or docker service explicitly.
+  const normalized = String(next ?? "").trim() || DEFAULT_API_BASE;
+  try { localStorage.setItem("geox_api_base", normalized); } catch {}
+  try { sessionStorage.setItem("geox_api_base", normalized); } catch {}
+  return normalized;
+}
+
 export function persistAoActToken(next: string): string { // Persist the AO-ACT token into both local and session storage.
   const token = String(next ?? "").trim() || DEFAULT_AO_ACT_TOKEN; // Normalize empty input back to the default dev token.
   try { localStorage.setItem("geox_ao_act_token", token); } catch {}
@@ -46,7 +67,7 @@ export function persistAoActToken(next: string): string { // Persist the AO-ACT 
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const token = readStoredAoActToken();
-  const apiBase = "http://127.0.0.1:3001";
+  const apiBase = readStoredApiBase();
   const finalUrl = /^https?:\/\//i.test(url) ? url : `${apiBase}${url}`;
 
   const baseHeaders =
@@ -801,6 +822,62 @@ export async function dispatchAoActTask(token: string, actTaskId: string, body: 
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body),
+  });
+}
+
+export type OperationPlanStatus = "DRAFT" | "READY" | "APPROVAL_PENDING" | "TASK_CREATED" | "REJECTED" | "ARCHIVED";
+
+export type OperationPlanItem = {
+  plan_id: string;
+  field_id: string;
+  template_code: string;
+  title: string;
+  status: OperationPlanStatus | string;
+  requested_by: string;
+  scheduled_start_ts_ms: number;
+  scheduled_end_ts_ms: number;
+  approval_request_id: string | null;
+  created_ts_ms: number;
+  updated_ts_ms: number;
+  plan_payload: any;
+  approval_status?: string | null;
+  act_task_id?: string | null;
+  linked_task_count?: number;
+  latest_receipt_status?: string | null;
+  queue_state?: string | null;
+};
+
+export async function fetchOperationPlans(token: string, params?: Record<string, unknown>): Promise<OperationPlanItem[]> {
+  const res = await requestJson<{ ok?: boolean; items?: OperationPlanItem[] }>(withQuery(`/api/v1/operations/plans`, params), { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchOperationPlanDetail(token: string, planId: string): Promise<OperationPlanItem> {
+  const res = await requestJson<{ ok?: boolean; item?: OperationPlanItem }>(`/api/v1/operations/plans/${encodeURIComponent(planId)}`, { headers: authHeaders(token) });
+  return (res.item ?? null) as OperationPlanItem;
+}
+
+export async function createOperationPlan(token: string, body: any): Promise<any> {
+  return requestJson<any>(`/api/v1/operations/plans`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function updateOperationPlanStatus(token: string, planId: string, status: OperationPlanStatus | string): Promise<any> {
+  return requestJson<any>(`/api/v1/operations/plans/${encodeURIComponent(planId)}/status`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function submitOperationPlanApproval(token: string, planId: string): Promise<any> {
+  return requestJson<any>(`/api/v1/operations/plans/${encodeURIComponent(planId)}/submit-approval`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({}),
   });
 }
 
