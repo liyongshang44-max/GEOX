@@ -60,6 +60,40 @@ This role is constitutional and must not be bypassed.
 
 ---
 
+
+## Sprint R1 · Recommendation → Operation Plan Closure v1
+
+Key anchors:
+
+- Branch: main
+- Commit anchor: 8281c29 (or later equivalent merge commit containing operation_plan chain updates)
+
+Frozen scope:
+
+- recommendation submit-approval returns `operation_plan_id`
+- approval decision maps recommendation chain into `operation_plan_v1`
+- receipt uplink updates `operation_plan_transition_v1` / `operation_plan_v1`
+- operations console and plan read model expose recommendation → approval → task → receipt lifecycle
+- evidence export bundles must include `operation_plan_v1` and `operation_plan_transition_v1` when the chain is present
+
+Acceptance:
+
+- `node scripts/agronomy_acceptance/ACCEPTANCE_AGRONOMY_E2E_V1.cjs`
+
+Hard boundaries:
+
+- recommendation facts are advisory only and have no execution authority
+- no direct recommendation → dispatch bypass is allowed
+- receipts require idempotency metadata
+- cross-tenant plan reads must stay non-enumerable (404)
+- duplicate receipts must be rejected
+
+Derived design note:
+
+- `docs/controlplane/GEOX_Operation_Plan_Execution_Chain_v1.md`
+
+---
+
 ## GEOX – Sprint 10 AO-ACT v0 Governance Docs Freeze Snapshot
 
 Key anchors:

@@ -128,24 +128,57 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
   // 5) Extend chain: recommendation-approval links and recommendation facts.
   const recommendationLinkFacts: any[] = []; // Link facts from recommendation to approval requests.
   for (const rid of requestIds) { // Find link facts by approval_request_id.
-    const rows = await fetchFactsByJsonPath(
-      pool,
-      "(record_json::jsonb->>'type')='decision_recommendation_approval_link_v1' AND (record_json::jsonb#>>'{payload,approval_request_id}')=$1",
-      [rid]
-    );
-    recommendationLinkFacts.push(...rows);
-  }
+    const rows = await fetchFactsByJsonPath( // Query recommendation->approval link facts.
+      pool, // Pool for query.
+      "(record_json::jsonb->>'type')='decision_recommendation_approval_link_v1' AND (record_json::jsonb#>>'{payload,approval_request_id}')=$1", // Filter by approval_request_id.
+      [rid] // Parameters.
+    ); // End query.
+    recommendationLinkFacts.push(...rows); // Append normalized link facts.
+  } // End link lookup loop.
 
-  const recommendationIds = Array.from(new Set(recommendationLinkFacts.map((x: any) => String(x.record_json?.payload?.recommendation_id ?? "")).filter(Boolean)));
-  const recommendationFacts: any[] = [];
-  for (const recId of recommendationIds) {
-    const rows = await fetchFactsByJsonPath(
-      pool,
-      "(record_json::jsonb->>'type')='decision_recommendation_v1' AND (record_json::jsonb#>>'{payload,recommendation_id}')=$1",
-      [recId]
-    );
-    recommendationFacts.push(...rows);
-  }
+  const recommendationIds = Array.from(new Set(recommendationLinkFacts.map((x: any) => String(x.record_json?.payload?.recommendation_id ?? "")).filter(Boolean))); // Collect unique recommendation ids.
+  const recommendationFacts: any[] = []; // Collect recommendation facts.
+  for (const recId of recommendationIds) { // Resolve each recommendation fact by recommendation_id.
+    const rows = await fetchFactsByJsonPath( // Query recommendation facts.
+      pool, // Pool for query.
+      "(record_json::jsonb->>'type')='decision_recommendation_v1' AND (record_json::jsonb#>>'{payload,recommendation_id}')=$1", // Filter by recommendation_id.
+      [recId] // Parameters.
+    ); // End query.
+    recommendationFacts.push(...rows); // Append normalized recommendation facts.
+  } // End recommendation lookup loop.
+
+  // 5b) Extend chain: operation_plan facts and transitions derived from approval / task bridge.
+  const operationPlanFacts: any[] = []; // Collect operation_plan_v1 facts referenced by this export chain.
+  const operationPlanIds = new Set<string>(); // Track unique operation_plan_id values for transition lookup.
+  for (const rid of requestIds) { // Resolve operation plans by approval_request_id first.
+    const rows = await fetchFactsByJsonPath( // Query operation plans linked to approval_request_id.
+      pool, // Pool for query.
+      "(record_json::jsonb->>'type')='operation_plan_v1' AND (record_json::jsonb#>>'{payload,approval_request_id}')=$1", // Filter by approval_request_id.
+      [rid] // Parameters.
+    ); // End query.
+    operationPlanFacts.push(...rows); // Append operation plan facts.
+  } // End approval_request-driven lookup.
+  if (operationPlanFacts.length < 1) { // Fallback for chains where only act_task_id is stable.
+    const fallbackRows = await fetchFactsByJsonPath( // Query operation plans linked by act_task_id.
+      pool, // Pool for query.
+      "(record_json::jsonb->>'type')='operation_plan_v1' AND (record_json::jsonb#>>'{payload,act_task_id}')=$1", // Filter by act_task_id.
+      [job.act_task_id] // Parameters.
+    ); // End query.
+    operationPlanFacts.push(...fallbackRows); // Append fallback operation plan facts.
+  } // End fallback branch.
+  for (const planFact of operationPlanFacts) { // Collect operation_plan_id values for transition lookup.
+    const operationPlanId = String(planFact.record_json?.payload?.operation_plan_id ?? '').trim(); // Read operation_plan_id from payload.
+    if (operationPlanId) operationPlanIds.add(operationPlanId); // Record non-empty operation_plan_id values.
+  } // End plan id collection.
+  const operationPlanTransitionFacts: any[] = []; // Collect operation_plan_transition_v1 facts.
+  for (const operationPlanId of Array.from(operationPlanIds)) { // Query transitions per operation_plan_id.
+    const rows = await fetchFactsByJsonPath( // Query transition facts.
+      pool, // Pool for query.
+      "(record_json::jsonb->>'type')='operation_plan_transition_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$1", // Filter by operation_plan_id.
+      [operationPlanId] // Parameters.
+    ); // End query.
+    operationPlanTransitionFacts.push(...rows); // Append normalized transition facts.
+  } // End transition lookup loop.
 
   // 6) Build evidence bundle (artifact) as a single JSON file (minimal serviceable v1).
   const evidence_fact_ids = [ // Build evidence fact id list (for acceptance_result_v1 refs).
@@ -154,7 +187,9 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     ...decisionFacts.map((x: any) => x.fact_id), // Decision fact ids.
     ...requestFacts.map((x: any) => x.fact_id), // Request fact ids.
     ...recommendationLinkFacts.map((x: any) => x.fact_id), // Link fact ids.
-    ...recommendationFacts.map((x: any) => x.fact_id) // Recommendation fact ids.
+    ...recommendationFacts.map((x: any) => x.fact_id), // Recommendation fact ids.
+    ...operationPlanFacts.map((x: any) => x.fact_id), // Operation plan fact ids.
+    ...operationPlanTransitionFacts.map((x: any) => x.fact_id) // Operation plan transition fact ids.
   ]; // End list.
 
   const artifact_core = { // Define deterministic core (excludes generated_at_ts and sha256 fields).
@@ -169,7 +204,9 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
       approval_decision_v1: decisionFacts, // Decision facts list.
       approval_request_v1: requestFacts, // Request facts list.
       decision_recommendation_approval_link_v1: recommendationLinkFacts, // Recommendation->approval link facts.
-      decision_recommendation_v1: recommendationFacts // Recommendation facts.
+      decision_recommendation_v1: recommendationFacts, // Recommendation facts.
+      operation_plan_v1: operationPlanFacts, // Operation plan facts.
+      operation_plan_transition_v1: operationPlanTransitionFacts // Operation plan transition facts.
     }, // End facts bundle.
     manifest: { // Minimal manifest for human inspection.
       counts: { // Counts of each fact type included.
@@ -178,7 +215,9 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
         approval_decision_v1: decisionFacts.length, // Count decision facts.
         approval_request_v1: requestFacts.length, // Count request facts.
         decision_recommendation_approval_link_v1: recommendationLinkFacts.length, // Count link facts.
-        decision_recommendation_v1: recommendationFacts.length // Count recommendation facts.
+        decision_recommendation_v1: recommendationFacts.length, // Count recommendation facts.
+        operation_plan_v1: operationPlanFacts.length, // Count operation plan facts.
+        operation_plan_transition_v1: operationPlanTransitionFacts.length // Count operation plan transition facts.
       }, // End counts.
       evidence_fact_ids // Flat list of all fact ids referenced by the artifact.
     } // End manifest.

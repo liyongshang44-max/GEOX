@@ -1,4 +1,4 @@
-// GEOX/apps/server/src/routes/evidence_export_jobs_v1.ts
+﻿// GEOX/apps/server/src/routes/evidence_export_jobs_v1.ts
 //
 // Sprint C1: Evidence Export Jobs (persisted) for Commercial delivery.
 // 
@@ -536,6 +536,187 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
   }
 
 
+
+
+  const taskFactRows = facts.filter((f: any) => String(f?.record_json?.type ?? "") === "ao_act_task_v0"); // Collect task facts already included in the bundle.
+  const taskIds = Array.from(new Set(taskFactRows.map((f: any) => String(f?.record_json?.payload?.act_task_id ?? "")).filter(Boolean))); // Collect unique act_task_id values from exported task facts.
+  const operationPlanFacts: any[] = []; // Collect related operation_plan_v1 facts that must travel with the execution chain.
+  for (const actTaskId of taskIds) { // Resolve one operation_plan_v1 fact per exported task when available.
+    const qPlan = await pool.query( // Query latest operation_plan_v1 by act_task_id.
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,act_task_id}') = $2
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 1`,
+      [tenant_id, actTaskId]
+    ); // End operation plan query.
+    if (qPlan.rowCount < 1) continue; // Skip tasks that do not yet have an operation plan bridge.
+    const planRow = qPlan.rows[0]; // Read the winning operation plan row.
+    let planRecord: any = null; // Prepare parsed operation plan JSON.
+    try { planRecord = typeof planRow.record_json === 'string' ? JSON.parse(planRow.record_json) : planRow.record_json; } catch { planRecord = null; } // Parse record_json safely.
+    if (!planRecord) continue; // Skip malformed records.
+    if (!seenFactIds.has(String(planRow.fact_id))) { // Inject operation plan fact only once.
+      seenFactIds.add(String(planRow.fact_id)); // Mark injected plan fact id as seen.
+      operationPlanFacts.push({ fact_id: planRow.fact_id, occurred_at: planRow.occurred_at, source: planRow.source, record_json: planRecord }); // Append normalized operation plan fact.
+      facts.push({ fact_id: planRow.fact_id, occurred_at: planRow.occurred_at, source: planRow.source, record_json: planRecord }); // Add plan fact into exported facts array.
+    } // End inject plan fact guard.
+          const operationPlanId = String(planRecord?.payload?.operation_plan_id ?? '').trim(); // Read operation_plan_id for transition lookup.
+
+      const approvalDecisionFactId = String(planRecord?.payload?.approval_decision_fact_id ?? '').trim(); // Read approval_decision_fact_id for approval decision injection.
+      if (approvalDecisionFactId && !seenFactIds.has(approvalDecisionFactId)) { // Inject linked approval_decision_v1 fact when present.
+        const qApprovalDecision = await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json
+             FROM facts
+            WHERE fact_id = $1
+              AND (record_json::jsonb->>'type') = 'approval_decision_v1'
+              AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+            LIMIT 1`,
+          [approvalDecisionFactId, tenant_id]
+        ); // End approval decision query.
+        if (qApprovalDecision.rowCount > 0) { // Inject approval decision when found.
+          const decisionRow = qApprovalDecision.rows[0];
+          let decisionRecord: any = null;
+          try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+          if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+            seenFactIds.add(String(decisionRow.fact_id));
+            facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+          }
+        }
+      }
+
+      const receiptFactId = String(planRecord?.payload?.receipt_fact_id ?? '').trim(); // Read receipt_fact_id for receipt injection.
+      if (receiptFactId && !seenFactIds.has(receiptFactId)) { // Inject linked receipt fact when present.
+        const qReceipt = await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json
+             FROM facts
+            WHERE fact_id = $1
+            LIMIT 1`,
+          [receiptFactId]
+        ); // End receipt query.
+        if (qReceipt.rowCount > 0) { // Inject receipt when found.
+          const receiptRow = qReceipt.rows[0];
+          let receiptRecord: any = null;
+          try { receiptRecord = typeof receiptRow.record_json === 'string' ? JSON.parse(receiptRow.record_json) : receiptRow.record_json; } catch { receiptRecord = null; }
+          if (receiptRecord && !seenFactIds.has(String(receiptRow.fact_id))) {
+            seenFactIds.add(String(receiptRow.fact_id));
+            facts.push({ fact_id: receiptRow.fact_id, occurred_at: receiptRow.occurred_at, source: receiptRow.source, record_json: receiptRecord });
+          }
+        }
+      }
+    const qTransition = await pool.query( // Query all operation_plan_transition_v1 rows for this plan.
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant_id, operationPlanId]
+    ); // End transition query.
+    for (const transitionRow of qTransition.rows) { // Normalize and inject each transition fact.
+      let transitionRecord: any = null; // Prepare parsed transition JSON.
+      try { transitionRecord = typeof transitionRow.record_json === 'string' ? JSON.parse(transitionRow.record_json) : transitionRow.record_json; } catch { transitionRecord = null; } // Parse record_json safely.
+      if (!transitionRecord) continue; // Skip malformed transition records.
+      if (seenFactIds.has(String(transitionRow.fact_id))) continue; // Skip already-included transition rows.
+      seenFactIds.add(String(transitionRow.fact_id)); // Mark transition fact id as seen.
+      facts.push({ fact_id: transitionRow.fact_id, occurred_at: transitionRow.occurred_at, source: transitionRow.source, record_json: transitionRecord }); // Add transition into exported facts array.
+    } // End transition injection loop.
+  } // End related operation plan injection loop.
+    if (scope.scope_type === "FIELD" && scope.scope_id) { // FIELD scope fallback: inject operation plans by field/time window even when task facts were not exported.
+    const qPlansByField = await pool.query( // Query operation_plan_v1 rows directly by field scope and export window.
+      `SELECT fact_id, occurred_at, source, record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,target,kind}') = 'field'
+          AND (record_json::jsonb#>>'{payload,target,ref}') = $2
+          AND occurred_at >= $3::timestamptz
+          AND occurred_at <  $4::timestamptz
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant_id, scope.scope_id, nowIso(from_ts_ms), nowIso(to_ts_ms)]
+    ); // End field-scope operation plan query.
+        for (const planRow of qPlansByField.rows) { // Normalize and inject each matching operation plan fact.
+      let planRecord: any = null; // Prepare parsed operation plan JSON.
+      try { planRecord = typeof planRow.record_json === 'string' ? JSON.parse(planRow.record_json) : planRow.record_json; } catch { planRecord = null; } // Parse record_json safely.
+      if (!planRecord) continue; // Skip malformed plan records.
+
+      if (!seenFactIds.has(String(planRow.fact_id))) { // Inject operation plan fact only once.
+        seenFactIds.add(String(planRow.fact_id)); // Mark operation plan fact id as seen.
+        facts.push({ fact_id: planRow.fact_id, occurred_at: planRow.occurred_at, source: planRow.source, record_json: planRecord }); // Add plan fact into exported facts array.
+      } // End inject plan fact guard.
+
+      const operationPlanId = String(planRecord?.payload?.operation_plan_id ?? '').trim(); // Read operation_plan_id for transition lookup.
+
+      const approvalDecisionFactId = String(planRecord?.payload?.approval_decision_fact_id ?? '').trim(); // Read approval_decision_fact_id for approval decision injection.
+      if (approvalDecisionFactId && !seenFactIds.has(approvalDecisionFactId)) { // Inject linked approval_decision_v1 fact when present.
+        const qApprovalDecision = await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json
+             FROM facts
+            WHERE fact_id = $1
+              AND (record_json::jsonb->>'type') = 'approval_decision_v1'
+              AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+            LIMIT 1`,
+          [approvalDecisionFactId, tenant_id]
+        ); // End approval decision query.
+        if (qApprovalDecision.rowCount > 0) { // Inject approval decision when found.
+          const decisionRow = qApprovalDecision.rows[0];
+          let decisionRecord: any = null;
+          try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+          if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+            seenFactIds.add(String(decisionRow.fact_id));
+            facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+          }
+        }
+      }
+
+      const receiptFactId = String(planRecord?.payload?.receipt_fact_id ?? '').trim(); // Read receipt_fact_id for receipt injection.
+      if (receiptFactId && !seenFactIds.has(receiptFactId)) { // Inject linked receipt fact when present.
+        const qReceipt = await pool.query(
+          `SELECT fact_id, occurred_at, source, record_json
+             FROM facts
+            WHERE fact_id = $1
+            LIMIT 1`,
+          [receiptFactId]
+        ); // End receipt query.
+        if (qReceipt.rowCount > 0) { // Inject receipt when found.
+          const receiptRow = qReceipt.rows[0];
+          let receiptRecord: any = null;
+          try { receiptRecord = typeof receiptRow.record_json === 'string' ? JSON.parse(receiptRow.record_json) : receiptRow.record_json; } catch { receiptRecord = null; }
+          if (receiptRecord && !seenFactIds.has(String(receiptRow.fact_id))) {
+            seenFactIds.add(String(receiptRow.fact_id));
+            facts.push({ fact_id: receiptRow.fact_id, occurred_at: receiptRow.occurred_at, source: receiptRow.source, record_json: receiptRecord });
+          }
+        }
+      }
+
+      if (!operationPlanId) continue; // Skip transition lookup when plan id is missing.
+
+      const qTransition = await pool.query( // Query all operation_plan_transition_v1 rows for this field-scoped plan.
+        `SELECT fact_id, occurred_at, source, record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
+          ORDER BY occurred_at ASC, fact_id ASC`,
+        [tenant_id, operationPlanId]
+      ); // End transition query.
+      for (const transitionRow of qTransition.rows) { // Normalize and inject each transition fact.
+        let transitionRecord: any = null; // Prepare parsed transition JSON.
+        try { transitionRecord = typeof transitionRow.record_json === 'string' ? JSON.parse(transitionRow.record_json) : transitionRow.record_json; } catch { transitionRecord = null; } // Parse record_json safely.
+        if (!transitionRecord) continue; // Skip malformed transition records.
+        if (seenFactIds.has(String(transitionRow.fact_id))) continue; // Skip already-included transition rows.
+        seenFactIds.add(String(transitionRow.fact_id)); // Mark transition fact id as seen.
+        facts.push({ fact_id: transitionRow.fact_id, occurred_at: transitionRow.occurred_at, source: transitionRow.source, record_json: transitionRecord }); // Add transition into exported facts array.
+      } // End transition injection loop.
+    } // End field-scope operation plan injection loop.
+  } // End FIELD scope fallback injection.
+  facts.sort((a: any, b: any) => { // Re-sort facts after best-effort chain injection.
+    const ta = Date.parse(String(a?.occurred_at ?? '')) || 0; // Convert occurred_at to comparable timestamp.
+    const tb = Date.parse(String(b?.occurred_at ?? '')) || 0; // Convert occurred_at to comparable timestamp.
+    if (ta !== tb) return ta - tb; // Preserve chronological ordering first.
+    return String(a?.fact_id ?? '').localeCompare(String(b?.fact_id ?? '')); // Break ties deterministically by fact id.
+  }); // End re-sort.
 
   // Snapshot relevant projections for convenience (not a source of truth, but useful in delivery).
   const snapshot: any = {}; // Snapshot object.
