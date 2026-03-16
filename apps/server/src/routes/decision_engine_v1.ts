@@ -263,6 +263,41 @@ function normalizeRecommendationOutput(row: any): any {
   };
 }
 
+function toAoActActionType(rec: any): string {
+  const recommendationType = String(rec?.recommendation_type ?? "").trim();
+  if (recommendationType === "irrigation_recommendation_v1") return "IRRIGATE";
+  if (recommendationType === "crop_health_alert_v1") return "SPRAY";
+  return "IRRIGATE";
+}
+
+function toAoActTarget(rec: any): { kind: "field"; ref: string } {
+  const fieldId = String(rec?.field_id ?? "").trim();
+  if (fieldId) return { kind: "field", ref: fieldId };
+  return { kind: "field", ref: "field_unknown" };
+}
+
+function toPrimitiveParameters(input: any): Record<string, number | boolean | string> {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const out: Record<string, number | boolean | string> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (typeof k !== "string" || !k.trim()) continue;
+    if (typeof v === "number" || typeof v === "boolean" || typeof v === "string") {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function toAoActParameterSchema(parameters: Record<string, number | boolean | string>): { keys: Array<{ name: string; type: "number" | "boolean" | "enum"; enum?: string[] }> } {
+  const keys = Object.keys(parameters).sort().map((name) => {
+    const value = parameters[name];
+    if (typeof value === "number") return { name, type: "number" as const };
+    if (typeof value === "boolean") return { name, type: "boolean" as const };
+    return { name, type: "enum" as const, enum: [String(value)] };
+  });
+  return { keys: keys.length > 0 ? keys : [{ name: "noop", type: "boolean" as const }] };
+}
+
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/agronomy/recommendations", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -367,8 +402,13 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
 
     const rec = row.record_json?.payload ?? {};
-    const actionType = rec?.suggested_action?.action_type;
-    if (typeof actionType !== "string" || !actionType) return badRequest(reply, "INVALID_RECOMMENDATION_ACTION");
+    const actionType = toAoActActionType(rec);
+    const aoActTarget = toAoActTarget(rec);
+    const aoActParameters = toPrimitiveParameters(rec?.suggested_action?.parameters ?? {});
+    if (Object.keys(aoActParameters).length === 0) {
+      aoActParameters.noop = true;
+    }
+    const aoActParameterSchema = toAoActParameterSchema(aoActParameters);
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/approval_request/v1/request`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
@@ -376,11 +416,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: tenant.group_id,
       issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
       action_type: actionType,
-      target: { kind: "device", ref: String(rec.device_id) },
+      target: aoActTarget,
       time_window: { start_ts: Date.now(), end_ts: Date.now() + 30 * 60 * 1000 },
-      parameter_schema: { type: "object", additionalProperties: true },
-      parameters: rec?.suggested_action?.parameters ?? {},
-      constraints: [{ key: "approval_gate", op: "eq", value: "required" }],
+      parameter_schema: aoActParameterSchema,
+      parameters: aoActParameters,
+      constraints: { approval_required: true },
       meta: {
         rationale: body.rationale ?? `Auto-mapped from recommendation ${recommendation_id}`,
         recommendation_id,
@@ -421,8 +461,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation_fact_id: row.fact_id,
         approval_request_id: delegated.json.request_id,
         action_type: actionType,
-        target: rec?.suggested_action?.target ?? { kind: "device", ref: String(rec.device_id ?? "") },
-        parameters: rec?.suggested_action?.parameters ?? {},
+        target: aoActTarget,
+        parameters: aoActParameters,
         status: "APPROVAL_PENDING",
         created_ts: Date.now(),
         updated_ts: Date.now()
