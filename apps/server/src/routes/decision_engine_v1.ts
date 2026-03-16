@@ -83,6 +83,19 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id;
 }
 
+function recommendationEvidenceFacts(body: any): Array<{ key: string; value: number | null; unit: string | null; source: string }> {
+  const telemetry = (body?.telemetry && typeof body.telemetry === "object") ? body.telemetry : {};
+  const image = (body?.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
+  const toNum = (x: any): number | null => Number.isFinite(Number(x)) ? Number(x) : null;
+  return [
+    { key: "soil_moisture_pct", value: toNum(telemetry.soil_moisture_pct), unit: "%", source: "telemetry" },
+    { key: "canopy_temp_c", value: toNum(telemetry.canopy_temp_c), unit: "c", source: "telemetry" },
+    { key: "image_stress_score", value: toNum(image.stress_score), unit: null, source: "image_recognition" },
+    { key: "image_disease_score", value: toNum(image.disease_score), unit: null, source: "image_recognition" },
+    { key: "image_pest_risk_score", value: toNum(image.pest_risk_score), unit: null, source: "image_recognition" }
+  ];
+}
+
 function buildRecommendations(body: any): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
@@ -301,6 +314,20 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
 
     const fact_ids: string[] = [];
     for (const rec of recommendations) {
+      const recommendation_input_fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
+        type: "decision_recommendation_input_facts_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          recommendation_id: rec.recommendation_id,
+          field_id: rec.field_id,
+          season_id: rec.season_id,
+          device_id: rec.device_id,
+          evidence_facts: recommendationEvidenceFacts(body),
+          created_ts: Date.now()
+        }
+      });
       const fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
         type: "decision_recommendation_v1",
         payload: {
@@ -308,6 +335,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           project_id: tenant.project_id,
           group_id: tenant.group_id,
           ...rec,
+          recommendation_input_fact_id,
           data_sources: {
             telemetry: body.telemetry ?? null,
             image_recognition: body.image_recognition ?? null
@@ -346,24 +374,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
-      request_id: `apr_${randomUUID().replace(/-/g, "")}`,
-      rationale: body.rationale ?? `Auto-mapped from recommendation ${recommendation_id}`,
-      proposal: {
-        issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
-        action_type: actionType,
-        target: { kind: "device", ref: String(rec.device_id) },
-        time_window: { start_ts: Date.now(), end_ts: Date.now() + 30 * 60 * 1000 },
-        parameter_schema: { type: "object", additionalProperties: true },
-        parameters: rec?.suggested_action?.parameters ?? {},
-        constraints: [{ key: "approval_gate", op: "eq", value: "required" }],
-        meta: {
-          recommendation_id,
-          recommendation_type: rec.recommendation_type ?? null,
-          field_id: rec.field_id ?? null,
-          season_id: rec.season_id ?? null,
-          confidence: rec.confidence ?? null,
-          device_id: rec.device_id ?? null
-        }
+      issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
+      action_type: actionType,
+      target: { kind: "device", ref: String(rec.device_id) },
+      time_window: { start_ts: Date.now(), end_ts: Date.now() + 30 * 60 * 1000 },
+      parameter_schema: { type: "object", additionalProperties: true },
+      parameters: rec?.suggested_action?.parameters ?? {},
+      constraints: [{ key: "approval_gate", op: "eq", value: "required" }],
+      meta: {
+        rationale: body.rationale ?? `Auto-mapped from recommendation ${recommendation_id}`,
+        recommendation_id,
+        recommendation_type: rec.recommendation_type ?? null,
+        field_id: rec.field_id ?? null,
+        season_id: rec.season_id ?? null,
+        confidence: rec.confidence ?? null,
+        device_id: rec.device_id ?? null
       }
     });
 
@@ -384,7 +409,41 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       }
     });
 
-    return reply.send({ ok: true, recommendation_id, approval_request_id: delegated.json.request_id, approval_fact_id: delegated.json.fact_id, mapping_fact_id });
+    const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
+    const operation_plan_fact_id = await insertFact(pool, "api/v1/recommendations/submit-approval", {
+      type: "operation_plan_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        operation_plan_id,
+        recommendation_id,
+        recommendation_fact_id: row.fact_id,
+        approval_request_id: delegated.json.request_id,
+        action_type: actionType,
+        target: rec?.suggested_action?.target ?? { kind: "device", ref: String(rec.device_id ?? "") },
+        parameters: rec?.suggested_action?.parameters ?? {},
+        status: "APPROVAL_PENDING",
+        created_ts: Date.now(),
+        updated_ts: Date.now()
+      }
+    });
+
+    await insertFact(pool, "api/v1/recommendations/submit-approval", {
+      type: "operation_plan_transition_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        operation_plan_id,
+        status: "APPROVAL_PENDING",
+        trigger: "recommendation_submit_approval",
+        approval_request_id: delegated.json.request_id,
+        created_ts: Date.now()
+      }
+    });
+
+    return reply.send({ ok: true, recommendation_id, approval_request_id: delegated.json.request_id, approval_fact_id: delegated.json.fact_id, mapping_fact_id, operation_plan_id, operation_plan_fact_id });
   });
 
   app.post("/api/v1/simulators/irrigation/execute", async (req, reply) => {
