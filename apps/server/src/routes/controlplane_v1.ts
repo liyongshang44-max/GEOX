@@ -415,6 +415,94 @@ async function listTasks(pool: Pool, tenant: TenantTriple, limit: number): Promi
   }));
 }
 
+
+async function loadLatestOperationPlanByApprovalRequestId(
+  pool: Pool,
+  approval_request_id: string,
+  tenant: TenantTriple
+): Promise<ParsedFactRow | null> {
+  return loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,approval_request_id", approval_request_id, tenant);
+}
+
+async function listOperationPlans(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
+  const sql = `
+    WITH latest_transition AS (
+      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+        (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id,
+        fact_id AS transition_fact_id,
+        occurred_at AS transition_occurred_at,
+        (record_json::jsonb) AS transition_json
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
+    ), latest_approval AS (
+      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,request_id}'))
+        (record_json::jsonb#>>'{payload,request_id}') AS request_id,
+        fact_id AS approval_decision_fact_id,
+        occurred_at AS approval_decision_occurred_at,
+        (record_json::jsonb) AS approval_decision_json
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY (record_json::jsonb#>>'{payload,request_id}'), occurred_at DESC, fact_id DESC
+    ), latest_receipt AS (
+      SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
+        (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+        fact_id AS receipt_fact_id,
+        occurred_at AS receipt_occurred_at,
+        (record_json::jsonb) AS receipt_json
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
+    )
+    SELECT p.fact_id AS operation_plan_fact_id,
+           p.occurred_at AS operation_plan_occurred_at,
+           (p.record_json::jsonb) AS operation_plan_json,
+           t.transition_fact_id,
+           t.transition_occurred_at,
+           t.transition_json,
+           a.approval_decision_fact_id,
+           a.approval_decision_occurred_at,
+           a.approval_decision_json,
+           r.receipt_fact_id,
+           r.receipt_occurred_at,
+           r.receipt_json
+    FROM facts p
+    LEFT JOIN latest_transition t ON (p.record_json::jsonb#>>'{payload,operation_plan_id}') = t.operation_plan_id
+    LEFT JOIN latest_approval a ON (p.record_json::jsonb#>>'{payload,approval_request_id}') = a.request_id
+    LEFT JOIN latest_receipt r ON (p.record_json::jsonb#>>'{payload,act_task_id}') = r.act_task_id
+    WHERE (p.record_json::jsonb->>'type') = 'operation_plan_v1'
+      AND (p.record_json::jsonb#>>'{payload,tenant_id}') = $1
+      AND (p.record_json::jsonb#>>'{payload,project_id}') = $2
+      AND (p.record_json::jsonb#>>'{payload,group_id}') = $3
+    ORDER BY p.occurred_at DESC, p.fact_id DESC
+    LIMIT $4
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
+  return (res.rows ?? []).map((row: any) => ({
+    operation_plan_fact_id: String(row.operation_plan_fact_id),
+    operation_plan_occurred_at: String(row.operation_plan_occurred_at),
+    operation_plan: parseJsonMaybe(row.operation_plan_json) ?? row.operation_plan_json,
+    transition_fact_id: row.transition_fact_id ? String(row.transition_fact_id) : null,
+    transition_occurred_at: row.transition_occurred_at ? String(row.transition_occurred_at) : null,
+    transition: parseJsonMaybe(row.transition_json),
+    approval_decision_fact_id: row.approval_decision_fact_id ? String(row.approval_decision_fact_id) : null,
+    approval_decision_occurred_at: row.approval_decision_occurred_at ? String(row.approval_decision_occurred_at) : null,
+    approval_decision: parseJsonMaybe(row.approval_decision_json),
+    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
+    receipt_occurred_at: row.receipt_occurred_at ? String(row.receipt_occurred_at) : null,
+    receipt: parseJsonMaybe(row.receipt_json)
+  }));
+}
+
 async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
   await ensureDispatchQueueRuntime(pool);
   const sql = `
@@ -553,6 +641,7 @@ function approvalImpactScopeFromProposal(proposal: any): any {
 
 async function buildOperationsConsole(pool: Pool, tenant: TenantTriple): Promise<any> {
   const approvalsRaw = await listApprovals(pool, tenant, 20);
+  const operationPlansRaw = await listOperationPlans(pool, tenant, 20);
   const monitoringRaw = await listTasks(pool, tenant, 20);
   const dispatches = await listDispatchQueue(pool, tenant, 10);
   const receipts = await listReceipts(pool, tenant, 10);
@@ -603,11 +692,13 @@ async function buildOperationsConsole(pool: Pool, tenant: TenantTriple): Promise
     summary: {
       approvals_pending: approvals.filter((x: any) => x.status === "PENDING").length,
       approvals_decided: approvals.filter((x: any) => x.status !== "PENDING").length,
+      operation_plans: operationPlansRaw.length,
       dispatch_queue: dispatches.length,
       receipts: receipts.length,
       retryable_tasks: monitoring.filter((x: any) => x.retry_allowed).length
     },
     approvals,
+    operation_plans: operationPlansRaw,
     monitoring,
     dispatches,
     receipts
@@ -733,6 +824,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }); // Wrapper fact gives Commercial v1 stable semantics without changing v0 core.
     }
 
+    const operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
+
     const decision_id = `apd_${randomUUID().replace(/-/g, "")}`; // Decision identifier exposed to clients.
     const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
       type: "approval_decision_v1",
@@ -752,7 +846,46 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
 
-    return reply.send({ ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id });
+    let operation_plan_transition_fact_id: string | null = null;
+    let operation_plan_update_fact_id: string | null = null;
+    if (operation_plan_id) {
+      const nextStatus = decision === "APPROVE" ? "TASK_CREATED" : "REJECTED";
+      operation_plan_transition_fact_id = await insertFact(pool, "api/v1/approvals", {
+        type: "operation_plan_transition_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id,
+          status: nextStatus,
+          trigger: "approval_decision",
+          approval_request_id: request_id,
+          decision,
+          decision_fact_id,
+          act_task_id,
+          created_ts: Date.now()
+        }
+      });
+      operation_plan_update_fact_id = await insertFact(pool, "api/v1/approvals", {
+        type: "operation_plan_v1",
+        payload: {
+          ...(operationPlan?.record_json?.payload ?? {}),
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id,
+          approval_request_id: request_id,
+          approval_decision: decision,
+          approval_decision_fact_id: decision_fact_id,
+          act_task_id,
+          ao_act_fact_id,
+          status: nextStatus,
+          updated_ts: Date.now()
+        }
+      });
+    }
+
+    return reply.send({ ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id, operation_plan_id, operation_plan_transition_fact_id, operation_plan_update_fact_id });
   });
 
   // POST /api/v1/ao-act/tasks
@@ -1112,8 +1245,75 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
     await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, { state: "ACKED", ack_fact_id });
-    return reply.send({ ok: true, ack_fact_id, fact_id: delegated.json.fact_id, wrapper_fact_id: delegated.json.wrapper_fact_id });
+    let operation_plan_transition_fact_id: string | null = null;
+    let operation_plan_update_fact_id: string | null = null;
+    const operationPlanForTask = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,act_task_id", act_task_id, tenant);
+    const operation_plan_id = operationPlanForTask?.record_json?.payload?.operation_plan_id ? String(operationPlanForTask.record_json.payload.operation_plan_id) : null;
+    if (operation_plan_id) {
+      operation_plan_transition_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
+        type: "operation_plan_transition_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id,
+          status: "RECEIPTED",
+          trigger: "receipt_uplink",
+          act_task_id,
+          receipt_fact_id: delegated.json.fact_id,
+          created_ts: Date.now()
+        }
+      });
+      operation_plan_update_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
+        type: "operation_plan_v1",
+        payload: {
+          ...(operationPlanForTask?.record_json?.payload ?? {}),
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id,
+          act_task_id,
+          status: "RECEIPTED",
+          receipt_fact_id: delegated.json.fact_id,
+          updated_ts: Date.now()
+        }
+      });
+    }
+    return reply.send({ ok: true, ack_fact_id, fact_id: delegated.json.fact_id, wrapper_fact_id: delegated.json.wrapper_fact_id, operation_plan_id, operation_plan_transition_fact_id, operation_plan_update_fact_id });
   });
+
+
+  // GET /api/v1/operations/plans
+  // OperationPlan read model: recommendation -> approval -> task -> receipt evidence chain.
+  app.get("/api/v1/operations/plans", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const items = await listOperationPlans(pool, tenant, parseLimit((req as any).query));
+    return reply.send({ ok: true, items });
+  });
+
+  // GET /api/v1/operations/plans/:operation_plan_id
+  app.get("/api/v1/operations/plans/:operation_plan_id", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const params: any = (req as any).params ?? {};
+    const operation_plan_id = String(params.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const planFact = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!planFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const approvalRequestId = String(planFact.record_json?.payload?.approval_request_id ?? "").trim();
+    const actTaskId = String(planFact.record_json?.payload?.act_task_id ?? "").trim();
+    const transition = await loadLatestFactByTypeAndKey(pool, "operation_plan_transition_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    const approval = approvalRequestId ? await loadLatestFactByTypeAndKey(pool, "approval_decision_v1", "payload,request_id", approvalRequestId, tenant) : null;
+    const task = actTaskId ? await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", actTaskId, tenant) : null;
+    const receipt = actTaskId ? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", actTaskId, tenant) : null;
+    return reply.send({ ok: true, item: { plan: planFact, transition, approval, task, receipt } });
+  });
+
 
 
   // GET /api/v1/operations/console
