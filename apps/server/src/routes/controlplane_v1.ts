@@ -192,7 +192,8 @@ async function claimDispatchQueueRows(
       WHERE q.queue_id = cte.queue_id
       RETURNING q.*
     `;
-    const res = await client.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, adapterHint ?? null, limit, leaseToken, executorId, leaseSeconds]);
+    const normalizedAdapterHint = normalizeAdapterHint(adapterHint);
+    const res = await client.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, normalizedAdapterHint, limit, leaseToken, executorId, leaseSeconds]);
     await client.query('COMMIT');
     return res.rows ?? [];
   } catch (err) {
@@ -537,7 +538,7 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
       AND q.group_id = $3
       AND ($4::text IS NULL OR q.act_task_id = $4)
       AND q.state IN ('READY','LEASED','PUBLISHED','ACKED')
-    ORDER BY q.created_at ASC, q.queue_id ASC
+    ORDER BY q.created_at DESC, q.queue_id DESC
     LIMIT $5
   `; // Runtime queue = mutable dispatch state joined back to immutable outbox/task facts.
   const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId ?? null, limit]);
@@ -606,6 +607,13 @@ function deriveDispatchTopic(tenant: TenantTriple, deviceId: string | null, body
   if (explicit) return explicit; // Use explicit topic when provided.
   if (!deviceId) return null; // Cannot derive default topic without device id.
   return `downlink/${tenant.tenant_id}/${deviceId}`; // Default Commercial v1 MQTT downlink topic.
+}
+
+function normalizeAdapterHint(raw: any): string | null {
+  const v = typeof raw === "string" ? raw.trim() : "";
+  if (!v) return null;
+  if (v === "mqtt") return "mqtt_downlink_once_v1"; // Backward-compatible alias used by some clients.
+  return v;
 }
 
 function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
@@ -985,7 +993,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         downlink_topic: typeof existingPayload.downlink_topic === "string" ? existingPayload.downlink_topic : null,
         qos: Math.max(0, Math.min(2, Number.parseInt(String(existingPayload.qos ?? body.qos ?? "1"), 10) || 1)),
         retain: Boolean(existingPayload.retain ?? body.retain ?? false),
-        adapter_hint: typeof existingPayload.adapter_hint === "string" ? existingPayload.adapter_hint : (body.adapter_hint ?? null)
+        adapter_hint: typeof existingPayload.adapter_hint === "string" ? normalizeAdapterHint(existingPayload.adapter_hint) : normalizeAdapterHint(body.adapter_hint)
       });
       return reply.send({ ok: true, act_task_id, dispatch_fact_id: null, outbox_fact_id: existingOutbox.fact_id, already_queued: true });
     } // Explicit idempotency: one open outbox item per task until receipt exists.
@@ -994,6 +1002,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const device_id = deriveDispatchDeviceId(body, taskRecord); // Prefer explicit device id; fallback to task meta.
     const downlink_topic = deriveDispatchTopic(tenant, device_id, body); // Resolve MQTT topic once at queue time.
     const dispatch_mode = String(body.dispatch_mode ?? "OUTBOX_ONLY").trim() || "OUTBOX_ONLY"; // Stable dispatch mode marker.
+    const adapter_hint = normalizeAdapterHint(body.adapter_hint); // Normalize aliases so queue consumers can match.
     const qos = Math.max(0, Math.min(2, Number.parseInt(String(body.qos ?? "1"), 10) || 1)); // MQTT QoS clamp.
     const retain = Boolean(body.retain ?? false); // MQTT retain flag.
 
@@ -1011,7 +1020,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         actor_id: auth.actor_id,
         token_id: auth.token_id,
         dispatch_mode,
-        adapter_hint: body.adapter_hint ?? null,
+        adapter_hint,
         created_at_ts: Date.now()
       }
     });
@@ -1028,7 +1037,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         downlink_topic,
         qos,
         retain,
-        adapter_hint: body.adapter_hint ?? null,
+        adapter_hint,
         created_at_ts: Date.now()
       }
     });
@@ -1042,7 +1051,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       downlink_topic,
       qos,
       retain,
-      adapter_hint: body.adapter_hint ?? null
+      adapter_hint
     });
     return reply.send({ ok: true, act_task_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false });
   });
