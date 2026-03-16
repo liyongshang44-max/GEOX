@@ -374,24 +374,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
-      request_id: `apr_${randomUUID().replace(/-/g, "")}`,
-      rationale: body.rationale ?? `Auto-mapped from recommendation ${recommendation_id}`,
-      proposal: {
-        issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
-        action_type: actionType,
-        target: { kind: "device", ref: String(rec.device_id) },
-        time_window: { start_ts: Date.now(), end_ts: Date.now() + 30 * 60 * 1000 },
-        parameter_schema: { type: "object", additionalProperties: true },
-        parameters: rec?.suggested_action?.parameters ?? {},
-        constraints: [{ key: "approval_gate", op: "eq", value: "required" }],
-        meta: {
-          recommendation_id,
-          recommendation_type: rec.recommendation_type ?? null,
-          field_id: rec.field_id ?? null,
-          season_id: rec.season_id ?? null,
-          confidence: rec.confidence ?? null,
-          device_id: rec.device_id ?? null
-        }
+      issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
+      action_type: actionType,
+      target: { kind: "device", ref: String(rec.device_id) },
+      time_window: { start_ts: Date.now(), end_ts: Date.now() + 30 * 60 * 1000 },
+      parameter_schema: { type: "object", additionalProperties: true },
+      parameters: rec?.suggested_action?.parameters ?? {},
+      constraints: [{ key: "approval_gate", op: "eq", value: "required" }],
+      meta: {
+        rationale: body.rationale ?? `Auto-mapped from recommendation ${recommendation_id}`,
+        recommendation_id,
+        recommendation_type: rec.recommendation_type ?? null,
+        field_id: rec.field_id ?? null,
+        season_id: rec.season_id ?? null,
+        confidence: rec.confidence ?? null,
+        device_id: rec.device_id ?? null
       }
     });
 
