@@ -1,5 +1,5 @@
-import React from "react"; // React hooks for the operations cockpit.
-import { Link } from "react-router-dom"; // Internal navigation links.
+import React from "react";
+import { Link } from "react-router-dom";
 import {
   fetchAuthMe,
   fetchOperationsConsole,
@@ -9,79 +9,84 @@ import {
   retryAoActTask,
   type AuthMe,
   type OperationsConsoleResponse,
-  type OperationsConsoleApprovalDetail,
-  type OperationsConsoleMonitoringItem,
-} from "../lib/api"; // Reuse Commercial v1 APIs plus the new operations aggregate.
+} from "../lib/api";
+import OperationSummaryStats from "../components/operations/OperationSummaryStats";
+import OperationQueueList from "../components/operations/OperationQueueList";
+import OperationDetailPanel from "../components/operations/OperationDetailPanel";
+import OperationQuickCreate from "../components/operations/OperationQuickCreate";
+import { OP_LABELS, buildWorkItems, summarize, type OpsLang, type OperationWorkItem, type WorkTab } from "../lib/operationViewModel";
 
 function getStoredToken(): string {
-  try { return localStorage.getItem("geox_ao_act_token") || "dev_ao_act_admin_v0"; } catch { return "dev_ao_act_admin_v0"; } // Keep page usable in dev when local storage is empty.
-}
-
-function shortJson(v: unknown): string {
-  try { return JSON.stringify(v ?? null, null, 2); } catch { return String(v); } // Safe preview for operator detail panels.
-}
-
-function targetLabel(target: any): string {
-  if (typeof target === "string") return target; // Legacy string target.
-  if (target && typeof target === "object") {
-    const kind = String(target.kind ?? "field"); // Default target kind for display.
-    const ref = String(target.ref ?? target.field_id ?? target.id ?? ""); // Normalize the reference key.
-    return ref ? `${kind}:${ref}` : kind; // Human-readable label.
-  }
-  return "-"; // Empty fallback.
+  try { return localStorage.getItem("geox_ao_act_token") || "dev_ao_act_admin_v0"; } catch { return "dev_ao_act_admin_v0"; }
 }
 
 function presetTemplate(actionType: string): { parameters: any; device_id?: string } {
-  if (actionType === "IRRIGATE") return { parameters: { duration_min: 15, flow_rate: 12 } }; // Default irrigation template.
-  if (actionType === "SPRAY") return { parameters: { dose_ml: 120, speed_kmh: 4 } }; // Default spray template.
-  if (actionType === "PLOW") return { parameters: { depth_cm: 18, speed_kmh: 5 }, device_id: "dev_demo" }; // Default plow template.
-  return { parameters: { duration_min: 10 } }; // Safe generic fallback.
+  if (actionType === "IRRIGATE") return { parameters: { duration_min: 15, flow_rate: 12 } };
+  if (actionType === "SPRAY") return { parameters: { dose_ml: 120, speed_kmh: 4 } };
+  if (actionType === "PLOW") return { parameters: { depth_cm: 18, speed_kmh: 5 }, device_id: "dev_demo" };
+  return { parameters: { duration_min: 10 } };
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [token] = React.useState<string>(getStoredToken()); // AO-ACT token from the current browser session.
-  const [session, setSession] = React.useState<AuthMe | null>(null); // Current actor session info.
-  const [consoleData, setConsoleData] = React.useState<OperationsConsoleResponse | null>(null); // New aggregate payload for the page.
-  const [statusText, setStatusText] = React.useState<string>(""); // Small operator feedback line.
-  const [loading, setLoading] = React.useState<boolean>(false); // Disable actions during refresh.
-  const [selectedApprovalId, setSelectedApprovalId] = React.useState<string>(""); // Detail panel selection for approvals.
-  const [selectedTaskId, setSelectedTaskId] = React.useState<string>(""); // Detail panel selection for monitoring items.
+  const [token] = React.useState<string>(getStoredToken());
+  const [session, setSession] = React.useState<AuthMe | null>(null);
+  const [consoleData, setConsoleData] = React.useState<OperationsConsoleResponse | null>(null);
+  const [statusText, setStatusText] = React.useState<string>("");
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [lang, setLang] = React.useState<OpsLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
+  const [activeTab, setActiveTab] = React.useState<WorkTab>("pending_approval");
+  const [selectedKey, setSelectedKey] = React.useState<string>("");
 
-  const [issuer, setIssuer] = React.useState("human"); // Wizard: issuer id.
-  const [actionType, setActionType] = React.useState("IRRIGATE"); // Wizard: action template family.
-  const [targetText, setTargetText] = React.useState('field_demo'); // Wizard: target reference.
-  const [requestDeviceId, setRequestDeviceId] = React.useState(""); // Wizard: optional device pinning.
-  const [parametersText, setParametersText] = React.useState(JSON.stringify(presetTemplate("IRRIGATE").parameters)); // Wizard: editable parameters JSON.
-  const [retryDeviceId, setRetryDeviceId] = React.useState("dev_demo"); // Retry path default device.
+  const [issuer, setIssuer] = React.useState("manual");
+  const [actionType, setActionType] = React.useState("IRRIGATE");
+  const [targetText, setTargetText] = React.useState("field_demo");
+  const [requestDeviceId, setRequestDeviceId] = React.useState("");
+  const [parametersText, setParametersText] = React.useState(JSON.stringify(presetTemplate("IRRIGATE").parameters));
+  const [retryDeviceId, setRetryDeviceId] = React.useState("dev_demo");
+
+  const labels = OP_LABELS[lang];
+  const isDev = Boolean(import.meta.env.DEV);
 
   async function refresh(): Promise<void> {
-    setLoading(true); // Freeze repeated clicks while requests are in flight.
+    setLoading(true);
     try {
-      const [me, overview] = await Promise.all([
-        fetchAuthMe(token),
-        fetchOperationsConsole(token),
-      ]); // Fetch actor session and the new cockpit aggregate in parallel.
-      setSession(me); // Keep role info for button gating.
-      setConsoleData(overview); // Replace the whole page state atomically.
-      setSelectedApprovalId((prev) => prev || String(overview.approvals?.[0]?.request_id ?? "")); // Default to the latest approval.
-      setSelectedTaskId((prev) => prev || String(overview.monitoring?.[0]?.act_task_id ?? "")); // Default to the latest task.
-      setStatusText(`已刷新：待审批 ${overview.summary.approvals_pending} / 可重试 ${overview.summary.retryable_tasks} / 回执 ${overview.summary.receipts}`); // One-line operational summary.
+      const [me, overview] = await Promise.all([fetchAuthMe(token), fetchOperationsConsole(token)]);
+      setSession(me);
+      setConsoleData(overview);
+      setStatusText(`${labels.refresh} OK`);
     } catch (e: any) {
-      setStatusText(`加载失败：${e?.bodyText || e?.message || String(e)}`); // Preserve raw API error text for debugging.
+      setStatusText(e?.bodyText || e?.message || String(e));
     } finally {
-      setLoading(false); // Re-enable page actions after refresh.
+      setLoading(false);
     }
   }
 
-  async function onCreateApproval(): Promise<void> {
-    if (session?.role === "operator") {
-      setStatusText("当前操作员角色不能发起审批。"); // Product gating stays explicit in UI.
+  React.useEffect(() => {
+    void refresh();
+  }, []);
+
+  const items = React.useMemo(() => buildWorkItems(consoleData, lang), [consoleData, lang]);
+  const stats = React.useMemo(() => summarize(items), [items]);
+  const queueItems = React.useMemo(() => items.filter((x) => x.status === activeTab), [activeTab, items]);
+
+  React.useEffect(() => {
+    if (!queueItems.length) {
+      setSelectedKey("");
       return;
     }
-    setStatusText("正在提交作业审批..."); // Wizard feedback text.
+    setSelectedKey((prev) => (prev && queueItems.some((x) => x.key === prev) ? prev : queueItems[0].key));
+  }, [queueItems]);
+
+  const selectedItem = React.useMemo(() => items.find((x) => x.key === selectedKey) || null, [items, selectedKey]);
+
+  async function onCreateApproval(): Promise<void> {
+    if (session?.role === "operator") {
+      setStatusText(lang === "zh" ? "当前角色不能新建作业。" : "Current role cannot create operation.");
+      return;
+    }
     try {
-      const parsedParameters = JSON.parse(parametersText || "{}"); // Wizard parameters stay JSON-first for minimum surface area.
-      const body = {
+      const parsedParameters = JSON.parse(parametersText || "{}");
+      await createApproval(token, {
         issuer,
         action_type: actionType,
         target: targetText.trim(),
@@ -90,178 +95,109 @@ export default function OperationsPage(): React.ReactElement {
         parameters: parsedParameters,
         constraints: {},
         meta: requestDeviceId.trim() ? { device_id: requestDeviceId.trim() } : {},
-      }; // Keep the request payload aligned with approval_request_v1.
-      const created = await createApproval(token, body); // Create approval through the stable Commercial v1 wrapper.
-      setSelectedApprovalId(String(created.request_id ?? "")); // Jump the detail panel to the newly created request.
-      setStatusText(`审批请求已创建：${created.request_id}`); // Operator feedback.
-      await refresh(); // Pull the derived detail/hash/risk info back from the aggregate route.
+      });
+      setStatusText(labels.createdStatus);
+      await refresh();
     } catch (e: any) {
-      setStatusText(`创建失败：${e?.bodyText || e?.message || String(e)}`); // Surface parse and API errors directly.
+      setStatusText(e?.bodyText || e?.message || String(e));
     }
   }
 
-  async function onTemplateChange(nextActionType: string): Promise<void> {
-    setActionType(nextActionType); // Update the selected template family.
-    const nextPreset = presetTemplate(nextActionType); // Read the suggested parameters for this action.
-    setParametersText(JSON.stringify(nextPreset.parameters)); // Replace the JSON editor content with the preset.
-    if (nextPreset.device_id) setRequestDeviceId(nextPreset.device_id); // Some templates prefer a default device.
+  function onTemplateChange(next: string): void {
+    setActionType(next);
+    const preset = presetTemplate(next);
+    setParametersText(JSON.stringify(preset.parameters));
+    if (preset.device_id) setRequestDeviceId(preset.device_id);
   }
 
-  async function onDecide(requestId: string, decision: "APPROVE" | "REJECT"): Promise<void> {
-    setStatusText(`正在${decision === "APPROVE" ? "批准" : "驳回"} ${requestId}...`); // Show action in progress.
+  async function onPrimaryAction(item: OperationWorkItem): Promise<void> {
     try {
-      const res = await decideApproval(token, requestId, { decision, reason: "ops_workbench" }); // Use the stable wrapper route.
-      if (decision === "APPROVE" && res?.act_task_id) setSelectedTaskId(String(res.act_task_id)); // Jump to the generated task after approval.
-      await refresh(); // Pull back latest approval/task state.
+      if (item.status === "pending_approval" && item.approvalId) {
+        await decideApproval(token, item.approvalId, { decision: "APPROVE", reason: "approved in operations console" });
+      } else if (item.status === "ready_to_dispatch" && item.taskId) {
+        await dispatchAoActTask(token, item.taskId, {});
+      } else if (item.status === "failed" && item.taskId) {
+        await retryAoActTask(token, item.taskId, { device_id: retryDeviceId || undefined, retry_reason: "manual_retry" });
+      }
+      await refresh();
     } catch (e: any) {
-      setStatusText(`审批失败：${e?.bodyText || e?.message || String(e)}`); // Preserve backend error text.
+      setStatusText(e?.bodyText || e?.message || String(e));
     }
   }
 
-  async function onDispatch(actTaskId: string): Promise<void> {
-    setStatusText(`正在下发 ${actTaskId}...`); // Show progress before explicit dispatch.
+  async function onCopy(text: string): Promise<void> {
+    if (!text) return;
     try {
-      await dispatchAoActTask(token, actTaskId, { device_id: retryDeviceId.trim() || undefined }); // Existing explicit dispatch path.
-      setSelectedTaskId(actTaskId); // Keep the monitoring panel focused on this task.
-      await refresh(); // Pull latest queue state.
-    } catch (e: any) {
-      setStatusText(`下发失败：${e?.bodyText || e?.message || String(e)}`); // Bubble backend error.
+      await navigator.clipboard.writeText(text);
+      setStatusText("copied");
+    } catch {
+      setStatusText("copy failed");
     }
   }
 
-  async function onRetry(actTaskId: string): Promise<void> {
-    setStatusText(`正在请求重试 ${actTaskId}...`); // Show retry intent.
-    try {
-      await retryAoActTask(token, actTaskId, { device_id: retryDeviceId.trim() || undefined, retry_reason: "ops_console_manual_retry", adapter_hint: "ops_console" }); // Restricted retry entry.
-      setSelectedTaskId(actTaskId); // Keep focus on the retried task.
-      await refresh(); // Pull latest queue state and retry counts.
-    } catch (e: any) {
-      setStatusText(`重试失败：${e?.bodyText || e?.message || String(e)}`); // Explicitly show retry rejection reasons.
-    }
-  }
-
-  React.useEffect(() => {
-    void refresh(); // Load page once after mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const summary = consoleData?.summary ?? { approvals_pending: 0, approvals_decided: 0, dispatch_queue: 0, receipts: 0, retryable_tasks: 0 }; // Default empty state before data arrives.
-  const approvals = consoleData?.approvals ?? []; // Approval detail list.
-  const monitoring = consoleData?.monitoring ?? []; // Task monitoring list.
-  const selectedApproval: OperationsConsoleApprovalDetail | null = approvals.find((item) => String(item.request_id) === selectedApprovalId) ?? approvals[0] ?? null; // Resolve current approval detail.
-  const selectedTask: OperationsConsoleMonitoringItem | null = monitoring.find((item) => item.act_task_id === selectedTaskId) ?? monitoring[0] ?? null; // Resolve current task detail.
+  const roleText = lang === "zh"
+    ? `当前角色：${session?.role === "admin" ? "管理员" : session?.role === "operator" ? "操作员" : "未识别"}`
+    : `Current role: ${session?.role || "unknown"}`;
 
   return (
-    <div className="stackList compactList">
-      <section className="hero card">
+    <div style={{ display: "grid", gap: 14 }}>
+      <section className="card" style={{ padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 18 }}>{labels.pageTitle}</h2>
+            <div className="muted" style={{ marginTop: 4 }}>{labels.pageDesc}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as OpsLang)}>
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+            <button className="btn" onClick={() => void refresh()} disabled={loading}>{labels.refresh}</button>
+            <Link className="btn" to="/audit/export">{labels.auditExport}</Link>
+            <button className="btn primary" onClick={() => document.getElementById("ops-quick-create")?.scrollIntoView({ behavior: "smooth" })}>{labels.createOperation}</button>
+          </div>
+        </div>
+      </section>
+
+      <OperationSummaryStats labels={labels} stats={stats} />
+
+      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14 }}>
         <div>
-          <div className="eyebrow">Operations / 作业运营台</div>
-          <h2 className="heroTitle">作业向导、审批详情、执行监控</h2>
-          <p className="heroText">本页把蓝图中的审批详情、执行监控和受限失败重试合并成一个最小可演示工作台。</p>
+          <h3 style={{ margin: "0 0 8px 0" }}>{labels.queueTitle}</h3>
+          <OperationQueueList
+            labels={labels}
+            tab={activeTab}
+            onTabChange={setActiveTab}
+            items={queueItems}
+            selectedKey={selectedKey}
+            onSelect={(item) => setSelectedKey(item.key)}
+            onPrimary={(item) => void onPrimaryAction(item)}
+          />
         </div>
-        <div className="heroActions">
-          <button className="btn btnPrimary" onClick={() => void refresh()} disabled={loading}>刷新数据</button>
-          <Link className="btn" to="/audit-export">查看审计与导出</Link>
-        </div>
+        <OperationDetailPanel item={selectedItem} labels={labels} isDev={isDev} onCopy={(text) => void onCopy(text)} />
       </section>
 
-      <section className="summaryGrid">
-        <div className="summaryCard card"><div className="summaryLabel">待审批</div><div className="summaryValue">{summary.approvals_pending}</div></div>
-        <div className="summaryCard card"><div className="summaryLabel">已决策</div><div className="summaryValue">{summary.approvals_decided}</div></div>
-        <div className="summaryCard card"><div className="summaryLabel">队列中</div><div className="summaryValue">{summary.dispatch_queue}</div></div>
-        <div className="summaryCard card"><div className="summaryLabel">可重试任务</div><div className="summaryValue">{summary.retryable_tasks}</div></div>
-      </section>
+      <div id="ops-quick-create">
+        <OperationQuickCreate
+          labels={labels}
+          issuer={issuer}
+          actionType={actionType}
+          targetText={targetText}
+          requestDeviceId={requestDeviceId}
+          parametersText={parametersText}
+          roleText={roleText}
+          disabled={loading || session?.role === "operator"}
+          onIssuer={setIssuer}
+          onActionType={onTemplateChange}
+          onTargetText={setTargetText}
+          onDevice={setRequestDeviceId}
+          onParameters={setParametersText}
+          onCreate={() => void onCreateApproval()}
+        />
+      </div>
 
-      <section className="card">
-        <div className="subSectionTitle">作业向导</div>
-        <div className="formGridTwo">
-          <label className="field"><span>发起人</span><input value={issuer} onChange={(e) => setIssuer(e.target.value)} /></label>
-          <label className="field"><span>模板</span><select value={actionType} onChange={(e) => void onTemplateChange(e.target.value)}><option value="IRRIGATE">灌溉</option><option value="SPRAY">喷洒</option><option value="PLOW">翻地</option><option value="HARROW">耙地</option><option value="HARVEST">采收</option></select></label>
-          <label className="field"><span>目标</span><input value={targetText} onChange={(e) => setTargetText(e.target.value)} placeholder="field_demo" /></label>
-          <label className="field"><span>设备</span><input value={requestDeviceId} onChange={(e) => setRequestDeviceId(e.target.value)} placeholder="dev_demo" /></label>
-          <label className="field" style={{ gridColumn: "1 / -1" }}><span>参数 JSON</span><textarea rows={6} value={parametersText} onChange={(e) => setParametersText(e.target.value)} /></label>
-        </div>
-        <div className="heroActions">
-          <button className="btn btnPrimary" onClick={() => void onCreateApproval()} disabled={loading || session?.role === "operator"}>提交审批</button>
-          <div className="metaText">当前角色：{session?.role === "admin" ? "管理员" : session?.role === "operator" ? "操作员" : "未识别"}</div>
-        </div>
-      </section>
-
-      <section className="detailGrid" style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr", gap: 16 }}>
-        <div className="card">
-          <div className="subSectionTitle">审批详情</div>
-          <div className="tableWrap">
-            <table className="tableCompact">
-              <thead><tr><th>请求</th><th>类型</th><th>状态</th><th>设备</th><th>操作</th></tr></thead>
-              <tbody>
-                {approvals.length < 1 ? <tr><td colSpan={5}>暂无审批。</td></tr> : approvals.map((item) => (
-                  <tr key={String(item.request_id)}>
-                    <td><button className="btn btnLink" onClick={() => setSelectedApprovalId(String(item.request_id ?? ""))}>{item.request_id}</button></td>
-                    <td>{item.action_type || "-"}</td>
-                    <td>{item.status}</td>
-                    <td>{item.device_id || "-"}</td>
-                    <td className="actionsRow">
-                      {item.status === "PENDING" ? (
-                        <>
-                          <button className="btn btnPrimary" onClick={() => void onDecide(String(item.request_id), "APPROVE")} disabled={session?.role !== "admin"}>批准</button>
-                          <button className="btn" onClick={() => void onDecide(String(item.request_id), "REJECT")} disabled={session?.role !== "admin"}>驳回</button>
-                        </>
-                      ) : <span className="pill">已决策</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {selectedApproval ? (
-            <div className="stackList compactList" style={{ marginTop: 12 }}>
-              <div className="subSectionTitle">单条审批详情</div>
-              <div className="metaText">风险提示：{selectedApproval.risk_hint}</div>
-              <div className="metaText">影响范围：{targetLabel(selectedApproval.impact_scope)}</div>
-              <div className="metaText">参数快照哈希：{selectedApproval.proposal_hash}</div>
-              <pre className="codeBlock">{shortJson(selectedApproval.parameter_snapshot)}</pre>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="card">
-          <div className="subSectionTitle">执行监控</div>
-          <label className="field" style={{ marginBottom: 12 }}><span>默认重试设备</span><input value={retryDeviceId} onChange={(e) => setRetryDeviceId(e.target.value)} placeholder="dev_demo" /></label>
-          <div className="tableWrap">
-            <table className="tableCompact">
-              <thead><tr><th>任务</th><th>状态</th><th>回执</th><th>操作</th></tr></thead>
-              <tbody>
-                {monitoring.length < 1 ? <tr><td colSpan={4}>暂无任务。</td></tr> : monitoring.map((item) => (
-                  <tr key={item.act_task_id}>
-                    <td><button className="btn btnLink" onClick={() => setSelectedTaskId(item.act_task_id)}>{item.act_task_id}</button></td>
-                    <td>{item.state}</td>
-                    <td>{item.latest_receipt_status || "-"}</td>
-                    <td className="actionsRow">
-                      <button className="btn" onClick={() => void onDispatch(item.act_task_id)} disabled={item.state !== "CREATED"}>下发</button>
-                      <button className="btn btnPrimary" onClick={() => void onRetry(item.act_task_id)} disabled={!item.retry_allowed || session?.role !== "admin"}>失败重试</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {selectedTask ? (
-            <div className="stackList compactList" style={{ marginTop: 12 }}>
-              <div className="subSectionTitle">任务监控详情</div>
-              <div className="metaText">动作：{selectedTask.action_type || "-"}</div>
-              <div className="metaText">目标：{targetLabel(selectedTask.target)}</div>
-              <div className="metaText">设备：{selectedTask.device_id || "-"}</div>
-              <div className="metaText">参数哈希：{selectedTask.parameters_hash}</div>
-              <div className="metaText">最新回执：{selectedTask.latest_receipt_status || "无"}</div>
-              <pre className="codeBlock">{shortJson(selectedTask.parameters)}</pre>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="subSectionTitle">页面状态</div>
-        <div className="metaText">{statusText || "准备就绪"}</div>
+      <section className="card" style={{ padding: 12 }}>
+        <div className="muted">{statusText || "-"}</div>
       </section>
     </div>
   );
