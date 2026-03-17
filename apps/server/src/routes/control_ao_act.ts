@@ -225,6 +225,28 @@ async function findAoActTaskByActTaskId(
   return r.rows[0].record_json; // Return task record_json for downstream schema checks.
 }
 
+async function loadLatestApprovalRequestStatusV0(
+  pool: Pool,
+  requestId: string,
+  tenant: TenantTripleV0
+): Promise<string | null> {
+  const sql = `
+    SELECT (record_json::jsonb#>>'{payload,status}') AS status
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+      AND (record_json::jsonb#>>'{payload,request_id}') = $1
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+      AND (record_json::jsonb#>>'{payload,project_id}') = $3
+      AND (record_json::jsonb#>>'{payload,group_id}') = $4
+    ORDER BY occurred_at DESC, fact_id DESC
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [requestId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+  if (!res.rows?.length) return null;
+  const status = String(res.rows[0].status ?? "").trim().toUpperCase();
+  return status || null;
+}
+
 
 async function findDuplicateAoActReceiptByIdempotencyKey(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
@@ -347,6 +369,7 @@ export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): vo
           tenant_id: z.string().min(1),
           project_id: z.string().min(1),
           group_id: z.string().min(1),
+          approval_request_id: z.string().min(1),
           issuer: z.object({ kind: z.literal("human"), id: z.string().min(1), namespace: z.string().min(1) }),
           action_type: z.string().min(1),
           target: z.object({ kind: z.enum(["field", "area", "path"]), ref: z.string().min(1) }),
@@ -391,6 +414,11 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         return reply.status(400).send({ ok: false, error: "TIME_WINDOW_INVALID" });
       }
 
+      const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, body.approval_request_id, tenant);
+      if (approvalStatus !== "APPROVED") {
+        return reply.status(403).send({ ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
+      }
+
       const schemaKeys = body.parameter_schema.keys.map((k) => ({
         name: k.name,
         type: k.type,
@@ -418,6 +446,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
           group_id: tenant.group_id,
+          approval_request_id: body.approval_request_id,
           act_task_id,
           issuer: body.issuer,
           action_type: body.action_type,
