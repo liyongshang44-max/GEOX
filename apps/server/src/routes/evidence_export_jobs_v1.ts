@@ -1,4 +1,4 @@
-﻿// GEOX/apps/server/src/routes/evidence_export_jobs_v1.ts
+// GEOX/apps/server/src/routes/evidence_export_jobs_v1.ts
 //
 // Sprint C1: Evidence Export Jobs (persisted) for Commercial delivery.
 // 
@@ -552,7 +552,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
         LIMIT 1`,
       [tenant_id, actTaskId]
     ); // End operation plan query.
-    if (qPlan.rowCount < 1) continue; // Skip tasks that do not yet have an operation plan bridge.
+    if ((qPlan.rowCount ?? 0) < 1) continue; // Skip tasks that do not yet have an operation plan bridge.
     const planRow = qPlan.rows[0]; // Read the winning operation plan row.
     let planRecord: any = null; // Prepare parsed operation plan JSON.
     try { planRecord = typeof planRow.record_json === 'string' ? JSON.parse(planRow.record_json) : planRow.record_json; } catch { planRecord = null; } // Parse record_json safely.
@@ -575,7 +575,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
             LIMIT 1`,
           [approvalDecisionFactId, tenant_id]
         ); // End approval decision query.
-        if (qApprovalDecision.rowCount > 0) { // Inject approval decision when found.
+        if ((qApprovalDecision.rowCount ?? 0) > 0) { // Inject approval decision when found.
           const decisionRow = qApprovalDecision.rows[0];
           let decisionRecord: any = null;
           try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
@@ -595,7 +595,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
             LIMIT 1`,
           [receiptFactId]
         ); // End receipt query.
-        if (qReceipt.rowCount > 0) { // Inject receipt when found.
+        if ((qReceipt.rowCount ?? 0) > 0) { // Inject receipt when found.
           const receiptRow = qReceipt.rows[0];
           let receiptRecord: any = null;
           try { receiptRecord = typeof receiptRow.record_json === 'string' ? JSON.parse(receiptRow.record_json) : receiptRow.record_json; } catch { receiptRecord = null; }
@@ -659,7 +659,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
             LIMIT 1`,
           [approvalDecisionFactId, tenant_id]
         ); // End approval decision query.
-        if (qApprovalDecision.rowCount > 0) { // Inject approval decision when found.
+        if ((qApprovalDecision.rowCount ?? 0) > 0) { // Inject approval decision when found.
           const decisionRow = qApprovalDecision.rows[0];
           let decisionRecord: any = null;
           try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
@@ -679,7 +679,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
             LIMIT 1`,
           [receiptFactId]
         ); // End receipt query.
-        if (qReceipt.rowCount > 0) { // Inject receipt when found.
+        if ((qReceipt.rowCount ?? 0) > 0) { // Inject receipt when found.
           const receiptRow = qReceipt.rows[0];
           let receiptRecord: any = null;
           try { receiptRecord = typeof receiptRow.record_json === 'string' ? JSON.parse(receiptRow.record_json) : receiptRow.record_json; } catch { receiptRecord = null; }
@@ -1234,3 +1234,4 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     return reply.send(stream); // Stream to client.
   }); // End download.
 } // End registerEvidenceExportJobsV1Routes.
+
