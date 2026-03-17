@@ -1,5 +1,5 @@
 // GEOX/apps/executor/src/run_dispatch_once.ts
-import { randomUUID } from "node:crypto";
+import crypto from "node:crypto"; // Used to mint a stable executor id + idempotency keys.
 import { createAdapterRegistry, findAdapter, type AoActTask } from "./adapters";
 
 type Args = { baseUrl: string; token: string; tenant_id: string; project_id: string; group_id: string; executor_id: string; limit: number };
@@ -17,7 +17,7 @@ function parseArgs(argv: string[]): Args {
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA";
   const project_id = get("project_id") ?? process.env.GEOX_PROJECT_ID ?? "projectA";
   const group_id = get("group_id") ?? process.env.GEOX_GROUP_ID ?? "groupA";
-  const executor_id = get("executor_id") ?? process.env.GEOX_EXECUTOR_ID ?? `dispatch_exec_${randomUUID().replace(/-/g, "")}`;
+  const executor_id = get("executor_id") ?? process.env.GEOX_EXECUTOR_ID ?? `dispatch_exec_${crypto.randomUUID().replace(/-/g, "")}`;
   const limit = Math.max(1, Number.parseInt(get("limit") ?? process.env.GEOX_EXECUTOR_LIMIT ?? "1", 10) || 1);
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
   return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit };
@@ -85,6 +85,7 @@ function readTaskState(item: any): string {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token });
+
   console.log(`INFO: run_dispatch_once baseUrl=${args.baseUrl}`);
   console.log(`INFO: executor_id=${args.executor_id}`);
 
@@ -115,16 +116,17 @@ async function main(): Promise<void> {
     console.log(`INFO: dispatching act_task_id=${task.act_task_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
     await writeDispatchState(args, task, "DISPATCHED");
 
-    const result = await adapter.dispatch(task);
-    if (!result.ok) {
-      await writeDispatchState(args, task, "FAILED");
-      throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown"}`);
-    }
+const result = await adapter.dispatch(task);
+if (!result.ok) {
+  await writeDispatchState(args, task, "FAILED");
+  throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown_error"}`);
+}
 
-    await writeDispatchState(args, task, "ACKED");
-    await writeDispatchState(args, task, "SUCCEEDED");
-    console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? "n/a"}`);
-    console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
+await writeDispatchState(args, task, "ACKED");
+await writeDispatchState(args, task, "SUCCEEDED");
+
+console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? ""}`);
+console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
   }
 }
 
