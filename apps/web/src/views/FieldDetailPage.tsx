@@ -1,7 +1,13 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { createFieldSeason, fetchFieldDetail } from "../lib/api";
+import { fetchFieldDetail } from "../lib/api";
+import FieldSummaryCards from "../components/field/FieldSummaryCards";
+import FieldOperationList from "../components/field/FieldOperationList";
+import FieldAlertList from "../components/field/FieldAlertList";
+import FieldLegend from "../components/field/FieldLegend";
+import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
+import { FIELD_TEXT, formatRiskStatus, getRiskColor, mapAlertTypeToLabel, mapFieldStatusToLabel, mapOperationTypeToLabel, mapSourceFieldToLabel, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -12,18 +18,8 @@ function fmtIso(ts: string | null | undefined): string {
   const ms = Date.parse(ts);
   return Number.isFinite(ms) ? new Date(ms).toLocaleString() : ts;
 }
-function nextSeasonId(fieldId: string): string {
-  return `${fieldId}_season_${new Date().getFullYear()}`;
-}
 
-type FieldTab = "overview" | "map" | "jobs" | "alerts";
-
-const FIELD_TAB_LABELS: Record<FieldTab, string> = {
-  overview: "概览",
-  map: "地图",
-  jobs: "作业",
-  alerts: "告警",
-};
+type FieldTab = "overview" | "map" | "operations" | "alerts";
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
@@ -33,11 +29,11 @@ export default function FieldDetailPage(): React.ReactElement {
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
+  const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
+  const [selectedObject, setSelectedObject] = React.useState<any>(null);
 
-  const [seasonId, setSeasonId] = React.useState(nextSeasonId(fieldId || "field"));
-  const [seasonName, setSeasonName] = React.useState("春季作业季");
-  const [seasonCrop, setSeasonCrop] = React.useState("水稻");
-  const [seasonStatus, setSeasonStatus] = React.useState<"PLANNED" | "ACTIVE" | "CLOSED">("PLANNED");
+  const labels = FIELD_TEXT[lang];
+  const isDev = Boolean(import.meta.env.DEV);
 
   const persistToken = (v: string) => {
     setToken(v);
@@ -47,134 +43,153 @@ export default function FieldDetailPage(): React.ReactElement {
   const refresh = React.useCallback(async () => {
     if (!fieldId || !token) return;
     setBusy(true);
-    setStatus("加载中...");
+    setStatus(lang === "zh" ? "加载中..." : "Loading...");
     try {
       const next = await fetchFieldDetail(token, fieldId);
       setDetail(next);
-      setStatus("加载成功");
+      setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
-      setStatus(`加载失败：${e?.message || String(e)}`);
+      setStatus(e?.message || String(e));
     } finally {
       setBusy(false);
     }
-  }, [fieldId, token]);
+  }, [fieldId, token, lang]);
 
   React.useEffect(() => {
-    setSeasonId(nextSeasonId(fieldId || "field"));
     void refresh();
-  }, [fieldId, refresh]);
+  }, [refresh]);
 
-  const submitSeason = async () => {
-    if (!fieldId) return;
-    setBusy(true);
-    try {
-      await createFieldSeason(token, fieldId, {
-        season_id: seasonId,
-        name: seasonName,
-        crop: seasonCrop,
-        status: seasonStatus,
-      });
-      setStatus(`季节 ${seasonId} 已保存`);
-      await refresh();
-    } catch (e: any) {
-      setStatus(`保存失败：${e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const operationItems = React.useMemo(() => {
+    const list = Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : [];
+    return list.map((item: any) => {
+      const sourceRaw = String(item?.timing_source ?? "");
+      const source = mapSourceFieldToLabel(sourceRaw, lang);
+      const statusLabel = sourceRaw.includes("receipt") ? labels.opCompleted : labels.opPlanned;
+      const window = item.trajectory_window_start_ts_ms
+        ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}`
+        : "-";
+      return {
+        id: String(item.id ?? `${item.task_type}_${item.ts_ms || 0}`),
+        type: mapOperationTypeToLabel(item.task_type, lang),
+        time: fmtTs(item.ts_ms),
+        source,
+        status: statusLabel,
+        device: item.device_id || "-",
+        window,
+        raw: item,
+      };
+    });
+  }, [detail, labels, lang]);
 
-  const tabs: FieldTab[] = ["overview", "map", "jobs", "alerts"];
-  const polygonGeo = detail?.polygon?.geojson_json;
-  const mapMarkers = detail?.map_layers?.markers || [];
-  const trajectoryGeo = detail?.map_layers?.trajectory_geojson || { type: "FeatureCollection", features: [] };
-  const heatGeo = detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] };
-  const jobHistory = detail?.map_layers?.job_history || [];
+  const alertItems = React.useMemo(() => {
+    const list = Array.isArray(detail?.recent_alerts) ? detail.recent_alerts : [];
+    return list.map((event: any) => {
+      const s = String(event.status ?? "").toUpperCase();
+      const statusLabel = s === "OPEN" ? labels.alertOpen : s === "ACKED" ? labels.alertAck : s === "CLOSED" ? labels.alertClosed : labels.unknown;
+      return {
+        id: String(event.event_id ?? `${event.metric}_${event.raised_ts_ms || 0}`),
+        type: mapAlertTypeToLabel(event.metric, lang),
+        status: statusLabel,
+        target: event.object_id || "-",
+        time: fmtIso(event.raised_at) !== "-" ? fmtIso(event.raised_at) : fmtTs(event.raised_ts_ms),
+        suggestion: event.suggested_action || event.suggestion || null,
+        severity: event.severity || null,
+        raw: event,
+      };
+    });
+  }, [detail, labels, lang]);
+
+  const risk = riskKey(detail);
+
+  const summaryCards = React.useMemo(() => {
+    const lastOp = operationItems[0];
+    return [
+      { label: labels.area, value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-" },
+      { label: labels.crop, value: detail?.latest_season?.crop || detail?.season?.crop || "-" },
+      { label: labels.season, value: detail?.latest_season?.name || detail?.latest_season?.season_id || "-" },
+      { label: labels.devices, value: String(detail?.summary?.device_count ?? 0) },
+      { label: labels.lastOperation, value: lastOp?.type || "-" },
+      { label: labels.riskStatus, value: formatRiskStatus(detail, lang) },
+    ];
+  }, [detail, labels, lang, operationItems]);
+
+  const tabs: Array<{ key: FieldTab; label: string }> = [
+    { key: "overview", label: labels.overview },
+    { key: "map", label: labels.map },
+    { key: "operations", label: labels.operations },
+    { key: "alerts", label: labels.alerts },
+  ];
 
   return (
-    <div className="layoutStack">
-      <div className="pageHeaderRow">
-        <div>
-          <h1 className="pageTitle">田块详情</h1>
-          <div className="pageSubtitle">{fieldId || "-"}</div>
+    <div style={{ display: "grid", gap: 14 }}>
+      <section className="card" style={{ padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 20 }}>{labels.title}</h2>
+            <div className="muted" style={{ marginTop: 4 }}>{labels.desc}</div>
+            <div className="muted" style={{ marginTop: 4 }}>field_id: <span className="mono">{shortId(fieldId)}</span></div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as FieldLang)}><option value="zh">中文</option><option value="en">English</option></select>
+            <Link className="btn" to="/fields">{labels.back}</Link>
+            <button className="btn" onClick={() => void refresh()} disabled={busy}>{labels.refresh}</button>
+          </div>
         </div>
-        <Link className="btn ghost" to="/fields">返回列表</Link>
-      </div>
+      </section>
 
-      <section className="card sectionBlock">
-        <div className="fieldRow">
-          <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="AO-ACT Token" />
-          <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
+      <FieldSummaryCards items={summaryCards} />
+
+      <section className="card" style={{ padding: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {tabs.map((t) => <button key={t.key} className={`btn ${activeTab === t.key ? "primary" : ""}`} onClick={() => setActiveTab(t.key)}>{t.label}</button>)}
           <span className="muted">{status}</span>
         </div>
       </section>
 
-      <section className="card sectionBlock">
-        <div className="tabBar">{tabs.map((t) => (
-          <button key={t} className={`tabBtn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>{FIELD_TAB_LABELS[t]}</button>
-        ))}</div>
-
-        {activeTab === "overview" && (
-          <div className="contentGridTwo alignStart">
-            <div className="infoCard">
-              <div>名称：{detail?.field?.name || "-"}</div>
-              <div>面积：{detail?.field?.area_ha ?? "-"} ha</div>
-              <div>状态：{detail?.field?.status || "-"}</div>
-              <div>设备数：{detail?.summary?.device_count ?? 0}</div>
+      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14 }}>
+        <div className="card" style={{ padding: 14 }}>
+          {activeTab === "overview" ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div><b>{labels.fieldName}：</b>{detail?.field?.name || "-"}</div>
+              <div><b>{labels.area}：</b>{detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-"}</div>
+              <div><b>{labels.currentSeason}：</b>{detail?.latest_season?.name || detail?.latest_season?.season_id || "-"}</div>
+              <div><b>{labels.crop}：</b>{detail?.latest_season?.crop || "-"}</div>
+              <div><b>{labels.currentStage}：</b>{detail?.latest_season?.stage || "-"}</div>
+              <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(detail?.field?.status, lang)}</div>
+              <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
+              <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
+              <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
+              <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{formatRiskStatus(detail, lang)}</span></div>
             </div>
-            <div className="infoCard">
-              <div className="fieldRow">
-                <input className="input" value={seasonId} onChange={(e) => setSeasonId(e.target.value)} placeholder="season_id" />
-                <input className="input" value={seasonName} onChange={(e) => setSeasonName(e.target.value)} placeholder="季节名称" />
-                <input className="input" value={seasonCrop} onChange={(e) => setSeasonCrop(e.target.value)} placeholder="作物" />
-                <select className="input" value={seasonStatus} onChange={(e) => setSeasonStatus(e.target.value as any)}>
-                  <option value="PLANNED">PLANNED</option><option value="ACTIVE">ACTIVE</option><option value="CLOSED">CLOSED</option>
-                </select>
-                <button className="btn" onClick={() => void submitSeason()}>保存季节</button>
-              </div>
+          ) : null}
+
+          {activeTab === "map" ? (
+            <div style={{ display: "grid", gap: 10 }}>
+              <FieldLegend labels={labels} />
+              <FieldGisMap
+                polygonGeoJson={detail?.polygon?.geojson_json}
+                trajectoryGeoJson={detail?.map_layers?.trajectory_geojson || { type: "FeatureCollection", features: [] }}
+                heatGeoJson={detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }}
+                markers={detail?.map_layers?.markers || []}
+                labels={labels}
+                onSelectObject={setSelectedObject}
+              />
             </div>
-          </div>
-        )}
+          ) : null}
 
-        {activeTab === "map" && (
-          <div className="layoutStack">
-            <FieldGisMap polygonGeoJson={polygonGeo} trajectoryGeoJson={trajectoryGeo} heatGeoJson={heatGeo} markers={mapMarkers} />
-            <div className="meta wrapMeta">
-              <span>设备轨迹：{trajectoryGeo?.features?.length || 0}</span>
-              <span>设备定位点：{mapMarkers.length}</span>
-              <span>告警热力点：{heatGeo?.features?.length || 0}</span>
-            </div>
-          </div>
-        )}
+          {activeTab === "operations" ? <FieldOperationList labels={labels} items={operationItems} onSelect={(item) => setSelectedObject({ kind: labels.operations, name: item.type, time: item.time, status: item.status, related: item.source })} /> : null}
+          {activeTab === "alerts" ? <FieldAlertList labels={labels} items={alertItems} onSelect={(item) => setSelectedObject({ kind: labels.alerts, name: item.type, time: item.time, status: item.status, related: item.target })} /> : null}
 
-        {activeTab === "jobs" && (
-          <div className="list modernList">
-            {jobHistory.map((item: any) => (
-              <div key={item.id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{item.task_type || "作业"}</div><div className="pill tone-default">{item.device_id || "-"}</div></div>
-                <div className="meta">
-                  <span>时间：{fmtTs(item.ts_ms)}</span>
-                  <span>位置：{item.location ? `${item.location.lat.toFixed(5)}, ${item.location.lon.toFixed(5)}` : "-"}</span>
-                  <span>轨迹点：{item.trajectory_points ?? 0}</span>
-                  <span>轨迹窗口：{item.trajectory_window_start_ts_ms ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}` : "-"}</span>
-                  <span>时间来源：{item.timing_source || "-"}</span>
-                </div>
-              </div>
-            ))}
-            {!jobHistory.length && <div className="emptyState">暂无作业历史轨迹数据</div>}
-          </div>
-        )}
+          {isDev ? (
+            <details style={{ marginTop: 12 }}>
+              <summary className="muted">{labels.devDebug}</summary>
+              <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="token" /></label>
+              <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify(detail, null, 2)}</pre>
+            </details>
+          ) : null}
+        </div>
 
-        {activeTab === "alerts" && (
-          <div className="list modernList">
-            {(detail?.recent_alerts || []).map((event: any) => (
-              <div key={event.event_id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{event.metric || "alert"}</div><div className="pill tone-warn">{event.status}</div></div>
-                <div className="meta"><span>对象：{event.object_id}</span><span>触发：{fmtTs(event.raised_ts_ms)}</span><span>时间：{fmtIso(event.raised_at)}</span></div>
-              </div>
-            ))}
-            {!detail?.recent_alerts?.length && <div className="emptyState">暂无告警</div>}
-          </div>
-        )}
+        <FieldSeasonPanel labels={labels} selectedMapObject={selectedObject} />
       </section>
     </div>
   );
