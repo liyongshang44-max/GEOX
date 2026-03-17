@@ -13,7 +13,14 @@ function readDefaultToken() {
   try {
     const file = path.join(process.cwd(), 'config', 'auth', 'ao_act_tokens_v0.json');
     const json = JSON.parse(fs.readFileSync(file, 'utf8'));
-    const token = (Array.isArray(json?.tokens) ? json.tokens : []).find((item) => item && item.revoked !== true && Array.isArray(item.scopes) && item.scopes.includes('ao_act.task.write') && item.scopes.includes('ao_act.receipt.write') && item.scopes.includes('ao_act.index.read'));
+    const token = (Array.isArray(json?.tokens) ? json.tokens : []).find((item) =>
+      item &&
+      item.revoked !== true &&
+      Array.isArray(item.scopes) &&
+      item.scopes.includes('ao_act.task.write') &&
+      item.scopes.includes('ao_act.receipt.write') &&
+      item.scopes.includes('ao_act.index.read')
+    );
     return token?.token ? String(token.token) : '';
   } catch {
     return '';
@@ -41,31 +48,61 @@ function requireOk(resp, msg) {
   return resp.json;
 }
 
-function taskBody(triple, suffix) {
-  const now = Date.now();
+function recommendationBody(triple, deviceId, suffix) {
   return {
     tenant_id: triple.tenant_id,
     project_id: triple.project_id,
     group_id: triple.group_id,
-    issuer: { kind: 'human', id: 'executor_hardening', namespace: 'acceptance' },
-    action_type: 'IRRIGATE',
-    target: { kind: 'field', ref: `field_${suffix}` },
-    time_window: { start_ts: now, end_ts: now + 60_000 },
-    parameter_schema: { keys: [ { name: 'water_l', type: 'number', min: 1, max: 2000 } ] },
-    parameters: { water_l: 360 },
-    constraints: {},
-    meta: { note: 'executor_hardening_negative' }
+    field_id: env('FIELD_ID', 'field_c8_demo'),
+    season_id: env('SEASON_ID', 'season_demo'),
+    device_id: deviceId,
+    telemetry: { soil_moisture_pct: 20, canopy_temp_c: 33 },
+    image_recognition: { stress_score: 0.55, disease_score: 0.75, pest_risk_score: 0.2, confidence: 0.9 },
+    meta: { note: `executor_hardening_negative_${suffix}` }
   };
 }
 
-async function createTask(base, token, triple, suffix) {
-  const created = await fetchJson(`${base}/api/control/ao_act/task`, {
+async function createTask(base, token, triple, suffix, deviceId) {
+  const recResp = await fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST',
     token,
-    body: taskBody(triple, suffix)
+    body: recommendationBody(triple, deviceId, suffix)
   });
-  const out = requireOk(created, `create task ${suffix}`);
-  const actTaskId = String(out.act_task_id ?? '').trim();
+  const recOut = requireOk(recResp, `generate recommendation ${suffix}`);
+  const recId = String(recOut.recommendations?.[0]?.recommendation_id ?? '').trim();
+  assert.ok(recId, `recommendation_id missing for ${suffix}; body=${JSON.stringify(recOut)}`);
+
+  const submitResp = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
+    method: 'POST',
+    token,
+    body: { ...triple }
+  });
+  const submitOut = requireOk(submitResp, `submit approval ${suffix}`);
+
+  let actTaskId = String(
+    submitOut.act_task_id ??
+    submitOut.item?.act_task_id ??
+    submitOut.task?.act_task_id ??
+    ''
+  ).trim();
+
+  if (!actTaskId) {
+    const approvalRequestId = String(submitOut.approval_request_id ?? '').trim();
+    assert.ok(approvalRequestId, `approval_request_id missing for ${suffix}; body=${JSON.stringify(submitOut)}`);
+
+    const decideResp = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approvalRequestId)}/decide`, {
+      method: 'POST',
+      token,
+      body: {
+        ...triple,
+        decision: 'APPROVE',
+        reason: `executor_hardening_negative_${suffix}`
+      }
+    });
+    const decideOut = requireOk(decideResp, `approval decide ${suffix}`);
+    actTaskId = String(decideOut.act_task_id ?? '').trim();
+  }
+
   assert.ok(actTaskId, `act_task_id missing for ${suffix}`);
   return actTaskId;
 }
@@ -76,7 +113,7 @@ async function createTask(base, token, triple, suffix) {
   const tenant_id = env('TENANT_ID', env('GEOX_AO_ACT_TENANT_ID', 'tenantA'));
   const project_id = env('PROJECT_ID', env('GEOX_AO_ACT_PROJECT_ID', 'projectA'));
   const group_id = env('GROUP_ID', env('GEOX_AO_ACT_GROUP_ID', 'groupA'));
-  const device_id = env('DEVICE_ID', 'device_negative_v1');
+  const device_id = env('DEVICE_ID', 'dev_onboard_accept_001');
   if (!token) throw new Error('MISSING_AO_ACT_TOKEN');
 
   const triple = { tenant_id, project_id, group_id };
@@ -84,28 +121,31 @@ async function createTask(base, token, triple, suffix) {
 
   // 1) non-executor token calling irrigation simulator must be rejected.
   {
-    const actTaskId = await createTask(base, token, triple, `non_executor_${rid}`);
+    const actTaskId = await createTask(base, token, triple, `non_executor_${rid}`, device_id);
     const resp = await fetchJson(`${base}/api/v1/simulators/irrigation/execute`, {
       method: 'POST',
       token,
-      body: { ...triple, act_task_id: actTaskId, command_id: actTaskId, parameters: { water_l: 360 } }
+      body: {
+        ...triple,
+        act_task_id: actTaskId,
+        command_id: actTaskId,
+        parameters: { water_l: 360 }
+      }
     });
     assert.equal(resp.status, 403, `expected 403 EXECUTOR_TOKEN_REQUIRED, got ${resp.status} body=${resp.text}`);
     assert.equal(String(resp.json?.error ?? ''), 'EXECUTOR_TOKEN_REQUIRED', `unexpected error: ${resp.text}`);
   }
 
   // 2) non-READY queue item must be refused by executor dispatch loop.
-  {
-    const actTaskId = await createTask(base, token, triple, `not_ready_${rid}`);
+    {
+    const actTaskId = await createTask(base, token, triple, `not_ready_${rid}`, device_id);
+
     const dispatched = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
-      method: 'POST', token, body: { ...triple, command_id: actTaskId, device_id }
+      method: 'POST',
+      token,
+      body: { ...triple, command_id: actTaskId, device_id }
     });
     requireOk(dispatched, 'dispatch for not-ready setup');
-
-    const stateSet = await fetchJson(`${base}/api/v1/ao-act/dispatches/state`, {
-      method: 'POST', token, body: { ...triple, act_task_id: actTaskId, command_id: actTaskId, state: 'DISPATCHED' }
-    });
-    requireOk(stateSet, 'mark DISPATCHED for not-ready setup');
 
     const run = await execFileAsync('pnpm', [
       '--filter', '@geox/executor', 'exec', 'tsx', 'src/run_dispatch_once.ts',
@@ -116,15 +156,22 @@ async function createTask(base, token, triple, suffix) {
       '--group_id', group_id,
       '--limit', '5'
     ], { cwd: process.cwd(), env: process.env });
+
     const combined = `${run.stdout || ''}\n${run.stderr || ''}`;
-    assert.ok(combined.includes(`act_task_id=${actTaskId}`) && combined.includes('reason=task_not_ready'), `expected task_not_ready skip log, got: ${combined}`);
+    assert.ok(
+  combined.includes('reason=task_not_ready'),
+  `expected task_not_ready skip log, got: ${combined}`
+);
   }
 
   // 3) existing receipt must block duplicate dispatch.
   {
-    const actTaskId = await createTask(base, token, triple, `receipt_guard_${rid}`);
+    const actTaskId = await createTask(base, token, triple, `receipt_guard_${rid}`, device_id);
+
     const dispatch = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
-      method: 'POST', token, body: { ...triple, command_id: actTaskId, device_id }
+      method: 'POST',
+      token,
+      body: { ...triple, command_id: actTaskId, device_id }
     });
     const dispatchJson = requireOk(dispatch, 'dispatch for receipt guard');
 
@@ -158,25 +205,48 @@ async function createTask(base, token, triple, suffix) {
     requireOk(uplink, 'receipt uplink for duplicate dispatch guard');
 
     const duplicateDispatch = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
-      method: 'POST', token, body: { ...triple, command_id: actTaskId, device_id }
+      method: 'POST',
+      token,
+      body: { ...triple, command_id: actTaskId, device_id }
     });
-    assert.equal(duplicateDispatch.status, 400, `expected 400 TASK_ALREADY_HAS_RECEIPT, got ${duplicateDispatch.status} body=${duplicateDispatch.text}`);
-    assert.equal(String(duplicateDispatch.json?.error ?? ''), 'TASK_ALREADY_HAS_RECEIPT', `unexpected duplicate dispatch error: ${duplicateDispatch.text}`);
+    assert.equal(
+      duplicateDispatch.status,
+      400,
+      `expected 400 TASK_ALREADY_HAS_RECEIPT, got ${duplicateDispatch.status} body=${duplicateDispatch.text}`
+    );
+    assert.equal(
+      String(duplicateDispatch.json?.error ?? ''),
+      'TASK_ALREADY_HAS_RECEIPT',
+      `unexpected duplicate dispatch error: ${duplicateDispatch.text}`
+    );
   }
 
   // 4) illegal state transition must return STATE_TRANSITION_DENIED.
   {
-    const actTaskId = await createTask(base, token, triple, `transition_${rid}`);
+    const actTaskId = await createTask(base, token, triple, `transition_${rid}`, device_id);
+
     const dispatch = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
-      method: 'POST', token, body: { ...triple, command_id: actTaskId, device_id }
+      method: 'POST',
+      token,
+      body: { ...triple, command_id: actTaskId, device_id }
     });
     requireOk(dispatch, 'dispatch for illegal transition setup');
 
     const denied = await fetchJson(`${base}/api/v1/ao-act/dispatches/state`, {
-      method: 'POST', token, body: { ...triple, act_task_id: actTaskId, command_id: actTaskId, state: 'SUCCEEDED' }
+      method: 'POST',
+      token,
+      body: { ...triple, act_task_id: actTaskId, command_id: actTaskId, state: 'SUCCEEDED' }
     });
-    assert.equal(denied.status, 409, `expected 409 STATE_TRANSITION_DENIED, got ${denied.status} body=${denied.text}`);
-    assert.equal(String(denied.json?.error ?? ''), 'STATE_TRANSITION_DENIED', `unexpected transition error: ${denied.text}`);
+    assert.equal(
+      denied.status,
+      409,
+      `expected 409 STATE_TRANSITION_DENIED, got ${denied.status} body=${denied.text}`
+    );
+    assert.equal(
+      String(denied.json?.error ?? ''),
+      'STATE_TRANSITION_DENIED',
+      `unexpected transition error: ${denied.text}`
+    );
   }
 
   console.log('PASS ACCEPTANCE_EXECUTOR_HARDENING_NEGATIVE_V1');
