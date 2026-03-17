@@ -214,6 +214,60 @@ async function loadRecommendationById(pool: Pool, recommendation_id: string, ten
   return { fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), record_json: parseJsonMaybe(row.record_json) ?? row.record_json };
 }
 
+async function loadRecommendationChainById(pool: Pool, recommendation_id: string, tenant: TenantTriple): Promise<{ approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }> {
+  const q = await pool.query(
+    `WITH latest_link AS (
+       SELECT (record_json::jsonb#>>'{payload,approval_request_id}') AS approval_request_id
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'decision_recommendation_approval_link_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND (record_json::jsonb#>>'{payload,recommendation_id}') = $4
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 1
+     ), latest_plan AS (
+       SELECT (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id,
+              (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+              (record_json::jsonb#>>'{payload,receipt_fact_id}') AS receipt_fact_id,
+              (record_json::jsonb#>>'{payload,status}') AS status
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND (record_json::jsonb#>>'{payload,recommendation_id}') = $4
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 1
+     ), latest_transition AS (
+       SELECT (record_json::jsonb#>>'{payload,status}') AS status
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND (record_json::jsonb#>>'{payload,operation_plan_id}') = (SELECT operation_plan_id FROM latest_plan)
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 1
+     )
+     SELECT (SELECT approval_request_id FROM latest_link) AS approval_request_id,
+            (SELECT operation_plan_id FROM latest_plan) AS operation_plan_id,
+            (SELECT act_task_id FROM latest_plan) AS act_task_id,
+            (SELECT receipt_fact_id FROM latest_plan) AS receipt_fact_id,
+            coalesce((SELECT status FROM latest_transition), (SELECT status FROM latest_plan)) AS latest_status`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, recommendation_id]
+  );
+  const row: any = q.rows?.[0] ?? {};
+  return {
+    approval_request_id: row.approval_request_id ? String(row.approval_request_id) : null,
+    operation_plan_id: row.operation_plan_id ? String(row.operation_plan_id) : null,
+    act_task_id: row.act_task_id ? String(row.act_task_id) : null,
+    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
+    latest_status: row.latest_status ? String(row.latest_status) : null
+  };
+}
+
+
 async function assertApprovedForTask(pool: Pool, tenant: TenantTriple, act_task_id: string): Promise<boolean> {
   const res = await pool.query(
     `SELECT 1
@@ -250,12 +304,17 @@ async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: numb
   }));
 }
 
-function normalizeRecommendationOutput(row: any): any {
+function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }): any {
   const payload = row?.record_json?.payload ?? {};
   return {
     fact_id: row.fact_id,
     occurred_at: row.occurred_at,
     recommendation_id: payload.recommendation_id ?? null,
+    approval_request_id: chain?.approval_request_id ?? null,
+    operation_plan_id: chain?.operation_plan_id ?? null,
+    act_task_id: chain?.act_task_id ?? null,
+    receipt_fact_id: chain?.receipt_fact_id ?? null,
+    latest_status: chain?.latest_status ?? payload.status ?? "proposed",
     field_id: payload.field_id ?? null,
     season_id: payload.season_id ?? null,
     device_id: payload.device_id ?? null,
@@ -318,7 +377,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
     const rows = await loadRecommendations(pool, tenant, limit);
-    return reply.send({ ok: true, items: rows.map(normalizeRecommendationOutput), count: rows.length });
+    const items = await Promise.all(rows.map(async (row) => normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant))));
+    return reply.send({ ok: true, items, count: rows.length });
   });
 
   app.get("/api/v1/agronomy/recommendations/:recommendation_id", async (req, reply) => {
@@ -336,7 +396,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
     const row = await loadRecommendationById(pool, recommendation_id, tenant);
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
-    return reply.send({ ok: true, item: normalizeRecommendationOutput(row) });
+    const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
+    return reply.send({ ok: true, item: normalizeRecommendationOutput(row, chain) });
   });
 
   app.post("/api/v1/recommendations/generate", async (req, reply) => {

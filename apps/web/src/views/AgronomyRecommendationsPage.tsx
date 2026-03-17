@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, type AgronomyRecommendationItemV1 } from "../lib/api";
+import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
 
 export default function AgronomyRecommendationsPage(): React.ReactElement {
   const [items, setItems] = React.useState<AgronomyRecommendationItemV1[]>([]);
@@ -7,22 +7,29 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>("");
 
-  React.useEffect(() => {
+  async function refreshAndSelect(recommendationId?: string): Promise<void> {
     setLoading(true);
     setError("");
-    fetchAgronomyRecommendations({ limit: 50 })
-      .then((res) => {
-        setItems(Array.isArray(res.items) ? res.items : []);
-        if (res.items?.[0]?.recommendation_id) {
-          return fetchAgronomyRecommendationDetail({ recommendation_id: res.items[0].recommendation_id });
-        }
-        return null;
-      })
-      .then((detail) => {
-        if (detail?.item) setSelected(detail.item);
-      })
-      .catch((e: any) => setError(String(e?.message ?? e)))
-      .finally(() => setLoading(false));
+    try {
+      const res = await fetchAgronomyRecommendations({ limit: 50 });
+      const nextItems = Array.isArray(res.items) ? res.items : [];
+      setItems(nextItems);
+      const targetId = recommendationId || nextItems?.[0]?.recommendation_id;
+      if (targetId) {
+        const detail = await fetchAgronomyRecommendationDetail({ recommendation_id: targetId });
+        setSelected(detail.item);
+      } else {
+        setSelected(null);
+      }
+    } catch (e: any) {
+      setError(String(e?.message ?? e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  React.useEffect(() => {
+    void refreshAndSelect();
   }, []);
 
   return (
@@ -34,21 +41,37 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
         {!loading && !items.length ? <div className="emptyState">暂无建议。</div> : null}
         <div style={{ display: "grid", gap: 8 }}>
           {items.map((item) => (
-            <button
-              key={item.recommendation_id}
-              className="btn"
-              style={{ textAlign: "left" }}
-              onClick={() => {
-                fetchAgronomyRecommendationDetail({ recommendation_id: item.recommendation_id })
-                  .then((res) => setSelected(res.item))
-                  .catch((e: any) => setError(String(e?.message ?? e)));
-              }}
-            >
-              <div><b>{item.recommendation_type || "-"}</b></div>
-              <div className="mono">{item.recommendation_id}</div>
-              <div>状态：{item.status}</div>
-              <div>置信度：{item.confidence ?? "-"}</div>
-            </button>
+            <div key={item.recommendation_id} style={{ display: "grid", gap: 6 }}>
+              <button
+                className="btn"
+                style={{ textAlign: "left" }}
+                onClick={() => {
+                  fetchAgronomyRecommendationDetail({ recommendation_id: item.recommendation_id })
+                    .then((res) => setSelected(res.item))
+                    .catch((e: any) => setError(String(e?.message ?? e)));
+                }}
+              >
+                <div><b>{item.recommendation_type || "-"}</b></div>
+                <div className="mono">recommendation_id: {item.recommendation_id}</div>
+                <div className="mono">approval_request_id: {item.approval_request_id || "-"}</div>
+                <div className="mono">operation_plan_id: {item.operation_plan_id || "-"}</div>
+                <div className="mono">act_task_id: {item.act_task_id || "-"}</div>
+                <div className="mono">receipt_fact_id: {item.receipt_fact_id || "-"}</div>
+                <div>最新状态：{item.latest_status || item.status || "-"}</div>
+                <div>置信度：{item.confidence ?? "-"}</div>
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  submitRecommendationApproval({ recommendation_id: item.recommendation_id })
+                    .then(() => refreshAndSelect(item.recommendation_id))
+                    .catch((e: any) => setError(String(e?.message ?? e)));
+                }}
+                disabled={Boolean(item.approval_request_id)}
+              >
+                {item.approval_request_id ? "已提交审批" : "提交到审批链"}
+              </button>
+            </div>
           ))}
         </div>
       </section>
@@ -57,6 +80,12 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
         <h3 style={{ marginTop: 0 }}>建议详情</h3>
         {!selected ? <div className="emptyState">请选择左侧建议。</div> : (
           <div style={{ display: "grid", gap: 8 }}>
+            <div><b>recommendation_id：</b><span className="mono">{selected.recommendation_id}</span></div>
+            <div><b>approval_request_id：</b><span className="mono">{selected.approval_request_id || "-"}</span></div>
+            <div><b>operation_plan_id：</b><span className="mono">{selected.operation_plan_id || "-"}</span></div>
+            <div><b>act_task_id：</b><span className="mono">{selected.act_task_id || "-"}</span></div>
+            <div><b>receipt_fact_id：</b><span className="mono">{selected.receipt_fact_id || "-"}</span></div>
+            <div><b>latest status：</b>{selected.latest_status || selected.status || "-"}</div>
             <div><b>建议类型：</b>{selected.recommendation_type || "-"}</div>
             <div><b>状态：</b>{selected.status}</div>
             <div><b>模型版本：</b>{selected.model_version || "-"}</div>
