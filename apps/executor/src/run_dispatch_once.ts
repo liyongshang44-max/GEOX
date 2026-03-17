@@ -1,8 +1,8 @@
 // GEOX/apps/executor/src/run_dispatch_once.ts
 import crypto from "node:crypto"; // Used to mint a stable executor id + idempotency keys.
+import { createAdapterRegistry, findAdapter, type AoActTask } from "./adapters";
 
 type Args = { baseUrl: string; token: string; tenant_id: string; project_id: string; group_id: string; executor_id: string; limit: number };
-function nowMs(): number { return Date.now(); }
 function parseArgs(argv: string[]): Args {
   const get = (k: string): string | undefined => { const idx = argv.indexOf(`--${k}`); if (idx === -1) return undefined; const v = argv[idx + 1]; if (!v || v.startsWith("--")) return undefined; return v; };
   const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3000";
@@ -31,34 +31,43 @@ async function getDispatchQueue(args: Args): Promise<any[]> {
   if (!out?.ok || !Array.isArray(out.items)) throw new Error(`unexpected queue response: ${JSON.stringify(out)}`);
   return out.items;
 }
-async function writeReceipt(args: Args, actTaskId: string, outboxFactId: string): Promise<any> {
-  const end = nowMs();
-  const start = end - 50;
-  const idempotencyKey = `dispatch_once_${outboxFactId}`;
-  const body = {
-    tenant_id: args.tenant_id, project_id: args.project_id, group_id: args.group_id, task_id: actTaskId, command_id: actTaskId, act_task_id: actTaskId,
-    executor_id: { kind: "script", id: args.executor_id, namespace: "executor_runtime_v1" },
-    execution_time: { start_ts: start, end_ts: end }, execution_coverage: { kind: "field", ref: "simulated" },
-    resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 }, logs_refs: [{ kind: "stdout", ref: `executor://dispatch_once/${outboxFactId}` }],
-    status: "executed", constraint_check: { violated: false, violations: [] }, observed_parameters: {}, meta: { idempotency_key: idempotencyKey, runtime: "dispatch_once_v1", outbox_fact_id: outboxFactId }
+
+function toAoActTask(item: any, args: Args): AoActTask {
+  const taskPayload = item?.task?.payload ?? {};
+  const act_task_id = String(taskPayload?.act_task_id ?? item?.task_id ?? "").trim();
+  const action_type = String(taskPayload?.action_type ?? "").trim();
+  if (!act_task_id || !action_type) throw new Error(`invalid queue item task payload: ${JSON.stringify(item)}`);
+  return {
+    tenant_id: String(taskPayload?.tenant_id ?? args.tenant_id),
+    project_id: String(taskPayload?.project_id ?? args.project_id),
+    group_id: String(taskPayload?.group_id ?? args.group_id),
+    act_task_id,
+    action_type,
+    parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {}
   };
-  return httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, { method: "POST", body: JSON.stringify(body) });
 }
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token });
+
   console.log(`INFO: run_dispatch_once baseUrl=${args.baseUrl}`);
   console.log(`INFO: executor_id=${args.executor_id}`);
   const queue = await getDispatchQueue(args);
   console.log(`INFO: dispatch queue size=${queue.length}`);
   if (queue.length < 1) { console.log("INFO: no dispatch items found (no-op)"); return; }
+
   for (const item of queue.slice(0, args.limit)) {
-    const actTaskId = String(item?.task?.payload?.act_task_id ?? "");
-    const outboxFactId = String(item?.outbox_fact_id ?? "");
-    if (!actTaskId || !outboxFactId) throw new Error(`invalid queue item: ${JSON.stringify(item)}`);
-    console.log(`INFO: executing dispatched act_task_id=${actTaskId} outbox_fact_id=${outboxFactId}`);
-    const receipt = await writeReceipt(args, actTaskId, outboxFactId);
-    console.log(`INFO: wrote receipt fact_id=${receipt.fact_id} wrapper_fact_id=${receipt.wrapper_fact_id}`);
-    console.log(`PASS: dispatch adapter completed act_task_id=${actTaskId}`);
+    const task = toAoActTask(item, args);
+    const adapter = findAdapter(registry, task.action_type);
+    if (!adapter) throw new Error(`no adapter for action_type=${task.action_type} act_task_id=${task.act_task_id}`);
+
+    console.log(`INFO: dispatching act_task_id=${task.act_task_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
+    const result = await adapter.dispatch(task);
+    if (!result.ok) throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown"}`);
+
+    console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? "n/a"}`);
+    console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
   }
 }
 main().catch((err) => { console.error(`FAIL: ${err?.message ?? String(err)}`); process.exit(1); });
