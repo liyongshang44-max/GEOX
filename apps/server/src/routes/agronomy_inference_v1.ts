@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
-import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } from "@geox/contracts";
+import * as GeoxContracts from "@geox/contracts";
 import { runAgronomyInferenceV1, type InferenceTaskTypeV1 } from "../services/agronomy_inference_service_v1";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-
+const { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } = GeoxContracts;
 function normalizeString(v: unknown, maxLen = 128): string | null {
   if (typeof v !== "string") return null;
   const s = v.trim();

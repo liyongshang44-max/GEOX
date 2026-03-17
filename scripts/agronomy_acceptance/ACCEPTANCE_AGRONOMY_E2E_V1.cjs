@@ -49,15 +49,19 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   });
   assert.strictEqual(crossTenantPlanRead.status, 404, `expected 404 for cross-tenant plan read, got ${crossTenantPlanRead.status}`); // Cross-tenant plan reads must be hidden.
 
+  const negativeBeforePublishBody = { // Build negative receipt body with missing task but valid contract fields.
+    tenant_id, project_id, group_id, // Bind request to the valid tenant triple.
+    task_id: 'act_missing_demo', // New receipt contract requires explicit task_id.
+    act_task_id: 'act_missing_demo', // Preserve backward-compatible alias for current route shape.
+    command_id: 'act_missing_demo', // Command id must match task id.
+    device_id, // Reuse known device id for consistency.
+    status: 'executed', // Simulate an executed receipt.
+    meta: { idempotency_key: 'missing-task-uplink-demo' } // Provide required idempotency metadata.
+  };
+
   const negativeBeforePublish = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, { // Probe receipt uplink before any task exists.
     method: 'POST', token, // Send authenticated POST request.
-    body: { // Provide a missing task id on purpose.
-      tenant_id, project_id, group_id, // Bind request to the valid tenant triple.
-      act_task_id: 'act_missing_demo', // Use a task id that must not exist.
-      device_id, // Reuse known device id for consistency.
-      status: 'executed', // Simulate an executed receipt.
-      meta: { idempotency_key: 'missing-task-uplink-demo' } // Provide required idempotency metadata.
-    }
+    body: negativeBeforePublishBody // Use explicit body object for easier debugging.
   });
   assert.strictEqual(negativeBeforePublish.status, 404, `expected 404 when uplinking missing task, got ${negativeBeforePublish.status}`); // Missing tasks must not be receipted.
 
@@ -66,7 +70,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
     body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'e2e bridge acceptance' } // Approve with deterministic reason text.
   });
   const decideJson = requireOk(decide, 'approval decide'); // Assert approval decision returned ok.
-  const actTaskId = decideJson.act_task_id; // Extract generated act_task_id.
+  const actTaskId = String(decideJson.act_task_id ?? ''); // Extract generated act_task_id as string.
   assert.ok(actTaskId, 'act_task_id missing after approve'); // Approved request must produce act_task_id.
 
   const dispatch = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, { // Explicitly dispatch the generated task.
@@ -89,43 +93,57 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   });
   requireOk(downlink, 'downlink published'); // Assert publish audit returned ok.
 
+  const badUplinkBody = { // Build invalid device receipt body.
+    tenant_id, project_id, group_id, // Bind request to the tenant triple.
+    task_id: actTaskId, // New receipt contract requires explicit task_id.
+    act_task_id: actTaskId, // Preserve backward-compatible alias for current route shape.
+    command_id: actTaskId, // Command id must match task id.
+    device_id: 'device_wrong', // Deliberately mismatch the device id.
+    status: 'executed', // Simulate an executed receipt.
+    meta: { idempotency_key: `bad-uplink-${actTaskId}` } // Provide required idempotency metadata.
+  };
+
   const badUplink = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, { // Send one invalid receipt to validate device mismatch guard.
     method: 'POST', token, // Send authenticated POST request.
-    body: { // Build invalid device receipt body.
-      tenant_id, project_id, group_id, // Bind request to the tenant triple.
-      act_task_id: actTaskId, // Reference the approved task.
-      device_id: 'device_wrong', // Deliberately mismatch the device id.
-      status: 'executed', // Simulate an executed receipt.
-      meta: { idempotency_key: `bad-uplink-${actTaskId}` } // Provide required idempotency metadata.
-    }
+    body: badUplinkBody // Use explicit body object for easier debugging.
   });
   assert.strictEqual(badUplink.status, 400, `expected 400 for device mismatch uplink, got ${badUplink.status}`); // Device mismatch must be rejected.
   assert.strictEqual(badUplink.json?.error, 'DEVICE_ID_MISMATCH', 'expected DEVICE_ID_MISMATCH'); // Error code must stay stable.
 
+  const uplinkBody = { // Build valid receipt body.
+    tenant_id, project_id, group_id, // Bind request to the tenant triple.
+    task_id: actTaskId, // New receipt contract requires explicit task_id.
+    act_task_id: actTaskId, // Preserve backward-compatible alias for current route shape.
+    command_id: actTaskId, // Command id must match task id.
+    device_id, // Match the published device id.
+    status: 'executed', // Simulate successful execution.
+    observed_parameters: {}, // Keep observed parameters explicit.
+    meta: { idempotency_key: `receipt-${actTaskId}` } // Provide required idempotency metadata.
+  };
+
+  console.log('DEBUG uplink body', JSON.stringify(uplinkBody)); // Print actual uplink body to diagnose receipt contract issues.
+
   const uplink = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, { // Send the valid receipt uplink.
     method: 'POST', token, // Send authenticated POST request.
-    body: { // Build valid receipt body.
-      tenant_id, project_id, group_id, // Bind request to the tenant triple.
-      act_task_id: actTaskId, // Reference the approved task.
-      device_id, // Match the published device id.
-      status: 'executed', // Simulate successful execution.
-      observed_parameters: {}, // Keep observed parameters explicit.
-      meta: { idempotency_key: `receipt-${actTaskId}` } // Provide required idempotency metadata.
-    }
+    body: uplinkBody // Use explicit body object for easier debugging.
   });
   const uplinkJson = requireOk(uplink, 'receipt uplink'); // Assert receipt uplink returned ok.
   assert.ok(uplinkJson.fact_id, 'receipt fact_id missing'); // Receipt fact id must be present.
 
+  const duplicateUplinkBody = { // Build duplicate receipt body.
+    tenant_id, project_id, group_id, // Bind request to the tenant triple.
+    task_id: actTaskId, // New receipt contract requires explicit task_id.
+    act_task_id: actTaskId, // Preserve backward-compatible alias for current route shape.
+    command_id: actTaskId, // Command id must match task id.
+    device_id, // Reuse the same device id.
+    status: 'executed', // Reuse the same status.
+    observed_parameters: {}, // Reuse the same observed parameters.
+    meta: { idempotency_key: `receipt-duplicate-${actTaskId}` } // Use a new idempotency key to prove duplicate guard is task-based.
+  };
+
   const duplicateUplink = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, { // Re-send the same receipt to validate duplicate protection.
     method: 'POST', token, // Send authenticated POST request.
-    body: { // Build duplicate receipt body.
-      tenant_id, project_id, group_id, // Bind request to the tenant triple.
-      act_task_id: actTaskId, // Reference the same task again.
-      device_id, // Reuse the same device id.
-      status: 'executed', // Reuse the same status.
-      observed_parameters: {}, // Reuse the same observed parameters.
-      meta: { idempotency_key: `receipt-duplicate-${actTaskId}` } // Use a new idempotency key to prove duplicate guard is task-based.
-    }
+    body: duplicateUplinkBody // Use explicit body object for easier debugging.
   });
   assert.strictEqual(duplicateUplink.status, 409, `expected 409 for duplicate receipt, got ${duplicateUplink.status}`); // Duplicate receipts must be rejected.
   assert.strictEqual(duplicateUplink.json?.error, 'DUPLICATE_RECEIPT', 'expected DUPLICATE_RECEIPT'); // Error code must stay stable.
@@ -192,4 +210,8 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
     receipt_fact_id: uplinkJson.fact_id, // Emit receipt fact id for debugging.
     export_job_id: exportJobId // Emit export job id for debugging.
   });
-})().catch((e) => { console.error('FAIL e2e acceptance', e.message); process.exit(1); }); // Fail the process on any assertion or runtime error.
+})().catch((e) => {
+  console.error('FAIL e2e acceptance', e);
+  if (e?.stack) console.error(e.stack);
+  process.exit(1);
+}); // Fail the process on any assertion or runtime error.

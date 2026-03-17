@@ -1269,11 +1269,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         created_at_ts: Date.now()
       }
     });
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`, String((req.headers as any).authorization ?? ""), {
+        const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      task_id: act_task_id,
       act_task_id,
+      command_id,
       executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
       execution_time: body.execution_time ?? { start_ts: Number(body.start_ts ?? Date.now() - 50), end_ts: Number(body.end_ts ?? Date.now()) },
       execution_coverage: body.execution_coverage ?? { kind: "field", ref: "device_uplink" },
