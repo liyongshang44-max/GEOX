@@ -68,7 +68,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
 
     let running_task_count = 0; // Default queue count when runtime table is absent.
     try {
-      const runningQ = await pool.query(`SELECT COUNT(*)::bigint AS count FROM dispatch_queue_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND state IN ('READY','LEASED','PUBLISHED','ACKED')`, [tenant_id, project_id, group_id]); // Query queue rows.
+      const runningQ = await pool.query(`SELECT COUNT(*)::bigint AS count FROM dispatch_queue_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND state IN ('CREATED','READY','DISPATCHED','ACKED')`, [tenant_id, project_id, group_id]); // Query active runtime rows under the normalized executor state machine.
       running_task_count = Number(runningQ.rows?.[0]?.count ?? 0); // Normalize count.
     } catch {
       running_task_count = 0; // Fresh DB fallback.
