@@ -53,6 +53,13 @@ function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: TenantTriple,
   return true;
 }
 
+
+function isExecutorToken(auth: AoActAuthContextV0): boolean {
+  const actor = String(auth.actor_id ?? "").toLowerCase();
+  const tokenId = String(auth.token_id ?? "").toLowerCase();
+  return actor.includes("executor") || tokenId.includes("executor");
+}
+
 function hostBaseUrl(req: FastifyRequest): string {
   const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim();
   if (envBase) return envBase;
@@ -489,6 +496,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   app.post("/api/v1/simulators/irrigation/execute", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
     if (!auth) return;
+    if (!isExecutorToken(auth)) {
+      return reply.status(403).send({ ok: false, error: "EXECUTOR_TOKEN_REQUIRED" });
+    }
     const body: any = req.body ?? {};
     const tenant: TenantTriple = {
       tenant_id: String(body.tenant_id ?? auth.tenant_id),
