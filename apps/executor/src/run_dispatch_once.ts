@@ -47,6 +47,17 @@ async function hasReceipt(args: Args, actTaskId: string): Promise<boolean> {
   return Boolean(out?.ok && Array.isArray(out?.items) && out.items.length > 0);
 }
 
+async function hasReceiptByCommandId(args: Args, actTaskId: string, commandId: string): Promise<boolean> {
+  const url = `${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(args.tenant_id)}&project_id=${encodeURIComponent(args.project_id)}&group_id=${encodeURIComponent(args.group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=5`;
+  const out = await httpJson(url, args.token, { method: "GET" });
+  const items = Array.isArray(out?.items) ? out.items : [];
+  return items.some((item: any) => {
+    const payload = item?.receipt?.payload ?? {};
+    const payloadCommandId = String(payload?.command_id ?? payload?.meta?.command_id ?? payload?.act_task_id ?? "").trim();
+    return payloadCommandId !== "" && payloadCommandId === commandId;
+  });
+}
+
 async function writeDispatchState(args: Args, task: AoActTask, state: "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED"): Promise<void> {
   const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
     method: "POST",
@@ -55,7 +66,7 @@ async function writeDispatchState(args: Args, task: AoActTask, state: "DISPATCHE
       project_id: task.project_id,
       group_id: task.group_id,
       act_task_id: task.act_task_id,
-      command_id: task.act_task_id,
+      command_id: task.command_id,
       state
     })
   });
@@ -65,13 +76,15 @@ async function writeDispatchState(args: Args, task: AoActTask, state: "DISPATCHE
 function toAoActTask(item: any, args: Args): AoActTask {
   const taskPayload = item?.task?.payload ?? {};
   const act_task_id = String(taskPayload?.act_task_id ?? item?.act_task_id ?? "").trim();
+  const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
   const action_type = String(taskPayload?.action_type ?? "").trim();
-  if (!act_task_id || !action_type) throw new Error(`invalid queue item task payload: ${JSON.stringify(item)}`);
+  if (!act_task_id || !command_id || !action_type) throw new Error(`invalid queue item task payload: ${JSON.stringify(item)}`);
   return {
     tenant_id: String(taskPayload?.tenant_id ?? args.tenant_id),
     project_id: String(taskPayload?.project_id ?? args.project_id),
     group_id: String(taskPayload?.group_id ?? args.group_id),
     act_task_id,
+    command_id,
     action_type,
     parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {}
   };
@@ -105,28 +118,35 @@ async function main(): Promise<void> {
       continue;
     }
 
+    if (await hasReceiptByCommandId(args, task.act_task_id, task.command_id)) {
+      console.log(`INFO: skip act_task_id=${task.act_task_id} command_id=${task.command_id} reason=receipt_exists`);
+      continue;
+    }
+
     if (await hasReceipt(args, task.act_task_id)) {
-      console.log(`INFO: skip act_task_id=${task.act_task_id} reason=receipt_exists`);
+      console.log(`INFO: skip act_task_id=${task.act_task_id} command_id=${task.command_id} reason=receipt_exists_for_task`);
       continue;
     }
 
     const adapter = findAdapter(registry, task.action_type);
-    if (!adapter) throw new Error(`no adapter for action_type=${task.action_type} act_task_id=${task.act_task_id}`);
 
-    console.log(`INFO: dispatching act_task_id=${task.act_task_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
+    console.log(`INFO: dispatching act_task_id=${task.act_task_id} command_id=${task.command_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
     await writeDispatchState(args, task, "DISPATCHED");
 
 const result = await adapter.dispatch(task);
-if (!result.ok) {
+if (!result.success) {
   await writeDispatchState(args, task, "FAILED");
-  throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown_error"}`);
+  throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id} command_id=${task.command_id}: ${result.error ?? "unknown_error"}`);
 }
 
 await writeDispatchState(args, task, "ACKED");
 await writeDispatchState(args, task, "SUCCEEDED");
 
-console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? ""}`);
-console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
+const receiptFactId = result.receipt_payload && typeof result.receipt_payload === "object"
+  ? String((result.receipt_payload as any).receipt_fact_id ?? "")
+  : "";
+console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} command_id=${task.command_id} receipt_fact_id=${receiptFactId}`);
+console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id} command_id=${task.command_id}`);
   }
 }
 

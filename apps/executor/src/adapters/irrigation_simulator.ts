@@ -28,6 +28,7 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Ac
           project_id: task.project_id,
           group_id: task.group_id,
           act_task_id: task.act_task_id,
+          command_id: task.command_id,
           parameters: task.parameters
         };
         const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
@@ -37,15 +38,16 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Ac
 
         return {
           adapter_type: "irrigation_simulator",
-          ok: true,
-          receipt_fact_id: out?.receipt_fact_id ? String(out.receipt_fact_id) : undefined,
-          detail: out
+          success: true,
+          error: null,
+          receipt_payload: out && typeof out === "object" ? out : null
         };
       } catch (error: any) {
         return {
           adapter_type: "irrigation_simulator",
-          ok: false,
-          error: error?.message ?? String(error)
+          success: false,
+          error: error?.message ?? String(error),
+          receipt_payload: null
         };
       }
     }

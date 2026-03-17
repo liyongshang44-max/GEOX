@@ -533,6 +533,13 @@ const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim();
 if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
   return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
 } // End idempotency key guard.
+const commandId = String((body.meta as any)?.command_id ?? body.act_task_id).trim(); // Reuse command_id trace key without changing frozen top-level payload schema.
+if (!commandId) {
+  return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
+}
+if (commandId !== body.act_task_id) {
+  return reply.status(400).send({ ok: false, error: "COMMAND_TASK_ID_MISMATCH" });
+}
 
 if (body.execution_time.start_ts > body.execution_time.end_ts) {
 
@@ -596,7 +603,10 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           observed_parameters: body.observed_parameters,
           device_refs: (body as any).device_refs,
           created_at_ts,
-          meta: body.meta
+          meta: {
+            ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+            command_id: commandId
+          }
         }
       };
 
