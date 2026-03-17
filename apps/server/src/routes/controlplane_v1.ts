@@ -71,6 +71,7 @@ async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
           project_id text NOT NULL,
           group_id text NOT NULL,
           act_task_id text NOT NULL,
+          command_id text NOT NULL,
           task_fact_id text NOT NULL,
           outbox_fact_id text NOT NULL,
           device_id text NULL,
@@ -89,12 +90,17 @@ async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
           last_error text NULL,
           created_at timestamptz NOT NULL DEFAULT now(),
           updated_at timestamptz NOT NULL DEFAULT now(),
-          CONSTRAINT dispatch_queue_v1_state_ck CHECK (state IN ('READY','LEASED','PUBLISHED','ACKED','RECEIPTED','DEAD')),
-          CONSTRAINT dispatch_queue_v1_task_unique UNIQUE (tenant_id, project_id, group_id, act_task_id)
+          CONSTRAINT dispatch_queue_v1_state_ck CHECK (state IN ('CREATED','READY','DISPATCHED','ACKED','SUCCEEDED','FAILED')),
+          CONSTRAINT dispatch_queue_v1_task_unique UNIQUE (tenant_id, project_id, group_id, act_task_id),
+          CONSTRAINT dispatch_queue_v1_command_unique UNIQUE (tenant_id, project_id, group_id, command_id)
         )
       `); // Runtime queue state lives outside the append-only ledger.
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_ready ON dispatch_queue_v1 (tenant_id, project_id, group_id, state, created_at)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_outbox ON dispatch_queue_v1 (outbox_fact_id)`);
+      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS command_id text`);
+      await pool.query(`UPDATE dispatch_queue_v1 SET command_id = act_task_id WHERE command_id IS NULL OR command_id = ''`);
+      await pool.query(`ALTER TABLE dispatch_queue_v1 ALTER COLUMN command_id SET NOT NULL`);
+      await pool.query(`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'dispatch_queue_v1_command_unique') THEN ALTER TABLE dispatch_queue_v1 ADD CONSTRAINT dispatch_queue_v1_command_unique UNIQUE (tenant_id, project_id, group_id, command_id); END IF; END $$;`);
     })().catch((err) => {
       ensureDispatchQueueRuntimePromise = null; // Allow retry on startup race or transient DB error.
       throw err;
@@ -107,6 +113,7 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
   tenant: TenantTriple;
   queue_id: string;
   act_task_id: string;
+  command_id: string;
   task_fact_id: string;
   outbox_fact_id: string;
   device_id: string | null;
@@ -118,12 +125,13 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
   await ensureDispatchQueueRuntime(pool);
   await pool.query(
     `INSERT INTO dispatch_queue_v1 (
-       queue_id, tenant_id, project_id, group_id, act_task_id, task_fact_id, outbox_fact_id,
+       queue_id, tenant_id, project_id, group_id, act_task_id, command_id, task_fact_id, outbox_fact_id,
        device_id, downlink_topic, qos, retain, adapter_hint, state,
        created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'READY',NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'CREATED',NOW(),NOW())
      ON CONFLICT (tenant_id, project_id, group_id, act_task_id)
      DO UPDATE SET
+       command_id = EXCLUDED.command_id,
        task_fact_id = EXCLUDED.task_fact_id,
        outbox_fact_id = EXCLUDED.outbox_fact_id,
        device_id = EXCLUDED.device_id,
@@ -131,7 +139,7 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
        qos = EXCLUDED.qos,
        retain = EXCLUDED.retain,
        adapter_hint = EXCLUDED.adapter_hint,
-       state = CASE WHEN dispatch_queue_v1.state = 'RECEIPTED' THEN 'READY' ELSE dispatch_queue_v1.state END,
+       state = CASE WHEN dispatch_queue_v1.state IN ('SUCCEEDED','FAILED') THEN dispatch_queue_v1.state ELSE 'READY' END,
        updated_at = NOW()`,
     [
       row.queue_id,
@@ -139,6 +147,7 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
       row.tenant.project_id,
       row.tenant.group_id,
       row.act_task_id,
+      row.command_id,
       row.task_fact_id,
       row.outbox_fact_id,
       row.device_id,
@@ -175,14 +184,13 @@ async function claimDispatchQueueRows(
           AND ($5::text IS NULL OR adapter_hint IS NULL OR adapter_hint = $5)
           AND (
             state = 'READY'
-            OR (state = 'LEASED' AND lease_expires_at IS NOT NULL AND lease_expires_at < NOW())
           )
         ORDER BY created_at ASC, queue_id ASC
         FOR UPDATE SKIP LOCKED
         LIMIT $6
       )
       UPDATE dispatch_queue_v1 q
-      SET state = 'LEASED',
+      SET state = 'DISPATCHED',
           lease_token = $7,
           leased_by = $8,
           lease_expires_at = NOW() + make_interval(secs => $9::int),
@@ -207,7 +215,7 @@ async function claimDispatchQueueRows(
 async function updateDispatchQueueStateByOutbox(
   pool: Pool,
   outboxFactId: string,
-  patch: { state: 'PUBLISHED' | 'ACKED' | 'RECEIPTED'; publish_fact_id?: string | null; ack_fact_id?: string | null; receipt_fact_id?: string | null; leaseToken?: string | null; leasedBy?: string | null }
+  patch: { state: 'DISPATCHED' | 'ACKED' | 'SUCCEEDED' | 'FAILED'; publish_fact_id?: string | null; ack_fact_id?: string | null; receipt_fact_id?: string | null; leaseToken?: string | null; leasedBy?: string | null }
 ): Promise<void> {
   await ensureDispatchQueueRuntime(pool);
   const fields = ["state = $2", "updated_at = NOW()"];
@@ -216,7 +224,7 @@ async function updateDispatchQueueStateByOutbox(
   if (patch.publish_fact_id !== undefined) { fields.push(`publish_fact_id = $${idx++}`); values.push(patch.publish_fact_id); }
   if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
   if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
-  if (patch.state === 'RECEIPTED') {
+  if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
     fields.push('lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL');
   }
   let where = 'WHERE outbox_fact_id = $1';
@@ -229,7 +237,7 @@ async function updateDispatchQueueStateByActTask(
   pool: Pool,
   tenant: TenantTriple,
   actTaskId: string,
-  patch: { state: 'ACKED' | 'RECEIPTED'; ack_fact_id?: string | null; receipt_fact_id?: string | null }
+  patch: { state: 'ACKED' | 'SUCCEEDED' | 'FAILED'; ack_fact_id?: string | null; receipt_fact_id?: string | null }
 ): Promise<void> {
   await ensureDispatchQueueRuntime(pool);
   const fields = ["state = $5", "updated_at = NOW()"];
@@ -237,7 +245,7 @@ async function updateDispatchQueueStateByActTask(
   let idx = 6;
   if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
   if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
-  if (patch.state === 'RECEIPTED') {
+  if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
     fields.push('lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL');
   }
   await pool.query(
@@ -509,6 +517,7 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
   const sql = `
     SELECT q.queue_id,
            q.act_task_id,
+           q.command_id,
            q.outbox_fact_id,
            q.task_fact_id,
            q.device_id,
@@ -537,7 +546,7 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
       AND q.project_id = $2
       AND q.group_id = $3
       AND ($4::text IS NULL OR q.act_task_id = $4)
-      AND q.state IN ('READY','LEASED','PUBLISHED','ACKED')
+      AND q.state IN ('READY','DISPATCHED','ACKED')
     ORDER BY q.created_at DESC, q.queue_id DESC
     LIMIT $5
   `; // Runtime queue = mutable dispatch state joined back to immutable outbox/task facts.
@@ -545,6 +554,7 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
   return (res.rows ?? []).map((row: any) => ({
     queue_id: String(row.queue_id),
     act_task_id: String(row.act_task_id),
+    command_id: String(row.command_id),
     outbox_fact_id: String(row.outbox_fact_id),
     outbox_occurred_at: String(row.outbox_occurred_at),
     outbox: parseJsonMaybe(row.outbox_json) ?? row.outbox_json,
@@ -677,8 +687,10 @@ async function buildOperationsConsole(pool: Pool, tenant: TenantTriple): Promise
     const receiptPayload = item?.receipt?.payload ?? {};
     const parameters = taskPayload?.parameters ?? null;
     let state = "CREATED";
-    if (item?.receipt_fact_id) state = "RECEIPTED";
-    else if (item?.dispatch_fact_id) state = "DISPATCHED";
+    if (item?.receipt_fact_id) {
+      const latest = String(receiptPayload?.status ?? '').toUpperCase();
+      state = latest === 'FAILED' ? 'FAILED' : 'SUCCEEDED';
+    } else if (item?.dispatch_fact_id) state = "DISPATCHED";
     return {
       act_task_id: String(taskPayload?.act_task_id ?? ""),
       state,
@@ -983,7 +995,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
     const act_task_id = String(params.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? act_task_id).trim();
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
     const tenant: TenantTriple = {
       tenant_id: String(body.tenant_id ?? auth.tenant_id),
       project_id: String(body.project_id ?? auth.project_id),
@@ -1003,6 +1018,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant,
         queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
         act_task_id,
+        command_id,
         task_fact_id: String(existingPayload.task_fact_id ?? taskFact.fact_id),
         outbox_fact_id: existingOutbox.fact_id,
         device_id: typeof existingPayload.device_id === "string" ? existingPayload.device_id : null,
@@ -1011,7 +1027,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         retain: Boolean(existingPayload.retain ?? body.retain ?? false),
         adapter_hint: typeof existingPayload.adapter_hint === "string" ? normalizeAdapterHint(existingPayload.adapter_hint) : normalizeAdapterHint(body.adapter_hint)
       });
-      return reply.send({ ok: true, act_task_id, dispatch_fact_id: null, outbox_fact_id: existingOutbox.fact_id, already_queued: true });
+      return reply.send({ ok: true, act_task_id, command_id, dispatch_fact_id: null, outbox_fact_id: existingOutbox.fact_id, already_queued: true });
     } // Explicit idempotency: one open outbox item per task until receipt exists.
 
     const taskRecord = taskFact.record_json ?? {}; // Joined AO-ACT task record used to derive adapter hints.
@@ -1047,6 +1063,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         act_task_id,
+        command_id,
         task_fact_id: taskFact.fact_id,
         dispatch_fact_id,
         device_id,
@@ -1061,6 +1078,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       tenant,
       queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
       act_task_id,
+      command_id,
       task_fact_id: String(taskFact.fact_id),
       outbox_fact_id,
       device_id,
@@ -1069,7 +1087,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       retain,
       adapter_hint
     });
-    return reply.send({ ok: true, act_task_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false });
+    return reply.send({ ok: true, act_task_id, command_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false });
   });
 
 
@@ -1136,7 +1154,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const existingPublished = await loadLatestDownlinkPublishedByOutboxFactId(pool, outbox_fact_id, tenant);
     if (existingPublished) {
       await updateDispatchQueueStateByOutbox(pool, outbox_fact_id, {
-        state: "PUBLISHED",
+        state: "DISPATCHED",
         publish_fact_id: existingPublished.fact_id,
         leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
         leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
@@ -1166,7 +1184,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
     await updateDispatchQueueStateByOutbox(pool, outbox_fact_id, {
-      state: "PUBLISHED",
+      state: "DISPATCHED",
       publish_fact_id: published_fact_id,
       leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
       leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
@@ -1216,9 +1234,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       group_id: String(body.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const act_task_id = String(body.act_task_id ?? body.command_id ?? "").trim();
+    const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? "").trim();
+    const act_task_id = task_id;
     const device_id = String(body.device_id ?? "").trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+    if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
     if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -1361,7 +1383,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
     const act_task_id = String(params.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? act_task_id).trim();
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
     const tenant: TenantTriple = {
       tenant_id: String(body.tenant_id ?? auth.tenant_id),
       project_id: String(body.project_id ?? auth.project_id),
@@ -1427,8 +1452,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       group_id: String(body.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? "").trim();
+    if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
+      act_task_id: task_id,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id
@@ -1440,14 +1471,16 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        act_task_id: body.act_task_id,
+        act_task_id: task_id,
         ao_act_receipt_fact_id: delegated.json.fact_id,
         actor_id: auth.actor_id,
         token_id: auth.token_id,
         created_at_ts: Date.now()
       }
     });
-    await updateDispatchQueueStateByActTask(pool, tenant, String(body.act_task_id ?? ""), { state: "RECEIPTED", receipt_fact_id: delegated.json.fact_id });
+    const receiptStatus = String(body.status ?? '').toUpperCase();
+    const terminalState = receiptStatus === 'FAILED' ? 'FAILED' : 'SUCCEEDED';
+    await updateDispatchQueueStateByActTask(pool, tenant, task_id, { state: terminalState, receipt_fact_id: delegated.json.fact_id });
     return reply.send({ ok: true, fact_id: delegated.json.fact_id, wrapper_fact_id });
   });
 

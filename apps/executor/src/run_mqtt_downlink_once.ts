@@ -244,6 +244,8 @@ async function writeReceipt(args: Args, item: any): Promise<any> {
     tenant_id: args.tenant_id, // Scope tenant id.
     project_id: args.project_id, // Scope project id.
     group_id: args.group_id, // Scope group id.
+    task_id: actTaskId, // Required receipt task id.
+    command_id: actTaskId, // Required receipt command id.
     act_task_id: actTaskId, // Link receipt to task id.
     executor_id: { kind: "script", id: args.executor_id, namespace: "executor_runtime_v1" }, // Synthetic executor identity.
     execution_time: { start_ts: start, end_ts: end }, // Minimal valid execution window.
