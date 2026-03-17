@@ -192,6 +192,26 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     ...operationPlanTransitionFacts.map((x: any) => x.fact_id) // Operation plan transition fact ids.
   ]; // End list.
 
+  const recommendationApprovalLinks = recommendationLinkFacts.map((x: any) => ({ // Flatten recommendation->approval links for offline audit closure.
+    recommendation_id: String(x.record_json?.payload?.recommendation_id ?? ""), // Upstream recommendation id.
+    approval_request_id: String(x.record_json?.payload?.approval_request_id ?? ""), // Downstream approval request id.
+    link_fact_id: String(x.fact_id ?? ""), // Fact id carrying this link.
+    recommendation_fact_id: String(x.record_json?.payload?.recommendation_fact_id ?? "") // Source recommendation fact id when available.
+  })).filter((x: any) => x.recommendation_id && x.approval_request_id); // Keep only complete link records.
+
+  const recommendationTaskLinks = operationPlanFacts.map((x: any) => ({ // Flatten recommendation->task links through operation plans.
+    recommendation_id: String(x.record_json?.payload?.recommendation_id ?? ""), // Upstream recommendation id.
+    operation_plan_id: String(x.record_json?.payload?.operation_plan_id ?? ""), // Bridge operation plan id.
+    act_task_id: String(x.record_json?.payload?.act_task_id ?? ""), // Downstream act task id when available.
+    operation_plan_fact_id: String(x.fact_id ?? "") // Fact id of bridge operation plan.
+  })).filter((x: any) => x.recommendation_id && x.act_task_id); // Keep only closed recommendation->task chains.
+
+  const taskReceipts = receiptFacts.map((x: any) => ({ // Flatten task->receipt links for offline execution evidence closure.
+    act_task_id: String(x.record_json?.payload?.act_task_id ?? ""), // Task id tied to this receipt.
+    receipt_fact_id: String(x.fact_id ?? ""), // Receipt fact id.
+    command_id: String(x.record_json?.payload?.command_id ?? "") // Command id when present.
+  })).filter((x: any) => x.act_task_id && x.receipt_fact_id); // Keep only complete task->receipt links.
+
   const artifact_core = { // Define deterministic core (excludes generated_at_ts and sha256 fields).
     tenant_id: job.tenant_id, // Tenant triple: tenant_id.
     project_id: job.project_id, // Tenant triple: project_id.
@@ -208,6 +228,12 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
       operation_plan_v1: operationPlanFacts, // Operation plan facts.
       operation_plan_transition_v1: operationPlanTransitionFacts // Operation plan transition facts.
     }, // End facts bundle.
+    evidence_files: { // Stable logical file map for offline export consumers.
+      "recommendation.json": recommendationFacts, // Primary recommendation file content.
+      "recommendation_approval_links.json": recommendationApprovalLinks, // recommendation -> approval_request links.
+      "recommendation_task_links.json": recommendationTaskLinks, // recommendation -> task links.
+      "task_receipts.json": taskReceipts // task -> receipt links.
+    }, // End logical file map.
     manifest: { // Minimal manifest for human inspection.
       counts: { // Counts of each fact type included.
         ao_act_task_v0: taskFacts.length, // Count task facts.
@@ -219,6 +245,17 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
         operation_plan_v1: operationPlanFacts.length, // Count operation plan facts.
         operation_plan_transition_v1: operationPlanTransitionFacts.length // Count operation plan transition facts.
       }, // End counts.
+      files: [ // Logical files present in this evidence export payload.
+        "recommendation.json",
+        "recommendation_approval_links.json",
+        "recommendation_task_links.json",
+        "task_receipts.json"
+      ],
+      links: { // Closure link counts for recommendation -> approval -> operation_plan -> task -> receipt.
+        recommendation_approval_links: recommendationApprovalLinks.length,
+        recommendation_task_links: recommendationTaskLinks.length,
+        task_receipts: taskReceipts.length
+      },
       evidence_fact_ids // Flat list of all fact ids referenced by the artifact.
     } // End manifest.
   }; // End artifact_core.
