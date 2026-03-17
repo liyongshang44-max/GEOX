@@ -54,3 +54,18 @@ At minimum, acceptance must prove:
 - cross-tenant plan reads return 404
 - duplicate receipts are rejected
 - evidence export bundle includes `operation_plan_v1` and `operation_plan_transition_v1`
+
+## Execution Boundary (Normative Rules)
+
+- recommendation 是建议对象，本身没有执行权
+- recommendation 必须经过 approval 才能进入 operation_plan / AO-ACT task
+- executor 只消费 AO-ACT task，不消费 recommendation
+
+## Negative Acceptance Requirements
+
+- 未授权访问（401）
+- 跨租户访问（403/404）
+- 不存在 recommendation（fail）
+- 未审批执行（forbidden）
+- 重复 dispatch（idempotent, no duplicate execution）
+
