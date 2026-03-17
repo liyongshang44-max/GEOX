@@ -69,3 +69,9 @@ apps/web/tsconfig.tsbuildinfo
 **/src/**/*.js
 **/src/**/*.js.map
 
+
+# local export artifacts
+*.bundle
+_tmp_*
+*.pdf
+*.json
