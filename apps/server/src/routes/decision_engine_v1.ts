@@ -273,20 +273,95 @@ async function loadRecommendationChainById(pool: Pool, recommendation_id: string
 }
 
 
-async function assertApprovedForTask(pool: Pool, tenant: TenantTriple, act_task_id: string): Promise<boolean> {
-  const res = await pool.query(
-    `SELECT 1
-     FROM facts
-     WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
-       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-       AND (record_json::jsonb#>>'{payload,project_id}') = $2
-       AND (record_json::jsonb#>>'{payload,group_id}') = $3
-       AND (record_json::jsonb#>>'{payload,act_task_id}') = $4
-       AND upper(coalesce((record_json::jsonb#>>'{payload,decision}'), '')) = 'APPROVE'
-     LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id]
+async function loadLatestFactByTypeAndKey(
+  pool: Pool,
+  factType: string,
+  keyPath: string,
+  keyValue: string,
+  tenant: TenantTriple
+): Promise<any | null> {
+  const sql = `
+    SELECT fact_id, occurred_at, source, record_json
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = $1
+      AND (record_json::jsonb#>>string_to_array($2, ',')) = $3
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $4
+      AND (record_json::jsonb#>>'{payload,project_id}') = $5
+      AND (record_json::jsonb#>>'{payload,group_id}') = $6
+    ORDER BY occurred_at DESC, fact_id DESC
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [factType, keyPath, keyValue, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+  if (!res.rows?.length) return null;
+  const row: any = res.rows[0];
+  return {
+    fact_id: String(row.fact_id),
+    occurred_at: String(row.occurred_at),
+    source: String(row.source),
+    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
+  };
+}
+
+async function classifyExecutePrimaryKey(
+  pool: Pool,
+  tenant: TenantTriple,
+  act_task_id: string
+): Promise<"recommendation" | "approval_request" | "operation_plan" | "task" | "missing"> {
+  if (!act_task_id) return "missing";
+
+  const recommendationFact = await loadLatestFactByTypeAndKey(
+    pool,
+    "decision_recommendation_v1",
+    "payload,recommendation_id",
+    act_task_id,
+    tenant
   );
-  return res.rows.length > 0;
+  if (recommendationFact) return "recommendation";
+
+  const approvalFact = await loadLatestFactByTypeAndKey(
+    pool,
+    "approval_request_v1",
+    "payload,request_id",
+    act_task_id,
+    tenant
+  );
+  if (approvalFact) return "approval_request";
+
+  const operationPlanFact = await loadLatestFactByTypeAndKey(
+    pool,
+    "operation_plan_v1",
+    "payload,operation_plan_id",
+    act_task_id,
+    tenant
+  );
+  if (operationPlanFact) return "operation_plan";
+
+  const taskFact = await loadLatestFactByTypeAndKey(
+    pool,
+    "ao_act_task_v0",
+    "payload,act_task_id",
+    act_task_id,
+    tenant
+  );
+  if (taskFact) return "task";
+
+  return "missing";
+}
+
+async function assertApprovedForTask(pool: Pool, tenant: TenantTriple, act_task_id: string): Promise<boolean> {
+  const sql = `
+    SELECT 1
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+      AND (record_json::jsonb#>>'{payload,project_id}') = $2
+      AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      AND (record_json::jsonb#>>'{payload,act_task_id}') = $4
+      AND COALESCE(record_json::jsonb#>>'{payload,status}','') = 'APPROVED'
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id]);
+  return !!res.rows?.length;
 }
 
 async function loadTaskFactByTaskId(pool: Pool, tenant: TenantTriple, act_task_id: string): Promise<any | null> {
@@ -609,17 +684,28 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const act_task_id = String(body.act_task_id ?? "").trim();
-    const command_id = String(body.command_id ?? act_task_id).trim();
-    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
+const command_id = String(body.command_id ?? act_task_id).trim();
+if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
 
-    const task = await loadTaskFactByTaskId(pool, tenant, act_task_id);
-    if (!task) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
+const keyKind = await classifyExecutePrimaryKey(pool, tenant, act_task_id);
 
-    const approved = await assertApprovedForTask(pool, tenant, act_task_id);
-    if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
+if (keyKind === "recommendation") {
+  return badRequest(reply, "RECOMMENDATION_ID_NOT_ALLOWED");
+}
+if (keyKind === "approval_request") {
+  return badRequest(reply, "APPROVAL_REQUEST_ID_NOT_ALLOWED");
+}
+if (keyKind === "operation_plan") {
+  return badRequest(reply, "OPERATION_PLAN_ID_NOT_ALLOWED");
+}
+if (keyKind === "missing") {
+  return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
+}
 
+const approved = await assertApprovedForTask(pool, tenant, act_task_id);
+if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
     const startTs = Date.now();
     const endTs = startTs + 5_000;
     const idempotency_key = `irrigation_sim_${randomUUID().replace(/-/g, "")}`;
