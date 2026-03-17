@@ -2,7 +2,7 @@
 "use strict"; // Enforce strict mode.
 
 const process = require("node:process"); // Read argv and exit deterministically.
-const { getIndex, postReceipt } = require("./ao_act_client_v0.cjs"); // Use the existing AO-ACT API endpoints only.
+const { getIndex, postReceipt } = require("./ao_act_client_v0.cjs"); // Use the existing AO-ACT API endpoints only; execution is executor-runtime only and never a recommendation/approval/UI direct call.
 const { buildReceiptPayloadV0 } = require("./receipt_builder_v0.cjs"); // Build schema-valid receipt payload.
 
 function parseArgs(argv) { // Parse minimal CLI flags without introducing extra behavior.
@@ -68,7 +68,7 @@ async function main() { // Main executor flow.
   const nowTs = Date.now(); // Capture current time for created_at_ts.
   const receiptPayload = buildReceiptPayloadV0(taskRecordJson, executorId, nowTs, undefined, { kind: "sim", ref: `sim://ao_act/${taskRecordJson.payload.act_task_id}` }); // Build receipt payload.
 
-  const wr = await postReceipt(baseUrl, receiptPayload); // Write receipt via the existing server endpoint.
+  const wr = await postReceipt(baseUrl, receiptPayload); // Write receipt via executor runtime path only (not recommendation/approval/UI flows).
   assert(wr.status === 200 && wr.json && wr.json.ok === true, `RECEIPT_WRITE_FAILED:${wr.status}:${wr.text}`); // Require successful write.
 
   console.log(`[OK] sim executor wrote receipt (act_task_id=${taskRecordJson.payload.act_task_id})`); // Print success line.

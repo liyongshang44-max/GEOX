@@ -27,3 +27,5 @@ Notes:
 Conclusion:
 
 Execution boundary is clean. No recommendation bypass path detected.
+
+- recommendation 没有执行权；用户界面、recommendation 域和审批提交流程不得直接调用执行入口。执行入口仅供 executor runtime 在已批准 task 上调用。
