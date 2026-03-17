@@ -6,6 +6,7 @@ import path from "node:path"; // Node path utilities for joining paths.
 import fs from "node:fs"; // Node filesystem utilities for writing artifacts.
 import crypto from "node:crypto"; // Node crypto for SHA-256 hashing and UUIDs.
 import { randomUUID } from "node:crypto"; // UUID generator for fact ids (append-only ledger).
+import { fileURLToPath } from "node:url"; // ESM 下替代 __filename / __dirname.
 import { z } from "zod"; // Zod schema validation for request parsing.
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
@@ -272,6 +273,8 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
   }; // End artifact object.
 
   // 6) Write artifact file under runtime/evidence_exports_v1 (runtime is excluded from git, safe for artifacts).
+  const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
   const repoRoot = path.resolve(__dirname, "..", "..", "..", ".."); // Resolve repo root from apps/server/src/routes.
   const outDir = path.join(repoRoot, "runtime", "evidence_exports_v1"); // Output directory for export artifacts.
   fs.mkdirSync(outDir, { recursive: true }); // Ensure output directory exists.
