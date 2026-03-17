@@ -75,9 +75,10 @@ const { assert, env, fetchJson } = require('./_common.cjs');
 
   const pendingPlan = await fetchJson(`${base}/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { token });
   assert.equal(pendingPlan.status, 200, `operation plan read failed; got ${pendingPlan.status} body=${pendingPlan.text}`);
-  const planStatus = String(pendingPlan.json?.item?.operation_plan?.payload?.status ?? '');
-  assert.equal(planStatus, 'APPROVAL_PENDING', `unapproved operation plan should remain APPROVAL_PENDING; got ${planStatus}`);
-  assert.equal(String(pendingPlan.json?.item?.operation_plan?.payload?.act_task_id ?? ''), '', `unapproved operation plan should not carry act_task_id; body=${pendingPlan.text}`);
+  const planPayload = pendingPlan.json?.item?.plan?.record_json?.payload ?? {};
+const planStatus = String(planPayload.status ?? '');
+assert.equal(planStatus, 'APPROVAL_PENDING', `unapproved operation plan should remain APPROVAL_PENDING; got ${planStatus}`);
+assert.equal(String(planPayload.act_task_id ?? ''), '', `unapproved operation plan should not carry act_task_id; body=${pendingPlan.text}`);
 
   const dispatchWithoutApprovedTask = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(`act_not_approved_${Date.now()}`)}/dispatch`, {
     method: 'POST',
