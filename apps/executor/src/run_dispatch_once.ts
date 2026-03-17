@@ -3,8 +3,15 @@ import crypto from "node:crypto"; // Used to mint a stable executor id + idempot
 import { createAdapterRegistry, findAdapter, type AoActTask } from "./adapters";
 
 type Args = { baseUrl: string; token: string; tenant_id: string; project_id: string; group_id: string; executor_id: string; limit: number };
+
 function parseArgs(argv: string[]): Args {
-  const get = (k: string): string | undefined => { const idx = argv.indexOf(`--${k}`); if (idx === -1) return undefined; const v = argv[idx + 1]; if (!v || v.startsWith("--")) return undefined; return v; };
+  const get = (k: string): string | undefined => {
+    const idx = argv.indexOf(`--${k}`);
+    if (idx === -1) return undefined;
+    const v = argv[idx + 1];
+    if (!v || v.startsWith("--")) return undefined;
+    return v;
+  };
   const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3000";
   const token = get("token") ?? process.env.GEOX_AO_ACT_TOKEN ?? "";
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA";
@@ -15,6 +22,7 @@ function parseArgs(argv: string[]): Args {
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
   return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit };
 }
+
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
   const headers: Record<string, string> = { Accept: "application/json", Authorization: `Bearer ${token}` };
   if (init?.body) headers["Content-Type"] = "application/json";
@@ -25,6 +33,7 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
 }
+
 async function getDispatchQueue(args: Args): Promise<any[]> {
   const url = `${args.baseUrl}/api/v1/ao-act/dispatches?tenant_id=${encodeURIComponent(args.tenant_id)}&project_id=${encodeURIComponent(args.project_id)}&group_id=${encodeURIComponent(args.group_id)}&limit=${args.limit}`;
   const out = await httpJson(url, args.token, { method: "GET" });
@@ -32,9 +41,30 @@ async function getDispatchQueue(args: Args): Promise<any[]> {
   return out.items;
 }
 
+async function hasReceipt(args: Args, actTaskId: string): Promise<boolean> {
+  const url = `${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(args.tenant_id)}&project_id=${encodeURIComponent(args.project_id)}&group_id=${encodeURIComponent(args.group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=1`;
+  const out = await httpJson(url, args.token, { method: "GET" });
+  return Boolean(out?.ok && Array.isArray(out?.items) && out.items.length > 0);
+}
+
+async function writeDispatchState(args: Args, task: AoActTask, state: "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED"): Promise<void> {
+  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: task.tenant_id,
+      project_id: task.project_id,
+      group_id: task.group_id,
+      act_task_id: task.act_task_id,
+      command_id: task.act_task_id,
+      state
+    })
+  });
+  if (!out?.ok) throw new Error(`dispatch state write failed state=${state} task=${task.act_task_id}`);
+}
+
 function toAoActTask(item: any, args: Args): AoActTask {
   const taskPayload = item?.task?.payload ?? {};
-  const act_task_id = String(taskPayload?.act_task_id ?? item?.task_id ?? "").trim();
+  const act_task_id = String(taskPayload?.act_task_id ?? item?.act_task_id ?? "").trim();
   const action_type = String(taskPayload?.action_type ?? "").trim();
   if (!act_task_id || !action_type) throw new Error(`invalid queue item task payload: ${JSON.stringify(item)}`);
   return {
@@ -47,27 +77,60 @@ function toAoActTask(item: any, args: Args): AoActTask {
   };
 }
 
+function readTaskState(item: any): string {
+  const s = String(item?.state ?? item?.task?.payload?.status ?? "").trim().toUpperCase();
+  return s || "UNKNOWN";
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token });
 
   console.log(`INFO: run_dispatch_once baseUrl=${args.baseUrl}`);
   console.log(`INFO: executor_id=${args.executor_id}`);
+
   const queue = await getDispatchQueue(args);
   console.log(`INFO: dispatch queue size=${queue.length}`);
-  if (queue.length < 1) { console.log("INFO: no dispatch items found (no-op)"); return; }
+  if (queue.length < 1) {
+    console.log("INFO: no dispatch items found (no-op)");
+    return;
+  }
 
   for (const item of queue.slice(0, args.limit)) {
     const task = toAoActTask(item, args);
+    const taskState = readTaskState(item);
+
+    if (taskState !== "READY") {
+      console.log(`INFO: skip act_task_id=${task.act_task_id} reason=task_not_ready state=${taskState}`);
+      continue;
+    }
+
+    if (await hasReceipt(args, task.act_task_id)) {
+      console.log(`INFO: skip act_task_id=${task.act_task_id} reason=receipt_exists`);
+      continue;
+    }
+
     const adapter = findAdapter(registry, task.action_type);
     if (!adapter) throw new Error(`no adapter for action_type=${task.action_type} act_task_id=${task.act_task_id}`);
 
     console.log(`INFO: dispatching act_task_id=${task.act_task_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
-    const result = await adapter.dispatch(task);
-    if (!result.ok) throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown"}`);
+    await writeDispatchState(args, task, "DISPATCHED");
 
-    console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? "n/a"}`);
-    console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
+const result = await adapter.dispatch(task);
+if (!result.ok) {
+  await writeDispatchState(args, task, "FAILED");
+  throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id}: ${result.error ?? "unknown_error"}`);
+}
+
+await writeDispatchState(args, task, "ACKED");
+await writeDispatchState(args, task, "SUCCEEDED");
+
+console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} receipt_fact_id=${result.receipt_fact_id ?? ""}`);
+console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id}`);
   }
 }
-main().catch((err) => { console.error(`FAIL: ${err?.message ?? String(err)}`); process.exit(1); });
+
+main().catch((err) => {
+  console.error(`FAIL: ${err?.message ?? String(err)}`);
+  process.exit(1);
+});

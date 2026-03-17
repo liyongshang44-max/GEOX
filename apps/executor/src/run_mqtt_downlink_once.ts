@@ -191,7 +191,7 @@ function publishOnce(
   retain: boolean
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    client.publish(topic, payloadJson, { qos, retain }, (err?: Error) => {
+    client.publish(topic, payloadJson, { qos: qos as 0 | 1 | 2, retain }, (err) => {
       if (err) return reject(err); // Reject when broker publish callback reports error.
       resolve(); // Resolve after broker accepted the publish call.
     }); // End publish callback.

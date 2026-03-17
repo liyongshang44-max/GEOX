@@ -254,6 +254,33 @@ async function updateDispatchQueueStateByActTask(
   );
 }
 
+
+async function transitionDispatchQueueState(
+  pool: Pool,
+  tenant: TenantTriple,
+  actTaskId: string,
+  commandId: string,
+  nextState: 'DISPATCHED' | 'ACKED' | 'SUCCEEDED' | 'FAILED'
+): Promise<boolean> {
+  await ensureDispatchQueueRuntime(pool);
+  const allowedCurrentStates =
+    nextState === 'DISPATCHED' ? ['READY'] :
+    nextState === 'ACKED' ? ['DISPATCHED'] :
+    nextState === 'SUCCEEDED' ? ['ACKED', 'DISPATCHED'] :
+    ['READY', 'DISPATCHED', 'ACKED'];
+  const result = await pool.query(
+    `UPDATE dispatch_queue_v1
+     SET state = $6, updated_at = NOW()
+     WHERE tenant_id = $1
+       AND project_id = $2
+       AND group_id = $3
+       AND act_task_id = $4
+       AND command_id = $5
+       AND state = ANY($7::text[])`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId, commandId, nextState, allowedCurrentStates]
+  );
+  return Number(result.rowCount ?? 0) > 0;
+}
 async function loadLatestFactByTypeAndKey(
   pool: Pool,
   factType: string,
@@ -1115,6 +1142,30 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     return reply.send({ ok: true, lease_token, items: items.filter((x: any) => claimedIds.has(String(x.queue_id))) });
   });
 
+
+
+  // POST /api/v1/ao-act/dispatches/state
+  // Explicit runtime state transition endpoint used by executor adapters.
+  app.post("/api/v1/ao-act/dispatches/state", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    const body: any = req.body ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(body.tenant_id ?? auth.tenant_id),
+      project_id: String(body.project_id ?? auth.project_id),
+      group_id: String(body.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const act_task_id = String(body.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? act_task_id).trim();
+    const state = String(body.state ?? "").trim().toUpperCase();
+    if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (!["DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(state)) return badRequest(reply, "INVALID_STATE");
+    const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
+    if (!changed) return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+    return reply.send({ ok: true, act_task_id, command_id, state });
+  });
   // GET /api/v1/ao-act/dispatches
   // Explicit adapter queue: outbox facts with no receipt yet.
   app.get("/api/v1/ao-act/dispatches", async (req, reply) => {

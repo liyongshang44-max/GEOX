@@ -48,7 +48,7 @@ function connectMqtt(url: string): Promise<mqtt.MqttClient> {
 
 function subscribeOnce(client: mqtt.MqttClient, topic: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    client.subscribe(topic, { qos: 1 }, (err?: Error) => {
+    client.subscribe(topic, { qos: 1 }, (err) => {
       if (err) return reject(err); // Surface subscribe error.
       resolve(); // Subscription ready.
     });
@@ -57,7 +57,7 @@ function subscribeOnce(client: mqtt.MqttClient, topic: string): Promise<void> {
 
 function publishOnce(client: mqtt.MqttClient, topic: string, payloadJson: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    client.publish(topic, payloadJson, { qos: 1, retain: false }, (err?: Error) => {
+    client.publish(topic, payloadJson, { qos: 1, retain: false }, (err) => {
       if (err) return reject(err); // Surface publish error.
       resolve(); // Broker accepted the publish call.
     });
