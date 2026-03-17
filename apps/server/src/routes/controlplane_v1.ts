@@ -337,6 +337,36 @@ async function loadLatestDownlinkPublishedByOutboxFactId(
   };
 }
 
+async function loadLatestReceiptByCommandId(
+  pool: Pool,
+  commandId: string,
+  tenant: TenantTriple
+): Promise<ParsedFactRow | null> {
+  const sql = `
+    SELECT fact_id, occurred_at, source, record_json
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0'
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+      AND (record_json::jsonb#>>'{payload,project_id}') = $2
+      AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      AND (
+        (record_json::jsonb#>>'{payload,meta,command_id}') = $4
+        OR (record_json::jsonb#>>'{payload,act_task_id}') = $4
+      )
+    ORDER BY occurred_at DESC, fact_id DESC
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, commandId]);
+  if (!res.rows?.length) return null;
+  const row: any = res.rows[0];
+  return {
+    fact_id: String(row.fact_id),
+    occurred_at: String(row.occurred_at),
+    source: String(row.source),
+    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
+  };
+}
+
 async function fetchJson(url: string, authz: string, body?: any): Promise<{ ok: boolean; status: number; json: any }> {
   const res = await fetch(url, {
     method: body === undefined ? "GET" : "POST",
@@ -1035,7 +1065,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const latestReceipt = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
+    const latestReceipt = await loadLatestReceiptByCommandId(pool, command_id, tenant);
     if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
 
     const existingOutbox = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
@@ -1337,6 +1367,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       observed_parameters: body.observed_parameters ?? {},
       meta: {
         ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+        command_id,
         receipt_message_id: body.receipt_message_id ?? null,
         device_id,
         uplink_topic: deriveReceiptTopic(tenant, device_id, body),

@@ -507,7 +507,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const act_task_id = String(body.act_task_id ?? "").trim();
+    const command_id = String(body.command_id ?? act_task_id).trim();
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
 
     const approved = await assertApprovedForTask(pool, tenant, act_task_id);
     if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
@@ -522,6 +525,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       project_id: tenant.project_id,
       group_id: tenant.group_id,
       act_task_id,
+      command_id,
       executor_id: { kind: "script", id: "irrigation_simulator", namespace: "decision_engine_v1" },
       execution_time: { start_ts: startTs, end_ts: endTs },
       execution_coverage: { kind: "field", ref: String(body.field_id ?? "field_unknown") },
@@ -541,6 +545,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       },
       meta: {
         idempotency_key,
+        command_id,
         simulator: "irrigation_simulator_v1"
       }
     });
@@ -556,6 +561,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       kind: "irrigation_execution_evidence_v1",
       tenant,
       act_task_id,
+      command_id,
       receipt_fact_id: delegated.json.fact_id,
       generated_at: new Date().toISOString(),
       simulator: "irrigation_simulator_v1",
