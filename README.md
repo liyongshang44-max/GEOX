@@ -130,3 +130,8 @@ Judge 的评估对象始终是 group。
 • 系统已完成基础设施阶段
 • 语义边界已通过 negative acceptance 锁死
 • 后续演进以治理优先于功能
+
+
+十四、执行入口约束（新增）
+• recommendation 没有执行权；用户界面、recommendation 域和审批提交流程不得直接调用执行入口。
+• 执行入口仅供 executor runtime 在已批准 task 上调用。

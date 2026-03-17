@@ -60,6 +60,11 @@ function isExecutorToken(auth: AoActAuthContextV0): boolean {
   return actor.includes("executor") || tokenId.includes("executor");
 }
 
+function hasExecutorRuntimeScopes(auth: AoActAuthContextV0): boolean {
+  const scopes = Array.isArray(auth.scopes) ? auth.scopes : [];
+  return scopes.includes("ao_act.task.write") && scopes.includes("ao_act.receipt.write");
+}
+
 function hostBaseUrl(req: FastifyRequest): string {
   const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim();
   if (envBase) return envBase;
@@ -282,6 +287,27 @@ async function assertApprovedForTask(pool: Pool, tenant: TenantTriple, act_task_
     [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id]
   );
   return res.rows.length > 0;
+}
+
+async function loadTaskFactByTaskId(pool: Pool, tenant: TenantTriple, act_task_id: string): Promise<any | null> {
+  const res = await pool.query(
+    `SELECT fact_id, occurred_at, record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,act_task_id}') = $4
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, act_task_id]
+  );
+  if (!res.rows?.length) return null;
+  return {
+    fact_id: String(res.rows[0].fact_id),
+    occurred_at: String(res.rows[0].occurred_at),
+    record_json: parseJsonMaybe(res.rows[0].record_json) ?? res.rows[0].record_json
+  };
 }
 
 
@@ -555,12 +581,27 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.post("/api/v1/simulators/irrigation/execute", async (req, reply) => {
+    // This endpoint is executor-only.
+    // It must never be called from recommendation / approval / UI flows directly.
+    // All execution must be derived from approved AO-ACT task dispatch only.
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
     if (!auth) return;
+    if (!hasExecutorRuntimeScopes(auth)) {
+      return reply.status(403).send({ ok: false, error: "EXECUTOR_SCOPE_REQUIRED" });
+    }
     if (!isExecutorToken(auth)) {
       return reply.status(403).send({ ok: false, error: "EXECUTOR_TOKEN_REQUIRED" });
     }
     const body: any = req.body ?? {};
+    if (body.recommendation_id !== undefined) {
+      return badRequest(reply, "RECOMMENDATION_ID_NOT_ALLOWED");
+    }
+    if (body.approval_request_id !== undefined) {
+      return badRequest(reply, "APPROVAL_REQUEST_ID_NOT_ALLOWED");
+    }
+    if (body.operation_plan_id !== undefined) {
+      return badRequest(reply, "OPERATION_PLAN_ID_NOT_ALLOWED");
+    }
     const tenant: TenantTriple = {
       tenant_id: String(body.tenant_id ?? auth.tenant_id),
       project_id: String(body.project_id ?? auth.project_id),
@@ -572,6 +613,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
+
+    const task = await loadTaskFactByTaskId(pool, tenant, act_task_id);
+    if (!task) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
 
     const approved = await assertApprovedForTask(pool, tenant, act_task_id);
     if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });

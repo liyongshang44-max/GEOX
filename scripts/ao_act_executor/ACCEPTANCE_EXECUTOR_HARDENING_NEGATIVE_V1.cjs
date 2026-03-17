@@ -136,6 +136,39 @@ async function createTask(base, token, triple, suffix, deviceId) {
     assert.equal(String(resp.json?.error ?? ''), 'EXECUTOR_TOKEN_REQUIRED', `unexpected error: ${resp.text}`);
   }
 
+  // 1.1) recommendation/approval/plan identifiers must not be accepted as execute inputs.
+  {
+    const actTaskId = await createTask(base, token, triple, `no_recommendation_key_${rid}`, device_id);
+    const resp = await fetchJson(`${base}/api/v1/simulators/irrigation/execute`, {
+      method: 'POST',
+      token,
+      body: {
+        ...triple,
+        act_task_id: actTaskId,
+        command_id: actTaskId,
+        recommendation_id: `rec_forbidden_${rid}`
+      }
+    });
+    assert.equal(resp.status, 400, `expected 400 RECOMMENDATION_ID_NOT_ALLOWED, got ${resp.status} body=${resp.text}`);
+    assert.equal(String(resp.json?.error ?? ''), 'RECOMMENDATION_ID_NOT_ALLOWED', `unexpected error: ${resp.text}`);
+  }
+
+  // 1.2) task selector must resolve to an existing task.
+  {
+    const missingTaskId = `act_missing_${rid}`;
+    const resp = await fetchJson(`${base}/api/v1/simulators/irrigation/execute`, {
+      method: 'POST',
+      token,
+      body: {
+        ...triple,
+        act_task_id: missingTaskId,
+        command_id: missingTaskId
+      }
+    });
+    assert.equal(resp.status, 404, `expected 404 TASK_NOT_FOUND, got ${resp.status} body=${resp.text}`);
+    assert.equal(String(resp.json?.error ?? ''), 'TASK_NOT_FOUND', `unexpected error: ${resp.text}`);
+  }
+
   // 2) non-READY queue item must be refused by executor dispatch loop.
     {
     const actTaskId = await createTask(base, token, triple, `not_ready_${rid}`, device_id);
