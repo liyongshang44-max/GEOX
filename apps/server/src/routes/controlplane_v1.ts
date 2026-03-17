@@ -798,10 +798,25 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
+      await insertFact(pool, "api/v1/approvals", {
+        type: "approval_request_v1",
+        payload: {
+          ...requestPayload,
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          request_id,
+          status: "APPROVED",
+          approved_at_ts: Date.now(),
+          approved_by_actor_id: auth.actor_id,
+          approved_by_token_id: auth.token_id
+        }
+      });
       const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
+        approval_request_id: request_id,
         issuer: proposal.issuer,
         action_type: proposal.action_type,
         target: proposal.target,
@@ -912,7 +927,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       ...body,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
-      group_id: tenant.group_id
+      group_id: tenant.group_id,
+      approval_request_id: String(body.approval_request_id ?? "").trim()
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {

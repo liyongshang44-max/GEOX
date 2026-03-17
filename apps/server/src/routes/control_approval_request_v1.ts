@@ -294,6 +294,25 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
       const proposal = payload.proposal ?? null;
       if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
 
+      const approvedRequestRecord = {
+        type: "approval_request_v1",
+        payload: {
+          ...payload,
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          request_id,
+          status: "APPROVED",
+          approved_at_ts: Date.now(),
+          approved_by_actor_id: auth.actor_id,
+          approved_by_token_id: auth.token_id
+        }
+      };
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [randomUUID(), "api/control/approval_request/v1", approvedRequestRecord]
+      );
+
       // Issue AO-ACT task by calling the existing endpoint with the same Authorization header.
       const url = `${buildInternalBaseUrl(req)}/api/control/ao_act/task`;
       const authz = String((req.headers as any)["authorization"] ?? "");
@@ -302,6 +321,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
+        approval_request_id: request_id,
         issuer: normalizeAoActIssuer(auth, proposal.issuer),
         action_type: proposal.action_type,
         target: normalizeAoActTarget(proposal.target),
