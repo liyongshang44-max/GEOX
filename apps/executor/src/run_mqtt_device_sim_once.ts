@@ -104,6 +104,7 @@ async function main(): Promise<void> {
             tenant_id: String(payload?.tenant_id ?? args.tenant_id),
             project_id: String(payload?.project_id ?? process.env.GEOX_PROJECT_ID ?? "projectA"),
             group_id: String(payload?.group_id ?? process.env.GEOX_GROUP_ID ?? "groupA"),
+            task_id: act_task_id,
             act_task_id,
             command_id: act_task_id,
             device_id: args.device_id,

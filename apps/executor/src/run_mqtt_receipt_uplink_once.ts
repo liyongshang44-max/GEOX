@@ -257,8 +257,9 @@ async function writeSyntheticReceipt(args: Args, item: DispatchQueueItem, topic:
     tenant_id: String(outbox.tenant_id ?? task.tenant_id ?? args.tenant_id), // Tenant triple field.
     project_id: String(outbox.project_id ?? task.project_id ?? args.project_id), // Tenant triple field.
     group_id: String(outbox.group_id ?? task.group_id ?? args.group_id), // Tenant triple field.
-    act_task_id, // AO-ACT task id.
+    task_id: act_task_id, // Required receipt task id.
     command_id: act_task_id, // Preserve command id.
+    act_task_id, // AO-ACT task id.
     device_id, // Device id.
     receipt_message_id: `rcpt_${crypto.randomUUID().replace(/-/g, "")}`, // Unique receipt message id.
     status: "executed", // Happy-path synthetic status.

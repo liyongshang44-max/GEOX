@@ -36,7 +36,7 @@ async function writeReceipt(args: Args, actTaskId: string, outboxFactId: string)
   const start = end - 50;
   const idempotencyKey = `dispatch_once_${outboxFactId}`;
   const body = {
-    tenant_id: args.tenant_id, project_id: args.project_id, group_id: args.group_id, act_task_id: actTaskId,
+    tenant_id: args.tenant_id, project_id: args.project_id, group_id: args.group_id, task_id: actTaskId, command_id: actTaskId, act_task_id: actTaskId,
     executor_id: { kind: "script", id: args.executor_id, namespace: "executor_runtime_v1" },
     execution_time: { start_ts: start, end_ts: end }, execution_coverage: { kind: "field", ref: "simulated" },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 }, logs_refs: [{ kind: "stdout", ref: `executor://dispatch_once/${outboxFactId}` }],
