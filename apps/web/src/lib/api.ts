@@ -961,6 +961,11 @@ export type AgronomyRecommendationItemV1 = {
   fact_id: string;
   occurred_at: string;
   recommendation_id: string;
+  approval_request_id?: string | null;
+  operation_plan_id?: string | null;
+  act_task_id?: string | null;
+  receipt_fact_id?: string | null;
+  latest_status?: string | null;
   field_id: string | null;
   season_id: string | null;
   device_id: string | null;
@@ -990,6 +995,34 @@ export async function fetchAgronomyRecommendations(params: {
   }), { headers: authHeaders(token) });
 }
 
+
+export async function submitRecommendationApproval(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  rationale?: string;
+  token?: string;
+}): Promise<{ ok: boolean; recommendation_id: string; approval_request_id: string; operation_plan_id: string; operation_plan_fact_id: string }> {
+  const token = params.token ?? readStoredAoActToken();
+  return requestJson<{ ok: boolean; recommendation_id: string; approval_request_id: string; operation_plan_id: string; operation_plan_fact_id: string }>(
+    withQuery(`/api/v1/recommendations/${encodeURIComponent(params.recommendation_id)}/submit-approval`, {
+      tenant_id: params.tenant_id,
+      project_id: params.project_id,
+      group_id: params.group_id,
+    }),
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({
+        tenant_id: params.tenant_id,
+        project_id: params.project_id,
+        group_id: params.group_id,
+        rationale: params.rationale ?? "Submitted from recommendations console",
+      }),
+    },
+  );
+}
 export async function fetchAgronomyRecommendationDetail(params: {
   recommendation_id: string;
   tenant_id?: string;
