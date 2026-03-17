@@ -1,4 +1,5 @@
 export type FieldLang = "zh" | "en";
+export type RiskKey = "normal" | "alert" | "unknown";
 
 export const FIELD_TEXT = {
   zh: {
@@ -32,7 +33,6 @@ export const FIELD_TEXT = {
     targetObject: "关联对象",
     time: "时间",
     suggestedAction: "建议动作",
-    seasonInfo: "季节与田块信息",
     selectedObject: "选中对象详情",
     noData: "暂无数据",
     mapLegendTitle: "地图图例",
@@ -88,7 +88,6 @@ export const FIELD_TEXT = {
     targetObject: "Target Object",
     time: "Time",
     suggestedAction: "Suggested Action",
-    seasonInfo: "Season & Field Info",
     selectedObject: "Selected Object",
     noData: "No data",
     mapLegendTitle: "Map Legend",
@@ -146,13 +145,25 @@ export function mapSourceFieldToLabel(source: string | null | undefined, lang: F
   return FIELD_TEXT[lang].sourceManual;
 }
 
-export function formatRiskStatus(detail: any, lang: FieldLang): string {
+export function riskKey(detail: any): RiskKey {
   const alertCount = Number(detail?.recent_alerts?.length ?? 0);
   const recCount = Number(detail?.summary?.recommendation_count ?? 0);
-  if (alertCount > 0) return FIELD_TEXT[lang].alerting;
-  if (recCount > 0) return FIELD_TEXT[lang].attention;
-  if (detail?.field) return FIELD_TEXT[lang].normal;
+  if (alertCount > 0) return "alert";
+  if (recCount > 0 || detail?.field) return "normal";
+  return "unknown";
+}
+
+export function formatRiskStatus(detail: any, lang: FieldLang): string {
+  const key = riskKey(detail);
+  if (key === "alert") return FIELD_TEXT[lang].alerting;
+  if (key === "normal") return FIELD_TEXT[lang].normal;
   return FIELD_TEXT[lang].unknown;
+}
+
+export function getRiskColor(status: RiskKey): string {
+  if (status === "normal") return "#1d6b42";
+  if (status === "alert") return "#b42318";
+  return "#667085";
 }
 
 export function shortId(v: string | null | undefined): string {

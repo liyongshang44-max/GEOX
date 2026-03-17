@@ -7,7 +7,7 @@ import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
 import FieldLegend from "../components/field/FieldLegend";
 import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
-import { FIELD_TEXT, formatRiskStatus, mapAlertTypeToLabel, mapFieldStatusToLabel, mapOperationTypeToLabel, mapSourceFieldToLabel, shortId, type FieldLang } from "../lib/fieldViewModel";
+import { FIELD_TEXT, formatRiskStatus, getRiskColor, mapAlertTypeToLabel, mapFieldStatusToLabel, mapOperationTypeToLabel, mapSourceFieldToLabel, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -30,7 +30,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [status, setStatus] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
-  const [selectedMapObject, setSelectedMapObject] = React.useState<any>(null);
+  const [selectedObject, setSelectedObject] = React.useState<any>(null);
 
   const labels = FIELD_TEXT[lang];
   const isDev = Boolean(import.meta.env.DEV);
@@ -58,18 +58,6 @@ export default function FieldDetailPage(): React.ReactElement {
   React.useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const summaryCards = React.useMemo(() => {
-    const lastOp = detail?.map_layers?.job_history?.[0];
-    return [
-      { label: labels.area, value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-" },
-      { label: labels.crop, value: detail?.latest_season?.crop || detail?.season?.crop || "-" },
-      { label: labels.season, value: detail?.latest_season?.name || detail?.latest_season?.season_id || "-" },
-      { label: labels.devices, value: String(detail?.summary?.device_count ?? 0) },
-      { label: labels.lastOperation, value: lastOp ? mapOperationTypeToLabel(lastOp.task_type, lang) : "-" },
-      { label: labels.riskStatus, value: formatRiskStatus(detail, lang) },
-    ];
-  }, [detail, labels, lang]);
 
   const operationItems = React.useMemo(() => {
     const list = Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : [];
@@ -104,11 +92,26 @@ export default function FieldDetailPage(): React.ReactElement {
         status: statusLabel,
         target: event.object_id || "-",
         time: fmtIso(event.raised_at) !== "-" ? fmtIso(event.raised_at) : fmtTs(event.raised_ts_ms),
-        suggestion: mapAlertTypeToLabel(event.metric, lang),
+        suggestion: event.suggested_action || event.suggestion || null,
         severity: event.severity || null,
+        raw: event,
       };
     });
   }, [detail, labels, lang]);
+
+  const risk = riskKey(detail);
+
+  const summaryCards = React.useMemo(() => {
+    const lastOp = operationItems[0];
+    return [
+      { label: labels.area, value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-" },
+      { label: labels.crop, value: detail?.latest_season?.crop || detail?.season?.crop || "-" },
+      { label: labels.season, value: detail?.latest_season?.name || detail?.latest_season?.season_id || "-" },
+      { label: labels.devices, value: String(detail?.summary?.device_count ?? 0) },
+      { label: labels.lastOperation, value: lastOp?.type || "-" },
+      { label: labels.riskStatus, value: formatRiskStatus(detail, lang) },
+    ];
+  }, [detail, labels, lang, operationItems]);
 
   const tabs: Array<{ key: FieldTab; label: string }> = [
     { key: "overview", label: labels.overview },
@@ -139,7 +142,6 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="card" style={{ padding: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {tabs.map((t) => <button key={t.key} className={`btn ${activeTab === t.key ? "primary" : ""}`} onClick={() => setActiveTab(t.key)}>{t.label}</button>)}
-          <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="AO-ACT Token" />
           <span className="muted">{status}</span>
         </div>
       </section>
@@ -157,6 +159,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
+              <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{formatRiskStatus(detail, lang)}</span></div>
             </div>
           ) : null}
 
@@ -169,23 +172,24 @@ export default function FieldDetailPage(): React.ReactElement {
                 heatGeoJson={detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }}
                 markers={detail?.map_layers?.markers || []}
                 labels={labels}
-                onSelectObject={setSelectedMapObject}
+                onSelectObject={setSelectedObject}
               />
             </div>
           ) : null}
 
-          {activeTab === "operations" ? <FieldOperationList labels={labels} items={operationItems} /> : null}
-          {activeTab === "alerts" ? <FieldAlertList labels={labels} items={alertItems} /> : null}
+          {activeTab === "operations" ? <FieldOperationList labels={labels} items={operationItems} onSelect={(item) => setSelectedObject({ kind: labels.operations, name: item.type, time: item.time, status: item.status, related: item.source })} /> : null}
+          {activeTab === "alerts" ? <FieldAlertList labels={labels} items={alertItems} onSelect={(item) => setSelectedObject({ kind: labels.alerts, name: item.type, time: item.time, status: item.status, related: item.target })} /> : null}
 
           {isDev ? (
             <details style={{ marginTop: 12 }}>
               <summary className="muted">{labels.devDebug}</summary>
+              <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="token" /></label>
               <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify(detail, null, 2)}</pre>
             </details>
           ) : null}
         </div>
 
-        <FieldSeasonPanel labels={labels} detail={detail} selectedMapObject={selectedMapObject} />
+        <FieldSeasonPanel labels={labels} selectedMapObject={selectedObject} />
       </section>
     </div>
   );
