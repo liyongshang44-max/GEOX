@@ -632,7 +632,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         action_type: actionType,
         target: aoActTarget,
         parameters: aoActParameters,
-        status: "APPROVAL_PENDING",
+        status: "CREATED",
         created_ts: Date.now(),
         updated_ts: Date.now()
       }
@@ -645,7 +645,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         operation_plan_id,
-        status: "APPROVAL_PENDING",
+        status: "CREATED",
         trigger: "recommendation_submit_approval",
         approval_request_id: delegated.json.request_id,
         created_ts: Date.now()
