@@ -53,10 +53,48 @@ function buildAccessInfo(tenant_id: string, device_id: string) {
     heartbeat_topic: `heartbeat/${tenant_id}/${device_id}`,
     downlink_topic: `downlink/${tenant_id}/${device_id}`,
     receipt_topic: `receipt/${tenant_id}/${device_id}`,
+    cmd_topic: `/device/${device_id}/cmd`,
+    ack_topic: `/device/${device_id}/ack`,
     payload_contract_version: "v1",
     auth_mode: "DEVICE_CREDENTIAL_SECRET_ONCE",
     secret_warning: "设备密钥仅在签发时返回一次；平台只保存哈希，不保存明文 secret。",
   };
+}
+
+function normalizeCapabilities(input: any): string[] | null {
+  if (!Array.isArray(input)) return null;
+  const allowed = new Set(["irrigation", "valve"]);
+  const normalized = Array.from(
+    new Set(
+      input
+        .map((v) => String(v ?? "").trim().toLowerCase())
+        .filter((v) => allowed.has(v))
+    )
+  );
+  return normalized;
+}
+
+let ensureDeviceCapabilityRuntimePromise: Promise<void> | null = null;
+
+async function ensureDeviceCapabilityRuntime(pool: Pool): Promise<void> {
+  if (!ensureDeviceCapabilityRuntimePromise) {
+    ensureDeviceCapabilityRuntimePromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS device_capability (
+          tenant_id TEXT NOT NULL,
+          device_id TEXT NOT NULL,
+          capabilities JSONB NOT NULL DEFAULT '[]'::jsonb,
+          updated_ts_ms BIGINT NOT NULL,
+          PRIMARY KEY (tenant_id, device_id)
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS device_capability_lookup_idx ON device_capability (tenant_id, device_id)`);
+    })().catch((err) => {
+      ensureDeviceCapabilityRuntimePromise = null;
+      throw err;
+    });
+  }
+  await ensureDeviceCapabilityRuntimePromise;
 }
 
 /**
@@ -423,6 +461,83 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     return reply.send({ ok: true, devices: q.rows }); // Return summarized device list.
   }); // End list.
 
+  app.put("/api/v1/devices/:device_id/capabilities", async (req, reply) => { // Upsert device capability projection + fact.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+    if (!auth) return;
+
+    const params: any = (req as any).params ?? {};
+    const body: any = (req as any).body ?? {};
+    const device_id = normalizeDeviceId(params.device_id);
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+    const capabilities = normalizeCapabilities(body.capabilities);
+    if (!capabilities) return badRequest(reply, "MISSING_OR_INVALID:capabilities");
+
+    await ensureDeviceCapabilityRuntime(pool);
+
+    const existsQ = await pool.query(
+      `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+      [auth.tenant_id, device_id]
+    );
+    if ((existsQ.rowCount ?? 0) < 1) return notFound(reply);
+
+    const updated_ts_ms = Date.now();
+    const occurred_iso = nowIso(updated_ts_ms);
+    const fact_id = `devcap_${sha256Hex(`device_capability_v1|${auth.tenant_id}|${device_id}|${capabilities.join(",")}`)}`;
+    const record = {
+      type: "device_capability_v1",
+      entity: { tenant_id: auth.tenant_id, device_id },
+      payload: { capabilities, updated_ts_ms, actor_id: auth.actor_id, token_id: auth.token_id }
+    };
+
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fact_id, occurred_iso, "control", JSON.stringify(record)]
+      );
+      await clientConn.query(
+        `INSERT INTO device_capability (tenant_id, device_id, capabilities, updated_ts_ms)
+         VALUES ($1, $2, $3::jsonb, $4)
+         ON CONFLICT (tenant_id, device_id)
+         DO UPDATE SET capabilities = EXCLUDED.capabilities, updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, device_id, JSON.stringify(capabilities), updated_ts_ms]
+      );
+      await clientConn.query("COMMIT");
+    } catch (e: any) {
+      try { await clientConn.query("ROLLBACK"); } catch {}
+      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
+
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, capabilities, updated_ts_ms, fact_id });
+  });
+
+  app.get("/api/v1/devices/:device_id/capabilities", async (req, reply) => { // Read device capability projection.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read");
+    if (!auth) return;
+    const device_id = normalizeDeviceId((req.params as any)?.device_id);
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+
+    await ensureDeviceCapabilityRuntime(pool);
+
+    const q = await pool.query(
+      `SELECT capabilities, updated_ts_ms
+         FROM device_capability
+        WHERE tenant_id = $1 AND device_id = $2
+        LIMIT 1`,
+      [auth.tenant_id, device_id]
+    );
+    if ((q.rowCount ?? 0) < 1) return notFound(reply);
+
+    const row: any = q.rows[0];
+    const capabilities = Array.isArray(row.capabilities) ? row.capabilities.map((v: any) => String(v)) : [];
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, capabilities, updated_ts_ms: Number(row.updated_ts_ms) });
+  });
+
 
 
   app.get("/api/v1/devices/:device_id/console", async (req, reply) => { // Device integration console view: access info + credentials + recent command/receipt history.
@@ -491,12 +606,23 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
        LIMIT 20`,
       [auth.tenant_id, device_id]
     ); // End receipt query.
+    await ensureDeviceCapabilityRuntime(pool);
+    const capabilityQ = await pool.query(
+      `SELECT capabilities, updated_ts_ms
+         FROM device_capability
+        WHERE tenant_id = $1 AND device_id = $2
+        LIMIT 1`,
+      [auth.tenant_id, device_id]
+    );
+    const capabilityRow: any = capabilityQ.rows?.[0] ?? null;
 
     const access_info = buildAccessInfo(auth.tenant_id, device_id); // Deterministic integration hints used by the device console page.
 
     return reply.send({ // Return console aggregate payload.
       ok: true, // Success envelope.
       device: existsQ.rows[0], // Base device summary.
+      capabilities: Array.isArray(capabilityRow?.capabilities) ? capabilityRow.capabilities : [],
+      capabilities_updated_ts_ms: capabilityRow?.updated_ts_ms == null ? null : Number(capabilityRow.updated_ts_ms),
       access_info, // Integration hints and warnings.
       credentials: credentialsQ.rows ?? [], // Recent credential summaries.
       recent_commands: commandsQ.rows ?? [], // Recent command history.
@@ -575,8 +701,23 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         fact_id: String(row.fact_id),
       })); // Normalize fallback rows.
     } // End fallback.
+    await ensureDeviceCapabilityRuntime(pool);
+    const capabilityQ = await pool.query(
+      `SELECT capabilities, updated_ts_ms
+         FROM device_capability
+        WHERE tenant_id = $1 AND device_id = $2
+        LIMIT 1`,
+      [auth.tenant_id, device_id]
+    );
+    const capabilityRow: any = capabilityQ.rows?.[0] ?? null;
 
-    return reply.send({ ok: true, device: q.rows[0], latest_telemetry: latestTelemetryRows }); // Return enriched detail.
+    return reply.send({
+      ok: true,
+      device: q.rows[0],
+      capabilities: Array.isArray(capabilityRow?.capabilities) ? capabilityRow.capabilities : [],
+      capabilities_updated_ts_ms: capabilityRow?.updated_ts_ms == null ? null : Number(capabilityRow.updated_ts_ms),
+      latest_telemetry: latestTelemetryRows
+    }); // Return enriched detail.
   }); // End get.
 
   app.post("/api/v1/devices/onboarding/register", async (req, reply) => { // Stable onboarding endpoint that cannot collide with :device_id route.

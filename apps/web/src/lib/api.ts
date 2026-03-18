@@ -46,7 +46,7 @@ export function persistAoActToken(next: string): string { // Persist the AO-ACT 
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   const token = readStoredAoActToken();
-  const apiBase = "http://127.0.0.1:3001";
+  const apiBase = "http://127.0.0.1:3000";
   const finalUrl = /^https?:\/\//i.test(url) ? url : `${apiBase}${url}`;
 
   const baseHeaders =
@@ -736,25 +736,28 @@ export type EvidenceExportScopeType = "TENANT" | "FIELD" | "DEVICE";
 export type EvidenceExportJob = any;
 
 export async function fetchEvidenceExportJobs(token: string, params?: Record<string, unknown>): Promise<EvidenceExportJob[]> {
-  const res = await requestJson<{ ok?: boolean; items?: EvidenceExportJob[] }>(
+  const res = await requestJson<{ ok?: boolean; jobs?: EvidenceExportJob[] }>(
     withQuery(`/api/v1/evidence-export/jobs`, params),
     { headers: authHeaders(token) },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  return Array.isArray(res.jobs) ? res.jobs : [];
 }
 
-export async function fetchEvidenceExportJob(token: string, jobId: string): Promise<EvidenceExportJob> {
-  return requestJson<EvidenceExportJob>(`/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}`, {
-    headers: authHeaders(token),
-  });
+export async function fetchEvidenceExportJob(token: string, jobId: string): Promise<EvidenceExportJob | null> {
+  const res = await requestJson<{ ok?: boolean; job?: EvidenceExportJob }>(
+    `/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}`,
+    { headers: authHeaders(token) },
+  );
+  return res.job ?? null;
 }
 
-export async function createEvidenceExportJob(token: string, body: any): Promise<any> {
-  return requestJson<any>(`/api/v1/evidence-export/jobs`, {
+export async function createEvidenceExportJob(token: string, body: any): Promise<string> {
+  const res = await requestJson<{ ok?: boolean; job_id?: string }>(`/api/v1/evidence-export/jobs`, {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify(body),
   });
+  return String(res.job_id ?? "");
 }
 
 // -----------------------------
@@ -1037,3 +1040,4 @@ export async function fetchAgronomyRecommendationDetail(params: {
     group_id: params.group_id,
   }), { headers: authHeaders(token) });
 }
+

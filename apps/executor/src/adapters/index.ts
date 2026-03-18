@@ -4,8 +4,17 @@ export type AoActTask = {
   group_id: string;
   act_task_id: string;
   command_id: string;
+  operation_plan_id: string;
   action_type: string;
+  adapter_type: string | null;
+  adapter_hint: string | null;
   parameters: Record<string, unknown>;
+  meta: Record<string, unknown>;
+  outbox_fact_id?: string | null;
+  device_id?: string | null;
+  downlink_topic?: string | null;
+  qos?: number | null;
+  retain?: boolean | null;
 };
 
 export type DispatchResult = {
@@ -15,10 +24,15 @@ export type DispatchResult = {
   receipt_payload: Record<string, unknown> | null;
 };
 
-export type ActuatorAdapter = {
-  adapter_type: string;
-  supports(actionType: string): boolean;
-  dispatch(task: AoActTask): Promise<DispatchResult>;
+export type Receipt = {
+  command_id: string;
+  status?: string;
+  payload?: Record<string, unknown>;
+};
+
+export type Adapter = {
+  dispatch(task: AoActTask): Promise<{ command_id: string }>;
+  handleReceipt(msg: unknown): Receipt;
 };
 
 export type AdapterRuntimeContext = {
@@ -26,21 +40,4 @@ export type AdapterRuntimeContext = {
   token: string;
 };
 
-import { createIrrigationSimulatorAdapter } from "./irrigation_simulator";
-
-export function createAdapterRegistry(ctx: AdapterRuntimeContext): ActuatorAdapter[] {
-  return [
-    createIrrigationSimulatorAdapter(ctx)
-  ];
-}
-
-export function findAdapter(registry: ActuatorAdapter[], actionType: string): ActuatorAdapter {
-  const matches = registry.filter((adapter) => adapter.supports(actionType));
-  if (matches.length === 0) {
-    throw new Error(`ADAPTER_NOT_FOUND: action_type=${actionType}`);
-  }
-  if (matches.length > 1) {
-    throw new Error(`ADAPTER_CONFLICT: action_type=${actionType} match_count=${matches.length}`);
-  }
-  return matches[0];
-}
+export { createAdapterRegistry, findAdapter } from "./registry";

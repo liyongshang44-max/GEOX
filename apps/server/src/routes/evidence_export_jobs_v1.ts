@@ -564,6 +564,8 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
     } // End inject plan fact guard.
           const operationPlanId = String(planRecord?.payload?.operation_plan_id ?? '').trim(); // Read operation_plan_id for transition lookup.
 
+            let injectedApprovalDecision = false; // Track whether approval_decision_v1 has already been injected for this plan.
+
       const approvalDecisionFactId = String(planRecord?.payload?.approval_decision_fact_id ?? '').trim(); // Read approval_decision_fact_id for approval decision injection.
       if (approvalDecisionFactId && !seenFactIds.has(approvalDecisionFactId)) { // Inject linked approval_decision_v1 fact when present.
         const qApprovalDecision = await pool.query(
@@ -582,6 +584,62 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
           if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
             seenFactIds.add(String(decisionRow.fact_id));
             facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+            injectedApprovalDecision = true;
+          }
+        }
+      }
+
+      if (!injectedApprovalDecision) { // Fallback 1: locate approval_decision_v1 by approval_request_id.
+        const approvalRequestId = String(planRecord?.payload?.approval_request_id ?? '').trim();
+        if (approvalRequestId) {
+          const qApprovalDecisionByRequest = await pool.query(
+            `SELECT fact_id, occurred_at, source, record_json
+               FROM facts
+              WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
+                AND (
+                  (record_json::jsonb#>>'{payload,request_id}') = $1
+                  OR (record_json::jsonb#>>'{payload,approval_request_id}') = $1
+                )
+                AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+              ORDER BY occurred_at DESC, fact_id DESC
+              LIMIT 1`,
+            [approvalRequestId, tenant_id]
+          ); // End approval decision fallback-by-request query.
+          if ((qApprovalDecisionByRequest.rowCount ?? 0) > 0) {
+            const decisionRow = qApprovalDecisionByRequest.rows[0];
+            let decisionRecord: any = null;
+            try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+            if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+              seenFactIds.add(String(decisionRow.fact_id));
+              facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+              injectedApprovalDecision = true;
+            }
+          }
+        }
+      }
+
+      if (!injectedApprovalDecision) { // Fallback 2: locate approval_decision_v1 by act_task_id.
+        const actTaskId = String(planRecord?.payload?.act_task_id ?? '').trim();
+        if (actTaskId) {
+          const qApprovalDecisionByTask = await pool.query(
+            `SELECT fact_id, occurred_at, source, record_json
+               FROM facts
+              WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
+                AND (record_json::jsonb#>>'{payload,act_task_id}') = $1
+                AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+              ORDER BY occurred_at DESC, fact_id DESC
+              LIMIT 1`,
+            [actTaskId, tenant_id]
+          ); // End approval decision fallback-by-task query.
+          if ((qApprovalDecisionByTask.rowCount ?? 0) > 0) {
+            const decisionRow = qApprovalDecisionByTask.rows[0];
+            let decisionRecord: any = null;
+            try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+            if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+              seenFactIds.add(String(decisionRow.fact_id));
+              facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+              injectedApprovalDecision = true;
+            }
           }
         }
       }
@@ -605,15 +663,16 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
           }
         }
       }
-    const qTransition = await pool.query( // Query all operation_plan_transition_v1 rows for this plan.
-      `SELECT fact_id, occurred_at, source, record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
-        ORDER BY occurred_at ASC, fact_id ASC`,
-      [tenant_id, operationPlanId]
-    ); // End transition query.
+
+      const qTransition = await pool.query( // Query all operation_plan_transition_v1 rows for this plan.
+        `SELECT fact_id, occurred_at, source, record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
+          ORDER BY occurred_at ASC, fact_id ASC`,
+        [tenant_id, operationPlanId]
+      ); // End transition query.
     for (const transitionRow of qTransition.rows) { // Normalize and inject each transition fact.
       let transitionRecord: any = null; // Prepare parsed transition JSON.
       try { transitionRecord = typeof transitionRow.record_json === 'string' ? JSON.parse(transitionRow.record_json) : transitionRow.record_json; } catch { transitionRecord = null; } // Parse record_json safely.
@@ -648,6 +707,8 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
 
       const operationPlanId = String(planRecord?.payload?.operation_plan_id ?? '').trim(); // Read operation_plan_id for transition lookup.
 
+            let injectedApprovalDecision = false; // Track whether approval_decision_v1 has already been injected for this plan.
+
       const approvalDecisionFactId = String(planRecord?.payload?.approval_decision_fact_id ?? '').trim(); // Read approval_decision_fact_id for approval decision injection.
       if (approvalDecisionFactId && !seenFactIds.has(approvalDecisionFactId)) { // Inject linked approval_decision_v1 fact when present.
         const qApprovalDecision = await pool.query(
@@ -666,6 +727,62 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
           if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
             seenFactIds.add(String(decisionRow.fact_id));
             facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+            injectedApprovalDecision = true;
+          }
+        }
+      }
+
+      if (!injectedApprovalDecision) { // Fallback 1: locate approval_decision_v1 by approval_request_id.
+        const approvalRequestId = String(planRecord?.payload?.approval_request_id ?? '').trim();
+        if (approvalRequestId) {
+          const qApprovalDecisionByRequest = await pool.query(
+            `SELECT fact_id, occurred_at, source, record_json
+               FROM facts
+              WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
+                AND (
+                  (record_json::jsonb#>>'{payload,request_id}') = $1
+                  OR (record_json::jsonb#>>'{payload,approval_request_id}') = $1
+                )
+                AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+              ORDER BY occurred_at DESC, fact_id DESC
+              LIMIT 1`,
+            [approvalRequestId, tenant_id]
+          ); // End approval decision fallback-by-request query.
+          if ((qApprovalDecisionByRequest.rowCount ?? 0) > 0) {
+            const decisionRow = qApprovalDecisionByRequest.rows[0];
+            let decisionRecord: any = null;
+            try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+            if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+              seenFactIds.add(String(decisionRow.fact_id));
+              facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+              injectedApprovalDecision = true;
+            }
+          }
+        }
+      }
+
+      if (!injectedApprovalDecision) { // Fallback 2: locate approval_decision_v1 by act_task_id.
+        const actTaskId = String(planRecord?.payload?.act_task_id ?? '').trim();
+        if (actTaskId) {
+          const qApprovalDecisionByTask = await pool.query(
+            `SELECT fact_id, occurred_at, source, record_json
+               FROM facts
+              WHERE (record_json::jsonb->>'type') = 'approval_decision_v1'
+                AND (record_json::jsonb#>>'{payload,act_task_id}') = $1
+                AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+              ORDER BY occurred_at DESC, fact_id DESC
+              LIMIT 1`,
+            [actTaskId, tenant_id]
+          ); // End approval decision fallback-by-task query.
+          if ((qApprovalDecisionByTask.rowCount ?? 0) > 0) {
+            const decisionRow = qApprovalDecisionByTask.rows[0];
+            let decisionRecord: any = null;
+            try { decisionRecord = typeof decisionRow.record_json === 'string' ? JSON.parse(decisionRow.record_json) : decisionRow.record_json; } catch { decisionRecord = null; }
+            if (decisionRecord && !seenFactIds.has(String(decisionRow.fact_id))) {
+              seenFactIds.add(String(decisionRow.fact_id));
+              facts.push({ fact_id: decisionRow.fact_id, occurred_at: decisionRow.occurred_at, source: decisionRow.source, record_json: decisionRecord });
+              injectedApprovalDecision = true;
+            }
           }
         }
       }

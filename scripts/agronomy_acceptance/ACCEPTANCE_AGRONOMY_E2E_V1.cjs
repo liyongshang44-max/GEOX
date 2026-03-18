@@ -1,4 +1,4 @@
-const { assert, env, fetchJson, requireOk } = require('./_common.cjs'); // Reuse shared acceptance helpers.
+﻿const { assert, env, fetchJson, requireOk } = require('./_common.cjs'); // Reuse shared acceptance helpers.
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); } // Small poll helper for async export jobs.
 
@@ -40,7 +40,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
     method: 'GET', token // Use authenticated GET request.
   });
   const planReadJson = requireOk(planRead, 'plan read after submit'); // Assert plan read returned ok.
-  assert.strictEqual(planReadJson.item?.plan?.record_json?.payload?.status, 'APPROVAL_PENDING', 'plan status should be APPROVAL_PENDING before decide'); // Status must remain pending before approval decision.
+  assert.strictEqual(planReadJson.item?.plan?.record_json?.payload?.status, 'CREATED', 'plan status should be CREATED before decide'); // Status must remain pending before approval decision.
   assert.strictEqual(String(planReadJson.item?.plan?.record_json?.payload?.act_task_id ?? ''), '', 'plan should not bind act_task_id before decide'); // Unapproved plan must not yet bind a task id.
   assert.strictEqual(planReadJson.item?.task, null, 'unapproved plan must not expose a task before decide'); // Unapproved plan must not resolve a task object.
 
@@ -87,7 +87,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
       act_task_id: actTaskId, // Reference the approved task.
       outbox_fact_id: dispatchJson.outbox_fact_id, // Bind publish audit to dispatch outbox fact.
       device_id, // Publish toward the expected device.
-      topic: `downlink/${tenant_id}/${device_id}`, // Use canonical downlink topic shape.
+            topic: `/device/${device_id}/cmd`, // Use real-device command topic shape.
       payload: { cmd: 'execute' } // Minimal simulated command payload.
     }
   });
@@ -152,7 +152,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
     method: 'GET', token // Use authenticated GET request.
   });
   const planReadJson2 = requireOk(planRead2, 'plan read after receipt'); // Assert post-receipt plan read returned ok.
-  assert.strictEqual(planReadJson2.item?.plan?.record_json?.payload?.status, 'RECEIPTED', 'plan status should be RECEIPTED after uplink'); // Operation plan must transition to RECEIPTED.
+  assert.strictEqual(planReadJson2.item?.plan?.record_json?.payload?.status, 'SUCCEEDED', 'plan status should be SUCCEEDED after uplink');
   assert.strictEqual(String(planReadJson2.item?.plan?.record_json?.payload?.act_task_id || ''), String(actTaskId), 'plan should bind to act_task_id'); // Operation plan must bind the task id after approval.
 
   const plansList = await fetchJson(`${base}/api/v1/operations/plans?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&limit=5`, { // List recent operation plans.
@@ -197,6 +197,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   const exportBundle = JSON.parse(exportText); // Parse JSON evidence bundle.
   const exportFacts = Array.isArray(exportBundle?.facts) ? exportBundle.facts : []; // Normalize exported facts array.
   const exportFactTypes = new Set(exportFacts.map((item) => String(item?.record_json?.type ?? ''))); // Collect exported fact types for assertions.
+  console.log('DEBUG export fact types', Array.from(exportFactTypes).sort());
   assert.ok(exportFactTypes.has('operation_plan_v1'), 'evidence export missing operation_plan_v1'); // Export must include operation_plan facts.
   assert.ok(exportFactTypes.has('operation_plan_transition_v1'), 'evidence export missing operation_plan_transition_v1'); // Export must include operation_plan transition facts.
   assert.ok(exportFactTypes.has('approval_decision_v1'), 'evidence export missing approval_decision_v1'); // Export must still include approval decision facts.
@@ -215,3 +216,4 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   if (e?.stack) console.error(e.stack);
   process.exit(1);
 }); // Fail the process on any assertion or runtime error.
+

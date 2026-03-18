@@ -57,6 +57,17 @@ CREATE TABLE IF NOT EXISTS device_binding_index_v1 (
 CREATE INDEX IF NOT EXISTS device_binding_index_v1_lookup_idx
   ON device_binding_index_v1 (tenant_id, field_id, device_id);
 
+CREATE TABLE IF NOT EXISTS device_capability (
+  tenant_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  capabilities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  updated_ts_ms BIGINT NOT NULL,
+  PRIMARY KEY (tenant_id, device_id)
+);
+
+CREATE INDEX IF NOT EXISTS device_capability_lookup_idx
+  ON device_capability (tenant_id, device_id);
+
 CREATE TABLE IF NOT EXISTS telemetry_index_v1 (
   tenant_id TEXT NOT NULL,
   device_id TEXT NOT NULL,

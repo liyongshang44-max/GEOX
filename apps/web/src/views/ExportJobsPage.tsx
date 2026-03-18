@@ -39,7 +39,7 @@ export default function ExportJobsPage(): React.ReactElement {
     }
   });
   const [scopeType, setScopeType] = React.useState<EvidenceExportScopeType>("FIELD");
-  const [scopeId, setScopeId] = React.useState<string>("field_demo_001");
+  const [scopeId, setScopeId] = React.useState<string>("field_c8_demo");
   const [fromTs, setFromTs] = React.useState<string>(defaultWindowStart());
   const [toTs, setToTs] = React.useState<string>(defaultWindowEnd());
   const [jobs, setJobs] = React.useState<EvidenceExportJob[]>([]);
@@ -115,8 +115,9 @@ export default function ExportJobsPage(): React.ReactElement {
         export_format: exportFormat,
         export_language: exportLanguage,
       });
-      setStatus(`已创建导出任务 ${jobId}。`);
+      setStatus(`已创建导出任务 ${jobId}，正在生成，请稍候…`);
       await refresh(true);
+      setTimeout(() => { void refresh(true); }, 1000);
     } catch (e: any) {
       setStatus(`创建失败：${e?.message || String(e)}`);
     } finally {
@@ -173,7 +174,7 @@ export default function ExportJobsPage(): React.ReactElement {
                 value={scopeId}
                 onChange={(e) => setScopeId(e.target.value)}
                 disabled={scopeType === "TENANT"}
-                placeholder={scopeType === "DEVICE" ? "dev_001" : scopeType === "FIELD" ? "field_demo_001" : "TENANT 无需填写"}
+                placeholder={scopeType === "DEVICE" ? "dev_onboard_accept_001" : scopeType === "FIELD" ? "field_c8_demo" : "TENANT 无需填写"}
               />
             </label>
             <div className="field fieldAction">

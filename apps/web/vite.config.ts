@@ -1,4 +1,4 @@
-import { defineConfig } from "vite"; // Import Vite config helper.
+﻿import { defineConfig } from "vite"; // Import Vite config helper.
 import react from "@vitejs/plugin-react"; // Import React plugin for Vite.
 import path from "node:path"; // Import Node path utilities.
 
@@ -29,7 +29,7 @@ export default defineConfig({
   port: 5173,
   proxy: {
     "/api": {
-      target: "http://127.0.0.1:3001",
+      target: "http://127.0.0.1:3000",
       changeOrigin: true,
     },
   },

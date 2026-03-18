@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
 
 type Lang = "zh" | "en";

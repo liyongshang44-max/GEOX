@@ -1,4 +1,4 @@
-import type { ActuatorAdapter, AdapterRuntimeContext, AoActTask, DispatchResult } from "./index";
+import type { Adapter, AdapterRuntimeContext, AoActTask, Receipt } from "./index";
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
   const headers: Record<string, string> = {
@@ -15,41 +15,32 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   return obj;
 }
 
-export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): ActuatorAdapter {
+export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
-    adapter_type: "irrigation_simulator",
-    supports(actionType: string): boolean {
-      return actionType === "IRRIGATE" || actionType === "irrigation.start";
+    async dispatch(task: AoActTask): Promise<{ command_id: string }> {
+      const payload = {
+        tenant_id: task.tenant_id,
+        project_id: task.project_id,
+        group_id: task.group_id,
+        act_task_id: task.act_task_id,
+        command_id: task.command_id,
+        parameters: task.parameters
+      };
+      const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const commandId = String(out?.command_id ?? task.command_id).trim();
+      if (!commandId) throw new Error(`invalid irrigation execute response: ${JSON.stringify(out)}`);
+      return { command_id: commandId };
     },
-    async dispatch(task: AoActTask): Promise<DispatchResult> {
-      try {
-        const payload = {
-          tenant_id: task.tenant_id,
-          project_id: task.project_id,
-          group_id: task.group_id,
-          act_task_id: task.act_task_id,
-          command_id: task.command_id,
-          parameters: task.parameters
-        };
-        const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-
-        return {
-          adapter_type: "irrigation_simulator",
-          success: true,
-          error: null,
-          receipt_payload: out && typeof out === "object" ? out : null
-        };
-      } catch (error: any) {
-        return {
-          adapter_type: "irrigation_simulator",
-          success: false,
-          error: error?.message ?? String(error),
-          receipt_payload: null
-        };
-      }
+    handleReceipt(msg: unknown): Receipt {
+      const payload = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
+      return {
+        command_id: String(payload.command_id ?? payload.act_task_id ?? ""),
+        status: typeof payload.status === "string" ? payload.status : undefined,
+        payload
+      };
     }
   };
 }

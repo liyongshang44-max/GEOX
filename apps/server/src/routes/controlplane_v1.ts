@@ -13,6 +13,14 @@ import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } fro
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
 
 type ParsedFactRow = { fact_id: string; occurred_at: string; source: string; record_json: any }; // Normalized fact row.
+type OperationPlanStateReadModelRow = {
+  plan_id: string;
+  status: string;
+  device_id: string | null;
+  field_id: string | null;
+  last_transition: string | null;
+  receipt_status: string | null;
+}; // Canonical state-centric read model row for UI/backend convergence.
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
@@ -128,7 +136,7 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
        queue_id, tenant_id, project_id, group_id, act_task_id, command_id, task_fact_id, outbox_fact_id,
        device_id, downlink_topic, qos, retain, adapter_hint, state,
        created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'CREATED',NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'READY',NOW(),NOW())
      ON CONFLICT (tenant_id, project_id, group_id, act_task_id)
      DO UPDATE SET
        command_id = EXCLUDED.command_id,
@@ -157,6 +165,91 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
       row.adapter_hint
     ]
   ); // READY rows are mutable runtime state derived from immutable facts.
+}
+
+async function enqueueReadyDispatchForTask(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  tenant: TenantTriple,
+  taskFact: ParsedFactRow,
+  operationPlan: ParsedFactRow
+): Promise<{
+  outbox_fact_id: string;
+  device_id: string | null;
+  downlink_topic: string | null;
+  adapter_hint: string | null;
+}> {
+  const taskPayload = taskFact.record_json?.payload ?? {};
+  const planPayload = operationPlan.record_json?.payload ?? {};
+
+  const act_task_id = String(taskPayload.act_task_id ?? "").trim();
+  const command_id = String(taskPayload.command_id ?? act_task_id).trim() || act_task_id;
+  if (!act_task_id) throw new Error("MISSING_ACT_TASK_ID_FOR_QUEUE_READY");
+
+  const device_id =
+    typeof taskPayload?.meta?.device_id === "string" && taskPayload.meta.device_id.trim()
+      ? String(taskPayload.meta.device_id).trim()
+      : null;
+
+  const downlink_topic = device_id ? `/device/${device_id}/cmd` : null;
+
+  const planAdapterType =
+    typeof planPayload?.adapter_type === "string" && planPayload.adapter_type.trim()
+      ? String(planPayload.adapter_type).trim()
+      : null;
+
+  const metaAdapterType =
+    typeof taskPayload?.meta?.adapter_type === "string" && String(taskPayload.meta.adapter_type).trim()
+      ? String(taskPayload.meta.adapter_type).trim()
+      : null;
+
+  const adapter_hint = normalizeAdapterHint(planAdapterType ?? metaAdapterType);
+
+  const qos = 1;
+  const retain = false;
+  const dispatch_mode = "OUTBOX_ONLY";
+
+  const outbox_fact_id = await insertFact(pool, "api/v1/ao-act/tasks/dispatch", {
+    type: "ao_act_dispatch_outbox_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      act_task_id,
+      command_id,
+      task_fact_id: taskFact.fact_id,
+      device_id,
+      downlink_topic,
+      qos,
+      retain,
+      actor_id: auth.actor_id,
+      token_id: auth.token_id,
+      dispatch_mode,
+      adapter_hint,
+      created_at_ts: Date.now()
+    }
+  });
+
+  await upsertDispatchQueueReady(pool, {
+    tenant,
+    queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
+    act_task_id,
+    command_id,
+    task_fact_id: String(taskFact.fact_id),
+    outbox_fact_id,
+    device_id,
+    downlink_topic,
+    qos,
+    retain,
+    adapter_hint
+  });
+
+  return {
+    outbox_fact_id,
+    device_id,
+    downlink_topic,
+    adapter_hint
+  };
 }
 
 async function claimDispatchQueueRows(
@@ -264,7 +357,7 @@ async function transitionDispatchQueueState(
 ): Promise<boolean> {
   await ensureDispatchQueueRuntime(pool);
   const allowedCurrentStates =
-    nextState === 'DISPATCHED' ? ['READY'] :
+    nextState === 'DISPATCHED' ? ['READY', 'DISPATCHED'] :
     nextState === 'ACKED' ? ['DISPATCHED'] :
     nextState === 'SUCCEEDED' ? ['ACKED', 'DISPATCHED'] :
     ['READY', 'DISPATCHED', 'ACKED'];
@@ -490,6 +583,130 @@ async function loadLatestOperationPlanByApprovalRequestId(
   return loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,approval_request_id", approval_request_id, tenant);
 }
 
+type OperationPlanStatusV1 = "CREATED" | "APPROVED" | "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
+
+const OPERATION_PLAN_NEXT_STATUS_V1: Record<Exclude<OperationPlanStatusV1, "SUCCEEDED" | "FAILED">, OperationPlanStatusV1> = {
+  CREATED: "APPROVED",
+  APPROVED: "READY",
+  READY: "DISPATCHED",
+  DISPATCHED: "ACKED",
+  ACKED: "SUCCEEDED"
+};
+
+async function transitionOperationPlanStateV1(
+  pool: Pool,
+  tenant: TenantTriple,
+  operationPlanFact: ParsedFactRow,
+  transition: {
+    next_status: OperationPlanStatusV1;
+    trigger: string;
+    approval_request_id?: string | null;
+    decision?: string | null;
+    decision_fact_id?: string | null;
+    act_task_id?: string | null;
+    receipt_fact_id?: string | null;
+    terminal_reason?: string | null;
+  },
+  source: string
+): Promise<{ transition_fact_id: string; operation_plan_fact_id: string }> {
+  const payload = operationPlanFact.record_json?.payload ?? {};
+const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
+if (!operation_plan_id) throw new Error("MISSING_OPERATION_PLAN_ID");
+
+const currentStatusRaw = String(payload.status ?? "").trim().toUpperCase();
+const current_status: OperationPlanStatusV1 = (currentStatusRaw || "CREATED") as OperationPlanStatusV1;
+const next_status = transition.next_status;
+
+if (current_status === "SUCCEEDED" || current_status === "FAILED") {
+  throw new Error("OPERATION_PLAN_TERMINAL");
+}
+
+const allowedNextStatuses: Record<OperationPlanStatusV1, OperationPlanStatusV1[]> = {
+  CREATED: ["APPROVED"],
+  APPROVED: ["READY"],
+  READY: ["DISPATCHED"],
+  DISPATCHED: ["ACKED", "FAILED"],
+  ACKED: ["SUCCEEDED", "FAILED"],
+  SUCCEEDED: [],
+  FAILED: []
+};
+
+const allowed = allowedNextStatuses[current_status] ?? [];
+if (!allowed.includes(next_status)) {
+  throw new Error(`INVALID_OPERATION_PLAN_TRANSITION:${current_status}->${next_status}`);
+}
+
+  const transition_fact_id = await insertFact(pool, source, {
+    type: "operation_plan_transition_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      from_status: current_status,
+      status: next_status,
+      trigger: transition.trigger,
+      approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
+      decision: transition.decision ?? null,
+      decision_fact_id: transition.decision_fact_id ?? null,
+      act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
+      receipt_fact_id: transition.receipt_fact_id ?? payload.receipt_fact_id ?? null,
+      terminal_reason: transition.terminal_reason ?? null,
+      created_ts: Date.now()
+    }
+  });
+  const operation_plan_fact_id = await insertFact(pool, source, {
+    type: "operation_plan_v1",
+    payload: {
+      ...payload,
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      status: next_status,
+      approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
+      act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
+      receipt_fact_id: transition.receipt_fact_id ?? payload.receipt_fact_id ?? null,
+      updated_ts: Date.now()
+    }
+  });
+  return { transition_fact_id, operation_plan_fact_id };
+}
+
+async function ensureOperationPlanAtLeastDispatched(
+  pool: Pool,
+  tenant: TenantTriple,
+  operation_plan_id: string,
+  act_task_id: string,
+  source: string,
+  trigger: string
+): Promise<{ transition_fact_id: string; operation_plan_fact_id: string } | null> {
+  const latestPlan = await loadLatestFactByTypeAndKey(
+    pool,
+    "operation_plan_v1",
+    "payload,operation_plan_id",
+    operation_plan_id,
+    tenant
+  );
+  if (!latestPlan) return null;
+
+  const currentStatus = String(latestPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
+  if (currentStatus === "READY") {
+    return transitionOperationPlanStateV1(
+      pool,
+      tenant,
+      latestPlan,
+      {
+        next_status: "DISPATCHED",
+        trigger,
+        act_task_id
+      },
+      source
+    );
+  }
+  return null;
+}
+
 async function listOperationPlans(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
   const sql = `
     WITH latest_transition AS (
@@ -566,6 +783,168 @@ async function listOperationPlans(pool: Pool, tenant: TenantTriple, limit: numbe
     receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
     receipt_occurred_at: row.receipt_occurred_at ? String(row.receipt_occurred_at) : null,
     receipt: parseJsonMaybe(row.receipt_json)
+  }));
+}
+
+let ensureOperationPlanStateReadModelRuntimePromise: Promise<void> | null = null; // Process-local guard for one-time read-model table init.
+
+async function ensureOperationPlanStateReadModelRuntime(pool: Pool): Promise<void> {
+  if (!ensureOperationPlanStateReadModelRuntimePromise) {
+    ensureOperationPlanStateReadModelRuntimePromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS operation_plan_state_v1_rm (
+          tenant_id text NOT NULL,
+          project_id text NOT NULL,
+          group_id text NOT NULL,
+          plan_id text NOT NULL,
+          status text NOT NULL,
+          device_id text NULL,
+          field_id text NULL,
+          last_transition timestamptz NULL,
+          receipt_status text NULL,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (tenant_id, project_id, group_id, plan_id)
+        )
+      `); // State-first read model table derived from immutable facts.
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_status ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, status, updated_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_device ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, device_id, updated_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_field ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, field_id, updated_at DESC)`);
+    })().catch((err) => {
+      ensureOperationPlanStateReadModelRuntimePromise = null; // Allow re-init after transient DB failure.
+      throw err;
+    });
+  }
+  await ensureOperationPlanStateReadModelRuntimePromise;
+}
+
+async function rebuildOperationPlanStateReadModel(pool: Pool, tenant: TenantTriple): Promise<number> {
+  await ensureOperationPlanStateReadModelRuntime(pool);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `DELETE FROM operation_plan_state_v1_rm
+       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id]
+    ); // Truncate tenant partition before replay.
+    const replay = await client.query(
+      `
+      WITH latest_plan AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
+          (record_json::jsonb) AS plan_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_transition AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
+          occurred_at AS transition_occurred_at
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_task AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
+          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+          (record_json::jsonb) AS task_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_receipt AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
+          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+          (record_json::jsonb#>>'{payload,status}') AS receipt_status
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
+      )
+      INSERT INTO operation_plan_state_v1_rm (
+        tenant_id, project_id, group_id, plan_id, status, device_id, field_id, last_transition, receipt_status, updated_at
+      )
+      SELECT
+        $1, $2, $3,
+        lp.plan_id,
+        COALESCE(NULLIF(lp.plan_json#>>'{payload,status}', ''), 'UNKNOWN') AS status,
+        COALESCE(
+          NULLIF(lp.plan_json#>>'{payload,meta,device_id}', ''),
+          NULLIF(lt.task_json#>>'{payload,meta,device_id}', '')
+        ) AS device_id,
+        COALESCE(
+          NULLIF(lp.plan_json#>>'{payload,target,field_id}', ''),
+          NULLIF(lp.plan_json#>>'{payload,target,ref}', ''),
+          NULLIF(lp.plan_json#>>'{payload,target,id}', ''),
+          CASE
+            WHEN jsonb_typeof(lp.plan_json#>'{payload,target}') = 'string' THEN NULLIF(lp.plan_json#>>'{payload,target}', '')
+            ELSE NULL
+          END
+        ) AS field_id,
+        ltr.transition_occurred_at,
+        lr.receipt_status,
+        NOW()
+      FROM latest_plan lp
+      LEFT JOIN latest_transition ltr ON ltr.plan_id = lp.plan_id
+      LEFT JOIN latest_task lt ON (lp.plan_json#>>'{payload,act_task_id}') = lt.act_task_id
+      LEFT JOIN latest_receipt lr ON (lp.plan_json#>>'{payload,act_task_id}') = lr.act_task_id
+      `,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id]
+    ); // Replay facts to regenerate the canonical state projection.
+    await client.query("COMMIT");
+    return Number(replay.rowCount ?? 0);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function listOperationPlanStateReadModel(
+  pool: Pool,
+  tenant: TenantTriple,
+  q: any
+): Promise<OperationPlanStateReadModelRow[]> {
+  await ensureOperationPlanStateReadModelRuntime(pool);
+  const status = typeof q?.status === "string" && q.status.trim() ? q.status.trim().toUpperCase() : null;
+  const device_id = typeof q?.device_id === "string" && q.device_id.trim() ? q.device_id.trim() : null;
+  const field_id = typeof q?.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
+  const plan_id = typeof q?.plan_id === "string" && q.plan_id.trim() ? q.plan_id.trim() : null;
+  const limit = parseLimit(q);
+  const sql = `
+    SELECT plan_id, status, device_id, field_id, last_transition, receipt_status
+    FROM operation_plan_state_v1_rm
+    WHERE tenant_id = $1
+      AND project_id = $2
+      AND group_id = $3
+      AND ($4::text IS NULL OR status = $4)
+      AND ($5::text IS NULL OR device_id = $5)
+      AND ($6::text IS NULL OR field_id = $6)
+      AND ($7::text IS NULL OR plan_id = $7)
+    ORDER BY updated_at DESC, plan_id DESC
+    LIMIT $8
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, status, device_id, field_id, plan_id, limit]);
+  return (res.rows ?? []).map((row: any) => ({
+    plan_id: String(row.plan_id),
+    status: String(row.status ?? "UNKNOWN"),
+    device_id: row.device_id ? String(row.device_id) : null,
+    field_id: row.field_id ? String(row.field_id) : null,
+    last_transition: row.last_transition ? String(row.last_transition) : null,
+    receipt_status: row.receipt_status ? String(row.receipt_status) : null
   }));
 }
 
@@ -673,7 +1052,7 @@ function deriveDispatchTopic(tenant: TenantTriple, deviceId: string | null, body
   const explicit = typeof body?.downlink_topic === "string" ? body.downlink_topic.trim() : ""; // Allow explicit topic override.
   if (explicit) return explicit; // Use explicit topic when provided.
   if (!deviceId) return null; // Cannot derive default topic without device id.
-  return `downlink/${tenant.tenant_id}/${deviceId}`; // Default Commercial v1 MQTT downlink topic.
+  return `/device/${deviceId}/cmd`; // Real-device MQTT command topic.
 }
 
 function normalizeAdapterHint(raw: any): string | null {
@@ -686,7 +1065,7 @@ function normalizeAdapterHint(raw: any): string | null {
 function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
   const explicit = typeof body?.uplink_topic === "string" ? body.uplink_topic.trim() : ""; // Allow explicit receipt topic override.
   if (explicit) return explicit; // Use explicit topic when provided.
-  return `receipt/${tenant.tenant_id}/${deviceId}`; // Default Commercial v1 MQTT receipt uplink topic.
+  return `/device/${deviceId}/ack`; // Real-device MQTT ack topic.
 }
 
 function sha256Json(value: any): string {
@@ -865,6 +1244,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     let ao_act_fact_id: string | null = null; // Will remain null for REJECT.
     let wrapper_task_created_fact_id: string | null = null; // Wrapper fact id for Commercial v1 paths.
 
+    const operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    if (!operationPlan) return badRequest(reply, "OPERATION_PLAN_NOT_FOUND");
+    if (decision !== "APPROVE") return badRequest(reply, "OPERATION_PLAN_APPROVAL_REQUIRED");
+
     if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
       await insertFact(pool, "api/v1/approvals", {
@@ -885,6 +1270,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
+        operation_plan_id,
         approval_request_id: request_id,
         issuer: proposal.issuer,
         action_type: proposal.action_type,
@@ -893,7 +1279,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         parameter_schema: proposal.parameter_schema,
         parameters: proposal.parameters,
         constraints: proposal.constraints,
-        meta: proposal.meta ?? {}
+        meta: {
+          ...(proposal.meta ?? {}),
+          adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
+            ? String(operationPlan.record_json.payload.adapter_type)
+            : (proposal?.meta?.adapter_type ?? null)
+        }
       });
       if (!delegated.ok || !delegated.json?.ok) {
         return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_CREATE_FAILED", detail: delegated.json ?? null });
@@ -916,9 +1307,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }); // Wrapper fact gives Commercial v1 stable semantics without changing v0 core.
     }
 
-    const operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
-    const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
-
     const decision_id = `apd_${randomUUID().replace(/-/g, "")}`; // Decision identifier exposed to clients.
     const decision_fact_id = await insertFact(pool, "api/v1/approvals", {
       type: "approval_decision_v1",
@@ -938,46 +1326,74 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
 
-    let operation_plan_transition_fact_id: string | null = null;
-    let operation_plan_update_fact_id: string | null = null;
-    if (operation_plan_id) {
-      const nextStatus = decision === "APPROVE" ? "TASK_CREATED" : "REJECTED";
-      operation_plan_transition_fact_id = await insertFact(pool, "api/v1/approvals", {
-        type: "operation_plan_transition_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id,
-          status: nextStatus,
-          trigger: "approval_decision",
-          approval_request_id: request_id,
-          decision,
-          decision_fact_id,
-          act_task_id,
-          created_ts: Date.now()
-        }
-      });
-      operation_plan_update_fact_id = await insertFact(pool, "api/v1/approvals", {
-        type: "operation_plan_v1",
-        payload: {
-          ...(operationPlan?.record_json?.payload ?? {}),
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id,
-          approval_request_id: request_id,
-          approval_decision: decision,
-          approval_decision_fact_id: decision_fact_id,
-          act_task_id,
-          ao_act_fact_id,
-          status: nextStatus,
-          updated_ts: Date.now()
-        }
-      });
+    const approvedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
+      next_status: "APPROVED",
+      trigger: "approval_decision",
+      approval_request_id: request_id,
+      decision,
+      decision_fact_id,
+      act_task_id
+    }, "api/v1/approvals");
+    const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
+
+    const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, {
+      next_status: "READY",
+      trigger: "task_created",
+      approval_request_id: request_id,
+      decision,
+      decision_fact_id,
+      act_task_id
+    }, "api/v1/approvals");
+
+    const createdTaskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      String(act_task_id ?? "").trim(),
+      tenant
+    );
+    if (!createdTaskFact) {
+      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_APPROVE" });
     }
 
-    return reply.send({ ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id, operation_plan_id, operation_plan_transition_fact_id, operation_plan_update_fact_id });
+    const readyPlan = await loadLatestFactByTypeAndKey(
+      pool,
+      "operation_plan_v1",
+      "payload,operation_plan_id",
+      operation_plan_id,
+      tenant
+    );
+    if (!readyPlan) {
+      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
+    }
+
+    const readyQueue = await enqueueReadyDispatchForTask(
+      pool,
+      auth,
+      tenant,
+      createdTaskFact,
+      readyPlan
+    );
+
+    return reply.send({
+      ok: true,
+      request_id,
+      decision_id,
+      decision_fact_id,
+      act_task_id,
+      ao_act_fact_id,
+      wrapper_task_created_fact_id,
+      operation_plan_id,
+      outbox_fact_id: readyQueue.outbox_fact_id,
+      queue_ready: true,
+      device_id: readyQueue.device_id,
+      downlink_topic: readyQueue.downlink_topic,
+      adapter_hint: readyQueue.adapter_hint,
+      operation_plan_transition_fact_id: readyTransition.transition_fact_id,
+      operation_plan_update_fact_id: readyTransition.operation_plan_fact_id,
+      operation_plan_approved_transition_fact_id: approvedTransition.transition_fact_id
+    });
   });
 
   // POST /api/v1/ao-act/tasks
@@ -992,20 +1408,27 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       group_id: String(body.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const operation_plan_id = String(body.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
       ...body,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      operation_plan_id,
       approval_request_id: String(body.approval_request_id ?? "").trim()
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
+
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {
       type: "ao_act_task_created_v1",
       payload: {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
+        operation_plan_id,
         act_task_id: delegated.json.act_task_id,
         ao_act_fact_id: delegated.json.fact_id,
         actor_id: auth.actor_id,
@@ -1013,7 +1436,58 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         created_at_ts: Date.now()
       }
     });
-    return reply.send({ ok: true, act_task_id: delegated.json.act_task_id, ao_act_fact_id: delegated.json.fact_id, wrapper_fact_id });
+
+    const readyTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
+      next_status: "READY",
+      trigger: "task_created",
+      approval_request_id: String(body.approval_request_id ?? "").trim() || null,
+      act_task_id: String(delegated.json.act_task_id ?? "")
+    }, "api/v1/ao-act/tasks");
+
+    const createdTaskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      String(delegated.json.act_task_id ?? "").trim(),
+      tenant
+    );
+    if (!createdTaskFact) {
+      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_CREATE" });
+    }
+
+    const latestPlan = await loadLatestFactByTypeAndKey(
+      pool,
+      "operation_plan_v1",
+      "payload,operation_plan_id",
+      operation_plan_id,
+      tenant
+    );
+    if (!latestPlan) {
+      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
+    }
+
+    const readyQueue = await enqueueReadyDispatchForTask(
+      pool,
+      auth,
+      tenant,
+      createdTaskFact,
+      latestPlan
+    );
+
+    return reply.send({
+      ok: true,
+      act_task_id: delegated.json.act_task_id,
+      ao_act_fact_id: delegated.json.fact_id,
+      wrapper_fact_id,
+      operation_plan_id,
+      outbox_fact_id: readyQueue.outbox_fact_id,
+      queue_ready: true,
+      device_id: readyQueue.device_id,
+      downlink_topic: readyQueue.downlink_topic,
+      adapter_hint: readyQueue.adapter_hint,
+      operation_plan_transition_fact_id: readyTransition.transition_fact_id,
+      operation_plan_update_fact_id: readyTransition.operation_plan_fact_id
+    });
   });
 
   // GET /api/v1/ao-act/tasks
@@ -1065,6 +1539,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const latestReceipt = await loadLatestReceiptByCommandId(pool, command_id, tenant);
     if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
 
@@ -1084,14 +1562,35 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         retain: Boolean(existingPayload.retain ?? body.retain ?? false),
         adapter_hint: typeof existingPayload.adapter_hint === "string" ? normalizeAdapterHint(existingPayload.adapter_hint) : normalizeAdapterHint(body.adapter_hint)
       });
-      return reply.send({ ok: true, act_task_id, command_id, dispatch_fact_id: null, outbox_fact_id: existingOutbox.fact_id, already_queued: true });
+      const dispatchedTransition = await ensureOperationPlanAtLeastDispatched(
+        pool,
+        tenant,
+        operation_plan_id,
+        act_task_id,
+        "api/v1/ao-act/tasks/dispatch",
+        "task_dispatch_existing_outbox"
+      );
+      return reply.send({
+        ok: true,
+        act_task_id,
+        command_id,
+        dispatch_fact_id: null,
+        outbox_fact_id: existingOutbox.fact_id,
+        already_queued: true,
+        operation_plan_id,
+        operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
+        operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
+      });
     } // Explicit idempotency: one open outbox item per task until receipt exists.
 
     const taskRecord = taskFact.record_json ?? {}; // Joined AO-ACT task record used to derive adapter hints.
     const device_id = deriveDispatchDeviceId(body, taskRecord); // Prefer explicit device id; fallback to task meta.
     const downlink_topic = deriveDispatchTopic(tenant, device_id, body); // Resolve MQTT topic once at queue time.
     const dispatch_mode = String(body.dispatch_mode ?? "OUTBOX_ONLY").trim() || "OUTBOX_ONLY"; // Stable dispatch mode marker.
-    const adapter_hint = normalizeAdapterHint(body.adapter_hint); // Normalize aliases so queue consumers can match.
+    const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
+      ? String(operationPlan.record_json.payload.adapter_type)
+      : null;
+    const adapter_hint = normalizeAdapterHint(body.adapter_hint ?? planAdapterType); // Normalize aliases so queue consumers can match.
     const qos = Math.max(0, Math.min(2, Number.parseInt(String(body.qos ?? "1"), 10) || 1)); // MQTT QoS clamp.
     const retain = Boolean(body.retain ?? false); // MQTT retain flag.
 
@@ -1144,7 +1643,15 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       retain,
       adapter_hint
     });
-    return reply.send({ ok: true, act_task_id, command_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false });
+    const dispatchedTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
+      next_status: "DISPATCHED",
+      trigger: "task_dispatch",
+      act_task_id
+    }, "api/v1/ao-act/tasks/dispatch");
+    return reply.send({
+      ok: true, act_task_id, command_id, dispatch_fact_id, outbox_fact_id, device_id, downlink_topic, qos, retain, already_queued: false,
+      operation_plan_id, operation_plan_transition_fact_id: dispatchedTransition.transition_fact_id, operation_plan_update_fact_id: dispatchedTransition.operation_plan_fact_id
+    });
   });
 
 
@@ -1192,9 +1699,68 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (!["DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(state)) return badRequest(reply, "INVALID_STATE");
-    const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
-    if (!changed) return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-    return reply.send({ ok: true, act_task_id, command_id, state });
+     const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
+
+    // 关键：DISPATCHED 允许幂等重放。
+    // claim 阶段已经可能把 queue 置为 DISPATCHED，但此时 operation_plan 仍可能停在 READY，
+    // 所以这里不能因为 queue 未变化就直接 409，需要继续尝试推进 operation_plan。
+    if (!changed && state !== "DISPATCHED") {
+      return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+    }
+
+    const taskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      act_task_id,
+      tenant
+    );
+    const operation_plan_id = String(taskFact?.record_json?.payload?.operation_plan_id ?? "").trim();
+
+    let operation_plan_transition_fact_id: string | null = null;
+    let operation_plan_update_fact_id: string | null = null;
+
+    if (operation_plan_id) {
+      const operationPlan = await loadLatestFactByTypeAndKey(
+        pool,
+        "operation_plan_v1",
+        "payload,operation_plan_id",
+        operation_plan_id,
+        tenant
+      );
+
+      if (operationPlan) {
+        const currentPlanStatus = String(operationPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
+        const targetPlanStatus = String(state ?? "").trim().toUpperCase();
+
+        // 如果 plan 已经在目标状态，则视为幂等成功，不重复写 transition
+        if (currentPlanStatus !== targetPlanStatus) {
+          const transitioned = await transitionOperationPlanStateV1(
+            pool,
+            tenant,
+            operationPlan,
+            {
+              next_status: state as OperationPlanStatusV1,
+              trigger: "dispatch_state_update",
+              act_task_id
+            },
+            "api/v1/ao-act/dispatches/state"
+          );
+          operation_plan_transition_fact_id = transitioned.transition_fact_id;
+          operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+        }
+      }
+    }
+
+    return reply.send({
+      ok: true,
+      act_task_id,
+      command_id,
+      state,
+      operation_plan_id: operation_plan_id || null,
+      operation_plan_transition_fact_id,
+      operation_plan_update_fact_id
+    });
   });
   // GET /api/v1/ao-act/dispatches
   // Explicit adapter queue: outbox facts with no receipt yet.
@@ -1232,6 +1798,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const queueItem = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
     if (!queueItem) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     if (String(queueItem.fact_id) !== outbox_fact_id) return badRequest(reply, "OUTBOX_FACT_MISMATCH");
+    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
+    const operation_plan_id = String(taskFact?.record_json?.payload?.operation_plan_id ?? "").trim();
     const existingPublished = await loadLatestDownlinkPublishedByOutboxFactId(pool, outbox_fact_id, tenant);
     if (existingPublished) {
       await updateDispatchQueueStateByOutbox(pool, outbox_fact_id, {
@@ -1240,7 +1808,24 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
         leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
       });
-      return reply.send({ ok: true, published_fact_id: existingPublished.fact_id, already_published: true });
+      const dispatchedTransition = operation_plan_id
+        ? await ensureOperationPlanAtLeastDispatched(
+          pool,
+          tenant,
+          operation_plan_id,
+          act_task_id,
+          "api/v1/ao-act/downlinks/published",
+          "downlink_published"
+        )
+        : null;
+      return reply.send({
+        ok: true,
+        published_fact_id: existingPublished.fact_id,
+        already_published: true,
+        operation_plan_id: operation_plan_id || null,
+        operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
+        operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
+      });
     } // Idempotent publish audit: same outbox fact maps to one published fact.
     const latestReceipt = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
     if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
@@ -1270,7 +1855,23 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       leaseToken: typeof body.lease_token === "string" && body.lease_token.trim() ? body.lease_token.trim() : null,
       leasedBy: typeof body.executor_id === "string" && body.executor_id.trim() ? body.executor_id.trim() : null
     });
-    return reply.send({ ok: true, published_fact_id });
+    const dispatchedTransition = operation_plan_id
+      ? await ensureOperationPlanAtLeastDispatched(
+        pool,
+        tenant,
+        operation_plan_id,
+        act_task_id,
+        "api/v1/ao-act/downlinks/published",
+        "downlink_published"
+      )
+      : null;
+    return reply.send({
+      ok: true,
+      published_fact_id,
+      operation_plan_id: operation_plan_id || null,
+      operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
+      operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
+    });
   });
 
   // GET /api/v1/ao-act/downlinks
@@ -1325,6 +1926,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     const publishedFact = await loadLatestFactByTypeAndKey(pool, "ao_act_downlink_published_v1", "payload,act_task_id", act_task_id, tenant);
     if (!publishedFact) return badRequest(reply, "RECEIPT_BEFORE_PUBLISH");
     const publishedPayload = publishedFact.record_json?.payload ?? {};
@@ -1350,10 +1953,27 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         created_at_ts: Date.now()
       }
     });
-        const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`, String((req.headers as any).authorization ?? ""), {
+    await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, { state: "ACKED", ack_fact_id });
+    await ensureOperationPlanAtLeastDispatched(
+      pool,
+      tenant,
+      operation_plan_id,
+      act_task_id,
+      "api/v1/ao-act/receipts/uplink",
+      "receipt_uplink_pre_ack"
+    );
+    const latestPlanForAck = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!latestPlanForAck) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+    const ackedTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForAck, {
+      next_status: "ACKED",
+      trigger: "receipt_uplink_ack",
+      act_task_id
+    }, "api/v1/ao-act/receipts/uplink");
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/ao-act/receipts`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      operation_plan_id,
       task_id: act_task_id,
       act_task_id,
       command_id,
@@ -1375,42 +1995,16 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
-    await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, { state: "ACKED", ack_fact_id });
-    let operation_plan_transition_fact_id: string | null = null;
-    let operation_plan_update_fact_id: string | null = null;
-    const operationPlanForTask = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,act_task_id", act_task_id, tenant);
-    const operation_plan_id = operationPlanForTask?.record_json?.payload?.operation_plan_id ? String(operationPlanForTask.record_json.payload.operation_plan_id) : null;
-    if (operation_plan_id) {
-      operation_plan_transition_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
-        type: "operation_plan_transition_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id,
-          status: "RECEIPTED",
-          trigger: "receipt_uplink",
-          act_task_id,
-          receipt_fact_id: delegated.json.fact_id,
-          created_ts: Date.now()
-        }
-      });
-      operation_plan_update_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
-        type: "operation_plan_v1",
-        payload: {
-          ...(operationPlanForTask?.record_json?.payload ?? {}),
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id,
-          act_task_id,
-          status: "RECEIPTED",
-          receipt_fact_id: delegated.json.fact_id,
-          updated_ts: Date.now()
-        }
-      });
-    }
-    return reply.send({ ok: true, ack_fact_id, fact_id: delegated.json.fact_id, wrapper_fact_id: delegated.json.wrapper_fact_id, operation_plan_id, operation_plan_transition_fact_id, operation_plan_update_fact_id });
+    return reply.send({
+      ok: true,
+      ack_fact_id,
+      fact_id: delegated.json.fact_id,
+      wrapper_fact_id: delegated.json.wrapper_fact_id,
+      operation_plan_id,
+      operation_plan_acked_transition_fact_id: ackedTransition.transition_fact_id,
+      operation_plan_transition_fact_id: delegated.json.operation_plan_transition_fact_id ?? null,
+      operation_plan_update_fact_id: delegated.json.operation_plan_update_fact_id ?? null
+    });
   });
 
 
@@ -1440,8 +2034,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const actTaskId = String(planFact.record_json?.payload?.act_task_id ?? "").trim();
     const transition = await loadLatestFactByTypeAndKey(pool, "operation_plan_transition_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     const approval = approvalRequestId ? await loadLatestFactByTypeAndKey(pool, "approval_decision_v1", "payload,request_id", approvalRequestId, tenant) : null;
-    const task = actTaskId ? await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", actTaskId, tenant) : null;
-    const receipt = actTaskId ? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", actTaskId, tenant) : null;
+    const task = actTaskId
+      ? await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", actTaskId, tenant)
+      : await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,operation_plan_id", operation_plan_id, tenant);
+    const receipt = actTaskId
+      ? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", actTaskId, tenant)
+      : await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,operation_plan_id", operation_plan_id, tenant);
     return reply.send({ ok: true, item: { plan: planFact, transition, approval, task, receipt } });
   });
 
@@ -1456,6 +2054,40 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const payload = await buildOperationsConsole(pool, tenant);
     return reply.send({ ok: true, ...payload });
+  });
+
+  // GET /api/v1/operations/console/read-model
+  // Canonical state projection for operations console (supports plan/field/device/status filters).
+  app.get("/api/v1/operations/console/read-model", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const q: any = (req as any).query ?? {};
+    const items = await listOperationPlanStateReadModel(pool, tenant, q);
+    return reply.send({ ok: true, items });
+  });
+
+  // POST /api/v1/operations/console/read-model/rebuild
+  // Rebuild sequence: truncate tenant projection -> replay facts -> regenerate state rows.
+  app.post("/api/v1/operations/console/read-model/rebuild", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const body: any = req.body ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(body.tenant_id ?? auth.tenant_id),
+      project_id: String(body.project_id ?? auth.project_id),
+      group_id: String(body.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const rebuilt = await rebuildOperationPlanStateReadModel(pool, tenant);
+    return reply.send({
+      ok: true,
+      rebuilt,
+      mode: "truncate_replay_rebuild",
+      tenant
+    });
   });
 
   // POST /api/v1/ao-act/tasks/:act_task_id/retry
@@ -1541,9 +2173,16 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
+    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
+    if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
       act_task_id: task_id,
+      operation_plan_id,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id
@@ -1565,7 +2204,21 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const receiptStatus = String(body.status ?? '').toUpperCase();
     const terminalState = receiptStatus === 'FAILED' ? 'FAILED' : 'SUCCEEDED';
     await updateDispatchQueueStateByActTask(pool, tenant, task_id, { state: terminalState, receipt_fact_id: delegated.json.fact_id });
-    return reply.send({ ok: true, fact_id: delegated.json.fact_id, wrapper_fact_id });
+    const terminalTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
+      next_status: terminalState,
+      trigger: "receipt_recorded",
+      act_task_id: task_id,
+      receipt_fact_id: delegated.json.fact_id,
+      terminal_reason: terminalState === "FAILED" ? "receipt_status_failed" : "receipt_status_executed"
+    }, "api/v1/ao-act/receipts");
+    return reply.send({
+      ok: true,
+      fact_id: delegated.json.fact_id,
+      wrapper_fact_id,
+      operation_plan_id,
+      operation_plan_transition_fact_id: terminalTransition.transition_fact_id,
+      operation_plan_update_fact_id: terminalTransition.operation_plan_fact_id
+    });
   });
 
   // GET /api/v1/ao-act/receipts
