@@ -466,7 +466,7 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
     if (!auth) return; // Stop if auth failed.
 
     const p = (req as any).params ?? {}; // Read params.
-    const job_id = typeof p.job_id === "string" ? p.job_id.trim() : ""; // Extract job id.
+    const job_id = typeof p.job_id === "string" ? p.job_id.trim() : (typeof p.id === "string" ? p.id.trim() : ""); // Extract job id.
     const job = exportJobs.get(job_id); // Lookup job.
     if (!job) return reply.code(404).send({ ok: false, error: "NOT_FOUND" }); // 404 for missing job id.
 
