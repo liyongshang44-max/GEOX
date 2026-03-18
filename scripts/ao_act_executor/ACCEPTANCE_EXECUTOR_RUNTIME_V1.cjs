@@ -29,24 +29,107 @@ function requireOk(resp, label) {
   return resp.json;
 }
 
-async function createTask(base, token, triple, suffix, adapter_type = 'mqtt') {
-  const body = {
-    ...triple,
-    operation_plan_id: `op_${suffix}`,
-    approval_request_id: `apr_${suffix}`,
-    issuer: { kind: 'system', id: 'acceptance' },
-    action_type: 'irrigation.start',
-    target: { kind: 'device', id: env('DEVICE_ID', 'dev_onboard_accept_001') },
-    time_window: { start_ts: Date.now(), end_ts: Date.now() + 60000 },
-    parameter_schema: { type: 'object' },
-    parameters: { water_l: 12 },
-    constraints: {},
-    meta: { device_id: env('DEVICE_ID', 'dev_onboard_accept_001'), adapter_type }
+function recommendationBody(triple, deviceId, suffix) {
+  return {
+    tenant_id: triple.tenant_id,
+    project_id: triple.project_id,
+    group_id: triple.group_id,
+    field_id: env('FIELD_ID', 'field_c8_demo'),
+    season_id: env('SEASON_ID', 'season_demo'),
+    device_id: deviceId,
+    telemetry: { soil_moisture_pct: 18, canopy_temp_c: 33 },
+    image_recognition: {
+      stress_score: 0.8,
+      disease_score: 0.1,
+      pest_risk_score: 0.1,
+      confidence: 0.9
+    },
+    meta: { note: `executor_runtime_v1_${suffix}` }
   };
+}
 
-  const out = await fetchJson(`${base}/api/v1/ao-act/tasks`, { method: 'POST', token, body });
-  const json = requireOk(out, `create task ${suffix}`);
-  return String(json.act_task_id ?? '').trim();
+async function createApprovedTaskViaRecommendation(base, token, triple, suffix, deviceId) {
+  const recResp = await fetchJson(`${base}/api/v1/recommendations/generate`, {
+    method: 'POST',
+    token,
+    body: recommendationBody(triple, deviceId, suffix)
+  });
+  const recOut = requireOk(recResp, `generate recommendation ${suffix}`);
+
+  const recommendationId = String(
+    recOut.recommendations?.[0]?.recommendation_id
+    ?? recOut.items?.[0]?.recommendation_id
+    ?? recOut.recommendation_id
+    ?? ''
+  ).trim();
+  assert.ok(recommendationId, `recommendation_id missing for ${suffix}; body=${JSON.stringify(recOut)}`);
+
+  const submitResp = await fetchJson(
+    `${base}/api/v1/recommendations/${encodeURIComponent(recommendationId)}/submit-approval`,
+    {
+      method: 'POST',
+      token,
+      body: { ...triple }
+    }
+  );
+  const submitOut = requireOk(submitResp, `submit approval ${suffix}`);
+
+  const approvalRequestId = String(
+    submitOut.approval_request_id
+    ?? submitOut.item?.approval_request_id
+    ?? ''
+  ).trim();
+  assert.ok(approvalRequestId, `approval_request_id missing for ${suffix}; body=${JSON.stringify(submitOut)}`);
+
+  const decideResp = await fetchJson(
+    `${base}/api/v1/approvals/${encodeURIComponent(approvalRequestId)}/decide`,
+    {
+      method: 'POST',
+      token,
+      body: {
+        ...triple,
+        decision: 'APPROVE',
+        reason: `executor_runtime_v1_${suffix}`
+      }
+    }
+  );
+  const decideOut = requireOk(decideResp, `approve request ${suffix}`);
+
+  const actTaskId = String(
+    decideOut.act_task_id
+    ?? decideOut.item?.act_task_id
+    ?? ''
+  ).trim();
+  const operationPlanId = String(
+    decideOut.operation_plan_id
+    ?? decideOut.item?.operation_plan_id
+    ?? ''
+  ).trim();
+
+  assert.ok(actTaskId, `act_task_id missing in approve response: ${JSON.stringify(decideOut)}`);
+  assert.ok(operationPlanId, `operation_plan_id missing in approve response: ${JSON.stringify(decideOut)}`);
+
+  return { recommendationId, approvalRequestId, operationPlanId, actTaskId };
+}
+
+async function createTaskWithUnsupportedAction(base, token, triple, operationPlanId, suffix, deviceId) {
+  return fetchJson(`${base}/api/v1/ao-act/tasks`, {
+    method: 'POST',
+    token,
+    body: {
+      ...triple,
+      operation_plan_id: operationPlanId,
+      approval_request_id: `apr_neg_${suffix}`,
+      issuer: { kind: 'system', id: 'acceptance_negative' },
+      action_type: 'spray.start',
+      target: { kind: 'device', id: deviceId },
+      time_window: { start_ts: Date.now(), end_ts: Date.now() + 60000 },
+      parameter_schema: { type: 'object' },
+      parameters: { dosage_ml: 1 },
+      constraints: {},
+      meta: { device_id: deviceId, adapter_type: 'irrigation_http_v1' }
+    }
+  });
 }
 
 (async () => {
@@ -57,39 +140,44 @@ async function createTask(base, token, triple, suffix, adapter_type = 'mqtt') {
     project_id: env('PROJECT_ID', 'projectA'),
     group_id: env('GROUP_ID', 'groupA')
   };
+  const deviceId = env('DEVICE_ID', 'dev_onboard_accept_001');
+
   if (!token) throw new Error('MISSING_AO_ACT_TOKEN');
 
   const rid = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
-  // adapter 不支持 action 的拒绝
+  // 先走 recommendation → approval → operation_plan → act_task 合法链路
+  const seed = await createApprovedTaskViaRecommendation(base, token, triple, `seed_${rid}`, deviceId);
+
+  // adapter 不支持 action 的拒绝：必须使用真实 operation_plan_id，避免被 plan 校验提前拦截
   {
-    const bad = await fetchJson(`${base}/api/v1/ao-act/tasks`, {
-      method: 'POST',
-      token,
-      body: {
-        ...triple,
-        operation_plan_id: `op_bad_${rid}`,
-        action_type: 'spray.start',
-        meta: { device_id: env('DEVICE_ID', 'dev_onboard_accept_001'), adapter_type: 'irrigation_http_v1' }
-      }
-    });
-    assert.equal(bad.status, 400, `expect unsupported action reject, got ${bad.status} body=${bad.text}`);
+    const bad = await createTaskWithUnsupportedAction(base, token, triple, seed.operationPlanId, rid, deviceId);
+    assert.equal(bad.status, 400, `expected 400 for unsupported action, got ${bad.status} body=${bad.text}`);
+    assert.equal(
+      String(bad.json?.error ?? ''),
+      'ADAPTER_UNSUPPORTED_ACTION',
+      `unexpected error payload: ${bad.text}`
+    );
   }
 
-  const taskId = await createTask(base, token, triple, rid, 'mqtt');
-
-  // claim/lease
+  // claim / lease
   const claim = await fetchJson(`${base}/api/v1/ao-act/dispatches/claim`, {
     method: 'POST',
     token,
-    body: { ...triple, executor_id: `acc_exec_${rid}`, limit: 1, lease_seconds: 20, act_task_id: taskId }
+    body: {
+      ...triple,
+      executor_id: `acc_exec_${rid}`,
+      limit: 1,
+      lease_seconds: 20,
+      act_task_id: seed.actTaskId
+    }
   });
   const claimOut = requireOk(claim, 'claim dispatch');
   assert.ok(Array.isArray(claimOut.items) && claimOut.items.length >= 1, 'claim should return at least 1 item');
   const item = claimOut.items[0];
-  assert.ok(Number(item.attempt_no ?? 0) >= 1, 'attempt_no should be >= 1');
+  assert.ok(Number(item.attempt_no ?? item.attempt_count ?? 0) >= 1, 'attempt_no should be >= 1');
 
-  // 幂等 dispatch + retry
+  // dispatch + retry
   await execFileAsync('pnpm', [
     '--filter', '@geox/executor', 'exec', 'tsx', 'src/run_dispatch_once.ts',
     '--baseUrl', base,
@@ -98,51 +186,55 @@ async function createTask(base, token, triple, suffix, adapter_type = 'mqtt') {
     '--project_id', triple.project_id,
     '--group_id', triple.group_id,
     '--executor_id', `acc_exec_${rid}`,
-    '--limit', '1'
+    '--limit', '1',
+    '--lease_seconds', '20'
   ], { cwd: process.cwd(), env: process.env });
 
-  const retry = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(taskId)}/retry`, {
+  const retry = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(seed.actTaskId)}/retry`, {
     method: 'POST',
     token,
     body: { ...triple, retry_reason: 'acceptance_retry' }
   });
-  // task has receipt now => retry should be rejected or no-op depending server protection.
-  assert.ok([200, 400].includes(retry.status), `unexpected retry status=${retry.status} body=${retry.text}`);
+  assert.equal(retry.status, 400, `retry after receipt should be rejected, got ${retry.status} body=${retry.text}`);
 
   // receipt 去重（相同 task/attempt/code）
+  const dedupeKey = `${seed.actTaskId}:1:ACK`;
+
   const r1 = await fetchJson(`${base}/api/v1/ao-act/receipts`, {
     method: 'POST',
     token,
     body: {
       ...triple,
-      task_id: taskId,
-      command_id: taskId,
+      task_id: seed.actTaskId,
+      command_id: seed.actTaskId,
+      status: 'executed',
       meta: {
-        idempotency_key: `${taskId}:1:ACK`,
+        idempotency_key: dedupeKey,
         adapter_type: 'mqtt',
         attempt_no: 1,
         receipt_status: 'SUCCEEDED',
         receipt_code: 'ACK',
-        device_id: env('DEVICE_ID', 'dev_onboard_accept_001')
+        device_id: deviceId
       }
     }
   });
-  assert.ok([200, 409].includes(r1.status), `receipt write should pass or dedupe, got ${r1.status}`);
+  assert.ok([200, 409].includes(r1.status), `first receipt write should pass or already dedupe, got ${r1.status}`);
 
   const r2 = await fetchJson(`${base}/api/v1/ao-act/receipts`, {
     method: 'POST',
     token,
     body: {
       ...triple,
-      task_id: taskId,
-      command_id: taskId,
+      task_id: seed.actTaskId,
+      command_id: seed.actTaskId,
+      status: 'executed',
       meta: {
-        idempotency_key: `${taskId}:1:ACK`,
+        idempotency_key: dedupeKey,
         adapter_type: 'mqtt',
         attempt_no: 1,
         receipt_status: 'SUCCEEDED',
         receipt_code: 'ACK',
-        device_id: env('DEVICE_ID', 'dev_onboard_accept_001')
+        device_id: deviceId
       }
     }
   });
