@@ -1,4 +1,5 @@
 import { createIrrigationSimulatorAdapter } from "./irrigation_simulator";
+import { createIrrigationRealAdapter } from "./irrigation_real_adapter";
 import { createMqttAdapter } from "./mqtt";
 import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
 
@@ -17,7 +18,7 @@ function registerAdapter(registry: AdapterRegistry, adapterType: string, adapter
 
 function defaultAdapterTypeByActionType(actionType: string): string {
   const normalized = actionType.trim().toLowerCase();
-  if (normalized === "irrigation.start" || normalized === "irrigate") return "irrigation";
+  if (normalized === "irrigation.start" || normalized === "irrigate") return "irrigation_real";
   return "mqtt";
 }
 
@@ -36,7 +37,9 @@ function resolveTaskAdapterType(task: AoActTask): string {
 
 export function createAdapterRegistry(ctx: AdapterRuntimeContext): AdapterRegistry {
   const registry: AdapterRegistry = new Map<string, Adapter>();
-  registerAdapter(registry, "irrigation", createIrrigationSimulatorAdapter(ctx));
+  registerAdapter(registry, "irrigation", createIrrigationRealAdapter(ctx));
+  registerAdapter(registry, "irrigation_real", createIrrigationRealAdapter(ctx));
+  registerAdapter(registry, "irrigation_simulator", createIrrigationSimulatorAdapter(ctx));
   registerAdapter(registry, "mqtt", createMqttAdapter(ctx));
   return registry;
 }
@@ -48,6 +51,10 @@ export function findAdapter(registry: AdapterRegistry, task: AoActTask): { adapt
   if (adapter) return { adapterType: key, adapter };
 
   const normalizedHint = key;
+  if (normalizedHint === "irrigation") {
+    const irrigationRealAdapter = registry.get("irrigation_real");
+    if (irrigationRealAdapter) return { adapterType: "irrigation_real", adapter: irrigationRealAdapter };
+  }
   if (normalizedHint === "mqtt_downlink_once_v1") {
     const mqttAdapter = registry.get("mqtt");
     if (mqttAdapter) return { adapterType: "mqtt", adapter: mqttAdapter };

@@ -22,8 +22,8 @@ function parseArgs(argv: string[]): Args {
   const mqttUrl = get("mqttUrl") ?? process.env.GEOX_MQTT_URL ?? "mqtt://127.0.0.1:1883"; // Resolve broker URL.
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA"; // Resolve tenant id.
   const device_id = get("device_id") ?? process.env.GEOX_DEVICE_ID ?? "dev_001"; // Resolve device id.
-  const downlinkTopic = get("downlinkTopic") ?? process.env.GEOX_DOWNLINK_TOPIC ?? `downlink/${tenant_id}/${device_id}`; // Resolve downlink topic.
-  const receiptTopic = get("receiptTopic") ?? process.env.GEOX_RECEIPT_TOPIC ?? `receipt/${tenant_id}/${device_id}`; // Resolve receipt topic.
+  const downlinkTopic = get("downlinkTopic") ?? process.env.GEOX_DOWNLINK_TOPIC ?? `/device/${device_id}/cmd`; // Resolve downlink topic.
+  const receiptTopic = get("receiptTopic") ?? process.env.GEOX_RECEIPT_TOPIC ?? `/device/${device_id}/ack`; // Resolve receipt topic.
   const timeoutMs = Math.max(1000, Number.parseInt(get("timeoutMs") ?? process.env.GEOX_TIMEOUT_MS ?? "15000", 10) || 15000); // Clamp wait timeout.
   const targetActTaskId = get("targetActTaskId") ?? process.env.GEOX_TARGET_ACT_TASK_ID; // Optional specific act_task_id.
   return { mqttUrl, tenant_id, device_id, downlinkTopic, receiptTopic, timeoutMs, targetActTaskId }; // Return normalized args.
