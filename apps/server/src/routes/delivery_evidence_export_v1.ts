@@ -495,6 +495,5 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   }; // End download handler.
 
   app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route.
-  app.get("/evidence-export/jobs/:id/download", downloadHandler); // Stable commercial route alias.
   app.get("/evidence-export/jobs/:job_id/download", downloadHandler); // Stable alias with legacy param name.
 } // End register routes.
