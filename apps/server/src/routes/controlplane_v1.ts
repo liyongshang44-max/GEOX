@@ -128,7 +128,7 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
        queue_id, tenant_id, project_id, group_id, act_task_id, command_id, task_fact_id, outbox_fact_id,
        device_id, downlink_topic, qos, retain, adapter_hint, state,
        created_at, updated_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'CREATED',NOW(),NOW())
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'READY',NOW(),NOW())
      ON CONFLICT (tenant_id, project_id, group_id, act_task_id)
      DO UPDATE SET
        command_id = EXCLUDED.command_id,
@@ -157,6 +157,91 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
       row.adapter_hint
     ]
   ); // READY rows are mutable runtime state derived from immutable facts.
+}
+
+async function enqueueReadyDispatchForTask(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  tenant: TenantTriple,
+  taskFact: ParsedFactRow,
+  operationPlan: ParsedFactRow
+): Promise<{
+  outbox_fact_id: string;
+  device_id: string | null;
+  downlink_topic: string | null;
+  adapter_hint: string | null;
+}> {
+  const taskPayload = taskFact.record_json?.payload ?? {};
+  const planPayload = operationPlan.record_json?.payload ?? {};
+
+  const act_task_id = String(taskPayload.act_task_id ?? "").trim();
+  const command_id = String(taskPayload.command_id ?? act_task_id).trim() || act_task_id;
+  if (!act_task_id) throw new Error("MISSING_ACT_TASK_ID_FOR_QUEUE_READY");
+
+  const device_id =
+    typeof taskPayload?.meta?.device_id === "string" && taskPayload.meta.device_id.trim()
+      ? String(taskPayload.meta.device_id).trim()
+      : null;
+
+  const downlink_topic = device_id ? `downlink/${tenant.tenant_id}/${device_id}` : null;
+
+  const planAdapterType =
+    typeof planPayload?.adapter_type === "string" && planPayload.adapter_type.trim()
+      ? String(planPayload.adapter_type).trim()
+      : null;
+
+  const metaAdapterType =
+    typeof taskPayload?.meta?.adapter_type === "string" && String(taskPayload.meta.adapter_type).trim()
+      ? String(taskPayload.meta.adapter_type).trim()
+      : null;
+
+  const adapter_hint = normalizeAdapterHint(planAdapterType ?? metaAdapterType);
+
+  const qos = 1;
+  const retain = false;
+  const dispatch_mode = "OUTBOX_ONLY";
+
+  const outbox_fact_id = await insertFact(pool, "api/v1/ao-act/tasks/dispatch", {
+    type: "ao_act_dispatch_outbox_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      act_task_id,
+      command_id,
+      task_fact_id: taskFact.fact_id,
+      device_id,
+      downlink_topic,
+      qos,
+      retain,
+      actor_id: auth.actor_id,
+      token_id: auth.token_id,
+      dispatch_mode,
+      adapter_hint,
+      created_at_ts: Date.now()
+    }
+  });
+
+  await upsertDispatchQueueReady(pool, {
+    tenant,
+    queue_id: `dq_${randomUUID().replace(/-/g, "")}`,
+    act_task_id,
+    command_id,
+    task_fact_id: String(taskFact.fact_id),
+    outbox_fact_id,
+    device_id,
+    downlink_topic,
+    qos,
+    retain,
+    adapter_hint
+  });
+
+  return {
+    outbox_fact_id,
+    device_id,
+    downlink_topic,
+    adapter_hint
+  };
 }
 
 async function claimDispatchQueueRows(
@@ -264,7 +349,7 @@ async function transitionDispatchQueueState(
 ): Promise<boolean> {
   await ensureDispatchQueueRuntime(pool);
   const allowedCurrentStates =
-    nextState === 'DISPATCHED' ? ['READY'] :
+    nextState === 'DISPATCHED' ? ['READY', 'DISPATCHED'] :
     nextState === 'ACKED' ? ['DISPATCHED'] :
     nextState === 'SUCCEEDED' ? ['ACKED', 'DISPATCHED'] :
     ['READY', 'DISPATCHED', 'ACKED'];
@@ -517,14 +602,31 @@ async function transitionOperationPlanStateV1(
   source: string
 ): Promise<{ transition_fact_id: string; operation_plan_fact_id: string }> {
   const payload = operationPlanFact.record_json?.payload ?? {};
-  const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
-  if (!operation_plan_id) throw new Error("MISSING_OPERATION_PLAN_ID");
-  const currentStatusRaw = String(payload.status ?? "").trim().toUpperCase();
-  const current_status: OperationPlanStatusV1 = (currentStatusRaw || "CREATED") as OperationPlanStatusV1;
-  const next_status = transition.next_status;
-  const expectedNext = current_status === "ACKED" && next_status === "FAILED" ? "FAILED" : OPERATION_PLAN_NEXT_STATUS_V1[current_status as keyof typeof OPERATION_PLAN_NEXT_STATUS_V1];
-  if (current_status === "SUCCEEDED" || current_status === "FAILED") throw new Error("OPERATION_PLAN_TERMINAL");
-  if (expectedNext !== next_status) throw new Error(`INVALID_OPERATION_PLAN_TRANSITION:${current_status}->${next_status}`);
+const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
+if (!operation_plan_id) throw new Error("MISSING_OPERATION_PLAN_ID");
+
+const currentStatusRaw = String(payload.status ?? "").trim().toUpperCase();
+const current_status: OperationPlanStatusV1 = (currentStatusRaw || "CREATED") as OperationPlanStatusV1;
+const next_status = transition.next_status;
+
+if (current_status === "SUCCEEDED" || current_status === "FAILED") {
+  throw new Error("OPERATION_PLAN_TERMINAL");
+}
+
+const allowedNextStatuses: Record<OperationPlanStatusV1, OperationPlanStatusV1[]> = {
+  CREATED: ["APPROVED"],
+  APPROVED: ["READY"],
+  READY: ["DISPATCHED"],
+  DISPATCHED: ["ACKED", "FAILED"],
+  ACKED: ["SUCCEEDED", "FAILED"],
+  SUCCEEDED: [],
+  FAILED: []
+};
+
+const allowed = allowedNextStatuses[current_status] ?? [];
+if (!allowed.includes(next_status)) {
+  throw new Error(`INVALID_OPERATION_PLAN_TRANSITION:${current_status}->${next_status}`);
+}
 
   const transition_fact_id = await insertFact(pool, source, {
     type: "operation_plan_transition_v1",
@@ -1030,6 +1132,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }, "api/v1/approvals");
     const approvedPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     if (!approvedPlan) return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_UPDATE_FAILED" });
+
     const readyTransition = await transitionOperationPlanStateV1(pool, tenant, approvedPlan, {
       next_status: "READY",
       trigger: "task_created",
@@ -1039,8 +1142,50 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       act_task_id
     }, "api/v1/approvals");
 
+    const createdTaskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      String(act_task_id ?? "").trim(),
+      tenant
+    );
+    if (!createdTaskFact) {
+      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_APPROVE" });
+    }
+
+    const readyPlan = await loadLatestFactByTypeAndKey(
+      pool,
+      "operation_plan_v1",
+      "payload,operation_plan_id",
+      operation_plan_id,
+      tenant
+    );
+    if (!readyPlan) {
+      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
+    }
+
+    const readyQueue = await enqueueReadyDispatchForTask(
+      pool,
+      auth,
+      tenant,
+      createdTaskFact,
+      readyPlan
+    );
+
     return reply.send({
-      ok: true, request_id, decision_id, decision_fact_id, act_task_id, ao_act_fact_id, wrapper_task_created_fact_id, operation_plan_id,
+      ok: true,
+      request_id,
+      decision_id,
+      decision_fact_id,
+      act_task_id,
+      ao_act_fact_id,
+      wrapper_task_created_fact_id,
+      operation_plan_id,
+      outbox_fact_id: readyQueue.outbox_fact_id,
+      queue_ready: true,
+      device_id: readyQueue.device_id,
+      downlink_topic: readyQueue.downlink_topic,
+      adapter_hint: readyQueue.adapter_hint,
       operation_plan_transition_fact_id: readyTransition.transition_fact_id,
       operation_plan_update_fact_id: readyTransition.operation_plan_fact_id,
       operation_plan_approved_transition_fact_id: approvedTransition.transition_fact_id
@@ -1072,6 +1217,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       approval_request_id: String(body.approval_request_id ?? "").trim()
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
+
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {
       type: "ao_act_task_created_v1",
       payload: {
@@ -1086,15 +1232,57 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         created_at_ts: Date.now()
       }
     });
+
     const readyTransition = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
       next_status: "READY",
       trigger: "task_created",
       approval_request_id: String(body.approval_request_id ?? "").trim() || null,
       act_task_id: String(delegated.json.act_task_id ?? "")
     }, "api/v1/ao-act/tasks");
+
+    const createdTaskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      String(delegated.json.act_task_id ?? "").trim(),
+      tenant
+    );
+    if (!createdTaskFact) {
+      return reply.status(500).send({ ok: false, error: "TASK_FACT_NOT_FOUND_AFTER_CREATE" });
+    }
+
+    const latestPlan = await loadLatestFactByTypeAndKey(
+      pool,
+      "operation_plan_v1",
+      "payload,operation_plan_id",
+      operation_plan_id,
+      tenant
+    );
+    if (!latestPlan) {
+      return reply.status(500).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND_AFTER_READY" });
+    }
+
+    const readyQueue = await enqueueReadyDispatchForTask(
+      pool,
+      auth,
+      tenant,
+      createdTaskFact,
+      latestPlan
+    );
+
     return reply.send({
-      ok: true, act_task_id: delegated.json.act_task_id, ao_act_fact_id: delegated.json.fact_id, wrapper_fact_id,
-      operation_plan_id, operation_plan_transition_fact_id: readyTransition.transition_fact_id, operation_plan_update_fact_id: readyTransition.operation_plan_fact_id
+      ok: true,
+      act_task_id: delegated.json.act_task_id,
+      ao_act_fact_id: delegated.json.fact_id,
+      wrapper_fact_id,
+      operation_plan_id,
+      outbox_fact_id: readyQueue.outbox_fact_id,
+      queue_ready: true,
+      device_id: readyQueue.device_id,
+      downlink_topic: readyQueue.downlink_topic,
+      adapter_hint: readyQueue.adapter_hint,
+      operation_plan_transition_fact_id: readyTransition.transition_fact_id,
+      operation_plan_update_fact_id: readyTransition.operation_plan_fact_id
     });
   });
 
@@ -1289,25 +1477,68 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (!["DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(state)) return badRequest(reply, "INVALID_STATE");
-    const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
-    if (!changed) return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
+     const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
+
+    // 关键：DISPATCHED 允许幂等重放。
+    // claim 阶段已经可能把 queue 置为 DISPATCHED，但此时 operation_plan 仍可能停在 READY，
+    // 所以这里不能因为 queue 未变化就直接 409，需要继续尝试推进 operation_plan。
+    if (!changed && state !== "DISPATCHED") {
+      return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+    }
+
+    const taskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      act_task_id,
+      tenant
+    );
     const operation_plan_id = String(taskFact?.record_json?.payload?.operation_plan_id ?? "").trim();
+
     let operation_plan_transition_fact_id: string | null = null;
     let operation_plan_update_fact_id: string | null = null;
+
     if (operation_plan_id) {
-      const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+      const operationPlan = await loadLatestFactByTypeAndKey(
+        pool,
+        "operation_plan_v1",
+        "payload,operation_plan_id",
+        operation_plan_id,
+        tenant
+      );
+
       if (operationPlan) {
-        const transitioned = await transitionOperationPlanStateV1(pool, tenant, operationPlan, {
-          next_status: state as OperationPlanStatusV1,
-          trigger: "dispatch_state_update",
-          act_task_id
-        }, "api/v1/ao-act/dispatches/state");
-        operation_plan_transition_fact_id = transitioned.transition_fact_id;
-        operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+        const currentPlanStatus = String(operationPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
+        const targetPlanStatus = String(state ?? "").trim().toUpperCase();
+
+        // 如果 plan 已经在目标状态，则视为幂等成功，不重复写 transition
+        if (currentPlanStatus !== targetPlanStatus) {
+          const transitioned = await transitionOperationPlanStateV1(
+            pool,
+            tenant,
+            operationPlan,
+            {
+              next_status: state as OperationPlanStatusV1,
+              trigger: "dispatch_state_update",
+              act_task_id
+            },
+            "api/v1/ao-act/dispatches/state"
+          );
+          operation_plan_transition_fact_id = transitioned.transition_fact_id;
+          operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
+        }
       }
     }
-    return reply.send({ ok: true, act_task_id, command_id, state, operation_plan_id: operation_plan_id || null, operation_plan_transition_fact_id, operation_plan_update_fact_id });
+
+    return reply.send({
+      ok: true,
+      act_task_id,
+      command_id,
+      state,
+      operation_plan_id: operation_plan_id || null,
+      operation_plan_transition_fact_id,
+      operation_plan_update_fact_id
+    });
   });
   // GET /api/v1/ao-act/dispatches
   // Explicit adapter queue: outbox facts with no receipt yet.

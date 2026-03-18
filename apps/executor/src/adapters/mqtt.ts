@@ -10,34 +10,60 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } });
   const text = await res.text();
   let obj: any = null;
-  try { obj = text ? JSON.parse(text) : {}; } catch { obj = { _non_json: text }; }
+  try {
+    obj = text ? JSON.parse(text) : {};
+  } catch {
+    obj = { _non_json: text };
+  }
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
-}
-
-function normalizeAdapterHint(task: AoActTask): string {
-  const value = String(task.adapter_hint ?? task.adapter_type ?? "mqtt").trim().toLowerCase();
-  if (!value) return "mqtt_downlink_once_v1";
-  if (value === "mqtt") return "mqtt_downlink_once_v1";
-  return value;
 }
 
 export function createMqttAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
     async dispatch(task: AoActTask): Promise<{ command_id: string }> {
-      const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/tasks/${encodeURIComponent(task.act_task_id)}/dispatch`, ctx.token, {
-        method: "POST",
-        body: JSON.stringify({
-          tenant_id: task.tenant_id,
-          project_id: task.project_id,
-          group_id: task.group_id,
-          command_id: task.command_id,
-          adapter_hint: normalizeAdapterHint(task)
-        })
-      });
-      if (!out?.ok) throw new Error(`mqtt dispatch failed: ${JSON.stringify(out)}`);
+      const outbox_fact_id = String(task.outbox_fact_id ?? "").trim();
+      const device_id = String(task.device_id ?? task.meta?.device_id ?? "").trim();
+      const topic = String(task.downlink_topic ?? "").trim();
+
+      if (!outbox_fact_id) {
+        throw new Error(`mqtt adapter missing outbox_fact_id act_task_id=${task.act_task_id}`);
+      }
+      if (!device_id) {
+        throw new Error(`mqtt adapter missing device_id act_task_id=${task.act_task_id}`);
+      }
+      if (!topic) {
+        throw new Error(`mqtt adapter missing downlink_topic act_task_id=${task.act_task_id}`);
+      }
+
+      const out = await httpJson(
+        `${ctx.baseUrl}/api/v1/ao-act/downlinks/published`,
+        ctx.token,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            tenant_id: task.tenant_id,
+            project_id: task.project_id,
+            group_id: task.group_id,
+            act_task_id: task.act_task_id,
+            command_id: task.command_id,
+            outbox_fact_id,
+            device_id,
+            topic,
+            qos: task.qos ?? 1,
+            retain: task.retain ?? false,
+            adapter_runtime: "mqtt_downlink_once_v1"
+          })
+        }
+      );
+
+      if (!out?.ok) {
+        throw new Error(`mqtt publish failed: ${JSON.stringify(out)}`);
+      }
+
       return { command_id: task.command_id };
     },
+
     handleReceipt(msg: unknown): Receipt {
       const payload = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
       return {

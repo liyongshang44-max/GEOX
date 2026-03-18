@@ -10,6 +10,11 @@ export type AoActTask = {
   adapter_hint: string | null;
   parameters: Record<string, unknown>;
   meta: Record<string, unknown>;
+  outbox_fact_id?: string | null;
+  device_id?: string | null;
+  downlink_topic?: string | null;
+  qos?: number | null;
+  retain?: boolean | null;
 };
 
 export type DispatchResult = {
