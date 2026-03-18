@@ -183,7 +183,7 @@ async function enqueueReadyDispatchForTask(
       ? String(taskPayload.meta.device_id).trim()
       : null;
 
-  const downlink_topic = device_id ? `downlink/${tenant.tenant_id}/${device_id}` : null;
+  const downlink_topic = device_id ? `/device/${device_id}/cmd` : null;
 
   const planAdapterType =
     typeof planPayload?.adapter_type === "string" && planPayload.adapter_type.trim()
@@ -848,7 +848,7 @@ function deriveDispatchTopic(tenant: TenantTriple, deviceId: string | null, body
   const explicit = typeof body?.downlink_topic === "string" ? body.downlink_topic.trim() : ""; // Allow explicit topic override.
   if (explicit) return explicit; // Use explicit topic when provided.
   if (!deviceId) return null; // Cannot derive default topic without device id.
-  return `downlink/${tenant.tenant_id}/${deviceId}`; // Default Commercial v1 MQTT downlink topic.
+  return `/device/${deviceId}/cmd`; // Real-device MQTT command topic.
 }
 
 function normalizeAdapterHint(raw: any): string | null {
@@ -861,7 +861,7 @@ function normalizeAdapterHint(raw: any): string | null {
 function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
   const explicit = typeof body?.uplink_topic === "string" ? body.uplink_topic.trim() : ""; // Allow explicit receipt topic override.
   if (explicit) return explicit; // Use explicit topic when provided.
-  return `receipt/${tenant.tenant_id}/${deviceId}`; // Default Commercial v1 MQTT receipt uplink topic.
+  return `/device/${deviceId}/ack`; // Real-device MQTT ack topic.
 }
 
 function sha256Json(value: any): string {
