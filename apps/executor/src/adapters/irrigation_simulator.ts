@@ -18,11 +18,14 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
 export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
     async dispatch(task: AoActTask): Promise<{ command_id: string }> {
+      // This endpoint is executor-only.
+      // Never callable from recommendation / UI / approval flows.
+      // All execution must originate from approved AO-ACT tasks.
       const payload = {
         tenant_id: task.tenant_id,
         project_id: task.project_id,
         group_id: task.group_id,
-        act_task_id: task.act_task_id,
+        task_id: task.act_task_id,
         command_id: task.command_id,
         parameters: task.parameters
       };

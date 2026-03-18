@@ -661,8 +661,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
 
   app.post("/api/v1/simulators/irrigation/execute", async (req, reply) => {
     // This endpoint is executor-only.
-    // It must never be called from recommendation / approval / UI flows directly.
-    // All execution must be derived from approved AO-ACT task dispatch only.
+    // Never callable from recommendation / UI / approval flows.
+    // All execution must originate from approved AO-ACT tasks.
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
     if (!auth) return;
     if (!hasExecutorRuntimeScopes(auth)) {
@@ -687,29 +687,31 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: String(body.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const act_task_id = String(body.act_task_id ?? "").trim();
-const command_id = String(body.command_id ?? act_task_id).trim();
-if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
-if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
-if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
+    const task_id = String(body.task_id ?? "").trim();
+    const bodyActTaskId = String(body.act_task_id ?? "").trim();
+    if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
+    if (bodyActTaskId && bodyActTaskId !== task_id) return badRequest(reply, "TASK_ID_ACT_TASK_ID_MISMATCH");
+    const act_task_id = task_id;
+    const command_id = String(body.command_id ?? "").trim();
+    if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
+    if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_TASK_ID");
 
-const keyKind = await classifyExecutePrimaryKey(pool, tenant, act_task_id);
+    const keyKind = await classifyExecutePrimaryKey(pool, tenant, act_task_id);
+    if (keyKind === "recommendation") {
+      return badRequest(reply, "RECOMMENDATION_ID_NOT_ALLOWED");
+    }
+    if (keyKind === "approval_request") {
+      return badRequest(reply, "APPROVAL_REQUEST_ID_NOT_ALLOWED");
+    }
+    if (keyKind === "operation_plan") {
+      return badRequest(reply, "OPERATION_PLAN_ID_NOT_ALLOWED");
+    }
+    if (keyKind === "missing") {
+      return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
+    }
 
-if (keyKind === "recommendation") {
-  return badRequest(reply, "RECOMMENDATION_ID_NOT_ALLOWED");
-}
-if (keyKind === "approval_request") {
-  return badRequest(reply, "APPROVAL_REQUEST_ID_NOT_ALLOWED");
-}
-if (keyKind === "operation_plan") {
-  return badRequest(reply, "OPERATION_PLAN_ID_NOT_ALLOWED");
-}
-if (keyKind === "missing") {
-  return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
-}
-
-const approved = await assertApprovedForTask(pool, tenant, act_task_id);
-if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
+    const approved = await assertApprovedForTask(pool, tenant, act_task_id);
+    if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
     const startTs = Date.now();
     const endTs = startTs + 5_000;
     const idempotency_key = `irrigation_sim_${randomUUID().replace(/-/g, "")}`;

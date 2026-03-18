@@ -135,3 +135,4 @@ Judge 的评估对象始终是 group。
 十四、执行入口约束（新增）
 • recommendation 没有执行权；用户界面、recommendation 域和审批提交流程不得直接调用执行入口。
 • 执行入口仅供 executor runtime 在已批准 task 上调用。
+• 宪法级约束：执行只能通过 approval → AO-ACT task → executor，任何 recommendation 不能直接触发执行。
