@@ -101,6 +101,7 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   const group_id = env('GROUP_ID', 'groupA');
   const field_id = env('FIELD_ID', 'field_demo_1');
   const season_id = env('SEASON_ID', 'season_demo_1');
+  const device_id = env('DEVICE_ID', 'device_demo_1');
 
   const chainStartTs = Date.now() - 60_000;
 
@@ -108,7 +109,12 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
     method: 'POST',
     token,
     body: {
-      tenant_id, project_id, group_id, field_id, season_id, device_id: env('DEVICE_ID', 'device_demo_1'),
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      device_id,
       telemetry: { soil_moisture_pct: 19, canopy_temp_c: 34 },
       image_recognition: { stress_score: 0.64, disease_score: 0.42, pest_risk_score: 0.31, confidence: 0.9 }
     }
@@ -118,15 +124,24 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   assert.ok(recId, 'recommendation_id missing');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
-    method: 'POST', token, body: { tenant_id, project_id, group_id }
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id }
   });
   const subJson = requireOk(submit, 'submit approval');
   assert.ok(subJson.approval_request_id, 'approval_request_id missing');
   assert.ok(subJson.operation_plan_id, 'operation_plan_id missing');
 
   const decide = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(subJson.approval_request_id)}/decide`, {
-    method: 'POST', token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'agronomy executor idempotency acceptance' }
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'agronomy executor idempotency acceptance'
+    }
   });
   const decideJson = requireOk(decide, 'approval decide');
   const actTaskId = String(decideJson.act_task_id ?? '');
@@ -139,7 +154,8 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   const run1MatchedCommand = run1.output.includes(`command_id=${commandId}`);
 
   const receiptsAfterRun1 = await fetchJson(`${base}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=20`, {
-    method: 'GET', token
+    method: 'GET',
+    token
   });
   const receiptsAfterRun1Json = requireOk(receiptsAfterRun1, 'receipts after first executor run');
   const receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterRun1Json.items ?? [], commandId);
@@ -147,9 +163,10 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   const factsAfterRun1 = await exportFacts(base, token, chainStartTs, Date.now() + 2_000, field_id);
   const transitionCountAfterRun1 = countOperationPlanTransitions(factsAfterRun1, subJson.operation_plan_id);
   const exportReceiptFactCountAfterRun1 = countReceiptFactsByCommandOrTask(factsAfterRun1, commandId, actTaskId);
+
   assert.ok(
     run1MatchedCommand || transitionCountAfterRun1 >= 1 || exportReceiptFactCountAfterRun1 >= 1,
-    `first executor run should show progress by command log/transition/receipt-fact; run1_matched=${run1MatchedCommand} transition_count=${transitionCountAfterRun1} export_receipt_count=${exportReceiptFactCountAfterRun1}`
+    `first executor run should show progress by command log/transition/receipt-fact; run1_matched=${run1MatchedCommand} transition_count=${transitionCountAfterRun1} export_receipt_count=${exportReceiptFactCountAfterRun1}; output=${run1.output}; receipts=${receiptsAfterRun1.text}`
   );
 
   const run2 = await runDispatchExecutorOnce({ base, token, tenant_id, project_id, group_id, executorId });
@@ -160,16 +177,25 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   console.log('PASS same command_id not re-dispatched');
 
   const receiptsAfterRun2 = await fetchJson(`${base}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=20`, {
-    method: 'GET', token
+    method: 'GET',
+    token
   });
   const receiptsAfterRun2Json = requireOk(receiptsAfterRun2, 'receipts after second executor run');
   const receiptCountAfterRun2 = countReceiptsByCommand(receiptsAfterRun2Json.items ?? [], commandId);
-  assert.strictEqual(receiptCountAfterRun2, receiptCountAfterRun1, `second executor run must not append duplicate receipt; before=${receiptCountAfterRun1} after=${receiptCountAfterRun2}`);
+  assert.strictEqual(
+    receiptCountAfterRun2,
+    receiptCountAfterRun1,
+    `second executor run must not append duplicate receipt; before=${receiptCountAfterRun1} after=${receiptCountAfterRun2}`
+  );
   console.log('PASS no duplicate receipt created');
 
   const factsAfterRun2 = await exportFacts(base, token, chainStartTs, Date.now() + 4_000, field_id);
   const transitionCountAfterRun2 = countOperationPlanTransitions(factsAfterRun2, subJson.operation_plan_id);
-  assert.strictEqual(transitionCountAfterRun2, transitionCountAfterRun1, `second executor run must not append operation_plan transitions; before=${transitionCountAfterRun1} after=${transitionCountAfterRun2}`);
+  assert.strictEqual(
+    transitionCountAfterRun2,
+    transitionCountAfterRun1,
+    `second executor run must not append operation_plan transitions; before=${transitionCountAfterRun1} after=${transitionCountAfterRun2}`
+  );
   console.log('PASS no duplicate operation_plan transition');
 
   console.log('PASS ACCEPTANCE_AGRONOMY_EXECUTOR_IDEMPOTENCY_V1');
