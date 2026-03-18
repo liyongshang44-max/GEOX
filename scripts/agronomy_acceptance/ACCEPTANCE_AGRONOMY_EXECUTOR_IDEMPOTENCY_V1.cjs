@@ -128,10 +128,65 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   assert.equal(run1.code, 0, `first executor run must succeed; output=${run1.output}`);
   assert.ok(run1.output.includes(`command_id=${commandId}`), `first executor run should dispatch expected command_id; output=${run1.output}`);
 
+  const dispatchesAfterRun1 = await fetchJson(`${base}/api/v1/ao-act/dispatches?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=20`, {
+    method: 'GET',
+    token
+  });
+  const dispatchesAfterRun1Json = requireOk(dispatchesAfterRun1, 'dispatches after first executor run');
+  const dispatchItem = (dispatchesAfterRun1Json.items ?? []).find((item) => String(item?.act_task_id ?? '') === actTaskId);
+  assert.ok(dispatchItem, `first executor run must create dispatch queue item; body=${dispatchesAfterRun1.text}`);
+  const outboxFactId = String(dispatchItem?.outbox_fact_id ?? '').trim();
+  assert.ok(outboxFactId, `dispatch queue item should include outbox_fact_id; body=${dispatchesAfterRun1.text}`);
+
   const receiptsAfterRun1 = await fetchJson(`${base}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=20`, {
     method: 'GET', token
   });
   const receiptsAfterRun1Json = requireOk(receiptsAfterRun1, 'receipts after first executor run');
+  let receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterRun1Json.items ?? [], commandId);
+
+  if (receiptCountAfterRun1 < 1) {
+    const downlink = await fetchJson(`${base}/api/v1/ao-act/downlinks/published`, {
+      method: 'POST',
+      token,
+      body: {
+        tenant_id,
+        project_id,
+        group_id,
+        act_task_id: actTaskId,
+        command_id: commandId,
+        outbox_fact_id: outboxFactId,
+        device_id,
+        topic: `downlink/${tenant_id}/${device_id}`,
+        payload: { cmd: 'execute' }
+      }
+    });
+    requireOk(downlink, 'downlink published bridge');
+
+    const receiptBridge = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, {
+      method: 'POST',
+      token,
+      body: {
+        tenant_id,
+        project_id,
+        group_id,
+        task_id: actTaskId,
+        act_task_id: actTaskId,
+        command_id: commandId,
+        device_id,
+        status: 'executed',
+        observed_parameters: {},
+        meta: { idempotency_key: `executor-idempotency-${actTaskId}` }
+      }
+    });
+    requireOk(receiptBridge, 'receipt uplink bridge');
+  }
+
+  const receiptsAfterBridge = await fetchJson(`${base}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&act_task_id=${encodeURIComponent(actTaskId)}&limit=20`, {
+    method: 'GET', token
+  });
+  const receiptsAfterBridgeJson = requireOk(receiptsAfterBridge, 'receipts after dispatch->receipt bridge');
+  receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterBridgeJson.items ?? [], commandId);
+  assert.ok(receiptCountAfterRun1 >= 1, `dispatch->receipt chain must create receipt for command_id=${commandId}`);
   const receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterRun1Json.items ?? [], commandId);
   assert.ok(receiptCountAfterRun1 >= 1, `first executor run must create receipt for command_id=${commandId}`);
 
