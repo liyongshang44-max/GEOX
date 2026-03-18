@@ -1,6 +1,5 @@
-// GEOX/apps/executor/src/run_dispatch_once.ts
 import crypto from "node:crypto";
-import { createAdapterRegistry, findAdapter, type AoActTask } from "./adapters";
+import { createAdapterRegistry, findAdapterByType, type AoActTask } from "./adapters";
 import { claimDispatchTasks } from "./lib/claim";
 
 type Args = {
@@ -12,6 +11,7 @@ type Args = {
   executor_id: string;
   limit: number;
   lease_seconds: number;
+  act_task_id?: string;
 };
 
 function parseArgs(argv: string[]): Args {
@@ -33,61 +33,59 @@ function parseArgs(argv: string[]): Args {
     process.env.GEOX_EXECUTOR_ID ??
     `dispatch_exec_${crypto.randomUUID().replace(/-/g, "")}`;
   const limit = Math.max(1, Number.parseInt(get("limit") ?? process.env.GEOX_EXECUTOR_LIMIT ?? "1", 10) || 1);
-  const lease_seconds = Math.max(
-    5,
-    Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30)
-  );
+  const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30));
+  const act_task_id = get("act_task_id") ?? process.env.GEOX_ACT_TASK_ID ?? undefined;
 
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
-
-  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds };
+  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id };
 }
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    Authorization: `Bearer ${token}`
-  };
+  const headers: Record<string, string> = { Accept: "application/json", Authorization: `Bearer ${token}` };
   if (init?.body) headers["Content-Type"] = "application/json";
-
   const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } });
   const text = await res.text();
-
   let obj: any = null;
-  try {
-    obj = text ? JSON.parse(text) : {};
-  } catch {
-    obj = { _non_json: text };
-  }
-
+  try { obj = text ? JSON.parse(text) : {}; } catch { obj = { _non_json: text }; }
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
 }
 
-async function hasReceiptByCommandId(args: Args, taskId: string, commandId: string): Promise<boolean> {
-  const url =
-    `${args.baseUrl}/api/v1/ao-act/receipts` +
-    `?tenant_id=${encodeURIComponent(args.tenant_id)}` +
-    `&project_id=${encodeURIComponent(args.project_id)}` +
-    `&group_id=${encodeURIComponent(args.group_id)}` +
-    `&act_task_id=${encodeURIComponent(taskId)}` +
-    `&limit=10`;
+function toAoActTask(item: any, args: Args): AoActTask {
+  const taskPayload = item?.task?.payload ?? {};
+  const act_task_id = String(item?.act_task_id ?? taskPayload?.act_task_id ?? "").trim();
+  const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
+  const action_type = String(taskPayload?.action_type ?? "").trim();
+  const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
 
-  const out = await httpJson(url, args.token, { method: "GET" });
-  const items = Array.isArray(out?.items) ? out.items : [];
+  if (!act_task_id || !command_id || !action_type || !operation_plan_id) {
+    throw new Error(`invalid claim item payload: ${JSON.stringify(item)}`);
+  }
 
-  return items.some((item: any) => {
-    const payload = item?.receipt?.payload ?? {};
-    const hit = String(payload?.command_id ?? payload?.meta?.command_id ?? payload?.act_task_id ?? "").trim();
-    return hit !== "" && hit === commandId;
-  });
+  return {
+    tenant_id: String(taskPayload?.tenant_id ?? args.tenant_id),
+    project_id: String(taskPayload?.project_id ?? args.project_id),
+    group_id: String(taskPayload?.group_id ?? args.group_id),
+    act_task_id,
+    command_id,
+    action_type,
+    operation_plan_id,
+    adapter_type: String(taskPayload?.adapter_type ?? "").trim() || null,
+    adapter_hint: String(item?.adapter_hint ?? "").trim() || null,
+    parameters: taskPayload?.parameters && typeof taskPayload.parameters === "object" ? taskPayload.parameters : {},
+    meta: taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {},
+    outbox_fact_id: typeof item?.outbox_fact_id === "string" ? item.outbox_fact_id : null,
+    device_id: typeof item?.device_id === "string" ? item.device_id : null,
+    downlink_topic: typeof item?.downlink_topic === "string" ? item.downlink_topic : null,
+    qos: Number.isFinite(Number(item?.qos)) ? Number(item.qos) : 1,
+    retain: typeof item?.retain === "boolean" ? item.retain : false
+  };
 }
 
-async function writeDispatchState(
-  args: Args,
-  task: AoActTask,
-  state: "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED"
-): Promise<void> {
+type DispatchState = "DISPATCHED" | "ACKED" | "FAILED";
+
+async function writeDispatchState(args: Args, task: AoActTask, state: DispatchState): Promise<void> {
+  console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
   const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
     method: "POST",
     body: JSON.stringify({
@@ -99,61 +97,77 @@ async function writeDispatchState(
       state
     })
   });
-
-  if (!out?.ok) {
-    throw new Error(`dispatch state write failed state=${state} task=${task.act_task_id}`);
-  }
+  if (!out?.ok) throw new Error(`dispatch state write failed state=${state} task=${task.act_task_id}`);
 }
 
-function toAoActTask(item: any, args: Args): AoActTask {
-  const taskPayload = item?.task?.payload ?? {};
-  const act_task_id = String(item?.act_task_id ?? taskPayload?.act_task_id ?? "").trim();
-  const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
-  const action_type = String(taskPayload?.action_type ?? "").trim();
-  const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
-  const adapter_type = String(taskPayload?.adapter_type ?? "").trim() || null;
-  const adapter_hint = String(item?.outbox?.payload?.adapter_hint ?? "").trim() || null;
-
-  if (!act_task_id || !command_id || !action_type) {
-    throw new Error(`invalid claim item task payload: ${JSON.stringify(item)}`);
-  }
-  if (!operation_plan_id) {
-    throw new Error(`missing operation_plan_id for act_task_id=${act_task_id}`);
-  }
-
-  return {
-    tenant_id: String(taskPayload?.tenant_id ?? args.tenant_id),
-    project_id: String(taskPayload?.project_id ?? args.project_id),
-    group_id: String(taskPayload?.group_id ?? args.group_id),
-    act_task_id,
-    command_id,
-    action_type,
-    operation_plan_id,
-    adapter_type,
-    adapter_hint,
-    parameters:
-      taskPayload?.parameters && typeof taskPayload.parameters === "object" ? taskPayload.parameters : {},
-    meta: taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {},
-    outbox_fact_id: typeof item?.outbox_fact_id === "string" ? item.outbox_fact_id : null,
-    device_id: typeof item?.device_id === "string" ? item.device_id : null,
-    downlink_topic: typeof item?.downlink_topic === "string" ? item.downlink_topic : null,
-    qos: Number.isFinite(Number(item?.qos)) ? Number(item.qos) : 1,
-    retain: typeof item?.retain === "boolean" ? item.retain : false
-  };
+async function getReceipts(args: Args, task: AoActTask): Promise<any[]> {
+  const out = await httpJson(
+    `${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(task.tenant_id)}&project_id=${encodeURIComponent(task.project_id)}&group_id=${encodeURIComponent(task.group_id)}&act_task_id=${encodeURIComponent(task.act_task_id)}&limit=50`,
+    args.token,
+    { method: "GET" }
+  );
+  return Array.isArray(out?.items) ? out.items : [];
 }
 
-function isDuplicateReceiptError(msg: string): boolean {
-  const normalized = msg.toUpperCase();
-  return normalized.includes("DUPLICATE_RECEIPT") || normalized.includes("RECEIPT_EXISTS");
+function hasReceiptIdempotencyKey(items: any[], taskId: string, attemptNo: number, receiptCode: string): boolean {
+  const expected = `${taskId}:${attemptNo}:${receiptCode}`;
+  return items.some((item) => String(item?.receipt?.payload?.meta?.idempotency_key ?? "").trim() === expected);
+}
+
+async function appendReceiptV1(
+  args: Args,
+  task: AoActTask,
+  attemptNo: number,
+  receipt_status: "ACKED" | "RUNNING" | "SUCCEEDED" | "FAILED",
+  adapter_type: string,
+  receipt_code?: string,
+  receipt_message?: string,
+  raw_receipt_ref?: string
+): Promise<void> {
+  const receiptCode = String(receipt_code ?? receipt_status).trim() || receipt_status;
+  const idempotencyKey = `${task.act_task_id}:${attemptNo}:${receiptCode}`;
+  const existing = await getReceipts(args, task);
+  if (hasReceiptIdempotencyKey(existing, task.act_task_id, attemptNo, receiptCode)) {
+    console.log(`INFO: dedupe receipt hit idempotency_key=${idempotencyKey}`);
+    return;
+  }
+
+  const mappedStatus = receipt_status === "FAILED" ? "failed" : "executed";
+  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: task.tenant_id,
+      project_id: task.project_id,
+      group_id: task.group_id,
+      task_id: task.act_task_id,
+      act_task_id: task.act_task_id,
+      command_id: task.command_id,
+      operation_plan_id: task.operation_plan_id,
+      executor_id: args.executor_id,
+      status: mappedStatus,
+      observed_parameters: {},
+      meta: {
+        schema: "ao_act_receipt_v1",
+        task_id: task.act_task_id,
+        command_id: task.command_id,
+        device_id: task.device_id ?? "",
+        adapter_type,
+        attempt_no: attemptNo,
+        receipt_status,
+        receipt_code: receiptCode,
+        receipt_message: receipt_message ?? null,
+        raw_receipt_ref: raw_receipt_ref ?? null,
+        received_ts: Date.now(),
+        idempotency_key: idempotencyKey
+      }
+    })
+  });
+  if (!out?.ok) throw new Error(`append receipt failed: ${JSON.stringify(out)}`);
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token });
-  const localExecutedCommandIds = new Set<string>();
-
-  console.log(`INFO: run_dispatch_once baseUrl=${args.baseUrl}`);
-  console.log(`INFO: executor_id=${args.executor_id}`);
+  const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token, executor_id: args.executor_id });
 
   const claimed = await claimDispatchTasks({
     baseUrl: args.baseUrl,
@@ -163,7 +177,8 @@ async function main(): Promise<void> {
     group_id: args.group_id,
     executor_id: args.executor_id,
     limit: args.limit,
-    lease_seconds: args.lease_seconds
+    lease_seconds: args.lease_seconds,
+    ...(args.act_task_id ? { act_task_id: args.act_task_id } : {})
   });
 
   console.log(`INFO: claimed queue size=${claimed.length}`);
@@ -174,60 +189,54 @@ async function main(): Promise<void> {
 
   for (const item of claimed.slice(0, args.limit)) {
     const task = toAoActTask(item, args);
+    const adapterType = String(task.adapter_type ?? task.adapter_hint ?? "").trim().toLowerCase();
+    const adapter = findAdapterByType(registry, adapterType);
 
-    if (localExecutedCommandIds.has(task.command_id)) {
-      console.log(
-        `INFO: skip act_task_id=${task.act_task_id} command_id=${task.command_id} reason=duplicate_command_in_run`
-      );
-      continue;
+    if (!adapter.supports(task.action_type)) {
+      throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
     }
+    const validation = adapter.validate(task);
+    if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
 
-    if (await hasReceiptByCommandId(args, task.act_task_id, task.command_id)) {
-      console.log(`INFO: skip act_task_id=${task.act_task_id} command_id=${task.command_id} reason=receipt_exists`);
-      continue;
-    }
-
-    const { adapterType, adapter } = findAdapter(registry, task);
-    console.log(
-      `INFO: dispatching act_task_id=${task.act_task_id} command_id=${task.command_id} action_type=${task.action_type} adapter_type=${adapterType}`
-    );
-
-    await writeDispatchState(args, task, "DISPATCHED");
+    const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
+    console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
 
     try {
-      const result = await adapter.dispatch(task);
-      const resolvedCommandId = String(result?.command_id ?? task.command_id).trim();
-
-      if (!resolvedCommandId) {
-        throw new Error(`adapter returned empty command_id act_task_id=${task.act_task_id}`);
-      }
-
-      localExecutedCommandIds.add(resolvedCommandId);
-
-      await writeDispatchState(args, task, "ACKED");
-      await writeDispatchState(args, task, "SUCCEEDED");
-
+      await writeDispatchState(args, task, "DISPATCHED");
+      const result = await adapter.dispatch(task, {
+        baseUrl: args.baseUrl,
+        token: args.token,
+        executor_id: args.executor_id,
+        lease_token: String(item?.lease_token ?? "") || undefined,
+        lease_until_ts: item?.lease_until_ts ? Number(item.lease_until_ts) : undefined,
+        attempt_no: attemptNo
+      });
       console.log(
-        `INFO: adapter dispatch success adapter_type=${adapterType} act_task_id=${task.act_task_id} command_id=${resolvedCommandId}`
+        `INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${result.command_id} receipt_status=${result.receipt_status}`
       );
-      console.log(
-        `PASS: dispatch adapter completed act_task_id=${task.act_task_id} command_id=${resolvedCommandId}`
-      );
-    } catch (error: any) {
-      const errMsg = String(error?.message ?? error ?? "");
 
-      if (isDuplicateReceiptError(errMsg)) {
-        console.log(`INFO: duplicate receipt ignored act_task_id=${task.act_task_id} command_id=${task.command_id}`);
-        localExecutedCommandIds.add(task.command_id);
-        await writeDispatchState(args, task, "SUCCEEDED");
+      if (result.receipt_status === "FAILED") {
+        await appendReceiptV1(
+          args,
+          task,
+          attemptNo,
+          "FAILED",
+          result.adapter_type,
+          result.receipt_code ?? "DISPATCH_FAILED",
+          result.receipt_message,
+          result.raw_receipt_ref
+        );
+        await writeDispatchState(args, task, "FAILED");
+        console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
         continue;
       }
 
+      await writeDispatchState(args, task, "ACKED");
+      console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
+    } catch (error: any) {
+      await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, "DISPATCH_ERROR", String(error?.message ?? error));
       await writeDispatchState(args, task, "FAILED");
-
-      throw new Error(
-        `adapter dispatch failed adapter_type=${adapterType} act_task_id=${task.act_task_id} command_id=${task.command_id}: ${errMsg}`
-      );
+      throw error;
     }
   }
 }
