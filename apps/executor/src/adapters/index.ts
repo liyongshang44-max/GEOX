@@ -4,6 +4,7 @@ export type AoActTask = {
   group_id: string;
   act_task_id: string;
   command_id: string;
+  operation_plan_id: string;
   action_type: string;
   parameters: Record<string, unknown>;
 };
