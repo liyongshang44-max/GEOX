@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
 
 type Lang = "zh" | "en";
@@ -215,7 +215,7 @@ function RecommendationStatusChain({ item, labels }: { item: RecommendationViewM
 function RecommendationCard(props: {
   item: RecommendationViewModel;
   active: boolean;
-  labels: typeof I18N.zh;
+  labels: (typeof I18N)[keyof typeof I18N];
   onOpen: () => void;
   onSubmit: () => void;
 }): React.ReactElement {

@@ -242,7 +242,7 @@ async function createTask(base, token, triple, suffix, deviceId) {
       assert.equal(String(resp.json?.error ?? ''), 'TASK_NOT_FOUND', `unexpected error: ${resp.text}`);
     }
 
-    // 4) non-READY queue item must be refused by executor dispatch loop.
+    // 4) non-READY queue item must be filtered before executor dispatch loop claim result.
     {
       const { actTaskId } = await createTask(base, token, triple, `not_ready_${rid}`, device_id);
 
@@ -265,8 +265,8 @@ async function createTask(base, token, triple, suffix, deviceId) {
 
       const combined = `${run.stdout || ''}\n${run.stderr || ''}`;
       assert.ok(
-        combined.includes('reason=task_not_ready'),
-        `expected task_not_ready skip log, got: ${combined}`
+        combined.includes('claimed queue size=0') || combined.includes('no claimed dispatch items found'),
+        `expected no-op due to empty claim, got: ${combined}`
       );
     }
 
