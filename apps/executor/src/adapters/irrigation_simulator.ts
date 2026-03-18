@@ -1,4 +1,4 @@
-import type { Adapter, AdapterRuntimeContext, AoActTask, Receipt } from "./index";
+import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
   const headers: Record<string, string> = {
@@ -17,32 +17,34 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
 
 export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
-    async dispatch(task: AoActTask): Promise<{ command_id: string }> {
-      // This endpoint is executor-only.
-      // Never callable from recommendation / UI / approval flows.
-      // All execution must originate from approved AO-ACT tasks.
-      const payload = {
-        tenant_id: task.tenant_id,
-        project_id: task.project_id,
-        group_id: task.group_id,
-        task_id: task.act_task_id,
-        command_id: task.command_id,
-        parameters: task.parameters
-      };
+    adapter_type: "irrigation_simulator",
+    supports(action_type: string): boolean {
+      const normalized = String(action_type ?? "").trim().toLowerCase();
+      return normalized === "irrigation.start" || normalized === "irrigate";
+    },
+    validate(task: AoActTask) {
+      if (!task.act_task_id) return { ok: false as const, reason: "MISSING_ACT_TASK_ID" };
+      return { ok: true as const };
+    },
+    async dispatch(task: AoActTask) {
       const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          tenant_id: task.tenant_id,
+          project_id: task.project_id,
+          group_id: task.group_id,
+          task_id: task.act_task_id,
+          command_id: task.command_id,
+          parameters: task.parameters
+        })
       });
       const commandId = String(out?.command_id ?? task.command_id).trim();
-      if (!commandId) throw new Error(`invalid irrigation execute response: ${JSON.stringify(out)}`);
-      return { command_id: commandId };
-    },
-    handleReceipt(msg: unknown): Receipt {
-      const payload = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
+      if (!commandId) throw new Error(`INVALID_IRRIGATION_EXECUTE_RESPONSE:${JSON.stringify(out)}`);
       return {
-        command_id: String(payload.command_id ?? payload.act_task_id ?? ""),
-        status: typeof payload.status === "string" ? payload.status : undefined,
-        payload
+        command_id: commandId,
+        adapter_type: "irrigation_simulator",
+        receipt_status: "ACKED",
+        adapter_payload: out ?? null
       };
     }
   };

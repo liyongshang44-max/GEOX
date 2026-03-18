@@ -1,4 +1,4 @@
-export type AoActTask = {
+export type AoActTaskV0 = {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -36,14 +36,31 @@ export type DispatchResult = {
   adapter_payload?: Record<string, unknown> | null;
 };
 
+export type ReceiptContext = {
+  baseUrl: string;
+  token: string;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  command_id?: string;
+};
+
+export type ReceiptResult = {
+  task_id: string;
+  command_id: string;
+  device_id?: string | null;
+  adapter_type: string;
+  receipt_status: "ACKED" | "RUNNING" | "SUCCEEDED" | "FAILED";
+  receipt_code?: string;
+  receipt_message?: string;
+  raw_receipt_ref?: string;
+  received_ts: number;
+};
+
 export type ExecutorAdapterV1 = {
   adapter_type: string;
   supports: (action_type: string) => boolean;
-  validate: (task: AoActTask) => { ok: true } | { ok: false; reason: string };
-  dispatch: (task: AoActTask, ctx: DispatchContext) => Promise<DispatchResult>;
+  validate: (task: AoActTaskV0) => { ok: true } | { ok: false; reason: string };
+  dispatch: (task: AoActTaskV0, ctx: DispatchContext) => Promise<DispatchResult>;
+  pollReceipt?: (ctx: ReceiptContext) => Promise<ReceiptResult[]>;
 };
-
-export type Adapter = ExecutorAdapterV1;
-export type AdapterRuntimeContext = DispatchContext;
-
-export { createAdapterRegistry, findAdapterByType } from "./registry";
