@@ -973,7 +973,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         parameter_schema: proposal.parameter_schema,
         parameters: proposal.parameters,
         constraints: proposal.constraints,
-        meta: proposal.meta ?? {}
+        meta: {
+          ...(proposal.meta ?? {}),
+          adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
+            ? String(operationPlan.record_json.payload.adapter_type)
+            : (proposal?.meta?.adapter_type ?? null)
+        }
       });
       if (!delegated.ok || !delegated.json?.ok) {
         return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_CREATE_FAILED", detail: delegated.json ?? null });
@@ -1172,7 +1177,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const device_id = deriveDispatchDeviceId(body, taskRecord); // Prefer explicit device id; fallback to task meta.
     const downlink_topic = deriveDispatchTopic(tenant, device_id, body); // Resolve MQTT topic once at queue time.
     const dispatch_mode = String(body.dispatch_mode ?? "OUTBOX_ONLY").trim() || "OUTBOX_ONLY"; // Stable dispatch mode marker.
-    const adapter_hint = normalizeAdapterHint(body.adapter_hint); // Normalize aliases so queue consumers can match.
+    const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
+      ? String(operationPlan.record_json.payload.adapter_type)
+      : null;
+    const adapter_hint = normalizeAdapterHint(body.adapter_hint ?? planAdapterType); // Normalize aliases so queue consumers can match.
     const qos = Math.max(0, Math.min(2, Number.parseInt(String(body.qos ?? "1"), 10) || 1)); // MQTT QoS clamp.
     const retain = Boolean(body.retain ?? false); // MQTT retain flag.
 

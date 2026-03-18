@@ -15,29 +15,33 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   return obj;
 }
 
-export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Adapter {
+function normalizeAdapterHint(task: AoActTask): string {
+  const value = String(task.adapter_hint ?? task.adapter_type ?? "mqtt").trim().toLowerCase();
+  if (!value) return "mqtt_downlink_once_v1";
+  if (value === "mqtt") return "mqtt_downlink_once_v1";
+  return value;
+}
+
+export function createMqttAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
     async dispatch(task: AoActTask): Promise<{ command_id: string }> {
-      const payload = {
-        tenant_id: task.tenant_id,
-        project_id: task.project_id,
-        group_id: task.group_id,
-        act_task_id: task.act_task_id,
-        command_id: task.command_id,
-        parameters: task.parameters
-      };
-      const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
+      const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/tasks/${encodeURIComponent(task.act_task_id)}/dispatch`, ctx.token, {
         method: "POST",
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          tenant_id: task.tenant_id,
+          project_id: task.project_id,
+          group_id: task.group_id,
+          command_id: task.command_id,
+          adapter_hint: normalizeAdapterHint(task)
+        })
       });
-      const commandId = String(out?.command_id ?? task.command_id).trim();
-      if (!commandId) throw new Error(`invalid irrigation execute response: ${JSON.stringify(out)}`);
-      return { command_id: commandId };
+      if (!out?.ok) throw new Error(`mqtt dispatch failed: ${JSON.stringify(out)}`);
+      return { command_id: task.command_id };
     },
     handleReceipt(msg: unknown): Receipt {
       const payload = msg && typeof msg === "object" ? (msg as Record<string, unknown>) : {};
       return {
-        command_id: String(payload.command_id ?? payload.act_task_id ?? ""),
+        command_id: String(payload.command_id ?? payload.task_id ?? ""),
         status: typeof payload.status === "string" ? payload.status : undefined,
         payload
       };
