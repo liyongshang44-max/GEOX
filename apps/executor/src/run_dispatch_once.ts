@@ -11,6 +11,7 @@ type Args = {
   executor_id: string;
   limit: number;
   lease_seconds: number;
+  act_task_id?: string;
 };
 
 function parseArgs(argv: string[]): Args {
@@ -33,9 +34,10 @@ function parseArgs(argv: string[]): Args {
     `dispatch_exec_${crypto.randomUUID().replace(/-/g, "")}`;
   const limit = Math.max(1, Number.parseInt(get("limit") ?? process.env.GEOX_EXECUTOR_LIMIT ?? "1", 10) || 1);
   const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30));
+  const act_task_id = get("act_task_id") ?? process.env.GEOX_ACT_TASK_ID ?? undefined;
 
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
-  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds };
+  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id };
 }
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
@@ -80,7 +82,10 @@ function toAoActTask(item: any, args: Args): AoActTask {
   };
 }
 
-async function writeDispatchState(args: Args, task: AoActTask, state: "ACKED" | "SUCCEEDED" | "FAILED"): Promise<void> {
+type DispatchState = "DISPATCHED" | "ACKED" | "FAILED";
+
+async function writeDispatchState(args: Args, task: AoActTask, state: DispatchState): Promise<void> {
+  console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
   const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
     method: "POST",
     body: JSON.stringify({
@@ -172,7 +177,8 @@ async function main(): Promise<void> {
     group_id: args.group_id,
     executor_id: args.executor_id,
     limit: args.limit,
-    lease_seconds: args.lease_seconds
+    lease_seconds: args.lease_seconds,
+    ...(args.act_task_id ? { act_task_id: args.act_task_id } : {})
   });
 
   console.log(`INFO: claimed queue size=${claimed.length}`);
@@ -193,9 +199,10 @@ async function main(): Promise<void> {
     if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
 
     const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
+    console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
 
     try {
-      await writeDispatchState(args, task, "ACKED");
+      await writeDispatchState(args, task, "DISPATCHED");
       const result = await adapter.dispatch(task, {
         baseUrl: args.baseUrl,
         token: args.token,
@@ -204,20 +211,28 @@ async function main(): Promise<void> {
         lease_until_ts: item?.lease_until_ts ? Number(item.lease_until_ts) : undefined,
         attempt_no: attemptNo
       });
-
-      await appendReceiptV1(
-        args,
-        task,
-        attemptNo,
-        result.receipt_status,
-        result.adapter_type,
-        result.receipt_code,
-        result.receipt_message,
-        result.raw_receipt_ref
+      console.log(
+        `INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${result.command_id} receipt_status=${result.receipt_status}`
       );
 
-      await writeDispatchState(args, task, result.receipt_status === "FAILED" ? "FAILED" : "SUCCEEDED");
-      console.log(`PASS: dispatch completed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
+      if (result.receipt_status === "FAILED") {
+        await appendReceiptV1(
+          args,
+          task,
+          attemptNo,
+          "FAILED",
+          result.adapter_type,
+          result.receipt_code ?? "DISPATCH_FAILED",
+          result.receipt_message,
+          result.raw_receipt_ref
+        );
+        await writeDispatchState(args, task, "FAILED");
+        console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
+        continue;
+      }
+
+      await writeDispatchState(args, task, "ACKED");
+      console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
     } catch (error: any) {
       await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, "DISPATCH_ERROR", String(error?.message ?? error));
       await writeDispatchState(args, task, "FAILED");
