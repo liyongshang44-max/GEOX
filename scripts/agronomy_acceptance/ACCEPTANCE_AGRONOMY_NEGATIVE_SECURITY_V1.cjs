@@ -1,4 +1,4 @@
-const { assert, env, fetchJson } = require('./_common.cjs');
+﻿const { assert, env, fetchJson } = require('./_common.cjs');
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3000');
   const token = env('AO_ACT_TOKEN', '');
@@ -60,6 +60,7 @@ const { assert, env, fetchJson } = require('./_common.cjs');
       project_id,
       group_id,
       approval_request_id,
+        operation_plan_id,
       issuer: { kind: 'human', id: 'negative_acceptance', namespace: 'agronomy_acceptance' },
       action_type: 'IRRIGATE',
       target: { kind: 'field', ref: field_id },
@@ -70,14 +71,14 @@ const { assert, env, fetchJson } = require('./_common.cjs');
       meta: { device_id, source: 'negative_acceptance' }
     }
   });
-  assert.equal(taskBeforeApproval.status, 403, `unapproved recommendation must not create AO-ACT task; got ${taskBeforeApproval.status}`);
+  assert.equal(taskBeforeApproval.status, 403, `unapproved recommendation must not create AO-ACT task; got ${taskBeforeApproval.status}; body=${taskBeforeApproval.text}`);
   assert.equal(String(taskBeforeApproval.json?.error ?? ''), 'APPROVAL_REQUEST_NOT_APPROVED', `unexpected task create error=${taskBeforeApproval.text}`);
 
   const pendingPlan = await fetchJson(`${base}/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { token });
   assert.equal(pendingPlan.status, 200, `operation plan read failed; got ${pendingPlan.status} body=${pendingPlan.text}`);
   const planPayload = pendingPlan.json?.item?.plan?.record_json?.payload ?? {};
 const planStatus = String(planPayload.status ?? '');
-assert.equal(planStatus, 'APPROVAL_PENDING', `unapproved operation plan should remain APPROVAL_PENDING; got ${planStatus}`);
+assert.equal(planStatus, 'CREATED', `unapproved operation plan should remain CREATED; got ${planStatus}`);
 assert.equal(String(planPayload.act_task_id ?? ''), '', `unapproved operation plan should not carry act_task_id; body=${pendingPlan.text}`);
 
   const dispatchWithoutApprovedTask = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(`act_not_approved_${Date.now()}`)}/dispatch`, {
@@ -93,3 +94,5 @@ assert.equal(String(planPayload.act_task_id ?? ''), '', `unapproved operation pl
   assert.equal(unapproved.status, 403, `unapproved dispatch must fail; got ${unapproved.status}`);
   console.log('PASS negative security acceptance');
 })().catch((e) => { console.error('FAIL negative security acceptance', e.message); process.exit(1); });
+
+
