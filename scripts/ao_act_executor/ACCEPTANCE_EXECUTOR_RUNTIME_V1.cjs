@@ -38,7 +38,12 @@ function recommendationBody(triple, deviceId, suffix) {
     season_id: env('SEASON_ID', 'season_demo'),
     device_id: deviceId,
     telemetry: { soil_moisture_pct: 18, canopy_temp_c: 33 },
-    image_recognition: { stress_score: 0.8, disease_score: 0.1, pest_risk_score: 0.1, confidence: 0.9 },
+    image_recognition: {
+      stress_score: 0.8,
+      disease_score: 0.1,
+      pest_risk_score: 0.1,
+      confidence: 0.9
+    },
     meta: { note: `executor_runtime_v1_${suffix}` }
   };
 }
@@ -50,32 +55,57 @@ async function createApprovedTaskViaRecommendation(base, token, triple, suffix, 
     body: recommendationBody(triple, deviceId, suffix)
   });
   const recOut = requireOk(recResp, `generate recommendation ${suffix}`);
-  const recommendationId = String(recOut.recommendations?.[0]?.recommendation_id ?? '').trim();
+
+  const recommendationId = String(
+    recOut.recommendations?.[0]?.recommendation_id
+    ?? recOut.items?.[0]?.recommendation_id
+    ?? recOut.recommendation_id
+    ?? ''
+  ).trim();
   assert.ok(recommendationId, `recommendation_id missing for ${suffix}; body=${JSON.stringify(recOut)}`);
 
-  const submitResp = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recommendationId)}/submit-approval`, {
-    method: 'POST',
-    token,
-    body: { ...triple }
-  });
+  const submitResp = await fetchJson(
+    `${base}/api/v1/recommendations/${encodeURIComponent(recommendationId)}/submit-approval`,
+    {
+      method: 'POST',
+      token,
+      body: { ...triple }
+    }
+  );
   const submitOut = requireOk(submitResp, `submit approval ${suffix}`);
 
-  const approvalRequestId = String(submitOut.approval_request_id ?? '').trim();
+  const approvalRequestId = String(
+    submitOut.approval_request_id
+    ?? submitOut.item?.approval_request_id
+    ?? ''
+  ).trim();
   assert.ok(approvalRequestId, `approval_request_id missing for ${suffix}; body=${JSON.stringify(submitOut)}`);
 
-  const decideResp = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approvalRequestId)}/decide`, {
-    method: 'POST',
-    token,
-    body: {
-      ...triple,
-      decision: 'APPROVE',
-      reason: `executor_runtime_v1_${suffix}`
+  const decideResp = await fetchJson(
+    `${base}/api/v1/approvals/${encodeURIComponent(approvalRequestId)}/decide`,
+    {
+      method: 'POST',
+      token,
+      body: {
+        ...triple,
+        decision: 'APPROVE',
+        reason: `executor_runtime_v1_${suffix}`
+      }
     }
-  });
+  );
   const decideOut = requireOk(decideResp, `approve request ${suffix}`);
 
-  const actTaskId = String(decideOut.act_task_id ?? '').trim();
-  const operationPlanId = String(decideOut.operation_plan_id ?? '').trim();
+  const actTaskId = String(
+    decideOut.act_task_id
+    ?? decideOut.item?.act_task_id
+    ?? ''
+  ).trim();
+  const operationPlanId = String(
+    decideOut.operation_plan_id
+    ?? decideOut.item?.operation_plan_id
+    ?? ''
+  ).trim();
+
   assert.ok(actTaskId, `act_task_id missing in approve response: ${JSON.stringify(decideOut)}`);
   assert.ok(operationPlanId, `operation_plan_id missing in approve response: ${JSON.stringify(decideOut)}`);
 
@@ -116,21 +146,31 @@ async function createTaskWithUnsupportedAction(base, token, triple, operationPla
 
   const rid = crypto.randomUUID().replace(/-/g, '').slice(0, 8);
 
-  // 先走 recommendation → approval → operation_plan 合法链路
+  // 先走 recommendation → approval → operation_plan → act_task 合法链路
   const seed = await createApprovedTaskViaRecommendation(base, token, triple, `seed_${rid}`, deviceId);
 
-  // adapter 不支持 action 的拒绝（使用真实 operation_plan_id，避免 404）
+  // adapter 不支持 action 的拒绝：必须使用真实 operation_plan_id，避免被 plan 校验提前拦截
   {
     const bad = await createTaskWithUnsupportedAction(base, token, triple, seed.operationPlanId, rid, deviceId);
     assert.equal(bad.status, 400, `expected 400 for unsupported action, got ${bad.status} body=${bad.text}`);
-    assert.equal(String(bad.json?.error ?? ''), 'ADAPTER_UNSUPPORTED_ACTION', `unexpected error payload: ${bad.text}`);
+    assert.equal(
+      String(bad.json?.error ?? ''),
+      'ADAPTER_UNSUPPORTED_ACTION',
+      `unexpected error payload: ${bad.text}`
+    );
   }
 
-  // claim/lease
+  // claim / lease
   const claim = await fetchJson(`${base}/api/v1/ao-act/dispatches/claim`, {
     method: 'POST',
     token,
-    body: { ...triple, executor_id: `acc_exec_${rid}`, limit: 1, lease_seconds: 20, act_task_id: seed.actTaskId }
+    body: {
+      ...triple,
+      executor_id: `acc_exec_${rid}`,
+      limit: 1,
+      lease_seconds: 20,
+      act_task_id: seed.actTaskId
+    }
   });
   const claimOut = requireOk(claim, 'claim dispatch');
   assert.ok(Array.isArray(claimOut.items) && claimOut.items.length >= 1, 'claim should return at least 1 item');
@@ -159,6 +199,7 @@ async function createTaskWithUnsupportedAction(base, token, triple, operationPla
 
   // receipt 去重（相同 task/attempt/code）
   const dedupeKey = `${seed.actTaskId}:1:ACK`;
+
   const r1 = await fetchJson(`${base}/api/v1/ao-act/receipts`, {
     method: 'POST',
     token,
