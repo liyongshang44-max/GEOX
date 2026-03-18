@@ -59,6 +59,10 @@ function sha256HexBytes(buf: Buffer): string { // Compute SHA-256 hex digest for
   return crypto.createHash("sha256").update(buf).digest("hex"); // Return SHA-256 hex digest.
 } // End sha256HexBytes.
 
+function sha256HexFile(fp: string): string { // Compute SHA-256 hex digest for a file.
+  return sha256HexBytes(fs.readFileSync(fp)); // Read bytes then hash.
+} // End sha256HexFile.
+
 function parseRecordJson(rowValue: unknown): any { // Parse facts.record_json which is stored as TEXT in Postgres.
   if (rowValue === null || rowValue === undefined) return null; // Treat null/undefined as missing.
   if (typeof rowValue === "object") return rowValue; // If driver already parsed, return as-is.
@@ -231,6 +235,16 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     }, // End facts bundle.
     evidence_files: { // Stable logical file map for offline export consumers.
       "recommendation.json": recommendationFacts, // Primary recommendation file content.
+      "approval.json": { // Approval closure data.
+        approval_decision_v1: decisionFacts, // Approval decision facts.
+        approval_request_v1: requestFacts // Approval request facts.
+      },
+      "plan.json": { // Plan closure data.
+        operation_plan_v1: operationPlanFacts, // Operation plan facts.
+        operation_plan_transition_v1: operationPlanTransitionFacts // Operation plan transition facts.
+      },
+      "task.json": taskFacts, // Task facts file content.
+      "receipt.json": receiptFacts, // Receipt facts file content.
       "recommendation_approval_links.json": recommendationApprovalLinks, // recommendation -> approval_request links.
       "recommendation_task_links.json": recommendationTaskLinks, // recommendation -> task links.
       "task_receipts.json": taskReceipts // task -> receipt links.
@@ -248,6 +262,10 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
       }, // End counts.
       files: [ // Logical files present in this evidence export payload.
         "recommendation.json",
+        "approval.json",
+        "plan.json",
+        "task.json",
+        "receipt.json",
         "recommendation_approval_links.json",
         "recommendation_task_links.json",
         "task_receipts.json"
@@ -257,9 +275,26 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
         recommendation_task_links: recommendationTaskLinks.length,
         task_receipts: taskReceipts.length
       },
+      required_chain: { // Task Pack 7.1 mandatory bundle sections.
+        recommendation: recommendationFacts.length,
+        approval: decisionFacts.length + requestFacts.length,
+        plan: operationPlanFacts.length + operationPlanTransitionFacts.length,
+        task: taskFacts.length,
+        receipt: receiptFacts.length
+      },
       evidence_fact_ids // Flat list of all fact ids referenced by the artifact.
     } // End manifest.
   }; // End artifact_core.
+
+  const requiredMissing: string[] = []; // Collect missing mandatory closure sections.
+  if (recommendationFacts.length < 1) requiredMissing.push("recommendation");
+  if (decisionFacts.length + requestFacts.length < 1) requiredMissing.push("approval");
+  if (operationPlanFacts.length + operationPlanTransitionFacts.length < 1) requiredMissing.push("plan");
+  if (taskFacts.length < 1) requiredMissing.push("task");
+  if (receiptFacts.length < 1) requiredMissing.push("receipt");
+  if (requiredMissing.length > 0) { // Reject export jobs without closed commercial chain evidence.
+    throw new Error(`EVIDENCE_CHAIN_INCOMPLETE:${requiredMissing.join(",")}`);
+  }
 
   const deterministic_hash = sha256HexBytes(Buffer.from(stableStringify(artifact_core), "utf8")); // Compute deterministic hash of artifact core.
   const generated_at_ts = Date.now(); // Record artifact generation time (non-deterministic audit field).
@@ -426,12 +461,12 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id/download
   // Streams the produced artifact file to client (JSON file for v1).
-  app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", async (req, reply) => { // Download endpoint.
+  const downloadHandler = async (req: any, reply: any) => { // Shared download handler for stable endpoint aliases.
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
     if (!auth) return; // Stop if auth failed.
 
     const p = (req as any).params ?? {}; // Read params.
-    const job_id = typeof p.job_id === "string" ? p.job_id.trim() : ""; // Extract job id.
+    const job_id = typeof p.job_id === "string" ? p.job_id.trim() : (typeof p.id === "string" ? p.id.trim() : ""); // Extract job id.
     const job = exportJobs.get(job_id); // Lookup job.
     if (!job) return reply.code(404).send({ ok: false, error: "NOT_FOUND" }); // 404 for missing job id.
 
@@ -446,11 +481,20 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
       return reply.code(500).send({ ok: false, error: "ARTIFACT_MISSING" }); // Server error if missing.
     } // End file existence check.
 
+    const fileSha256 = sha256HexFile(job.artifact_path); // Recompute hash to enforce manifest integrity on download.
+    if (fileSha256 !== job.artifact_sha256) { // Abort when artifact bytes diverge from recorded sha256(bundle).
+      return reply.code(409).send({ ok: false, error: "BUNDLE_HASH_MISMATCH", expected_sha256: job.artifact_sha256, actual_sha256: fileSha256 });
+    } // End integrity check.
+
     reply.header("content-type", "application/json"); // Serve JSON content type.
-    reply.header("x-artifact-sha256", job.artifact_sha256); // Provide sha256 header for client verification.
+    reply.header("x-artifact-sha256", job.artifact_sha256); // Provide sha256(bundle) header for client verification.
     reply.header("content-disposition", `attachment; filename="${job.job_id}.json"`); // Provide download filename.
 
     const rs = fs.createReadStream(job.artifact_path); // Create read stream.
     return reply.send(rs); // Stream file to client.
-  }); // End download route.
+  }; // End download handler.
+
+  app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route.
+  app.get("/evidence-export/jobs/:id/download", downloadHandler); // Stable commercial route alias.
+  app.get("/evidence-export/jobs/:job_id/download", downloadHandler); // Stable alias with legacy param name.
 } // End register routes.
