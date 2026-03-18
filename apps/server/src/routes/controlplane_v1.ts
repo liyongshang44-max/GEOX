@@ -13,6 +13,14 @@ import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } fro
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
 
 type ParsedFactRow = { fact_id: string; occurred_at: string; source: string; record_json: any }; // Normalized fact row.
+type OperationPlanStateReadModelRow = {
+  plan_id: string;
+  status: string;
+  device_id: string | null;
+  field_id: string | null;
+  last_transition: string | null;
+  receipt_status: string | null;
+}; // Canonical state-centric read model row for UI/backend convergence.
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
@@ -775,6 +783,168 @@ async function listOperationPlans(pool: Pool, tenant: TenantTriple, limit: numbe
     receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
     receipt_occurred_at: row.receipt_occurred_at ? String(row.receipt_occurred_at) : null,
     receipt: parseJsonMaybe(row.receipt_json)
+  }));
+}
+
+let ensureOperationPlanStateReadModelRuntimePromise: Promise<void> | null = null; // Process-local guard for one-time read-model table init.
+
+async function ensureOperationPlanStateReadModelRuntime(pool: Pool): Promise<void> {
+  if (!ensureOperationPlanStateReadModelRuntimePromise) {
+    ensureOperationPlanStateReadModelRuntimePromise = (async () => {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS operation_plan_state_v1_rm (
+          tenant_id text NOT NULL,
+          project_id text NOT NULL,
+          group_id text NOT NULL,
+          plan_id text NOT NULL,
+          status text NOT NULL,
+          device_id text NULL,
+          field_id text NULL,
+          last_transition timestamptz NULL,
+          receipt_status text NULL,
+          updated_at timestamptz NOT NULL DEFAULT now(),
+          PRIMARY KEY (tenant_id, project_id, group_id, plan_id)
+        )
+      `); // State-first read model table derived from immutable facts.
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_status ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, status, updated_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_device ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, device_id, updated_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_operation_plan_state_v1_rm_field ON operation_plan_state_v1_rm (tenant_id, project_id, group_id, field_id, updated_at DESC)`);
+    })().catch((err) => {
+      ensureOperationPlanStateReadModelRuntimePromise = null; // Allow re-init after transient DB failure.
+      throw err;
+    });
+  }
+  await ensureOperationPlanStateReadModelRuntimePromise;
+}
+
+async function rebuildOperationPlanStateReadModel(pool: Pool, tenant: TenantTriple): Promise<number> {
+  await ensureOperationPlanStateReadModelRuntime(pool);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query(
+      `DELETE FROM operation_plan_state_v1_rm
+       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id]
+    ); // Truncate tenant partition before replay.
+    const replay = await client.query(
+      `
+      WITH latest_plan AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
+          (record_json::jsonb) AS plan_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_transition AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+          (record_json::jsonb#>>'{payload,operation_plan_id}') AS plan_id,
+          occurred_at AS transition_occurred_at
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_transition_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_task AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
+          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+          (record_json::jsonb) AS task_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
+      ),
+      latest_receipt AS (
+        SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,act_task_id}'))
+          (record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+          (record_json::jsonb#>>'{payload,status}') AS receipt_status
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY (record_json::jsonb#>>'{payload,act_task_id}'), occurred_at DESC, fact_id DESC
+      )
+      INSERT INTO operation_plan_state_v1_rm (
+        tenant_id, project_id, group_id, plan_id, status, device_id, field_id, last_transition, receipt_status, updated_at
+      )
+      SELECT
+        $1, $2, $3,
+        lp.plan_id,
+        COALESCE(NULLIF(lp.plan_json#>>'{payload,status}', ''), 'UNKNOWN') AS status,
+        COALESCE(
+          NULLIF(lp.plan_json#>>'{payload,meta,device_id}', ''),
+          NULLIF(lt.task_json#>>'{payload,meta,device_id}', '')
+        ) AS device_id,
+        COALESCE(
+          NULLIF(lp.plan_json#>>'{payload,target,field_id}', ''),
+          NULLIF(lp.plan_json#>>'{payload,target,ref}', ''),
+          NULLIF(lp.plan_json#>>'{payload,target,id}', ''),
+          CASE
+            WHEN jsonb_typeof(lp.plan_json#>'{payload,target}') = 'string' THEN NULLIF(lp.plan_json#>>'{payload,target}', '')
+            ELSE NULL
+          END
+        ) AS field_id,
+        ltr.transition_occurred_at,
+        lr.receipt_status,
+        NOW()
+      FROM latest_plan lp
+      LEFT JOIN latest_transition ltr ON ltr.plan_id = lp.plan_id
+      LEFT JOIN latest_task lt ON (lp.plan_json#>>'{payload,act_task_id}') = lt.act_task_id
+      LEFT JOIN latest_receipt lr ON (lp.plan_json#>>'{payload,act_task_id}') = lr.act_task_id
+      `,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id]
+    ); // Replay facts to regenerate the canonical state projection.
+    await client.query("COMMIT");
+    return Number(replay.rowCount ?? 0);
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
+async function listOperationPlanStateReadModel(
+  pool: Pool,
+  tenant: TenantTriple,
+  q: any
+): Promise<OperationPlanStateReadModelRow[]> {
+  await ensureOperationPlanStateReadModelRuntime(pool);
+  const status = typeof q?.status === "string" && q.status.trim() ? q.status.trim().toUpperCase() : null;
+  const device_id = typeof q?.device_id === "string" && q.device_id.trim() ? q.device_id.trim() : null;
+  const field_id = typeof q?.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
+  const plan_id = typeof q?.plan_id === "string" && q.plan_id.trim() ? q.plan_id.trim() : null;
+  const limit = parseLimit(q);
+  const sql = `
+    SELECT plan_id, status, device_id, field_id, last_transition, receipt_status
+    FROM operation_plan_state_v1_rm
+    WHERE tenant_id = $1
+      AND project_id = $2
+      AND group_id = $3
+      AND ($4::text IS NULL OR status = $4)
+      AND ($5::text IS NULL OR device_id = $5)
+      AND ($6::text IS NULL OR field_id = $6)
+      AND ($7::text IS NULL OR plan_id = $7)
+    ORDER BY updated_at DESC, plan_id DESC
+    LIMIT $8
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, status, device_id, field_id, plan_id, limit]);
+  return (res.rows ?? []).map((row: any) => ({
+    plan_id: String(row.plan_id),
+    status: String(row.status ?? "UNKNOWN"),
+    device_id: row.device_id ? String(row.device_id) : null,
+    field_id: row.field_id ? String(row.field_id) : null,
+    last_transition: row.last_transition ? String(row.last_transition) : null,
+    receipt_status: row.receipt_status ? String(row.receipt_status) : null
   }));
 }
 
@@ -1884,6 +2054,40 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const payload = await buildOperationsConsole(pool, tenant);
     return reply.send({ ok: true, ...payload });
+  });
+
+  // GET /api/v1/operations/console/read-model
+  // Canonical state projection for operations console (supports plan/field/device/status filters).
+  app.get("/api/v1/operations/console/read-model", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const q: any = (req as any).query ?? {};
+    const items = await listOperationPlanStateReadModel(pool, tenant, q);
+    return reply.send({ ok: true, items });
+  });
+
+  // POST /api/v1/operations/console/read-model/rebuild
+  // Rebuild sequence: truncate tenant projection -> replay facts -> regenerate state rows.
+  app.post("/api/v1/operations/console/read-model/rebuild", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    const body: any = req.body ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(body.tenant_id ?? auth.tenant_id),
+      project_id: String(body.project_id ?? auth.project_id),
+      group_id: String(body.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const rebuilt = await rebuildOperationPlanStateReadModel(pool, tenant);
+    return reply.send({
+      ok: true,
+      rebuilt,
+      mode: "truncate_replay_rebuild",
+      tenant
+    });
   });
 
   // POST /api/v1/ao-act/tasks/:act_task_id/retry
