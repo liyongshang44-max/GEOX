@@ -187,6 +187,8 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
   const receiptsAfterBridgeJson = requireOk(receiptsAfterBridge, 'receipts after dispatch->receipt bridge');
   receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterBridgeJson.items ?? [], commandId);
   assert.ok(receiptCountAfterRun1 >= 1, `dispatch->receipt chain must create receipt for command_id=${commandId}`);
+  const receiptCountAfterRun1 = countReceiptsByCommand(receiptsAfterRun1Json.items ?? [], commandId);
+  assert.ok(receiptCountAfterRun1 >= 1, `first executor run must create receipt for command_id=${commandId}`);
 
   const factsAfterRun1 = await exportFacts(base, token, chainStartTs, Date.now() + 2_000, field_id);
   const transitionCountAfterRun1 = countOperationPlanTransitions(factsAfterRun1, subJson.operation_plan_id);
