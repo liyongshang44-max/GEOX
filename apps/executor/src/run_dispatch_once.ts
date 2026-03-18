@@ -77,6 +77,8 @@ function toAoActTask(item: any, args: Args): AoActTask {
   const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
   const action_type = String(taskPayload?.action_type ?? "").trim();
   const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
+  const adapter_type = String(taskPayload?.adapter_type ?? "").trim() || null;
+  const adapter_hint = String(item?.outbox?.payload?.adapter_hint ?? "").trim() || null;
   if (!act_task_id || !command_id || !action_type) throw new Error(`invalid claim item task payload: ${JSON.stringify(item)}`);
   if (!operation_plan_id) throw new Error(`missing operation_plan_id for act_task_id=${act_task_id}`);
   return {
@@ -87,7 +89,10 @@ function toAoActTask(item: any, args: Args): AoActTask {
     command_id,
     action_type,
     operation_plan_id,
-    parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {}
+    adapter_type,
+    adapter_hint,
+    parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {},
+    meta: (taskPayload?.meta && typeof taskPayload.meta === "object") ? taskPayload.meta : {}
   };
 }
 
@@ -131,31 +136,28 @@ async function main(): Promise<void> {
       continue;
     }
 
-    const adapter = findAdapter(registry, task.action_type);
-    console.log(`INFO: dispatching act_task_id=${task.act_task_id} command_id=${task.command_id} action_type=${task.action_type} adapter_type=${adapter.adapter_type}`);
+    const { adapterType, adapter } = findAdapter(registry, task);
+    console.log(`INFO: dispatching act_task_id=${task.act_task_id} command_id=${task.command_id} action_type=${task.action_type} adapter_type=${adapterType}`);
     await writeDispatchState(args, task, "DISPATCHED");
     try {
       const result = await adapter.dispatch(task);
-      if (!result.success) {
-        if (isDuplicateReceiptError(String(result.error ?? ""))) {
-          console.log(`INFO: duplicate receipt ignored act_task_id=${task.act_task_id} command_id=${task.command_id}`);
-          localExecutedCommandIds.add(task.command_id);
-          await writeDispatchState(args, task, "SUCCEEDED");
-          continue;
-        }
-        await writeDispatchState(args, task, "FAILED");
-        throw new Error(`adapter dispatch failed adapter_type=${adapter.adapter_type} act_task_id=${task.act_task_id} command_id=${task.command_id}: ${result.error ?? "unknown_error"}`);
-      }
-      localExecutedCommandIds.add(task.command_id);
+      const resolvedCommandId = String(result?.command_id ?? task.command_id).trim();
+      if (!resolvedCommandId) throw new Error(`adapter returned empty command_id act_task_id=${task.act_task_id}`);
+
+      localExecutedCommandIds.add(resolvedCommandId);
       await writeDispatchState(args, task, "ACKED");
       await writeDispatchState(args, task, "SUCCEEDED");
-      const receiptFactId = result.receipt_payload && typeof result.receipt_payload === "object"
-        ? String((result.receipt_payload as any).receipt_fact_id ?? "")
-        : "";
-      console.log(`INFO: adapter dispatch success adapter_type=${result.adapter_type} act_task_id=${task.act_task_id} command_id=${task.command_id} receipt_fact_id=${receiptFactId}`);
-      console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id} command_id=${task.command_id}`);
-    } catch (error) {
-      throw error;
+      console.log(`INFO: adapter dispatch success adapter_type=${adapterType} act_task_id=${task.act_task_id} command_id=${resolvedCommandId}`);
+      console.log(`PASS: dispatch adapter completed act_task_id=${task.act_task_id} command_id=${resolvedCommandId}`);
+    } catch (error: any) {
+      if (isDuplicateReceiptError(String(error?.message ?? error ?? ""))) {
+        console.log(`INFO: duplicate receipt ignored act_task_id=${task.act_task_id} command_id=${task.command_id}`);
+        localExecutedCommandIds.add(task.command_id);
+        await writeDispatchState(args, task, "SUCCEEDED");
+        continue;
+      }
+      await writeDispatchState(args, task, "FAILED");
+      throw new Error(`adapter dispatch failed adapter_type=${adapterType} act_task_id=${task.act_task_id} command_id=${task.command_id}: ${error?.message ?? String(error)}`);
     }
   }
 }

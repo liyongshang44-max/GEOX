@@ -578,6 +578,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       aoActParameters.noop = true;
     }
     const aoActParameterSchema = toAoActParameterSchema(aoActParameters);
+    const adapterTypeRaw = typeof rec?.suggested_action?.adapter_type === "string" ? String(rec.suggested_action.adapter_type).trim() : "";
+    const adapter_type = adapterTypeRaw || ((String(actionType).toLowerCase() === "irrigation.start" || String(actionType).toLowerCase() === "irrigate") ? "irrigation" : "mqtt");
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/approval_request/v1/request`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
@@ -597,7 +599,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         field_id: rec.field_id ?? null,
         season_id: rec.season_id ?? null,
         confidence: rec.confidence ?? null,
-        device_id: rec.device_id ?? null
+        device_id: rec.device_id ?? null,
+        adapter_type
       }
     });
 
@@ -630,6 +633,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation_fact_id: row.fact_id,
         approval_request_id: delegated.json.request_id,
         action_type: actionType,
+        adapter_type,
         target: aoActTarget,
         parameters: aoActParameters,
         status: "CREATED",
