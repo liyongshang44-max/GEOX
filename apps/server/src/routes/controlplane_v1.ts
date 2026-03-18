@@ -52,10 +52,37 @@ function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: TenantTriple,
 function queryTenantFromReq(req: FastifyRequest, auth: AoActAuthContextV0): TenantTriple {
   const q: any = (req as any).query ?? {}; // Read query object.
   return {
-    tenant_id: typeof q.tenant_id === "string" && q.tenant_id.trim() ? q.tenant_id.trim() : auth.tenant_id,
-    project_id: typeof q.project_id === "string" && q.project_id.trim() ? q.project_id.trim() : auth.project_id,
-    group_id: typeof q.group_id === "string" && q.group_id.trim() ? q.group_id.trim() : auth.group_id
-  }; // Default to token triple when query is omitted.
+    tenant_id: typeof q.tenant_id === "string" ? q.tenant_id.trim() : "",
+    project_id: typeof q.project_id === "string" ? q.project_id.trim() : "",
+    group_id: typeof q.group_id === "string" ? q.group_id.trim() : ""
+  }; // Require explicit tenant triple in query for anti-enumeration hardening.
+}
+
+function parseTenantFromBody(body: any): TenantTriple {
+  return {
+    tenant_id: String(body?.tenant_id ?? "").trim(),
+    project_id: String(body?.project_id ?? "").trim(),
+    group_id: String(body?.group_id ?? "").trim()
+  }; // Require explicit tenant triple in body for all write endpoints.
+}
+
+function requireTenantFieldsPresentOr400(tenant: TenantTriple, reply: FastifyReply): boolean {
+  if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) {
+    reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" }); // Require explicit tenant fields.
+    return false;
+  }
+  return true;
+}
+
+async function ensureDeviceBelongsTenantOr404(pool: Pool, tenant: TenantTriple, device_id: string): Promise<boolean> {
+  const q = await pool.query(
+    `SELECT 1
+       FROM device_index_v1
+      WHERE tenant_id = $1 AND device_id = $2
+      LIMIT 1`,
+    [tenant.tenant_id, device_id]
+  ); // Object-level validation: device must exist in tenant projection.
+  return (q.rowCount ?? 0) > 0;
 }
 
 async function insertFact(pool: Pool, source: string, record_json: any): Promise<string> {
@@ -1169,11 +1196,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!auth) return;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/approval_request/v1/request`, String((req.headers as any).authorization ?? ""), {
@@ -1192,6 +1216,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Reuse read-only control scope.
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const items = await listApprovals(pool, tenant, parseLimit((req as any).query));
     return reply.send({ ok: true, items });
@@ -1202,6 +1227,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const request_id = String(params.request_id ?? "").trim();
@@ -1225,11 +1251,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!request_id) return badRequest(reply, "MISSING_REQUEST_ID");
     const decision = String(body.decision ?? "").trim().toUpperCase();
     if (decision !== "APPROVE" && decision !== "REJECT") return badRequest(reply, "INVALID_DECISION");
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const requestFact = await loadLatestFactByTypeAndKey(pool, "approval_request_v1", "payload,request_id", request_id, tenant);
@@ -1402,12 +1425,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const requestedDeviceId = String((body?.meta as any)?.device_id ?? "").trim();
+    if (requestedDeviceId && !(await ensureDeviceBelongsTenantOr404(pool, tenant, requestedDeviceId))) {
+      return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    }
     const operation_plan_id = String(body.operation_plan_id ?? "").trim();
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
@@ -1495,6 +1519,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const items = await listTasks(pool, tenant, parseLimit((req as any).query));
     return reply.send({ ok: true, items });
@@ -1505,6 +1530,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const act_task_id = String(params.act_task_id ?? "").trim();
@@ -1530,11 +1556,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
@@ -1661,11 +1684,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const limit = Math.max(1, Math.min(50, Number.parseInt(String(body.limit ?? 1), 10) || 1));
     const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(String(body.lease_seconds ?? 30), 10) || 30));
@@ -1687,11 +1707,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const act_task_id = String(body.act_task_id ?? "").trim();
     const command_id = String(body.command_id ?? act_task_id).trim();
@@ -1768,6 +1785,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const q: any = (req as any).query ?? {};
     const actTaskId = typeof q.act_task_id === "string" && q.act_task_id.trim() ? q.act_task_id.trim() : undefined; // Optional server-side task filter for one-shot adapters.
@@ -1781,11 +1799,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const act_task_id = String(body.act_task_id ?? "").trim();
     const outbox_fact_id = String(body.outbox_fact_id ?? "").trim();
@@ -1794,6 +1809,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!outbox_fact_id) return badRequest(reply, "MISSING_OUTBOX_FACT_ID");
     if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
+    if (!(await ensureDeviceBelongsTenantOr404(pool, tenant, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     if (!topic) return badRequest(reply, "MISSING_TOPIC");
     const queueItem = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
     if (!queueItem) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -1880,6 +1896,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const q: any = (req as any).query ?? {};
     const sql = `
@@ -1910,11 +1927,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
     const command_id = String(body.command_id ?? "").trim();
@@ -1924,6 +1938,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
     if (!device_id) return badRequest(reply, "MISSING_DEVICE_ID");
+    if (!(await ensureDeviceBelongsTenantOr404(pool, tenant, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
@@ -2014,6 +2029,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const items = await listOperationPlans(pool, tenant, parseLimit((req as any).query));
     return reply.send({ ok: true, items });
@@ -2024,6 +2040,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const operation_plan_id = String(params.operation_plan_id ?? "").trim();
@@ -2051,6 +2068,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const payload = await buildOperationsConsole(pool, tenant);
     return reply.send({ ok: true, ...payload });
@@ -2062,6 +2080,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const q: any = (req as any).query ?? {};
     const items = await listOperationPlanStateReadModel(pool, tenant, q);
@@ -2075,11 +2094,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!auth) return;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const rebuilt = await rebuildOperationPlanStateReadModel(pool, tenant);
     return reply.send({
@@ -2103,11 +2119,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== act_task_id) return badRequest(reply, "COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const existingTask = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!existingTask) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -2133,6 +2146,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const q: any = (req as any).query ?? {};
     const sql = `
@@ -2162,11 +2176,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
     if (!auth) return;
     const body: any = req.body ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id)
-    };
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const task_id = String(body.task_id ?? body.act_task_id ?? "").trim();
     const command_id = String(body.command_id ?? "").trim();
@@ -2226,6 +2237,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = queryTenantFromReq(req, auth);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const q: any = (req as any).query ?? {};
     const items = await listReceipts(pool, tenant, parseLimit(q), typeof q.act_task_id === "string" ? q.act_task_id : undefined);

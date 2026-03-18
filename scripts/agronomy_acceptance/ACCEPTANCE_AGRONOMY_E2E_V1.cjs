@@ -11,6 +11,7 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   const field_id = env('FIELD_ID', 'field_demo_1'); // Resolve field id from env.
   const season_id = env('SEASON_ID', 'season_demo_1'); // Resolve season id from env.
   const device_id = env('DEVICE_ID', 'device_demo_1'); // Resolve device id from env.
+  const cross_tenant_token = env('AO_ACT_TOKEN_TENANT_B', ''); // Optional real cross-tenant token for anti-enumeration validation.
   const export_window_before_ms = Number(env('EXPORT_WINDOW_BEFORE_MS', '3600000')) || 3600000; // Expand export window backward to capture full chain.
   const export_window_after_ms = Number(env('EXPORT_WINDOW_AFTER_MS', '120000')) || 120000; // Expand export window forward to tolerate async job timestamps.
 
@@ -107,8 +108,27 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
     method: 'POST', token, // Send authenticated POST request.
     body: badUplinkBody // Use explicit body object for easier debugging.
   });
-  assert.strictEqual(badUplink.status, 400, `expected 400 for device mismatch uplink, got ${badUplink.status}`); // Device mismatch must be rejected.
-  assert.strictEqual(badUplink.json?.error, 'DEVICE_ID_MISMATCH', 'expected DEVICE_ID_MISMATCH'); // Error code must stay stable.
+  assert.strictEqual(badUplink.status, 404, `expected 404 for device mismatch uplink, got ${badUplink.status}`); // Device mismatch is non-enumerable and must be hidden as NOT_FOUND.
+  assert.strictEqual(badUplink.json?.error, 'NOT_FOUND', 'expected NOT_FOUND'); // Error code must stay non-enumerable.
+
+  if (cross_tenant_token) { // Optional runtime probe: use a real other-tenant token to validate object-level anti-enumeration.
+    const crossTenantUplink = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, {
+      method: 'POST', token: cross_tenant_token,
+      body: {
+        tenant_id, project_id, group_id, // Intentionally reference tenant A scope with tenant B token.
+        task_id: actTaskId,
+        act_task_id: actTaskId,
+        command_id: actTaskId,
+        device_id,
+        status: 'executed',
+        meta: { idempotency_key: `cross-tenant-uplink-${actTaskId}` }
+      }
+    });
+    assert.strictEqual(crossTenantUplink.status, 404, `expected 404 for cross-tenant token uplink, got ${crossTenantUplink.status}`); // Cross-tenant probe must not leak existence.
+    assert.strictEqual(crossTenantUplink.json?.error, 'NOT_FOUND', 'expected NOT_FOUND for cross-tenant token uplink'); // Keep error surface non-enumerable.
+  } else {
+    console.log('INFO skip cross-tenant token probe: AO_ACT_TOKEN_TENANT_B not set'); // Keep script runnable in single-tenant local environments.
+  }
 
   const uplinkBody = { // Build valid receipt body.
     tenant_id, project_id, group_id, // Bind request to the tenant triple.
@@ -216,4 +236,3 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   if (e?.stack) console.error(e.stack);
   process.exit(1);
 }); // Fail the process on any assertion or runtime error.
-
