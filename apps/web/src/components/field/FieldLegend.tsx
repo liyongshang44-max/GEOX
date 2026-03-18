@@ -6,6 +6,10 @@ export default function FieldLegend({ labels }: { labels: any }): React.ReactEle
     { color: "#16a34a", label: labels.devicePosition },
     { color: "#2563eb", label: labels.operationTrack },
     { color: "#dc2626", label: labels.alertLocation },
+    { color: "#2563eb", label: "READY" },
+    { color: "#f79009", label: "DISPATCHED" },
+    { color: "#12b76a", label: "SUCCEEDED" },
+    { color: "#f04438", label: "FAILED" },
   ];
   return (
     <div className="card" style={{ padding: 10 }}>

@@ -20,6 +20,14 @@ function fmtIso(ts: string | null | undefined): string {
 }
 
 type FieldTab = "overview" | "map" | "operations" | "alerts";
+type ExecutionStatus = "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
+
+function executionColor(status: ExecutionStatus): string {
+  if (status === "READY") return "#2563eb";
+  if (status === "DISPATCHED") return "#f79009";
+  if (status === "SUCCEEDED") return "#12b76a";
+  return "#f04438";
+}
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
@@ -31,6 +39,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
+  const [timelineIndex, setTimelineIndex] = React.useState<number>(0);
+  const [playing, setPlaying] = React.useState<boolean>(false);
 
   const labels = FIELD_TEXT[lang];
   const isDev = Boolean(import.meta.env.DEV);
@@ -70,8 +80,10 @@ export default function FieldDetailPage(): React.ReactElement {
         : "-";
       return {
         id: String(item.id ?? `${item.task_type}_${item.ts_ms || 0}`),
+        actTaskId: String(item.act_task_id ?? ""),
         type: mapOperationTypeToLabel(item.task_type, lang),
         time: fmtTs(item.ts_ms),
+        timeMs: Number(item.ts_ms ?? 0),
         source,
         status: statusLabel,
         device: item.device_id || "-",
@@ -92,12 +104,85 @@ export default function FieldDetailPage(): React.ReactElement {
         status: statusLabel,
         target: event.object_id || "-",
         time: fmtIso(event.raised_at) !== "-" ? fmtIso(event.raised_at) : fmtTs(event.raised_ts_ms),
+        timeMs: Number(event.raised_ts_ms ?? Date.parse(event.raised_at ?? "") ?? 0),
         suggestion: event.suggested_action || event.suggestion || null,
         severity: event.severity || null,
         raw: event,
       };
     });
   }, [detail, labels, lang]);
+
+  const timelineEvents = React.useMemo(() => {
+    const telemetryEvents = (detail?.map_layers?.markers || []).map((m: any) => ({
+      ts: Number(m.ts_ms ?? 0),
+      type: "telemetry",
+      label: `${labels.devicePosition} ${m.device_id}`,
+    }));
+    const receiptEvents = (detail?.recent_receipts || []).map((r: any) => ({
+      ts: Number(Date.parse(String(r.occurred_at ?? ""))) || 0,
+      type: "receipt",
+      label: `${labels.source}: ${labels.alerts}`,
+    }));
+    const transitionEvents = operationItems.map((op) => ({
+      ts: Number(op.timeMs || 0),
+      type: "plan_transition",
+      label: `${labels.operations}: ${op.type}`,
+    }));
+    return [...telemetryEvents, ...receiptEvents, ...transitionEvents]
+      .filter((x) => Number.isFinite(x.ts) && x.ts > 0)
+      .sort((a, b) => a.ts - b.ts);
+  }, [detail, operationItems, labels]);
+
+  React.useEffect(() => {
+    if (!playing || timelineEvents.length < 2) return;
+    const timer = window.setInterval(() => {
+      setTimelineIndex((prev) => (prev + 1 < timelineEvents.length ? prev + 1 : prev));
+    }, 900);
+    return () => window.clearInterval(timer);
+  }, [playing, timelineEvents.length]);
+
+  React.useEffect(() => {
+    if (timelineIndex >= timelineEvents.length) setTimelineIndex(Math.max(0, timelineEvents.length - 1));
+  }, [timelineEvents.length, timelineIndex]);
+
+  const playbackTs = timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER;
+
+  const trajectorySegments = React.useMemo(() => {
+    const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
+    const receiptByTask = new Map<string, any>();
+    for (const receipt of detail?.recent_receipts || []) {
+      const actTaskId = String(receipt?.receipt?.payload?.act_task_id ?? "").trim();
+      if (actTaskId) receiptByTask.set(actTaskId, receipt);
+    }
+
+    return operationItems.map((op) => {
+      const traj = trajectories.find((t: any) => String(t.device_id ?? "") === String(op.raw?.device_id ?? ""));
+      const points = Array.isArray(traj?.points) ? traj.points : [];
+      const start = Number(op.raw?.start_ts_ms ?? 0);
+      const end = Number(op.raw?.end_ts_ms ?? Number.MAX_SAFE_INTEGER);
+      const clipped = points
+        .filter((p: any) => Number(p.ts_ms) >= start && Number(p.ts_ms) <= end && Number(p.ts_ms) <= playbackTs)
+        .map((p: any) => [Number(p.lon), Number(p.lat)] as [number, number]);
+      const receipt = op.actTaskId ? receiptByTask.get(op.actTaskId) : null;
+      const receiptStatus = String(receipt?.receipt?.payload?.status ?? "").toUpperCase();
+      let statusCode: ExecutionStatus = "READY";
+      if (receiptStatus.includes("FAIL")) statusCode = "FAILED";
+      else if (receiptStatus.includes("SUCCESS") || receiptStatus.includes("SUCC") || op.source === labels.fromReceipt) statusCode = "SUCCEEDED";
+      else if (op.source === labels.fromSchedule) statusCode = "DISPATCHED";
+      return {
+        id: op.id,
+        status: statusCode,
+        color: executionColor(statusCode),
+        coordinates: clipped,
+        label: op.type,
+      };
+    }).filter((s) => s.coordinates.length > 1);
+  }, [detail, operationItems, playbackTs, labels]);
+
+  const playbackMarkers = React.useMemo(
+    () => (detail?.map_layers?.markers || []).filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs),
+    [detail, playbackTs],
+  );
 
   const risk = riskKey(detail);
 
@@ -166,25 +251,34 @@ export default function FieldDetailPage(): React.ReactElement {
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
+              <div className="card" style={{ padding: 10 }}>
+                <div className="muted">Timeline</div>
+                <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
+                <div className="muted" style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>{timelineEvents[timelineIndex]?.label || "-"}</span>
+                  <button className="btn" onClick={() => setPlaying((v) => !v)}>{playing ? "Pause" : "Play"}</button>
+                </div>
+              </div>
               <FieldGisMap
                 polygonGeoJson={detail?.polygon?.geojson_json}
-                trajectoryGeoJson={detail?.map_layers?.trajectory_geojson || { type: "FeatureCollection", features: [] }}
                 heatGeoJson={detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }}
-                markers={detail?.map_layers?.markers || []}
+                markers={playbackMarkers}
+                trajectorySegments={trajectorySegments}
+                activeSegmentId={selectedObject?.id}
                 labels={labels}
                 onSelectObject={setSelectedObject}
               />
             </div>
           ) : null}
 
-          {activeTab === "operations" ? <FieldOperationList labels={labels} items={operationItems} onSelect={(item) => setSelectedObject({ kind: labels.operations, name: item.type, time: item.time, status: item.status, related: item.source })} /> : null}
-          {activeTab === "alerts" ? <FieldAlertList labels={labels} items={alertItems} onSelect={(item) => setSelectedObject({ kind: labels.alerts, name: item.type, time: item.time, status: item.status, related: item.target })} /> : null}
+          {activeTab === "operations" ? <FieldOperationList labels={labels} items={operationItems} onSelect={(item) => setSelectedObject({ kind: labels.operations, name: item.type, time: item.time, status: item.status, related: item.source, id: item.id })} /> : null}
+          {activeTab === "alerts" ? <FieldAlertList labels={labels} items={alertItems} onSelect={(item) => setSelectedObject({ kind: labels.alerts, name: item.type, time: item.time, status: item.status, related: item.target, id: item.id })} /> : null}
 
           {isDev ? (
             <details style={{ marginTop: 12 }}>
               <summary className="muted">{labels.devDebug}</summary>
               <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="token" /></label>
-              <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify(detail, null, 2)}</pre>
+              <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify({ timelineEvents, trajectorySegments, detail }, null, 2)}</pre>
             </details>
           ) : null}
         </div>

@@ -215,7 +215,7 @@ function RecommendationStatusChain({ item, labels }: { item: RecommendationViewM
 function RecommendationCard(props: {
   item: RecommendationViewModel;
   active: boolean;
-  labels: (typeof I18N)[keyof typeof I18N];
+  labels: typeof I18N.zh;
   onOpen: () => void;
   onSubmit: () => void;
 }): React.ReactElement {
