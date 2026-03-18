@@ -18,3 +18,6 @@ export * from "./schema/agronomy_recommendation_v1";
 export * from "./schema/actuator_adapter_v1";
 export * from "./schema/operation_plan_v1";
 export * from "./schema/operation_plan_transition_v1";
+
+export * from "./schema/executor_adapter_v1";
+export * from "./schema/ao_act_receipt_v1";
