@@ -1,5 +1,6 @@
-﻿import React from "react";
+import React from "react";
 import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
+import { mapStatusToText, t } from "../lib/i18n";
 
 type Lang = "zh" | "en";
 type RecommendationStatus = "pending" | "in_approval" | "planned" | "tasked" | "completed";
@@ -173,6 +174,7 @@ function reasonLabel(code: string, lang: Lang): string {
 function toViewModel(item: AgronomyRecommendationItemV1, lang: Lang): RecommendationViewModel {
   const status = deriveStatus(item);
   const reasons = Array.isArray(item.reason_codes) ? item.reason_codes : [];
+  const tt = (key: string) => t(lang, key);
   return {
     raw: item,
     recommendationId: item.recommendation_id,
@@ -182,10 +184,10 @@ function toViewModel(item: AgronomyRecommendationItemV1, lang: Lang): Recommenda
     statusLabel: I18N[lang].statusMap[status],
     executionLabel:
       status === "completed"
-        ? (lang === "zh" ? "已执行" : "Executed")
+        ? mapStatusToText("SUCCESS", tt)
         : String(item.latest_status ?? "").toUpperCase().includes("FAIL")
-          ? (lang === "zh" ? "执行失败" : "Execution Failed")
-          : (lang === "zh" ? "未执行" : "Not Executed"),
+          ? mapStatusToText("FAILED", tt)
+          : mapStatusToText("PENDING", tt),
     reasonLabels: reasons.length ? reasons.map((code) => reasonLabel(code, lang)) : [I18N[lang].noReason],
     canSubmit: status === "pending",
     evidenceCount: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,

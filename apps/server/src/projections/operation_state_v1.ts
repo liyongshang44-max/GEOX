@@ -37,6 +37,8 @@ export type OperationStateV1 = {
   timeline: OperationTimelineItemV1[];
 };
 
+export type OperationProjectionFactRow = FactRow;
+
 function parseRecordJson(v: any): any {
   if (v && typeof v === "object") return v;
   if (typeof v === "string") {
@@ -119,8 +121,7 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
   return null;
 }
 
-export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
-  const facts = await loadFacts(pool, tenant);
+export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const decisionByReq = latestByKey(facts.filter((r) => r.record_json?.type === "approval_decision_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
@@ -205,4 +206,9 @@ export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple):
   }
 
   return states.sort((a, b) => b.last_event_ts - a.last_event_ts);
+}
+
+export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
+  const facts = await loadFacts(pool, tenant);
+  return projectOperationStateFromFacts(facts);
 }

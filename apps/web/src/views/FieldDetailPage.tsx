@@ -8,7 +8,7 @@ import FieldAlertList from "../components/field/FieldAlertList";
 import FieldLegend from "../components/field/FieldLegend";
 import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
 import { FIELD_TEXT, formatRiskStatus, getRiskColor, mapAlertTypeToLabel, mapFieldStatusToLabel, mapOperationTypeToLabel, mapSourceFieldToLabel, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
-import { t } from "../lib/i18n";
+import { mapStatusToText, t } from "../lib/i18n";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -219,11 +219,11 @@ export default function FieldDetailPage(): React.ReactElement {
   const recentTimeline = React.useMemo(() => {
     const opEvents = activeOperations.slice(0, 4).map((x) => ({
       ts: x.last_event_ts,
-      text: `${x.action_type || tt("operation.title")} ${x.final_status}`,
+      text: `${x.action_type || tt("operation.title")} ${mapStatusToText(String(x.final_status ?? ""), tt)}`,
     }));
     const recEvents = recentRecommendations.slice(0, 4).map((x) => ({
       ts: Number(Date.parse(String(x.occurred_at ?? ""))) || 0,
-      text: `${x.recommendation_type || tt("field.recent_timeline")} ${x.latest_status || x.status || ""}`.trim(),
+      text: `${x.recommendation_type || tt("field.recentTimeline")} ${x.latest_status || x.status || ""}`.trim(),
     }));
     const alertTimeline = alertItems.slice(0, 4).map((x) => ({
       ts: Number(x.timeMs ?? 0),
@@ -275,15 +275,15 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.fieldName}：</b>{detail?.field?.name || "-"}</div>
               <div><b>{labels.area}：</b>{detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-"}</div>
               <div><b>{labels.currentSeason}：</b>{detail?.latest_season?.name || detail?.latest_season?.season_id || "-"}</div>
-              <div><b>{labels.crop}：</b>{detail?.latest_season?.crop || "-"}</div>
-              <div><b>{labels.currentStage}：</b>{detail?.latest_season?.stage || "-"}</div>
+              {detail?.latest_season?.crop ? <div><b>{labels.crop}：</b>{detail.latest_season.crop}</div> : null}
+              {detail?.latest_season?.stage ? <div><b>{labels.currentStage}：</b>{detail.latest_season.stage}</div> : null}
               <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(detail?.field?.status, lang)}</div>
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
-              <div><b>{tt("field.current_operation")}：</b>{activeOperations.length}</div>
+              <div><b>{tt("field.currentOperation")}：</b>{activeOperations.length}</div>
               <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{formatRiskStatus(detail, lang)}</span></div>
-              <div style={{ marginTop: 8 }}><b>{tt("field.recent_timeline")}：</b></div>
+              <div style={{ marginTop: 8 }}><b>{tt("field.recentTimeline")}：</b></div>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {recentRecommendations.map((r) => (
                   <li key={r.recommendation_id} className="muted">
@@ -293,15 +293,15 @@ export default function FieldDetailPage(): React.ReactElement {
                 {!recentRecommendations.length ? <li className="muted">-</li> : null}
               </ul>
 
-              <div style={{ marginTop: 12 }}><b>{tt("field.current_operation")}</b></div>
+              <div style={{ marginTop: 12 }}><b>{tt("field.currentOperation")}</b></div>
               <div className="card" style={{ padding: 10 }}>
                 <div>{tt("operation.labels.action")}：{currentOperation?.action_type || tt("common.none")}</div>
                 <div>{tt("operation.labels.device")}：{currentOperation?.device_id || tt("common.none")}</div>
-                <div>{tt("operation.filters.status")}：{currentOperation ? tt(`operation.status.${currentOperation.final_status}`) : tt("common.none")}</div>
+                <div>{tt("operation.filters.status")}：{currentOperation ? mapStatusToText(String(currentOperation.final_status), tt) : tt("common.none")}</div>
                 <div>{tt("field.progress")}：{currentProgress}%</div>
               </div>
 
-              <div style={{ marginTop: 12 }}><b>{tt("field.recent_timeline")}</b></div>
+              <div style={{ marginTop: 12 }}><b>{tt("field.recentTimeline")}</b></div>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {recentTimeline.map((x, idx) => (
                   <li key={`${x.ts}_${idx}`}>[{new Date(x.ts).toLocaleTimeString()}] {x.text}</li>
@@ -309,10 +309,10 @@ export default function FieldDetailPage(): React.ReactElement {
                 {!recentTimeline.length ? <li className="muted">-</li> : null}
               </ul>
 
-              <div style={{ marginTop: 12 }}><b>{tt("field.risk_alerts")}</b></div>
+              <div style={{ marginTop: 12 }}><b>{tt("field.riskAlerts")}</b></div>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {alertItems.slice(0, 3).map((x) => <li key={x.id}>⚠ {x.type}</li>)}
-                {!alertItems.length ? <li className="muted">{tt("field.no_risk")}</li> : null}
+                {!alertItems.length ? <li className="muted">{tt("field.noRisk")}</li> : null}
               </ul>
             </div>
           ) : null}
