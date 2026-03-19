@@ -1,5 +1,6 @@
-﻿import React from "react";
+import React from "react";
 import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
+import { mapStatusToText, t } from "../lib/i18n";
 
 type Lang = "zh" | "en";
 type RecommendationStatus = "pending" | "in_approval" | "planned" | "tasked" | "completed";
@@ -11,6 +12,7 @@ type RecommendationViewModel = {
   typeLabel: string;
   status: RecommendationStatus;
   statusLabel: string;
+  executionLabel: string;
   reasonLabels: string[];
   canSubmit: boolean;
   evidenceCount: number;
@@ -172,6 +174,7 @@ function reasonLabel(code: string, lang: Lang): string {
 function toViewModel(item: AgronomyRecommendationItemV1, lang: Lang): RecommendationViewModel {
   const status = deriveStatus(item);
   const reasons = Array.isArray(item.reason_codes) ? item.reason_codes : [];
+  const tt = (key: string) => t(lang, key);
   return {
     raw: item,
     recommendationId: item.recommendation_id,
@@ -179,6 +182,12 @@ function toViewModel(item: AgronomyRecommendationItemV1, lang: Lang): Recommenda
     typeLabel: recommendationTypeLabel(item.recommendation_type, lang),
     status,
     statusLabel: I18N[lang].statusMap[status],
+    executionLabel:
+      status === "completed"
+        ? mapStatusToText("SUCCESS", tt)
+        : String(item.latest_status ?? "").toUpperCase().includes("FAIL")
+          ? mapStatusToText("FAILED", tt)
+          : mapStatusToText("PENDING", tt),
     reasonLabels: reasons.length ? reasons.map((code) => reasonLabel(code, lang)) : [I18N[lang].noReason],
     canSubmit: status === "pending",
     evidenceCount: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
@@ -215,7 +224,7 @@ function RecommendationStatusChain({ item, labels }: { item: RecommendationViewM
 function RecommendationCard(props: {
   item: RecommendationViewModel;
   active: boolean;
-  labels: typeof I18N.zh;
+  labels: (typeof I18N)[Lang];
   onOpen: () => void;
   onSubmit: () => void;
 }): React.ReactElement {
@@ -236,6 +245,7 @@ function RecommendationCard(props: {
         <span>{labels.evidence} {item.evidenceCount}</span>
         <span>{labels.rule} {item.ruleHitCount}</span>
         <span>{labels.confidence} {item.raw.confidence ?? "-"}</span>
+        <span>{item.executionLabel}</span>
       </div>
       {item.canSubmit ? <button className="btn primary" onClick={onSubmit}>{labels.submit}</button> : null}
     </div>
@@ -396,7 +406,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               <div><b>{labels.operationPlanId}：</b><span className="mono">{shortId(selected.operation_plan_id)}</span></div>
               <div><b>{labels.taskId}：</b><span className="mono">{shortId(selected.act_task_id)}</span></div>
               <div><b>{labels.receiptId}：</b><span className="mono">{shortId(selected.receipt_fact_id)}</span></div>
-              <div><b>{labels.status}：</b>{selectedView?.statusLabel}</div>
+              <div><b>{labels.status}：</b>{selectedView?.statusLabel} / {selectedView?.executionLabel}</div>
               <div><b>{labels.type}：</b>{selectedView?.typeLabel}</div>
               <div><b>{labels.reasons}：</b>{selectedView?.reasonLabels.join(" / ") || labels.noReason}</div>
               <div><b>{labels.action}：</b>{selected.suggested_action?.summary || "-"}</div>

@@ -925,6 +925,29 @@ export type OperationsConsoleResponse = {
   receipts: OperationReceiptItem[];
 };
 
+export type OperationStateTimelineItemV1 = {
+  type: string;
+  label: string;
+  ts: number;
+};
+
+export type OperationStateItemV1 = {
+  operation_id: string;
+  recommendation_id?: string | null;
+  approval_request_id?: string | null;
+  approval_decision_id?: string | null;
+  operation_plan_id?: string | null;
+  task_id?: string | null;
+  device_id?: string | null;
+  field_id?: string | null;
+  action_type?: string | null;
+  dispatch_status: string;
+  receipt_status: string;
+  final_status: string;
+  last_event_ts: number;
+  timeline: OperationStateTimelineItemV1[];
+};
+
 export async function fetchOperationsConsole(token: string): Promise<OperationsConsoleResponse> {
   const res = await requestJson<{ ok: boolean } & OperationsConsoleResponse>(`/api/v1/operations/console`, {
     headers: authHeaders(token),
@@ -937,6 +960,16 @@ export async function fetchOperationsConsole(token: string): Promise<OperationsC
     dispatches: Array.isArray(res.dispatches) ? res.dispatches : [],
     receipts: Array.isArray(res.receipts) ? res.receipts : [],
   };
+}
+
+export async function fetchOperationStates(
+  token: string,
+  params?: { field_id?: string; device_id?: string; final_status?: string; limit?: number },
+): Promise<{ ok: boolean; count: number; items: OperationStateItemV1[] }> {
+  return requestJson<{ ok: boolean; count: number; items: OperationStateItemV1[] }>(
+    withQuery(`/api/v1/operations`, params),
+    { headers: authHeaders(token) },
+  );
 }
 
 export async function retryAoActTask(
@@ -1040,4 +1073,3 @@ export async function fetchAgronomyRecommendationDetail(params: {
     group_id: params.group_id,
   }), { headers: authHeaders(token) });
 }
-

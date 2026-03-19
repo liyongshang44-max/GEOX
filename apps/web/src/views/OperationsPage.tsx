@@ -1,203 +1,184 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import {
-  fetchAuthMe,
-  fetchOperationsConsole,
-  createApproval,
-  decideApproval,
-  dispatchAoActTask,
-  retryAoActTask,
-  type AuthMe,
-  type OperationsConsoleResponse,
-} from "../lib/api";
-import OperationSummaryStats from "../components/operations/OperationSummaryStats";
-import OperationQueueList from "../components/operations/OperationQueueList";
-import OperationDetailPanel from "../components/operations/OperationDetailPanel";
-import OperationQuickCreate from "../components/operations/OperationQuickCreate";
-import { OP_LABELS, buildWorkItems, summarize, type OpsLang, type OperationWorkItem, type WorkTab } from "../lib/operationViewModel";
+import { fetchOperationStates, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
+import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
-function getStoredToken(): string {
-  try { return localStorage.getItem("geox_ao_act_token") || "dev_ao_act_admin_v0"; } catch { return "dev_ao_act_admin_v0"; }
+type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
+
+function fmtTs(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "-";
+  return new Date(ms).toLocaleTimeString();
 }
 
-function presetTemplate(actionType: string): { parameters: any; device_id?: string } {
-  if (actionType === "IRRIGATE") return { parameters: { duration_min: 15, flow_rate: 12 } };
-  if (actionType === "SPRAY") return { parameters: { dose_ml: 120, speed_kmh: 4 } };
-  if (actionType === "PLOW") return { parameters: { depth_cm: 18, speed_kmh: 5 }, device_id: "dev_demo" };
-  return { parameters: { duration_min: 10 } };
+function statusOf(item: OperationStateItemV1): StatusKey {
+  const s = String(item.final_status ?? "").toUpperCase();
+  if (s === "SUCCESS") return "SUCCESS";
+  if (s === "FAILED") return "FAILED";
+  if (s === "RUNNING") return "RUNNING";
+  return "PENDING";
+}
+
+function statusColor(status: StatusKey): string {
+  if (status === "SUCCESS") return "#16a34a";
+  if (status === "FAILED") return "#dc2626";
+  if (status === "RUNNING") return "#2563eb";
+  return "#6b7280";
+}
+
+function actionLabel(value: string | null | undefined, locale: Locale): string {
+  const raw = String(value ?? "").toLowerCase();
+  if (raw.includes("irrig")) return locale === "zh" ? "灌溉" : "Irrigation";
+  if (raw.includes("spray")) return locale === "zh" ? "喷洒" : "Spray";
+  if (raw.includes("seed")) return locale === "zh" ? "播种" : "Seeding";
+  return locale === "zh" ? "作业" : (raw ? raw.toUpperCase() : t(locale, "common.unknown"));
+}
+
+function timelineItemVisual(type: string): { icon: string; color: string } {
+  if (type === "RECOMMENDATION_CREATED") return { icon: "🧠", color: "#6b7280" };
+  if (type === "APPROVED") return { icon: "✅", color: "#16a34a" };
+  if (type === "TASK_DISPATCHED") return { icon: "📤", color: "#2563eb" };
+  if (type === "EXECUTING" || type === "DEVICE_ACK") return { icon: "⚙️", color: "#2563eb" };
+  if (type === "SUCCEEDED") return { icon: "✅", color: "#16a34a" };
+  if (type === "FAILED") return { icon: "❌", color: "#dc2626" };
+  return { icon: "•", color: "#6b7280" };
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [token] = React.useState<string>(getStoredToken());
-  const [session, setSession] = React.useState<AuthMe | null>(null);
-  const [consoleData, setConsoleData] = React.useState<OperationsConsoleResponse | null>(null);
-  const [statusText, setStatusText] = React.useState<string>("");
-  const [loading, setLoading] = React.useState<boolean>(false);
-  const [lang, setLang] = React.useState<OpsLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
-  const [activeTab, setActiveTab] = React.useState<WorkTab>("pending_approval");
-  const [selectedKey, setSelectedKey] = React.useState<string>("");
+  const [token] = React.useState<string>(() => readStoredAoActToken());
+  const [locale] = React.useState<Locale>(() => resolveLocale());
+  const tt = React.useCallback((key: string) => t(locale, key), [locale]);
+  const [items, setItems] = React.useState<OperationStateItemV1[]>([]);
+  const [selectedId, setSelectedId] = React.useState<string>("");
+  const [loading, setLoading] = React.useState(false);
 
-  const [issuer, setIssuer] = React.useState("manual");
-  const [actionType, setActionType] = React.useState("IRRIGATE");
-  const [targetText, setTargetText] = React.useState("field_demo");
-  const [requestDeviceId, setRequestDeviceId] = React.useState("");
-  const [parametersText, setParametersText] = React.useState(JSON.stringify(presetTemplate("IRRIGATE").parameters));
-  const [retryDeviceId, setRetryDeviceId] = React.useState("dev_demo");
+  const [fieldFilter, setFieldFilter] = React.useState<string>("");
+  const [deviceFilter, setDeviceFilter] = React.useState<string>("");
+  const [statusFilter, setStatusFilter] = React.useState<string>("");
 
-  const labels = OP_LABELS[lang];
-  const isDev = Boolean(import.meta.env.DEV);
-
-  async function refresh(): Promise<void> {
+  const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [me, overview] = await Promise.all([fetchAuthMe(token), fetchOperationsConsole(token)]);
-      setSession(me);
-      setConsoleData(overview);
-      setStatusText(`${labels.refresh} OK`);
-    } catch (e: any) {
-      setStatusText(e?.bodyText || e?.message || String(e));
+      const res = await fetchOperationStates(token, {
+        limit: 200,
+        field_id: fieldFilter || undefined,
+        device_id: deviceFilter || undefined,
+        final_status: statusFilter || undefined,
+      });
+      const next = Array.isArray(res.items) ? res.items : [];
+      setItems(next);
+      setSelectedId((prev) => (prev && next.some((x) => x.operation_id === prev) ? prev : (next[0]?.operation_id ?? "")));
     } finally {
       setLoading(false);
     }
-  }
+  }, [token, fieldFilter, deviceFilter, statusFilter]);
 
-  React.useEffect(() => {
-    void refresh();
-  }, []);
+  React.useEffect(() => { void refresh(); }, [refresh]);
 
-  const items = React.useMemo(() => buildWorkItems(consoleData, lang), [consoleData, lang]);
-  const stats = React.useMemo(() => summarize(items), [items]);
-  const queueItems = React.useMemo(() => items.filter((x) => x.status === activeTab), [activeTab, items]);
+  const selected = React.useMemo(() => items.find((x) => x.operation_id === selectedId) ?? null, [items, selectedId]);
 
-  React.useEffect(() => {
-    if (!queueItems.length) {
-      setSelectedKey("");
-      return;
-    }
-    setSelectedKey((prev) => (prev && queueItems.some((x) => x.key === prev) ? prev : queueItems[0].key));
-  }, [queueItems]);
+  const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.field_id ?? "")).filter(Boolean))), [items]);
+  const deviceOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.device_id ?? "")).filter(Boolean))), [items]);
 
-  const selectedItem = React.useMemo(() => items.find((x) => x.key === selectedKey) || null, [items, selectedKey]);
+  const todayKey = new Date().toDateString();
+  const todayItems = items.filter((x) => new Date(x.last_event_ts).toDateString() === todayKey);
+  const successCount = todayItems.filter((x) => statusOf(x) === "SUCCESS").length;
+  const failedCount = todayItems.filter((x) => statusOf(x) === "FAILED").length;
+  const runningCount = todayItems.filter((x) => statusOf(x) === "RUNNING").length;
+  const successRate = todayItems.length ? `${Math.round((successCount / todayItems.length) * 100)}%` : "0%";
 
-  async function onCreateApproval(): Promise<void> {
-    if (session?.role === "operator") {
-      setStatusText(lang === "zh" ? "当前角色不能新建作业。" : "Current role cannot create operation.");
-      return;
-    }
-    try {
-      const parsedParameters = JSON.parse(parametersText || "{}");
-      await createApproval(token, {
-        issuer,
-        action_type: actionType,
-        target: targetText.trim(),
-        time_window: { start_ts: Date.now() - 60_000, end_ts: Date.now() + 3_600_000 },
-        parameter_schema: { keys: Object.keys(parsedParameters).map((name) => ({ name, type: typeof parsedParameters[name] === "number" ? "number" : typeof parsedParameters[name] === "boolean" ? "boolean" : "string" })) },
-        parameters: parsedParameters,
-        constraints: {},
-        meta: requestDeviceId.trim() ? { device_id: requestDeviceId.trim() } : {},
-      });
-      setStatusText(labels.createdStatus);
-      await refresh();
-    } catch (e: any) {
-      setStatusText(e?.bodyText || e?.message || String(e));
-    }
-  }
-
-  function onTemplateChange(next: string): void {
-    setActionType(next);
-    const preset = presetTemplate(next);
-    setParametersText(JSON.stringify(preset.parameters));
-    if (preset.device_id) setRequestDeviceId(preset.device_id);
-  }
-
-  async function onPrimaryAction(item: OperationWorkItem): Promise<void> {
-    try {
-      if (item.status === "pending_approval" && item.approvalId) {
-        await decideApproval(token, item.approvalId, { decision: "APPROVE", reason: "approved in operations console" });
-      } else if (item.status === "ready_to_dispatch" && item.taskId) {
-        await dispatchAoActTask(token, item.taskId, {});
-      } else if (item.status === "failed" && item.taskId) {
-        await retryAoActTask(token, item.taskId, { device_id: retryDeviceId || undefined, retry_reason: "manual_retry" });
-      }
-      await refresh();
-    } catch (e: any) {
-      setStatusText(e?.bodyText || e?.message || String(e));
-    }
-  }
-
-  async function onCopy(text: string): Promise<void> {
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatusText("copied");
-    } catch {
-      setStatusText("copy failed");
-    }
-  }
-
-  const roleText = lang === "zh"
-    ? `当前角色：${session?.role === "admin" ? "管理员" : session?.role === "operator" ? "操作员" : "未识别"}`
-    : `Current role: ${session?.role || "unknown"}`;
+  const startTs = selected?.timeline?.[0]?.ts ?? selected?.last_event_ts ?? 0;
+  const endTs = selected?.timeline?.[selected.timeline.length - 1]?.ts ?? selected?.last_event_ts ?? 0;
+  const failedReason = statusOf(selected ?? ({} as any)) === "FAILED" ? String(selected?.receipt_status ?? tt("common.none")) : "";
+  const durationSec = Math.max(0, Math.round((endTs - startTs) / 1000));
+  const durationText = `${Math.floor(durationSec / 60)}分${durationSec % 60}秒`;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
-      <section className="card" style={{ padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{labels.pageTitle}</h2>
-            <div className="muted" style={{ marginTop: 4 }}>{labels.pageDesc}</div>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as OpsLang)}>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-            <button className="btn" onClick={() => void refresh()} disabled={loading}>{labels.refresh}</button>
-            <Link className="btn" to="/audit/export">{labels.auditExport}</Link>
-            <button className="btn primary" onClick={() => document.getElementById("ops-quick-create")?.scrollIntoView({ behavior: "smooth" })}>{labels.createOperation}</button>
-          </div>
-        </div>
-      </section>
-
-      <OperationSummaryStats labels={labels} stats={stats} />
-
-      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14 }}>
+      <section className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
-          <h3 style={{ margin: "0 0 8px 0" }}>{labels.queueTitle}</h3>
-          <OperationQueueList
-            labels={labels}
-            tab={activeTab}
-            onTabChange={setActiveTab}
-            items={queueItems}
-            selectedKey={selectedKey}
-            onSelect={(item) => setSelectedKey(item.key)}
-            onPrimary={(item) => void onPrimaryAction(item)}
-          />
+          <h2 style={{ margin: 0 }}>{tt("operation.title")}</h2>
+          <div className="muted">{tt("operation.desc")}</div>
         </div>
-        <OperationDetailPanel item={selectedItem} labels={labels} isDev={isDev} onCopy={(text) => void onCopy(text)} />
+        <button className="btn" onClick={() => void refresh()} disabled={loading}>{tt("operation.actions.refresh")}</button>
       </section>
 
-      <div id="ops-quick-create">
-        <OperationQuickCreate
-          labels={labels}
-          issuer={issuer}
-          actionType={actionType}
-          targetText={targetText}
-          requestDeviceId={requestDeviceId}
-          parametersText={parametersText}
-          roleText={roleText}
-          disabled={loading || session?.role === "operator"}
-          onIssuer={setIssuer}
-          onActionType={onTemplateChange}
-          onTargetText={setTargetText}
-          onDevice={setRequestDeviceId}
-          onParameters={setParametersText}
-          onCreate={() => void onCreateApproval()}
-        />
-      </div>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_today")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayItems.length}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_success_rate")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{successRate}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_running")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{runningCount}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_failed")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{failedCount}</div></div>
+      </section>
 
-      <section className="card" style={{ padding: 12 }}>
-        <div className="muted">{statusText || "-"}</div>
+      <section className="card" style={{ padding: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
+          <option value="">{tt("operation.filters.all_fields")}</option>
+          {fieldOptions.map((v) => <option value={v} key={v}>{v}</option>)}
+        </select>
+        <select className="select" value={deviceFilter} onChange={(e) => setDeviceFilter(e.target.value)}>
+          <option value="">{tt("operation.filters.all_devices")}</option>
+          {deviceOptions.map((v) => <option value={v} key={v}>{v}</option>)}
+        </select>
+        <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="">{tt("operation.filters.all_status")}</option>
+          <option value="SUCCESS">{mapStatusToText("SUCCESS", tt)}</option>
+          <option value="FAILED">{mapStatusToText("FAILED", tt)}</option>
+          <option value="RUNNING">{mapStatusToText("RUNNING", tt)}</option>
+          <option value="PENDING">{mapStatusToText("PENDING", tt)}</option>
+        </select>
+      </section>
+
+      <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="card" style={{ padding: 12 }}>
+          <h3 style={{ marginTop: 0 }}>{tt("operation.list")}</h3>
+          <div style={{ display: "grid", gap: 8, maxHeight: 560, overflow: "auto" }}>
+            {items.map((item) => {
+              const status = statusOf(item);
+              const color = statusColor(status);
+              return (
+                <button key={item.operation_id} className="btn" onClick={() => setSelectedId(item.operation_id)} style={{ textAlign: "left", borderColor: selectedId === item.operation_id ? "#111" : undefined }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 999, background: color, display: "inline-block" }} />
+                    <span><b>{actionLabel(item.action_type, locale)}</b> · {item.field_id || tt("common.none")}</span>
+                  </div>
+                  <div className="muted">{tt("operation.labels.device")}：{item.device_id || tt("common.none")} · {fmtTs(item.timeline?.[0]?.ts ?? item.last_event_ts)}</div>
+                  <div className="muted">{tt("operation.filters.status")}：{mapStatusToText(status, tt)}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 12 }}>
+          <h3 style={{ marginTop: 0 }}>{tt("operation.detail")}</h3>
+          {selected ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div><b>{tt("operation.labels.action")}：</b>{actionLabel(selected.action_type, locale)}</div>
+              <div><b>{tt("operation.labels.field")}：</b>{selected.field_id || tt("common.none")}</div>
+              <div><b>{tt("operation.labels.device")}：</b>{selected.device_id || tt("common.none")}</div>
+              <div><b>{tt("operation.filters.status")}：</b><span style={{ color: statusColor(statusOf(selected)) }}>{statusOf(selected) === "SUCCESS" ? "✅" : statusOf(selected) === "FAILED" ? "❌" : "⏳"} {mapStatusToText(statusOf(selected), tt)}</span></div>
+              <div><b>{tt("operation.labels.duration")}：</b>{durationText}</div>
+
+              <details>
+                <summary className="muted">{tt("common.ids")}</summary>
+                <div className="mono" style={{ fontSize: 12 }}>
+                  <div>operation_id: {selected.operation_id}</div>
+                  <div>recommendation_id: {selected.recommendation_id || tt("common.none")}</div>
+                  <div>task_id: {selected.task_id || tt("common.none")}</div>
+                </div>
+              </details>
+
+              {failedReason ? <div><b>{tt("operation.labels.failure_reason")}：</b>{failedReason}</div> : null}
+
+              <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.timeline")}</div>
+              <ul style={{ display: "grid", gap: 4, margin: 0, paddingLeft: 16 }}>
+                {(selected.timeline ?? []).map((x, idx) => {
+                  const v = timelineItemVisual(x.type);
+                  return <li key={`${x.type}_${idx}`} style={{ color: v.color, display: "flex", justifyContent: "space-between" }}><span>{v.icon} {tt(`operation.timelineLabel.${x.type}`)}</span><span className="muted">{fmtTs(x.ts)}</span></li>;
+                })}
+                {!selected.timeline?.length ? <li className="muted">{tt("common.none")}</li> : null}
+              </ul>
+            </div>
+          ) : <div className="muted">{tt("common.none")}</div>}
+        </div>
       </section>
     </div>
   );
