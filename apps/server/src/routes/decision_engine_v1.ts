@@ -712,6 +712,22 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
 
     const approved = await assertApprovedForTask(pool, tenant, act_task_id);
     if (!approved) return reply.status(403).send({ ok: false, error: "TASK_NOT_APPROVED" });
+
+    const taskFact = await loadLatestFactByTypeAndKey(
+      pool,
+      "ao_act_task_v0",
+      "payload,act_task_id",
+      act_task_id,
+      tenant
+    );
+    if (!taskFact) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
+
+    const taskPayload: any = taskFact.record_json?.payload ?? {};
+    const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
+    if (!operation_plan_id) {
+      return badRequest(reply, "TASK_OPERATION_PLAN_ID_MISSING");
+    }
+
     const startTs = Date.now();
     const endTs = startTs + 5_000;
     const idempotency_key = `irrigation_sim_${randomUUID().replace(/-/g, "")}`;
@@ -721,6 +737,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      operation_plan_id,
       act_task_id,
       command_id,
       executor_id: { kind: "script", id: "irrigation_simulator", namespace: "decision_engine_v1" },
@@ -736,13 +753,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       status: "executed",
       constraint_check: { violated: false, violations: [] },
       observed_parameters: {
-        duration_s: 300,
-        flow_state: "stable",
-        simulated: true
+        duration_min: 5
       },
       meta: {
         idempotency_key,
         command_id,
+        operation_plan_id,
         simulator: "irrigation_simulator_v1"
       }
     });

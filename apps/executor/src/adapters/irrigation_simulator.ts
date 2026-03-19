@@ -10,7 +10,11 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } });
   const text = await res.text();
   let obj: any = null;
-  try { obj = text ? JSON.parse(text) : {}; } catch { obj = { _non_json: text }; }
+  try {
+    obj = text ? JSON.parse(text) : {};
+  } catch {
+    obj = { _non_json: text };
+  }
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
 }
@@ -19,116 +23,107 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Ad
   async function markPublished(task: AoActTask, dispatchCtx: AdapterRuntimeContext, commandId: string): Promise<void> {
     const deviceId = String(task.device_id ?? task.meta?.device_id ?? "").trim();
     const outboxFactId = String(task.outbox_fact_id ?? "").trim();
+    const topic = String(task.downlink_topic ?? task.meta?.downlink_topic ?? `/device/${deviceId}/cmd`).trim();
+
+    if (!task.act_task_id) throw new Error("MISSING_ACT_TASK_ID");
     if (!deviceId) throw new Error("MISSING_DEVICE_ID");
     if (!outboxFactId) throw new Error("MISSING_OUTBOX_FACT_ID");
-    const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/downlinks/published`, ctx.token, {
-      method: "POST",
-      body: JSON.stringify({
-        tenant_id: task.tenant_id,
-        project_id: task.project_id,
-        group_id: task.group_id,
-        act_task_id: task.act_task_id,
-        task_id: task.act_task_id,
-        command_id: commandId,
-        outbox_fact_id: outboxFactId,
-        device_id: deviceId,
-        adapter_type: "irrigation_simulator",
-        topic: task.downlink_topic ?? `/device/${deviceId}/cmd`,
-        qos: Number(task.qos ?? 1),
-        retain: Boolean(task.retain ?? false),
-        published_ts: Date.now(),
-        lease_token: dispatchCtx.lease_token ?? null,
-        executor_id: dispatchCtx.executor_id ?? null,
-        adapter_runtime: "irrigation_simulator_v1"
-      })
-    });
-    if (!out?.ok) throw new Error(`PUBLISHED_WRITE_FAILED:${JSON.stringify(out)}`);
-    console.log(`INFO: simulator published success act_task_id=${task.act_task_id} command_id=${commandId}`);
-  }
+    if (!topic) throw new Error("MISSING_TOPIC");
 
-  async function sendReceiptUplink(task: AoActTask, dispatchCtx: AdapterRuntimeContext, commandId: string): Promise<void> {
-    const now = Date.now();
-    const attemptNo = Math.max(1, Number(dispatchCtx.attempt_no ?? task.meta?.attempt_no ?? 1));
-    const receiptCode = "ACK";
-    const idempotencyKey = `${task.act_task_id}:${attemptNo}:${receiptCode}`;
-    const deviceId = String(task.device_id ?? task.meta?.device_id ?? "").trim();
-    if (!deviceId) throw new Error("MISSING_DEVICE_ID");
     try {
-      const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/receipts/uplink`, ctx.token, {
+      const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/downlinks/published`, ctx.token, {
         method: "POST",
         body: JSON.stringify({
           tenant_id: task.tenant_id,
           project_id: task.project_id,
           group_id: task.group_id,
-          task_id: task.act_task_id,
           act_task_id: task.act_task_id,
-          command_id: commandId,
-          operation_plan_id: task.operation_plan_id,
+          outbox_fact_id: outboxFactId,
           device_id: deviceId,
-          status: "executed",
-          start_ts: now - 100,
-          end_ts: now,
-          executor_id: {
-            kind: "script",
-            id: String(dispatchCtx.executor_id ?? "irrigation_simulator"),
-            namespace: "executor_runtime_v1"
-          },
-          execution_time: { start_ts: now - 100, end_ts: now },
-          execution_coverage: { kind: "field", ref: "simulator_irrigation" },
-          resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
-          logs_refs: [{ kind: "stdout", ref: `executor://irrigation_simulator/${task.act_task_id}` }],
-          constraint_check: { violated: false, violations: [] },
-          observed_parameters: {},
-          meta: {
-            idempotency_key: idempotencyKey,
-            adapter_type: "irrigation_simulator",
-            attempt_no: attemptNo,
-            receipt_status: "SUCCEEDED",
-            receipt_code: receiptCode,
-            received_ts: now
-          }
+          topic,
+          qos: Number(task.qos ?? 1),
+          retain: Boolean(task.retain ?? false),
+          adapter_runtime: "irrigation_simulator_v1",
+          adapter_message_id: null,
+          command_payload_sha256: null,
+          lease_token: dispatchCtx.lease_token ?? null,
+          executor_id: String(dispatchCtx.executor_id ?? "")
         })
       });
-      if (!out?.ok) throw new Error(`RECEIPT_UPLINK_FAILED:${JSON.stringify(out)}`);
-      console.log(`INFO: simulator receipt uplink success act_task_id=${task.act_task_id} idempotency_key=${idempotencyKey}`);
+
+      if (!out?.ok) throw new Error(`PUBLISHED_WRITE_FAILED:${JSON.stringify(out)}`);
+      console.log(`INFO: simulator published success act_task_id=${task.act_task_id} command_id=${commandId}`);
     } catch (error: any) {
       const msg = String(error?.message ?? error);
-      if (msg.includes("http 409")) {
-        console.log(`WARN: simulator receipt uplink dedupe act_task_id=${task.act_task_id} idempotency_key=${idempotencyKey}`);
+
+      if (msg.includes("TASK_ALREADY_HAS_RECEIPT")) {
+        console.log(`WARN: simulator published skipped act_task_id=${task.act_task_id} reason=already_has_receipt`);
         return;
       }
-      console.log(`ERROR: simulator receipt uplink failed act_task_id=${task.act_task_id} error=${msg}`);
+
+      if (msg.includes("already_published") || msg.includes("http 409")) {
+        console.log(`WARN: simulator published dedupe act_task_id=${task.act_task_id}`);
+        return;
+      }
+
       throw error;
     }
   }
 
   return {
     adapter_type: "irrigation_simulator",
+
     supports(action_type: string): boolean {
       const normalized = String(action_type ?? "").trim().toLowerCase();
       return normalized === "irrigation.start" || normalized === "irrigate";
     },
+
     validate(task: AoActTask) {
       if (!task.act_task_id) return { ok: false as const, reason: "MISSING_ACT_TASK_ID" };
       return { ok: true as const };
     },
+
     async dispatch(task: AoActTask, dispatchCtx: AdapterRuntimeContext) {
-      const out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
-        method: "POST",
-        body: JSON.stringify({
-          tenant_id: task.tenant_id,
-          project_id: task.project_id,
-          group_id: task.group_id,
-          task_id: task.act_task_id,
-          command_id: task.command_id,
-          parameters: task.parameters
-        })
-      });
-      const commandId = String(out?.command_id ?? task.command_id).trim();
-      if (!commandId) throw new Error(`INVALID_IRRIGATION_EXECUTE_RESPONSE:${JSON.stringify(out)}`);
-      console.log(`INFO: simulator execute success act_task_id=${task.act_task_id} command_id=${commandId}`);
+      const commandId = String(task.command_id ?? task.act_task_id).trim();
+      if (!commandId) throw new Error("MISSING_COMMAND_ID");
+
+      // 关键：必须先 published，再 execute
       await markPublished(task, dispatchCtx, commandId);
-      await sendReceiptUplink(task, dispatchCtx, commandId);
+
+      let out: any;
+      try {
+        out = await httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
+          method: "POST",
+          body: JSON.stringify({
+            tenant_id: task.tenant_id,
+            project_id: task.project_id,
+            group_id: task.group_id,
+            act_task_id: task.act_task_id,
+            task_id: task.act_task_id,
+            command_id: commandId,
+            parameters: task.parameters
+          })
+        });
+      } catch (error: any) {
+        const msg = String(error?.message ?? error);
+
+        if (msg.includes("TASK_ALREADY_HAS_RECEIPT")) {
+          console.log(`WARN: simulator execute skipped act_task_id=${task.act_task_id} reason=already_has_receipt`);
+          return {
+            command_id: commandId,
+            adapter_type: "irrigation_simulator",
+            receipt_status: "ACKED",
+            adapter_payload: { ok: true, deduped: true }
+          };
+        }
+
+        throw error;
+      }
+
+      console.log(`INFO: simulator execute success act_task_id=${task.act_task_id} command_id=${commandId}`);
+
+      // 不要再写 receipts/uplink；
+      // execute 端点已经在服务端内部落 control receipt
       return {
         command_id: commandId,
         adapter_type: "irrigation_simulator",

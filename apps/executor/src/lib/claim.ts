@@ -24,6 +24,8 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
 
 export async function claimDispatchTasks(args: ClaimArgs): Promise<any[]> {
   const limit = Math.max(1, Number.parseInt(String(args.limit ?? 1), 10) || 1);
+  const requestedTaskId = String(args.act_task_id ?? "").trim();
+
   const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/claim`, args.token, {
     method: "POST",
     body: JSON.stringify({
@@ -34,17 +36,26 @@ export async function claimDispatchTasks(args: ClaimArgs): Promise<any[]> {
       limit,
       lease_seconds: Math.max(5, Number.parseInt(String(args.lease_seconds ?? 30), 10) || 30),
       ...(args.adapter_hint ? { adapter_hint: args.adapter_hint } : {}),
-      ...(args.act_task_id ? { act_task_id: args.act_task_id } : {})
+      ...(requestedTaskId ? { act_task_id: requestedTaskId } : {})
     })
   });
-  if (!out?.ok || !Array.isArray(out.items)) throw new Error(`unexpected claim response: ${JSON.stringify(out)}`);
+
+  if (!out?.ok || !Array.isArray(out.items)) {
+    throw new Error(`unexpected claim response: ${JSON.stringify(out)}`);
+  }
 
   const byTask = new Map<string, any>();
   for (const item of out.items) {
     const taskId = String(item?.act_task_id ?? item?.task?.payload?.act_task_id ?? "").trim();
     if (!taskId) continue;
+    if (requestedTaskId && taskId !== requestedTaskId) continue;
     if (!byTask.has(taskId)) byTask.set(taskId, item);
     if (byTask.size >= limit) break;
   }
+
+  if (requestedTaskId && !byTask.has(requestedTaskId)) {
+    throw new Error(`CLAIM_RETURNED_UNEXPECTED_TASK: expected=${requestedTaskId} got=${JSON.stringify(out.items)}`);
+  }
+
   return [...byTask.values()];
 }

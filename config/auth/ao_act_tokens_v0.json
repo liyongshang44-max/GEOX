@@ -127,6 +127,28 @@
         "fields.read",
         "telemetry.read"
       ]
+    },
+    {
+      "token": "geox_exec_tenantA_runtime_v1",
+      "token_id": "tok_executor_tenantA_runtime_v1",
+      "actor_id": "executor_a",
+      "role": "executor",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "revoked": false,
+      "scopes": [
+        "ao_act.index.read",
+        "ao_act.task.write",
+        "ao_act.receipt.write",
+
+        "ao_act.dispatch.claim",
+        "ao_act.dispatch.execute",
+        "ao_act.task.execute",
+
+        "ao_act.executor",
+        "ao_act.runtime"
+      ]
     }
   ]
 }

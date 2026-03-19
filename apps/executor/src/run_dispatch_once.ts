@@ -33,7 +33,10 @@ function parseArgs(argv: string[]): Args {
     process.env.GEOX_EXECUTOR_ID ??
     `dispatch_exec_${crypto.randomUUID().replace(/-/g, "")}`;
   const limit = Math.max(1, Number.parseInt(get("limit") ?? process.env.GEOX_EXECUTOR_LIMIT ?? "1", 10) || 1);
-  const lease_seconds = Math.max(5, Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30));
+  const lease_seconds = Math.max(
+    5,
+    Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30)
+  );
   const act_task_id = get("act_task_id") ?? process.env.GEOX_ACT_TASK_ID ?? undefined;
 
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
@@ -41,22 +44,38 @@ function parseArgs(argv: string[]): Args {
 }
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
-  const headers: Record<string, string> = { Accept: "application/json", Authorization: `Bearer ${token}` };
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    Authorization: `Bearer ${token}`
+  };
   if (init?.body) headers["Content-Type"] = "application/json";
+
   const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } });
   const text = await res.text();
   let obj: any = null;
-  try { obj = text ? JSON.parse(text) : {}; } catch { obj = { _non_json: text }; }
+  try {
+    obj = text ? JSON.parse(text) : {};
+  } catch {
+    obj = { _non_json: text };
+  }
   if (!res.ok) throw new Error(`http ${res.status}: ${text}`);
   return obj;
 }
 
 function toAoActTask(item: any, args: Args): AoActTask {
   const taskPayload = item?.task?.payload ?? {};
+  const taskMeta = taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {};
+  const itemMeta = item?.meta && typeof item.meta === "object" ? item.meta : {};
   const act_task_id = String(item?.act_task_id ?? taskPayload?.act_task_id ?? "").trim();
   const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
   const action_type = String(taskPayload?.action_type ?? "").trim();
-  const operation_plan_id = String(taskPayload?.operation_plan_id ?? "").trim();
+  const operation_plan_id = String(
+    taskPayload?.operation_plan_id ??
+      taskMeta?.operation_plan_id ??
+      item?.operation_plan_id ??
+      itemMeta?.operation_plan_id ??
+      ""
+  ).trim();
 
   if (!act_task_id || !command_id || !action_type || !operation_plan_id) {
     throw new Error(`invalid claim item payload: ${JSON.stringify(item)}`);
@@ -73,7 +92,7 @@ function toAoActTask(item: any, args: Args): AoActTask {
     adapter_type: String(taskPayload?.adapter_type ?? "").trim() || null,
     adapter_hint: String(item?.adapter_hint ?? "").trim() || null,
     parameters: taskPayload?.parameters && typeof taskPayload.parameters === "object" ? taskPayload.parameters : {},
-    meta: taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {},
+    meta: taskMeta,
     outbox_fact_id: typeof item?.outbox_fact_id === "string" ? item.outbox_fact_id : null,
     device_id: typeof item?.device_id === "string" ? item.device_id : null,
     downlink_topic: typeof item?.downlink_topic === "string" ? item.downlink_topic : null,
@@ -86,18 +105,27 @@ type DispatchState = "DISPATCHED" | "ACKED" | "FAILED";
 
 async function writeDispatchState(args: Args, task: AoActTask, state: DispatchState): Promise<void> {
   console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
-  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: task.tenant_id,
-      project_id: task.project_id,
-      group_id: task.group_id,
-      act_task_id: task.act_task_id,
-      command_id: task.command_id,
-      state
-    })
-  });
-  if (!out?.ok) throw new Error(`dispatch state write failed state=${state} task=${task.act_task_id}`);
+  try {
+    const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: task.tenant_id,
+        project_id: task.project_id,
+        group_id: task.group_id,
+        act_task_id: task.act_task_id,
+        command_id: task.command_id,
+        state
+      })
+    });
+    if (!out?.ok) throw new Error(`dispatch state write failed state=${state} task=${task.act_task_id}`);
+  } catch (error: any) {
+    const msg = String(error?.message ?? error);
+    if ((state === "ACKED" || state === "FAILED") && msg.includes("http 409") && msg.includes("STATE_TRANSITION_DENIED")) {
+      console.log(`WARN: dispatch state ${state.toLowerCase()} skipped act_task_id=${task.act_task_id} reason=already_terminal`);
+      return;
+    }
+    throw error;
+  }
 }
 
 async function getReceipts(args: Args, task: AoActTask): Promise<any[]> {
@@ -132,37 +160,73 @@ async function appendReceiptV1(
     return;
   }
 
-  const mappedStatus = receipt_status === "FAILED" ? "failed" : "executed";
-  const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: task.tenant_id,
-      project_id: task.project_id,
-      group_id: task.group_id,
-      task_id: task.act_task_id,
-      act_task_id: task.act_task_id,
-      command_id: task.command_id,
-      operation_plan_id: task.operation_plan_id,
-      executor_id: args.executor_id,
-      status: mappedStatus,
-      observed_parameters: {},
-      meta: {
-        schema: "ao_act_receipt_v1",
+  const now = Date.now();
+  const mappedStatus = receipt_status === "FAILED" ? "not_executed" : "executed";
+  const operationPlanId = String(task.operation_plan_id ?? (task.meta as any)?.operation_plan_id ?? "").trim();
+  const commandId = String(task.command_id ?? task.act_task_id).trim();
+
+  if (!operationPlanId) throw new Error("MISSING_OPERATION_PLAN_ID");
+  if (!commandId) throw new Error("MISSING_COMMAND_ID");
+
+  try {
+    const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: task.tenant_id,
+        project_id: task.project_id,
+        group_id: task.group_id,
         task_id: task.act_task_id,
-        command_id: task.command_id,
-        device_id: task.device_id ?? "",
-        adapter_type,
-        attempt_no: attemptNo,
-        receipt_status,
-        receipt_code: receiptCode,
-        receipt_message: receipt_message ?? null,
-        raw_receipt_ref: raw_receipt_ref ?? null,
-        received_ts: Date.now(),
-        idempotency_key: idempotencyKey
-      }
-    })
-  });
-  if (!out?.ok) throw new Error(`append receipt failed: ${JSON.stringify(out)}`);
+        act_task_id: task.act_task_id,
+        command_id: commandId,
+        operation_plan_id: operationPlanId,
+        executor_id: {
+          kind: "script",
+          id: args.executor_id,
+          namespace: "executor_runtime_v1"
+        },
+        execution_time: { start_ts: now - 100, end_ts: now },
+        execution_coverage: {
+          kind: "field",
+          ref: String((task.meta as any)?.field_id ?? (task.meta as any)?.target_ref ?? "executor_dispatch")
+        },
+        resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
+        logs_refs: [{ kind: "stdout", ref: raw_receipt_ref ?? `executor://run_dispatch_once/${task.act_task_id}` }],
+        status: mappedStatus,
+        constraint_check: { violated: false, violations: [] },
+        observed_parameters: {},
+        meta: {
+          schema: "ao_act_receipt_v1",
+          task_id: task.act_task_id,
+          command_id: commandId,
+          operation_plan_id: operationPlanId,
+          device_id: task.device_id ?? "",
+          adapter_type,
+          attempt_no: attemptNo,
+          receipt_status,
+          receipt_code: receiptCode,
+          receipt_message: receipt_message ?? null,
+          raw_receipt_ref: raw_receipt_ref ?? null,
+          received_ts: now,
+          idempotency_key: idempotencyKey
+        }
+      })
+    });
+    if (!out?.ok) throw new Error(`append receipt failed: ${JSON.stringify(out)}`);
+  } catch (error: any) {
+    const msg = String(error?.message ?? error);
+
+    if (msg.includes("TASK_ALREADY_HAS_RECEIPT")) {
+      console.log(`WARN: receipt append skipped act_task_id=${task.act_task_id} reason=already_has_receipt`);
+      return;
+    }
+
+    if (msg.includes("http 409") && msg.includes("DUPLICATE_RECEIPT")) {
+      console.log(`WARN: receipt append dedupe act_task_id=${task.act_task_id} idempotency_key=${idempotencyKey}`);
+      return;
+    }
+
+    throw error;
+  }
 }
 
 async function main(): Promise<void> {
