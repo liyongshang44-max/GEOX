@@ -8,6 +8,7 @@ import FieldAlertList from "../components/field/FieldAlertList";
 import FieldLegend from "../components/field/FieldLegend";
 import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
 import { FIELD_TEXT, formatRiskStatus, getRiskColor, mapAlertTypeToLabel, mapFieldStatusToLabel, mapOperationTypeToLabel, mapSourceFieldToLabel, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
+import { t } from "../lib/i18n";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -45,6 +46,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [playing, setPlaying] = React.useState<boolean>(false);
 
   const labels = FIELD_TEXT[lang];
+  const tt = (key: string) => t(lang, key);
   const isDev = Boolean(import.meta.env.DEV);
 
   const persistToken = (v: string) => {
@@ -63,7 +65,7 @@ export default function FieldDetailPage(): React.ReactElement {
         fetchAgronomyRecommendations({ limit: 30, token }),
       ]);
       setDetail(next);
-      setActiveOperations((ops.items ?? []).filter((x) => !["success", "failed", "rejected"].includes(String(x.final_status))));
+      setActiveOperations((ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))));
       setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
@@ -206,6 +208,33 @@ export default function FieldDetailPage(): React.ReactElement {
     ];
   }, [detail, labels, lang, operationItems]);
 
+  const currentOperation = activeOperations[0] ?? null;
+  const currentProgress = currentOperation
+    ? String(currentOperation.final_status) === "SUCCESS" ? 100
+      : String(currentOperation.final_status) === "RUNNING" ? 70
+        : String(currentOperation.final_status) === "FAILED" ? 100
+          : 30
+    : 0;
+
+  const recentTimeline = React.useMemo(() => {
+    const opEvents = activeOperations.slice(0, 4).map((x) => ({
+      ts: x.last_event_ts,
+      text: `${x.action_type || tt("operation.title")} ${x.final_status}`,
+    }));
+    const recEvents = recentRecommendations.slice(0, 4).map((x) => ({
+      ts: Number(Date.parse(String(x.occurred_at ?? ""))) || 0,
+      text: `${x.recommendation_type || tt("field.recent_timeline")} ${x.latest_status || x.status || ""}`.trim(),
+    }));
+    const alertTimeline = alertItems.slice(0, 4).map((x) => ({
+      ts: Number(x.timeMs ?? 0),
+      text: `${x.type} ${x.status}`,
+    }));
+    return [...opEvents, ...recEvents, ...alertTimeline]
+      .filter((x) => Number.isFinite(x.ts) && x.ts > 0)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 8);
+  }, [activeOperations, recentRecommendations, alertItems, lang]);
+
   const tabs: Array<{ key: FieldTab; label: string }> = [
     { key: "overview", label: labels.overview },
     { key: "map", label: labels.map },
@@ -252,9 +281,9 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
-              <div><b>Active Operations：</b>{activeOperations.length}</div>
+              <div><b>{tt("field.current_operation")}：</b>{activeOperations.length}</div>
               <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{formatRiskStatus(detail, lang)}</span></div>
-              <div style={{ marginTop: 8 }}><b>Recent Recommendations：</b></div>
+              <div style={{ marginTop: 8 }}><b>{tt("field.recent_timeline")}：</b></div>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {recentRecommendations.map((r) => (
                   <li key={r.recommendation_id} className="muted">
@@ -262,6 +291,28 @@ export default function FieldDetailPage(): React.ReactElement {
                   </li>
                 ))}
                 {!recentRecommendations.length ? <li className="muted">-</li> : null}
+              </ul>
+
+              <div style={{ marginTop: 12 }}><b>{tt("field.current_operation")}</b></div>
+              <div className="card" style={{ padding: 10 }}>
+                <div>{tt("operation.labels.action")}：{currentOperation?.action_type || tt("common.none")}</div>
+                <div>{tt("operation.labels.device")}：{currentOperation?.device_id || tt("common.none")}</div>
+                <div>{tt("operation.filters.status")}：{currentOperation ? tt(`operation.status.${currentOperation.final_status}`) : tt("common.none")}</div>
+                <div>{tt("field.progress")}：{currentProgress}%</div>
+              </div>
+
+              <div style={{ marginTop: 12 }}><b>{tt("field.recent_timeline")}</b></div>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {recentTimeline.map((x, idx) => (
+                  <li key={`${x.ts}_${idx}`}>[{new Date(x.ts).toLocaleTimeString()}] {x.text}</li>
+                ))}
+                {!recentTimeline.length ? <li className="muted">-</li> : null}
+              </ul>
+
+              <div style={{ marginTop: 12 }}><b>{tt("field.risk_alerts")}</b></div>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {alertItems.slice(0, 3).map((x) => <li key={x.id}>⚠ {x.type}</li>)}
+                {!alertItems.length ? <li className="muted">{tt("field.no_risk")}</li> : null}
               </ul>
             </div>
           ) : null}

@@ -926,11 +926,9 @@ export type OperationsConsoleResponse = {
 };
 
 export type OperationStateTimelineItemV1 = {
-  event: string;
+  type: string;
   label: string;
   ts: number;
-  occurred_at: string;
-  fact_id?: string | null;
 };
 
 export type OperationStateItemV1 = {
@@ -942,6 +940,7 @@ export type OperationStateItemV1 = {
   task_id?: string | null;
   device_id?: string | null;
   field_id?: string | null;
+  action_type?: string | null;
   dispatch_status: string;
   receipt_status: string;
   final_status: string;

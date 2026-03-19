@@ -13,7 +13,7 @@ export function projectDeviceStateV1(operations: OperationStateV1[]): DeviceStat
     const device_id = String(op.device_id ?? "").trim();
     if (!device_id) continue;
     const prev = map.get(device_id);
-    const isActive = !["success", "failed", "rejected"].includes(op.final_status);
+    const isActive = !["SUCCESS", "FAILED"].includes(op.final_status);
     if (!prev) {
       map.set(device_id, {
         device_id,

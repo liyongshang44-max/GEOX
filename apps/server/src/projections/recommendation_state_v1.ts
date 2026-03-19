@@ -13,7 +13,7 @@ export function projectRecommendationStateV1(operations: OperationStateV1[]): Re
   const out: RecommendationStateV1[] = [];
   for (const op of operations) {
     if (!op.recommendation_id) continue;
-    const execution_status = op.final_status === "success" ? "executed" : op.final_status === "failed" ? "failed" : "pending";
+    const execution_status = op.final_status === "SUCCESS" ? "executed" : op.final_status === "FAILED" ? "failed" : "pending";
     out.push({
       recommendation_id: op.recommendation_id,
       status: op.final_status,
