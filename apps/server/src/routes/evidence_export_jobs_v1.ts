@@ -405,6 +405,98 @@ function enrichJobRow(row: any): any { // Helper: attach evidence pack summary a
   };
 } // End helper.
 
+function buildOperationBundlesFromFacts(facts: any[]): any[] { // Build operation-centric bundle for pilot closure evidence.
+  type ChainItem = { recommendation: any | null; approval: any | null; operation_plan: any | null; task: any | null; receipt: any | null; timeline: any[] };
+  const byOperation = new Map<string, ChainItem>();
+
+  const ensure = (operation_plan_id: string): ChainItem => {
+    const hit = byOperation.get(operation_plan_id);
+    if (hit) return hit;
+    const next: ChainItem = { recommendation: null, approval: null, operation_plan: null, task: null, receipt: null, timeline: [] };
+    byOperation.set(operation_plan_id, next);
+    return next;
+  };
+
+  for (const fact of facts) {
+    const record = fact?.record_json ?? {};
+    const type = String(record?.type ?? '');
+    const payload = record?.payload ?? {};
+
+    if (type === 'operation_plan_v1') {
+      const operation_plan_id = String(payload?.operation_plan_id ?? '').trim();
+      if (!operation_plan_id) continue;
+      const row = ensure(operation_plan_id);
+      row.operation_plan = record;
+      row.timeline.push({ type, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+      continue;
+    }
+
+    if (type === 'operation_plan_transition_v1') {
+      const operation_plan_id = String(payload?.operation_plan_id ?? '').trim();
+      if (!operation_plan_id) continue;
+      const row = ensure(operation_plan_id);
+      row.timeline.push({ type, status: payload?.status ?? null, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+      continue;
+    }
+
+    if (type === 'ao_act_task_v0') {
+      const operation_plan_id = String(payload?.operation_plan_id ?? payload?.meta?.operation_plan_id ?? '').trim();
+      if (!operation_plan_id) continue;
+      const row = ensure(operation_plan_id);
+      row.task = record;
+      row.timeline.push({ type, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+      continue;
+    }
+
+    if (type === 'ao_act_receipt_v0' || type === 'ao_act_receipt_v1') {
+      const operation_plan_id = String(payload?.operation_plan_id ?? payload?.meta?.operation_plan_id ?? '').trim();
+      if (!operation_plan_id) continue;
+      const row = ensure(operation_plan_id);
+      row.receipt = record;
+      row.timeline.push({ type, status: payload?.status ?? payload?.meta?.receipt_status ?? null, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+      continue;
+    }
+
+    if (type === 'approval_decision_v1') {
+      const operation_plan_id = String(payload?.operation_plan_id ?? '').trim();
+      if (!operation_plan_id) continue;
+      const row = ensure(operation_plan_id);
+      row.approval = record;
+      row.timeline.push({ type, decision: payload?.decision ?? null, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+      continue;
+    }
+
+    if (type === 'decision_recommendation_v1') {
+      const recommendation_id = String(payload?.recommendation_id ?? '').trim();
+      if (!recommendation_id) continue;
+      for (const [operation_plan_id, row] of byOperation.entries()) {
+        const recId = String(row.operation_plan?.payload?.recommendation_id ?? '').trim();
+        if (recId && recId === recommendation_id) {
+          row.recommendation = record;
+          row.timeline.push({ type, ts: fact?.occurred_at, fact_id: fact?.fact_id });
+          byOperation.set(operation_plan_id, row);
+        }
+      }
+    }
+  }
+
+  const out: any[] = [];
+  for (const [operation_plan_id, row] of byOperation.entries()) {
+    out.push({
+      operation_plan_id,
+      operation_bundle: {
+        recommendation: row.recommendation,
+        approval: row.approval,
+        operation_plan: row.operation_plan,
+        task: row.task,
+        receipt: row.receipt,
+        timeline: row.timeline.sort((a, b) => Date.parse(String(a?.ts ?? '')) - Date.parse(String(b?.ts ?? '')))
+      }
+    });
+  }
+  return out;
+}
+
 async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportScope, from_ts_ms: number, to_ts_ms: number): Promise<any> { // Build evidence JSON bundle.
   // Resolve devices in scope (for FIELD scope, include currently bound devices).
   let deviceIds: string[] = []; // Devices to include.
@@ -867,6 +959,7 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
     meta: { tenant_id, scope, from_ts_ms, to_ts_ms, built_at_ts_ms: Date.now() }, // Metadata.
     snapshot, // Projection snapshot (best-effort).
     facts, // Facts array (source of truth).
+    operation_bundles: buildOperationBundlesFromFacts(facts), // Operation-centric export structure for pilot audit closure.
   }; // End return.
 } // End bundle builder.
 
