@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { fetchFieldDetail } from "../lib/api";
+import { fetchAgronomyRecommendations, fetchFieldDetail, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
@@ -39,6 +39,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
+  const [activeOperations, setActiveOperations] = React.useState<OperationStateItemV1[]>([]);
+  const [recentRecommendations, setRecentRecommendations] = React.useState<AgronomyRecommendationItemV1[]>([]);
   const [timelineIndex, setTimelineIndex] = React.useState<number>(0);
   const [playing, setPlaying] = React.useState<boolean>(false);
 
@@ -55,8 +57,14 @@ export default function FieldDetailPage(): React.ReactElement {
     setBusy(true);
     setStatus(lang === "zh" ? "加载中..." : "Loading...");
     try {
-      const next = await fetchFieldDetail(token, fieldId);
+      const [next, ops, recs] = await Promise.all([
+        fetchFieldDetail(token, fieldId),
+        fetchOperationStates(token, { field_id: fieldId, limit: 20 }),
+        fetchAgronomyRecommendations({ limit: 30, token }),
+      ]);
       setDetail(next);
+      setActiveOperations((ops.items ?? []).filter((x) => !["success", "failed", "rejected"].includes(String(x.final_status))));
+      setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
       setStatus(e?.message || String(e));
@@ -244,7 +252,17 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
+              <div><b>Active Operations：</b>{activeOperations.length}</div>
               <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{formatRiskStatus(detail, lang)}</span></div>
+              <div style={{ marginTop: 8 }}><b>Recent Recommendations：</b></div>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {recentRecommendations.map((r) => (
+                  <li key={r.recommendation_id} className="muted">
+                    {r.recommendation_type || "-"} · {r.latest_status || r.status || "-"}
+                  </li>
+                ))}
+                {!recentRecommendations.length ? <li className="muted">-</li> : null}
+              </ul>
             </div>
           ) : null}
 
