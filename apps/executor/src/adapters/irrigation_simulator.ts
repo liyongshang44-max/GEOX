@@ -63,10 +63,22 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext): Ad
           task_id: task.act_task_id,
           act_task_id: task.act_task_id,
           command_id: commandId,
+          operation_plan_id: task.operation_plan_id,
           device_id: deviceId,
           status: "executed",
           start_ts: now - 100,
           end_ts: now,
+          executor_id: {
+            kind: "script",
+            id: String(dispatchCtx.executor_id ?? "irrigation_simulator"),
+            namespace: "executor_runtime_v1"
+          },
+          execution_time: { start_ts: now - 100, end_ts: now },
+          execution_coverage: { kind: "field", ref: "simulator_irrigation" },
+          resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
+          logs_refs: [{ kind: "stdout", ref: `executor://irrigation_simulator/${task.act_task_id}` }],
+          constraint_check: { violated: false, violations: [] },
+          observed_parameters: {},
           meta: {
             idempotency_key: idempotencyKey,
             adapter_type: "irrigation_simulator",

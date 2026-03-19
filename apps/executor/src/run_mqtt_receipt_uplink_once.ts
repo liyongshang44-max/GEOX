@@ -71,6 +71,7 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const idempotency_key = `${args.task_id}:${args.attempt_no}:${args.receipt_code}`;
 
+  const status = args.receipt_status === "FAILED" ? "not_executed" : "executed";
   const body = {
     tenant_id: args.tenant_id,
     project_id: args.project_id,
@@ -80,10 +81,16 @@ async function main(): Promise<void> {
     command_id: args.command_id,
     operation_plan_id: args.operation_plan_id,
     device_id: args.device_id,
-    status: args.receipt_status === "FAILED" ? "failed" : "executed",
+    status,
     start_ts: Math.max(0, args.ts_ms - 20),
     end_ts: args.ts_ms,
     ts_ms: args.ts_ms,
+    executor_id: { kind: "script", id: "run_mqtt_receipt_uplink_once", namespace: "executor_runtime_v1" },
+    execution_time: { start_ts: Math.max(0, args.ts_ms - 20), end_ts: args.ts_ms },
+    execution_coverage: { kind: "field", ref: "device_uplink" },
+    resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
+    logs_refs: [{ kind: "stdout", ref: `executor://run_mqtt_receipt_uplink_once/${args.task_id}` }],
+    constraint_check: { violated: false, violations: [] },
     observed_parameters: {},
     raw_payload: {
       command_id: args.command_id,
