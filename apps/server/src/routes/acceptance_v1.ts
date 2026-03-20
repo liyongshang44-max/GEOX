@@ -107,6 +107,46 @@ function deriveTelemetryFromReceipt(receipt: any): Record<string, number> {
   return {};
 }
 
+function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const lat = Number(raw?.lat ?? raw?.latitude ?? raw?.location?.lat ?? raw?.location?.latitude);
+  const lon = Number(raw?.lon ?? raw?.lng ?? raw?.longitude ?? raw?.location?.lon ?? raw?.location?.lng ?? raw?.location?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon };
+}
+
+async function loadFieldPolygon(pool: Pool, tenantId: string, fieldId: string | null): Promise<any | null> {
+  if (!fieldId) return null;
+  const q = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2`, [tenantId, fieldId]);
+  if (!q.rows?.length) return null;
+  return normalizeRecordJson(q.rows[0].geojson);
+}
+
+async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: string | null, startTs: number | null, endTs: number | null): Promise<Array<{ lat: number; lon: number; ts_ms: number }>> {
+  if (!deviceId || !startTs || !endTs || endTs < startTs) return [];
+  const q = await pool.query(
+    `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+            (record_json::jsonb #> '{payload,geo}') AS geo_json
+       FROM facts
+      WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+        AND (record_json::jsonb #>> '{entity,project_id}') = $2
+        AND (record_json::jsonb #>> '{entity,group_id}') = $3
+        AND (record_json::jsonb #>> '{entity,device_id}') = $4
+        AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
+        AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+        AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $5 AND $6
+      ORDER BY ts_ms ASC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, deviceId, startTs, endTs]
+  );
+  return (q.rows ?? []).map((row: any) => {
+    const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
+    const ts_ms = Number(row.ts_ms ?? 0);
+    if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
+    return { lat: geo.lat, lon: geo.lon, ts_ms };
+  }).filter(Boolean) as Array<{ lat: number; lon: number; ts_ms: number }>;
+}
+
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
@@ -129,11 +169,19 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       const taskPayload = taskFact.record_json?.payload ?? {};
       const telemetry = deriveTelemetryFromReceipt(receiptFact.record_json);
+      const field_id = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
+      const device_id = typeof taskPayload?.meta?.device_id === "string" ? taskPayload.meta.device_id : null;
+      const start_ts = Number(taskPayload?.time_window?.start_ts ?? receiptFact.record_json?.payload?.execution_time?.start_ts ?? 0);
+      const end_ts = Number(taskPayload?.time_window?.end_ts ?? receiptFact.record_json?.payload?.execution_time?.end_ts ?? 0);
+      const [field_polygon, track_points] = await Promise.all([
+        loadFieldPolygon(pool, tenant.tenant_id, field_id),
+        loadTrackPoints(pool, tenant, device_id, Number.isFinite(start_ts) && start_ts > 0 ? start_ts : null, Number.isFinite(end_ts) && end_ts > 0 ? end_ts : null),
+      ]);
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
-        telemetry
+        telemetry: { ...telemetry, field_polygon, track_points }
       });
 
       const acceptanceFactId = randomUUID();

@@ -540,6 +540,12 @@ export async function fetchFieldDetail(token: string, fieldId: string): Promise<
   });
 }
 
+export async function fetchFieldGeometry(token: string, fieldId: string): Promise<any> {
+  return requestJson<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`, {
+    headers: authHeaders(token),
+  });
+}
+
 export async function createFieldSeason(token: string, fieldId: string, body: any): Promise<any> {
   return requestJson<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/seasons`, {
     method: "POST",

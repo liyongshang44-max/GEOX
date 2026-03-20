@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
+import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
@@ -66,7 +66,9 @@ export default function FieldDetailPage(): React.ReactElement {
         fetchAgronomyRecommendations({ limit: 30, token }),
         fetchFieldCurrentProgram(token, fieldId).catch(() => null),
       ]);
-      setDetail(next);
+      const geometryRes = await fetchFieldGeometry(token, fieldId).catch(() => null);
+      const stableGeometry = geometryRes?.geometry ?? next?.geometry ?? null;
+      setDetail({ ...next, geometry: stableGeometry });
       setActiveOperations((ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))));
       setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
       setCurrentProgram(prg);
@@ -328,6 +330,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>Geometry unavailable for this field.</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div className="muted">Timeline</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
@@ -337,7 +340,7 @@ export default function FieldDetailPage(): React.ReactElement {
                 </div>
               </div>
               <FieldGisMap
-                polygonGeoJson={detail?.polygon?.geojson_json}
+                polygonGeoJson={detail?.geometry || detail?.polygon?.geojson_json}
                 heatGeoJson={detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }}
                 markers={playbackMarkers}
                 trajectorySegments={trajectorySegments}
