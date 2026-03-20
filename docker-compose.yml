@@ -76,6 +76,47 @@ services:
       retries: 20
       start_period: 10s
 
+  executor:
+    image: node:20
+    working_dir: /app
+    init: true
+    restart: unless-stopped
+    command:
+      - sh
+      - -lc
+      - |
+          set -e
+
+          export CI=1
+          export PNPM_STORE_DIR=/pnpm-store
+
+          npm install -g pnpm@9.15.4
+
+          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
+
+          node apps/executor/src/runtime_loop.ts
+    volumes:
+      - ./:/app
+      - geox_node_modules:/app/node_modules
+      - geox_pnpm_store:/pnpm-store
+      - geox_pnpm_vstore:/pnpm-vstore
+    environment:
+      NODE_ENV: development
+      CI: "1"
+      PNPM_STORE_DIR: /pnpm-store
+      GEOX_BASE_URL: http://server:3000
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:-}
+      GEOX_TENANT_ID: ${GEOX_TENANT_ID:-tenantA}
+      GEOX_PROJECT_ID: ${GEOX_PROJECT_ID:-projectA}
+      GEOX_GROUP_ID: ${GEOX_GROUP_ID:-groupA}
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      server:
+        condition: service_started
+
 volumes:
   landos_pgdata:
   geox_pnpm_store:

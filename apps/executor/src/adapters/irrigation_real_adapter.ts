@@ -23,6 +23,7 @@ async function loadCapabilities(ctx: AdapterRuntimeContext, task: AoActTask, dev
 
 export function createIrrigationRealAdapter(ctx: AdapterRuntimeContext): Adapter {
   return {
+    type: "irrigation_real",
     adapter_type: "irrigation_real",
     supports(action_type: string): boolean {
       const normalized = String(action_type ?? "").trim().toLowerCase();
@@ -33,11 +34,11 @@ export function createIrrigationRealAdapter(ctx: AdapterRuntimeContext): Adapter
       if (!String(task.device_id ?? task.meta?.device_id ?? "").trim()) return { ok: false as const, reason: "MISSING_DEVICE_ID" };
       return { ok: true as const };
     },
-    async dispatch(task: AoActTask, dispatchCtx) {
+    async execute(task: AoActTask) {
       const device_id = String(task.device_id ?? task.meta?.device_id ?? "").trim();
       const capabilities = await loadCapabilities(ctx, task, device_id);
       if (capabilities && !capabilities.includes("irrigation")) {
-        throw new Error(`DEVICE_CAPABILITY_MISSING_IRRIGATION:${device_id}`);
+        return { status: "FAILED", meta: { reason: `DEVICE_CAPABILITY_MISSING_IRRIGATION:${device_id}` } };
       }
 
       const out = await httpJson(`${ctx.baseUrl}/api/v1/ao-act/downlinks/published`, ctx.token, {
@@ -53,18 +54,16 @@ export function createIrrigationRealAdapter(ctx: AdapterRuntimeContext): Adapter
           topic: `/device/${device_id}/cmd`,
           qos: 1,
           retain: false,
-          lease_token: dispatchCtx.lease_token ?? null,
-          executor_id: dispatchCtx.executor_id ?? null,
+          lease_token: task.runtime?.lease_token ?? null,
+          executor_id: task.runtime?.executor_id ?? ctx.executor_id ?? null,
           adapter_runtime: "irrigation_real_adapter_v1"
         })
       });
 
-      if (!out?.ok) throw new Error(`IRRIGATION_REAL_PUBLISH_FAILED:${JSON.stringify(out)}`);
+      if (!out?.ok) return { status: "FAILED", meta: { reason: `IRRIGATION_REAL_PUBLISH_FAILED:${JSON.stringify(out)}` } };
       return {
-        command_id: task.command_id,
-        adapter_type: "irrigation_real",
-        receipt_status: "ACKED",
-        adapter_payload: { published_fact_id: out.published_fact_id ?? null }
+        status: "SUCCEEDED",
+        meta: { receipt_status: "ACKED", published_fact_id: out.published_fact_id ?? null }
       };
     }
   };
