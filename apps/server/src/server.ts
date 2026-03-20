@@ -43,6 +43,7 @@ import { registerAgronomyInferenceV1Routes } from "./routes/agronomy_inference_v
 import { registerDecisionEngineV1Routes } from "./routes/decision_engine_v1"; // Decision engine recommendations + simulator routes.
 import { registerOperationStateV1Routes } from "./routes/operation_state_v1"; // Sprint B: unified operation state routes.
 import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // Sprint C: field timeline/replay route.
+import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -265,6 +266,7 @@ registerControlPlaneV1Routes(app, pool); // Control-2: 注册 Commercial REST v1
 registerDecisionEngineV1Routes(app, pool); // Decision engine: recommendation generation, approval mapping, and irrigation simulator.
 registerOperationStateV1Routes(app, pool); // Sprint B: unified operations state projection API.
 registerFieldTimelineV1Routes(app, pool); // Sprint C: field timeline/replay API.
+registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program state projection API.
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
