@@ -25,6 +25,7 @@ function resolveDeviceCommandUrl(ctx: AdapterRuntimeContext, task: AoActTask, de
 
 export function createIrrigationHttpV1Adapter(ctx: AdapterRuntimeContext): Adapter {
   return {
+    type: "irrigation_http_v1",
     adapter_type: "irrigation_http_v1",
     supports(action_type: string): boolean {
       return ["irrigation.start", "irrigate"].includes(String(action_type ?? "").trim().toLowerCase());
@@ -34,7 +35,7 @@ export function createIrrigationHttpV1Adapter(ctx: AdapterRuntimeContext): Adapt
       if (!String(task.operation_plan_id ?? task.meta?.operation_plan_id ?? "").trim()) return { ok: false as const, reason: "MISSING_OPERATION_PLAN_ID" };
       return { ok: true as const };
     },
-    async dispatch(task: AoActTask) {
+    async execute(task: AoActTask) {
       const deviceId = String(task.device_id ?? task.meta?.device_id ?? "").trim();
       const simulateTimeout = Boolean(task.meta?.simulate_timeout);
       const simulateRetry = Number(task.meta?.simulate_retry_count ?? 0);
@@ -62,21 +63,23 @@ export function createIrrigationHttpV1Adapter(ctx: AdapterRuntimeContext): Adapt
           const statusRaw = String(out?.status ?? "ACK").toUpperCase();
           if (statusRaw === "FAIL") {
             return {
-              command_id: task.command_id,
-              adapter_type: "irrigation_http_v1",
-              receipt_status: "FAILED",
-              receipt_code: String(out?.code ?? "DEVICE_REJECT"),
-              receipt_message: String(out?.message ?? "device rejected"),
-              adapter_payload: { ...out, dispatch_url: dispatchUrl, dispatched_at_ts: sentAt, last_receipt_ts: sentAt, fault_flags: ["DEVICE_REJECT"] }
+              status: "FAILED",
+              meta: {
+                receipt_status: "FAILED",
+                receipt_code: String(out?.code ?? "DEVICE_REJECT"),
+                receipt_message: String(out?.message ?? "device rejected"),
+                adapter_payload: { ...out, dispatch_url: dispatchUrl, dispatched_at_ts: sentAt, last_receipt_ts: sentAt, fault_flags: ["DEVICE_REJECT"] }
+              }
             };
           }
           return {
-            command_id: task.command_id,
-            adapter_type: "irrigation_http_v1",
-            receipt_status: "ACKED",
-            receipt_code: String(out?.code ?? "ACK"),
-            receipt_message: String(out?.message ?? "accepted"),
-            adapter_payload: { ...out, dispatch_url: dispatchUrl, dispatched_at_ts: sentAt, last_receipt_ts: sentAt, fault_flags: [] }
+            status: "SUCCEEDED",
+            meta: {
+              receipt_status: "ACKED",
+              receipt_code: String(out?.code ?? "ACK"),
+              receipt_message: String(out?.message ?? "accepted"),
+              adapter_payload: { ...out, dispatch_url: dispatchUrl, dispatched_at_ts: sentAt, last_receipt_ts: sentAt, fault_flags: [] }
+            }
           };
         } catch (err) {
           lastErr = err;
@@ -84,12 +87,13 @@ export function createIrrigationHttpV1Adapter(ctx: AdapterRuntimeContext): Adapt
       }
 
       return {
-        command_id: task.command_id,
-        adapter_type: "irrigation_http_v1",
-        receipt_status: "FAILED",
-        receipt_code: "HTTP_ERROR",
-        receipt_message: String(lastErr?.message ?? lastErr ?? "unknown error"),
-        adapter_payload: { dispatch_url: dispatchUrl, fault_flags: ["HTTP_ERROR"] }
+        status: "FAILED",
+        meta: {
+          receipt_status: "FAILED",
+          receipt_code: "HTTP_ERROR",
+          receipt_message: String(lastErr?.message ?? lastErr ?? "unknown error"),
+          adapter_payload: { dispatch_url: dispatchUrl, fault_flags: ["HTTP_ERROR"] }
+        }
       };
     }
   };

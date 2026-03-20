@@ -15,6 +15,12 @@ export type AoActTask = {
   downlink_topic?: string | null;
   qos?: number | null;
   retain?: boolean | null;
+  runtime?: {
+    executor_id?: string;
+    lease_token?: string;
+    lease_until_ts?: number;
+    attempt_no?: number;
+  };
 };
 
 export type DispatchContext = {
@@ -26,21 +32,18 @@ export type DispatchContext = {
   attempt_no?: number;
 };
 
-export type DispatchResult = {
-  command_id: string;
-  adapter_type: string;
-  receipt_status: "ACKED" | "RUNNING" | "SUCCEEDED" | "FAILED";
-  receipt_code?: string;
-  receipt_message?: string;
-  raw_receipt_ref?: string;
-  adapter_payload?: Record<string, unknown> | null;
-};
+export interface ExecutorAdapter {
+  type: string;
+  execute(task: AoActTask): Promise<{
+    status: "SUCCEEDED" | "FAILED";
+    meta?: any;
+  }>;
+}
 
-export type ExecutorAdapterV1 = {
+export type ExecutorAdapterV1 = ExecutorAdapter & {
   adapter_type: string;
-  supports: (action_type: string) => boolean;
-  validate: (task: AoActTask) => { ok: true } | { ok: false; reason: string };
-  dispatch: (task: AoActTask, ctx: DispatchContext) => Promise<DispatchResult>;
+  supports?: (action_type: string) => boolean;
+  validate?: (task: AoActTask) => { ok: true } | { ok: false; reason: string };
 };
 
 export type Adapter = ExecutorAdapterV1;
