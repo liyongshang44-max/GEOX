@@ -831,6 +831,11 @@ export async function fetchProgramDetail(token: string, programId: string): Prom
   return res.item ?? null;
 }
 
+export async function fetchProgramTrajectories(token: string, programId: string): Promise<any[]> {
+  const res = await requestJson<{ ok?: boolean; items?: any[] }>(`/api/v1/programs/${encodeURIComponent(programId)}/trajectories`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
 export async function fetchFieldPrograms(token: string, fieldId: string): Promise<ProgramStateItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/programs`, { headers: authHeaders(token) });
   return Array.isArray(res.items) ? res.items : [];
@@ -1011,6 +1016,11 @@ export async function fetchOperationStates(
     withQuery(`/api/v1/operations`, params),
     { headers: authHeaders(token) },
   );
+}
+
+export async function fetchTaskTrajectory(token: string, actTaskId: string): Promise<any | null> {
+  const res = await requestJson<{ ok?: boolean; trajectory?: any }>(`/api/v1/tasks/${encodeURIComponent(actTaskId)}/trajectory`, { headers: authHeaders(token) });
+  return res.trajectory ?? null;
 }
 
 export async function retryAoActTask(

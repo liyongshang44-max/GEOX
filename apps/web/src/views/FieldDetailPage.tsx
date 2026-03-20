@@ -33,6 +33,10 @@ function executionColor(status: ExecutionStatus): string {
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
+  const focusTaskId = React.useMemo(() => {
+    if (typeof window === "undefined") return "";
+    return new URLSearchParams(window.location.search).get("focusTask") || "";
+  }, []);
   const [token, setToken] = React.useState<string>(() => localStorage.getItem("geox_ao_act_token") || "");
   const [detail, setDetail] = React.useState<any>(null);
   const [busy, setBusy] = React.useState(false);
@@ -45,6 +49,9 @@ export default function FieldDetailPage(): React.ReactElement {
   const [timelineIndex, setTimelineIndex] = React.useState<number>(0);
   const [playing, setPlaying] = React.useState<boolean>(false);
   const [currentProgram, setCurrentProgram] = React.useState<any>(null);
+  const [showTrajectoryLayer, setShowTrajectoryLayer] = React.useState(true);
+  const [showAlertLayer, setShowAlertLayer] = React.useState(true);
+  const [showAcceptanceLayer, setShowAcceptanceLayer] = React.useState(true);
 
   const labels = FIELD_TEXT[lang];
   const tt = (key: string) => t(lang, key);
@@ -159,6 +166,14 @@ export default function FieldDetailPage(): React.ReactElement {
   React.useEffect(() => {
     if (timelineIndex >= timelineEvents.length) setTimelineIndex(Math.max(0, timelineEvents.length - 1));
   }, [timelineEvents.length, timelineIndex]);
+
+  React.useEffect(() => {
+    if (!focusTaskId || !operationItems.length) return;
+    const target = operationItems.find((item) => String(item.actTaskId) === focusTaskId);
+    if (!target) return;
+    setActiveTab("map");
+    setSelectedObject({ kind: labels.operations, name: target.type, time: target.time, status: target.status, id: target.id });
+  }, [focusTaskId, operationItems, labels.operations]);
 
   const playbackTs = timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER;
 
@@ -288,6 +303,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>当前偏差：</b>{Array.isArray(currentProgram?.current_risk_summary?.signals) ? currentProgram.current_risk_summary.signals.join(", ") : "-"}</div>
               <div><b>当前待审批动作：</b>{String(currentProgram?.pending_operation_plan?.approval_request_id ?? "-")}</div>
               <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(detail?.field?.status, lang)}</div>
+              <div><b>{tt("field.gisCenter")}：</b>{tt("field.layerControl")}</div>
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{alertItems.length}</div>
@@ -332,6 +348,15 @@ export default function FieldDetailPage(): React.ReactElement {
               <FieldLegend labels={labels} />
               {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>Geometry unavailable for this field.</div> : null}
               <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
+                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
+                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
+                </div>
+              </div>
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
+              <div className="card" style={{ padding: 10 }}>
                 <div className="muted">Timeline</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
                 <div className="muted" style={{ display: "flex", justifyContent: "space-between" }}>
@@ -341,13 +366,19 @@ export default function FieldDetailPage(): React.ReactElement {
               </div>
               <FieldGisMap
                 polygonGeoJson={detail?.geometry || detail?.polygon?.geojson_json}
-                heatGeoJson={detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }}
+                heatGeoJson={showAlertLayer ? (detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }) : { type: "FeatureCollection", features: [] }}
                 markers={playbackMarkers}
-                trajectorySegments={trajectorySegments}
+                trajectorySegments={showTrajectoryLayer ? trajectorySegments : []}
+                acceptancePoints={showAcceptanceLayer ? (operationItems.filter((x) => x.raw?.location).map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) }))) : []}
                 activeSegmentId={selectedObject?.id}
                 labels={labels}
                 onSelectObject={setSelectedObject}
               />
+              <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700 }}>{tt("field.acceptanceSummary")}</div>
+                <div className="muted">{tt("operation.gis.trajectory_points")}: {trajectorySegments.reduce((acc, s) => acc + s.coordinates.length, 0)}</div>
+                <div className="muted">{tt("operation.gis.in_field_ratio")}: {(detail?.latest_acceptance_result?.metrics?.in_field_ratio != null) ? Number(detail.latest_acceptance_result.metrics.in_field_ratio).toFixed(3) : "-"}</div>
+              </div>
             </div>
           ) : null}
 
