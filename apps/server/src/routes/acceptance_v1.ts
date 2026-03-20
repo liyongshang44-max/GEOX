@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
@@ -21,6 +22,26 @@ const EvaluateRequestSchema = z.object({
   group_id: z.string().min(1),
   act_task_id: z.string().min(1)
 });
+
+const AcceptanceReadQuerySchema = z.object({
+  tenant_id: z.string().min(1),
+  project_id: z.string().min(1),
+  group_id: z.string().min(1),
+  act_task_id: z.string().min(1),
+  limit: z.union([z.string(), z.number()]).optional()
+});
+
+function requireTenantMatchOr404(
+  auth: { tenant_id: string; project_id: string; group_id: string },
+  target: TenantTriple,
+  reply: any
+): boolean {
+  if (auth.tenant_id !== target.tenant_id || auth.project_id !== target.project_id || auth.group_id !== target.group_id) {
+    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return false;
+  }
+  return true;
+}
 
 function normalizeRecordJson(v: unknown): any {
   if (v === null || v === undefined) return null;
@@ -89,12 +110,16 @@ function deriveTelemetryFromReceipt(receipt: any): Record<string, number> {
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+
       const body = EvaluateRequestSchema.parse((req as any).body ?? {});
       const tenant: TenantTriple = {
         tenant_id: body.tenant_id,
         project_id: body.project_id,
         group_id: body.group_id
       };
+      if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
       const taskFact = await loadTaskFact(pool, body.act_task_id, tenant);
       if (!taskFact) return reply.status(404).send({ ok: false, error: "TASK_NOT_FOUND" });
@@ -140,6 +165,48 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         ok: true,
         result: evaluated.result,
         fact_id: acceptanceFactId
+      });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
+
+  app.get("/api/v1/acceptance/results", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+
+      const q = AcceptanceReadQuerySchema.parse((req as any).query ?? {});
+      const tenant: TenantTriple = {
+        tenant_id: q.tenant_id,
+        project_id: q.project_id,
+        group_id: q.group_id
+      };
+      if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+      const limitRaw = Number(q.limit ?? 20);
+      const limit = Number.isFinite(limitRaw) ? Math.min(100, Math.max(1, Math.trunc(limitRaw))) : 20;
+
+      const out = await pool.query(
+        `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3
+            AND (record_json::jsonb#>>'{payload,act_task_id}') = $4
+          ORDER BY occurred_at DESC, fact_id DESC
+          LIMIT ${limit}`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, q.act_task_id]
+      );
+
+      return reply.send({
+        ok: true,
+        items: (out.rows ?? []).map((row: any) => ({
+          fact_id: String(row.fact_id),
+          occurred_at: row.occurred_at,
+          record_json: normalizeRecordJson(row.record_json)
+        }))
       });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
