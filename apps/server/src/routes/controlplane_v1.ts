@@ -115,9 +115,11 @@ async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
           retain boolean NOT NULL DEFAULT false,
           adapter_hint text NULL,
           state text NOT NULL,
+          claim_id text NULL,
           lease_token text NULL,
           leased_by text NULL,
           lease_expires_at timestamptz NULL,
+          lease_expire_at bigint NULL,
           claimed_by text NULL,
           claimed_ts bigint NULL,
           lease_until_ts bigint NULL,
@@ -137,9 +139,11 @@ async function ensureDispatchQueueRuntime(pool: Pool): Promise<void> {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_ready ON dispatch_queue_v1 (tenant_id, project_id, group_id, state, created_at)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_dispatch_queue_v1_outbox ON dispatch_queue_v1 (outbox_fact_id)`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS command_id text`);
+      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claim_id text`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claimed_by text`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS claimed_ts bigint`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS lease_until_ts bigint`);
+      await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS lease_expire_at bigint`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS attempt_no integer NOT NULL DEFAULT 0`);
       await pool.query(`ALTER TABLE dispatch_queue_v1 ADD COLUMN IF NOT EXISTS attempt_count integer NOT NULL DEFAULT 0`);
       await pool.query(`UPDATE dispatch_queue_v1 SET command_id = act_task_id WHERE command_id IS NULL OR command_id = ''`);
@@ -184,6 +188,12 @@ async function upsertDispatchQueueReady(pool: Pool, row: {
        retain = EXCLUDED.retain,
        adapter_hint = EXCLUDED.adapter_hint,
        state = CASE WHEN dispatch_queue_v1.state IN ('SUCCEEDED','FAILED') THEN dispatch_queue_v1.state ELSE 'READY' END,
+       claim_id = NULL,
+       lease_token = NULL,
+       leased_by = NULL,
+       lease_expires_at = NULL,
+       lease_expire_at = NULL,
+       lease_until_ts = NULL,
        updated_at = NOW()`,
     [
       row.queue_id,
@@ -313,6 +323,11 @@ async function claimDispatchQueueRows(
           AND ($5::text IS NULL OR adapter_hint IS NULL OR adapter_hint = $5)
           AND (
             state = 'READY'
+            OR (
+              state = 'DISPATCHED'
+              AND lease_until_ts IS NOT NULL
+              AND lease_until_ts <= (extract(epoch from now()) * 1000)::bigint
+            )
           )
         ORDER BY created_at ASC, queue_id ASC
         FOR UPDATE SKIP LOCKED
@@ -320,10 +335,12 @@ async function claimDispatchQueueRows(
       )
       UPDATE dispatch_queue_v1 q
       SET state = 'DISPATCHED',
+          claim_id = $7,
           lease_token = $7,
           leased_by = $8,
           claimed_by = $8,
           claimed_ts = (extract(epoch from now()) * 1000)::bigint,
+          lease_expire_at = ((extract(epoch from now()) * 1000)::bigint + ($9::bigint * 1000)),
           lease_until_ts = ((extract(epoch from now()) * 1000)::bigint + ($9::bigint * 1000)),
           lease_expires_at = NOW() + make_interval(secs => $9::int),
           attempt_count = q.attempt_count + 1,
@@ -358,7 +375,7 @@ async function updateDispatchQueueStateByOutbox(
   if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
   if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
   if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
-    fields.push('lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL');
+    fields.push('claim_id = NULL', 'lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL', 'lease_expire_at = NULL', 'lease_until_ts = NULL');
   }
   let where = 'WHERE outbox_fact_id = $1';
   if (patch.leaseToken) { where += ` AND lease_token = $${idx++}`; values.push(patch.leaseToken); }
@@ -379,7 +396,7 @@ async function updateDispatchQueueStateByActTask(
   if (patch.ack_fact_id !== undefined) { fields.push(`ack_fact_id = $${idx++}`); values.push(patch.ack_fact_id); }
   if (patch.receipt_fact_id !== undefined) { fields.push(`receipt_fact_id = $${idx++}`); values.push(patch.receipt_fact_id); }
   if (patch.state === 'SUCCEEDED' || patch.state === 'FAILED') {
-    fields.push('lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL');
+    fields.push('claim_id = NULL', 'lease_token = NULL', 'leased_by = NULL', 'lease_expires_at = NULL', 'lease_expire_at = NULL', 'lease_until_ts = NULL');
   }
   await pool.query(
     `UPDATE dispatch_queue_v1 SET ${fields.join(', ')} WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND act_task_id = $4`,
@@ -1008,9 +1025,13 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
            q.retain,
            q.adapter_hint,
            q.state,
+           q.claim_id,
            q.lease_token,
            q.leased_by,
            q.lease_expires_at,
+           q.lease_expire_at,
+           q.claimed_by,
+           q.claimed_ts,
            q.publish_fact_id,
            q.ack_fact_id,
            q.receipt_fact_id,
@@ -1050,9 +1071,13 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
     retain: Boolean(row.retain),
     adapter_hint: row.adapter_hint ? String(row.adapter_hint) : null,
     state: String(row.state),
+    claim_id: row.claim_id ? String(row.claim_id) : null,
     lease_token: row.lease_token ? String(row.lease_token) : null,
     leased_by: row.leased_by ? String(row.leased_by) : null,
     lease_expires_at: row.lease_expires_at ? String(row.lease_expires_at) : null,
+    lease_expire_at: Number.isFinite(Number(row.lease_expire_at)) ? Number(row.lease_expire_at) : null,
+    claimed_by: row.claimed_by ? String(row.claimed_by) : null,
+    claimed_ts: Number.isFinite(Number(row.claimed_ts)) ? Number(row.claimed_ts) : null,
     publish_fact_id: row.publish_fact_id ? String(row.publish_fact_id) : null,
     ack_fact_id: row.ack_fact_id ? String(row.ack_fact_id) : null,
     receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
@@ -1788,7 +1813,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const rows = await claimDispatchQueueRows(pool, tenant, limit, lease_seconds, executor_id, lease_token, actTaskId, adapterHint);
     const items = await listDispatchQueue(pool, tenant, limit * 5, actTaskId);
     const claimedIds = new Set(rows.map((r: any) => String(r.queue_id)));
-    return reply.send({ ok: true, lease_token, items: items.filter((x: any) => claimedIds.has(String(x.queue_id))) });
+    return reply.send({ ok: true, claim_id: lease_token, lease_token, items: items.filter((x: any) => claimedIds.has(String(x.queue_id))) });
   });
 
 
