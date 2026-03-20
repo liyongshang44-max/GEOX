@@ -2,6 +2,7 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const { setTimeout: sleep } = require("node:timers/promises");
 
 function readArg(argv, key) {
   const idx = argv.indexOf(`--${key}`);
@@ -13,6 +14,17 @@ function must(name, fallback = "") {
   const value = String(fallback || process.env[name] || "").trim();
   if (!value) throw new Error(`MISSING_ENV:${name}`);
   return value;
+}
+
+function resolveToken(argv) {
+  const raw = String(
+    readArg(argv, "token") ||
+      process.env.GEOX_AO_ACT_TOKEN ||
+      process.env.GEOX_BEARER_TOKEN ||
+      ""
+  ).trim();
+  if (!raw) throw new Error("MISSING_ENV:GEOX_AO_ACT_TOKEN");
+  return raw.startsWith("Bearer ") ? raw.slice("Bearer ".length).trim() : raw;
 }
 
 async function httpJson(baseUrl, token, path, init) {
@@ -52,11 +64,11 @@ async function claimOnce(baseUrl, token, body) {
 async function main() {
   const argv = process.argv.slice(2);
   const baseUrl = String(readArg(argv, "baseUrl") || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000").trim();
-  const token = must("GEOX_AO_ACT_TOKEN", readArg(argv, "token"));
+  const token = resolveToken(argv);
   const tenant_id = must("GEOX_TENANT_ID", readArg(argv, "tenant_id"));
   const project_id = must("GEOX_PROJECT_ID", readArg(argv, "project_id"));
   const group_id = must("GEOX_GROUP_ID", readArg(argv, "group_id"));
-  const lease_seconds = Math.max(5, Number.parseInt(readArg(argv, "lease_seconds") || process.env.GEOX_DISPATCH_LEASE_SECONDS || "30", 10) || 30);
+  const lease_seconds = Math.max(5, Number.parseInt(readArg(argv, "lease_seconds") || process.env.GEOX_DISPATCH_LEASE_SECONDS || "5", 10) || 5);
 
   const providedTaskId = String(readArg(argv, "act_task_id") || process.env.GEOX_ACT_TASK_ID || "").trim();
   const act_task_id = providedTaskId || (await pickActTaskId(baseUrl, token, tenant_id, project_id, group_id));
@@ -75,7 +87,7 @@ async function main() {
 
   const aHit = aItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
   const bHit = bItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
-  assert.ok(aHit + bHit <= 1, `DUPLICATE_CLAIM_DETECTED act_task_id=${act_task_id} a=${aHit} b=${bHit}`);
+  assert.equal(aHit + bHit, 1, `CLAIM_WINNER_REQUIRED act_task_id=${act_task_id} a=${aHit} b=${bHit}`);
 
   const claimedItem = [...aItems, ...bItems].find((x) => String(x?.act_task_id ?? "") === act_task_id) || null;
   if (claimedItem) {
@@ -83,6 +95,20 @@ async function main() {
     assert.ok(String(claimedItem?.claimed_by ?? "").trim().length > 0, "CLAIMED_BY_MISSING");
     assert.ok(Number.isFinite(Number(claimedItem?.lease_expire_at)), "LEASE_EXPIRE_AT_MISSING");
   }
+
+  const immediateRetry = await claimOnce(baseUrl, token, { ...common, executor_id: `lease_accept_exec_C_${Date.now()}` });
+  assert.equal(immediateRetry.status, 200, `CLAIM_C_STATUS_${immediateRetry.status}:${immediateRetry.text}`);
+  const immediateItems = Array.isArray(immediateRetry.json?.items) ? immediateRetry.json.items : [];
+  const immediateHit = immediateItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
+  assert.equal(immediateHit, 0, `LEASE_LOCK_BROKEN_BEFORE_EXPIRE act_task_id=${act_task_id}`);
+
+  await sleep(lease_seconds * 1000 + 250);
+  const takeover = await claimOnce(baseUrl, token, { ...common, executor_id: `lease_accept_exec_RECOVER_${Date.now()}` });
+  assert.equal(takeover.status, 200, `CLAIM_RECOVER_STATUS_${takeover.status}:${takeover.text}`);
+  const takeoverItems = Array.isArray(takeover.json?.items) ? takeover.json.items : [];
+  const takeoverItem = takeoverItems.find((x) => String(x?.act_task_id ?? "") === act_task_id) || null;
+  assert.ok(takeoverItem, `LEASE_TAKEOVER_FAILED act_task_id=${act_task_id}`);
+  assert.ok(String(takeoverItem?.claimed_by ?? "").includes("lease_accept_exec_RECOVER_"), "TAKEOVER_CLAIMED_BY_MISMATCH");
 
   console.log(JSON.stringify({
     ok: true,
@@ -92,7 +118,9 @@ async function main() {
     winner: aHit === 1 ? "A" : bHit === 1 ? "B" : "NONE",
     claim_id: claimedItem?.claim_id ?? null,
     claimed_by: claimedItem?.claimed_by ?? null,
-    lease_expire_at: claimedItem?.lease_expire_at ?? null
+    lease_expire_at: claimedItem?.lease_expire_at ?? null,
+    takeover_claim_id: takeoverItem?.claim_id ?? null,
+    takeover_claimed_by: takeoverItem?.claimed_by ?? null
   }, null, 2));
 }
 
