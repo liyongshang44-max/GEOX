@@ -56,6 +56,7 @@ export const FIELD_TEXT = {
     alertAck: "已确认",
     alertClosed: "已关闭",
     devDebug: "开发调试信息（原始字段）",
+    layerAcceptance: "验收图层",
   },
   en: {
     title: "Field Operations View",
@@ -111,6 +112,7 @@ export const FIELD_TEXT = {
     alertAck: "Acknowledged",
     alertClosed: "Closed",
     devDebug: "Developer Debug Fields",
+    layerAcceptance: "Acceptance Layer",
   },
 } as const;
 

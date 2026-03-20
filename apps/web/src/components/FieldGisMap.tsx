@@ -8,6 +8,7 @@ type TrajectorySegment = {
   coordinates: Array<[number, number]>;
   label?: string;
 };
+type AcceptancePoint = { id: string; status: string; lat: number; lon: number };
 
 type ViewPoint = { lon: number; lat: number };
 type Bounds = { minLon: number; maxLon: number; minLat: number; maxLat: number };
@@ -68,6 +69,7 @@ export default function FieldGisMap({
   markers,
   trajectorySegments,
   activeSegmentId,
+  acceptancePoints = [],
   labels,
   onSelectObject,
 }: {
@@ -76,6 +78,7 @@ export default function FieldGisMap({
   markers: Marker[];
   trajectorySegments: TrajectorySegment[];
   activeSegmentId?: string;
+  acceptancePoints?: AcceptancePoint[];
   labels?: any;
   onSelectObject?: (obj: any) => void;
 }): React.ReactElement {
@@ -83,7 +86,8 @@ export default function FieldGisMap({
   const segmentPoints = trajectorySegments.flatMap((s) => s.coordinates.map(([lon, lat]) => ({ lon, lat })));
   const heatPoints = (heatGeoJson?.features || []).map((f: any) => ({ lon: Number(f?.geometry?.coordinates?.[0]), lat: Number(f?.geometry?.coordinates?.[1]) })).filter((p: any) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
   const polygonPoints = extractPolygonRings(polygonGeoJson).flat().map(([lon, lat]) => ({ lon: Number(lon), lat: Number(lat) }));
-  const computedBounds = toBounds([...polygonPoints, ...markerPoints, ...segmentPoints, ...heatPoints]);
+  const acceptanceGeoPoints = acceptancePoints.map((p) => ({ lon: Number(p.lon), lat: Number(p.lat) })).filter((p) => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+  const computedBounds = toBounds([...polygonPoints, ...markerPoints, ...segmentPoints, ...heatPoints, ...acceptanceGeoPoints]);
   const bounds = computedBounds ? expandBounds(computedBounds) : { minLon: 120.9, maxLon: 121.1, minLat: 31.1, maxLat: 31.3 };
 
   const w = 820;
@@ -143,6 +147,13 @@ export default function FieldGisMap({
           return <g key={`${m.device_id}_${m.ts_ms || 0}`} onClick={() => onSelectObject?.({ kind: labels?.devicePosition || "Device Position", name: m.device_id, time: m.ts_ms ? new Date(m.ts_ms).toLocaleString() : "-", status: "-" })}>
             <circle cx={p.x} cy={p.y} r="4.5" fill="#16a34a" />
             <text x={p.x + 6} y={p.y - 6} fontSize="11" fill="#14532d">{m.device_id}</text>
+          </g>;
+        })}
+        {acceptancePoints.map((a) => {
+          const p = proj(Number(a.lon), Number(a.lat));
+          const fill = String(a.status).toUpperCase().includes("FAIL") ? "#dc2626" : "#7c3aed";
+          return <g key={`acc_${a.id}`} onClick={() => onSelectObject?.({ kind: labels?.layerAcceptance || "Acceptance Layer", name: a.id, status: a.status })}>
+            <rect x={p.x - 4} y={p.y - 4} width={8} height={8} fill={fill} />
           </g>;
         })}
       </svg>

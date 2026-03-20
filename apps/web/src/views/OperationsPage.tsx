@@ -1,5 +1,6 @@
 import React from "react";
-import { fetchOperationStates, fetchPrograms, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
+import { Link } from "react-router-dom";
+import { fetchOperationStates, fetchPrograms, fetchTaskTrajectory, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
 import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
 type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
@@ -49,6 +50,7 @@ export default function OperationsPage(): React.ReactElement {
   const [items, setItems] = React.useState<OperationStateItemV1[]>([]);
   const [selectedId, setSelectedId] = React.useState<string>("");
   const [loading, setLoading] = React.useState(false);
+  const [trajectory, setTrajectory] = React.useState<any | null>(null);
 
   const [fieldFilter, setFieldFilter] = React.useState<string>("");
   const [deviceFilter, setDeviceFilter] = React.useState<string>("");
@@ -81,6 +83,11 @@ export default function OperationsPage(): React.ReactElement {
   React.useEffect(() => { void refresh(); }, [refresh]);
 
   const selected = React.useMemo(() => items.find((x) => x.operation_id === selectedId) ?? null, [items, selectedId]);
+  React.useEffect(() => {
+    const taskId = String(selected?.task_id ?? "").trim();
+    if (!taskId) { setTrajectory(null); return; }
+    fetchTaskTrajectory(token, taskId).then(setTrajectory).catch(() => setTrajectory(null));
+  }, [selected?.task_id, token]);
 
   const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.field_id ?? "")).filter(Boolean))), [items]);
   const deviceOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.device_id ?? "")).filter(Boolean))), [items]);
@@ -96,7 +103,9 @@ export default function OperationsPage(): React.ReactElement {
   const endTs = selected?.timeline?.[selected.timeline.length - 1]?.ts ?? selected?.last_event_ts ?? 0;
   const failedReason = statusOf(selected ?? ({} as any)) === "FAILED" ? String(selected?.receipt_status ?? tt("common.none")) : "";
   const durationSec = Math.max(0, Math.round((endTs - startTs) / 1000));
-  const durationText = `${Math.floor(durationSec / 60)}分${durationSec % 60}秒`;
+  const durationText = locale === "zh" ? `${Math.floor(durationSec / 60)}分${durationSec % 60}秒` : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
+  const trajectoryPointCount = Number(trajectory?.payload?.point_count ?? 0);
+  const inFieldRatio = Number((selected as any)?.latest_acceptance_result?.metrics?.in_field_ratio ?? 0);
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -179,6 +188,11 @@ export default function OperationsPage(): React.ReactElement {
               </details>
 
               {failedReason ? <div><b>{tt("operation.labels.failure_reason")}：</b>{failedReason}</div> : null}
+              <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.gis.trajectory_summary")}</div>
+              <div><b>{tt("operation.gis.trajectory_points")}：</b>{trajectoryPointCount || tt("common.none")}</div>
+              <div><b>{tt("operation.gis.spatial_summary")}：</b>{tt("operation.gis.in_field_ratio")} {Number.isFinite(inFieldRatio) && inFieldRatio > 0 ? inFieldRatio.toFixed(3) : "-"}</div>
+              <div><b>{tt("operation.gis.trajectory_summary")}：</b>{trajectoryPointCount > 1 ? tt("operation.gis.trajectory_ready") : tt("operation.gis.trajectory_missing")}</div>
+              {selected?.field_id ? <Link className="btn" to={`/fields/${encodeURIComponent(String(selected.field_id))}?focusTask=${encodeURIComponent(String(selected.task_id ?? ""))}`}>{tt("operation.gis.jump_to_field")}</Link> : null}
 
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.timeline")}</div>
               <ul style={{ display: "grid", gap: 4, margin: 0, paddingLeft: 16 }}>
