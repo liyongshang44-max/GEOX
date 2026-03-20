@@ -14,6 +14,9 @@ export type OperationPlanV1 = {
     project_id: string;
     group_id: string;
     operation_plan_id: string;
+    program_id?: string | null;
+    field_id?: string | null;
+    season_id?: string | null;
     recommendation_id?: string | null;
     recommendation_fact_id?: string | null;
     approval_request_id?: string | null;

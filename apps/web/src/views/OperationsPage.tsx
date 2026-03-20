@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchOperationStates, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
+import { fetchOperationStates, fetchPrograms, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
 import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
 type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
@@ -53,23 +53,30 @@ export default function OperationsPage(): React.ReactElement {
   const [fieldFilter, setFieldFilter] = React.useState<string>("");
   const [deviceFilter, setDeviceFilter] = React.useState<string>("");
   const [statusFilter, setStatusFilter] = React.useState<string>("");
+  const [programFilter, setProgramFilter] = React.useState<string>("");
+  const [programIds, setProgramIds] = React.useState<string[]>([]);
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetchOperationStates(token, {
-        limit: 200,
-        field_id: fieldFilter || undefined,
-        device_id: deviceFilter || undefined,
-        final_status: statusFilter || undefined,
-      });
-      const next = Array.isArray(res.items) ? res.items : [];
+      const [res, programs] = await Promise.all([
+        fetchOperationStates(token, {
+          limit: 200,
+          field_id: fieldFilter || undefined,
+          device_id: deviceFilter || undefined,
+          final_status: statusFilter || undefined,
+        }),
+        fetchPrograms(token, { limit: 200 }),
+      ]);
+      let next = Array.isArray(res.items) ? res.items : [];
+      if (programFilter) next = next.filter((x) => String(x.program_id ?? "") === programFilter);
+      setProgramIds(Array.from(new Set((programs ?? []).map((p: any) => String(p.program_id ?? "")).filter(Boolean))));
       setItems(next);
       setSelectedId((prev) => (prev && next.some((x) => x.operation_id === prev) ? prev : (next[0]?.operation_id ?? "")));
     } finally {
       setLoading(false);
     }
-  }, [token, fieldFilter, deviceFilter, statusFilter]);
+  }, [token, fieldFilter, deviceFilter, statusFilter, programFilter]);
 
   React.useEffect(() => { void refresh(); }, [refresh]);
 
@@ -101,11 +108,12 @@ export default function OperationsPage(): React.ReactElement {
         <button className="btn" onClick={() => void refresh()} disabled={loading}>{tt("operation.actions.refresh")}</button>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 }}>
         <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_today")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayItems.length}</div></div>
         <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_success_rate")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{successRate}</div></div>
         <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_running")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{runningCount}</div></div>
         <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_failed")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{failedCount}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">Program 聚合</div><div style={{ fontSize: 24, fontWeight: 700 }}>{new Set(items.map((x) => String(x.program_id ?? "")).filter(Boolean)).size}</div></div>
       </section>
 
       <section className="card" style={{ padding: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -116,6 +124,10 @@ export default function OperationsPage(): React.ReactElement {
         <select className="select" value={deviceFilter} onChange={(e) => setDeviceFilter(e.target.value)}>
           <option value="">{tt("operation.filters.all_devices")}</option>
           {deviceOptions.map((v) => <option value={v} key={v}>{v}</option>)}
+        </select>
+        <select className="select" value={programFilter} onChange={(e) => setProgramFilter(e.target.value)}>
+          <option value="">全部 Program</option>
+          {programIds.map((v) => <option value={v} key={v}>{v}</option>)}
         </select>
         <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">{tt("operation.filters.all_status")}</option>

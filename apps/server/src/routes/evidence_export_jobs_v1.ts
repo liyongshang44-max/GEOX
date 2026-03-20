@@ -1043,7 +1043,7 @@ function buildEvidencePdf(bundle: any, scope: ExportScope, from_ts_ms: number, t
   return Buffer.from(pdf, "utf8"); // Return PDF bytes.
 } // End helper.
 
-async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_format: ExportFormat, export_language: ExportLanguage): Promise<void> { // Execute job in-process.
+async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_format: ExportFormat, export_language: ExportLanguage, program_id: string | null = null, field_id: string | null = null, season_id: string | null = null): Promise<void> { // Execute job in-process.
   const started_ms = Date.now(); // Start time.
 
   // Transition job to RUNNING.
@@ -1159,6 +1159,9 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
       entity: { tenant_id, job_id }, // Entity.
       payload: { // Payload.
         scope, // Export scope.
+        program_id, // Optional program binding.
+        field_id, // Optional field binding.
+        season_id, // Optional season binding.
         from_ts_ms, // Window start.
         to_ts_ms, // Window end.
         status: "DONE", // Status.
@@ -1223,7 +1226,7 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
     const record = { // Error fact record.
       type: "evidence_export_job_completed_v1", // Reuse completed fact type with ERROR status for MVP.
       entity: { tenant_id, job_id }, // Entity.
-      payload: { scope, from_ts_ms, to_ts_ms, status: "ERROR", error: msg, completed_ts_ms: err_ms, started_ts_ms: started_ms }, // Payload.
+      payload: { scope, program_id, field_id, season_id, from_ts_ms, to_ts_ms, status: "ERROR", error: msg, completed_ts_ms: err_ms, started_ts_ms: started_ms }, // Payload.
     }; // End record.
 
     const clientConn = await pool.connect(); // Connection for atomic error update.
@@ -1273,6 +1276,9 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     const to_ts_ms = (typeof body.to_ts_ms === "number" && Number.isFinite(body.to_ts_ms)) ? Math.trunc(body.to_ts_ms) : null; // Parse window.
     const export_format = normalizeExportFormat(body.export_format); // Optional requested artifact format.
     const export_language = normalizeExportLanguage(body.export_language); // Optional requested artifact language.
+    const program_id = normalizeId(body.program_id); // Optional program binding.
+    const field_id = normalizeId(body.field_id); // Optional field binding.
+    const season_id = normalizeId(body.season_id); // Optional season binding.
     if (from_ts_ms == null || to_ts_ms == null || to_ts_ms <= from_ts_ms) return badRequest(reply, "MISSING_OR_INVALID:from_ts_ms|to_ts_ms"); // Validate.
 
     // Validate referenced resources exist within tenant (best-effort).
@@ -1295,6 +1301,9 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
       entity: { tenant_id: auth.tenant_id, job_id }, // Entity.
       payload: { // Payload.
         scope, // Export scope.
+        program_id, // Optional program binding.
+        field_id, // Optional field binding.
+        season_id, // Optional season binding.
         from_ts_ms, // Window start.
         to_ts_ms, // Window end.
         status: "QUEUED", // Initial status.
@@ -1333,7 +1342,7 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     if (!running.has(key)) { // Guard.
       running.add(key); // Mark running.
       setTimeout(() => { // Defer to event loop to return response first.
-        runJob(pool, auth.tenant_id, job_id, scope, from_ts_ms, to_ts_ms, export_format, export_language)
+        runJob(pool, auth.tenant_id, job_id, scope, from_ts_ms, to_ts_ms, export_format, export_language, program_id, field_id, season_id)
           .catch(() => void 0)
           .finally(() => { running.delete(key); }); // Clear running flag.
       }, 0); // Immediate.

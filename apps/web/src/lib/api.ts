@@ -807,6 +807,39 @@ export async function dispatchAoActTask(token: string, actTaskId: string, body: 
   });
 }
 
+
+
+// -----------------------------
+// Program APIs
+// -----------------------------
+
+export type ProgramStateItemV1 = any;
+
+export async function fetchPrograms(token: string, params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery(`/api/v1/programs`, params), { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchProgramDetail(token: string, programId: string): Promise<ProgramStateItemV1 | null> {
+  const res = await requestJson<{ ok?: boolean; item?: ProgramStateItemV1 }>(`/api/v1/programs/${encodeURIComponent(programId)}`, { headers: authHeaders(token) });
+  return res.item ?? null;
+}
+
+export async function fetchFieldPrograms(token: string, fieldId: string): Promise<ProgramStateItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/programs`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchFieldCurrentProgram(token: string, fieldId: string): Promise<ProgramStateItemV1 | null> {
+  const res = await requestJson<{ ok?: boolean; item?: ProgramStateItemV1 }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`, { headers: authHeaders(token) });
+  return res.item ?? null;
+}
+
+export async function fetchSeasonPrograms(token: string, seasonId: string): Promise<ProgramStateItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(`/api/v1/seasons/${encodeURIComponent(seasonId)}/programs`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
 // -----------------------------
 // Dashboard APIs
 // -----------------------------
@@ -934,12 +967,14 @@ export type OperationStateTimelineItemV1 = {
 export type OperationStateItemV1 = {
   operation_id: string;
   recommendation_id?: string | null;
+  program_id?: string | null;
   approval_request_id?: string | null;
   approval_decision_id?: string | null;
   operation_plan_id?: string | null;
   task_id?: string | null;
   device_id?: string | null;
   field_id?: string | null;
+  season_id?: string | null;
   action_type?: string | null;
   dispatch_status: string;
   receipt_status: string;

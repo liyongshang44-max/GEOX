@@ -23,12 +23,14 @@ export type OperationTimelineItemV1 = {
 export type OperationStateV1 = {
   operation_id: string;
   recommendation_id: string | null;
+  program_id: string | null;
   approval_request_id: string | null;
   approval_decision_id: string | null;
   operation_plan_id: string | null;
   task_id: string | null;
   device_id: string | null;
   field_id: string | null;
+  season_id: string | null;
   action_type: string | null;
   dispatch_status: string;
   receipt_status: string;
@@ -190,12 +192,14 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     states.push({
       operation_id: operation_plan_id,
       recommendation_id,
+      program_id: String(payload.program_id ?? rec?.record_json?.payload?.program_id ?? "").trim() || null,
       approval_request_id,
       approval_decision_id: decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null,
       operation_plan_id,
       task_id,
       device_id: String(payload.device_id ?? task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null,
-      field_id: String(payload?.target?.ref ?? rec?.record_json?.payload?.field_id ?? "").trim() || null,
+      field_id: String(payload.field_id ?? payload?.target?.ref ?? rec?.record_json?.payload?.field_id ?? "").trim() || null,
+      season_id: String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null,
       action_type: String(payload.action_type ?? task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
