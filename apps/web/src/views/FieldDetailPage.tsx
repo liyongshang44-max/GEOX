@@ -346,6 +346,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>Geometry unavailable for this field.</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
