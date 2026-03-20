@@ -21,6 +21,9 @@ type ExportJob = { // Evidence export job record stored in memory.
   tenant_id: string; // Tenant identifier (hard isolation).
   project_id: string; // Project identifier (hard isolation).
   group_id: string; // Group identifier (hard isolation).
+  program_id: string | null; // Optional program binding for compatibility migration.
+  field_id: string | null; // Optional field binding for compatibility migration.
+  season_id: string | null; // Optional season binding for compatibility migration.
   act_task_id: string; // Target AO-ACT act_task_id to export.
   template: string; // Export template name (v1 allows explicit templates).
   artifact_path: string | null; // Filesystem path of the produced artifact (JSON bundle for v1).
@@ -221,6 +224,9 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     tenant_id: job.tenant_id, // Tenant triple: tenant_id.
     project_id: job.project_id, // Tenant triple: project_id.
     group_id: job.group_id, // Tenant triple: group_id.
+    program_id: job.program_id ?? null, // Optional program binding.
+    field_id: job.field_id ?? null, // Optional field binding.
+    season_id: job.season_id ?? null, // Optional season binding.
     act_task_id: job.act_task_id, // Target act_task_id.
     template: job.template, // Template name.
     facts: { // Facts bundle.
@@ -329,6 +335,9 @@ const __dirname = path.dirname(__filename);
     tenant_id: job.tenant_id, // Tenant triple: tenant_id.
     project_id: job.project_id, // Tenant triple: project_id.
     group_id: job.group_id, // Tenant triple: group_id.
+    program_id: job.program_id ?? null, // Optional program binding.
+    field_id: job.field_id ?? null, // Optional field binding.
+    season_id: job.season_id ?? null, // Optional season binding.
     act_task_id: job.act_task_id, // Target act_task_id.
     template: job.template, // Template name.
     verdict, // PASS/FAIL verdict.
@@ -377,6 +386,9 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
         project_id: z.string().min(1), // Project id.
         group_id: z.string().min(1), // Group id.
         act_task_id: z.string().min(1), // AO-ACT act_task_id.
+        program_id: z.string().min(1).optional(), // Optional program binding.
+        field_id: z.string().min(1).optional(), // Optional field binding.
+        season_id: z.string().min(1).optional(), // Optional season binding.
         template: z.string().min(1).default("ao_act_basic_v1") // Template name (default).
       }).parse((req as any).body ?? {}); // Parse request body.
 
@@ -392,6 +404,9 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
         tenant_id: tenant.tenant_id, // Tenant id.
         project_id: tenant.project_id, // Project id.
         group_id: tenant.group_id, // Group id.
+        program_id: body.program_id ?? null, // Optional program id.
+        field_id: body.field_id ?? null, // Optional field id.
+        season_id: body.season_id ?? null, // Optional season id.
         act_task_id: body.act_task_id, // Act task id.
         template: body.template, // Template name.
         artifact_path: null, // Not produced yet.
@@ -447,6 +462,9 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
         tenant_id: job.tenant_id, // Tenant id.
         project_id: job.project_id, // Project id.
         group_id: job.group_id, // Group id.
+        program_id: job.program_id, // Optional program id.
+        field_id: job.field_id, // Optional field id.
+        season_id: job.season_id, // Optional season id.
         act_task_id: job.act_task_id, // Act task id.
         template: job.template, // Template.
         artifact_sha256: job.artifact_sha256, // Artifact sha256.

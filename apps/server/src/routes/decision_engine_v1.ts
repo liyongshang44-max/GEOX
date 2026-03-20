@@ -13,6 +13,7 @@ type RecommendationV1 = {
   field_id: string;
   season_id: string;
   device_id: string;
+  program_id?: string | null;
   recommendation_type: RecommendationTypeV1;
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
@@ -112,6 +113,7 @@ function buildRecommendations(body: any): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
+  const program_id = String(body.program_id ?? "").trim() || null;
   if (!field_id || !season_id || !device_id) return [];
 
   const telemetry = (body.telemetry && typeof body.telemetry === "object") ? body.telemetry : {};
@@ -138,6 +140,7 @@ function buildRecommendations(body: any): RecommendationV1[] {
       field_id,
       season_id,
       device_id,
+      program_id,
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
       reason_codes: ["soil_moisture_low_or_heat_stress"],
@@ -174,6 +177,7 @@ function buildRecommendations(body: any): RecommendationV1[] {
       field_id,
       season_id,
       device_id,
+      program_id,
       recommendation_type: "crop_health_alert_v1",
       status: "proposed",
       reason_codes: ["image_health_risk_high"],
@@ -585,6 +589,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      program_id: rec.program_id ?? null,
+      field_id: rec.field_id ?? null,
+      season_id: rec.season_id ?? null,
       issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
       action_type: actionType,
       target: aoActTarget,
@@ -600,6 +607,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         season_id: rec.season_id ?? null,
         confidence: rec.confidence ?? null,
         device_id: rec.device_id ?? null,
+        program_id: rec.program_id ?? null,
         adapter_type
       }
     });
@@ -615,6 +623,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         recommendation_id,
+        program_id: rec.program_id ?? null,
+        field_id: rec.field_id ?? null,
+        season_id: rec.season_id ?? null,
         recommendation_fact_id: row.fact_id,
         approval_request_id: delegated.json.request_id,
         created_ts: Date.now()
@@ -630,6 +641,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         group_id: tenant.group_id,
         operation_plan_id,
         recommendation_id,
+        program_id: rec.program_id ?? null,
+        field_id: rec.field_id ?? null,
+        season_id: rec.season_id ?? null,
         recommendation_fact_id: row.fact_id,
         approval_request_id: delegated.json.request_id,
         action_type: actionType,

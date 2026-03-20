@@ -7,6 +7,9 @@ export type OperationPlanTransitionV1 = {
     project_id: string;
     group_id: string;
     operation_plan_id: string;
+    program_id?: string | null;
+    field_id?: string | null;
+    season_id?: string | null;
     from_status: Exclude<OperationPlanStatusV1, "CREATED"> | "CREATED";
     status: OperationPlanStatusV1;
     trigger: string;
