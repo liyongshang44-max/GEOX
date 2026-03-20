@@ -123,6 +123,53 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     return reply.send({ ok: true, item });
   });
 
+  app.get("/api/v1/programs/:program_id/trajectories", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const q = await pool.query(
+      `SELECT (record_json::jsonb #>> '{payload,act_task_id}') AS act_task_id,
+              (record_json::jsonb #>> '{payload,field_id}') AS field_id,
+              (record_json::jsonb #>> '{payload,meta,device_id}') AS device_id,
+              (record_json::jsonb #>> '{payload,time_window,start_ts}')::bigint AS start_ts,
+              (record_json::jsonb #>> '{payload,time_window,end_ts}')::bigint AS end_ts
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
+          AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{payload,project_id}') = $2
+          AND (record_json::jsonb #>> '{payload,group_id}') = $3
+          AND (record_json::jsonb #>> '{payload,program_id}') = $4
+        ORDER BY start_ts DESC NULLS LAST
+        LIMIT 200`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id]
+    );
+
+    return reply.send({
+      ok: true,
+      program_id,
+      items: (q.rows ?? []).map((row: any) => ({
+        type: "operation_trajectory_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          program_id,
+          act_task_id: row.act_task_id ?? null,
+          field_id: row.field_id ?? null,
+          device_id: row.device_id ?? null,
+          start_ts: row.start_ts ?? null,
+          end_ts: row.end_ts ?? null,
+          line: null,
+          point_count: 0,
+        }
+      }))
+    });
+  });
+
   app.post("/api/v1/programs/:program_id/transitions", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
