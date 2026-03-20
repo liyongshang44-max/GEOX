@@ -3,6 +3,7 @@ import { createIrrigationSimulatorAdapter } from "./irrigation_simulator";
 import { createIrrigationRealAdapter } from "./irrigation_real_adapter";
 import { createMqttAdapter } from "./mqtt";
 import { createIrrigationHttpV1Adapter } from "./irrigation_http_v1";
+import { createExecutorApi } from "../lib/executor_api";
 
 type AdapterRegistry = Map<string, Adapter>;
 
@@ -19,9 +20,10 @@ function registerAdapter(registry: AdapterRegistry, adapter: Adapter): void {
 
 export function createAdapterRegistry(ctx: AdapterRuntimeContext): AdapterRegistry {
   const registry: AdapterRegistry = new Map<string, Adapter>();
+  const api = createExecutorApi(ctx);
   registerAdapter(registry, createIrrigationRealAdapter(ctx));
-  registerAdapter(registry, createIrrigationSimulatorAdapter(ctx));
-  registerAdapter(registry, createMqttAdapter(ctx));
+  registerAdapter(registry, createIrrigationSimulatorAdapter(api));
+  registerAdapter(registry, createMqttAdapter(api));
   registerAdapter(registry, createIrrigationHttpV1Adapter(ctx));
   return registry;
 }
