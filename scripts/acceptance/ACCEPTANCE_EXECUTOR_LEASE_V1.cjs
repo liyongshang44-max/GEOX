@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+"use strict";
+
+const assert = require("node:assert/strict");
+
+function readArg(argv, key) {
+  const idx = argv.indexOf(`--${key}`);
+  if (idx < 0) return "";
+  return String(argv[idx + 1] ?? "").trim();
+}
+
+function must(name, fallback = "") {
+  const value = String(fallback || process.env[name] || "").trim();
+  if (!value) throw new Error(`MISSING_ENV:${name}`);
+  return value;
+}
+
+async function httpJson(baseUrl, token, path, init) {
+  const res = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+      ...(init?.headers || {})
+    }
+  });
+  const text = await res.text();
+  let json = null;
+  try { json = text ? JSON.parse(text) : null; } catch { json = { _raw: text }; }
+  return { status: res.status, json, text };
+}
+
+async function pickActTaskId(baseUrl, token, tenant_id, project_id, group_id) {
+  const query = `tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&limit=50`;
+  const res = await httpJson(baseUrl, token, `/api/v1/ao-act/dispatches?${query}`, { method: "GET" });
+  assert.equal(res.status, 200, `DISPATCH_LIST_STATUS_${res.status}`);
+  assert.equal(res.json?.ok, true, "DISPATCH_LIST_NOT_OK");
+  const items = Array.isArray(res.json?.items) ? res.json.items : [];
+  const ready = items.find((x) => String(x?.state ?? "") === "READY");
+  if (!ready) throw new Error("NO_READY_TASK_FOUND: pass --act_task_id or set GEOX_ACT_TASK_ID");
+  return String(ready.act_task_id ?? "").trim();
+}
+
+async function claimOnce(baseUrl, token, body) {
+  return httpJson(baseUrl, token, "/api/v1/ao-act/dispatches/claim", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+}
+
+async function main() {
+  const argv = process.argv.slice(2);
+  const baseUrl = String(readArg(argv, "baseUrl") || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000").trim();
+  const token = must("GEOX_AO_ACT_TOKEN", readArg(argv, "token"));
+  const tenant_id = must("GEOX_TENANT_ID", readArg(argv, "tenant_id"));
+  const project_id = must("GEOX_PROJECT_ID", readArg(argv, "project_id"));
+  const group_id = must("GEOX_GROUP_ID", readArg(argv, "group_id"));
+  const lease_seconds = Math.max(5, Number.parseInt(readArg(argv, "lease_seconds") || process.env.GEOX_DISPATCH_LEASE_SECONDS || "30", 10) || 30);
+
+  const providedTaskId = String(readArg(argv, "act_task_id") || process.env.GEOX_ACT_TASK_ID || "").trim();
+  const act_task_id = providedTaskId || (await pickActTaskId(baseUrl, token, tenant_id, project_id, group_id));
+  assert.ok(act_task_id, "MISSING_ACT_TASK_ID");
+
+  const common = { tenant_id, project_id, group_id, limit: 1, lease_seconds, act_task_id };
+  const [a, b] = await Promise.all([
+    claimOnce(baseUrl, token, { ...common, executor_id: `lease_accept_exec_A_${Date.now()}` }),
+    claimOnce(baseUrl, token, { ...common, executor_id: `lease_accept_exec_B_${Date.now()}` })
+  ]);
+
+  assert.equal(a.status, 200, `CLAIM_A_STATUS_${a.status}:${a.text}`);
+  assert.equal(b.status, 200, `CLAIM_B_STATUS_${b.status}:${b.text}`);
+  const aItems = Array.isArray(a.json?.items) ? a.json.items : [];
+  const bItems = Array.isArray(b.json?.items) ? b.json.items : [];
+
+  const aHit = aItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
+  const bHit = bItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
+  assert.ok(aHit + bHit <= 1, `DUPLICATE_CLAIM_DETECTED act_task_id=${act_task_id} a=${aHit} b=${bHit}`);
+
+  const claimedItem = [...aItems, ...bItems].find((x) => String(x?.act_task_id ?? "") === act_task_id) || null;
+  if (claimedItem) {
+    assert.ok(String(claimedItem?.claim_id ?? "").trim().length > 0, "CLAIM_ID_MISSING");
+    assert.ok(String(claimedItem?.claimed_by ?? "").trim().length > 0, "CLAIMED_BY_MISSING");
+    assert.ok(Number.isFinite(Number(claimedItem?.lease_expire_at)), "LEASE_EXPIRE_AT_MISSING");
+  }
+
+  console.log(JSON.stringify({
+    ok: true,
+    act_task_id,
+    claim_a_count: aHit,
+    claim_b_count: bHit,
+    winner: aHit === 1 ? "A" : bHit === 1 ? "B" : "NONE",
+    claim_id: claimedItem?.claim_id ?? null,
+    claimed_by: claimedItem?.claimed_by ?? null,
+    lease_expire_at: claimedItem?.lease_expire_at ?? null
+  }, null, 2));
+}
+
+main().catch((err) => {
+  console.error(String(err?.stack ?? err?.message ?? err));
+  process.exit(1);
+});
