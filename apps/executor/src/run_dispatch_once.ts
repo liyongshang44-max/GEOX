@@ -229,8 +229,8 @@ async function appendReceiptV1(
   }
 }
 
-async function main(): Promise<void> {
-  const args = parseArgs(process.argv.slice(2));
+export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
+  const args = parseArgs(cliArgs ?? process.argv.slice(2));
   const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token, executor_id: args.executor_id });
 
   const claimed = await claimDispatchTasks({
@@ -305,7 +305,13 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error(`FAIL: ${err?.message ?? String(err)}`);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  await runDispatchOnce(process.argv.slice(2));
+}
+
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(`FAIL: ${err?.message ?? String(err)}`);
+    process.exit(1);
+  });
+}
