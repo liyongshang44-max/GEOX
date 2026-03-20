@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { fetchAgronomyRecommendations, fetchFieldDetail, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
+import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
@@ -44,6 +44,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [recentRecommendations, setRecentRecommendations] = React.useState<AgronomyRecommendationItemV1[]>([]);
   const [timelineIndex, setTimelineIndex] = React.useState<number>(0);
   const [playing, setPlaying] = React.useState<boolean>(false);
+  const [currentProgram, setCurrentProgram] = React.useState<any>(null);
 
   const labels = FIELD_TEXT[lang];
   const tt = (key: string) => t(lang, key);
@@ -59,14 +60,16 @@ export default function FieldDetailPage(): React.ReactElement {
     setBusy(true);
     setStatus(lang === "zh" ? "加载中..." : "Loading...");
     try {
-      const [next, ops, recs] = await Promise.all([
+      const [next, ops, recs, prg] = await Promise.all([
         fetchFieldDetail(token, fieldId),
         fetchOperationStates(token, { field_id: fieldId, limit: 20 }),
         fetchAgronomyRecommendations({ limit: 30, token }),
+        fetchFieldCurrentProgram(token, fieldId).catch(() => null),
       ]);
       setDetail(next);
       setActiveOperations((ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))));
       setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
+      setCurrentProgram(prg);
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
       setStatus(e?.message || String(e));
@@ -277,6 +280,11 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.currentSeason}：</b>{detail?.latest_season?.name || detail?.latest_season?.season_id || "-"}</div>
               {detail?.latest_season?.crop ? <div><b>{labels.crop}：</b>{detail.latest_season.crop}</div> : null}
               {detail?.latest_season?.stage ? <div><b>{labels.currentStage}：</b>{detail.latest_season.stage}</div> : null}
+              <div><b>当前 active program：</b>{String(currentProgram?.program_id ?? "-")}</div>
+              <div><b>program 目标：</b>{currentProgram?.goal_profile ? JSON.stringify(currentProgram.goal_profile) : "-"}</div>
+              <div><b>当前生育/阶段状态：</b>{String(currentProgram?.current_stage ?? "-")}</div>
+              <div><b>当前偏差：</b>{Array.isArray(currentProgram?.current_risk_summary?.signals) ? currentProgram.current_risk_summary.signals.join(", ") : "-"}</div>
+              <div><b>当前待审批动作：</b>{String(currentProgram?.pending_operation_plan?.approval_request_id ?? "-")}</div>
               <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(detail?.field?.status, lang)}</div>
               <div><b>{labels.devices}：</b>{detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{operationItems[0]?.type || "-"}</div>
