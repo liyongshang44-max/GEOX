@@ -1,4 +1,6 @@
-const { spawn } = require("node:child_process");
+const { register } = require("../node_modules/tsx/dist/cjs/api/index.cjs");
+register();
+const { runDispatchOnce } = require("./run_dispatch_once.ts");
 
 const DEFAULT_POLL_INTERVAL_MS = 3000;
 const MIN_POLL_INTERVAL_MS = 2000;
@@ -23,28 +25,6 @@ function stripPollArg(argv) {
     next.push(item);
   }
   return next;
-}
-
-function runDispatchOnce(forwardArgs) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(
-      "pnpm",
-      ["--filter", "@geox/executor", "dispatch-once", "--", ...forwardArgs],
-      { stdio: "inherit", env: process.env }
-    );
-
-    child.on("error", (error) => {
-      reject(error);
-    });
-
-    child.on("exit", (code, signal) => {
-      if (code === 0) {
-        resolve();
-        return;
-      }
-      reject(new Error(`dispatch-once exited with code=${code ?? "null"} signal=${signal ?? "null"}`));
-    });
-  });
 }
 
 function sleep(ms) {
