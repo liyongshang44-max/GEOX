@@ -6,13 +6,14 @@ const { getIndex, postReceipt } = require("./ao_act_client_v0.cjs"); // Use the 
 const { buildReceiptPayloadV0 } = require("./receipt_builder_v0.cjs"); // Build schema-valid receipt payload.
 
 function parseArgs(argv) { // Parse minimal CLI flags without introducing extra behavior.
-  const out = { baseUrl: null, taskFactId: null, actTaskId: null, once: false }; // Initialize arg bag.
+  const out = { baseUrl: null, taskFactId: null, actTaskId: null, once: false, autoEvaluate: false }; // Initialize arg bag.
   for (let i = 0; i < argv.length; i++) { // Iterate argv tokens.
     const a = argv[i]; // Current token.
     if (a === "--baseUrl") { out.baseUrl = String(argv[i + 1] ?? ""); i++; continue; } // Read --baseUrl.
     if (a === "--taskFactId") { out.taskFactId = String(argv[i + 1] ?? ""); i++; continue; } // Read --taskFactId.
     if (a === "--actTaskId") { out.actTaskId = String(argv[i + 1] ?? ""); i++; continue; } // Read --actTaskId.
     if (a === "--once") { out.once = true; continue; } // Read --once (demo-only index pick).
+    if (a === "--auto_evaluate") { out.autoEvaluate = String(argv[i + 1] ?? "").trim().toLowerCase() === "true"; i++; continue; } // Read --auto_evaluate (accepted but intentionally ignored).
   } // End block.
   return out; // Return parsed args.
 } // End block.
@@ -49,6 +50,7 @@ async function selectTaskRowDemoOnce(baseUrl) { // Demo-only selection: pick fir
 
 async function main() { // Main executor flow.
   const args = parseArgs(process.argv.slice(2)); // Parse args after node+script.
+  if (args.autoEvaluate) console.log("WARN: --auto_evaluate=true ignored; execution and acceptance remain decoupled."); // Explicitly keep execution != acceptance.
   const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000"; // Resolve base URL with env fallback.
   const hasExplicit = Boolean(args.taskFactId) || Boolean(args.actTaskId); // Compute whether explicit selection is configured.
   if (!hasExplicit && !args.once) { // Enforce that some selection mode is provided.

@@ -955,10 +955,20 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
     snapshot.device_status = stQ.rowCount ? stQ.rows[0] : null; // Status row.
   } // End device snapshot.
 
+  const acceptance_results = facts // Stage C3: export acceptance results as first-class section in evidence bundle.
+    .filter((f: any) => String(f?.record_json?.type ?? "") === "acceptance_result_v1")
+    .map((f: any) => ({ // Keep result envelope self-describing for downstream audit tooling.
+      fact_id: f?.fact_id ?? null,
+      occurred_at: f?.occurred_at ?? null,
+      source: f?.source ?? null,
+      record_json: f?.record_json ?? null,
+    }));
+
   return { // Return bundle.
     meta: { tenant_id, scope, from_ts_ms, to_ts_ms, built_at_ts_ms: Date.now() }, // Metadata.
     snapshot, // Projection snapshot (best-effort).
     facts, // Facts array (source of truth).
+    acceptance_results, // Stage C3: required acceptance_result_v1 export view.
     operation_bundles: buildOperationBundlesFromFacts(facts), // Operation-centric export structure for pilot audit closure.
   }; // End return.
 } // End bundle builder.
@@ -1453,4 +1463,3 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     return reply.send(stream); // Stream to client.
   }); // End download.
 } // End registerEvidenceExportJobsV1Routes.
-

@@ -45,6 +45,7 @@ import { registerOperationStateV1Routes } from "./routes/operation_state_v1"; //
 import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // Sprint C: field timeline/replay route.
 import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
 import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program management + field/season scoped program routes.
+import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -269,6 +270,7 @@ registerOperationStateV1Routes(app, pool); // Sprint B: unified operations state
 registerFieldTimelineV1Routes(app, pool); // Sprint C: field timeline/replay API.
 registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program state projection API.
 registerProgramsV1Routes(app, pool); // Program management + field/season scoped program APIs.
+registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。

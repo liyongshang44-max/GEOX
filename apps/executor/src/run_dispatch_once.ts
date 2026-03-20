@@ -12,7 +12,16 @@ type Args = {
   limit: number;
   lease_seconds: number;
   act_task_id?: string;
+  auto_evaluate: boolean;
 };
+
+function parseBool(v: string | undefined, fallback: boolean): boolean {
+  if (v === undefined) return fallback;
+  const s = String(v).trim().toLowerCase();
+  if (s === "1" || s === "true" || s === "yes" || s === "on") return true;
+  if (s === "0" || s === "false" || s === "no" || s === "off") return false;
+  return fallback;
+}
 
 function parseArgs(argv: string[]): Args {
   const get = (k: string): string | undefined => {
@@ -38,9 +47,10 @@ function parseArgs(argv: string[]): Args {
     Math.min(300, Number.parseInt(get("lease_seconds") ?? process.env.GEOX_DISPATCH_LEASE_SECONDS ?? "30", 10) || 30)
   );
   const act_task_id = get("act_task_id") ?? process.env.GEOX_ACT_TASK_ID ?? undefined;
+  const auto_evaluate = parseBool(get("auto_evaluate") ?? process.env.GEOX_AUTO_EVALUATE, false);
 
   if (!token) throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
-  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id };
+  return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id, auto_evaluate };
 }
 
 async function httpJson(url: string, token: string, init?: RequestInit): Promise<any> {
@@ -244,6 +254,9 @@ async function appendReceiptV1(
 
 export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
   const args = parseArgs(cliArgs ?? process.argv.slice(2));
+  if (args.auto_evaluate) {
+    console.log("WARN: auto_evaluate=true requested, but executor keeps acceptance decoupled and will not auto-evaluate.");
+  }
   const registry = createAdapterRegistry({ baseUrl: args.baseUrl, token: args.token, executor_id: args.executor_id });
 
   const claimed = await claimDispatchTasks({
