@@ -103,6 +103,19 @@ function toAoActTask(item: any, args: Args): AoActTask {
 
 type DispatchState = "DISPATCHED" | "ACKED" | "FAILED";
 
+function logExecutionEvent(task: AoActTask, adapter: string, status: "SUCCEEDED" | "FAILED", startedAtMs: number): void {
+  const durationMs = Math.max(0, Date.now() - startedAtMs);
+  const payload = {
+    task_id: task.act_task_id,
+    program_id: String((task.meta as any)?.program_id ?? task.operation_plan_id ?? "").trim() || null,
+    device_id: String(task.device_id ?? (task.meta as any)?.device_id ?? "").trim() || null,
+    adapter,
+    status,
+    duration_ms: durationMs
+  };
+  console.log(`EXECUTION_EVENT ${JSON.stringify(payload)}`);
+}
+
 async function writeDispatchState(args: Args, task: AoActTask, state: DispatchState): Promise<void> {
   console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
   try {
@@ -255,19 +268,21 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
     const task = toAoActTask(item, args);
     const adapterType = String(task.adapter_type ?? task.adapter_hint ?? "").trim().toLowerCase();
     const adapter = findAdapterByType(registry, adapterType);
-
-    if (typeof adapter.supports === "function" && !adapter.supports(task.action_type)) {
-      throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
-    }
-    if (typeof adapter.validate === "function") {
-      const validation = adapter.validate(task);
-      if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
-    }
-
-    const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
-    console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
+    const startedAtMs = Date.now();
+    let executionStatus: "SUCCEEDED" | "FAILED" = "FAILED";
+    let adapterTypeForLog = String((adapter as any).type ?? (adapter as any).adapter_type ?? adapterType).trim() || adapterType;
 
     try {
+      if (typeof adapter.supports === "function" && !adapter.supports(task.action_type)) {
+        throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
+      }
+      if (typeof adapter.validate === "function") {
+        const validation = adapter.validate(task);
+        if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
+      }
+
+      const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
+      console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
       await writeDispatchState(args, task, "DISPATCHED");
       const execTask: AoActTask = {
         ...task,
@@ -280,6 +295,7 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
       };
       const execution = await adapter.execute(execTask);
       const adapterTypeNormalized = String((adapter as any).type ?? (adapter as any).adapter_type ?? adapterType).trim() || adapterType;
+      adapterTypeForLog = adapterTypeNormalized;
       const execMeta = execution?.meta ?? {};
       const receiptStatus = String(execMeta?.receipt_status ?? (execution.status === "FAILED" ? "FAILED" : "ACKED")).toUpperCase();
       console.log(
@@ -297,16 +313,22 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
           typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : undefined
         );
         await writeDispatchState(args, task, "FAILED");
+        executionStatus = "FAILED";
         console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
         continue;
       }
 
       await writeDispatchState(args, task, "ACKED");
+      executionStatus = "SUCCEEDED";
       console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
     } catch (error: any) {
+      const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
       await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, "DISPATCH_ERROR", String(error?.message ?? error));
       await writeDispatchState(args, task, "FAILED");
+      executionStatus = "FAILED";
       throw error;
+    } finally {
+      logExecutionEvent(task, adapterTypeForLog, executionStatus, startedAtMs);
     }
   }
 }
