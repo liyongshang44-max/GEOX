@@ -6,7 +6,7 @@ const { getIndex, postReceipt } = require("./ao_act_client_v0.cjs"); // Use exis
 const { buildReceiptPayloadV0, validateObservedKeysAreSubsetOfSchema } = require("./receipt_builder_v0.cjs"); // Build and validate receipt fields.
 
 function parseArgs(argv) { // Parse minimal CLI args without introducing scheduler semantics.
-  const out = { baseUrl: null, deviceGatewayUrl: null, taskFactId: null, actTaskId: null, once: false }; // Initialize args.
+  const out = { baseUrl: null, deviceGatewayUrl: null, taskFactId: null, actTaskId: null, once: false, autoEvaluate: false }; // Initialize args.
   for (let i = 0; i < argv.length; i++) { // Iterate argv tokens.
     const a = argv[i]; // Current token.
     if (a === "--baseUrl") { out.baseUrl = String(argv[i + 1] ?? ""); i++; continue; } // Read --baseUrl.
@@ -14,6 +14,7 @@ function parseArgs(argv) { // Parse minimal CLI args without introducing schedul
     if (a === "--taskFactId") { out.taskFactId = String(argv[i + 1] ?? ""); i++; continue; } // Read --taskFactId.
     if (a === "--actTaskId") { out.actTaskId = String(argv[i + 1] ?? ""); i++; continue; } // Read --actTaskId.
     if (a === "--once") { out.once = true; continue; } // Read --once (demo-only index pick).
+    if (a === "--auto_evaluate") { out.autoEvaluate = String(argv[i + 1] ?? "").trim().toLowerCase() === "true"; i++; continue; } // Read --auto_evaluate (accepted but intentionally ignored).
   } // End block.
   return out; // Return parsed args.
 } // End block.
@@ -58,6 +59,7 @@ async function selectTaskRowDemoOnce(baseUrl) { // Demo-only selection: pick fir
 
 async function main() { // Main executor flow.
   const args = parseArgs(process.argv.slice(2)); // Parse args after node+script.
+  if (args.autoEvaluate) console.log("WARN: --auto_evaluate=true ignored; execution and acceptance remain decoupled."); // Explicit decoupling.
   const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000"; // Resolve base URL.
   const deviceGatewayUrl = String(args.deviceGatewayUrl || "").trim(); // Read device gateway URL.
   assert(deviceGatewayUrl.length > 0, "MISSING_DEVICE_GATEWAY_URL"); // Require gateway URL.
