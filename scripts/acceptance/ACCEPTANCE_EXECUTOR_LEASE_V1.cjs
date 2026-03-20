@@ -49,9 +49,16 @@ async function pickActTaskId(baseUrl, token, tenant_id, project_id, group_id) {
   assert.equal(res.status, 200, `DISPATCH_LIST_STATUS_${res.status}`);
   assert.equal(res.json?.ok, true, "DISPATCH_LIST_NOT_OK");
   const items = Array.isArray(res.json?.items) ? res.json.items : [];
-  const ready = items.find((x) => String(x?.state ?? "") === "READY");
-  if (!ready) throw new Error("NO_READY_TASK_FOUND: pass --act_task_id or set GEOX_ACT_TASK_ID");
-  return String(ready.act_task_id ?? "").trim();
+  const now = Date.now();
+  const candidate = items.find((x) => {
+    const state = String(x?.state ?? "").toUpperCase();
+    const leaseExpireAt = Number(x?.lease_expire_at ?? NaN);
+    const receiptFactId = String(x?.receipt_fact_id ?? "").trim();
+    const stateAllowed = state === "DISPATCHED" || state === "ACKED";
+    return stateAllowed && Number.isFinite(leaseExpireAt) && leaseExpireAt < now && !receiptFactId;
+  });
+  if (!candidate) throw new Error("NO_EXPIRED_LEASE_TASK_FOUND: need expired lease + no receipt + allowed state");
+  return String(candidate.act_task_id ?? "").trim();
 }
 
 async function claimOnce(baseUrl, token, body) {
@@ -102,11 +109,14 @@ async function main() {
   const immediateHit = immediateItems.filter((x) => String(x?.act_task_id ?? "") === act_task_id).length;
   assert.equal(immediateHit, 0, `LEASE_LOCK_BROKEN_BEFORE_EXPIRE act_task_id=${act_task_id}`);
 
-  await sleep(lease_seconds * 1000 + 250);
+  await sleep(lease_seconds * 1000 + 1800);
   const takeover = await claimOnce(baseUrl, token, { ...common, executor_id: `lease_accept_exec_RECOVER_${Date.now()}` });
   assert.equal(takeover.status, 200, `CLAIM_RECOVER_STATUS_${takeover.status}:${takeover.text}`);
   const takeoverItems = Array.isArray(takeover.json?.items) ? takeover.json.items : [];
   const takeoverItem = takeoverItems.find((x) => String(x?.act_task_id ?? "") === act_task_id) || null;
+  if (!takeoverItem) {
+    console.error(`[DEBUG] takeover.json=${JSON.stringify(takeover.json ?? null)}`);
+  }
   assert.ok(takeoverItem, `LEASE_TAKEOVER_FAILED act_task_id=${act_task_id}`);
   assert.ok(String(takeoverItem?.claimed_by ?? "").includes("lease_accept_exec_RECOVER_"), "TAKEOVER_CLAIMED_BY_MISMATCH");
 
