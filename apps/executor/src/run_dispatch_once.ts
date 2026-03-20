@@ -256,39 +256,45 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
     const adapterType = String(task.adapter_type ?? task.adapter_hint ?? "").trim().toLowerCase();
     const adapter = findAdapterByType(registry, adapterType);
 
-    if (!adapter.supports(task.action_type)) {
+    if (typeof adapter.supports === "function" && !adapter.supports(task.action_type)) {
       throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
     }
-    const validation = adapter.validate(task);
-    if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
+    if (typeof adapter.validate === "function") {
+      const validation = adapter.validate(task);
+      if (!validation.ok) throw new Error(`ADAPTER_VALIDATE_FAILED:${adapterType}:${validation.reason}`);
+    }
 
     const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
     console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
 
     try {
       await writeDispatchState(args, task, "DISPATCHED");
-      const result = await adapter.dispatch(task, {
-        baseUrl: args.baseUrl,
-        token: args.token,
-        executor_id: args.executor_id,
-        lease_token: String(item?.lease_token ?? "") || undefined,
-        lease_until_ts: item?.lease_until_ts ? Number(item.lease_until_ts) : undefined,
-        attempt_no: attemptNo
-      });
+      const execTask: AoActTask = {
+        ...task,
+        runtime: {
+          executor_id: args.executor_id,
+          lease_token: String(item?.lease_token ?? "") || undefined,
+          lease_until_ts: item?.lease_until_ts ? Number(item.lease_until_ts) : undefined,
+          attempt_no: attemptNo
+        }
+      };
+      const execution = await adapter.execute(execTask);
+      const adapterTypeNormalized = String((adapter as any).type ?? (adapter as any).adapter_type ?? adapterType).trim() || adapterType;
+      const execMeta = execution?.meta ?? {};
+      const receiptStatus = String(execMeta?.receipt_status ?? (execution.status === "FAILED" ? "FAILED" : "ACKED")).toUpperCase();
       console.log(
-        `INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${result.command_id} receipt_status=${result.receipt_status}`
+        `INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${task.command_id} receipt_status=${receiptStatus}`
       );
 
-      if (result.receipt_status === "FAILED") {
+      if (execution.status === "FAILED" || receiptStatus === "FAILED") {
         await appendReceiptV1(
           args,
           task,
           attemptNo,
           "FAILED",
-          result.adapter_type,
-          result.receipt_code ?? "DISPATCH_FAILED",
-          result.receipt_message,
-          result.raw_receipt_ref
+          adapterTypeNormalized,
+          String(execMeta?.receipt_code ?? execMeta?.reason ?? "DISPATCH_FAILED"),
+          typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : undefined
         );
         await writeDispatchState(args, task, "FAILED");
         console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
