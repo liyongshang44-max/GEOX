@@ -346,6 +346,34 @@ export default function FieldDetailPage(): React.ReactElement {
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>Geometry unavailable for this field.</div> : null}
+              <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
+                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
+                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
+                </div>
+              </div>
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
+              <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
+                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
+                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
+                </div>
+              </div>
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
+              <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
+                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
+                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
+                </div>
+              </div>
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
