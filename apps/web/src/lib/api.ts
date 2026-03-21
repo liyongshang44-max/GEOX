@@ -821,6 +821,8 @@ export async function dispatchAoActTask(token: string, actTaskId: string, body: 
 
 export type ProgramStateItemV1 = any;
 export type ProgramPortfolioItemV1 = any;
+export type SchedulingConflictItemV1 = any;
+export type SchedulingHintItemV1 = any;
 
 export async function fetchPrograms(token: string, params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery(`/api/v1/programs`, params), { headers: authHeaders(token) });
@@ -864,6 +866,16 @@ export async function fetchSeasonPrograms(token: string, seasonId: string): Prom
 
 export async function fetchSeasonProgramPortfolio(token: string, seasonId: string): Promise<ProgramPortfolioItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramPortfolioItemV1[] }>(`/api/v1/seasons/${encodeURIComponent(seasonId)}/program-portfolio`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchSchedulingConflicts(token: string): Promise<SchedulingConflictItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: SchedulingConflictItemV1[] }>(`/api/v1/scheduling/conflicts`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchSchedulingHints(token: string): Promise<SchedulingHintItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: SchedulingHintItemV1[] }>(`/api/v1/scheduling/hints`, { headers: authHeaders(token) });
   return Array.isArray(res.items) ? res.items : [];
 }
 
