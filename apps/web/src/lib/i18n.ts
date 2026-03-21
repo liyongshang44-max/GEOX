@@ -83,6 +83,12 @@ export const messages = {
       trajectoryTasks: "轨迹任务数",
       trajectoryReady: "具备轨迹定义",
       trajectoryPending: "待补充轨迹",
+      header: "Header",
+      actionCenter: "Action Center",
+      outcomeCenter: "Outcome Center",
+      resourceCenter: "Resource/Cost/SLA Center",
+      mapCenter: "Map Center",
+      timelineCenter: "Timeline Center",
     },
     portfolio: {
       title: "经营组合总览",
@@ -96,8 +102,19 @@ export const messages = {
       deviceConflict: "设备冲突",
       fieldConflict: "地块冲突",
       intentConflict: "意图冲突",
+      consoleDesc: "经营控制台：组合视图、筛选与排序。",
+      combinedView: "组合视图",
+      allSeasons: "全部 Season",
+      allRisk: "全部风险",
+      sortRisk: "按风险排序",
+      sortCost: "按成本排序",
+      sortSla: "按SLA排序",
+      risk: "风险",
+      cost: "成本",
+      sla: "SLA",
+      efficiency: "效率",
     },
-    common: { none: "-", unknown: "未知", ids: "编号信息" },
+    common: { none: "-", unknown: "未知", ids: "编号信息", insufficientData: "数据不足", noRecord: "暂无记录" },
   },
   en: {
     operation: {
@@ -180,6 +197,12 @@ export const messages = {
       trajectoryTasks: "Trajectory Tasks",
       trajectoryReady: "Trajectory Defined",
       trajectoryPending: "Trajectory Pending",
+      header: "Header",
+      actionCenter: "Action Center",
+      outcomeCenter: "Outcome Center",
+      resourceCenter: "Resource/Cost/SLA Center",
+      mapCenter: "Map Center",
+      timelineCenter: "Timeline Center",
     },
     portfolio: {
       title: "Program Portfolio",
@@ -193,14 +216,25 @@ export const messages = {
       deviceConflict: "Device Conflict",
       fieldConflict: "Field Conflict",
       intentConflict: "Intent Conflict",
+      consoleDesc: "Program console with combined view, filters, and sorting.",
+      combinedView: "Combined View",
+      allSeasons: "All Seasons",
+      allRisk: "All Risk",
+      sortRisk: "Sort by Risk",
+      sortCost: "Sort by Cost",
+      sortSla: "Sort by SLA",
+      risk: "Risk",
+      cost: "Cost",
+      sla: "SLA",
+      efficiency: "Efficiency",
     },
-    common: { none: "-", unknown: "Unknown", ids: "IDs" },
+    common: { none: "-", unknown: "Unknown", ids: "IDs", insufficientData: "Insufficient Data", noRecord: "No Records" },
   },
 } as const;
 
 export function resolveLocale(): Locale {
-  if (typeof navigator === "undefined") return "en";
-  return navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
+  if (typeof navigator === "undefined") return "zh";
+  return navigator.language.toLowerCase().startsWith("en") ? "en" : "zh";
 }
 
 export function t(locale: Locale, key: string): string {
