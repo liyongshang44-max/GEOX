@@ -3,6 +3,9 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
+import { projectProgramStateV1 } from "../projections/program_state_v1";
+import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
+import { projectProgramTimelineV1 } from "../projections/program_timeline_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const PROGRAM_STATUSES = new Set(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"]);
@@ -121,6 +124,84 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const item = (await projectFieldProgramStateV1(pool, tenant)).find((x) => x.program_id === program_id);
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, item });
+  });
+
+
+  app.get("/api/v1/programs/:program_id/state", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const item = (await projectProgramStateV1(pool, tenant)).find((x) => x.program_id === program_id);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
+  });
+
+  app.get("/api/v1/programs/:program_id/timeline", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const items = await projectProgramTimelineV1(pool, tenant, program_id);
+    if (!items.length) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, program_id, count: items.length, items });
+  });
+
+  app.get("/api/v1/programs/:program_id/feedback-history", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const program = (await projectProgramStateV1(pool, tenant)).find((x) => x.program_id === program_id);
+    if (!program) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const q = await pool.query(
+      `SELECT occurred_at, (record_json::jsonb) AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+          AND (record_json::jsonb#>>'{payload,program_id}') = $4
+        ORDER BY occurred_at ASC
+        LIMIT 200`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id]
+    );
+
+    const results = (q.rows ?? []).map((row: any) => ({
+      ...((row.record_json?.payload ?? {}) as any),
+      evaluated_at_ts: Number(row.record_json?.payload?.evaluated_at_ts ?? Date.parse(String(row.occurred_at))) || 0
+    }));
+
+    const items = results.map((_, idx) => {
+      const historyResults = results.slice(0, idx + 1);
+      const feedback = deriveProgramFeedbackV1({
+        program,
+        acceptanceResults: historyResults,
+        trajectories: historyResults.map((x: any) => x.metrics ?? {}),
+        recentTasks: []
+      });
+      const latest = historyResults[historyResults.length - 1] ?? {};
+      return {
+        ts: Number(latest.evaluated_at_ts ?? 0),
+        acceptance_result: String(latest.result ?? latest.verdict ?? ""),
+        current_stage: feedback.current_stage,
+        current_goal_progress: feedback.current_goal_progress,
+        next_action_hint: feedback.next_action_hint
+      };
+    });
+
+    return reply.send({ ok: true, program_id, count: items.length, items });
   });
 
   app.get("/api/v1/programs/:program_id/trajectories", async (req, reply) => {
@@ -263,6 +344,22 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
 
     const items = (await projectFieldProgramStateV1(pool, tenant)).filter((x) => x.field_id === field_id);
     return reply.send({ ok: true, count: items.length, items });
+  });
+
+
+  app.get("/api/v1/fields/:field_id/program-state", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const field_id = String((req.params as any)?.field_id ?? "").trim();
+    if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
+
+    const items = (await projectProgramStateV1(pool, tenant)).filter((x) => x.field_id === field_id);
+    const item = items.find((x) => x.status === "ACTIVE") ?? items[0] ?? null;
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
   });
 
   app.get("/api/v1/fields/:field_id/current-program", async (req, reply) => {
