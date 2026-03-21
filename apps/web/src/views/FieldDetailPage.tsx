@@ -168,8 +168,18 @@ export default function FieldDetailPage(): React.ReactElement {
   }, [playing, timelineEvents.length]);
 
   React.useEffect(() => {
-    if (timelineIndex >= timelineEvents.length) setTimelineIndex(Math.max(0, timelineEvents.length - 1));
-  }, [timelineEvents.length, timelineIndex]);
+    if (!timelineEvents.length) {
+      setTimelineIndex(0);
+      return;
+    }
+    setTimelineIndex((prev) => (prev >= timelineEvents.length ? timelineEvents.length - 1 : prev));
+  }, [timelineEvents.length]);
+
+  React.useEffect(() => {
+    if (!playing && timelineEvents.length > 0 && timelineIndex === 0) {
+      setTimelineIndex(timelineEvents.length - 1);
+    }
+  }, [playing, timelineEvents.length, timelineIndex]);
 
   React.useEffect(() => {
     if (!focusTaskId || !operationItems.length) return;
@@ -179,7 +189,7 @@ export default function FieldDetailPage(): React.ReactElement {
     setSelectedObject({ kind: labels.operations, name: target.type, time: target.time, status: target.status, id: target.id });
   }, [focusTaskId, operationItems, labels.operations]);
 
-  const playbackTs = timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER;
+  const playbackTs = playing ? (timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
 
   const trajectorySegments = React.useMemo(() => {
     const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
@@ -213,9 +223,14 @@ export default function FieldDetailPage(): React.ReactElement {
     }).filter((s) => s.coordinates.length > 1);
   }, [detail, operationItems, playbackTs, labels]);
 
+  const rawMarkers = React.useMemo(() => (detail?.map_layers?.markers || []), [detail]);
   const playbackMarkers = React.useMemo(
-    () => (detail?.map_layers?.markers || []).filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs),
-    [detail, playbackTs],
+    () => rawMarkers.filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs),
+    [rawMarkers, playbackTs],
+  );
+  const acceptancePoints = React.useMemo(
+    () => operationItems.filter((x) => x.raw?.location).map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) })),
+    [operationItems],
   );
 
   const risk = riskKey(detail);
@@ -391,34 +406,6 @@ export default function FieldDetailPage(): React.ReactElement {
                   <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
                 </div>
               </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div className="muted">Timeline</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
@@ -432,11 +419,17 @@ export default function FieldDetailPage(): React.ReactElement {
                 heatGeoJson={showAlertLayer ? (detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }) : { type: "FeatureCollection", features: [] }}
                 markers={playbackMarkers}
                 trajectorySegments={showTrajectoryLayer ? trajectorySegments : []}
-                acceptancePoints={showAcceptanceLayer ? (operationItems.filter((x) => x.raw?.location).map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) }))) : []}
+                acceptancePoints={showAcceptanceLayer ? acceptancePoints : []}
                 activeSegmentId={selectedObject?.id}
                 labels={labels}
                 onSelectObject={setSelectedObject}
               />
+              <div className="card" style={{ padding: 10 }}>
+                <div className="muted">GIS debug counts</div>
+                <div className="mono" style={{ fontSize: 12 }}>
+                  rawMarkers={rawMarkers.length} · playbackMarkers={playbackMarkers.length} · trajectorySegments={trajectorySegments.length} · acceptancePoints={acceptancePoints.length}
+                </div>
+              </div>
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700 }}>{tt("field.acceptanceSummary")}</div>
                 <div className="muted">{tt("operation.gis.trajectory_points")}: {trajectorySegments.reduce((acc, s) => acc + s.coordinates.length, 0)}</div>
