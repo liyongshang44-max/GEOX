@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { detectSchedulingConflictsV1 } from "../domain/scheduling/conflict_detector_v1";
+import { projectSchedulingHintsV1 } from "../domain/scheduling/scheduling_hint_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -37,6 +38,16 @@ export function registerSchedulingConflictV1Routes(app: FastifyInstance, pool: P
     return reply.send({ ok: true, count: items.length, items });
   });
 
+  app.get("/api/v1/scheduling/hints", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const items = await projectSchedulingHintsV1(pool, tenant);
+    return reply.send({ ok: true, count: items.length, items });
+  });
+
   app.get("/api/v1/fields/:field_id/conflicts", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -61,5 +72,19 @@ export function registerSchedulingConflictV1Routes(app: FastifyInstance, pool: P
 
     const items = (await detectSchedulingConflictsV1(pool, tenant)).filter((x) => x.kind === "DEVICE_CONFLICT" && x.target_ref === deviceId);
     return reply.send({ ok: true, device_id: deviceId, count: items.length, items });
+  });
+
+  app.get("/api/v1/programs/:program_id/scheduling-hint", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const programId = String((req.params as any)?.program_id ?? "").trim();
+    if (!programId) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const item = (await projectSchedulingHintsV1(pool, tenant)).find((x) => x.program_id === programId);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
   });
 }
