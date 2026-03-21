@@ -89,6 +89,7 @@ export const messages = {
       resourceCenter: "Resource/Cost/SLA Center",
       mapCenter: "Map Center",
       timelineCenter: "Timeline Center",
+      updatedAt: "更新时间",
     },
     portfolio: {
       title: "经营组合总览",
@@ -109,6 +110,7 @@ export const messages = {
       sortRisk: "按风险排序",
       sortCost: "按成本排序",
       sortSla: "按SLA排序",
+      sortEfficiency: "按效率排序",
       risk: "风险",
       cost: "成本",
       sla: "SLA",
@@ -212,6 +214,7 @@ export const messages = {
       resourceCenter: "Resource/Cost/SLA Center",
       mapCenter: "Map Center",
       timelineCenter: "Timeline Center",
+      updatedAt: "更新时间",
     },
     portfolio: {
       title: "Program Portfolio",
@@ -232,6 +235,7 @@ export const messages = {
       sortRisk: "Sort by Risk",
       sortCost: "Sort by Cost",
       sortSla: "Sort by SLA",
+      sortEfficiency: "Sort by Efficiency",
       risk: "Risk",
       cost: "Cost",
       sla: "SLA",

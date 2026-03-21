@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { fetchProgramPortfolio, fetchSchedulingConflicts, fetchSchedulingHints, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
-import { buildProgramListRows } from "../viewmodels/programDashboardViewModel";
+import { buildProgramListCards, riskSortRank, slaSortRank, type BadgeTone } from "../viewmodels/programDashboardViewModel";
 
 function conflictLabel(kind: string, tf: (k: string) => string): string {
   const k = String(kind ?? "").toUpperCase();
@@ -19,9 +19,11 @@ function priorityWeight(v: string): number {
   return 1;
 }
 
-function isAtRisk(risk: string): boolean {
-  const r = String(risk ?? "").toUpperCase();
-  return r === "HIGH" || r === "MEDIUM";
+function badgeStyle(tone: BadgeTone): React.CSSProperties {
+  if (tone === "success") return { background: "#ecfdf3", color: "#067647" };
+  if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
+  if (tone === "danger") return { background: "#fef3f2", color: "#b42318" };
+  return { background: "#f2f4f7", color: "#344054" };
 }
 
 export default function ProgramListPage(): React.ReactElement {
@@ -34,7 +36,7 @@ export default function ProgramListPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(false);
   const [seasonFilter, setSeasonFilter] = React.useState<string>("ALL");
   const [riskFilter, setRiskFilter] = React.useState<string>("ALL");
-  const [sortBy, setSortBy] = React.useState<string>("risk_desc");
+  const [sortBy, setSortBy] = React.useState<string>("risk");
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -79,41 +81,60 @@ export default function ProgramListPage(): React.ReactElement {
 
   const seasons = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.season_id ?? "")).filter(Boolean))).sort(), [items]);
 
-  const rows = React.useMemo(
-    () => buildProgramListRows({ items, conflictsByProgram, priorityByProgram }),
-    [items, conflictsByProgram, priorityByProgram],
-  );
+  const cards = React.useMemo(() => buildProgramListCards({
+    items,
+    conflictsByProgram,
+    priorityByProgram,
+    insufficientText: tf("common.insufficientData"),
+    noRecordText: tf("common.noRecord"),
+  }), [items, conflictsByProgram, priorityByProgram, tf]);
 
-  const filteredRows = React.useMemo(() => {
-    let next = rows.filter((x) => (seasonFilter === "ALL" ? true : x.seasonId === seasonFilter));
-    next = next.filter((x) => (riskFilter === "ALL" ? true : x.risk.toUpperCase() === riskFilter));
-    if (sortBy === "risk_desc") next = [...next].sort((a, b) => b.risk.localeCompare(a.risk));
-    if (sortBy === "cost_desc") next = [...next].sort((a, b) => b.costSummary.localeCompare(a.costSummary));
-    if (sortBy === "sla_desc") next = [...next].sort((a, b) => b.slaSummary.localeCompare(a.slaSummary));
+  const filtered = React.useMemo(() => {
+    let next = cards.filter((x) => (seasonFilter === "ALL" ? true : x.seasonId === seasonFilter));
+    next = next.filter((x) => (riskFilter === "ALL" ? true : String(x.riskBadge.text).toUpperCase() === riskFilter));
+
+    if (sortBy === "risk") {
+      next = [...next].sort((a, b) => riskSortRank(a.sortRiskKey) - riskSortRank(b.sortRiskKey));
+    } else if (sortBy === "cost") {
+      next = [...next].sort((a, b) => {
+        if (a.sortCostValue == null && b.sortCostValue == null) return 0;
+        if (a.sortCostValue == null) return 1;
+        if (b.sortCostValue == null) return -1;
+        return b.sortCostValue - a.sortCostValue;
+      });
+    } else if (sortBy === "sla") {
+      next = [...next].sort((a, b) => slaSortRank(a.sortSlaKey) - slaSortRank(b.sortSlaKey));
+    } else if (sortBy === "efficiency") {
+      next = [...next].sort((a, b) => {
+        if (a.sortEfficiencyValue == null && b.sortEfficiencyValue == null) return 0;
+        if (a.sortEfficiencyValue == null) return 1;
+        if (b.sortEfficiencyValue == null) return -1;
+        return b.sortEfficiencyValue - a.sortEfficiencyValue;
+      });
+    }
     return next;
-  }, [rows, seasonFilter, riskFilter, sortBy]);
+  }, [cards, seasonFilter, riskFilter, sortBy]);
 
   const summary = React.useMemo(() => {
-    const activePrograms = filteredRows.length;
-    const atRiskPrograms = filteredRows.filter((x) => isAtRisk(x.risk)).length;
-    const pendingActions = filteredRows.filter((x) => x.nextAction !== tf("common.insufficientData")).length;
-    const lowEfficiencyOrInsufficient = filteredRows.filter((x) => {
-      if (x.efficiencySummary === tf("common.insufficientData")) return true;
-      const score = Number(x.efficiencySummary);
-      return Number.isFinite(score) && score < 0.6;
+    const activePrograms = filtered.length;
+    const atRiskPrograms = filtered.filter((x) => x.riskBadge.tone === "danger" || x.riskBadge.tone === "warning").length;
+    const pendingActions = filtered.filter((x) => x.nextActionText !== tf("common.insufficientData")).length;
+    const lowEfficiencyOrInsufficient = filtered.filter((x) => {
+      if (x.sortEfficiencyValue == null) return true;
+      return x.sortEfficiencyValue < 0.6;
     }).length;
     return { activePrograms, atRiskPrograms, pendingActions, lowEfficiencyOrInsufficient };
-  }, [filteredRows, tf]);
+  }, [filtered, tf]);
 
   const grouped = React.useMemo(() => {
-    const bySeason = new Map<string, typeof filteredRows>();
-    for (const row of filteredRows) {
-      const list = bySeason.get(row.seasonId) ?? [];
-      list.push(row);
-      bySeason.set(row.seasonId, list);
+    const bySeason = new Map<string, typeof filtered>();
+    for (const card of filtered) {
+      const list = bySeason.get(card.seasonId) ?? [];
+      list.push(card);
+      bySeason.set(card.seasonId, list);
     }
     return Array.from(bySeason.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [filteredRows]);
+  }, [filtered]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
@@ -138,9 +159,10 @@ export default function ProgramListPage(): React.ReactElement {
             <option value="LOW">LOW</option>
           </select>
           <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="risk_desc">{tf("portfolio.sortRisk")}</option>
-            <option value="cost_desc">{tf("portfolio.sortCost")}</option>
-            <option value="sla_desc">{tf("portfolio.sortSla")}</option>
+            <option value="risk">{tf("portfolio.sortRisk")}</option>
+            <option value="cost">{tf("portfolio.sortCost")}</option>
+            <option value="sla">{tf("portfolio.sortSla")}</option>
+            <option value="efficiency">{tf("portfolio.sortEfficiency")}</option>
           </select>
           <button className="btn" onClick={() => void refresh()} disabled={loading}>{tf("operation.actions.refresh")}</button>
         </div>
@@ -153,27 +175,32 @@ export default function ProgramListPage(): React.ReactElement {
         <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.lowEfficiencyOrInsufficient}</div></div>
       </section>
 
-      {grouped.map(([seasonId, seasonRows]) => (
+      {grouped.map(([seasonId, seasonCards]) => (
         <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-          <h3 style={{ margin: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonRows.length}）</h3>
-          {seasonRows.map((x) => (
-            <article key={x.programId} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontWeight: 600 }}>{x.programId || tf("common.noRecord")}</div>
-                <span className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{tf("portfolio.risk")}: {x.risk}</span>
+          <h3 style={{ margin: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonCards.length}）</h3>
+          {seasonCards.map((card) => (
+            <article key={card.href} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>{card.title}</div>
+                  <div className="muted">{card.subtitle}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <span className="pill" style={badgeStyle(card.statusBadge.tone)}>{card.statusBadge.text}</span>
+                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{tf("portfolio.risk")}: {card.riskBadge.text}</span>
+                </div>
               </div>
-              <div className="muted">{tf("portfolio.rowFieldCropStatus")}: {x.fieldId} / {x.cropCode} / {x.status}</div>
-              <div>{tf("portfolio.rowNextAction")}: {x.nextAction}</div>
-              <div>{tf("portfolio.rowPending")}: {x.pendingPlan} / {x.pendingTask}</div>
-              <div>{tf("portfolio.rowCostSlaEfficiency")}: {x.costSummary} / {x.slaSummary} / {x.efficiencySummary}</div>
+              <div>{tf("portfolio.rowNextAction")}: {card.nextActionText}</div>
+              <div>{tf("portfolio.rowPending")}: {card.pendingPlanText} / {card.pendingTaskText}</div>
+              <div>{tf("portfolio.rowCostSlaEfficiency")}: {card.costText} / {card.slaText} / {card.efficiencyText}</div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {x.conflictKinds.map((k) => (
+                  {card.conflictTags.map((k) => (
                     <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictLabel(k, tf)}</span>
                   ))}
-                  {x.conflictKinds.length === 0 ? <span className="muted">{tf("common.noRecord")}</span> : null}
+                  {card.conflictTags.length === 0 ? <span className="muted">{tf("common.noRecord")}</span> : null}
                 </div>
-                <Link className="btn" to={`/programs/${encodeURIComponent(x.programId)}`}>{tf("portfolio.viewDetail")}</Link>
+                <Link className="btn" to={card.href}>{tf("portfolio.viewDetail")}</Link>
               </div>
             </article>
           ))}
