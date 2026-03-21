@@ -7,6 +7,9 @@ import { projectProgramStateV1 } from "../projections/program_state_v1";
 import { projectProgramPortfolioV1 } from "../projections/program_portfolio_v1";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 import { projectProgramTimelineV1 } from "../projections/program_timeline_v1";
+import { projectProgramCostV1 } from "../projections/program_cost_v1";
+import { projectProgramSlaV1 } from "../projections/program_sla_v1";
+import { projectProgramEfficiencyV1 } from "../projections/program_efficiency_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const PROGRAM_STATUSES = new Set(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"]);
@@ -267,6 +270,147 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
         }
       }))
     });
+  });
+
+  app.post("/api/v1/programs/:program_id/resource-usage", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const existing = await loadLatestProgramFact(pool, program_id, tenant);
+    if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
+
+    const body: any = req.body ?? {};
+    const usageFact = {
+      type: "resource_usage_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id,
+        act_task_id: body.act_task_id ?? null,
+        resource_usage: {
+          fuel_l: Number(body?.resource_usage?.fuel_l ?? body?.fuel_l ?? 0) || 0,
+          electric_kwh: Number(body?.resource_usage?.electric_kwh ?? body?.electric_kwh ?? 0) || 0,
+          water_l: Number(body?.resource_usage?.water_l ?? body?.water_l ?? 0) || 0,
+          chemical_ml: Number(body?.resource_usage?.chemical_ml ?? body?.chemical_ml ?? 0) || 0
+        },
+        source: body.source ?? "manual",
+        recorded_ts: Number(body.recorded_ts ?? Date.now())
+      }
+    };
+    const fact_id = await insertFact(pool, "api/v1/programs/resource-usage", usageFact);
+    return reply.send({ ok: true, fact_id, program_id });
+  });
+
+  app.post("/api/v1/programs/:program_id/cost-records", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const existing = await loadLatestProgramFact(pool, program_id, tenant);
+    if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
+
+    const body: any = req.body ?? {};
+    const amount = Number(body.cost_amount ?? body.amount ?? body.total_cost);
+    if (!Number.isFinite(amount)) return reply.status(400).send({ ok: false, error: "INVALID_COST_AMOUNT" });
+
+    const costFact = {
+      type: "cost_record_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id,
+        act_task_id: body.act_task_id ?? null,
+        cost_amount: amount,
+        currency: String(body.currency ?? existing.payload?.budget?.currency ?? "USD"),
+        category: body.category ?? "operation",
+        source: body.source ?? "manual",
+        recorded_ts: Number(body.recorded_ts ?? Date.now())
+      }
+    };
+    const fact_id = await insertFact(pool, "api/v1/programs/cost-records", costFact);
+    return reply.send({ ok: true, fact_id, program_id });
+  });
+
+  app.post("/api/v1/programs/:program_id/sla-evaluations", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const existing = await loadLatestProgramFact(pool, program_id, tenant);
+    if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
+
+    const body: any = req.body ?? {};
+    const met = body.met == null ? undefined : Boolean(body.met);
+    const status = String(body.status ?? (met == null ? "UNKNOWN" : (met ? "MET" : "BREACH"))).toUpperCase();
+    const evaluationFact = {
+      type: "sla_evaluation_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id,
+        sla_name: body.sla_name ?? "execution_latency",
+        target_value: body.target_value ?? null,
+        actual_value: body.actual_value ?? null,
+        met: met ?? (status === "MET"),
+        status,
+        source: body.source ?? "manual",
+        recorded_ts: Number(body.recorded_ts ?? Date.now())
+      }
+    };
+    const fact_id = await insertFact(pool, "api/v1/programs/sla-evaluations", evaluationFact);
+    return reply.send({ ok: true, fact_id, program_id });
+  });
+
+  app.get("/api/v1/programs/:program_id/cost", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const item = (await projectProgramCostV1(pool, tenant)).find((x) => x.program_id === program_id);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
+  });
+
+  app.get("/api/v1/programs/:program_id/sla", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const item = (await projectProgramSlaV1(pool, tenant)).find((x) => x.program_id === program_id);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
+  });
+
+  app.get("/api/v1/programs/:program_id/efficiency", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const item = (await projectProgramEfficiencyV1(pool, tenant)).find((x) => x.program_id === program_id);
+    if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, item });
   });
 
   app.post("/api/v1/programs/:program_id/transitions", async (req, reply) => {
