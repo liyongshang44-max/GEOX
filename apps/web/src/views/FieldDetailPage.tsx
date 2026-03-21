@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
+import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchFieldProgramsBySeason, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1, type ProgramPortfolioItemV1 } from "../lib/api";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
@@ -52,6 +52,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const [showTrajectoryLayer, setShowTrajectoryLayer] = React.useState(true);
   const [showAlertLayer, setShowAlertLayer] = React.useState(true);
   const [showAcceptanceLayer, setShowAcceptanceLayer] = React.useState(true);
+  const [programsBySeason, setProgramsBySeason] = React.useState<Array<{ season_id: string; count: number; programs: ProgramPortfolioItemV1[] }>>([]);
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("ALL");
 
   const labels = FIELD_TEXT[lang];
   const tt = (key: string) => t(lang, key);
@@ -73,12 +75,14 @@ export default function FieldDetailPage(): React.ReactElement {
         fetchAgronomyRecommendations({ limit: 30, token }),
         fetchFieldCurrentProgram(token, fieldId).catch(() => null),
       ]);
+      const bySeason = await fetchFieldProgramsBySeason(token, fieldId).catch(() => []);
       const geometryRes = await fetchFieldGeometry(token, fieldId).catch(() => null);
       const stableGeometry = geometryRes?.geometry ?? next?.geometry ?? null;
       setDetail({ ...next, geometry: stableGeometry });
       setActiveOperations((ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))));
       setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
       setCurrentProgram(prg);
+      setProgramsBySeason(Array.isArray(bySeason) ? bySeason : []);
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
       setStatus(e?.message || String(e));
@@ -228,6 +232,15 @@ export default function FieldDetailPage(): React.ReactElement {
     ];
   }, [detail, labels, lang, operationItems]);
 
+  const seasonOptions = React.useMemo(
+    () => programsBySeason.map((x) => String(x.season_id)).filter(Boolean).sort(),
+    [programsBySeason]
+  );
+  const filteredSeasonPrograms = React.useMemo(
+    () => (seasonFilter === "ALL" ? programsBySeason : programsBySeason.filter((x) => String(x.season_id) === seasonFilter)),
+    [programsBySeason, seasonFilter]
+  );
+
   const currentOperation = activeOperations[0] ?? null;
   const currentProgress = currentOperation
     ? String(currentOperation.final_status) === "SUCCESS" ? 100
@@ -280,6 +293,29 @@ export default function FieldDetailPage(): React.ReactElement {
       </section>
 
       <FieldSummaryCards items={summaryCards} />
+
+      <section className="card" style={{ padding: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div>
+            <b>Season Program Summary</b>
+            <div className="muted">同一地块跨 season 的 program 视图。</div>
+          </div>
+          <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
+            <option value="ALL">全部 Season</option>
+            {seasonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10, marginTop: 10 }}>
+          {filteredSeasonPrograms.map((s) => (
+            <div key={s.season_id} className="card" style={{ padding: 10 }}>
+              <div style={{ fontWeight: 700 }}>{s.season_id}</div>
+              <div className="muted">Programs: {s.count}</div>
+              <div className="muted">Active: {s.programs.filter((p) => String(p.status).toUpperCase() === "ACTIVE").length}</div>
+            </div>
+          ))}
+          {!filteredSeasonPrograms.length ? <div className="muted">暂无 season program 数据</div> : null}
+        </div>
+      </section>
 
       <section className="card" style={{ padding: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
