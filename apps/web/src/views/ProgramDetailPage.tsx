@@ -112,6 +112,7 @@ export default function ProgramDetailPage(): React.ReactElement {
 
       <section className="card" style={{ padding: 16 }}>
         <h3 style={{ marginTop: 0 }}>效率（Efficiency）</h3>
+        <div>data status: {String(efficiency?.data_status ?? "-")}</div>
         <div>efficiency index: {efficiency?.efficiency_index != null ? Number(efficiency.efficiency_index).toFixed(3) : "-"}</div>
         <div>cost efficiency: {efficiency?.cost_efficiency_score != null ? Number(efficiency.cost_efficiency_score).toFixed(3) : "-"}</div>
         <div>sla compliance rate: {efficiency?.sla_compliance_rate != null ? Number(efficiency.sla_compliance_rate).toFixed(3) : "-"}</div>

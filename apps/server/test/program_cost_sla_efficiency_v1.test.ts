@@ -38,5 +38,11 @@ test("projects cost/sla/efficiency with tenant isolation", () => {
   const efficiency = projectProgramEfficiencyFromFacts(rows);
   const e1 = efficiency.find((x) => x.program_id === "prg_1");
   assert.ok(e1);
+  assert.equal(e1?.data_status, "OK");
   assert.ok((e1?.efficiency_index ?? 0) > 0);
+
+  const e2 = efficiency.find((x) => x.program_id === "prg_2");
+  assert.ok(e2);
+  assert.equal(e2?.data_status, "INSUFFICIENT_DATA");
+  assert.equal(e2?.efficiency_index, null);
 });

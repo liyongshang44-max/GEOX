@@ -11,6 +11,7 @@ export type ProgramCostV1 = {
   currency: string;
   total_cost: number;
   record_count: number;
+  resource_record_count: number;
   resource_usage_totals: {
     fuel_l: number;
     electric_kwh: number;
@@ -68,6 +69,7 @@ export function projectProgramCostFromFacts(rows: FactRow[]): ProgramCostV1[] {
       currency,
       total_cost: 0,
       record_count: 0,
+      resource_record_count: 0,
       resource_usage_totals: defaultUsage(),
       updated_at_ts: toMs(row.occurred_at)
     };
@@ -98,6 +100,7 @@ export function projectProgramCostFromFacts(rows: FactRow[]): ProgramCostV1[] {
     item.resource_usage_totals.electric_kwh += num(usage.electric_kwh);
     item.resource_usage_totals.water_l += num(usage.water_l);
     item.resource_usage_totals.chemical_ml += num(usage.chemical_ml);
+    item.resource_record_count += 1;
     item.updated_at_ts = Math.max(item.updated_at_ts, toMs(row.occurred_at));
   }
 

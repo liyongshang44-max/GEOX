@@ -10,9 +10,10 @@ export type ProgramEfficiencyV1 = {
   tenant_id: string;
   project_id: string;
   group_id: string;
-  cost_efficiency_score: number;
-  sla_compliance_rate: number;
-  efficiency_index: number;
+  cost_efficiency_score: number | null;
+  sla_compliance_rate: number | null;
+  efficiency_index: number | null;
+  data_status: "OK" | "INSUFFICIENT_DATA";
   updated_at_ts: number;
 };
 
@@ -44,6 +45,25 @@ export function projectProgramEfficiencyFromFacts(rows: FactRow[]): ProgramEffic
 
   const out: ProgramEfficiencyV1[] = costs.map((cost) => {
     const sla = slaByProgram.get(cost.program_id);
+    const hasCostFacts = cost.record_count > 0;
+    const hasUsageFacts = cost.resource_record_count > 0;
+    const hasSlaFacts = (sla?.total_checks ?? 0) > 0;
+    const hasAnyEfficiencyInput = hasCostFacts || hasUsageFacts || hasSlaFacts;
+
+    if (!hasAnyEfficiencyInput) {
+      return {
+        program_id: cost.program_id,
+        tenant_id: cost.tenant_id,
+        project_id: cost.project_id,
+        group_id: cost.group_id,
+        cost_efficiency_score: null,
+        sla_compliance_rate: null,
+        efficiency_index: null,
+        data_status: "INSUFFICIENT_DATA",
+        updated_at_ts: Math.max(cost.updated_at_ts, sla?.updated_at_ts ?? 0)
+      };
+    }
+
     const totalResource = cost.resource_usage_totals.fuel_l + cost.resource_usage_totals.electric_kwh + cost.resource_usage_totals.water_l + cost.resource_usage_totals.chemical_ml;
     const unitCost = totalResource > 0 ? cost.total_cost / totalResource : cost.total_cost;
     const costEfficiency = clamp01(1 / (1 + Math.max(0, unitCost)));
@@ -58,6 +78,7 @@ export function projectProgramEfficiencyFromFacts(rows: FactRow[]): ProgramEffic
       cost_efficiency_score: costEfficiency,
       sla_compliance_rate: slaRate,
       efficiency_index: efficiencyIndex,
+      data_status: "OK",
       updated_at_ts: Math.max(cost.updated_at_ts, sla?.updated_at_ts ?? 0)
     };
   });
