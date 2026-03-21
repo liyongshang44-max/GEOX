@@ -820,9 +820,15 @@ export async function dispatchAoActTask(token: string, actTaskId: string, body: 
 // -----------------------------
 
 export type ProgramStateItemV1 = any;
+export type ProgramPortfolioItemV1 = any;
 
 export async function fetchPrograms(token: string, params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery(`/api/v1/programs`, params), { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchProgramPortfolio(token: string, params?: Record<string, unknown>): Promise<ProgramPortfolioItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: ProgramPortfolioItemV1[] }>(withQuery(`/api/v1/program-portfolio`, params), { headers: authHeaders(token) });
   return Array.isArray(res.items) ? res.items : [];
 }
 
@@ -841,6 +847,11 @@ export async function fetchFieldPrograms(token: string, fieldId: string): Promis
   return Array.isArray(res.items) ? res.items : [];
 }
 
+export async function fetchFieldProgramsBySeason(token: string, fieldId: string): Promise<Array<{ season_id: string; count: number; programs: ProgramPortfolioItemV1[] }>> {
+  const res = await requestJson<{ ok?: boolean; seasons?: Array<{ season_id: string; count: number; programs: ProgramPortfolioItemV1[] }> }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/programs/by-season`, { headers: authHeaders(token) });
+  return Array.isArray(res.seasons) ? res.seasons : [];
+}
+
 export async function fetchFieldCurrentProgram(token: string, fieldId: string): Promise<ProgramStateItemV1 | null> {
   const res = await requestJson<{ ok?: boolean; item?: ProgramStateItemV1 }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`, { headers: authHeaders(token) });
   return res.item ?? null;
@@ -848,6 +859,11 @@ export async function fetchFieldCurrentProgram(token: string, fieldId: string): 
 
 export async function fetchSeasonPrograms(token: string, seasonId: string): Promise<ProgramStateItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(`/api/v1/seasons/${encodeURIComponent(seasonId)}/programs`, { headers: authHeaders(token) });
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchSeasonProgramPortfolio(token: string, seasonId: string): Promise<ProgramPortfolioItemV1[]> {
+  const res = await requestJson<{ ok?: boolean; items?: ProgramPortfolioItemV1[] }>(`/api/v1/seasons/${encodeURIComponent(seasonId)}/program-portfolio`, { headers: authHeaders(token) });
   return Array.isArray(res.items) ? res.items : [];
 }
 

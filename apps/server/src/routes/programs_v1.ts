@@ -364,6 +364,33 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     return reply.send({ ok: true, count: items.length, items });
   });
 
+  app.get("/api/v1/fields/:field_id/programs/by-season", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const field_id = String((req.params as any)?.field_id ?? "").trim();
+    if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
+
+    const items = (await projectProgramPortfolioV1(pool, tenant)).filter((x) => x.field_id === field_id);
+    const grouped = new Map<string, typeof items>();
+    for (const item of items) {
+      const key = String(item.season_id || "UNKNOWN");
+      const list = grouped.get(key) ?? [];
+      list.push(item);
+      grouped.set(key, list);
+    }
+
+    const seasons = Array.from(grouped.entries()).map(([season_id, seasonItems]) => ({
+      season_id,
+      count: seasonItems.length,
+      programs: seasonItems.sort((a, b) => b.updated_at_ts - a.updated_at_ts)
+    }));
+
+    return reply.send({ ok: true, field_id, count: items.length, seasons });
+  });
+
 
   app.get("/api/v1/fields/:field_id/program-state", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -406,5 +433,18 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
 
     const items = (await projectFieldProgramStateV1(pool, tenant)).filter((x) => x.season_id === season_id);
     return reply.send({ ok: true, count: items.length, items });
+  });
+
+  app.get("/api/v1/seasons/:season_id/program-portfolio", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const season_id = String((req.params as any)?.season_id ?? "").trim();
+    if (!season_id) return reply.status(400).send({ ok: false, error: "MISSING_SEASON_ID" });
+
+    const items = (await projectProgramPortfolioV1(pool, tenant)).filter((x) => x.season_id === season_id);
+    return reply.send({ ok: true, season_id, count: items.length, items });
   });
 }
