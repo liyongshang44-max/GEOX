@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
 import { projectProgramStateV1 } from "../projections/program_state_v1";
+import { projectProgramPortfolioV1 } from "../projections/program_portfolio_v1";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 import { projectProgramTimelineV1 } from "../projections/program_timeline_v1";
 
@@ -110,6 +111,23 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
     if (q.status) items = items.filter((x) => x.status === String(q.status));
+    return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
+  });
+
+  app.get("/api/v1/program-portfolio", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const q: any = (req as any).query ?? {};
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 100) || 100, 300));
+
+    let items = await projectProgramPortfolioV1(pool, tenant);
+    if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
+    if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
+    if (q.status) items = items.filter((x) => x.status === String(q.status));
+    if (q.next_action_priority) items = items.filter((x) => x.next_action_hint?.priority === String(q.next_action_priority).toUpperCase());
+
     return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
   });
 
