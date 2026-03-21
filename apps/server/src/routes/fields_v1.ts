@@ -44,6 +44,10 @@ function notFound(reply: any) { // Helper: standardized 404 response.
   return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Non-enumerable response.
 } // End helper.
 
+function emptyGeometry(reply: any) { // Helper: explicit empty geometry response.
+  return reply.status(422).send({ ok: false, error: "EMPTY_GEOMETRY" });
+}
+
 function normalizeGeoJsonText(v: any): string | null { // Helper: validate and normalize GeoJSON input.
   if (v == null) return null; // Missing => invalid.
   let obj: any = null; // Parsed object placeholder.
@@ -88,6 +92,7 @@ type FieldTrajectoryPointV1 = { lat: number; lon: number; ts_ms: number; }; // O
 type FieldDeviceTrajectoryV1 = { device_id: string; points: FieldTrajectoryPointV1[]; geojson: any; }; // Device trajectory payload.
 
 type GeoPointV1 = { lat: number; lon: number; }; // Generic geographic point.
+type GeoJsonGeometryV1 = { type: "Polygon" | "MultiPolygon"; coordinates: any[]; }; // Stable field geometry type.
 
 type TaskTimingV1 = { anchor_ts_ms: number | null; start_ts_ms: number | null; end_ts_ms: number | null; source: string; }; // Best-effort task timing metadata.
 
@@ -196,6 +201,39 @@ function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null { // N
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null; // Reject invalid coordinates.
   return { lat, lon }; // Normalized point.
 } // End helper.
+
+function normalizeGeometryObject(geo: any): GeoJsonGeometryV1 | null { // Normalize any supported GeoJSON wrapper into Polygon/MultiPolygon only.
+  if (!geo || typeof geo !== "object") return null;
+  const type = String((geo as any).type ?? "");
+  if (type === "Feature") return normalizeGeometryObject((geo as any).geometry);
+  if (type === "FeatureCollection") {
+    const features = Array.isArray((geo as any).features) ? (geo as any).features : [];
+    for (const f of features) {
+      const normalized = normalizeGeometryObject(f);
+      if (normalized) return normalized;
+    }
+    return null;
+  }
+  if (type === "Polygon") {
+    const coordinates = Array.isArray((geo as any).coordinates) ? (geo as any).coordinates : null;
+    if (!coordinates) return null;
+    return { type: "Polygon", coordinates };
+  }
+  if (type === "MultiPolygon") {
+    const coordinates = Array.isArray((geo as any).coordinates) ? (geo as any).coordinates : null;
+    if (!coordinates) return null;
+    return { type: "MultiPolygon", coordinates };
+  }
+  return null;
+}
+
+function computeBBox(geo: any): [number, number, number, number] | null { // Compute [minLon,minLat,maxLon,maxLat] for geometry.
+  const points = extractGeoPoints(geo);
+  if (!points.length) return null;
+  const lons = points.map((p) => p.lon);
+  const lats = points.map((p) => p.lat);
+  return [Math.min(...lons), Math.min(...lats), Math.max(...lons), Math.max(...lats)];
+}
 
 async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Startup helper: create season projection table for upgraded repos.
   await pool.query( // Create field season projection table.
@@ -398,6 +436,41 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
 
     return reply.send({ ok: true, fields: q.rows }); // Return list.
   }); // End GET /api/v1/fields.
+
+  app.get("/api/v1/fields/:field_id/geometry", async (req, reply) => { // Return stable field geometry payload for GIS clients.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+
+    const fieldQ = await pool.query(
+      `SELECT field_id FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    );
+    if (fieldQ.rowCount === 0) return notFound(reply);
+
+    const polyQ = await pool.query(
+      `SELECT geojson, updated_ts_ms
+         FROM field_polygon_v1
+        WHERE tenant_id = $1 AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    );
+    const rawGeo = parseJsonOrNull(polyQ.rows?.[0]?.geojson) ?? polyQ.rows?.[0]?.geojson ?? null;
+    const geometry = normalizeGeometryObject(rawGeo);
+    if (!geometry) return emptyGeometry(reply);
+    const centroid = computeCentroid(geometry);
+    const bbox = computeBBox(geometry);
+
+    return reply.send({
+      ok: true,
+      field_id,
+      geometry,
+      centroid: centroid ? { type: "Point", coordinates: [centroid.lon, centroid.lat] } : null,
+      bbox,
+      geometry_updated_ts_ms: Number(polyQ.rows?.[0]?.updated_ts_ms ?? 0) || null,
+    });
+  });
 
   app.get("/api/v1/fields/:field_id", async (req, reply) => { // Get field detail including polygon, devices, seasons, and summary.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read"); // Require fields.read.
@@ -688,10 +761,21 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       };
     });
 
+    const rawGeo = parseJsonOrNull(polyQ.rows?.[0]?.geojson) ?? polyQ.rows?.[0]?.geojson ?? null;
+    const geometry = normalizeGeometryObject(rawGeo);
+    const geometryCentroid = geometry ? computeCentroid(geometry) : null;
+    const geometryBbox = geometry ? computeBBox(geometry) : null;
+
     return reply.send({ // Return detail payload.
       ok: true, // Success flag.
       field: fieldQ.rows[0], // Field projection.
       polygon: polyQ.rowCount ? { ...polyQ.rows[0], geojson_json: parseJsonOrNull(polyQ.rows[0].geojson) } : null, // Polygon detail with parsed JSON convenience field.
+      geometry: geometry ? {
+        type: geometry.type,
+        coordinates: geometry.coordinates,
+        centroid: geometryCentroid ? { type: "Point", coordinates: [geometryCentroid.lon, geometryCentroid.lat] } : null,
+        bbox: geometryBbox,
+      } : null,
       bound_devices, // Device rows.
       seasons, // Field seasons.
       sensor_trends, // Sensor tab payload.
@@ -707,6 +791,205 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }, // End summary.
     }); // End response.
   }); // End GET /api/v1/fields/:field_id.
+
+  app.get("/api/v1/devices/:device_id/positions", async (req, reply) => { // Return normalized device_position_v1 list.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+    const device_id = normalizeId((req.params as any)?.device_id);
+    if (!device_id) return notFound(reply);
+    const sinceTsMsRaw = Number((req.query as any)?.since_ts_ms ?? (Date.now() - 24 * 60 * 60 * 1000));
+    const since_ts_ms = Number.isFinite(sinceTsMsRaw) ? sinceTsMsRaw : (Date.now() - 24 * 60 * 60 * 1000);
+    const limitRaw = Number((req.query as any)?.limit ?? 1000);
+    const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(5000, Math.trunc(limitRaw))) : 1000;
+
+    const q = await pool.query(
+      `SELECT
+          COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+          (record_json::jsonb #> '{payload,geo}') AS geo_json,
+          (record_json::jsonb #>> '{payload,speed_mps}') AS speed_mps,
+          (record_json::jsonb #>> '{payload,heading_deg}') AS heading_deg
+         FROM facts
+        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,project_id}') = $2
+          AND (record_json::jsonb #>> '{entity,group_id}') = $3
+          AND (record_json::jsonb #>> '{entity,device_id}') = $4
+          AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+          AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) >= $5
+        ORDER BY ts_ms DESC
+        LIMIT ${limit}`,
+      [auth.tenant_id, auth.project_id, auth.group_id, device_id, since_ts_ms]
+    );
+    const positions = (q.rows ?? []).map((row: any) => {
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      if (!geo) return null;
+      return {
+        type: "device_position_v1",
+        payload: {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          device_id,
+          ts: Number(row.ts_ms ?? 0),
+          point: { type: "Point", coordinates: [geo.lon, geo.lat] },
+          speed_mps: row.speed_mps == null ? null : Number(row.speed_mps),
+          heading_deg: row.heading_deg == null ? null : Number(row.heading_deg),
+        }
+      };
+    }).filter(Boolean);
+
+    return reply.send({ ok: true, device_id, items: positions.reverse() });
+  });
+
+  app.get("/api/v1/fields/:field_id/device-positions", async (req, reply) => { // Return latest positions for field-bound devices.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+    const fieldQ = await pool.query(`SELECT field_id FROM field_index_v1 WHERE tenant_id = $1 AND field_id = $2`, [auth.tenant_id, field_id]);
+    if (fieldQ.rowCount === 0) return notFound(reply);
+
+    const devQ = await pool.query(
+      `SELECT device_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND field_id = $2 ORDER BY bound_ts_ms DESC`,
+      [auth.tenant_id, field_id]
+    );
+    const deviceIds = (devQ.rows ?? []).map((row: any) => String(row.device_id ?? "")).filter(Boolean);
+    if (!deviceIds.length) return reply.send({ ok: true, field_id, items: [] });
+
+    const q = await pool.query(
+      `SELECT DISTINCT ON ((record_json::jsonb #>> '{entity,device_id}'))
+          (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+          COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+          (record_json::jsonb #> '{payload,geo}') AS geo_json
+        FROM facts
+       WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+         AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+         AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+         AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+       ORDER BY (record_json::jsonb #>> '{entity,device_id}'), ts_ms DESC, occurred_at DESC`,
+      [auth.tenant_id, deviceIds]
+    );
+    const items = (q.rows ?? []).map((row: any) => {
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      if (!geo) return null;
+      return {
+        type: "device_position_v1",
+        payload: {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          field_id,
+          device_id: String(row.device_id),
+          ts: Number(row.ts_ms ?? 0),
+          point: { type: "Point", coordinates: [geo.lon, geo.lat] },
+        }
+      };
+    }).filter(Boolean);
+    return reply.send({ ok: true, field_id, items });
+  });
+
+  app.get("/api/v1/fields/:field_id/trajectories", async (req, reply) => { // Aggregate recent operation_trajectory_v1 by field devices.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+    const devQ = await pool.query(`SELECT device_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND field_id = $2`, [auth.tenant_id, field_id]);
+    const deviceIds = (devQ.rows ?? []).map((r: any) => String(r.device_id ?? "")).filter(Boolean);
+    if (!deviceIds.length) return reply.send({ ok: true, field_id, items: [] });
+    const sinceTsMsRaw = Number((req.query as any)?.since_ts_ms ?? (Date.now() - 24 * 60 * 60 * 1000));
+    const since_ts_ms = Number.isFinite(sinceTsMsRaw) ? sinceTsMsRaw : (Date.now() - 24 * 60 * 60 * 1000);
+    const q = await pool.query(
+      `SELECT (record_json::jsonb #>> '{entity,device_id}') AS device_id,
+              COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+              (record_json::jsonb #> '{payload,geo}') AS geo_json
+         FROM facts
+        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,device_id}') = ANY($2::text[])
+          AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+          AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) >= $3
+        ORDER BY device_id ASC, ts_ms ASC`,
+      [auth.tenant_id, deviceIds, since_ts_ms]
+    );
+    const byDevice = new Map<string, Array<[number, number]>>();
+    for (const row of q.rows ?? []) {
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      const device_id = String(row.device_id ?? "");
+      if (!geo || !device_id) continue;
+      const points = byDevice.get(device_id) ?? [];
+      points.push([geo.lon, geo.lat]);
+      byDevice.set(device_id, points);
+    }
+    const items = Array.from(byDevice.entries()).map(([device_id, coordinates]) => ({
+      type: "operation_trajectory_v1",
+      payload: {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        field_id,
+        device_id,
+        line: { type: "LineString", coordinates },
+        point_count: coordinates.length,
+      }
+    }));
+    return reply.send({ ok: true, field_id, items });
+  });
+
+  app.get("/api/v1/tasks/:act_task_id/trajectory", async (req, reply) => { // Build task trajectory from task timing + device telemetry.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const act_task_id = normalizeId((req.params as any)?.act_task_id);
+    if (!act_task_id) return notFound(reply);
+    const taskQ = await pool.query(
+      `SELECT occurred_at, (record_json::jsonb) AS task_json
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v0'
+          AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{payload,project_id}') = $2
+          AND (record_json::jsonb #>> '{payload,group_id}') = $3
+          AND (record_json::jsonb #>> '{payload,act_task_id}') = $4
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [auth.tenant_id, auth.project_id, auth.group_id, act_task_id]
+    );
+    if (!taskQ.rows?.length) return notFound(reply);
+    const task = parseJsonOrNull(taskQ.rows[0].task_json) ?? taskQ.rows[0].task_json;
+    const payload = task?.payload ?? {};
+    const device_id = String(payload?.meta?.device_id ?? payload?.device_id ?? "").trim();
+    if (!device_id) return reply.status(422).send({ ok: false, error: "TASK_DEVICE_NOT_BOUND" });
+    const start_ts_ms = Number(payload?.time_window?.start_ts ?? 0) || (Number(Date.parse(String(taskQ.rows[0].occurred_at))) || 0);
+    const end_ts_ms = Number(payload?.time_window?.end_ts ?? 0) || (start_ts_ms + 2 * 60 * 60 * 1000);
+    const q = await pool.query(
+      `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+              (record_json::jsonb #> '{payload,geo}') AS geo_json
+         FROM facts
+        WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{entity,device_id}') = $2
+          AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+          AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+          AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $3 AND $4
+        ORDER BY ts_ms ASC`,
+      [auth.tenant_id, device_id, start_ts_ms, end_ts_ms]
+    );
+    const coordinates: Array<[number, number]> = [];
+    for (const row of q.rows ?? []) {
+      const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+      if (!geo) continue;
+      coordinates.push([geo.lon, geo.lat]);
+    }
+    return reply.send({
+      ok: true,
+      act_task_id,
+      trajectory: {
+        type: "operation_trajectory_v1",
+        payload: {
+          tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id,
+          act_task_id, operation_plan_id: payload?.operation_plan_id ?? null, program_id: payload?.program_id ?? null,
+          field_id: payload?.field_id ?? null, device_id, line: { type: "LineString", coordinates },
+          start_ts: start_ts_ms, end_ts: end_ts_ms, point_count: coordinates.length,
+        }
+      }
+    });
+  });
 
   app.post("/api/v1/fields/:field_id/polygon", async (req, reply) => { // Set or update a field polygon.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require fields.write.
