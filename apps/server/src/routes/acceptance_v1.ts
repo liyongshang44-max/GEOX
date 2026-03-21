@@ -187,8 +187,8 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         : (typeof taskPayload?.device_id === "string" ? taskPayload.device_id : null);
       const fieldIdFromPayload = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
       const field_id = fieldIdFromPayload || await inferFieldIdFromDeviceBinding(pool, tenant.tenant_id, device_id);
-      const start_ts_raw = Number(taskPayload?.time_window?.start_ts ?? receiptFact.record_json?.payload?.execution_time?.start_ts ?? 0);
-      const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? receiptFact.record_json?.payload?.execution_time?.end_ts ?? 0);
+      const start_ts_raw = Number(taskPayload?.time_window?.start_ts ?? 0);
+      const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? 0);
       const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
       const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
       const [field_polygon, track_points] = await Promise.all([
