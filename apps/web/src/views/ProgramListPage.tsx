@@ -19,6 +19,11 @@ function priorityWeight(v: string): number {
   return 1;
 }
 
+function isAtRisk(risk: string): boolean {
+  const r = String(risk ?? "").toUpperCase();
+  return r === "HIGH" || r === "MEDIUM";
+}
+
 export default function ProgramListPage(): React.ReactElement {
   const [token] = React.useState(() => readStoredAoActToken());
   const [locale, setLocale] = React.useState<Locale>(() => resolveLocale());
@@ -88,6 +93,18 @@ export default function ProgramListPage(): React.ReactElement {
     return next;
   }, [rows, seasonFilter, riskFilter, sortBy]);
 
+  const summary = React.useMemo(() => {
+    const activePrograms = filteredRows.length;
+    const atRiskPrograms = filteredRows.filter((x) => isAtRisk(x.risk)).length;
+    const pendingActions = filteredRows.filter((x) => x.nextAction !== tf("common.insufficientData")).length;
+    const lowEfficiencyOrInsufficient = filteredRows.filter((x) => {
+      if (x.efficiencySummary === tf("common.insufficientData")) return true;
+      const score = Number(x.efficiencySummary);
+      return Number.isFinite(score) && score < 0.6;
+    }).length;
+    return { activePrograms, atRiskPrograms, pendingActions, lowEfficiencyOrInsufficient };
+  }, [filteredRows, tf]);
+
   const grouped = React.useMemo(() => {
     const bySeason = new Map<string, typeof filteredRows>();
     for (const row of filteredRows) {
@@ -112,9 +129,7 @@ export default function ProgramListPage(): React.ReactElement {
           </select>
           <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
             <option value="ALL">{tf("portfolio.allSeasons")}</option>
-            {seasons.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
+            {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
             <option value="ALL">{tf("portfolio.allRisk")}</option>
@@ -131,52 +146,37 @@ export default function ProgramListPage(): React.ReactElement {
         </div>
       </section>
 
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.activePrograms")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.activePrograms}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.atRisk")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.atRiskPrograms}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.pendingActions")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.pendingActions}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.lowEfficiencyOrInsufficient}</div></div>
+      </section>
+
       {grouped.map(([seasonId, seasonRows]) => (
-        <section key={seasonId} className="card" style={{ padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonRows.length}）</h3>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th align="left">Program</th>
-                <th align="left">Field</th>
-                <th align="left">Crop</th>
-                <th align="left">Status</th>
-                <th align="left">{tf("portfolio.risk")}</th>
-                <th align="left">{tf("portfolio.nextAction")}</th>
-                <th align="left">{tf("portfolio.pendingPlan")}</th>
-                <th align="left">{tf("portfolio.pendingTask")}</th>
-                <th align="left">{tf("portfolio.cost")}</th>
-                <th align="left">{tf("portfolio.sla")}</th>
-                <th align="left">{tf("portfolio.efficiency")}</th>
-                <th align="left">{tf("portfolio.conflicts")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {seasonRows.map((x) => (
-                <tr key={x.programId} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td><Link to={`/programs/${encodeURIComponent(x.programId)}`}>{x.programId || tf("common.noRecord")}</Link></td>
-                  <td>{x.fieldId}</td>
-                  <td>{x.cropCode}</td>
-                  <td>{x.status}</td>
-                  <td>{x.risk}</td>
-                  <td>{x.nextAction}</td>
-                  <td>{x.pendingPlan}</td>
-                  <td>{x.pendingTask}</td>
-                  <td>{x.costSummary}</td>
-                  <td>{x.slaSummary}</td>
-                  <td>{x.efficiencySummary}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {x.conflictKinds.map((k) => (
-                        <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictLabel(k, tf)}</span>
-                      ))}
-                      {x.conflictKinds.length === 0 ? tf("common.noRecord") : null}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
+          <h3 style={{ margin: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonRows.length}）</h3>
+          {seasonRows.map((x) => (
+            <article key={x.programId} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 600 }}>{x.programId || tf("common.noRecord")}</div>
+                <span className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{tf("portfolio.risk")}: {x.risk}</span>
+              </div>
+              <div className="muted">{tf("portfolio.rowFieldCropStatus")}: {x.fieldId} / {x.cropCode} / {x.status}</div>
+              <div>{tf("portfolio.rowNextAction")}: {x.nextAction}</div>
+              <div>{tf("portfolio.rowPending")}: {x.pendingPlan} / {x.pendingTask}</div>
+              <div>{tf("portfolio.rowCostSlaEfficiency")}: {x.costSummary} / {x.slaSummary} / {x.efficiencySummary}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {x.conflictKinds.map((k) => (
+                    <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictLabel(k, tf)}</span>
+                  ))}
+                  {x.conflictKinds.length === 0 ? <span className="muted">{tf("common.noRecord")}</span> : null}
+                </div>
+                <Link className="btn" to={`/programs/${encodeURIComponent(x.programId)}`}>{tf("portfolio.viewDetail")}</Link>
+              </div>
+            </article>
+          ))}
         </section>
       ))}
 
