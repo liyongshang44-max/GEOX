@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
-import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1 } from "../lib/api";
+import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchFieldProgramsBySeason, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1, type ProgramPortfolioItemV1 } from "../lib/api";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
@@ -52,6 +52,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const [showTrajectoryLayer, setShowTrajectoryLayer] = React.useState(true);
   const [showAlertLayer, setShowAlertLayer] = React.useState(true);
   const [showAcceptanceLayer, setShowAcceptanceLayer] = React.useState(true);
+  const [programsBySeason, setProgramsBySeason] = React.useState<Array<{ season_id: string; count: number; programs: ProgramPortfolioItemV1[] }>>([]);
+  const [seasonFilter, setSeasonFilter] = React.useState<string>("ALL");
 
   const labels = FIELD_TEXT[lang];
   const tt = (key: string) => t(lang, key);
@@ -73,12 +75,14 @@ export default function FieldDetailPage(): React.ReactElement {
         fetchAgronomyRecommendations({ limit: 30, token }),
         fetchFieldCurrentProgram(token, fieldId).catch(() => null),
       ]);
+      const bySeason = await fetchFieldProgramsBySeason(token, fieldId).catch(() => []);
       const geometryRes = await fetchFieldGeometry(token, fieldId).catch(() => null);
       const stableGeometry = geometryRes?.geometry ?? next?.geometry ?? null;
       setDetail({ ...next, geometry: stableGeometry });
       setActiveOperations((ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))));
       setRecentRecommendations((recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8));
       setCurrentProgram(prg);
+      setProgramsBySeason(Array.isArray(bySeason) ? bySeason : []);
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     } catch (e: any) {
       setStatus(e?.message || String(e));
@@ -164,8 +168,18 @@ export default function FieldDetailPage(): React.ReactElement {
   }, [playing, timelineEvents.length]);
 
   React.useEffect(() => {
-    if (timelineIndex >= timelineEvents.length) setTimelineIndex(Math.max(0, timelineEvents.length - 1));
-  }, [timelineEvents.length, timelineIndex]);
+    if (!timelineEvents.length) {
+      setTimelineIndex(0);
+      return;
+    }
+    setTimelineIndex((prev) => (prev >= timelineEvents.length ? timelineEvents.length - 1 : prev));
+  }, [timelineEvents.length]);
+
+  React.useEffect(() => {
+    if (!playing && timelineEvents.length > 0 && timelineIndex === 0) {
+      setTimelineIndex(timelineEvents.length - 1);
+    }
+  }, [playing, timelineEvents.length, timelineIndex]);
 
   React.useEffect(() => {
     if (!focusTaskId || !operationItems.length) return;
@@ -175,7 +189,7 @@ export default function FieldDetailPage(): React.ReactElement {
     setSelectedObject({ kind: labels.operations, name: target.type, time: target.time, status: target.status, id: target.id });
   }, [focusTaskId, operationItems, labels.operations]);
 
-  const playbackTs = timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER;
+  const playbackTs = playing ? (timelineEvents[timelineIndex]?.ts ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
 
   const trajectorySegments = React.useMemo(() => {
     const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
@@ -209,9 +223,14 @@ export default function FieldDetailPage(): React.ReactElement {
     }).filter((s) => s.coordinates.length > 1);
   }, [detail, operationItems, playbackTs, labels]);
 
+  const rawMarkers = React.useMemo(() => (detail?.map_layers?.markers || []), [detail]);
   const playbackMarkers = React.useMemo(
-    () => (detail?.map_layers?.markers || []).filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs),
-    [detail, playbackTs],
+    () => rawMarkers.filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs),
+    [rawMarkers, playbackTs],
+  );
+  const acceptancePoints = React.useMemo(
+    () => operationItems.filter((x) => x.raw?.location).map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) })),
+    [operationItems],
   );
 
   const risk = riskKey(detail);
@@ -227,6 +246,15 @@ export default function FieldDetailPage(): React.ReactElement {
       { label: labels.riskStatus, value: formatRiskStatus(detail, lang) },
     ];
   }, [detail, labels, lang, operationItems]);
+
+  const seasonOptions = React.useMemo(
+    () => programsBySeason.map((x) => String(x.season_id)).filter(Boolean).sort(),
+    [programsBySeason]
+  );
+  const filteredSeasonPrograms = React.useMemo(
+    () => (seasonFilter === "ALL" ? programsBySeason : programsBySeason.filter((x) => String(x.season_id) === seasonFilter)),
+    [programsBySeason, seasonFilter]
+  );
 
   const currentOperation = activeOperations[0] ?? null;
   const currentProgress = currentOperation
@@ -280,6 +308,29 @@ export default function FieldDetailPage(): React.ReactElement {
       </section>
 
       <FieldSummaryCards items={summaryCards} />
+
+      <section className="card" style={{ padding: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div>
+            <b>Season Program Summary</b>
+            <div className="muted">同一地块跨 season 的 program 视图。</div>
+          </div>
+          <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
+            <option value="ALL">全部 Season</option>
+            {seasonOptions.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10, marginTop: 10 }}>
+          {filteredSeasonPrograms.map((s) => (
+            <div key={s.season_id} className="card" style={{ padding: 10 }}>
+              <div style={{ fontWeight: 700 }}>{s.season_id}</div>
+              <div className="muted">Programs: {s.count}</div>
+              <div className="muted">Active: {s.programs.filter((p) => String(p.status).toUpperCase() === "ACTIVE").length}</div>
+            </div>
+          ))}
+          {!filteredSeasonPrograms.length ? <div className="muted">暂无 season program 数据</div> : null}
+        </div>
+      </section>
 
       <section className="card" style={{ padding: 12 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -355,34 +406,6 @@ export default function FieldDetailPage(): React.ReactElement {
                   <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
                 </div>
               </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
-              <div className="card" style={{ padding: 10 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
-                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
-                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
-                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
-                </div>
-              </div>
-              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div className="muted">Timeline</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
@@ -396,11 +419,17 @@ export default function FieldDetailPage(): React.ReactElement {
                 heatGeoJson={showAlertLayer ? (detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] }) : { type: "FeatureCollection", features: [] }}
                 markers={playbackMarkers}
                 trajectorySegments={showTrajectoryLayer ? trajectorySegments : []}
-                acceptancePoints={showAcceptanceLayer ? (operationItems.filter((x) => x.raw?.location).map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) }))) : []}
+                acceptancePoints={showAcceptanceLayer ? acceptancePoints : []}
                 activeSegmentId={selectedObject?.id}
                 labels={labels}
                 onSelectObject={setSelectedObject}
               />
+              <div className="card" style={{ padding: 10 }}>
+                <div className="muted">GIS debug counts</div>
+                <div className="mono" style={{ fontSize: 12 }}>
+                  rawMarkers={rawMarkers.length} · playbackMarkers={playbackMarkers.length} · trajectorySegments={trajectorySegments.length} · acceptancePoints={acceptancePoints.length}
+                </div>
+              </div>
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700 }}>{tt("field.acceptanceSummary")}</div>
                 <div className="muted">{tt("operation.gis.trajectory_points")}: {trajectorySegments.reduce((acc, s) => acc + s.coordinates.length, 0)}</div>

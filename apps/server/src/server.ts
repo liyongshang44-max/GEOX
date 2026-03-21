@@ -46,6 +46,7 @@ import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // S
 import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
 import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program management + field/season scoped program routes.
 import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
+import { registerSchedulingConflictV1Routes } from "./routes/scheduling_conflicts_v1"; // Scheduling conflict detector API routes.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -257,6 +258,7 @@ registerDevicesV1Routes(app, pool); // Sprint A2: 注册设备注册/凭据路�
 registerFieldsV1Routes(app, pool); // Sprint C1: 注册 Field/GIS + Device Binding（地块化基座）。
 registerDeviceHeartbeatV1Routes(app, pool); // Sprint C2: Register Device Heartbeat ingest (POST /api/v1/devices/:device_id/heartbeat).
 registerDeviceStatusV1Routes(app, pool); // Sprint C1: 注册 Device Status（心跳/在线状态）。
+registerSchedulingConflictV1Routes(app, pool); // Sprint F2: 注册 scheduling conflicts APIs（device/field/program intent conflicts）。
 registerAlertsV1Routes(app, pool); // Sprint C1: 注册 Alerts（告警规则 + 事件）。
 registerEvidenceExportJobsV1Routes(app, pool); // Sprint C1: 注册 Evidence Export Jobs（持久化作业）。
 
