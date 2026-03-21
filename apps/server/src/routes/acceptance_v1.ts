@@ -51,9 +51,9 @@ function normalizeRecordJson(v: unknown): any {
   return v;
 }
 
-async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; record_json: any } | null> {
+async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; occurred_at: string | null; record_json: any } | null> {
   const sql = `
-    SELECT fact_id, (record_json::jsonb) AS record_json
+    SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
     FROM facts
     WHERE (record_json::jsonb)->>'type' = 'ao_act_task_v0'
       AND (record_json::jsonb)#>>'{payload,act_task_id}' = $1
@@ -67,6 +67,7 @@ async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple)
   if (!r.rows?.length) return null;
   return {
     fact_id: String(r.rows[0].fact_id),
+    occurred_at: r.rows[0].occurred_at ? String(r.rows[0].occurred_at) : null,
     record_json: normalizeRecordJson(r.rows[0].record_json)
   };
 }
@@ -107,6 +108,57 @@ function deriveTelemetryFromReceipt(receipt: any): Record<string, number> {
   return {};
 }
 
+function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null {
+  if (!raw || typeof raw !== "object") return null;
+  const lat = Number(raw?.lat ?? raw?.latitude ?? raw?.location?.lat ?? raw?.location?.latitude);
+  const lon = Number(raw?.lon ?? raw?.lng ?? raw?.longitude ?? raw?.location?.lon ?? raw?.location?.lng ?? raw?.location?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return { lat, lon };
+}
+
+async function loadFieldPolygon(pool: Pool, tenantId: string, fieldId: string | null): Promise<any | null> {
+  if (!fieldId) return null;
+  const q = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2`, [tenantId, fieldId]);
+  if (!q.rows?.length) return null;
+  return normalizeRecordJson(q.rows[0].geojson);
+}
+
+async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: string | null, startTs: number | null, endTs: number | null): Promise<Array<{ lat: number; lon: number; ts_ms: number }>> {
+  if (!deviceId || !startTs || !endTs || endTs < startTs) return [];
+  const q = await pool.query(
+    `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+            (record_json::jsonb #> '{payload,geo}') AS geo_json
+       FROM facts
+      WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+        AND (record_json::jsonb #>> '{entity,device_id}') = $2
+        AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
+        AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+        AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $3 AND $4
+      ORDER BY ts_ms ASC`,
+    [tenant.tenant_id, deviceId, startTs, endTs]
+  );
+  return (q.rows ?? []).map((row: any) => {
+    const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
+    const ts_ms = Number(row.ts_ms ?? 0);
+    if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
+    return { lat: geo.lat, lon: geo.lon, ts_ms };
+  }).filter(Boolean) as Array<{ lat: number; lon: number; ts_ms: number }>;
+}
+
+async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, deviceId: string | null): Promise<string | null> {
+  if (!deviceId) return null;
+  const q = await pool.query(
+    `SELECT field_id
+       FROM device_binding_index_v1
+      WHERE tenant_id = $1 AND device_id = $2
+      ORDER BY bound_ts_ms DESC
+      LIMIT 1`,
+    [tenantId, deviceId]
+  );
+  return q.rows?.length ? String(q.rows[0].field_id ?? "").trim() || null : null;
+}
+
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
@@ -129,11 +181,25 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       const taskPayload = taskFact.record_json?.payload ?? {};
       const telemetry = deriveTelemetryFromReceipt(receiptFact.record_json);
+      const taskFactOccurredAtMs = Number(Date.parse(String(taskFact?.occurred_at ?? ""))) || null;
+      const device_id = typeof taskPayload?.meta?.device_id === "string"
+        ? taskPayload.meta.device_id
+        : (typeof taskPayload?.device_id === "string" ? taskPayload.device_id : null);
+      const fieldIdFromPayload = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
+      const field_id = fieldIdFromPayload || await inferFieldIdFromDeviceBinding(pool, tenant.tenant_id, device_id);
+      const start_ts_raw = Number(taskPayload?.time_window?.start_ts ?? receiptFact.record_json?.payload?.execution_time?.start_ts ?? 0);
+      const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? receiptFact.record_json?.payload?.execution_time?.end_ts ?? 0);
+      const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
+      const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
+      const [field_polygon, track_points] = await Promise.all([
+        loadFieldPolygon(pool, tenant.tenant_id, field_id),
+        loadTrackPoints(pool, tenant, device_id, start_ts, end_ts),
+      ]);
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
-        telemetry
+        telemetry: { ...telemetry, field_polygon, track_points }
       });
 
       const acceptanceFactId = randomUUID();
