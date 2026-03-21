@@ -138,12 +138,32 @@ async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: strin
       ORDER BY ts_ms ASC`,
     [tenant.tenant_id, deviceId, startTs, endTs]
   );
-  return (q.rows ?? []).map((row: any) => {
+  const strictPoints = (q.rows ?? []).map((row: any) => {
     const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
     const ts_ms = Number(row.ts_ms ?? 0);
     if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
     return { lat: geo.lat, lon: geo.lon, ts_ms };
   }).filter(Boolean) as Array<{ lat: number; lon: number; ts_ms: number }>;
+  if (strictPoints.length > 0) return strictPoints;
+
+  const fallbackQ = await pool.query(
+    `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+            (record_json::jsonb #> '{payload,geo}') AS geo_json
+       FROM facts
+      WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+        AND (record_json::jsonb #>> '{entity,device_id}') = $2
+        AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
+        AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+      ORDER BY ts_ms DESC
+      LIMIT 500`,
+    [tenant.tenant_id, deviceId]
+  );
+  return (fallbackQ.rows ?? []).map((row: any) => {
+    const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
+    const ts_ms = Number(row.ts_ms ?? 0);
+    if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
+    return { lat: geo.lat, lon: geo.lon, ts_ms };
+  }).filter(Boolean).reverse() as Array<{ lat: number; lon: number; ts_ms: number }>;
 }
 
 async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, deviceId: string | null): Promise<string | null> {

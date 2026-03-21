@@ -976,6 +976,25 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       if (!geo) continue;
       coordinates.push([geo.lon, geo.lat]);
     }
+    if (coordinates.length === 0) {
+      const fallbackQ = await pool.query(
+        `SELECT COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) AS ts_ms,
+                (record_json::jsonb #> '{payload,geo}') AS geo_json
+           FROM facts
+          WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
+            AND (record_json::jsonb #>> '{entity,device_id}') = $2
+            AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1', 'device_heartbeat_v1')
+            AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
+          ORDER BY ts_ms DESC
+          LIMIT 500`,
+        [auth.tenant_id, device_id]
+      );
+      for (const row of (fallbackQ.rows ?? []).reverse()) {
+        const geo = normalizeGeoPoint(parseJsonOrNull(row.geo_json) ?? row.geo_json);
+        if (!geo) continue;
+        coordinates.push([geo.lon, geo.lat]);
+      }
+    }
     return reply.send({
       ok: true,
       act_task_id,
