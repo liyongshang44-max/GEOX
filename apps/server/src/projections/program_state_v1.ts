@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -95,39 +96,6 @@ function pickLatest<T extends FactRow>(rows: T[]): T | undefined {
   return rows.reduce<T | undefined>((best, row) => (!best || toMs(row.occurred_at) >= toMs(best.occurred_at) ? row : best), undefined);
 }
 
-function deriveCurrentStage(status: string, hasRecommendation: boolean, hasPlan: boolean, hasTask: boolean): string {
-  const s = status.toUpperCase();
-  if (["PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"].includes(s)) return s;
-  if (!hasRecommendation) return "SETUP";
-  if (!hasPlan) return "PLANNING";
-  if (!hasTask) return "READY_TO_EXECUTE";
-  return "EXECUTING";
-}
-
-function deriveNextActionHint(input: {
-  latestAcceptanceResult?: ProgramAcceptanceResultV1;
-  latestRecommendationId?: string;
-  latestOperationPlanId?: string;
-  latestActTaskId?: string;
-}): ProgramStateV1["next_action_hint"] | undefined {
-  if (input.latestAcceptanceResult === "FAILED") {
-    return { kind: "REVIEW_FAILURE", reason: "Latest acceptance result failed.", priority: "HIGH" };
-  }
-  if (!input.latestRecommendationId) {
-    return { kind: "GENERATE_RECOMMENDATION", reason: "Program has no recommendation yet.", priority: "MEDIUM" };
-  }
-  if (!input.latestOperationPlanId) {
-    return { kind: "BUILD_OPERATION_PLAN", reason: "Recommendation has not been translated into an operation plan.", priority: "MEDIUM" };
-  }
-  if (!input.latestActTaskId) {
-    return { kind: "DISPATCH_TASK", reason: "Operation plan is present but no act task has been issued.", priority: "HIGH" };
-  }
-  if (input.latestAcceptanceResult === "INCONCLUSIVE") {
-    return { kind: "COLLECT_EVIDENCE", reason: "Acceptance is inconclusive and needs more evidence.", priority: "MEDIUM" };
-  }
-  return undefined;
-}
-
 export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow[]): ProgramStateV1[] {
   const facts = rows.map((row) => ({ ...row, record_json: parseRecordJson(row.record_json) ?? row.record_json }));
   const programs = facts.filter((r) => r.record_json?.type === "field_program_v1");
@@ -190,7 +158,7 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
       const p = r.record_json?.payload ?? {};
       if (str(p.program_id) === programId) return true;
       if (latestActTaskId && str(p.act_task_id) === latestActTaskId) return true;
-      return latestOperationPlanId && str(p.operation_plan_id) === latestOperationPlanId;
+      return Boolean(latestOperationPlanId && str(p.operation_plan_id) === latestOperationPlanId);
     });
 
     const latestAcceptance = pickLatest(acceptanceRows);
@@ -217,8 +185,12 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
     const trackPointCount = toNum(metrics.track_point_count);
     const trackPointsInField = toNum(metrics.track_points_in_field);
 
-    const totalAcceptance = acceptanceSummary.passed + acceptanceSummary.failed + acceptanceSummary.inconclusive;
-    const executionRatio = totalAcceptance > 0 ? acceptanceSummary.passed / totalAcceptance : undefined;
+    const feedback = deriveProgramFeedbackV1({
+      program: pp,
+      acceptanceResults: acceptanceRows.map((row) => row.record_json?.payload ?? {}),
+      trajectories: acceptanceRows.map((row) => row.record_json?.payload?.metrics ?? {}),
+      recentTasks: actTaskRows.map((row) => row.record_json?.payload ?? {})
+    });
 
     const updatedAtTs = Math.max(
       toMs(programRow.occurred_at),
@@ -237,10 +209,9 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
       season_id: seasonId,
       crop_code: str(pp.crop_code),
       status: str(pp.status),
-      current_stage: deriveCurrentStage(str(pp.status), Boolean(latestRecommendationId), Boolean(latestOperationPlanId), Boolean(latestActTaskId)),
+      current_stage: feedback.current_stage,
       current_goal_progress: {
-        water_management: progressFromRatio(inFieldRatio),
-        execution_reliability: progressFromRatio(executionRatio),
+        ...feedback.current_goal_progress,
         acceptance_quality: progressFromRatio(acceptanceLastScore)
       },
       latest_recommendation_id: latestRecommendationId,
@@ -256,12 +227,7 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
         last_track_point_count: trackPointCount,
         last_track_points_in_field: trackPointsInField
       },
-      next_action_hint: deriveNextActionHint({
-        latestAcceptanceResult,
-        latestRecommendationId,
-        latestOperationPlanId,
-        latestActTaskId
-      }),
+      next_action_hint: feedback.next_action_hint,
       updated_at_ts: updatedAtTs
     });
   }

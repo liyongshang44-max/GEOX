@@ -6,7 +6,7 @@ function fact(type: string, payload: any, occurred_at: string, fact_id: string):
   return { fact_id, occurred_at, record_json: { type, payload } };
 }
 
-test("projects dynamic program state with acceptance and spatial summary", () => {
+test("projects dynamic program state with stable execution feedback", () => {
   const rows: ProgramStateProjectionFactRow[] = [
     fact("field_program_v1", {
       tenant_id: "t1", project_id: "p1", group_id: "g1",
@@ -27,33 +27,53 @@ test("projects dynamic program state with acceptance and spatial summary", () =>
     fact("acceptance_result_v1", {
       tenant_id: "t1", project_id: "p1", group_id: "g1",
       program_id: "prg_1", act_task_id: "task_1", result: "PASSED", score: 0.9,
+      evaluated_at_ts: 1710000000001,
       metrics: { in_field_ratio: 0.88, track_point_count: 20, track_points_in_field: 18 }
-    }, "2026-03-20T10:05:00.000Z", "a1")
+    }, "2026-03-20T10:05:00.000Z", "a1"),
+    fact("acceptance_result_v1", {
+      tenant_id: "t1", project_id: "p1", group_id: "g1",
+      program_id: "prg_1", act_task_id: "task_1", result: "PASSED", score: 0.87,
+      evaluated_at_ts: 1710000000002,
+      metrics: { in_field_ratio: 0.86, track_point_count: 20, track_points_in_field: 17 }
+    }, "2026-03-20T10:06:00.000Z", "a2"),
+    fact("acceptance_result_v1", {
+      tenant_id: "t1", project_id: "p1", group_id: "g1",
+      program_id: "prg_1", act_task_id: "task_1", result: "PASSED", score: 0.91,
+      evaluated_at_ts: 1710000000003,
+      metrics: { in_field_ratio: 0.9, track_point_count: 20, track_points_in_field: 18 }
+    }, "2026-03-20T10:07:00.000Z", "a3")
   ];
 
   const out = projectProgramStateFromFacts(rows);
   assert.equal(out.length, 1);
-  assert.equal(out[0].current_stage, "EXECUTING");
+  assert.equal(out[0].current_stage, "STABLE_EXECUTION");
   assert.equal(out[0].latest_recommendation_id, "rec_1");
   assert.equal(out[0].latest_operation_plan_id, "opl_1");
   assert.equal(out[0].latest_act_task_id, "task_1");
   assert.equal(out[0].latest_acceptance_result, "PASSED");
-  assert.equal(out[0].acceptance_summary.passed, 1);
+  assert.equal(out[0].acceptance_summary.passed, 3);
   assert.equal(out[0].spatial_summary.last_track_point_count, 20);
   assert.equal(out[0].current_goal_progress.acceptance_quality, "ON_TRACK");
+  assert.equal(out[0].current_goal_progress.execution_reliability, "ON_TRACK");
 });
 
-test("provides next-action hints when pipeline is incomplete", () => {
+test("derives irrigation risk hint from failed acceptance and low in-field ratio", () => {
   const rows: ProgramStateProjectionFactRow[] = [
     fact("field_program_v1", {
       tenant_id: "t1", project_id: "p1", group_id: "g1",
       program_id: "prg_2", field_id: "field_2", season_id: "season_2", crop_code: "rice", status: "ACTIVE"
-    }, "2026-03-20T11:00:00.000Z", "p2")
+    }, "2026-03-20T11:00:00.000Z", "p2"),
+    fact("acceptance_result_v1", {
+      tenant_id: "t1", project_id: "p1", group_id: "g1",
+      program_id: "prg_2", result: "FAILED", score: 0.4,
+      evaluated_at_ts: 1710000000010,
+      metrics: { in_field_ratio: 0.45, track_point_count: 10, track_points_in_field: 4 }
+    }, "2026-03-20T11:05:00.000Z", "a10")
   ];
 
   const out = projectProgramStateFromFacts(rows);
   assert.equal(out.length, 1);
-  assert.equal(out[0].current_stage, "SETUP");
-  assert.equal(out[0].next_action_hint?.kind, "GENERATE_RECOMMENDATION");
-  assert.equal(out[0].next_action_hint?.priority, "MEDIUM");
+  assert.equal(out[0].current_goal_progress.execution_reliability, "AT_RISK");
+  assert.equal(out[0].current_goal_progress.water_management, "OFF_TRACK");
+  assert.equal(out[0].next_action_hint?.kind, "CHECK_DEVICE_PATH_OR_BINDING");
 });
