@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchProgramDetail, fetchProgramTrajectories, readStoredAoActToken } from "../lib/api";
+import { fetchProgramCost, fetchProgramDetail, fetchProgramEfficiency, fetchProgramSla, fetchProgramTrajectories, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
 
 export default function ProgramDetailPage(): React.ReactElement {
@@ -10,6 +10,9 @@ export default function ProgramDetailPage(): React.ReactElement {
   const tt = React.useCallback((key: string) => t(locale, key), [locale]);
   const [item, setItem] = React.useState<any>(null);
   const [trajectories, setTrajectories] = React.useState<any[]>([]);
+  const [cost, setCost] = React.useState<any>(null);
+  const [sla, setSla] = React.useState<any>(null);
+  const [efficiency, setEfficiency] = React.useState<any>(null);
 
   React.useEffect(() => {
     const id = decodeURIComponent(programId);
@@ -17,12 +20,21 @@ export default function ProgramDetailPage(): React.ReactElement {
     Promise.all([
       fetchProgramDetail(token, id).catch(() => null),
       fetchProgramTrajectories(token, id).catch(() => []),
-    ]).then(([detail, traj]) => {
+      fetchProgramCost(token, id).catch(() => null),
+      fetchProgramSla(token, id).catch(() => null),
+      fetchProgramEfficiency(token, id).catch(() => null),
+    ]).then(([detail, traj, costData, slaData, efficiencyData]) => {
       setItem(detail);
       setTrajectories(traj);
+      setCost(costData);
+      setSla(slaData);
+      setEfficiency(efficiencyData);
     }).catch(() => {
       setItem(null);
       setTrajectories([]);
+      setCost(null);
+      setSla(null);
+      setEfficiency(null);
     });
   }, [programId, token]);
 
@@ -82,6 +94,28 @@ export default function ProgramDetailPage(): React.ReactElement {
         <div>{tt("program.trajectoryTasks")}: {trajectories.length}</div>
         <div>{tt("program.trajectoryReady")}: {trajectoryReadyCount}</div>
         <div>{tt("program.trajectoryPending")}: {Math.max(0, trajectories.length - trajectoryReadyCount)}</div>
+      </section>
+
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>成本（Cost）</h3>
+        <div>total: {cost?.total_cost != null ? Number(cost.total_cost).toFixed(2) : "-"} {String(cost?.currency ?? "")}</div>
+        <div>records: {String(cost?.record_count ?? "-")}</div>
+        <div>water_l: {String(cost?.resource_usage_totals?.water_l ?? "-")}</div>
+      </section>
+
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>SLA</h3>
+        <div>compliance: {sla?.compliance_rate != null ? `${(Number(sla.compliance_rate) * 100).toFixed(1)}%` : "-"}</div>
+        <div>met/breach: {String(sla?.met_checks ?? "-")} / {String(sla?.breach_checks ?? "-")}</div>
+        <div>latest: {String(sla?.latest_status ?? "-")} {sla?.latest_sla_name ? `(${String(sla.latest_sla_name)})` : ""}</div>
+      </section>
+
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>效率（Efficiency）</h3>
+        <div>data status: {String(efficiency?.data_status ?? "-")}</div>
+        <div>efficiency index: {efficiency?.efficiency_index != null ? Number(efficiency.efficiency_index).toFixed(3) : "-"}</div>
+        <div>cost efficiency: {efficiency?.cost_efficiency_score != null ? Number(efficiency.cost_efficiency_score).toFixed(3) : "-"}</div>
+        <div>sla compliance rate: {efficiency?.sla_compliance_rate != null ? Number(efficiency.sla_compliance_rate).toFixed(3) : "-"}</div>
       </section>
     </div>
   );

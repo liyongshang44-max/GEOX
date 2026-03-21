@@ -22,5 +22,8 @@ export * from "./schema/operation_plan_transition_v1";
 export * from "./schema/field_program_v1";
 export * from "./schema/field_program_transition_v1";
 export * from "./schema/field_program_note_v1";
+export * from "./schema/resource_usage_v1";
+export * from "./schema/cost_record_v1";
+export * from "./schema/sla_evaluation_v1";
 export * from "./schema/executor_adapter_v1";
 export * from "./schema/ao_act_receipt_v1";

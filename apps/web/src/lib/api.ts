@@ -844,6 +844,21 @@ export async function fetchProgramTrajectories(token: string, programId: string)
   return Array.isArray(res.items) ? res.items : [];
 }
 
+export async function fetchProgramCost(token: string, programId: string): Promise<any | null> {
+  const res = await requestJson<{ ok?: boolean; item?: any }>(`/api/v1/programs/${encodeURIComponent(programId)}/cost`, { headers: authHeaders(token) });
+  return res.item ?? null;
+}
+
+export async function fetchProgramSla(token: string, programId: string): Promise<any | null> {
+  const res = await requestJson<{ ok?: boolean; item?: any }>(`/api/v1/programs/${encodeURIComponent(programId)}/sla`, { headers: authHeaders(token) });
+  return res.item ?? null;
+}
+
+export async function fetchProgramEfficiency(token: string, programId: string): Promise<any | null> {
+  const res = await requestJson<{ ok?: boolean; item?: any }>(`/api/v1/programs/${encodeURIComponent(programId)}/efficiency`, { headers: authHeaders(token) });
+  return res.item ?? null;
+}
+
 export async function fetchFieldPrograms(token: string, fieldId: string): Promise<ProgramStateItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: ProgramStateItemV1[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/programs`, { headers: authHeaders(token) });
   return Array.isArray(res.items) ? res.items : [];
