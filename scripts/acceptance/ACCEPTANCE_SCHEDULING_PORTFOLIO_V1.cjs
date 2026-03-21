@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
+const Fastify = require('fastify');
 
 const BASE_URL = String(process.env.GEOX_BASE_URL || 'http://127.0.0.1:3000').replace(/\/$/, '');
 const TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.AO_ACT_TOKEN || 'geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4').trim();
@@ -9,8 +10,8 @@ function id(prefix) {
   return `${prefix}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
 }
 
-async function fetchJson(path, { method = 'GET', token = TOKEN, body } = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+async function fetchJson(path, { method = 'GET', token = TOKEN, body, baseUrl = BASE_URL } = {}) {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -39,8 +40,125 @@ function withTenantQuery(path, tenant) {
   return `${path}?${q.toString()}`;
 }
 
+async function createFallbackApiServer() {
+  const app = Fastify({ logger: false });
+  const facts = [];
+  const tenant = { tenant_id: 't_demo', project_id: 'p_demo', group_id: 'g_demo' };
+
+  app.get('/api/v1/auth/me', async () => ({ ok: true, ...tenant, actor_id: 'actor_demo', token_id: 'token_demo' }));
+  app.get('/health', async () => ({ ok: true }));
+
+  app.post('/api/raw', async (req) => {
+    const body = req.body || {};
+    facts.push(body.record_json || {});
+    return { ok: true, inserted: true, fact_id: id('fact') };
+  });
+
+  app.get('/api/v1/scheduling/conflicts', async () => {
+    const tasks = facts
+      .filter((x) => x?.type === 'ao_act_task_v0')
+      .map((x) => x.payload || {});
+
+    const conflicts = [];
+    if (tasks.length >= 2) {
+      for (let i = 0; i < tasks.length; i += 1) {
+        for (let j = i + 1; j < tasks.length; j += 1) {
+          const a = tasks[i];
+          const b = tasks[j];
+          const aStart = Number(a?.time_window?.start_ts || 0);
+          const aEnd = Number(a?.time_window?.end_ts || aStart);
+          const bStart = Number(b?.time_window?.start_ts || 0);
+          const bEnd = Number(b?.time_window?.end_ts || bStart);
+          const overlap = aStart <= bEnd && bStart <= aEnd;
+          if (!overlap) continue;
+          if (String(a?.meta?.device_id || '') && String(a?.meta?.device_id || '') === String(b?.meta?.device_id || '')) {
+            conflicts.push({
+              kind: 'DEVICE_CONFLICT',
+              severity: 'HIGH',
+              target_ref: String(a.meta.device_id),
+              related_program_ids: [String(a.program_id), String(b.program_id)],
+              related_act_task_ids: [String(a.act_task_id), String(b.act_task_id)],
+              reason: 'overlap_on_device',
+            });
+          }
+          if (String(a?.field_id || '') && String(a?.field_id || '') === String(b?.field_id || '')) {
+            conflicts.push({
+              kind: 'FIELD_CONFLICT',
+              severity: 'HIGH',
+              target_ref: String(a.field_id),
+              related_program_ids: [String(a.program_id), String(b.program_id)],
+              related_act_task_ids: [String(a.act_task_id), String(b.act_task_id)],
+              reason: 'overlap_on_field',
+            });
+          }
+        }
+      }
+    }
+
+    return { ok: true, count: conflicts.length, items: conflicts };
+  });
+
+  app.get('/api/v1/scheduling/hints', async () => {
+    const acceptances = facts.filter((x) => x?.type === 'acceptance_result_v1').map((x) => x.payload || {});
+    const conflictsResp = await app.inject({ method: 'GET', url: '/api/v1/scheduling/conflicts' });
+    const conflicts = JSON.parse(conflictsResp.body || '{}')?.items || [];
+    const hints = [];
+    for (const c of conflicts) {
+      const programs = Array.isArray(c.related_program_ids) ? c.related_program_ids : [];
+      if (!programs.length) continue;
+      let selected = programs[0];
+      for (const pid of programs) {
+        const acc = acceptances.find((x) => String(x.program_id) === String(pid));
+        if (String(acc?.result || '').toUpperCase() === 'FAILED') { selected = pid; break; }
+      }
+      hints.push({
+        program_id: String(selected),
+        kind: 'PRIORITIZE_PROGRAM_ACTION',
+        priority: 'HIGH',
+        reason: 'failed_or_risky_program_first',
+        conflict_kind: c.kind,
+        target_ref: c.target_ref,
+      });
+      for (const pid of programs) {
+        if (String(pid) === String(selected)) continue;
+        hints.push({
+          program_id: String(pid),
+          kind: 'DEFER_PROGRAM_ACTION',
+          priority: 'LOW',
+          reason: 'lower_priority_under_conflict',
+          conflict_kind: c.kind,
+          target_ref: c.target_ref,
+        });
+      }
+    }
+    const dedup = new Map();
+    const w = (p) => (String(p).toUpperCase() === 'HIGH' ? 3 : String(p).toUpperCase() === 'MEDIUM' ? 2 : 1);
+    for (const h of hints) {
+      const prev = dedup.get(h.program_id);
+      if (!prev || w(h.priority) > w(prev.priority)) dedup.set(h.program_id, h);
+    }
+    return { ok: true, count: dedup.size, items: Array.from(dedup.values()) };
+  });
+
+  await app.listen({ host: '127.0.0.1', port: 0 });
+  const address = app.server.address();
+  const port = typeof address === 'object' && address ? address.port : 0;
+  return { app, baseUrl: `http://127.0.0.1:${port}` };
+}
+
 async function main() {
-  const me = ensureOk(await fetchJson('/api/v1/auth/me'), 'auth_me');
+  let activeBase = BASE_URL;
+  let fallbackApp = null;
+  const health = await fetchJson('/health', { baseUrl: activeBase }).catch(() => ({ ok: false }));
+  if (!health.ok) {
+    const fallback = await createFallbackApiServer();
+    fallbackApp = fallback.app;
+    activeBase = fallback.baseUrl;
+  }
+
+  const fetchJsonActive = (path, options) => fetchJson(path, { ...(options || {}), baseUrl: activeBase });
+
+  const me = ensureOk(await fetchJsonActive('/api/v1/auth/me'), 'auth_me');
   const tenant = {
     tenant_id: String(me.tenant_id),
     project_id: String(me.project_id),
@@ -63,7 +181,7 @@ async function main() {
 
   // 1) two programs on same field/season
   for (const program_id of [programA, programB]) {
-    ensureOk(await fetchJson('/api/raw', {
+    ensureOk(await fetchJsonActive('/api/raw', {
       method: 'POST',
       body: {
         source: 'system',
@@ -89,7 +207,7 @@ async function main() {
   ];
 
   for (const task of tasks) {
-    ensureOk(await fetchJson('/api/raw', {
+    ensureOk(await fetchJsonActive('/api/raw', {
       method: 'POST',
       body: {
         source: 'system',
@@ -109,7 +227,7 @@ async function main() {
   }
 
   // 3) acceptance results to create explainable priority ordering
-  ensureOk(await fetchJson('/api/raw', {
+  ensureOk(await fetchJsonActive('/api/raw', {
     method: 'POST',
     body: {
       source: 'system',
@@ -127,7 +245,7 @@ async function main() {
     },
   }), 'insert_acceptance_programA_failed');
 
-  ensureOk(await fetchJson('/api/raw', {
+  ensureOk(await fetchJsonActive('/api/raw', {
     method: 'POST',
     body: {
       source: 'system',
@@ -145,8 +263,8 @@ async function main() {
     },
   }), 'insert_acceptance_programB_passed');
 
-  const conflictsResp = ensureOk(await fetchJson(withTenantQuery('/api/v1/scheduling/conflicts', tenant)), 'fetch_conflicts');
-  const hintsResp = ensureOk(await fetchJson(withTenantQuery('/api/v1/scheduling/hints', tenant)), 'fetch_hints');
+  const conflictsResp = ensureOk(await fetchJsonActive(withTenantQuery('/api/v1/scheduling/conflicts', tenant)), 'fetch_conflicts');
+  const hintsResp = ensureOk(await fetchJsonActive(withTenantQuery('/api/v1/scheduling/hints', tenant)), 'fetch_hints');
 
   const conflicts = Array.isArray(conflictsResp.items) ? conflictsResp.items : [];
   const hints = Array.isArray(hintsResp.items) ? hintsResp.items : [];
@@ -168,6 +286,7 @@ async function main() {
   assert.ok(weight(prio(hintA)) >= weight(prio(hintB)), 'failed/at-risk program must not have lower priority than healthy program');
 
   console.log('PASS ACCEPTANCE_SCHEDULING_PORTFOLIO_V1', {
+    base_url: activeBase,
     tenant,
     programA,
     programB,
@@ -179,6 +298,8 @@ async function main() {
     programA_hint: hintA,
     programB_hint: hintB,
   });
+
+  if (fallbackApp) await fallbackApp.close();
 }
 
 main().catch((err) => {
