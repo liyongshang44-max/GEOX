@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchProgramPortfolio, fetchSchedulingConflicts, fetchSchedulingHints, readStoredAoActToken, type ProgramPortfolioItemV1 } from "../lib/api";
+import { fetchProgramPortfolio, fetchSchedulingConflicts, fetchSchedulingHints, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
+import { buildProgramListRows } from "../viewmodels/programDashboardViewModel";
 
 function conflictLabel(kind: string, tf: (k: string) => string): string {
   const k = String(kind ?? "").toUpperCase();
@@ -18,17 +19,22 @@ function priorityWeight(v: string): number {
   return 1;
 }
 
+function isAtRisk(risk: string): boolean {
+  const r = String(risk ?? "").toUpperCase();
+  return r === "HIGH" || r === "MEDIUM";
+}
+
 export default function ProgramListPage(): React.ReactElement {
   const [token] = React.useState(() => readStoredAoActToken());
   const [locale, setLocale] = React.useState<Locale>(() => resolveLocale());
   const tf = React.useCallback((key: string) => t(locale, key), [locale]);
-  const [items, setItems] = React.useState<ProgramPortfolioItemV1[]>([]);
+  const [items, setItems] = React.useState<any[]>([]);
   const [conflictsByProgram, setConflictsByProgram] = React.useState<Map<string, string[]>>(new Map());
   const [priorityByProgram, setPriorityByProgram] = React.useState<Map<string, string>>(new Map());
   const [loading, setLoading] = React.useState(false);
   const [seasonFilter, setSeasonFilter] = React.useState<string>("ALL");
-  const allSeasonLabel = locale === "zh" ? "全部 Season" : "All Seasons";
-  const refreshLabel = locale === "zh" ? "刷新" : "Refresh";
+  const [riskFilter, setRiskFilter] = React.useState<string>("ALL");
+  const [sortBy, setSortBy] = React.useState<string>("risk_desc");
 
   const refresh = React.useCallback(async () => {
     setLoading(true);
@@ -67,93 +73,114 @@ export default function ProgramListPage(): React.ReactElement {
     }
   }, [token]);
 
-  React.useEffect(() => { void refresh(); }, [refresh]);
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const seasons = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.season_id ?? "")).filter(Boolean))).sort(), [items]);
+
+  const rows = React.useMemo(
+    () => buildProgramListRows({ items, conflictsByProgram, priorityByProgram }),
+    [items, conflictsByProgram, priorityByProgram],
+  );
+
+  const filteredRows = React.useMemo(() => {
+    let next = rows.filter((x) => (seasonFilter === "ALL" ? true : x.seasonId === seasonFilter));
+    next = next.filter((x) => (riskFilter === "ALL" ? true : x.risk.toUpperCase() === riskFilter));
+    if (sortBy === "risk_desc") next = [...next].sort((a, b) => b.risk.localeCompare(a.risk));
+    if (sortBy === "cost_desc") next = [...next].sort((a, b) => b.costSummary.localeCompare(a.costSummary));
+    if (sortBy === "sla_desc") next = [...next].sort((a, b) => b.slaSummary.localeCompare(a.slaSummary));
+    return next;
+  }, [rows, seasonFilter, riskFilter, sortBy]);
+
+  const summary = React.useMemo(() => {
+    const activePrograms = filteredRows.length;
+    const atRiskPrograms = filteredRows.filter((x) => isAtRisk(x.risk)).length;
+    const pendingActions = filteredRows.filter((x) => x.nextAction !== tf("common.insufficientData")).length;
+    const lowEfficiencyOrInsufficient = filteredRows.filter((x) => {
+      if (x.efficiencySummary === tf("common.insufficientData")) return true;
+      const score = Number(x.efficiencySummary);
+      return Number.isFinite(score) && score < 0.6;
+    }).length;
+    return { activePrograms, atRiskPrograms, pendingActions, lowEfficiencyOrInsufficient };
+  }, [filteredRows, tf]);
+
   const grouped = React.useMemo(() => {
-    const bySeason = new Map<string, ProgramPortfolioItemV1[]>();
-    for (const item of items) {
-      const seasonId = String(item.season_id ?? "UNKNOWN");
-      if (seasonFilter !== "ALL" && seasonId !== seasonFilter) continue;
-      const list = bySeason.get(seasonId) ?? [];
-      list.push(item);
-      bySeason.set(seasonId, list);
+    const bySeason = new Map<string, typeof filteredRows>();
+    for (const row of filteredRows) {
+      const list = bySeason.get(row.seasonId) ?? [];
+      list.push(row);
+      bySeason.set(row.seasonId, list);
     }
     return Array.from(bySeason.entries()).sort((a, b) => b[0].localeCompare(a[0]));
-  }, [items, seasonFilter]);
+  }, [filteredRows]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
-      <section className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between" }}>
+      <section className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", gap: 12 }}>
         <div>
           <h2 style={{ margin: 0 }}>{tf("portfolio.title")}</h2>
-          <div className="muted">Program Portfolio for scheduling overview.</div>
+          <div className="muted">{tf("portfolio.consoleDesc")}</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <select className="select" value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
             <option value="zh">中文</option>
             <option value="en">English</option>
           </select>
           <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
-            <option value="ALL">{allSeasonLabel}</option>
+            <option value="ALL">{tf("portfolio.allSeasons")}</option>
             {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button className="btn" onClick={() => void refresh()} disabled={loading}>{refreshLabel}</button>
+          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
+            <option value="ALL">{tf("portfolio.allRisk")}</option>
+            <option value="HIGH">HIGH</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="LOW">LOW</option>
+          </select>
+          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+            <option value="risk_desc">{tf("portfolio.sortRisk")}</option>
+            <option value="cost_desc">{tf("portfolio.sortCost")}</option>
+            <option value="sla_desc">{tf("portfolio.sortSla")}</option>
+          </select>
+          <button className="btn" onClick={() => void refresh()} disabled={loading}>{tf("operation.actions.refresh")}</button>
         </div>
       </section>
 
-      {grouped.map(([seasonId, seasonItems]) => (
-        <section key={seasonId} className="card" style={{ padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>Season: {seasonId}（{seasonItems.length}）</h3>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr>
-                <th align="left">Program</th>
-                <th align="left">Field</th>
-                <th align="left">Crop</th>
-                <th align="left">Status</th>
-                <th align="left">Current Stage</th>
-                <th align="left">Latest Acceptance</th>
-                <th align="left">{tf("portfolio.executionReliability")}</th>
-                <th align="left">{tf("portfolio.nextAction")}</th>
-                <th align="left">{tf("portfolio.pendingPlan")}</th>
-                <th align="left">{tf("portfolio.pendingTask")}</th>
-                <th align="left">{tf("portfolio.conflicts")}</th>
-                <th align="left">{tf("portfolio.priority")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {seasonItems.map((x) => (
-                <tr key={String(x.program_id)} style={{ borderTop: "1px solid #e5e7eb" }}>
-                  <td><Link to={`/programs/${encodeURIComponent(String(x.program_id))}`}>{String(x.program_id)}</Link></td>
-                  <td>{String(x.field_id ?? "-")}</td>
-                  <td>{String(x.crop_code ?? "-")}</td>
-                  <td>{String(x.status ?? "-")}</td>
-                  <td>{String(x.current_stage ?? "-")}</td>
-                  <td>{String(x.latest_acceptance_result ?? "-")}</td>
-                  <td>{String(x.execution_reliability ?? "-")}</td>
-                  <td>{x.next_action_hint?.kind ? `${x.next_action_hint.kind}` : "-"}</td>
-                  <td>{String(x.pending_operation_plan_id ?? "-")}</td>
-                  <td>{String(x.pending_act_task_id ?? "-")}</td>
-                  <td>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      {(conflictsByProgram.get(String(x.program_id)) ?? []).map((k) => (
-                        <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictLabel(k, tf)}</span>
-                      ))}
-                      {(conflictsByProgram.get(String(x.program_id)) ?? []).length === 0 ? "-" : null}
-                    </div>
-                  </td>
-                  <td>
-                    {priorityByProgram.get(String(x.program_id)) ?? (x.next_action_hint?.priority || "-")}
-                    {(priorityByProgram.get(String(x.program_id)) ?? "").toUpperCase() === "LOW" ? <span className="muted" style={{ marginLeft: 6 }}>({tf("portfolio.defer")})</span> : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.activePrograms")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.activePrograms}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.atRisk")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.atRiskPrograms}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.pendingActions")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.pendingActions}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.lowEfficiencyOrInsufficient}</div></div>
+      </section>
+
+      {grouped.map(([seasonId, seasonRows]) => (
+        <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
+          <h3 style={{ margin: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonRows.length}）</h3>
+          {seasonRows.map((x) => (
+            <article key={x.programId} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontWeight: 600 }}>{x.programId || tf("common.noRecord")}</div>
+                <span className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{tf("portfolio.risk")}: {x.risk}</span>
+              </div>
+              <div className="muted">{tf("portfolio.rowFieldCropStatus")}: {x.fieldId} / {x.cropCode} / {x.status}</div>
+              <div>{tf("portfolio.rowNextAction")}: {x.nextAction}</div>
+              <div>{tf("portfolio.rowPending")}: {x.pendingPlan} / {x.pendingTask}</div>
+              <div>{tf("portfolio.rowCostSlaEfficiency")}: {x.costSummary} / {x.slaSummary} / {x.efficiencySummary}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  {x.conflictKinds.map((k) => (
+                    <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictLabel(k, tf)}</span>
+                  ))}
+                  {x.conflictKinds.length === 0 ? <span className="muted">{tf("common.noRecord")}</span> : null}
+                </div>
+                <Link className="btn" to={`/programs/${encodeURIComponent(x.programId)}`}>{tf("portfolio.viewDetail")}</Link>
+              </div>
+            </article>
+          ))}
         </section>
       ))}
-      {!grouped.length ? <section className="card" style={{ padding: 12 }}><div className="muted">暂无 program。</div></section> : null}
+
+      {!grouped.length ? <section className="card" style={{ padding: 12 }}><div className="muted">{tf("common.noRecord")}</div></section> : null}
     </div>
   );
 }
