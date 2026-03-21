@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
 import { projectProgramStateV1 } from "../projections/program_state_v1";
+import { projectProgramPortfolioV1 } from "../projections/program_portfolio_v1";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 import { projectProgramTimelineV1 } from "../projections/program_timeline_v1";
 
@@ -110,6 +111,23 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
     if (q.status) items = items.filter((x) => x.status === String(q.status));
+    return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
+  });
+
+  app.get("/api/v1/program-portfolio", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const q: any = (req as any).query ?? {};
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 100) || 100, 300));
+
+    let items = await projectProgramPortfolioV1(pool, tenant);
+    if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
+    if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
+    if (q.status) items = items.filter((x) => x.status === String(q.status));
+    if (q.next_action_priority) items = items.filter((x) => x.next_action_hint?.priority === String(q.next_action_priority).toUpperCase());
+
     return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
   });
 
@@ -346,6 +364,33 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     return reply.send({ ok: true, count: items.length, items });
   });
 
+  app.get("/api/v1/fields/:field_id/programs/by-season", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const field_id = String((req.params as any)?.field_id ?? "").trim();
+    if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
+
+    const items = (await projectProgramPortfolioV1(pool, tenant)).filter((x) => x.field_id === field_id);
+    const grouped = new Map<string, typeof items>();
+    for (const item of items) {
+      const key = String(item.season_id || "UNKNOWN");
+      const list = grouped.get(key) ?? [];
+      list.push(item);
+      grouped.set(key, list);
+    }
+
+    const seasons = Array.from(grouped.entries()).map(([season_id, seasonItems]) => ({
+      season_id,
+      count: seasonItems.length,
+      programs: seasonItems.sort((a, b) => b.updated_at_ts - a.updated_at_ts)
+    }));
+
+    return reply.send({ ok: true, field_id, count: items.length, seasons });
+  });
+
 
   app.get("/api/v1/fields/:field_id/program-state", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -388,5 +433,18 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
 
     const items = (await projectFieldProgramStateV1(pool, tenant)).filter((x) => x.season_id === season_id);
     return reply.send({ ok: true, count: items.length, items });
+  });
+
+  app.get("/api/v1/seasons/:season_id/program-portfolio", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const season_id = String((req.params as any)?.season_id ?? "").trim();
+    if (!season_id) return reply.status(400).send({ ok: false, error: "MISSING_SEASON_ID" });
+
+    const items = (await projectProgramPortfolioV1(pool, tenant)).filter((x) => x.season_id === season_id);
+    return reply.send({ ok: true, season_id, count: items.length, items });
   });
 }
