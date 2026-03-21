@@ -357,6 +357,15 @@ export default function FieldDetailPage(): React.ReactElement {
               </div>
               {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
               <div className="card" style={{ padding: 10 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
+                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                  <label><input type="checkbox" checked={showTrajectoryLayer} onChange={(e) => setShowTrajectoryLayer(e.target.checked)} /> {tt("field.layerTrajectory")}</label>
+                  <label><input type="checkbox" checked={showAlertLayer} onChange={(e) => setShowAlertLayer(e.target.checked)} /> {tt("field.layerAlerts")}</label>
+                  <label><input type="checkbox" checked={showAcceptanceLayer} onChange={(e) => setShowAcceptanceLayer(e.target.checked)} /> {tt("field.layerAcceptance")}</label>
+                </div>
+              </div>
+              {!detail?.geometry ? <div className="card" style={{ padding: 10, color: "#b42318" }}>{tt("field.geometryUnavailable")}</div> : null}
+              <div className="card" style={{ padding: 10 }}>
                 <div className="muted">Timeline</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
                 <div className="muted" style={{ display: "flex", justifyContent: "space-between" }}>

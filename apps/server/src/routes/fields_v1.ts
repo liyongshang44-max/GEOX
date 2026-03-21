@@ -954,7 +954,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     if (!taskQ.rows?.length) return notFound(reply);
     const task = parseJsonOrNull(taskQ.rows[0].task_json) ?? taskQ.rows[0].task_json;
     const payload = task?.payload ?? {};
-    const device_id = String(payload?.meta?.device_id ?? "").trim();
+    const device_id = String(payload?.meta?.device_id ?? payload?.device_id ?? "").trim();
     if (!device_id) return reply.status(422).send({ ok: false, error: "TASK_DEVICE_NOT_BOUND" });
     const start_ts_ms = Number(payload?.time_window?.start_ts ?? 0) || (Number(Date.parse(String(taskQ.rows[0].occurred_at))) || 0);
     const end_ts_ms = Number(payload?.time_window?.end_ts ?? 0) || (start_ts_ms + 2 * 60 * 60 * 1000);

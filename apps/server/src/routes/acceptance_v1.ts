@@ -51,9 +51,9 @@ function normalizeRecordJson(v: unknown): any {
   return v;
 }
 
-async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; record_json: any } | null> {
+async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple): Promise<{ fact_id: string; occurred_at: string | null; record_json: any } | null> {
   const sql = `
-    SELECT fact_id, (record_json::jsonb) AS record_json
+    SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
     FROM facts
     WHERE (record_json::jsonb)->>'type' = 'ao_act_task_v0'
       AND (record_json::jsonb)#>>'{payload,act_task_id}' = $1
@@ -67,6 +67,7 @@ async function loadTaskFact(pool: Pool, actTaskId: string, tenant: TenantTriple)
   if (!r.rows?.length) return null;
   return {
     fact_id: String(r.rows[0].fact_id),
+    occurred_at: r.rows[0].occurred_at ? String(r.rows[0].occurred_at) : null,
     record_json: normalizeRecordJson(r.rows[0].record_json)
   };
 }
@@ -130,14 +131,12 @@ async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: strin
             (record_json::jsonb #> '{payload,geo}') AS geo_json
        FROM facts
       WHERE (record_json::jsonb #>> '{entity,tenant_id}') = $1
-        AND (record_json::jsonb #>> '{entity,project_id}') = $2
-        AND (record_json::jsonb #>> '{entity,group_id}') = $3
-        AND (record_json::jsonb #>> '{entity,device_id}') = $4
+        AND (record_json::jsonb #>> '{entity,device_id}') = $2
         AND (record_json::jsonb ->> 'type') IN ('raw_telemetry_v1','device_heartbeat_v1')
         AND (record_json::jsonb #> '{payload,geo}') IS NOT NULL
-        AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $5 AND $6
+        AND COALESCE((record_json::jsonb #>> '{payload,ts_ms}')::bigint, (EXTRACT(EPOCH FROM occurred_at) * 1000)::bigint) BETWEEN $3 AND $4
       ORDER BY ts_ms ASC`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, deviceId, startTs, endTs]
+    [tenant.tenant_id, deviceId, startTs, endTs]
   );
   return (q.rows ?? []).map((row: any) => {
     const geo = normalizeGeoPoint(normalizeRecordJson(row.geo_json) ?? row.geo_json);
@@ -145,6 +144,19 @@ async function loadTrackPoints(pool: Pool, tenant: TenantTriple, deviceId: strin
     if (!geo || !Number.isFinite(ts_ms) || ts_ms <= 0) return null;
     return { lat: geo.lat, lon: geo.lon, ts_ms };
   }).filter(Boolean) as Array<{ lat: number; lon: number; ts_ms: number }>;
+}
+
+async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, deviceId: string | null): Promise<string | null> {
+  if (!deviceId) return null;
+  const q = await pool.query(
+    `SELECT field_id
+       FROM device_binding_index_v1
+      WHERE tenant_id = $1 AND device_id = $2
+      ORDER BY bound_ts_ms DESC
+      LIMIT 1`,
+    [tenantId, deviceId]
+  );
+  return q.rows?.length ? String(q.rows[0].field_id ?? "").trim() || null : null;
 }
 
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -169,13 +181,19 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       const taskPayload = taskFact.record_json?.payload ?? {};
       const telemetry = deriveTelemetryFromReceipt(receiptFact.record_json);
-      const field_id = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
-      const device_id = typeof taskPayload?.meta?.device_id === "string" ? taskPayload.meta.device_id : null;
-      const start_ts = Number(taskPayload?.time_window?.start_ts ?? receiptFact.record_json?.payload?.execution_time?.start_ts ?? 0);
-      const end_ts = Number(taskPayload?.time_window?.end_ts ?? receiptFact.record_json?.payload?.execution_time?.end_ts ?? 0);
+      const taskFactOccurredAtMs = Number(Date.parse(String(taskFact?.occurred_at ?? ""))) || null;
+      const device_id = typeof taskPayload?.meta?.device_id === "string"
+        ? taskPayload.meta.device_id
+        : (typeof taskPayload?.device_id === "string" ? taskPayload.device_id : null);
+      const fieldIdFromPayload = typeof taskPayload.field_id === "string" ? taskPayload.field_id : null;
+      const field_id = fieldIdFromPayload || await inferFieldIdFromDeviceBinding(pool, tenant.tenant_id, device_id);
+      const start_ts_raw = Number(taskPayload?.time_window?.start_ts ?? receiptFact.record_json?.payload?.execution_time?.start_ts ?? 0);
+      const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? receiptFact.record_json?.payload?.execution_time?.end_ts ?? 0);
+      const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
+      const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
       const [field_polygon, track_points] = await Promise.all([
         loadFieldPolygon(pool, tenant.tenant_id, field_id),
-        loadTrackPoints(pool, tenant, device_id, Number.isFinite(start_ts) && start_ts > 0 ? start_ts : null, Number.isFinite(end_ts) && end_ts > 0 ? end_ts : null),
+        loadTrackPoints(pool, tenant, device_id, start_ts, end_ts),
       ]);
 
       const evaluated = evaluateAcceptanceV1({
