@@ -3,12 +3,23 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
+import {
+  AcceptanceResultV1Schema,
+  AcceptanceRuleV1PayloadSchema,
+  type AcceptanceResultV1Payload
+} from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
-const ACCEPTANCE_RULE_ID_V1 = "acceptance_rule_v1_irrigate_duration_80pct";
+const ACCEPTANCE_RULE_V1 = AcceptanceRuleV1PayloadSchema.parse({
+  rule_id: "acceptance_rule_v1_irrigate_duration_80pct",
+  task_type: "IRRIGATE",
+  policy_version: "v1",
+  required_metrics: ["coverage_ratio", "in_field_ratio", "telemetry_delta"],
+  thresholds: { pass_ratio_min: 0.8 }
+});
 
 type TenantTriple = {
   tenant_id: string;
@@ -179,6 +190,28 @@ async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, devic
   return q.rows?.length ? String(q.rows[0].field_id ?? "").trim() || null : null;
 }
 
+function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
+  if (result === "PASSED") return "PASS";
+  if (result === "FAILED") return "FAIL";
+  return "PARTIAL";
+}
+
+function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: Record<string, number> }; expectedDurationMin: number | null }): AcceptanceResultV1Payload["metrics"] {
+  const m = params.evaluated.metrics ?? {};
+  const inFieldRatio = Number(m.in_field_ratio);
+  const coverageRatio = Number(params.evaluated.score ?? m.coverage_ratio ?? 0);
+  const expected = Number(params.expectedDurationMin);
+  const actual = Number(m.actual_duration);
+  const telemetryDelta = Number.isFinite(expected) && expected > 0 && Number.isFinite(actual)
+    ? Math.abs(actual - expected) / expected
+    : 0;
+  return {
+    coverage_ratio: Number.isFinite(coverageRatio) ? coverageRatio : 0,
+    in_field_ratio: Number.isFinite(inFieldRatio) ? inFieldRatio : 0,
+    telemetry_delta: Number.isFinite(telemetryDelta) ? telemetryDelta : 0
+  };
+}
+
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
@@ -223,24 +256,26 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       });
 
       const acceptanceFactId = randomUUID();
-      const nowTs = Date.now();
-      const acceptanceRecord = {
+      const nowIso = new Date().toISOString();
+      const expectedDurationMin = Number(taskPayload?.parameters?.duration_min);
+      const acceptanceRecord = AcceptanceResultV1Schema.parse({
         type: "acceptance_result_v1",
         payload: {
+          acceptance_id: acceptanceFactId,
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
           group_id: tenant.group_id,
           act_task_id: body.act_task_id,
+          field_id: field_id ?? "unknown_field",
           operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : undefined,
           program_id: typeof taskPayload.program_id === "string" ? taskPayload.program_id : undefined,
-          result: evaluated.result,
-          score: evaluated.score,
-          metrics: evaluated.metrics,
-          rule_id: ACCEPTANCE_RULE_ID_V1,
-          evaluated_at_ts: nowTs,
+          verdict: toVerdict(evaluated.result),
+          metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),
+          rule_id: ACCEPTANCE_RULE_V1.rule_id,
+          evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id]
         }
-      };
+      });
 
       await pool.query(
         "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
@@ -249,7 +284,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       return reply.send({
         ok: true,
-        result: evaluated.result,
+        verdict: acceptanceRecord.payload.verdict,
         fact_id: acceptanceFactId
       });
     } catch (error: any) {

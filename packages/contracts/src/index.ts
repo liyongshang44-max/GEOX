@@ -27,3 +27,6 @@ export * from "./schema/cost_record_v1";
 export * from "./schema/sla_evaluation_v1";
 export * from "./schema/executor_adapter_v1";
 export * from "./schema/ao_act_receipt_v1";
+
+export * from "./schema/acceptance_result_v1";
+export * from "./schema/acceptance_rule_v1";

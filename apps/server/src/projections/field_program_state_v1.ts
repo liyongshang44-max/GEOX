@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { AcceptanceResultV1PayloadSchema, type AcceptanceResultV1Payload } from "@geox/contracts";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -62,12 +63,7 @@ export type FieldProgramStateV1 = {
     updated_ts: number;
     fact_id: string;
   } | null;
-  latest_acceptance_result: {
-    verdict: string;
-    deterministic_hash: string | null;
-    created_ts: number;
-    fact_id: string;
-  } | null;
+  latest_acceptance_result: (AcceptanceResultV1Payload & { fact_id: string; created_ts: number }) | null;
   latest_evidence: {
     artifact_type: string;
     artifact_uri: string | null;
@@ -282,12 +278,11 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
         updated_ts: toNum(pendingPlanRow.record_json?.payload?.updated_ts) ?? toMs(pendingPlanRow.occurred_at),
         fact_id: pendingPlanRow.fact_id
       } : null,
-      latest_acceptance_result: latestAcceptance ? {
-        verdict: str(latestAcceptance.record_json?.payload?.verdict),
-        deterministic_hash: str(latestAcceptance.record_json?.payload?.deterministic_hash) || null,
-        created_ts: toNum(latestAcceptance.record_json?.payload?.created_ts) ?? toMs(latestAcceptance.occurred_at),
-        fact_id: latestAcceptance.fact_id
-      } : null,
+      latest_acceptance_result: latestAcceptance ? (() => {
+        const payload = AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance.record_json?.payload);
+        if (!payload.success) return null;
+        return { ...payload.data, created_ts: toMs(payload.data.evaluated_at) || toMs(latestAcceptance.occurred_at), fact_id: latestAcceptance.fact_id };
+      })() : null,
       latest_evidence: latestEvidence ? {
         artifact_type: str(latestEvidence.record_json?.payload?.artifact_type) || "evidence_pack_export_v1",
         artifact_uri: str(latestEvidence.record_json?.payload?.artifact_path ?? latestEvidence.record_json?.payload?.artifact_uri) || null,
