@@ -15,7 +15,7 @@ export type MetricBlock = {
 
 export type ProgramListCardVM = {
   title: string;
-  subtitle: string;
+  subtitleParts: { field: string; crop: string; status: string };
   statusBadge: DisplayBadge;
   riskBadge: DisplayBadge;
   primaryActionKey: string;
@@ -170,7 +170,11 @@ export function buildProgramListCards(args: {
 
     return {
       title: safeText(x?.program_id, noRecordText),
-      subtitle: `${safeText(x?.field_id, insufficientText)} · ${safeText(x?.crop_code, insufficientText)} · ${statusText}`,
+      subtitleParts: {
+        field: safeText(x?.field_id, insufficientText),
+        crop: safeText(x?.crop_code, insufficientText),
+        status: statusText,
+      },
       statusBadge: statusBadge(statusText, insufficientText),
       riskBadge: riskBadge(rawRisk),
       primaryActionKey: nextActionKey(x?.next_action_hint?.kind),
@@ -226,7 +230,7 @@ export function buildProgramDetailDashboardVM(args: {
       { titleKey: "program.pendingPlan.title", value: toShortId(item?.pending_operation_plan?.operation_plan_id, noRecordText), descriptionKey: "program.pendingPlan.desc" },
       {
         titleKey: "program.pendingTaskAndConflict.title",
-        value: `${toShortId(item?.pending_operation_plan?.act_task_id, noRecordText)} / ${conflicts.length ? conflicts.join("、") : noRecordText}`,
+        value: `${toShortId(item?.pending_operation_plan?.act_task_id, noRecordText)} / ${conflicts.length ? conflicts.join(", ") : noRecordText}`,
         descriptionKey: "program.pendingTaskAndConflict.desc",
       },
     ],

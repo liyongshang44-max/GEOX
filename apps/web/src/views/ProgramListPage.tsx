@@ -153,10 +153,10 @@ export default function ProgramListPage(): React.ReactElement {
           </select>
           <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
             <option value="ALL">{tf("portfolio.riskLabel")}</option>
-            <option value="HIGH">HIGH</option>
-            <option value="MEDIUM">MEDIUM</option>
-            <option value="LOW">LOW</option>
-            <option value="INSUFFICIENT_DATA">INSUFFICIENT_DATA</option>
+            <option value="HIGH">{tf("portfolio.riskHigh")}</option>
+            <option value="MEDIUM">{tf("portfolio.riskMedium")}</option>
+            <option value="LOW">{tf("portfolio.riskLow")}</option>
+            <option value="INSUFFICIENT_DATA">{tf("portfolio.riskInsufficient")}</option>
           </select>
           <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="risk">{tf("portfolio.sortRisk")}</option>
@@ -184,7 +184,7 @@ export default function ProgramListPage(): React.ReactElement {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <div>
                   <div style={{ fontWeight: 700 }}>{card.title}</div>
-                  <div className="muted">{card.subtitle}</div>
+                  <div className="muted">{card.subtitleParts.field} · {card.subtitleParts.crop} · {card.subtitleParts.status}</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <span className="pill" style={badgeStyle(card.statusBadge.tone)}>{card.statusBadge.text}</span>
