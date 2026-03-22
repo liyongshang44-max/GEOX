@@ -3,6 +3,12 @@ import { Link } from "react-router-dom";
 import { fetchProgramPortfolio, fetchSchedulingConflicts, fetchSchedulingHints, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
 import { buildProgramListCards, riskSortRank, type BadgeTone } from "../viewmodels/programDashboardViewModel";
+import { badgeStyle } from "./badgeStyle";
+
+function resolveDisplayText(value: string, tf: (k: string) => string): string {
+  if (value.startsWith("program.") || value.startsWith("portfolio.") || value.startsWith("common.")) return tf(value);
+  return value;
+}
 
 function conflictLabel(kind: string, tf: (k: string) => string): string {
   const k = String(kind ?? "").toUpperCase();
@@ -12,24 +18,10 @@ function conflictLabel(kind: string, tf: (k: string) => string): string {
   return k || tf("common.none");
 }
 
-function badgeStyle(tone: BadgeTone): React.CSSProperties {
-  if (tone === "success") return { background: "#ecfdf3", color: "#067647" };
-  if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
-  if (tone === "danger") return { background: "#fef3f2", color: "#b42318" };
-  return { background: "#f2f4f7", color: "#344054" };
-}
-
 function metricBlockStyle(tone?: BadgeTone): React.CSSProperties {
   if (tone === "danger") return { border: "1px solid #fecaca", background: "#fff1f2" };
   if (tone === "warning") return { border: "1px solid #fde68a", background: "#fffbeb" };
   return { border: "1px solid #e5e7eb", background: "#f9fafb" };
-}
-
-function badgeStyle(tone: BadgeTone): React.CSSProperties {
-  if (tone === "success") return { background: "#ecfdf3", color: "#067647" };
-  if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
-  if (tone === "danger") return { background: "#fef3f2", color: "#b42318" };
-  return { background: "#f2f4f7", color: "#344054" };
 }
 
 export default function ProgramListPage(): React.ReactElement {
@@ -128,7 +120,7 @@ export default function ProgramListPage(): React.ReactElement {
   const summary = React.useMemo(() => {
     const activePrograms = filtered.length;
     const atRiskPrograms = filtered.filter((x) => x.sortRiskRank <= 1).length;
-    const pendingActions = filtered.filter((x) => x.primaryAction !== tf("common.insufficientData")).length;
+    const pendingActions = filtered.filter((x) => resolveDisplayText(x.primaryActionKey, tf) !== tf("common.insufficientData")).length;
     const lowEfficiencyOrInsufficient = filtered.filter((x) => x.sortEfficiencyValue == null || x.sortEfficiencyValue < 0.6).length;
     return { activePrograms, atRiskPrograms, pendingActions, lowEfficiencyOrInsufficient };
   }, [filtered, tf]);
@@ -186,7 +178,7 @@ export default function ProgramListPage(): React.ReactElement {
 
       {grouped.map(([seasonId, seasonCards]) => (
         <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-          <h3 style={{ margin: 0 }}>{tf("portfolio.season")} {seasonId}（{seasonCards.length}）</h3>
+          <h3 style={{ margin: 0 }}>{tf("portfolio.season")} {seasonId} ({seasonCards.length})</h3>
           {seasonCards.map((card) => (
             <article key={card.href} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, display: "grid", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -196,13 +188,13 @@ export default function ProgramListPage(): React.ReactElement {
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <span className="pill" style={badgeStyle(card.statusBadge.tone)}>{card.statusBadge.text}</span>
-                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{card.riskBadge.text}</span>
+                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{resolveDisplayText(card.riskBadge.text, tf)}</span>
                 </div>
               </div>
 
               <div>
                 <div className="muted">{tf("portfolio.rowNextAction")}</div>
-                <div style={{ fontWeight: 600 }}>{card.primaryAction}</div>
+                <div style={{ fontWeight: 600 }}>{resolveDisplayText(card.primaryActionKey, tf)}</div>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
@@ -218,9 +210,9 @@ export default function ProgramListPage(): React.ReactElement {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                 {card.metrics.map((metric) => (
-                  <div key={metric.label} style={{ borderRadius: 8, padding: 10, ...metricBlockStyle(metric.tone) }}>
-                    <div className="muted">{metric.label}</div>
-                    <div style={{ fontWeight: 700 }}>{metric.value}</div>
+                  <div key={metric.labelKey} style={{ borderRadius: 8, padding: 10, ...metricBlockStyle(metric.tone) }}>
+                    <div className="muted">{tf(metric.labelKey)}</div>
+                    <div style={{ fontWeight: 700 }}>{resolveDisplayText(metric.value, tf)}</div>
                   </div>
                 ))}
               </div>
