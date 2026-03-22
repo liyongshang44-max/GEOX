@@ -8,6 +8,8 @@ import crypto from "node:crypto"; // Node crypto for SHA-256 hashing and UUIDs.
 import { randomUUID } from "node:crypto"; // UUID generator for fact ids (append-only ledger).
 import { fileURLToPath } from "node:url"; // ESM 下替代 __filename / __dirname.
 import { z } from "zod"; // Zod schema validation for request parsing.
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type for tenant triple checks.
@@ -31,7 +33,7 @@ type ExportJob = { // Evidence export job record stored in memory.
   stdout_tail: string; // Tail of job logs (human debugging, truncated).
   stderr_tail: string; // Tail of job errors (human debugging, truncated).
   acceptance_fact_id: string | null; // fact_id of acceptance_result_v1 created by this job.
-  acceptance_result: any | null; // Small in-memory summary of the acceptance_result_v1 payload (for status endpoint).
+  acceptance_result: AcceptanceResultV1Payload | null; // Small in-memory summary of the acceptance_result_v1 payload (for status endpoint).
   error: string | null; // Terminal error message.
 }; // End ExportJob.
 
@@ -330,35 +332,25 @@ const __dirname = path.dirname(__filename);
   job.stdout_tail = tailAppend(job.stdout_tail, `artifact:written sha256=${artifact_sha256}\n`); // Append log.
 
   // 7) Compute minimal acceptance_result_v1 and append it to facts ledger (append-only).
-  const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
-  const acceptance_payload_core = { // Define deterministic acceptance core.
-    tenant_id: job.tenant_id, // Tenant triple: tenant_id.
-    project_id: job.project_id, // Tenant triple: project_id.
-    group_id: job.group_id, // Tenant triple: group_id.
-    program_id: job.program_id ?? null, // Optional program binding.
-    field_id: job.field_id ?? null, // Optional field binding.
-    season_id: job.season_id ?? null, // Optional season binding.
-    act_task_id: job.act_task_id, // Target act_task_id.
-    template: job.template, // Template name.
-    verdict, // PASS/FAIL verdict.
-    evidence_fact_ids, // Evidence pointers by fact_id.
-    artifact_sha256, // Bind acceptance to produced artifact sha256.
-    deterministic_hash: "" // Placeholder to be filled after hashing.
-  }; // End acceptance core.
-
-  const acceptance_deterministic_hash = sha256HexBytes(Buffer.from(stableStringify({ ...acceptance_payload_core, deterministic_hash: undefined }), "utf8")); // Compute deterministic hash without self-reference.
-  acceptance_payload_core.deterministic_hash = acceptance_deterministic_hash; // Set deterministic_hash field.
-
-  const acceptance_record = { // Build acceptance_result_v1 fact record_json object.
-    type: "acceptance_result_v1", // Fact type marker.
-    schema_version: "1", // Schema version marker.
-    payload: { // Payload block.
-      ...acceptance_payload_core, // Copy computed acceptance payload.
-      computed_at_ts: Date.now() // Add audit timestamp (non-deterministic).
-    } // End payload.
-  }; // End acceptance record.
-
   const acceptance_fact_id = randomUUID(); // Generate new fact_id for append-only insert.
+  const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
+  const acceptance_record = {
+    type: "acceptance_result_v1",
+    payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
+      acceptance_id: acceptance_fact_id,
+      tenant_id: job.tenant_id,
+      project_id: job.project_id,
+      group_id: job.group_id,
+      program_id: job.program_id ?? undefined,
+      field_id: job.field_id ?? "unknown_field",
+      act_task_id: job.act_task_id,
+      verdict,
+      metrics: { coverage_ratio: verdict === "PASS" ? 1 : 0, in_field_ratio: 0, telemetry_delta: 0 },
+      evidence_refs: evidence_fact_ids,
+      evaluated_at: new Date().toISOString()
+    })
+  };
+
   await pool.query( // Insert acceptance_result_v1 fact into facts table (append-only).
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", // SQL insert.
     [acceptance_fact_id, "api/delivery/evidence_export/v1", acceptance_record] // Parameters.
@@ -373,10 +365,46 @@ const __dirname = path.dirname(__filename);
   job.updated_at = Date.now(); // Update timestamp.
 } // End runEvidenceExportJob.
 
+
+function createExportJob(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  act_task_id: string;
+  template: string;
+  program_id?: string;
+  field_id?: string;
+  season_id?: string;
+}): ExportJob {
+  const now = Date.now();
+  const job_id = `exp_${now}_${randomUUID().replace(/-/g, "")}`;
+  return {
+    job_id,
+    state: "queued",
+    created_at: now,
+    updated_at: now,
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    program_id: input.program_id ?? null,
+    field_id: input.field_id ?? null,
+    season_id: input.season_id ?? null,
+    act_task_id: input.act_task_id,
+    template: input.template,
+    artifact_path: null,
+    artifact_sha256: null,
+    stdout_tail: "job:queued\n",
+    stderr_tail: "",
+    acceptance_fact_id: null,
+    acceptance_result: null,
+    error: null
+  };
+}
+
 export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, pool: Pool): void { // Register Sprint 26 evidence export API v1 routes.
   // POST /api/delivery/evidence_export/v1/jobs
   // Creates an async export job that produces an artifact and an acceptance_result_v1 fact.
-  app.post("/api/delivery/evidence_export/v1/jobs", async (req, reply) => { // Create job endpoint.
+  const createJobHandler = async (req: any, reply: any) => { // Create job endpoint (enqueue only).
     try { // Guard with try/catch for consistent 400 errors.
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
       if (!auth) return; // Stop if auth failed (handler already replied).
@@ -395,48 +423,26 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
       const tenant = { tenant_id: body.tenant_id, project_id: body.project_id, group_id: body.group_id }; // Normalize tenant triple.
       if (!requireTenantMatchOr404(auth, tenant, reply)) return; // Enforce tenant triple match (404 non-enumerable).
 
-      const job_id = `exp_${Date.now()}_${randomUUID().replace(/-/g, "")}`; // Create job id with exp_ prefix.
-      const job: ExportJob = { // Initialize job record.
-        job_id, // Job id.
-        state: "queued", // Initial state.
-        created_at: Date.now(), // Creation timestamp.
-        updated_at: Date.now(), // Update timestamp.
-        tenant_id: tenant.tenant_id, // Tenant id.
-        project_id: tenant.project_id, // Project id.
-        group_id: tenant.group_id, // Group id.
-        program_id: body.program_id ?? null, // Optional program id.
-        field_id: body.field_id ?? null, // Optional field id.
-        season_id: body.season_id ?? null, // Optional season id.
-        act_task_id: body.act_task_id, // Act task id.
-        template: body.template, // Template name.
-        artifact_path: null, // Not produced yet.
-        artifact_sha256: null, // Not computed yet.
-        stdout_tail: "job:queued\n", // Initial log.
-        stderr_tail: "", // Initial stderr tail.
-        acceptance_fact_id: null, // Not produced yet.
-        acceptance_result: null, // Not produced yet.
-        error: null // No error yet.
-      }; // End job initialization.
+      const job = createExportJob({
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id: body.program_id,
+        field_id: body.field_id,
+        season_id: body.season_id,
+        act_task_id: body.act_task_id,
+        template: body.template
+      });
+      exportJobs.set(job.job_id, job);
 
-      exportJobs.set(job_id, job); // Store job in map.
-
-      // Kick off async execution without blocking request/response (best-effort in-process job runner).
-      setImmediate(async () => { // Schedule job execution on event loop.
-        try { // Catch errors inside job runner.
-          await runEvidenceExportJob(pool, job); // Run job logic.
-        } catch (e: any) { // Handle job failure.
-          job.state = "error"; // Mark error.
-          job.error = String(e?.message ?? e); // Store error message.
-          job.stderr_tail = tailAppend(job.stderr_tail, `error:${job.error}\n`); // Append to stderr tail.
-          job.updated_at = Date.now(); // Update timestamp.
-        } // End catch.
-      }); // End setImmediate.
-
-      return reply.send({ ok: true, job_id }); // Return job id to client.
+      return reply.send({ ok: true, job_id: job.job_id });
     } catch (e: any) { // Catch parse errors.
       return reply.code(400).send({ ok: false, error: String(e?.message ?? e) }); // Return standardized error.
     } // End catch.
-  }); // End create job route.
+  }; // End create job handler.
+
+  app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint.
+  app.post("/api/v1/evidence-export/jobs", createJobHandler); // Canonical v1 endpoint (enqueue only).
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id
   // Returns job status + small result summary (including acceptance_result_v1 pointers).
@@ -515,3 +521,19 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route.
   app.get("/evidence-export/jobs/:job_id/download", downloadHandler); // Stable alias with legacy param name.
 } // End register routes.
+
+
+export function fetchPendingJobs(): ExportJob[] {
+  return [...exportJobs.values()].filter((job) => job.state === "queued");
+}
+
+export function markJobFailed(job: ExportJob, error: unknown): void {
+  job.state = "error";
+  job.error = String((error as any)?.message ?? error);
+  job.stderr_tail = tailAppend(job.stderr_tail, `error:${job.error}\n`);
+  job.updated_at = Date.now();
+}
+
+export async function runQueuedEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
+  await runEvidenceExportJob(pool, job);
+}
