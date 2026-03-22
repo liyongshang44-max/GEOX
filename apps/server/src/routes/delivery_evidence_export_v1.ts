@@ -8,6 +8,8 @@ import crypto from "node:crypto"; // Node crypto for SHA-256 hashing and UUIDs.
 import { randomUUID } from "node:crypto"; // UUID generator for fact ids (append-only ledger).
 import { fileURLToPath } from "node:url"; // ESM 下替代 __filename / __dirname.
 import { z } from "zod"; // Zod schema validation for request parsing.
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type for tenant triple checks.
@@ -31,7 +33,7 @@ type ExportJob = { // Evidence export job record stored in memory.
   stdout_tail: string; // Tail of job logs (human debugging, truncated).
   stderr_tail: string; // Tail of job errors (human debugging, truncated).
   acceptance_fact_id: string | null; // fact_id of acceptance_result_v1 created by this job.
-  acceptance_result: any | null; // Small in-memory summary of the acceptance_result_v1 payload (for status endpoint).
+  acceptance_result: AcceptanceResultV1Payload | null; // Small in-memory summary of the acceptance_result_v1 payload (for status endpoint).
   error: string | null; // Terminal error message.
 }; // End ExportJob.
 
@@ -330,35 +332,25 @@ const __dirname = path.dirname(__filename);
   job.stdout_tail = tailAppend(job.stdout_tail, `artifact:written sha256=${artifact_sha256}\n`); // Append log.
 
   // 7) Compute minimal acceptance_result_v1 and append it to facts ledger (append-only).
-  const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
-  const acceptance_payload_core = { // Define deterministic acceptance core.
-    tenant_id: job.tenant_id, // Tenant triple: tenant_id.
-    project_id: job.project_id, // Tenant triple: project_id.
-    group_id: job.group_id, // Tenant triple: group_id.
-    program_id: job.program_id ?? null, // Optional program binding.
-    field_id: job.field_id ?? null, // Optional field binding.
-    season_id: job.season_id ?? null, // Optional season binding.
-    act_task_id: job.act_task_id, // Target act_task_id.
-    template: job.template, // Template name.
-    verdict, // PASS/FAIL verdict.
-    evidence_fact_ids, // Evidence pointers by fact_id.
-    artifact_sha256, // Bind acceptance to produced artifact sha256.
-    deterministic_hash: "" // Placeholder to be filled after hashing.
-  }; // End acceptance core.
-
-  const acceptance_deterministic_hash = sha256HexBytes(Buffer.from(stableStringify({ ...acceptance_payload_core, deterministic_hash: undefined }), "utf8")); // Compute deterministic hash without self-reference.
-  acceptance_payload_core.deterministic_hash = acceptance_deterministic_hash; // Set deterministic_hash field.
-
-  const acceptance_record = { // Build acceptance_result_v1 fact record_json object.
-    type: "acceptance_result_v1", // Fact type marker.
-    schema_version: "1", // Schema version marker.
-    payload: { // Payload block.
-      ...acceptance_payload_core, // Copy computed acceptance payload.
-      computed_at_ts: Date.now() // Add audit timestamp (non-deterministic).
-    } // End payload.
-  }; // End acceptance record.
-
   const acceptance_fact_id = randomUUID(); // Generate new fact_id for append-only insert.
+  const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
+  const acceptance_record = {
+    type: "acceptance_result_v1",
+    payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
+      acceptance_id: acceptance_fact_id,
+      tenant_id: job.tenant_id,
+      project_id: job.project_id,
+      group_id: job.group_id,
+      program_id: job.program_id ?? undefined,
+      field_id: job.field_id ?? "unknown_field",
+      act_task_id: job.act_task_id,
+      verdict,
+      metrics: { coverage_ratio: verdict === "PASS" ? 1 : 0, in_field_ratio: 0, telemetry_delta: 0 },
+      evidence_refs: evidence_fact_ids,
+      evaluated_at: new Date().toISOString()
+    })
+  };
+
   await pool.query( // Insert acceptance_result_v1 fact into facts table (append-only).
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", // SQL insert.
     [acceptance_fact_id, "api/delivery/evidence_export/v1", acceptance_record] // Parameters.
