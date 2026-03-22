@@ -442,7 +442,6 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   }; // End create job handler.
 
   app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint.
-  app.post("/api/v1/evidence-export/jobs", createJobHandler); // Canonical v1 endpoint (enqueue only).
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id
   // Returns job status + small result summary (including acceptance_result_v1 pointers).
