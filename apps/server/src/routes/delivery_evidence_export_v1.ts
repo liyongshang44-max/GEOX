@@ -521,3 +521,19 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route.
   app.get("/evidence-export/jobs/:job_id/download", downloadHandler); // Stable alias with legacy param name.
 } // End register routes.
+
+
+export function fetchPendingJobs(): ExportJob[] {
+  return [...exportJobs.values()].filter((job) => job.state === "queued");
+}
+
+export function markJobFailed(job: ExportJob, error: unknown): void {
+  job.state = "error";
+  job.error = String((error as any)?.message ?? error);
+  job.stderr_tail = tailAppend(job.stderr_tail, `error:${job.error}\n`);
+  job.updated_at = Date.now();
+}
+
+export async function runQueuedEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
+  await runEvidenceExportJob(pool, job);
+}

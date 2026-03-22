@@ -1,4 +1,6 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { Pool } from "pg";
+import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1";
 
 const DEFAULT_INTERVAL_MS = 5000;
 
@@ -9,19 +11,40 @@ function parseIntervalMs(): number {
   return parsed;
 }
 
-async function runOnce(): Promise<void> {
-  // Commercial v1 baseline keeps all runtime jobs in a dedicated process.
-  // Add concrete scheduled jobs here (export compaction / timeout sweeps / notification dispatch, etc.)
-  console.log(`JOBS_TRACE tick_ts=${Date.now()}`);
+function createPool(): Pool {
+  const databaseUrl = String(process.env.DATABASE_URL ?? "").trim();
+  if (!databaseUrl) {
+    throw new Error("Missing DATABASE_URL for jobs runtime");
+  }
+  return new Pool({ connectionString: databaseUrl });
+}
+
+async function runOnce(pool: Pool): Promise<void> {
+  const tickTs = Date.now();
+  console.log(`JOBS_TRACE tick_ts=${tickTs}`);
+
+  const jobs = fetchPendingJobs();
+  if (jobs.length < 1) return;
+
+  for (const job of jobs) {
+    try {
+      console.log(`RUN_JOB job_id=${job.job_id}`);
+      await runQueuedEvidenceExportJob(pool, job);
+    } catch (error: any) {
+      markJobFailed(job, error);
+      console.error(`RUN_JOB_FAILED job_id=${job.job_id} error=${String(error?.message ?? error)}`);
+    }
+  }
 }
 
 export async function runJobsRuntime(): Promise<void> {
   const intervalMs = parseIntervalMs();
+  const pool = createPool();
   console.log(`INFO: jobs runtime started interval_ms=${intervalMs}`);
 
   while (true) {
     try {
-      await runOnce();
+      await runOnce(pool);
     } catch (error: any) {
       console.error(`ERROR: jobs runtime tick failed: ${error?.stack ?? error?.message ?? String(error)}`);
     }
