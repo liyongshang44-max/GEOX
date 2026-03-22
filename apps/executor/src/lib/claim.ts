@@ -11,23 +11,15 @@ export type ClaimArgs = {
   act_task_id?: string;
 };
 
-type DispatchQueueState = "CREATED" | "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
-
 type ClaimItem = {
   act_task_id?: string;
   command_id?: string;
-  state?: DispatchQueueState | string;
+  state?: string;
   lease_until_ts?: number | null;
   task?: { payload?: { act_task_id?: string; command_id?: string } };
 };
 
-const HEARTBEAT_TASK_TTL_MS = 10 * 60 * 1000;
 const localLeaseByTask = new Map<string, number>();
-const terminalStateByTask = new Map<string, DispatchQueueState>();
-
-function isTerminalState(state: string): boolean {
-  return state === "SUCCEEDED" || state === "FAILED";
-}
 
 function parseClaimTaskId(item: ClaimItem): string {
   return String(item?.act_task_id ?? item?.task?.payload?.act_task_id ?? "").trim();
@@ -47,15 +39,6 @@ function sweepExpiredLocalLeases(nowMs: number): void {
     if (leaseUntil > nowMs) continue;
     localLeaseByTask.delete(taskId);
     console.log(`LEASE_RECOVER task_id=${taskId} expired_at=${leaseUntil}`);
-  }
-
-  for (const [taskId, state] of terminalStateByTask.entries()) {
-    const leaseUntil = localLeaseByTask.get(taskId) ?? 0;
-    if (leaseUntil > nowMs - HEARTBEAT_TASK_TTL_MS) continue;
-    terminalStateByTask.delete(taskId);
-    if (state) {
-      console.log(`TERMINAL_CACHE_EVICT task_id=${taskId} state=${state}`);
-    }
   }
 }
 
@@ -105,18 +88,6 @@ export async function claimDispatchTasks(args: ClaimArgs): Promise<any[]> {
     const leaseUntilTs = parseLeaseUntilTs(item);
 
     console.log(`DISPATCH_TRACE phase=claim task_id=${taskId} command_id=${commandId} state=${state || "UNKNOWN"} lease_until_ts=${leaseUntilTs || 0}`);
-
-    if (isTerminalState(state)) {
-      terminalStateByTask.set(taskId, state as DispatchQueueState);
-      console.log(`TERMINAL_DEDUPE_SKIP task_id=${taskId} command_id=${commandId} state=${state}`);
-      continue;
-    }
-
-    if (terminalStateByTask.has(taskId)) {
-      const terminal = terminalStateByTask.get(taskId);
-      console.log(`TERMINAL_DEDUPE_SKIP task_id=${taskId} command_id=${commandId} terminal_state=${terminal}`);
-      continue;
-    }
 
     const localLeaseUntil = localLeaseByTask.get(taskId) ?? 0;
     if (localLeaseUntil > nowMs) {
