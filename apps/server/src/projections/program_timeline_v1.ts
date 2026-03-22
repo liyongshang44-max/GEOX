@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { AcceptanceResultV1PayloadSchema } from "@geox/contracts";
+import GeoxContracts from "@geox/contracts";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -150,7 +150,7 @@ export function projectProgramTimelineFromFacts(input: {
   }
 
   for (const row of acceptanceFacts) {
-    const parsed = AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
+    const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
     if (!parsed.success) continue;
     const p = parsed.data;
     events.push({
@@ -177,7 +177,7 @@ export function projectProgramTimelineFromFacts(input: {
 
   const sortedAcceptancePayloads = acceptanceFacts
     .map((r) => {
-      const parsed = AcceptanceResultV1PayloadSchema.safeParse(r.record_json?.payload);
+      const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(r.record_json?.payload);
       if (!parsed.success) return null;
       return { ...parsed.data, __ts: eventTs(parsed.data, r.occurred_at) };
     })

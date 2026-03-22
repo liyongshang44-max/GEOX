@@ -26,10 +26,4 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   rule_id: z.string().min(1).optional()
 });
 
-export const AcceptanceResultV1Schema = z.object({
-  type: z.literal("acceptance_result_v1"),
-  payload: AcceptanceResultV1PayloadSchema
-});
-
 export type AcceptanceResultV1Payload = z.infer<typeof AcceptanceResultV1PayloadSchema>;
-export type AcceptanceResultV1 = z.infer<typeof AcceptanceResultV1Schema>;

@@ -8,7 +8,8 @@ import crypto from "node:crypto"; // Node crypto for SHA-256 hashing and UUIDs.
 import { randomUUID } from "node:crypto"; // UUID generator for fact ids (append-only ledger).
 import { fileURLToPath } from "node:url"; // ESM 下替代 __filename / __dirname.
 import { z } from "zod"; // Zod schema validation for request parsing.
-import { AcceptanceResultV1Schema, type AcceptanceResultV1Payload } from "@geox/contracts";
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type for tenant triple checks.
@@ -333,9 +334,9 @@ const __dirname = path.dirname(__filename);
   // 7) Compute minimal acceptance_result_v1 and append it to facts ledger (append-only).
   const acceptance_fact_id = randomUUID(); // Generate new fact_id for append-only insert.
   const verdict = taskFacts.length > 0 ? "PASS" : "FAIL"; // Minimal template: task must exist.
-  const acceptance_record = AcceptanceResultV1Schema.parse({
+  const acceptance_record = {
     type: "acceptance_result_v1",
-    payload: {
+    payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
       acceptance_id: acceptance_fact_id,
       tenant_id: job.tenant_id,
       project_id: job.project_id,
@@ -347,8 +348,8 @@ const __dirname = path.dirname(__filename);
       metrics: { coverage_ratio: verdict === "PASS" ? 1 : 0, in_field_ratio: 0, telemetry_delta: 0 },
       evidence_refs: evidence_fact_ids,
       evaluated_at: new Date().toISOString()
-    }
-  });
+    })
+  };
 
   await pool.query( // Insert acceptance_result_v1 fact into facts table (append-only).
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", // SQL insert.

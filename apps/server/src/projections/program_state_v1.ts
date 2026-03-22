@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { AcceptanceResultV1PayloadSchema } from "@geox/contracts";
+import GeoxContracts from "@geox/contracts";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -163,13 +163,13 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
     });
 
     const latestAcceptance = pickLatest(acceptanceRows);
-    const latestAcceptancePayloadParsed = AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance?.record_json?.payload);
+    const latestAcceptancePayloadParsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance?.record_json?.payload);
     const latestAcceptancePayload = latestAcceptancePayloadParsed.success ? latestAcceptancePayloadParsed.data : undefined;
     const latestAcceptanceResult = normalizeAcceptanceResult(latestAcceptancePayload?.verdict);
 
     const acceptanceSummary = acceptanceRows.reduce(
       (acc, row) => {
-        const parsed = AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
+        const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
         const result = normalizeAcceptanceResult(parsed.success ? parsed.data.verdict : undefined);
         if (result === "PASSED") acc.passed += 1;
         else if (result === "FAILED") acc.failed += 1;
@@ -187,8 +187,8 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
 
     const feedback = deriveProgramFeedbackV1({
       program: pp,
-      acceptanceResults: acceptanceRows.map((row) => AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data),
-      trajectories: acceptanceRows.map((row) => AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data.metrics),
+      acceptanceResults: acceptanceRows.map((row) => GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data),
+      trajectories: acceptanceRows.map((row) => GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data.metrics),
       recentTasks: actTaskRows.map((row) => row.record_json?.payload ?? {})
     });
 

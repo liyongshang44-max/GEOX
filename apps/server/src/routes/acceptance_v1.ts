@@ -3,17 +3,14 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import {
-  AcceptanceResultV1Schema,
-  AcceptanceRuleV1PayloadSchema,
-  type AcceptanceResultV1Payload
-} from "@geox/contracts";
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
-const ACCEPTANCE_RULE_V1 = AcceptanceRuleV1PayloadSchema.parse({
+const ACCEPTANCE_RULE_V1 = GeoxContracts.AcceptanceRuleV1PayloadSchema.parse({
   rule_id: "acceptance_rule_v1_irrigate_duration_80pct",
   task_type: "IRRIGATE",
   policy_version: "v1",
@@ -258,9 +255,9 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const acceptanceFactId = randomUUID();
       const nowIso = new Date().toISOString();
       const expectedDurationMin = Number(taskPayload?.parameters?.duration_min);
-      const acceptanceRecord = AcceptanceResultV1Schema.parse({
+      const acceptanceRecord = {
         type: "acceptance_result_v1",
-        payload: {
+        payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
           acceptance_id: acceptanceFactId,
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
@@ -274,8 +271,8 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           rule_id: ACCEPTANCE_RULE_V1.rule_id,
           evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id]
-        }
-      });
+        })
+      };
 
       await pool.query(
         "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",

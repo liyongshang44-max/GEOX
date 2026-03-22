@@ -1,5 +1,6 @@
 import type { Pool } from "pg";
-import { AcceptanceResultV1PayloadSchema, type AcceptanceResultV1Payload } from "@geox/contracts";
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -279,7 +280,7 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
         fact_id: pendingPlanRow.fact_id
       } : null,
       latest_acceptance_result: latestAcceptance ? (() => {
-        const payload = AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance.record_json?.payload);
+        const payload = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance.record_json?.payload);
         if (!payload.success) return null;
         return { ...payload.data, created_ts: toMs(payload.data.evaluated_at) || toMs(latestAcceptance.occurred_at), fact_id: latestAcceptance.fact_id };
       })() : null,
