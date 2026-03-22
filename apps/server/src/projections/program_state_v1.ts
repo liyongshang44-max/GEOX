@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import GeoxContracts from "@geox/contracts";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -162,14 +163,14 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
     });
 
     const latestAcceptance = pickLatest(acceptanceRows);
-    const latestAcceptanceResult = normalizeAcceptanceResult(
-      latestAcceptance?.record_json?.payload?.result ?? latestAcceptance?.record_json?.payload?.verdict
-    );
+    const latestAcceptancePayloadParsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(latestAcceptance?.record_json?.payload);
+    const latestAcceptancePayload = latestAcceptancePayloadParsed.success ? latestAcceptancePayloadParsed.data : undefined;
+    const latestAcceptanceResult = normalizeAcceptanceResult(latestAcceptancePayload?.verdict);
 
     const acceptanceSummary = acceptanceRows.reduce(
       (acc, row) => {
-        const payload = row.record_json?.payload ?? {};
-        const result = normalizeAcceptanceResult(payload.result ?? payload.verdict);
+        const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
+        const result = normalizeAcceptanceResult(parsed.success ? parsed.data.verdict : undefined);
         if (result === "PASSED") acc.passed += 1;
         else if (result === "FAILED") acc.failed += 1;
         else acc.inconclusive += 1;
@@ -178,17 +179,16 @@ export function projectProgramStateFromFacts(rows: ProgramStateProjectionFactRow
       { passed: 0, failed: 0, inconclusive: 0 }
     );
 
-    const latestAcceptancePayload = latestAcceptance?.record_json?.payload ?? {};
-    const acceptanceLastScore = toNum(latestAcceptancePayload.score);
-    const metrics = latestAcceptancePayload.metrics ?? {};
-    const inFieldRatio = toNum(metrics.in_field_ratio);
-    const trackPointCount = toNum(metrics.track_point_count);
-    const trackPointsInField = toNum(metrics.track_points_in_field);
+    const acceptanceLastScore = toNum(latestAcceptancePayload?.metrics?.coverage_ratio);
+    const metrics = latestAcceptancePayload?.metrics;
+    const inFieldRatio = toNum(metrics?.in_field_ratio);
+    const trackPointCount = undefined;
+    const trackPointsInField = undefined;
 
     const feedback = deriveProgramFeedbackV1({
       program: pp,
-      acceptanceResults: acceptanceRows.map((row) => row.record_json?.payload ?? {}),
-      trajectories: acceptanceRows.map((row) => row.record_json?.payload?.metrics ?? {}),
+      acceptanceResults: acceptanceRows.map((row) => GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data),
+      trajectories: acceptanceRows.map((row) => GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload)).filter((r) => r.success).map((r) => r.data.metrics),
       recentTasks: actTaskRows.map((row) => row.record_json?.payload ?? {})
     });
 
