@@ -365,10 +365,46 @@ const __dirname = path.dirname(__filename);
   job.updated_at = Date.now(); // Update timestamp.
 } // End runEvidenceExportJob.
 
+
+function createExportJob(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  act_task_id: string;
+  template: string;
+  program_id?: string;
+  field_id?: string;
+  season_id?: string;
+}): ExportJob {
+  const now = Date.now();
+  const job_id = `exp_${now}_${randomUUID().replace(/-/g, "")}`;
+  return {
+    job_id,
+    state: "queued",
+    created_at: now,
+    updated_at: now,
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    program_id: input.program_id ?? null,
+    field_id: input.field_id ?? null,
+    season_id: input.season_id ?? null,
+    act_task_id: input.act_task_id,
+    template: input.template,
+    artifact_path: null,
+    artifact_sha256: null,
+    stdout_tail: "job:queued\n",
+    stderr_tail: "",
+    acceptance_fact_id: null,
+    acceptance_result: null,
+    error: null
+  };
+}
+
 export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, pool: Pool): void { // Register Sprint 26 evidence export API v1 routes.
   // POST /api/delivery/evidence_export/v1/jobs
   // Creates an async export job that produces an artifact and an acceptance_result_v1 fact.
-  app.post("/api/delivery/evidence_export/v1/jobs", async (req, reply) => { // Create job endpoint.
+  const createJobHandler = async (req: any, reply: any) => { // Create job endpoint (enqueue only).
     try { // Guard with try/catch for consistent 400 errors.
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
       if (!auth) return; // Stop if auth failed (handler already replied).
@@ -387,48 +423,26 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
       const tenant = { tenant_id: body.tenant_id, project_id: body.project_id, group_id: body.group_id }; // Normalize tenant triple.
       if (!requireTenantMatchOr404(auth, tenant, reply)) return; // Enforce tenant triple match (404 non-enumerable).
 
-      const job_id = `exp_${Date.now()}_${randomUUID().replace(/-/g, "")}`; // Create job id with exp_ prefix.
-      const job: ExportJob = { // Initialize job record.
-        job_id, // Job id.
-        state: "queued", // Initial state.
-        created_at: Date.now(), // Creation timestamp.
-        updated_at: Date.now(), // Update timestamp.
-        tenant_id: tenant.tenant_id, // Tenant id.
-        project_id: tenant.project_id, // Project id.
-        group_id: tenant.group_id, // Group id.
-        program_id: body.program_id ?? null, // Optional program id.
-        field_id: body.field_id ?? null, // Optional field id.
-        season_id: body.season_id ?? null, // Optional season id.
-        act_task_id: body.act_task_id, // Act task id.
-        template: body.template, // Template name.
-        artifact_path: null, // Not produced yet.
-        artifact_sha256: null, // Not computed yet.
-        stdout_tail: "job:queued\n", // Initial log.
-        stderr_tail: "", // Initial stderr tail.
-        acceptance_fact_id: null, // Not produced yet.
-        acceptance_result: null, // Not produced yet.
-        error: null // No error yet.
-      }; // End job initialization.
+      const job = createExportJob({
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id: body.program_id,
+        field_id: body.field_id,
+        season_id: body.season_id,
+        act_task_id: body.act_task_id,
+        template: body.template
+      });
+      exportJobs.set(job.job_id, job);
 
-      exportJobs.set(job_id, job); // Store job in map.
-
-      // Kick off async execution without blocking request/response (best-effort in-process job runner).
-      setImmediate(async () => { // Schedule job execution on event loop.
-        try { // Catch errors inside job runner.
-          await runEvidenceExportJob(pool, job); // Run job logic.
-        } catch (e: any) { // Handle job failure.
-          job.state = "error"; // Mark error.
-          job.error = String(e?.message ?? e); // Store error message.
-          job.stderr_tail = tailAppend(job.stderr_tail, `error:${job.error}\n`); // Append to stderr tail.
-          job.updated_at = Date.now(); // Update timestamp.
-        } // End catch.
-      }); // End setImmediate.
-
-      return reply.send({ ok: true, job_id }); // Return job id to client.
+      return reply.send({ ok: true, job_id: job.job_id });
     } catch (e: any) { // Catch parse errors.
       return reply.code(400).send({ ok: false, error: String(e?.message ?? e) }); // Return standardized error.
     } // End catch.
-  }); // End create job route.
+  }; // End create job handler.
+
+  app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint.
+  app.post("/api/v1/evidence-export/jobs", createJobHandler); // Canonical v1 endpoint (enqueue only).
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id
   // Returns job status + small result summary (including acceptance_result_v1 pointers).
