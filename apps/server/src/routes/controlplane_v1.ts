@@ -2413,6 +2413,19 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     }
 
+    const currentStatusBeforeTerminal = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
+    if (currentStatusBeforeTerminal === "SUCCEEDED" || currentStatusBeforeTerminal === "FAILED") {
+      return reply.send({
+        ok: true,
+        deduped: true,
+        fact_id: delegated.json.fact_id,
+        wrapper_fact_id,
+        operation_plan_id,
+        operation_plan_transition_fact_id: null,
+        operation_plan_update_fact_id: null
+      });
+    }
+
     const terminalTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
       next_status: terminalState,
       trigger: "receipt_recorded",
@@ -2422,6 +2435,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }, "api/v1/ao-act/receipts");
     return reply.send({
       ok: true,
+      deduped: false,
       fact_id: delegated.json.fact_id,
       wrapper_fact_id,
       operation_plan_id,
