@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { fetchProgramPortfolio, fetchSchedulingConflicts, fetchSchedulingHints, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
-import { buildProgramListCards, riskSortRank, slaSortRank, type BadgeTone } from "../viewmodels/programDashboardViewModel";
+import { buildProgramListCards, riskSortRank, type BadgeTone } from "../viewmodels/programDashboardViewModel";
 
 function conflictLabel(kind: string, tf: (k: string) => string): string {
   const k = String(kind ?? "").toUpperCase();
@@ -12,11 +12,17 @@ function conflictLabel(kind: string, tf: (k: string) => string): string {
   return k || tf("common.none");
 }
 
-function priorityWeight(v: string): number {
-  const s = String(v ?? "").toUpperCase();
-  if (s === "HIGH") return 3;
-  if (s === "MEDIUM") return 2;
-  return 1;
+function badgeStyle(tone: BadgeTone): React.CSSProperties {
+  if (tone === "success") return { background: "#ecfdf3", color: "#067647" };
+  if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
+  if (tone === "danger") return { background: "#fef3f2", color: "#b42318" };
+  return { background: "#f2f4f7", color: "#344054" };
+}
+
+function metricBlockStyle(tone?: BadgeTone): React.CSSProperties {
+  if (tone === "danger") return { border: "1px solid #fecaca", background: "#fff1f2" };
+  if (tone === "warning") return { border: "1px solid #fde68a", background: "#fffbeb" };
+  return { border: "1px solid #e5e7eb", background: "#f9fafb" };
 }
 
 function badgeStyle(tone: BadgeTone): React.CSSProperties {
@@ -65,9 +71,7 @@ export default function ProgramListPage(): React.ReactElement {
       for (const h of hints) {
         const pid = String(h?.program_id ?? "");
         if (!pid) continue;
-        const prev = nextPriority.get(pid);
-        const incoming = String(h?.priority ?? "LOW").toUpperCase();
-        if (!prev || priorityWeight(incoming) > priorityWeight(prev)) nextPriority.set(pid, incoming);
+        nextPriority.set(pid, String(h?.priority ?? "LOW").toUpperCase());
       }
       setPriorityByProgram(nextPriority);
     } finally {
@@ -91,10 +95,16 @@ export default function ProgramListPage(): React.ReactElement {
 
   const filtered = React.useMemo(() => {
     let next = cards.filter((x) => (seasonFilter === "ALL" ? true : x.seasonId === seasonFilter));
-    next = next.filter((x) => (riskFilter === "ALL" ? true : String(x.riskBadge.text).toUpperCase() === riskFilter));
+    next = next.filter((x) => {
+      if (riskFilter === "ALL") return true;
+      if (riskFilter === "INSUFFICIENT_DATA") return x.sortRiskRank === 3;
+      return x.sortRiskRank === riskSortRank(riskFilter);
+    });
 
     if (sortBy === "risk") {
-      next = [...next].sort((a, b) => riskSortRank(a.sortRiskKey) - riskSortRank(b.sortRiskKey));
+      next = [...next].sort((a, b) => a.sortRiskRank - b.sortRiskRank);
+    } else if (sortBy === "priority") {
+      next = [...next].sort((a, b) => a.sortPriorityRank - b.sortPriorityRank);
     } else if (sortBy === "cost") {
       next = [...next].sort((a, b) => {
         if (a.sortCostValue == null && b.sortCostValue == null) return 0;
@@ -103,7 +113,7 @@ export default function ProgramListPage(): React.ReactElement {
         return b.sortCostValue - a.sortCostValue;
       });
     } else if (sortBy === "sla") {
-      next = [...next].sort((a, b) => slaSortRank(a.sortSlaKey) - slaSortRank(b.sortSlaKey));
+      next = [...next].sort((a, b) => a.sortSlaRank - b.sortSlaRank);
     } else if (sortBy === "efficiency") {
       next = [...next].sort((a, b) => {
         if (a.sortEfficiencyValue == null && b.sortEfficiencyValue == null) return 0;
@@ -117,12 +127,9 @@ export default function ProgramListPage(): React.ReactElement {
 
   const summary = React.useMemo(() => {
     const activePrograms = filtered.length;
-    const atRiskPrograms = filtered.filter((x) => x.riskBadge.tone === "danger" || x.riskBadge.tone === "warning").length;
-    const pendingActions = filtered.filter((x) => x.nextActionText !== tf("common.insufficientData")).length;
-    const lowEfficiencyOrInsufficient = filtered.filter((x) => {
-      if (x.sortEfficiencyValue == null) return true;
-      return x.sortEfficiencyValue < 0.6;
-    }).length;
+    const atRiskPrograms = filtered.filter((x) => x.sortRiskRank <= 1).length;
+    const pendingActions = filtered.filter((x) => x.primaryAction !== tf("common.insufficientData")).length;
+    const lowEfficiencyOrInsufficient = filtered.filter((x) => x.sortEfficiencyValue == null || x.sortEfficiencyValue < 0.6).length;
     return { activePrograms, atRiskPrograms, pendingActions, lowEfficiencyOrInsufficient };
   }, [filtered, tf]);
 
@@ -149,17 +156,19 @@ export default function ProgramListPage(): React.ReactElement {
             <option value="en">English</option>
           </select>
           <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
-            <option value="ALL">{tf("portfolio.allSeasons")}</option>
+            <option value="ALL">{tf("portfolio.season")}</option>
             {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-            <option value="ALL">{tf("portfolio.allRisk")}</option>
+            <option value="ALL">{tf("portfolio.riskLabel")}</option>
             <option value="HIGH">HIGH</option>
             <option value="MEDIUM">MEDIUM</option>
             <option value="LOW">LOW</option>
+            <option value="INSUFFICIENT_DATA">INSUFFICIENT_DATA</option>
           </select>
           <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="risk">{tf("portfolio.sortRisk")}</option>
+            <option value="priority">{tf("portfolio.sortPriority")}</option>
             <option value="cost">{tf("portfolio.sortCost")}</option>
             <option value="sla">{tf("portfolio.sortSla")}</option>
             <option value="efficiency">{tf("portfolio.sortEfficiency")}</option>
@@ -169,30 +178,53 @@ export default function ProgramListPage(): React.ReactElement {
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.activePrograms")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.activePrograms}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.atRisk")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.atRiskPrograms}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.pendingActions")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.pendingActions}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 600 }}>{summary.lowEfficiencyOrInsufficient}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.activePrograms")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.activePrograms}</div><div className="muted">{tf("portfolio.activeProgramsDesc")}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.atRisk")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.atRiskPrograms}</div><div className="muted">{tf("portfolio.atRiskDesc")}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.pendingActions")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.pendingActions}</div><div className="muted">{tf("portfolio.pendingActionsDesc")}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.lowEfficiencyOrInsufficient}</div><div className="muted">{tf("portfolio.lowEfficiencyDesc")}</div></div>
       </section>
 
       {grouped.map(([seasonId, seasonCards]) => (
         <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-          <h3 style={{ margin: 0 }}>{tf("portfolio.combinedView")} · {seasonId}（{seasonCards.length}）</h3>
+          <h3 style={{ margin: 0 }}>{tf("portfolio.season")} {seasonId}（{seasonCards.length}）</h3>
           {seasonCards.map((card) => (
-            <article key={card.href} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 10, display: "grid", gap: 8 }}>
+            <article key={card.href} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, display: "grid", gap: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                 <div>
-                  <div style={{ fontWeight: 600 }}>{card.title}</div>
+                  <div style={{ fontWeight: 700 }}>{card.title}</div>
                   <div className="muted">{card.subtitle}</div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <span className="pill" style={badgeStyle(card.statusBadge.tone)}>{card.statusBadge.text}</span>
-                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{tf("portfolio.risk")}: {card.riskBadge.text}</span>
+                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{card.riskBadge.text}</span>
                 </div>
               </div>
-              <div>{tf("portfolio.rowNextAction")}: {card.nextActionText}</div>
-              <div>{tf("portfolio.rowPending")}: {card.pendingPlanText} / {card.pendingTaskText}</div>
-              <div>{tf("portfolio.rowCostSlaEfficiency")}: {card.costText} / {card.slaText} / {card.efficiencyText}</div>
+
+              <div>
+                <div className="muted">{tf("portfolio.rowNextAction")}</div>
+                <div style={{ fontWeight: 600 }}>{card.primaryAction}</div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">{tf("portfolio.pendingPlan")}</div>
+                  <div style={{ fontWeight: 600 }}>{card.pendingPlan}</div>
+                </div>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">{tf("portfolio.pendingTask")}</div>
+                  <div style={{ fontWeight: 600 }}>{card.pendingTask}</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+                {card.metrics.map((metric) => (
+                  <div key={metric.label} style={{ borderRadius: 8, padding: 10, ...metricBlockStyle(metric.tone) }}>
+                    <div className="muted">{metric.label}</div>
+                    <div style={{ fontWeight: 700 }}>{metric.value}</div>
+                  </div>
+                ))}
+              </div>
+
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {card.conflictTags.map((k) => (

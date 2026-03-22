@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchProgramCost, fetchProgramDetail, fetchProgramEfficiency, fetchProgramSla, fetchProgramTrajectories, readStoredAoActToken } from "../lib/api";
+import { fetchProgramCost, fetchProgramDetail, fetchProgramEfficiency, fetchProgramSla, fetchProgramTrajectories, fetchSchedulingConflicts, readStoredAoActToken } from "../lib/api";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
 import { buildProgramDetailDashboardVM, type BadgeTone } from "../viewmodels/programDashboardViewModel";
 
@@ -9,6 +9,14 @@ function badgeStyle(tone: BadgeTone): React.CSSProperties {
   if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
   if (tone === "danger") return { background: "#fef3f2", color: "#b42318" };
   return { background: "#f2f4f7", color: "#344054" };
+}
+
+function conflictLabel(kind: string, tf: (k: string) => string): string {
+  const k = String(kind ?? "").toUpperCase();
+  if (k === "DEVICE_CONFLICT") return tf("portfolio.deviceConflict");
+  if (k === "FIELD_CONFLICT") return tf("portfolio.fieldConflict");
+  if (k === "PROGRAM_INTENT_CONFLICT") return tf("portfolio.intentConflict");
+  return tf("common.noRecord");
 }
 
 export default function ProgramDetailPage(): React.ReactElement {
@@ -21,6 +29,7 @@ export default function ProgramDetailPage(): React.ReactElement {
   const [cost, setCost] = React.useState<any>(null);
   const [sla, setSla] = React.useState<any>(null);
   const [efficiency, setEfficiency] = React.useState<any>(null);
+  const [conflicts, setConflicts] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     const id = decodeURIComponent(programId);
@@ -31,20 +40,26 @@ export default function ProgramDetailPage(): React.ReactElement {
       fetchProgramCost(token, id).catch(() => null),
       fetchProgramSla(token, id).catch(() => null),
       fetchProgramEfficiency(token, id).catch(() => null),
-    ]).then(([detail, traj, costData, slaData, efficiencyData]) => {
+      fetchSchedulingConflicts(token).catch(() => []),
+    ]).then(([detail, traj, costData, slaData, efficiencyData, conflictList]) => {
       setItem(detail);
       setTrajectories(traj);
       setCost(costData);
       setSla(slaData);
       setEfficiency(efficiencyData);
+      const kinds = (Array.isArray(conflictList) ? conflictList : [])
+        .filter((c: any) => Array.isArray(c?.related_program_ids) && c.related_program_ids.some((pid: unknown) => String(pid) === id))
+        .map((c: any) => conflictLabel(String(c?.kind ?? ""), tt));
+      setConflicts(Array.from(new Set(kinds)));
     }).catch(() => {
       setItem(null);
       setTrajectories([]);
       setCost(null);
       setSla(null);
       setEfficiency(null);
+      setConflicts([]);
     });
-  }, [programId, token]);
+  }, [programId, token, tt]);
 
   const vm = React.useMemo(() => buildProgramDetailDashboardVM({
     programId,
@@ -53,27 +68,43 @@ export default function ProgramDetailPage(): React.ReactElement {
     cost,
     sla,
     efficiency,
+    conflicts,
     insufficientText: tt("common.insufficientData"),
     noRecordText: tt("common.noRecord"),
-  }), [programId, item, trajectories, cost, sla, efficiency, tt]);
+  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, tt]);
 
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <section className="card" style={{ padding: 16, display: "grid", gap: 8 }}>
-        <h2 style={{ margin: 0 }}>{tt("program.header")}</h2>
-        <div style={{ fontWeight: 700, fontSize: 18 }}>{vm.header.title}</div>
+        <div style={{ fontWeight: 700, fontSize: 20 }}>{vm.header.title}</div>
         <div className="muted">{vm.header.subtitle}</div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <span className="pill" style={badgeStyle(vm.header.statusBadge.tone)}>{tt("program.status")}: {vm.header.statusBadge.text}</span>
-          <span className="pill" style={badgeStyle(vm.header.riskBadge.tone)}>{tt("portfolio.risk")}: {vm.header.riskBadge.text}</span>
+          <span className="pill" style={badgeStyle(vm.header.riskBadge.tone)}>{tt("portfolio.risk")}：{vm.header.riskBadge.text}</span>
           <span className="pill" style={{ background: "#f9fafb", color: "#344054" }}>{tt("program.updatedAt")}: {vm.header.updatedAtText}</span>
         </div>
       </section>
 
+      <section className="card" style={{ padding: 16, display: "grid", gap: 8 }}>
+        <h3 style={{ margin: 0 }}>{tt("program.currentIssue")}</h3>
+        <div>
+          <div className="muted">{tt("program.riskHeadline")}</div>
+          <div style={{ fontWeight: 600 }}>{vm.currentIssue.riskHeadline}</div>
+        </div>
+        <div>
+          <div className="muted">{tt("program.currentStage")}</div>
+          <div style={{ fontWeight: 600 }}>{vm.currentIssue.stageText}</div>
+        </div>
+        <div>
+          <div className="muted">{tt("program.riskReason")}</div>
+          <div>{vm.currentIssue.reasonText}</div>
+        </div>
+      </section>
+
       <section className="card" style={{ padding: 16 }}>
-        <h3 style={{ marginTop: 0 }}>{tt("program.actionCenter")}</h3>
+        <h3 style={{ marginTop: 0 }}>{tt("program.nextActions")}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-          {vm.actionCenter.map((x) => (
+          {vm.nextActions.map((x) => (
             <article key={x.title} className="card" style={{ padding: 10 }}>
               <div className="muted">{x.title}</div>
               <div style={{ fontWeight: 600 }}>{x.value}</div>
@@ -89,7 +120,7 @@ export default function ProgramDetailPage(): React.ReactElement {
           {vm.outcomeCenter.map((x) => (
             <article key={x.title} className="card" style={{ padding: 10 }}>
               <div className="muted">{x.title}</div>
-              <div style={{ fontWeight: 600 }}>{x.value}</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{x.value}</div>
               <div className="muted">{x.description}</div>
             </article>
           ))}
@@ -102,7 +133,7 @@ export default function ProgramDetailPage(): React.ReactElement {
           {vm.resourceCenter.map((x) => (
             <article key={x.title} className="card" style={{ padding: 10 }}>
               <div className="muted">{x.title}</div>
-              <div style={{ fontWeight: 600 }}>{x.value}</div>
+              <div style={{ fontWeight: 700 }}>{x.value}</div>
               <div className="muted">{x.description}</div>
             </article>
           ))}
@@ -111,7 +142,7 @@ export default function ProgramDetailPage(): React.ReactElement {
 
       <section className="card" style={{ padding: 16 }}>
         <h3 style={{ marginTop: 0 }}>{tt("program.mapCenter")}</h3>
-        <div className="card" style={{ minHeight: 180, display: "grid", placeItems: "center", background: "#f8fafc", border: "1px dashed #cbd5e1" }}>
+        <div className="card" style={{ minHeight: 160, display: "grid", placeItems: "center", background: "#f8fafc", border: "1px dashed #cbd5e1" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontWeight: 600 }}>{vm.mapCenter.title}</div>
             <div className="muted">{vm.mapCenter.description}</div>
@@ -135,7 +166,8 @@ export default function ProgramDetailPage(): React.ReactElement {
               </div>
               <article className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 600 }}>{e.title}</div>
-                <div>{e.value}</div>
+                <div>{e.statusText}</div>
+                <div className="muted">ID: {e.idText}</div>
                 <div className="muted">{e.description}</div>
               </article>
             </div>
