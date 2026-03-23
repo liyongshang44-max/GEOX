@@ -1,5 +1,3 @@
-const { register } = require("../node_modules/tsx/dist/cjs/api/index.cjs");
-register();
 const { runDispatchOnce } = require("./run_dispatch_once.ts");
 
 const DEFAULT_POLL_INTERVAL_MS = 3000;
