@@ -112,6 +112,33 @@ function toAoActTask(item: any, args: Args): AoActTask {
 }
 
 type DispatchState = "DISPATCHED" | "ACKED" | "FAILED";
+const recentTerminalByTask = new Map<string, number>();
+const DEFAULT_TERMINAL_DEDUPE_MS = 120000;
+
+function parseTerminalDedupeMs(): number {
+  const raw = process.env.GEOX_EXECUTOR_TERMINAL_DEDUPE_MS ?? `${DEFAULT_TERMINAL_DEDUPE_MS}`;
+  const parsed = Number.parseInt(String(raw), 10);
+  if (!Number.isFinite(parsed)) return DEFAULT_TERMINAL_DEDUPE_MS;
+  return Math.max(10000, parsed);
+}
+
+function sweepExpiredTerminalDedupe(nowMs: number): void {
+  for (const [taskId, untilMs] of recentTerminalByTask.entries()) {
+    if (untilMs > nowMs) continue;
+    recentTerminalByTask.delete(taskId);
+  }
+}
+
+function shouldSkipByTerminalDedupe(taskId: string, nowMs: number): boolean {
+  const terminalUntilMs = recentTerminalByTask.get(taskId) ?? 0;
+  if (terminalUntilMs <= nowMs) return false;
+  console.log(`TERMINAL_DEDUPE_SKIP act_task_id=${taskId} terminal_until_ts=${terminalUntilMs}`);
+  return true;
+}
+
+function markTerminalDedupe(taskId: string, nowMs: number, dedupeMs: number): void {
+  recentTerminalByTask.set(taskId, nowMs + dedupeMs);
+}
 
 function logExecutionEvent(task: AoActTask, adapter: string, status: "SUCCEEDED" | "FAILED", startedAtMs: number): void {
   const durationMs = Math.max(0, Date.now() - startedAtMs);
@@ -254,6 +281,8 @@ async function appendReceiptV1(
 
 export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
   const args = parseArgs(cliArgs ?? process.argv.slice(2));
+  const terminalDedupeMs = parseTerminalDedupeMs();
+  sweepExpiredTerminalDedupe(Date.now());
   if (args.auto_evaluate) {
     console.log("WARN: auto_evaluate=true requested, but executor keeps acceptance decoupled and will not auto-evaluate.");
   }
@@ -279,6 +308,8 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
 
   for (const item of claimed.slice(0, args.limit)) {
     const task = toAoActTask(item, args);
+    const nowMs = Date.now();
+    if (shouldSkipByTerminalDedupe(task.act_task_id, nowMs)) continue;
     const adapterType = String(task.adapter_type ?? task.adapter_hint ?? "").trim().toLowerCase();
     const adapter = findAdapterByType(registry, adapterType);
     const startedAtMs = Date.now();
@@ -326,18 +357,21 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
           typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : undefined
         );
         await writeDispatchState(args, task, "FAILED");
+        markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
         executionStatus = "FAILED";
         console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
         continue;
       }
 
       await writeDispatchState(args, task, "ACKED");
+      markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
       executionStatus = "SUCCEEDED";
       console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
     } catch (error: any) {
       const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
       await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, "DISPATCH_ERROR", String(error?.message ?? error));
       await writeDispatchState(args, task, "FAILED");
+      markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
       executionStatus = "FAILED";
       throw error;
     } finally {
