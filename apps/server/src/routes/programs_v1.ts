@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { z } from "zod";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
 import { projectProgramStateV1 } from "../projections/program_state_v1";
@@ -13,6 +14,44 @@ import { projectProgramEfficiencyV1 } from "../projections/program_efficiency_v1
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const PROGRAM_STATUSES = new Set(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"]);
+
+const ProgramPrioritySchema = z.enum(["low", "medium", "high"]);
+const ProgramCreateBodySchema = z.object({
+  tenant_id: z.string().min(1).optional(),
+  project_id: z.string().min(1).optional(),
+  group_id: z.string().min(1).optional(),
+  program_id: z.string().min(1).optional(),
+  field_id: z.string().min(1),
+  season_id: z.string().min(1),
+  crop_code: z.string().min(1),
+  variety_code: z.string().min(1).nullable().optional(),
+  goal_profile: z.object({
+    yield_priority: ProgramPrioritySchema,
+    quality_priority: ProgramPrioritySchema,
+    residue_priority: ProgramPrioritySchema,
+    water_saving_priority: ProgramPrioritySchema,
+    cost_priority: ProgramPrioritySchema
+  }),
+  constraints: z.object({
+    forbid_pesticide_classes: z.array(z.string()),
+    forbid_fertilizer_types: z.array(z.string()),
+    max_irrigation_mm_per_day: z.number().finite().nullable().optional(),
+    manual_approval_required_for: z.array(z.string()),
+    allow_night_irrigation: z.boolean()
+  }),
+  budget: z.object({
+    max_cost_total: z.number().finite().nullable().optional(),
+    currency: z.string().min(1)
+  }).nullable().optional(),
+  execution_policy: z.object({
+    mode: z.enum(["approval_required", "auto_allowed"]),
+    auto_execute_allowed_task_types: z.array(z.string())
+  }).default({ mode: "approval_required", auto_execute_allowed_task_types: [] }),
+  acceptance_policy_ref: z.string().min(1).nullable().optional(),
+  evidence_policy_ref: z.string().min(1).nullable().optional(),
+  status: z.string().optional()
+});
+
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -66,7 +105,9 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const tenant = tenantFromReq(req as any, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
-    const body: any = req.body ?? {};
+    const parsedBody = ProgramCreateBodySchema.safeParse((req as any).body ?? {});
+    if (!parsedBody.success) return reply.status(400).send({ ok: false, error: "INVALID_PROGRAM_SCHEMA", details: parsedBody.error.issues });
+    const body = parsedBody.data;
     const now = Date.now();
     const program_id = String(body.program_id ?? `prg_${randomUUID().replace(/-/g, "")}`).trim();
     const field_id = String(body.field_id ?? "").trim();
@@ -87,8 +128,8 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
         season_id,
         crop_code,
         variety_code: body.variety_code ?? null,
-        goal_profile: body.goal_profile ?? {},
-        constraints: body.constraints ?? {},
+        goal_profile: body.goal_profile,
+        constraints: body.constraints,
         budget: body.budget ?? null,
         execution_policy: body.execution_policy ?? { mode: "approval_required", auto_execute_allowed_task_types: [] },
         acceptance_policy_ref: body.acceptance_policy_ref ?? null,
@@ -201,7 +242,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
 
     const results = (q.rows ?? []).map((row: any) => ({
       ...((row.record_json?.payload ?? {}) as any),
-      evaluated_at_ts: Number(row.record_json?.payload?.evaluated_at_ts ?? Date.parse(String(row.occurred_at))) || 0
+      evaluated_at_ts: Number(Date.parse(String(row.record_json?.payload?.evaluated_at ?? row.occurred_at))) || 0
     }));
 
     const items = results.map((_, idx) => {
@@ -215,7 +256,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
       const latest = historyResults[historyResults.length - 1] ?? {};
       return {
         ts: Number(latest.evaluated_at_ts ?? 0),
-        acceptance_result: String(latest.result ?? latest.verdict ?? ""),
+        acceptance_result: String(latest.verdict ?? ""),
         current_stage: feedback.current_stage,
         current_goal_progress: feedback.current_goal_progress,
         next_action_hint: feedback.next_action_hint
@@ -283,7 +324,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const existing = await loadLatestProgramFact(pool, program_id, tenant);
     if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
 
-    const body: any = req.body ?? {};
+    const body: any = (req as any).body ?? {};
     const usageFact = {
       type: "resource_usage_v1",
       payload: {
@@ -317,7 +358,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const existing = await loadLatestProgramFact(pool, program_id, tenant);
     if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
 
-    const body: any = req.body ?? {};
+    const body: any = (req as any).body ?? {};
     const amount = Number(body.cost_amount ?? body.amount ?? body.total_cost);
     if (!Number.isFinite(amount)) return reply.status(400).send({ ok: false, error: "INVALID_COST_AMOUNT" });
 
@@ -351,7 +392,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const existing = await loadLatestProgramFact(pool, program_id, tenant);
     if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
 
-    const body: any = req.body ?? {};
+    const body: any = (req as any).body ?? {};
     const met = body.met == null ? undefined : Boolean(body.met);
     const status = String(body.status ?? (met == null ? "UNKNOWN" : (met ? "MET" : "BREACH"))).toUpperCase();
     const evaluationFact = {
@@ -421,7 +462,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const program_id = String((req.params as any)?.program_id ?? "").trim();
     if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
 
-    const body: any = req.body ?? {};
+    const body: any = (req as any).body ?? {};
     const status = String(body.status ?? "").trim().toUpperCase();
     if (!PROGRAM_STATUSES.has(status)) return reply.status(400).send({ ok: false, error: "INVALID_STATUS" });
 
@@ -468,7 +509,7 @@ export function registerProgramsV1Routes(app: FastifyInstance, pool: Pool): void
     const existing = await loadLatestProgramFact(pool, program_id, tenant);
     if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
 
-    const body: any = req.body ?? {};
+    const body: any = (req as any).body ?? {};
     const note = String(body.note ?? "").trim();
     if (!note) return reply.status(400).send({ ok: false, error: "MISSING_NOTE" });
 

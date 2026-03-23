@@ -1086,6 +1086,81 @@ async function listDispatchQueue(pool: Pool, tenant: TenantTriple, limit: number
   }));
 }
 
+
+async function listDispatchQueueByIds(pool: Pool, tenant: TenantTriple, queueIds: string[]): Promise<any[]> {
+  if (!queueIds.length) return [];
+  await ensureDispatchQueueRuntime(pool);
+  const sql = `
+    SELECT q.queue_id,
+           q.act_task_id,
+           q.command_id,
+           q.outbox_fact_id,
+           q.task_fact_id,
+           q.device_id,
+           q.downlink_topic,
+           q.qos,
+           q.retain,
+           q.adapter_hint,
+           q.state,
+           q.claim_id,
+           q.lease_token,
+           q.leased_by,
+           q.lease_expires_at,
+           q.lease_expire_at,
+           q.claimed_by,
+           q.claimed_ts,
+           q.publish_fact_id,
+           q.ack_fact_id,
+           q.receipt_fact_id,
+           q.attempt_no,
+           q.attempt_count,
+           q.created_at,
+           q.updated_at,
+           o.occurred_at AS outbox_occurred_at,
+           (o.record_json::jsonb) AS outbox_json,
+           t.occurred_at AS task_occurred_at,
+           (t.record_json::jsonb) AS task_json
+    FROM dispatch_queue_v1 q
+    JOIN facts o ON o.fact_id = q.outbox_fact_id
+    JOIN facts t ON t.fact_id = q.task_fact_id
+    WHERE q.tenant_id = $1
+      AND q.project_id = $2
+      AND q.group_id = $3
+      AND q.queue_id = ANY($4::text[])
+    ORDER BY q.created_at DESC, q.queue_id DESC
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, queueIds]);
+  return (res.rows ?? []).map((row: any) => ({
+    queue_id: String(row.queue_id),
+    act_task_id: String(row.act_task_id),
+    command_id: String(row.command_id),
+    outbox_fact_id: String(row.outbox_fact_id),
+    outbox_occurred_at: String(row.outbox_occurred_at),
+    outbox: parseJsonMaybe(row.outbox_json) ?? row.outbox_json,
+    task_fact_id: String(row.task_fact_id),
+    task_occurred_at: String(row.task_occurred_at),
+    task: parseJsonMaybe(row.task_json) ?? row.task_json,
+    device_id: row.device_id ? String(row.device_id) : null,
+    downlink_topic: row.downlink_topic ? String(row.downlink_topic) : null,
+    qos: Number(row.qos),
+    retain: Boolean(row.retain),
+    adapter_hint: row.adapter_hint ? String(row.adapter_hint) : null,
+    state: String(row.state),
+    claim_id: row.claim_id ? String(row.claim_id) : null,
+    lease_token: row.lease_token ? String(row.lease_token) : null,
+    leased_by: row.leased_by ? String(row.leased_by) : null,
+    lease_expires_at: row.lease_expires_at ? String(row.lease_expires_at) : null,
+    lease_expire_at: Number.isFinite(Number(row.lease_expire_at)) ? Number(row.lease_expire_at) : null,
+    claimed_by: row.claimed_by ? String(row.claimed_by) : null,
+    claimed_ts: Number.isFinite(Number(row.claimed_ts)) ? Number(row.claimed_ts) : null,
+    publish_fact_id: row.publish_fact_id ? String(row.publish_fact_id) : null,
+    ack_fact_id: row.ack_fact_id ? String(row.ack_fact_id) : null,
+    receipt_fact_id: row.receipt_fact_id ? String(row.receipt_fact_id) : null,
+    attempt_no: Number(row.attempt_no ?? row.attempt_count ?? 0),
+    attempt_count: Number(row.attempt_count ?? 0)
+  }));
+}
+
 async function loadReceiptV1ByIdempotencyKey(
   pool: Pool,
   tenant: TenantTriple,
@@ -1811,9 +1886,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const actTaskId = typeof body.act_task_id === "string" && body.act_task_id.trim() ? body.act_task_id.trim() : undefined;
     const adapterHint = typeof body.adapter_hint === "string" && body.adapter_hint.trim() ? body.adapter_hint.trim() : undefined;
     const rows = await claimDispatchQueueRows(pool, tenant, limit, lease_seconds, executor_id, lease_token, actTaskId, adapterHint);
-    const items = await listDispatchQueue(pool, tenant, limit * 5, actTaskId);
-    const claimedIds = new Set(rows.map((r: any) => String(r.queue_id)));
-    return reply.send({ ok: true, claim_id: lease_token, lease_token, items: items.filter((x: any) => claimedIds.has(String(x.queue_id))) });
+    const claimedIds = rows.map((r: any) => String(r.queue_id)).filter(Boolean);
+    const items = await listDispatchQueueByIds(pool, tenant, claimedIds);
+    return reply.send({ ok: true, claim_id: lease_token, lease_token, items });
   });
 
 
@@ -2413,6 +2488,19 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     }
 
+    const currentStatusBeforeTerminal = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
+    if (currentStatusBeforeTerminal === "SUCCEEDED" || currentStatusBeforeTerminal === "FAILED") {
+      return reply.send({
+        ok: true,
+        deduped: true,
+        fact_id: delegated.json.fact_id,
+        wrapper_fact_id,
+        operation_plan_id,
+        operation_plan_transition_fact_id: null,
+        operation_plan_update_fact_id: null
+      });
+    }
+
     const terminalTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
       next_status: terminalState,
       trigger: "receipt_recorded",
@@ -2422,6 +2510,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }, "api/v1/ao-act/receipts");
     return reply.send({
       ok: true,
+      deduped: false,
       fact_id: delegated.json.fact_id,
       wrapper_fact_id,
       operation_plan_id,
