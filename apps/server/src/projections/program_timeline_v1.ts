@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import GeoxContracts from "@geox/contracts";
 import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -149,31 +150,38 @@ export function projectProgramTimelineFromFacts(input: {
   }
 
   for (const row of acceptanceFacts) {
-    const p = row.record_json?.payload ?? {};
+    const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(row.record_json?.payload);
+    if (!parsed.success) continue;
+    const p = parsed.data;
     events.push({
       ts: eventTs(p, row.occurred_at),
       type: "acceptance_evaluated",
       fact_id: row.fact_id,
-      payload: { result: str(p.result ?? p.verdict), score: p.score ?? null, act_task_id: str(p.act_task_id) }
+      payload: { verdict: str(p.verdict), score: p.metrics.coverage_ratio, act_task_id: str(p.act_task_id) }
     });
 
-    const metrics = p.metrics ?? {};
-    if (metrics && (metrics.in_field_ratio != null || metrics.track_point_count != null || metrics.track_points_in_field != null)) {
+    const metrics = p.metrics;
+    if (metrics && (metrics.in_field_ratio != null || metrics.coverage_ratio != null || metrics.telemetry_delta != null)) {
       events.push({
         ts: eventTs(p, row.occurred_at),
         type: "spatial_acceptance_updated",
         fact_id: row.fact_id,
         payload: {
           in_field_ratio: Number(metrics.in_field_ratio ?? NaN),
-          track_point_count: Number(metrics.track_point_count ?? NaN),
-          track_points_in_field: Number(metrics.track_points_in_field ?? NaN)
+          coverage_ratio: Number(metrics.coverage_ratio ?? NaN),
+          telemetry_delta: Number(metrics.telemetry_delta ?? NaN)
         }
       });
     }
   }
 
   const sortedAcceptancePayloads = acceptanceFacts
-    .map((r) => ({ ...(r.record_json?.payload ?? {}), __ts: eventTs(r.record_json?.payload ?? {}, r.occurred_at) }))
+    .map((r) => {
+      const parsed = GeoxContracts.AcceptanceResultV1PayloadSchema.safeParse(r.record_json?.payload);
+      if (!parsed.success) return null;
+      return { ...parsed.data, __ts: eventTs(parsed.data, r.occurred_at) };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort((a, b) => Number(a.__ts) - Number(b.__ts));
   let lastHintKind = "";
   for (let i = 0; i < sortedAcceptancePayloads.length; i += 1) {

@@ -27,3 +27,40 @@ export * from "./schema/cost_record_v1";
 export * from "./schema/sla_evaluation_v1";
 export * from "./schema/executor_adapter_v1";
 export * from "./schema/ao_act_receipt_v1";
+
+export {
+  AcceptanceResultV1PayloadSchema,
+  AcceptanceVerdictV1Schema,
+  AcceptanceMetricsV1Schema,
+  type AcceptanceResultV1Payload,
+  type AcceptanceVerdictV1,
+  type AcceptanceMetricsV1,
+} from "./schema/acceptance_result_v1";
+
+export {
+  AcceptanceRuleV1PayloadSchema,
+  AcceptanceRuleV1Schema,
+  type AcceptanceRuleV1Payload,
+  type AcceptanceRuleV1,
+} from "./schema/acceptance_rule_v1";
+
+
+import {
+  AcceptanceResultV1PayloadSchema,
+  AcceptanceVerdictV1Schema,
+  AcceptanceMetricsV1Schema,
+} from "./schema/acceptance_result_v1";
+import {
+  AcceptanceRuleV1PayloadSchema,
+  AcceptanceRuleV1Schema,
+} from "./schema/acceptance_rule_v1";
+
+const GeoxContractsDefault = {
+  AcceptanceResultV1PayloadSchema,
+  AcceptanceVerdictV1Schema,
+  AcceptanceMetricsV1Schema,
+  AcceptanceRuleV1PayloadSchema,
+  AcceptanceRuleV1Schema,
+};
+
+export default GeoxContractsDefault;
