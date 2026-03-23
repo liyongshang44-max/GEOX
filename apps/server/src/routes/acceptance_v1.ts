@@ -3,12 +3,13 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
+import GeoxContracts from "@geox/contracts";
+import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
-const ACCEPTANCE_RULE_ID_V1 = "acceptance_rule_v1_irrigate_duration_80pct";
 
 type TenantTriple = {
   tenant_id: string;
@@ -179,6 +180,51 @@ async function inferFieldIdFromDeviceBinding(pool: Pool, tenantId: string, devic
   return q.rows?.length ? String(q.rows[0].field_id ?? "").trim() || null : null;
 }
 
+async function loadProgramAcceptancePolicyRef(
+  pool: Pool,
+  tenant: TenantTriple,
+  programId: string | null
+): Promise<string | null> {
+  if (!programId) return null;
+  const q = await pool.query(
+    `SELECT (record_json::jsonb #>> '{payload,acceptance_policy_ref}') AS acceptance_policy_ref
+       FROM facts
+      WHERE (record_json::jsonb ->> 'type') = 'field_program_v1'
+        AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+        AND (record_json::jsonb #>> '{payload,project_id}') = $2
+        AND (record_json::jsonb #>> '{payload,group_id}') = $3
+        AND (record_json::jsonb #>> '{payload,program_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, programId]
+  );
+  if (!q.rows?.length) return null;
+  const value = String(q.rows[0].acceptance_policy_ref ?? "").trim();
+  return value || null;
+}
+
+function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
+  if (result === "PASSED") return "PASS";
+  if (result === "FAILED") return "FAIL";
+  return "PARTIAL";
+}
+
+function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: Record<string, number> }; expectedDurationMin: number | null }): AcceptanceResultV1Payload["metrics"] {
+  const m = params.evaluated.metrics ?? {};
+  const inFieldRatio = Number(m.in_field_ratio);
+  const coverageRatio = Number(params.evaluated.score ?? m.coverage_ratio ?? 0);
+  const expected = Number(params.expectedDurationMin);
+  const actual = Number(m.actual_duration);
+  const telemetryDelta = Number.isFinite(expected) && expected > 0 && Number.isFinite(actual)
+    ? Math.abs(actual - expected) / expected
+    : 0;
+  return {
+    coverage_ratio: Number.isFinite(coverageRatio) ? coverageRatio : 0,
+    in_field_ratio: Number.isFinite(inFieldRatio) ? inFieldRatio : 0,
+    telemetry_delta: Number.isFinite(telemetryDelta) ? telemetryDelta : 0
+  };
+}
+
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
@@ -211,35 +257,40 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const end_ts_raw = Number(taskPayload?.time_window?.end_ts ?? 0);
       const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
       const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
-      const [field_polygon, track_points] = await Promise.all([
+      const program_id = typeof taskPayload?.program_id === "string" ? taskPayload.program_id : null;
+      const [field_polygon, track_points, acceptance_policy_ref] = await Promise.all([
         loadFieldPolygon(pool, tenant.tenant_id, field_id),
         loadTrackPoints(pool, tenant, device_id, start_ts, end_ts),
+        loadProgramAcceptancePolicyRef(pool, tenant, program_id)
       ]);
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
-        telemetry: { ...telemetry, field_polygon, track_points }
+        telemetry: { ...telemetry, field_polygon, track_points },
+        acceptance_policy_ref
       });
 
       const acceptanceFactId = randomUUID();
-      const nowTs = Date.now();
+      const nowIso = new Date().toISOString();
+      const expectedDurationMin = Number(taskPayload?.parameters?.duration_min);
       const acceptanceRecord = {
         type: "acceptance_result_v1",
-        payload: {
+        payload: GeoxContracts.AcceptanceResultV1PayloadSchema.parse({
+          acceptance_id: acceptanceFactId,
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
           group_id: tenant.group_id,
           act_task_id: body.act_task_id,
+          field_id: field_id ?? "unknown_field",
           operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : undefined,
           program_id: typeof taskPayload.program_id === "string" ? taskPayload.program_id : undefined,
-          result: evaluated.result,
-          score: evaluated.score,
-          metrics: evaluated.metrics,
-          rule_id: ACCEPTANCE_RULE_ID_V1,
-          evaluated_at_ts: nowTs,
+          verdict: toVerdict(evaluated.result),
+          metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),
+          rule_id: evaluated.rule_id,
+          evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id]
-        }
+        })
       };
 
       await pool.query(
@@ -249,7 +300,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
       return reply.send({
         ok: true,
-        result: evaluated.result,
+        verdict: acceptanceRecord.payload.verdict,
         fact_id: acceptanceFactId
       });
     } catch (error: any) {
