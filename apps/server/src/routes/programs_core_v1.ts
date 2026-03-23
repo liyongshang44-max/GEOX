@@ -11,6 +11,7 @@ import { projectProgramTimelineV1 } from "../projections/program_timeline_v1";
 import { projectProgramCostV1 } from "../projections/program_cost_v1";
 import { projectProgramSlaV1 } from "../projections/program_sla_v1";
 import { projectProgramEfficiencyV1 } from "../projections/program_efficiency_v1";
+import { compileProgramActionsV1 } from "../domain/planner/compiler_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const PROGRAM_STATUSES = new Set(["DRAFT", "ACTIVE", "PAUSED", "COMPLETED", "CANCELLED", "ARCHIVED"]);
@@ -456,6 +457,19 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const item = (await projectProgramEfficiencyV1(pool, tenant)).find((x) => x.program_id === program_id);
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, item });
+  });
+
+  get("/api/v1/programs/:program_id/actions", async (req: any, reply: any) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const program_id = String((req.params as any)?.program_id ?? "").trim();
+    if (!program_id) return reply.status(400).send({ ok: false, error: "MISSING_PROGRAM_ID" });
+
+    const compiled = await compileProgramActionsV1(pool, tenant, program_id);
+    if (!compiled) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    return reply.send({ ok: true, program_id, candidate_actions: compiled.candidate_actions });
   });
 
   post("/api/v1/programs/:program_id/transitions", async (req: any, reply: any) => {
