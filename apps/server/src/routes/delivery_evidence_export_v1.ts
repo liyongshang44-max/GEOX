@@ -401,10 +401,17 @@ function createExportJob(input: {
   };
 }
 
+
+function setLegacyDeprecatedWarning(reply: any): void {
+  reply.header("Warning", '299 - "Deprecated API: use /api/v1/evidence-export/jobs"');
+  reply.header("X-API-Deprecated", "true");
+}
+
 export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, pool: Pool): void { // Register Sprint 26 evidence export API v1 routes.
   // POST /api/delivery/evidence_export/v1/jobs
   // Creates an async export job that produces an artifact and an acceptance_result_v1 fact.
   const createJobHandler = async (req: any, reply: any) => { // Create job endpoint (enqueue only).
+    setLegacyDeprecatedWarning(reply);
     try { // Guard with try/catch for consistent 400 errors.
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
       if (!auth) return; // Stop if auth failed (handler already replied).
@@ -441,11 +448,12 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
     } // End catch.
   }; // End create job handler.
 
-  app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint.
+  app.post("/api/delivery/evidence_export/v1/jobs", createJobHandler); // Backward-compatible endpoint (deprecated: true).
 
   // GET /api/delivery/evidence_export/v1/jobs/:job_id
   // Returns job status + small result summary (including acceptance_result_v1 pointers).
   app.get("/api/delivery/evidence_export/v1/jobs/:job_id", async (req, reply) => { // Job status endpoint.
+    setLegacyDeprecatedWarning(reply);
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
     if (!auth) return; // Stop if auth failed.
 
@@ -485,6 +493,7 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
   // GET /api/delivery/evidence_export/v1/jobs/:job_id/download
   // Streams the produced artifact file to client (JSON file for v1).
   const downloadHandler = async (req: any, reply: any) => { // Shared download handler for stable endpoint aliases.
+    setLegacyDeprecatedWarning(reply);
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Require read-only AO-ACT scope.
     if (!auth) return; // Stop if auth failed.
 
@@ -517,7 +526,7 @@ export function registerDeliveryEvidenceExportV1Routes(app: FastifyInstance, poo
     return reply.send(rs); // Stream file to client.
   }; // End download handler.
 
-  app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route.
+  app.get("/api/delivery/evidence_export/v1/jobs/:job_id/download", downloadHandler); // Backward-compatible download route (deprecated: true).
   app.get("/evidence-export/jobs/:job_id/download", downloadHandler); // Stable alias with legacy param name.
 } // End register routes.
 
