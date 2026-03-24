@@ -1,23 +1,12 @@
 // GEOX/apps/web/src/views/ApprovalRequestsPage.tsx
 
 import React from "react";
-import { fetchAuthMe } from "../lib/api";
-
-type ApiItem = {
-  fact_id: string;
-  occurred_at: string;
-  source: string;
-  record_json: any;
-};
+import { fetchAuthMe } from "../api";
+import { approveApprovalRequest, createApprovalRequest, fetchApprovalRequests, type ApprovalRequestItem } from "../api/operations";
+import { useSession } from "../auth/useSession";
 
 export default function ApprovalRequestsPage(): React.ReactElement {
-  const [token, setToken] = React.useState<string>(() => {
-    try {
-      return localStorage.getItem("geox_ao_act_token") || "dev_ao_act_admin_v0";
-    } catch {
-      return "dev_ao_act_admin_v0";
-    }
-  });
+  const { token, setToken } = useSession();
 
   const [tenantId, setTenantId] = React.useState<string>("tenantA");
   const [projectId, setProjectId] = React.useState<string>("projectA");
@@ -29,41 +18,32 @@ export default function ApprovalRequestsPage(): React.ReactElement {
   const [startTs, setStartTs] = React.useState<string>(() => String(Date.now() - 60_000));
   const [endTs, setEndTs] = React.useState<string>(() => String(Date.now() + 60_000));
 
-  const [items, setItems] = React.useState<ApiItem[]>([]);
+  const [items, setItems] = React.useState<ApprovalRequestItem[]>([]);
   const [status, setStatus] = React.useState<string>("");
   const [role, setRole] = React.useState<string>("admin");
 
-  function authHeader(): Record<string, string> {
-    return { Authorization: `Bearer ${token}` };
-  }
-
-  async function refresh(): Promise<void> {
+  const refresh = React.useCallback(async (): Promise<void> => {
     setStatus("Loading...");
     try {
-      const u = `/api/control/approval_request/v1/requests?tenant_id=${encodeURIComponent(tenantId)}&project_id=${encodeURIComponent(
-        projectId
-      )}&group_id=${encodeURIComponent(groupId)}&limit=50`;
-      const resp = await fetch(u, { headers: { ...authHeader() } });
-      const j = await resp.json();
-      if (!resp.ok || !j?.ok) throw new Error(j?.error || `HTTP_${resp.status}`);
-      setItems(j.items || []);
+      const result = await fetchApprovalRequests({
+        tenant_id: tenantId,
+        project_id: projectId,
+        group_id: groupId,
+        limit: 50,
+      });
+      setItems(result);
       setStatus("OK");
     } catch (e: any) {
       setStatus(`ERROR: ${e?.message || String(e)}`);
     }
-  }
+  }, [tenantId, projectId, groupId]);
 
   async function createRequest(): Promise<void> {
     setStatus("Creating...");
     try {
       if (role === "operator") throw new Error("当前操作员角色不能发起或审批请求");
-      try {
-        localStorage.setItem("geox_ao_act_token", token);
-      } catch {
-        // ignore
-      }
 
-      const body = {
+      const result = await createApprovalRequest({
         tenant_id: tenantId,
         project_id: projectId,
         group_id: groupId,
@@ -74,17 +54,10 @@ export default function ApprovalRequestsPage(): React.ReactElement {
         parameter_schema: { keys: [] },
         parameters: {},
         constraints: {},
-        meta: { note: "created from ApprovalRequestsPage" }
-      };
-
-      const resp = await fetch(`/api/control/approval_request/v1/request`, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...authHeader() },
-        body: JSON.stringify(body)
+        meta: { note: "created from ApprovalRequestsPage" },
       });
-      const j = await resp.json();
-      if (!resp.ok || !j?.ok) throw new Error(j?.error || `HTTP_${resp.status}`);
-      setStatus(`Created request_id=${j.request_id}`);
+      if (!result?.ok) throw new Error(result?.error || "REQUEST_FAILED");
+      setStatus(`Created request_id=${result.request_id}`);
       await refresh();
     } catch (e: any) {
       setStatus(`ERROR: ${e?.message || String(e)}`);
@@ -95,14 +68,9 @@ export default function ApprovalRequestsPage(): React.ReactElement {
     if (role === "operator") { setStatus("当前操作员角色不能审批"); return; }
     setStatus(`Approving ${requestId}...`);
     try {
-      const resp = await fetch(`/api/control/approval_request/v1/approve`, {
-        method: "POST",
-        headers: { "content-type": "application/json", ...authHeader() },
-        body: JSON.stringify({ request_id: requestId })
-      });
-      const j = await resp.json();
-      if (!resp.ok || !j?.ok) throw new Error(j?.error || `HTTP_${resp.status}`);
-      setStatus(`Approved: act_task_id=${j.act_task_id}`);
+      const result = await approveApprovalRequest(requestId);
+      if (!result?.ok) throw new Error(result?.error || "APPROVE_FAILED");
+      setStatus(`Approved: act_task_id=${result.act_task_id}`);
       await refresh();
     } catch (e: any) {
       setStatus(`ERROR: ${e?.message || String(e)}`);
@@ -110,10 +78,9 @@ export default function ApprovalRequestsPage(): React.ReactElement {
   }
 
   React.useEffect(() => {
-    fetchAuthMe(token).then((me) => setRole(me.role)).catch(() => setRole("admin"));
+    fetchAuthMe().then((me) => setRole(me.role)).catch(() => setRole("admin"));
     void refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refresh]);
 
   return (
     <div className="page">

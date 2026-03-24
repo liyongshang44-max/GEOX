@@ -1,5 +1,6 @@
 ﻿// GEOX/apps/web/src/lib/api.ts
 import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1, MarkerKind } from "./contracts";
+import { requestJson as requestJsonClient } from "../api/client";
 
 export type GroupsResponse = { groups: SensorGroupV1[] };
 
@@ -45,31 +46,7 @@ export function persistAoActToken(next: string): string { // Persist the AO-ACT 
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const token = readStoredAoActToken();
-  const apiBase = "http://127.0.0.1:3000";
-  const finalUrl = /^https?:\/\//i.test(url) ? url : `${apiBase}${url}`;
-
-  const baseHeaders =
-    init?.body instanceof FormData
-      ? { ...(init?.headers ?? {}) }
-      : {
-          "Content-Type": "application/json",
-          ...(init?.headers ?? {}),
-        };
-
-  const headers: HeadersInit = {
-    ...baseHeaders,
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-
-  const res = await fetch(finalUrl, {
-    ...init,
-    headers,
-  });
-
-  const text = await res.text();
-  if (!res.ok) throw new ApiError(res.status, text);
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  return requestJsonClient<T>(url, init);
 }
 
 function authHeaders(token: string): HeadersInit {
@@ -253,10 +230,10 @@ export async function postAdminImportCafHourly(params: {
   if (params.writeRawSamples) fd.append("writeRawSamples", params.writeRawSamples);
   if (params.writeMarkers) fd.append("writeMarkers", params.writeMarkers);
 
-  const res = await fetch(`/api/admin/import/caf_hourly`, { method: "POST", body: fd });
-  const text = await res.text();
-  if (!res.ok) throw new ApiError(res.status, text);
-  return JSON.parse(text) as { ok: boolean; jobId: string; filePath: string };
+  return requestJson<{ ok: boolean; jobId: string; filePath: string }>(`/api/admin/import/caf_hourly`, {
+    method: "POST",
+    body: fd,
+  });
 }
 
 export async function fetchAdminImportJob(jobId: string): Promise<{ ok: boolean; job: ImportJob }> {
