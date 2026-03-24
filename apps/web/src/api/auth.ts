@@ -1,4 +1,4 @@
-import { requestJson } from "./client";
+import { apiRequest } from "./client";
 
 export type AuthMe = {
   ok: boolean;
@@ -12,5 +12,5 @@ export type AuthMe = {
 };
 
 export async function fetchAuthMe(): Promise<AuthMe> {
-  return requestJson<AuthMe>("/api/v1/auth/me");
+  return apiRequest<AuthMe>("/api/v1/auth/me");
 }
