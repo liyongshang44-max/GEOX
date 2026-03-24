@@ -9,6 +9,7 @@ import {
 } from "../api";
 import {
   buildProgramDetailViewModel,
+  missingDataExplanation,
   type ProgramDetailViewModel,
 } from "../viewmodels/programDetailViewModel";
 
@@ -73,7 +74,7 @@ export function useProgramDetail(programId: string): {
         setConflicts(Array.from(new Set(kinds)));
 
         setLoading(false);
-        if (!detail) setError("暂无足够数据支持判断");
+        if (!detail) setError(missingDataExplanation("Program详情"));
       })
       .catch(() => {
         if (!active) return;
@@ -83,7 +84,7 @@ export function useProgramDetail(programId: string): {
         setSla(null);
         setEfficiency(null);
         setConflicts([]);
-        setError("暂无足够数据支持判断");
+        setError(missingDataExplanation("Program详情"));
         setLoading(false);
       });
 

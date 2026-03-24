@@ -2,11 +2,17 @@ export type BadgeStatus = "success" | "warning" | "failed" | "pending";
 
 export type ProgramActionMode = "AUTO" | "APPROVAL_REQUIRED" | "BLOCKED" | "PENDING";
 
+export type ProgramActionExpectation = {
+  label: "下一次评估时间" | "触发条件";
+  value: string;
+};
+
 export type ProgramDetailAction = {
   type: string;
   mode: ProgramActionMode;
   reason: string;
   expectedEffect: string;
+  expectation: ProgramActionExpectation;
 };
 
 export type ProgramDetailTimelineItem = {
@@ -30,9 +36,14 @@ export type ProgramDetailViewModel = {
   goals: Array<{ label: string; value: string }>;
   constraints: Array<{ label: string; value: string }>;
   actions: ProgramDetailAction[];
+  noActionExpectation: ProgramActionExpectation;
   timeline: ProgramDetailTimelineItem[];
   metrics: ProgramDetailMetric[];
 };
+
+export function missingDataExplanation(subject: string): string {
+  return `当前缺少${subject}数据，暂无法判断，系统将持续监测。`;
+}
 
 function safeText(value: unknown, fallback: string): string {
   if (typeof value === "string") {
@@ -92,6 +103,29 @@ function shortDate(value: unknown, fallback: string): string {
   return new Date(ms).toLocaleString();
 }
 
+function buildExpectation(item: any): ProgramActionExpectation {
+  const nextEvaluateAt = safeText(item?.next_action_hint?.next_evaluate_at ?? item?.next_evaluation_at, "");
+  if (nextEvaluateAt) {
+    return {
+      label: "下一次评估时间",
+      value: shortDate(nextEvaluateAt, missingDataExplanation("下一次评估时间")),
+    };
+  }
+
+  const triggerCondition = safeText(item?.next_action_hint?.trigger_condition, "");
+  if (triggerCondition) {
+    return {
+      label: "触发条件",
+      value: triggerCondition,
+    };
+  }
+
+  return {
+    label: "触发条件",
+    value: missingDataExplanation("触发条件"),
+  };
+}
+
 export function buildProgramDetailViewModel(args: {
   programId: string;
   item: any;
@@ -103,14 +137,23 @@ export function buildProgramDetailViewModel(args: {
 }): ProgramDetailViewModel {
   const { programId, item, trajectories, cost, sla, efficiency, conflicts } = args;
 
-  const fallbackData = "暂无足够数据支持判断";
+  const fallbackData = missingDataExplanation("关键");
   const titleId = decodeURIComponent(programId || "");
   const actionMode = toMode(item?.next_action_hint?.mode ?? item?.next_action_hint?.decision_mode);
+  const expectation = buildExpectation(item);
+
   const primaryAction: ProgramDetailAction = {
     type: toActionType(item?.next_action_hint?.kind),
     mode: actionMode,
-    reason: safeText(item?.current_risk_summary?.reason ?? item?.latest_acceptance_result?.summary, fallbackData),
-    expectedEffect: safeText(item?.next_action_hint?.expected_effect, "执行后将降低风险并提升执行稳定性"),
+    reason: safeText(
+      item?.current_risk_summary?.reason ?? item?.latest_acceptance_result?.summary,
+      missingDataExplanation("风险原因"),
+    ),
+    expectedEffect: safeText(
+      item?.next_action_hint?.expected_effect,
+      "执行后预计降低当前风险，并提高任务执行稳定性。",
+    ),
+    expectation,
   };
 
   const inFieldRatio = asNumber(item?.latest_acceptance_result?.metrics?.in_field_ratio);
@@ -132,7 +175,8 @@ export function buildProgramDetailViewModel(args: {
       { label: "执行模式", value: toHumanMode(actionMode) },
       { label: "调度冲突", value: conflicts.length > 0 ? conflicts.join("，") : "无" },
     ],
-    actions: primaryAction.reason === fallbackData ? [] : [primaryAction],
+    actions: primaryAction.reason === missingDataExplanation("风险原因") ? [] : [primaryAction],
+    noActionExpectation: expectation,
     timeline: [
       {
         kind: "推荐生成",
@@ -150,14 +194,14 @@ export function buildProgramDetailViewModel(args: {
         kind: "验收结论",
         status: safeText(item?.latest_acceptance_result?.verdict, fallbackData),
         occurredAt: shortDate(item?.latest_acceptance_result?.occurred_at ?? item?.updated_at, fallbackData),
-        summary: safeText(item?.latest_acceptance_result?.summary, fallbackData),
+        summary: safeText(item?.latest_acceptance_result?.summary, missingDataExplanation("验收结论")),
       },
     ],
     metrics: [
-      { label: "累计成本", value: costTotal == null ? fallbackData : `${costTotal.toFixed(2)}` },
-      { label: "SLA", value: safeText(sla?.latest_status, fallbackData) },
-      { label: "执行稳定度", value: efficiencyIndex == null ? fallbackData : efficiencyIndex.toFixed(3) },
-      { label: "在田覆盖率", value: inFieldRatio == null ? fallbackData : `${(inFieldRatio * 100).toFixed(1)}%` },
+      { label: "累计成本", value: costTotal == null ? missingDataExplanation("累计成本") : `${costTotal.toFixed(2)}` },
+      { label: "SLA", value: safeText(sla?.latest_status, missingDataExplanation("SLA")) },
+      { label: "执行稳定度", value: efficiencyIndex == null ? missingDataExplanation("执行稳定度") : efficiencyIndex.toFixed(3) },
+      { label: "在田覆盖率", value: inFieldRatio == null ? missingDataExplanation("在田覆盖率") : `${(inFieldRatio * 100).toFixed(1)}%` },
       { label: "轨迹任务数", value: trajectories.length > 0 ? String(trajectories.length) : "0" },
     ],
   };

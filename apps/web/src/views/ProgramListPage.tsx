@@ -104,6 +104,18 @@ export default function ProgramListPage(): React.ReactElement {
                 </div>
               </div>
 
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">风险原因</div>
+                  <div style={{ fontWeight: 600 }}>{resolveText(card.riskReason)}</div>
+                </div>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">最近更新时间</div>
+                  <div style={{ fontWeight: 600 }}>{card.updatedAtText}</div>
+                </div>
+              </div>
+
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
                 {card.metrics.map((metric) => (
                   <div key={metric.labelKey} style={{ borderRadius: 8, padding: 10, ...metricBlockStyle(metric.tone) }}>

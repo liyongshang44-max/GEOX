@@ -1,5 +1,5 @@
 import React from "react";
-import type { BadgeStatus, ProgramDetailAction } from "../../viewmodels/programDetailViewModel";
+import type { BadgeStatus, ProgramActionExpectation, ProgramDetailAction } from "../../viewmodels/programDetailViewModel";
 
 function mapMode(mode: string): BadgeStatus {
   switch (mode) {
@@ -28,22 +28,29 @@ function statusText(mode: string): string {
 }
 
 function StatusBadge({ status }: { status: BadgeStatus }): React.ReactElement {
-  const styleMap: Record<BadgeStatus, { bg: string; color: string }> = {
-    success: { bg: "#ecfdf3", color: "#027a48" },
-    warning: { bg: "#fffaeb", color: "#b54708" },
-    failed: { bg: "#fef3f2", color: "#b42318" },
-    pending: { bg: "#f2f4f7", color: "#344054" },
+  const styleMap: Record<BadgeStatus, { bg: string; color: string; text: string }> = {
+    success: { bg: "#ecfdf3", color: "#027a48", text: "可执行" },
+    warning: { bg: "#fffaeb", color: "#b54708", text: "需确认" },
+    failed: { bg: "#fef3f2", color: "#b42318", text: "不可执行" },
+    pending: { bg: "#f2f4f7", color: "#344054", text: "待确认" },
   };
   const style = styleMap[status] ?? styleMap.pending;
-  return <span className="pill" style={{ background: style.bg, color: style.color }}>{status}</span>;
+  return <span className="pill" style={{ background: style.bg, color: style.color }}>{style.text}</span>;
 }
 
-export function ProgramActionsPanel({ actions }: { actions: ProgramDetailAction[] }): React.ReactElement {
+export function ProgramActionsPanel({
+  actions,
+  noActionExpectation,
+}: {
+  actions: ProgramDetailAction[];
+  noActionExpectation: ProgramActionExpectation;
+}): React.ReactElement {
   if (!actions || actions.length === 0) {
     return (
       <section className="card" style={{ padding: 16, display: "grid", gap: 8 }}>
         <h2 style={{ margin: 0 }}>下一步动作</h2>
         <p style={{ margin: 0 }}>当前无需新增操作，系统正在持续监测状态。</p>
+        <p className="muted" style={{ margin: 0 }}>{noActionExpectation.label}：{noActionExpectation.value}</p>
       </section>
     );
   }
@@ -61,6 +68,7 @@ export function ProgramActionsPanel({ actions }: { actions: ProgramDetailAction[
           <div style={{ display: "grid", gap: 4 }}>
             <div>原因：{a.reason}</div>
             <div>预期效果：{a.expectedEffect}</div>
+            <div className="muted">{a.expectation.label}：{a.expectation.value}</div>
             <div className="muted">模式：{statusText(a.mode)}</div>
           </div>
 

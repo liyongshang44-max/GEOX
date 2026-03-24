@@ -18,7 +18,10 @@ export default function ProgramDetailPage(): React.ReactElement {
   return (
     <div className="program-detail" style={{ display: "grid", gap: 12 }}>
       <ProgramHero vm={viewModel} />
-      <ProgramActionsPanel actions={viewModel.actions} />
+      <ProgramActionsPanel
+        actions={viewModel.actions}
+        noActionExpectation={viewModel.noActionExpectation}
+      />
       <ProgramTimeline timeline={viewModel.timeline} />
       <ProgramMetricsPanel metrics={viewModel.metrics} />
       <ProgramEvidencePanel programId={programId} />
