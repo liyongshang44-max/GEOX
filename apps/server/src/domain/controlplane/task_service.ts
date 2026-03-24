@@ -1240,9 +1240,10 @@ function adapterSupportsAction(adapterType: string, actionType: string): boolean
   const a = String(adapterType ?? "").trim().toLowerCase();
   const action = String(actionType ?? "").trim().toLowerCase();
   if (!a || !action) return false;
-  if (a === "mqtt" && action === "irrigate") return true; // Keep explicit mqtt+irrigate allowlist for task_type/action_type compatibility.
-  if (a === "mqtt") return true;
-  if (a === "irrigation_real" || a === "irrigation_simulator" || a === "irrigation_http_v1") {
+  const adapter = a === "mqtt_downlink_once_v1" ? "mqtt" : a; // Keep mqtt alias aligned with normalizeAdapterHint("mqtt").
+  if (adapter === "mqtt" && action === "irrigate") return true; // Explicitly allow adapter_type=mqtt + task_type/action_type=IRRIGATE.
+  if (adapter === "mqtt") return true;
+  if (adapter === "irrigation_real" || adapter === "irrigation_simulator" || adapter === "irrigation_http_v1") {
     return action === "irrigation.start" || action === "irrigate";
   }
   return false;
