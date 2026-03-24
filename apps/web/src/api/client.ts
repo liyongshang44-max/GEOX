@@ -1,15 +1,18 @@
 import { readSessionToken } from "../auth/authStorage";
 
-const API_BASE = "http://127.0.0.1:3000";
+const DEFAULT_API_BASE_URL = "http://127.0.0.1:3000";
+export const API_BASE_URL = String((import.meta as any)?.env?.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
 
 export class ApiError extends Error {
   public status: number;
   public bodyText: string;
+  public url: string;
 
-  constructor(status: number, bodyText: string) {
-    super(`API ${status}`);
+  constructor(status: number, bodyText: string, url: string) {
+    super(`API ${status} ${url}`);
     this.status = status;
     this.bodyText = bodyText;
+    this.url = url;
   }
 }
 
@@ -27,9 +30,13 @@ export function withQuery(path: string, params?: Record<string, unknown>): strin
   return queryString ? `${path}?${queryString}` : path;
 }
 
-export async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
+function resolveUrl(path: string): string {
+  return /^https?:\/\//i.test(path) ? path : `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = readSessionToken();
-  const finalUrl = /^https?:\/\//i.test(path) ? path : `${API_BASE}${path}`;
+  const finalUrl = resolveUrl(path);
   const baseHeaders = init?.body instanceof FormData
     ? { ...(init?.headers ?? {}) }
     : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
@@ -43,6 +50,15 @@ export async function requestJson<T>(path: string, init?: RequestInit): Promise<
   });
 
   const text = await response.text();
-  if (!response.ok) throw new ApiError(response.status, text);
-  return text ? (JSON.parse(text) as T) : ({} as T);
+  if (!response.ok) {
+    throw new ApiError(response.status, text, finalUrl);
+  }
+
+  try {
+    return text ? (JSON.parse(text) as T) : ({} as T);
+  } catch {
+    throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 300)}`, finalUrl);
+  }
 }
+
+export const requestJson = apiRequest;
