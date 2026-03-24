@@ -74,7 +74,7 @@ export function useProgramDetail(programId: string): {
         setConflicts(Array.from(new Set(kinds)));
 
         setLoading(false);
-        if (!detail) setError(missingDataExplanation("Program详情"));
+        if (!detail) setError(missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议"));
       })
       .catch(() => {
         if (!active) return;
@@ -84,7 +84,7 @@ export function useProgramDetail(programId: string): {
         setSla(null);
         setEfficiency(null);
         setConflicts([]);
-        setError(missingDataExplanation("Program详情"));
+        setError(missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议"));
         setLoading(false);
       });
 
