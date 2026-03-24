@@ -1240,9 +1240,10 @@ function adapterSupportsAction(adapterType: string, actionType: string): boolean
   const a = String(adapterType ?? "").trim().toLowerCase();
   const action = String(actionType ?? "").trim().toLowerCase();
   if (!a || !action) return false;
-  if (a === "mqtt" && action === "irrigate") return true; // Explicitly allow adapter_type=mqtt + task_type/action_type=IRRIGATE.
-  if (a === "mqtt") return true;
-  if (a === "irrigation_real" || a === "irrigation_simulator" || a === "irrigation_http_v1") {
+  const adapter = a === "mqtt_downlink_once_v1" ? "mqtt" : a; // Keep mqtt alias aligned with normalizeAdapterHint("mqtt").
+  if (adapter === "mqtt" && action === "irrigate") return true; // Explicitly allow adapter_type=mqtt + task_type/action_type=IRRIGATE.
+  if (adapter === "mqtt") return true;
+  if (adapter === "irrigation_real" || adapter === "irrigation_simulator" || adapter === "irrigation_http_v1") {
     return action === "irrigation.start" || action === "irrigate";
   }
   return false;
@@ -1759,10 +1760,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const taskPayload = taskFact.record_json?.payload ?? {};
-    const adapterType = String(taskPayload?.adapter_type ?? body.adapter_hint ?? "").trim();
+    const adapterType = String(body.adapter_hint ?? taskPayload?.adapter_type ?? "").trim();
+    const actionType = resolveActionType(taskPayload);
+    console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${String(adapterType).trim().toLowerCase()} action_type=${String(actionType).trim().toLowerCase()} task_type=${String(taskPayload?.task_type ?? "").trim().toLowerCase()}`);
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, resolveActionType(taskPayload))) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+    if (!adapterSupportsAction(adapterType, actionType)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
     const adapterValidation = validateAdapterTask(adapterType, taskPayload);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
@@ -1786,7 +1789,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         downlink_topic: typeof existingPayload.downlink_topic === "string" ? existingPayload.downlink_topic : null,
         qos: Math.max(0, Math.min(2, Number.parseInt(String(existingPayload.qos ?? body.qos ?? "1"), 10) || 1)),
         retain: Boolean(existingPayload.retain ?? body.retain ?? false),
-        adapter_hint: typeof existingPayload.adapter_hint === "string" ? normalizeAdapterHint(existingPayload.adapter_hint) : normalizeAdapterHint(body.adapter_hint)
+        adapter_hint: normalizeAdapterHint(body.adapter_hint ?? existingPayload.adapter_hint)
       });
       const dispatchedTransition = await ensureOperationPlanAtLeastDispatched(
         pool,
