@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { createAdapterRegistry, findAdapterByType, type AoActTask } from "./adapters";
+import { createAdapterRegistry, findAdapterByType } from "./adapters";
 import { claimDispatchTasks } from "./lib/claim";
 
 type Args = {
@@ -72,7 +72,7 @@ async function httpJson(url: string, token: string, init?: RequestInit): Promise
   return obj;
 }
 
-function toAoActTask(item: any, args: Args): AoActTask {
+function toAoActTask(item: any, args: Args): any {
   const taskPayload = item?.task?.payload ?? {};
   const taskMeta = taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {};
   const itemMeta = item?.meta && typeof item.meta === "object" ? item.meta : {};
@@ -140,7 +140,7 @@ function markTerminalDedupe(taskId: string, nowMs: number, dedupeMs: number): vo
   recentTerminalByTask.set(taskId, nowMs + dedupeMs);
 }
 
-function logExecutionEvent(task: AoActTask, adapter: string, status: "SUCCEEDED" | "FAILED", startedAtMs: number): void {
+function logExecutionEvent(task: any, adapter: string, status: "SUCCEEDED" | "FAILED", startedAtMs: number): void {
   const durationMs = Math.max(0, Date.now() - startedAtMs);
   const payload = {
     task_id: task.act_task_id,
@@ -153,7 +153,7 @@ function logExecutionEvent(task: AoActTask, adapter: string, status: "SUCCEEDED"
   console.log(`EXECUTION_EVENT ${JSON.stringify(payload)}`);
 }
 
-async function writeDispatchState(args: Args, task: AoActTask, state: DispatchState): Promise<void> {
+async function writeDispatchState(args: Args, task: any, state: DispatchState): Promise<void> {
   console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
   try {
     const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
@@ -178,7 +178,7 @@ async function writeDispatchState(args: Args, task: AoActTask, state: DispatchSt
   }
 }
 
-async function getReceipts(args: Args, task: AoActTask): Promise<any[]> {
+async function getReceipts(args: Args, task: any): Promise<any[]> {
   const out = await httpJson(
     `${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(task.tenant_id)}&project_id=${encodeURIComponent(task.project_id)}&group_id=${encodeURIComponent(task.group_id)}&act_task_id=${encodeURIComponent(task.act_task_id)}&limit=50`,
     args.token,
@@ -194,7 +194,7 @@ function hasReceiptIdempotencyKey(items: any[], taskId: string, attemptNo: numbe
 
 async function appendReceiptV1(
   args: Args,
-  task: AoActTask,
+  task: any,
   attemptNo: number,
   receipt_status: "ACKED" | "RUNNING" | "SUCCEEDED" | "FAILED",
   adapter_type: string,
@@ -328,7 +328,7 @@ export async function runDispatchOnce(cliArgs?: string[]): Promise<void> {
       const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
       console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
       await writeDispatchState(args, task, "DISPATCHED");
-      const execTask: AoActTask = {
+      const execTask = {
         ...task,
         runtime: {
           executor_id: args.executor_id,
