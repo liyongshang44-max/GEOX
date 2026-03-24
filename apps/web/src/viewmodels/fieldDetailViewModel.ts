@@ -1,0 +1,173 @@
+import {
+  formatRiskStatus,
+  mapAlertTypeToLabel,
+  mapOperationTypeToLabel,
+  mapSourceFieldToLabel,
+  type FieldLang,
+} from "../lib/fieldViewModel";
+
+function fmtTs(ms: number | null | undefined): string {
+  if (!ms || !Number.isFinite(ms)) return "-";
+  return new Date(ms).toLocaleString();
+}
+
+function fmtIso(ts: string | null | undefined): string {
+  if (!ts) return "-";
+  const ms = Date.parse(ts);
+  return Number.isFinite(ms) ? new Date(ms).toLocaleString() : ts;
+}
+
+type ExecutionStatus = "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
+
+function executionColor(status: ExecutionStatus): string {
+  if (status === "READY") return "#2563eb";
+  if (status === "DISPATCHED") return "#f79009";
+  if (status === "SUCCEEDED") return "#12b76a";
+  return "#f04438";
+}
+
+export function buildFieldDetailViewModel(params: {
+  detail: any;
+  labels: any;
+  lang: FieldLang;
+  activeOperations: any[];
+  recentRecommendations: any[];
+  currentProgram: any;
+  programsBySeason: Array<{ season_id: string; count: number; programs: any[] }>;
+  playbackTs: number;
+}) {
+  const { detail, labels, lang, activeOperations, recentRecommendations, currentProgram, programsBySeason, playbackTs } = params;
+
+  const operationItems = (Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : []).map((item: any) => {
+    const sourceRaw = String(item?.timing_source ?? "");
+    const source = mapSourceFieldToLabel(sourceRaw, lang);
+    const statusLabel = sourceRaw.includes("receipt") ? labels.opCompleted : labels.opPlanned;
+    const window = item.trajectory_window_start_ts_ms
+      ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}`
+      : "-";
+    return {
+      id: String(item.id ?? `${item.task_type}_${item.ts_ms || 0}`),
+      actTaskId: String(item.act_task_id ?? ""),
+      type: mapOperationTypeToLabel(item.task_type, lang),
+      time: fmtTs(item.ts_ms),
+      timeMs: Number(item.ts_ms ?? 0),
+      source,
+      status: statusLabel,
+      device: item.device_id || "-",
+      window,
+      raw: item,
+    };
+  });
+
+  const alertItems = (Array.isArray(detail?.recent_alerts) ? detail.recent_alerts : []).map((event: any) => {
+    const s = String(event.status ?? "").toUpperCase();
+    const statusLabel = s === "OPEN" ? labels.alertOpen : s === "ACKED" ? labels.alertAck : s === "CLOSED" ? labels.alertClosed : labels.unknown;
+    return {
+      id: String(event.event_id ?? `${event.metric}_${event.raised_ts_ms || 0}`),
+      type: mapAlertTypeToLabel(event.metric, lang),
+      status: statusLabel,
+      target: event.object_id || "-",
+      time: fmtIso(event.raised_at) !== "-" ? fmtIso(event.raised_at) : fmtTs(event.raised_ts_ms),
+      timeMs: Number(event.raised_ts_ms ?? Date.parse(event.raised_at ?? "") ?? 0),
+      suggestion: event.suggested_action || event.suggestion || null,
+      severity: event.severity || null,
+      raw: event,
+    };
+  });
+
+  const timelineEvents = [
+    ...(detail?.map_layers?.markers || []).map((m: any) => ({ ts: Number(m.ts_ms ?? 0), type: "telemetry", label: `${labels.devicePosition} ${m.device_id}` })),
+    ...(detail?.recent_receipts || []).map((r: any) => ({ ts: Number(Date.parse(String(r.occurred_at ?? ""))) || 0, type: "receipt", label: `${labels.source}: ${labels.alerts}` })),
+    ...operationItems.map((op) => ({ ts: Number(op.timeMs || 0), type: "plan_transition", label: `${labels.operations}: ${op.type}` })),
+  ]
+    .filter((x) => Number.isFinite(x.ts) && x.ts > 0)
+    .sort((a, b) => a.ts - b.ts);
+
+  const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
+  const receiptByTask = new Map<string, any>();
+  for (const receipt of detail?.recent_receipts || []) {
+    const actTaskId = String(receipt?.receipt?.payload?.act_task_id ?? "").trim();
+    if (actTaskId) receiptByTask.set(actTaskId, receipt);
+  }
+
+  const trajectorySegments = operationItems.map((op) => {
+    const traj = trajectories.find((t: any) => String(t.device_id ?? "") === String(op.raw?.device_id ?? ""));
+    const points = Array.isArray(traj?.points) ? traj.points : [];
+    const start = Number(op.raw?.start_ts_ms ?? 0);
+    const end = Number(op.raw?.end_ts_ms ?? Number.MAX_SAFE_INTEGER);
+    const clipped = points
+      .filter((p: any) => Number(p.ts_ms) >= start && Number(p.ts_ms) <= end && Number(p.ts_ms) <= playbackTs)
+      .map((p: any) => [Number(p.lon), Number(p.lat)] as [number, number]);
+    const receipt = op.actTaskId ? receiptByTask.get(op.actTaskId) : null;
+    const receiptStatus = String(receipt?.receipt?.payload?.status ?? "").toUpperCase();
+    let statusCode: ExecutionStatus = "READY";
+    if (receiptStatus.includes("FAIL")) statusCode = "FAILED";
+    else if (receiptStatus.includes("SUCCESS") || receiptStatus.includes("SUCC") || op.source === labels.fromReceipt) statusCode = "SUCCEEDED";
+    else if (op.source === labels.fromSchedule) statusCode = "DISPATCHED";
+    return {
+      id: op.id,
+      status: statusCode,
+      color: executionColor(statusCode),
+      coordinates: clipped,
+      label: op.type,
+    };
+  }).filter((s) => s.coordinates.length > 1);
+
+  const rawMarkers = Array.isArray(detail?.map_layers?.markers) ? detail.map_layers.markers : [];
+  const playbackMarkers = rawMarkers.filter((m: any) => Number(m.ts_ms ?? 0) <= playbackTs);
+  const acceptancePoints = operationItems
+    .filter((x) => x.raw?.location)
+    .map((x) => ({ id: x.id, status: x.status, lat: Number(x.raw.location.lat), lon: Number(x.raw.location.lon) }));
+
+  const lastOp = operationItems[0];
+  const summaryCards = [
+    { label: labels.area, value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "-" },
+    { label: labels.crop, value: detail?.latest_season?.crop || detail?.season?.crop || "-" },
+    { label: labels.season, value: detail?.latest_season?.name || detail?.latest_season?.season_id || "-" },
+    { label: labels.devices, value: String(detail?.summary?.device_count ?? 0) },
+    { label: labels.lastOperation, value: lastOp?.type || "-" },
+    { label: labels.riskStatus, value: formatRiskStatus(detail, lang) },
+  ];
+
+  const seasonOptions = programsBySeason.map((x) => String(x.season_id)).filter(Boolean).sort();
+
+  const currentOperation = activeOperations[0] ?? null;
+  const currentProgress = currentOperation
+    ? String(currentOperation.final_status) === "SUCCESS" ? 100
+      : String(currentOperation.final_status) === "RUNNING" ? 70
+        : String(currentOperation.final_status) === "FAILED" ? 100
+          : 30
+    : 0;
+
+  const recentTimeline = [
+    ...activeOperations.slice(0, 4).map((x: any) => ({ ts: x.last_event_ts, text: `${x.action_type || "Operation"} ${String(x.final_status ?? "")}` })),
+    ...recentRecommendations.slice(0, 4).map((x: any) => ({ ts: Number(Date.parse(String(x.occurred_at ?? ""))) || 0, text: `${x.recommendation_type || "Recommendation"} ${x.latest_status || x.status || ""}`.trim() })),
+    ...alertItems.slice(0, 4).map((x) => ({ ts: Number(x.timeMs ?? 0), text: `${x.type} ${x.status}` })),
+  ]
+    .filter((x) => Number.isFinite(x.ts) && x.ts > 0)
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 8);
+
+  return {
+    detail,
+    summaryCards,
+    operationItems,
+    alertItems,
+    timelineEvents,
+    currentOperation,
+    currentProgress,
+    recentTimeline,
+    currentProgram,
+    programsBySeason,
+    seasonOptions,
+    recentRecommendations,
+    mapInput: {
+      polygonGeoJson: detail?.geometry || detail?.polygon?.geojson_json,
+      heatGeoJson: detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] },
+      rawMarkers,
+      playbackMarkers,
+      trajectorySegments,
+      acceptancePoints,
+    },
+  };
+}
