@@ -1,66 +1,73 @@
 import React from "react";
 import {
-  fetchAuthMe,
   fetchDashboardAcceptanceRisks,
   fetchDashboardEvidenceSummary,
   fetchDashboardOverview,
   fetchDashboardPendingActions,
-  fetchPrograms,
-  type AuthMe,
-  type DashboardOverview,
+  fetchProgramPortfolio,
 } from "../api";
-import { buildDashboardViewModel } from "../viewmodels/dashboardViewModel";
+import { buildDashboardViewModel, type DashboardVM } from "../viewmodels/dashboardViewModel";
 
 export function useDashboard(): {
-  session: AuthMe | null;
   loading: boolean;
-  message: string;
-  model: ReturnType<typeof buildDashboardViewModel>;
+  error: string | null;
+  vm: DashboardVM;
   reload: () => Promise<void>;
 } {
-  const [session, setSession] = React.useState<AuthMe | null>(null);
   const [loading, setLoading] = React.useState<boolean>(true);
-  const [message, setMessage] = React.useState<string>("");
-  const [overview, setOverview] = React.useState<DashboardOverview | null>(null);
-  const [activePrograms, setActivePrograms] = React.useState<any[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
+  const [overview, setOverview] = React.useState<any>(null);
+  const [portfolio, setPortfolio] = React.useState<any[]>([]);
   const [evidenceItems, setEvidenceItems] = React.useState<any[]>([]);
   const [riskItems, setRiskItems] = React.useState<any[]>([]);
   const [pendingActions, setPendingActions] = React.useState<any[]>([]);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
-    const now = Date.now();
-    const start = now - 24 * 60 * 60 * 1000;
+    setError(null);
     try {
-      const [nextOverview, nextSession, nextPrograms, nextEvidence, nextRisks, nextPending] = await Promise.all([
-        fetchDashboardOverview({ from_ts_ms: start, to_ts_ms: now }),
-        fetchAuthMe().catch(() => null),
-        fetchPrograms({ status: "ACTIVE", limit: 6 }).catch(() => []),
-        fetchDashboardEvidenceSummary(6).catch(() => []),
-        fetchDashboardAcceptanceRisks(6).catch(() => []),
-        fetchDashboardPendingActions(6).catch(() => []),
+      const now = Date.now();
+      const start = now - 24 * 60 * 60 * 1000;
+      const [nextOverview, nextPortfolio, nextEvidence, nextRisks, nextPending] = await Promise.all([
+        fetchDashboardOverview({ from_ts_ms: start, to_ts_ms: now }).catch(() => null),
+        fetchProgramPortfolio({ limit: 80 }).catch(() => []),
+        fetchDashboardEvidenceSummary(8).catch(() => []),
+        fetchDashboardAcceptanceRisks(8).catch(() => []),
+        fetchDashboardPendingActions(12).catch(() => []),
       ]);
 
       setOverview(nextOverview);
-      setSession(nextSession);
-      setActivePrograms(Array.isArray(nextPrograms) ? nextPrograms : []);
+      setPortfolio(Array.isArray(nextPortfolio) ? nextPortfolio : []);
       setEvidenceItems(Array.isArray(nextEvidence) ? nextEvidence : []);
       setRiskItems(Array.isArray(nextRisks) ? nextRisks : []);
       setPendingActions(Array.isArray(nextPending) ? nextPending : []);
-      setMessage(`当前会话：${nextSession?.role === "operator" ? "操作员" : nextSession?.role === "admin" ? "管理员" : "未识别"}；已同步首页聚合数据。`);
     } catch (e: any) {
-      setMessage(`暂未读取到首页总览：${e?.message || String(e)}`);
+      setError(String(e?.message || e || "未知错误"));
+      setOverview(null);
+      setPortfolio([]);
+      setEvidenceItems([]);
+      setRiskItems([]);
+      setPendingActions([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  React.useEffect(() => { void reload(); }, [reload]);
+  React.useEffect(() => {
+    void reload();
+  }, [reload]);
 
-  const model = React.useMemo(
-    () => buildDashboardViewModel({ overview, activePrograms, evidenceItems, riskItems, pendingActions }),
-    [overview, activePrograms, evidenceItems, riskItems, pendingActions],
+  const vm = React.useMemo(
+    () =>
+      buildDashboardViewModel({
+        overview,
+        portfolio,
+        pendingActions,
+        riskItems,
+        evidenceItems,
+      }),
+    [overview, portfolio, pendingActions, riskItems, evidenceItems],
   );
 
-  return { session, loading, message, model, reload };
+  return { loading, error, vm, reload };
 }
