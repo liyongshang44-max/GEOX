@@ -183,7 +183,7 @@ services:
           npm install -g pnpm@9.15.4
           pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
           pnpm --filter @geox/contracts build
-          node apps/executor/src/runtime_loop.ts
+          pnpm --filter @geox/executor exec tsx src/runtime_loop.ts
     volumes:
       - ./:/app
       - geox_v1_node_modules:/app/node_modules
