@@ -1,16 +1,7 @@
 import React from "react";
+import { useSession } from "../auth/useSession";
 import { Link } from "react-router-dom";
 import { fetchAuditExportOverview, type AuditExportOverview, type AuditOverviewObjectType } from "../lib/api";
-
-const TOKEN_KEY = "geox_ao_act_token";
-
-function readToken(): string {
-  try {
-    return localStorage.getItem(TOKEN_KEY) || localStorage.getItem("geox_ao_act_token") || "";
-  } catch {
-    return "";
-  }
-}
 
 function fmtTs(v: number | string | null | undefined): string {
   if (typeof v === "number") return v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
@@ -34,7 +25,7 @@ function summaryValue(v: number): string {
 }
 
 export default function AuditExportPage(): React.ReactElement {
-  const [token, setToken] = React.useState<string>(() => readToken());
+  const { token, setToken } = useSession();
   const [fieldId, setFieldId] = React.useState<string>("");
   const [deviceId, setDeviceId] = React.useState<string>("");
   const [objectType, setObjectType] = React.useState<AuditOverviewObjectType>("ALL");
@@ -43,12 +34,6 @@ export default function AuditExportPage(): React.ReactElement {
   const [busy, setBusy] = React.useState<boolean>(false);
   const [status, setStatus] = React.useState<string>("正在准备审计与导出视图...");
   const [overview, setOverview] = React.useState<AuditExportOverview | null>(null);
-
-  function persistToken(next: string): void {
-    setToken(next);
-    try { localStorage.setItem(TOKEN_KEY, next); } catch { /* ignore */ }
-  }
-
   async function refresh(): Promise<void> {
     setBusy(true);
     setStatus("正在读取审计与导出总表...");
@@ -99,7 +84,7 @@ export default function AuditExportPage(): React.ReactElement {
           </div>
         </div>
         <div className="formGrid fourCols">
-          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => persistToken(e.target.value)} /></label>
+          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           <label className="field">田块 ID<input className="input" value={fieldId} onChange={(e) => setFieldId(e.target.value)} placeholder="field_demo_001" /></label>
           <label className="field">设备 ID<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} placeholder="dev_001" /></label>
           <label className="field">对象类型

@@ -1,4 +1,5 @@
 import React from "react";
+import { useSession } from "../auth/useSession";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import { fetchAgronomyRecommendations, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchFieldProgramsBySeason, fetchOperationStates, type AgronomyRecommendationItemV1, type OperationStateItemV1, type ProgramPortfolioItemV1 } from "../lib/api";
@@ -37,7 +38,7 @@ export default function FieldDetailPage(): React.ReactElement {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("focusTask") || "";
   }, []);
-  const [token, setToken] = React.useState<string>(() => localStorage.getItem("geox_ao_act_token") || "");
+  const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<any>(null);
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
@@ -61,7 +62,6 @@ export default function FieldDetailPage(): React.ReactElement {
 
   const persistToken = (v: string) => {
     setToken(v);
-    localStorage.setItem("geox_ao_act_token", v);
   };
 
   const refresh = React.useCallback(async () => {
@@ -444,7 +444,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {isDev ? (
             <details style={{ marginTop: 12 }}>
               <summary className="muted">{labels.devDebug}</summary>
-              <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => persistToken(e.target.value)} placeholder="token" /></label>
+              <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => setToken(e.target.value)} placeholder="token" /></label>
               <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify({ timelineEvents, trajectorySegments, detail }, null, 2)}</pre>
             </details>
           ) : null}

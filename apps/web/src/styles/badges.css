@@ -1,0 +1,6 @@
+.badge-status-normal{ background:#ecfdf3; color:#067647; }
+.badge-status-pending{ background:#eff8ff; color:#175cd3; }
+.badge-status-risk{ background:#fffaeb; color:#b54708; }
+.badge-status-blocked{ background:#f4f3ff; color:#5925dc; }
+.badge-status-failed{ background:#fef3f2; color:#b42318; }
+.badge-status-partial{ background:#fff7ed; color:#c2410c; }

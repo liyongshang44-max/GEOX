@@ -1,8 +1,7 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchProgramCost, fetchProgramDetail, fetchProgramEfficiency, fetchProgramSla, fetchProgramTrajectories, fetchSchedulingConflicts, readStoredAoActToken } from "../lib/api";
+import { useProgramDetail } from "../hooks/useProgramDetail";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
-import { buildProgramDetailDashboardVM } from "../viewmodels/programDashboardViewModel";
 import { badgeStyle } from "./badgeStyle";
 
 function resolveDisplayText(value: string, tf: (k: string) => string): string {
@@ -20,57 +19,15 @@ function conflictLabel(kind: string, tf: (k: string) => string): string {
 
 export default function ProgramDetailPage(): React.ReactElement {
   const { programId = "" } = useParams();
-  const [token] = React.useState(() => readStoredAoActToken());
   const [locale] = React.useState<Locale>(() => resolveLocale());
   const tt = React.useCallback((key: string) => t(locale, key), [locale]);
-  const [item, setItem] = React.useState<any>(null);
-  const [trajectories, setTrajectories] = React.useState<any[]>([]);
-  const [cost, setCost] = React.useState<any>(null);
-  const [sla, setSla] = React.useState<any>(null);
-  const [efficiency, setEfficiency] = React.useState<any>(null);
-  const [conflicts, setConflicts] = React.useState<string[]>([]);
-
-  React.useEffect(() => {
-    const id = decodeURIComponent(programId);
-    if (!id) return;
-    Promise.all([
-      fetchProgramDetail(token, id).catch(() => null),
-      fetchProgramTrajectories(token, id).catch(() => []),
-      fetchProgramCost(token, id).catch(() => null),
-      fetchProgramSla(token, id).catch(() => null),
-      fetchProgramEfficiency(token, id).catch(() => null),
-      fetchSchedulingConflicts(token).catch(() => []),
-    ]).then(([detail, traj, costData, slaData, efficiencyData, conflictList]) => {
-      setItem(detail);
-      setTrajectories(traj);
-      setCost(costData);
-      setSla(slaData);
-      setEfficiency(efficiencyData);
-      const kinds = (Array.isArray(conflictList) ? conflictList : [])
-        .filter((c: any) => Array.isArray(c?.related_program_ids) && c.related_program_ids.some((pid: unknown) => String(pid) === id))
-        .map((c: any) => conflictLabel(String(c?.kind ?? ""), tt));
-      setConflicts(Array.from(new Set(kinds)));
-    }).catch(() => {
-      setItem(null);
-      setTrajectories([]);
-      setCost(null);
-      setSla(null);
-      setEfficiency(null);
-      setConflicts([]);
-    });
-  }, [programId, token, tt]);
-
-  const vm = React.useMemo(() => buildProgramDetailDashboardVM({
+  const mapConflictLabel = React.useCallback((kind: string) => conflictLabel(kind, tt), [tt]);
+  const { vm } = useProgramDetail({
     programId,
-    item,
-    trajectories,
-    cost,
-    sla,
-    efficiency,
-    conflicts,
+    conflictLabel: mapConflictLabel,
     insufficientText: tt("common.insufficientData"),
     noRecordText: tt("common.noRecord"),
-  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, tt]);
+  });
 
   return (
     <div style={{ display: "grid", gap: 12 }}>

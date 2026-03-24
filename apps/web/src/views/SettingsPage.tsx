@@ -1,16 +1,12 @@
 import React from "react";
+import { useSession } from "../auth/useSession";
 import { fetchAuthMe, type AuthMe } from "../lib/api";
 
-const TOKEN_KEY = "geox_ao_act_token";
 const ADMIN_FALLBACK = "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
 const OPERATOR_FALLBACK = "geox_op_tenantA_3n2QnT9Yj0F6mXcR8LkP4sVuWbHdZe7q1aBcDfGhJkM";
 
-function readToken(): string {
-  try { return localStorage.getItem(TOKEN_KEY) || ADMIN_FALLBACK; } catch { return ADMIN_FALLBACK; }
-}
-
 export default function SettingsPage(): React.ReactElement {
-  const [token, setToken] = React.useState<string>(() => readToken());
+  const { token, setToken } = useSession();
   const [session, setSession] = React.useState<AuthMe | null>(null);
   const [status, setStatus] = React.useState<string>("");
 
@@ -26,10 +22,6 @@ export default function SettingsPage(): React.ReactElement {
     }
   }
 
-  function persist(next: string): void {
-    setToken(next);
-    try { localStorage.setItem(TOKEN_KEY, next); } catch {}
-  }
 
   React.useEffect(() => { void refresh(); }, []);
 
@@ -49,10 +41,10 @@ export default function SettingsPage(): React.ReactElement {
         <section className="card sectionBlock">
           <div className="sectionHeader"><div><div className="sectionTitle">当前会话</div><div className="sectionDesc">可在此切换管理员 / 操作员令牌，验证页面和接口门禁。</div></div></div>
           <div className="formGrid twoCols">
-            <label className="field">访问令牌<input className="input" value={token} onChange={(e) => persist(e.target.value)} /></label>
+            <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
             <div className="field fieldAction">会话操作<div className="row" style={{gap:8, flexWrap:'wrap'}}>
-              <button className="btn" onClick={() => { persist(ADMIN_FALLBACK); void refresh(ADMIN_FALLBACK); }}>切换为管理员示例</button>
-              <button className="btn" onClick={() => { persist(OPERATOR_FALLBACK); void refresh(OPERATOR_FALLBACK); }}>切换为操作员示例</button>
+              <button className="btn" onClick={() => { setToken(ADMIN_FALLBACK); void refresh(ADMIN_FALLBACK); }}>切换为管理员示例</button>
+              <button className="btn" onClick={() => { setToken(OPERATOR_FALLBACK); void refresh(OPERATOR_FALLBACK); }}>切换为操作员示例</button>
               <button className="btn primary" onClick={() => void refresh()}>刷新会话</button>
             </div></div>
           </div>

@@ -26,7 +26,8 @@ import AgronomyRecommendationsPage from "../views/AgronomyRecommendationsPage";
 import SettingsPage from "../views/SettingsPage";
 import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
-import { fetchAuthMe, readStoredAoActToken, type AuthMe } from "../lib/api";
+import { fetchAuthMe, type AuthMe } from "../api";
+import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
 
 type BreadcrumbItem = {
   label: string;
@@ -111,9 +112,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   const [session, setSession] = React.useState<AuthMe | null>(null);
 
     React.useEffect(() => {
-    const token = readStoredAoActToken(); // Resolve the shared AO-ACT token from storage helpers.
-    if (!token) { setSession(null); return; } // Clear the session badge when no token is available.
-    fetchAuthMe(token).then(setSession).catch(() => setSession(null)); // Refresh the visible session badge on route changes.
+    fetchAuthMe().then(setSession).catch(() => setSession(null)); // Refresh the visible session badge on route changes.
   }, [location.pathname]);
 
   return (
@@ -227,18 +226,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 }
 
 export default function App(): React.ReactElement {
-  const [expert, setExpert] = React.useState<boolean>(() => {
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("expert") === "1") {
-        localStorage.setItem("geox_expert", "1");
-        return true;
-      }
-      return localStorage.getItem("geox_expert") === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [expert, setExpert] = React.useState<boolean>(() => readExpertModeFromStorage());
 
   return (
     <div className="app appReset">
@@ -247,12 +235,7 @@ export default function App(): React.ReactElement {
         onToggleExpert={() => {
           const next = !expert;
           setExpert(next);
-          try {
-            if (next) localStorage.setItem("geox_expert", "1");
-            else localStorage.removeItem("geox_expert");
-          } catch {
-            // ignore
-          }
+          persistExpertMode(next);
         }}
       />
     </div>
