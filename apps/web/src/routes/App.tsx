@@ -27,6 +27,7 @@ import SettingsPage from "../views/SettingsPage";
 import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
+import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
 
 type BreadcrumbItem = {
   label: string;
@@ -225,18 +226,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 }
 
 export default function App(): React.ReactElement {
-  const [expert, setExpert] = React.useState<boolean>(() => {
-    try {
-      const url = new URL(window.location.href);
-      if (url.searchParams.get("expert") === "1") {
-        localStorage.setItem("geox_expert", "1");
-        return true;
-      }
-      return localStorage.getItem("geox_expert") === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [expert, setExpert] = React.useState<boolean>(() => readExpertModeFromStorage());
 
   return (
     <div className="app appReset">
@@ -245,12 +235,7 @@ export default function App(): React.ReactElement {
         onToggleExpert={() => {
           const next = !expert;
           setExpert(next);
-          try {
-            if (next) localStorage.setItem("geox_expert", "1");
-            else localStorage.removeItem("geox_expert");
-          } catch {
-            // ignore
-          }
+          persistExpertMode(next);
         }}
       />
     </div>

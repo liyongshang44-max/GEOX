@@ -1,4 +1,5 @@
 import React from "react";
+import { useSession } from "../auth/useSession";
 import {
   createEvidenceExportJob,
   fetchEvidenceExportJob,
@@ -31,13 +32,7 @@ function defaultWindowEnd(): string {
 }
 
 export default function ExportJobsPage(): React.ReactElement {
-  const [token, setToken] = React.useState<string>(() => {
-    try {
-      return localStorage.getItem("geox_ao_act_token") || "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-    } catch {
-      return "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-    }
-  });
+  const { token, setToken } = useSession();
   const [scopeType, setScopeType] = React.useState<EvidenceExportScopeType>("FIELD");
   const [scopeId, setScopeId] = React.useState<string>("field_c8_demo");
   const [fromTs, setFromTs] = React.useState<string>(defaultWindowStart());
@@ -51,14 +46,6 @@ export default function ExportJobsPage(): React.ReactElement {
   const [status, setStatus] = React.useState<string>("");
   const [busy, setBusy] = React.useState<boolean>(false);
 
-  function persistToken(next: string): void {
-    setToken(next);
-    try {
-      localStorage.setItem("geox_ao_act_token", next);
-    } catch {
-      // ignore
-    }
-  }
 
   async function refresh(selectLatest?: boolean): Promise<void> {
     setBusy(true);
@@ -157,7 +144,7 @@ export default function ExportJobsPage(): React.ReactElement {
           <div className="formGrid fourCols">
             <label className="field">
               访问令牌
-              <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} />
+              <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
             </label>
             <label className="field">
               导出范围
