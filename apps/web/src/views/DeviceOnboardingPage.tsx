@@ -1,20 +1,13 @@
 import React from "react";
+import { useSession } from "../auth/useSession";
 import { fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
-
-function readToken(): string {
-  try {
-    return localStorage.getItem("geox_ao_act_token") || "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  } catch {
-    return "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  }
-}
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
 }
 
 export default function DeviceOnboardingPage(): React.ReactElement {
-  const [token, setToken] = React.useState<string>(() => readToken());
+  const { token, setToken } = useSession();
   const [deviceId, setDeviceId] = React.useState<string>("demo_device_001");
   const [displayName, setDisplayName] = React.useState<string>("演示设备 001");
   const [credentialId, setCredentialId] = React.useState<string>("");
@@ -23,14 +16,6 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const [registerResult, setRegisterResult] = React.useState<any>(null);
   const [onboarding, setOnboarding] = React.useState<any>(null);
 
-  function persistToken(next: string): void {
-    setToken(next);
-    try {
-      localStorage.setItem("geox_ao_act_token", next);
-    } catch {
-      // ignore
-    }
-  }
 
   async function handleRegister(): Promise<void> {
     setBusy(true);
@@ -83,7 +68,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionHeader"><div><div className="sectionTitle">设备注册</div></div></div>
         <div className="contentGridTwo alignStart">
-          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => persistToken(e.target.value)} /></label>
+          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           <label className="field">设备 ID<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
           <label className="field">设备名称<input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
           <label className="field">凭据 ID（可选）<input className="input" value={credentialId} onChange={(e) => setCredentialId(e.target.value)} placeholder="留空自动生成" /></label>

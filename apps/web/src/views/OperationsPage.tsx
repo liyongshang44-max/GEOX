@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchOperationStates, fetchPrograms, fetchTaskTrajectory, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
+import { type OperationStateItemV1 } from "../api";
+import { useOperations } from "../hooks/useOperations";
 import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
 type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
@@ -44,68 +45,29 @@ function timelineItemVisual(type: string): { icon: string; color: string } {
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [token] = React.useState<string>(() => readStoredAoActToken());
   const [locale] = React.useState<Locale>(() => resolveLocale());
   const tt = React.useCallback((key: string) => t(locale, key), [locale]);
-  const [items, setItems] = React.useState<OperationStateItemV1[]>([]);
-  const [selectedId, setSelectedId] = React.useState<string>("");
-  const [loading, setLoading] = React.useState(false);
-  const [trajectory, setTrajectory] = React.useState<any | null>(null);
-
   const [fieldFilter, setFieldFilter] = React.useState<string>("");
   const [deviceFilter, setDeviceFilter] = React.useState<string>("");
   const [statusFilter, setStatusFilter] = React.useState<string>("");
   const [programFilter, setProgramFilter] = React.useState<string>("");
-  const [programIds, setProgramIds] = React.useState<string[]>([]);
+  const {
+    items,
+    programIds,
+    fieldOptions,
+    deviceOptions,
+    loading,
+    selectedId,
+    setSelectedId,
+    selected,
+    todayStats,
+    selectedStats,
+    refresh,
+  } = useOperations({ fieldFilter, deviceFilter, statusFilter, programFilter });
 
-  const refresh = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [res, programs] = await Promise.all([
-        fetchOperationStates(token, {
-          limit: 200,
-          field_id: fieldFilter || undefined,
-          device_id: deviceFilter || undefined,
-          final_status: statusFilter || undefined,
-        }),
-        fetchPrograms(token, { limit: 200 }),
-      ]);
-      let next = Array.isArray(res.items) ? res.items : [];
-      if (programFilter) next = next.filter((x) => String(x.program_id ?? "") === programFilter);
-      setProgramIds(Array.from(new Set((programs ?? []).map((p: any) => String(p.program_id ?? "")).filter(Boolean))));
-      setItems(next);
-      setSelectedId((prev) => (prev && next.some((x) => x.operation_id === prev) ? prev : (next[0]?.operation_id ?? "")));
-    } finally {
-      setLoading(false);
-    }
-  }, [token, fieldFilter, deviceFilter, statusFilter, programFilter]);
-
-  React.useEffect(() => { void refresh(); }, [refresh]);
-
-  const selected = React.useMemo(() => items.find((x) => x.operation_id === selectedId) ?? null, [items, selectedId]);
-  React.useEffect(() => {
-    const taskId = String(selected?.task_id ?? "").trim();
-    if (!taskId) { setTrajectory(null); return; }
-    fetchTaskTrajectory(token, taskId).then(setTrajectory).catch(() => setTrajectory(null));
-  }, [selected?.task_id, token]);
-
-  const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.field_id ?? "")).filter(Boolean))), [items]);
-  const deviceOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.device_id ?? "")).filter(Boolean))), [items]);
-
-  const todayKey = new Date().toDateString();
-  const todayItems = items.filter((x) => new Date(x.last_event_ts).toDateString() === todayKey);
-  const successCount = todayItems.filter((x) => statusOf(x) === "SUCCESS").length;
-  const failedCount = todayItems.filter((x) => statusOf(x) === "FAILED").length;
-  const runningCount = todayItems.filter((x) => statusOf(x) === "RUNNING").length;
-  const successRate = todayItems.length ? `${Math.round((successCount / todayItems.length) * 100)}%` : "0%";
-
-  const startTs = selected?.timeline?.[0]?.ts ?? selected?.last_event_ts ?? 0;
-  const endTs = selected?.timeline?.[selected.timeline.length - 1]?.ts ?? selected?.last_event_ts ?? 0;
-  const failedReason = statusOf(selected ?? ({} as any)) === "FAILED" ? String(selected?.receipt_status ?? tt("common.none")) : "";
-  const durationSec = Math.max(0, Math.round((endTs - startTs) / 1000));
-  const durationText = locale === "zh" ? `${Math.floor(durationSec / 60)}分${durationSec % 60}秒` : `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`;
-  const trajectoryPointCount = Number(trajectory?.payload?.point_count ?? 0);
-  const inFieldRatio = Number((selected as any)?.latest_acceptance_result?.metrics?.in_field_ratio ?? 0);
+  const durationText = locale === "zh"
+    ? `${Math.floor(selectedStats.durationSec / 60)}分${selectedStats.durationSec % 60}秒`
+    : `${Math.floor(selectedStats.durationSec / 60)}m ${selectedStats.durationSec % 60}s`;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -118,11 +80,11 @@ export default function OperationsPage(): React.ReactElement {
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 }}>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_today")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayItems.length}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_success_rate")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{successRate}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_running")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{runningCount}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_failed")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{failedCount}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">Program 聚合</div><div style={{ fontSize: 24, fontWeight: 700 }}>{new Set(items.map((x) => String(x.program_id ?? "")).filter(Boolean)).size}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_today")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.total}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_success_rate")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.successRate}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_running")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.runningCount}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_failed")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.failedCount}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">Program 聚合</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.programCount}</div></div>
       </section>
 
       <section className="card" style={{ padding: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -187,11 +149,11 @@ export default function OperationsPage(): React.ReactElement {
                 </div>
               </details>
 
-              {failedReason ? <div><b>{tt("operation.labels.failure_reason")}：</b>{failedReason}</div> : null}
+              {selectedStats.failedReason ? <div><b>{tt("operation.labels.failure_reason")}：</b>{selectedStats.failedReason || tt("common.none")}</div> : null}
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.gis.trajectory_summary")}</div>
-              <div><b>{tt("operation.gis.trajectory_points")}：</b>{trajectoryPointCount || tt("common.none")}</div>
-              <div><b>{tt("operation.gis.spatial_summary")}：</b>{tt("operation.gis.in_field_ratio")} {Number.isFinite(inFieldRatio) && inFieldRatio > 0 ? inFieldRatio.toFixed(3) : "-"}</div>
-              <div><b>{tt("operation.gis.trajectory_summary")}：</b>{trajectoryPointCount > 1 ? tt("operation.gis.trajectory_ready") : tt("operation.gis.trajectory_missing")}</div>
+              <div><b>{tt("operation.gis.trajectory_points")}：</b>{selectedStats.trajectoryPointCount || tt("common.none")}</div>
+              <div><b>{tt("operation.gis.spatial_summary")}：</b>{tt("operation.gis.in_field_ratio")} {Number.isFinite(selectedStats.inFieldRatio) && selectedStats.inFieldRatio > 0 ? selectedStats.inFieldRatio.toFixed(3) : "-"}</div>
+              <div><b>{tt("operation.gis.trajectory_summary")}：</b>{selectedStats.trajectoryPointCount > 1 ? tt("operation.gis.trajectory_ready") : tt("operation.gis.trajectory_missing")}</div>
               {selected?.field_id ? <Link className="btn" to={`/fields/${encodeURIComponent(String(selected.field_id))}?focusTask=${encodeURIComponent(String(selected.task_id ?? ""))}`}>{tt("operation.gis.jump_to_field")}</Link> : null}
 
               <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.timeline")}</div>

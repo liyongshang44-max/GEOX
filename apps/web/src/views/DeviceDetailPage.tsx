@@ -1,4 +1,5 @@
 ﻿import React from "react";
+import { useSession } from "../auth/useSession";
 import { Link, useParams } from "react-router-dom";
 import {
   bindDeviceToField,
@@ -22,14 +23,6 @@ import {
   type FieldListItem,
   type FieldDetail,
 } from "../lib/api";
-
-function readToken(): string {
-  try {
-    return localStorage.getItem("geox_ao_act_token") || "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  } catch {
-    return "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  }
-}
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0
@@ -91,7 +84,7 @@ async function resolveBoundFieldFromFields(token: string, deviceId: string): Pro
 export default function DeviceDetailPage(): React.ReactElement {
   const { deviceId } = useParams();
 
-  const [token, setToken] = React.useState<string>(() => readToken());
+  const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<DeviceDetail | null>(null);
   const [consoleView, setConsoleView] = React.useState<DeviceConsoleView | null>(null);
   const [statusObj, setStatusObj] = React.useState<DeviceStatus | null>(null);
@@ -107,16 +100,6 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [newCredentialId, setNewCredentialId] = React.useState<string>("");
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
-
-  function persistToken(next: string): void {
-    setToken(next);
-    try {
-      localStorage.setItem("geox_ao_act_token", next);
-    } catch {
-      // ignore localStorage failure
-    }
-  }
-
   async function refresh(): Promise<void> {
     if (!deviceId) return;
 
@@ -332,7 +315,7 @@ export default function DeviceDetailPage(): React.ReactElement {
 
           <label className="field">
             访问令牌
-            <input className="input" value={token} onChange={(e) => persistToken(e.target.value)} />
+            <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
           </label>
 
           <div className="kv"><span className="k">设备 ID</span><span className="v">{(detail as any)?.device?.device_id || deviceId || "-"}</span></div>
