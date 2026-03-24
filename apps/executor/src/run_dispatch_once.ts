@@ -279,7 +279,8 @@ async function runDispatchOnce(cliArgs) {
         let executionStatus = "FAILED";
         let adapterTypeForLog = String(adapter.type ?? adapter.adapter_type ?? adapterType).trim() || adapterType;
         try {
-            if (typeof adapter.supports === "function" && !adapter.supports(task.action_type)) {
+            const supportsInput = adapterType === "mqtt" ? task : task.action_type;
+            if (typeof adapter.supports === "function" && !adapter.supports(supportsInput)) {
                 throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
             }
             if (typeof adapter.validate === "function") {
