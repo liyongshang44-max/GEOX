@@ -1229,7 +1229,11 @@ function assertTenantFieldDeviceTriple(taskPayload: any): { ok: true } | { ok: f
 }
 
 function resolveActionType(input: any): string {
-  return String(input?.action_type ?? input?.task_type ?? "").trim();
+  const actionType = typeof input?.action_type === "string" ? input.action_type.trim() : "";
+  if (actionType) return actionType;
+  const taskType = typeof input?.task_type === "string" ? input.task_type.trim() : "";
+  if (taskType) return taskType;
+  return "";
 }
 
 function adapterSupportsAction(adapterType: string, actionType: string): boolean {
