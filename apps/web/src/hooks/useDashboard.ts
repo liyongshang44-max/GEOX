@@ -1,8 +1,15 @@
 import React from "react";
-import { fetchAuthMe, fetchDashboardOverview, type AuthMe, type DashboardOverview } from "../api";
+import { fetchAuthMe, fetchDashboardOverview, type AuthMe, type DashboardAlertItem, type DashboardOverview, type DashboardQuickAction, type DashboardReceiptItem, type DashboardSummary, type DashboardTrendSeries } from "../api";
+
+const EMPTY_SUMMARY: DashboardSummary = { field_count: 0, online_device_count: 0, open_alert_count: 0, running_task_count: 0 };
 
 export function useDashboard(): {
   overview: DashboardOverview | null;
+  summary: DashboardSummary;
+  trendSeries: DashboardTrendSeries[];
+  latestAlerts: DashboardAlertItem[];
+  latestReceipts: DashboardReceiptItem[];
+  quickActions: DashboardQuickAction[];
   session: AuthMe | null;
   loading: boolean;
   message: string;
@@ -34,5 +41,16 @@ export function useDashboard(): {
 
   React.useEffect(() => { void reload(); }, [reload]);
 
-  return { overview, session, loading, message, reload };
+  return {
+    overview,
+    summary: overview?.summary ?? EMPTY_SUMMARY,
+    trendSeries: overview?.trend_series ?? [],
+    latestAlerts: overview?.latest_alerts ?? [],
+    latestReceipts: overview?.latest_receipts ?? [],
+    quickActions: overview?.quick_actions ?? [],
+    session,
+    loading,
+    message,
+    reload,
+  };
 }

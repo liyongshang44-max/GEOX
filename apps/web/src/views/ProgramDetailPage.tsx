@@ -2,7 +2,6 @@ import React from "react";
 import { useParams } from "react-router-dom";
 import { useProgramDetail } from "../hooks/useProgramDetail";
 import { resolveLocale, t, type Locale } from "../lib/i18n";
-import { buildProgramDetailDashboardVM } from "../viewmodels/programDashboardViewModel";
 import { badgeStyle } from "./badgeStyle";
 
 function resolveDisplayText(value: string, tf: (k: string) => string): string {
@@ -23,19 +22,12 @@ export default function ProgramDetailPage(): React.ReactElement {
   const [locale] = React.useState<Locale>(() => resolveLocale());
   const tt = React.useCallback((key: string) => t(locale, key), [locale]);
   const mapConflictLabel = React.useCallback((kind: string) => conflictLabel(kind, tt), [tt]);
-  const { item, trajectories, cost, sla, efficiency, conflicts } = useProgramDetail(programId, mapConflictLabel);
-
-  const vm = React.useMemo(() => buildProgramDetailDashboardVM({
+  const { vm } = useProgramDetail({
     programId,
-    item,
-    trajectories,
-    cost,
-    sla,
-    efficiency,
-    conflicts,
+    conflictLabel: mapConflictLabel,
     insufficientText: tt("common.insufficientData"),
     noRecordText: tt("common.noRecord"),
-  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, tt]);
+  });
 
   return (
     <div style={{ display: "grid", gap: 12 }}>

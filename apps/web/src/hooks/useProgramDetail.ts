@@ -7,15 +7,17 @@ import {
   fetchProgramTrajectories,
   fetchSchedulingConflicts,
 } from "../api";
+import { buildProgramDetailDashboardVM } from "../viewmodels/programDashboardViewModel";
 
-export function useProgramDetail(programId: string, conflictLabel: (kind: string) => string): {
-  item: any;
-  trajectories: any[];
-  cost: any;
-  sla: any;
-  efficiency: any;
-  conflicts: string[];
+export function useProgramDetail(params: {
+  programId: string;
+  conflictLabel: (kind: string) => string;
+  insufficientText: string;
+  noRecordText: string;
+}): {
+  vm: ReturnType<typeof buildProgramDetailDashboardVM>;
 } {
+  const { programId, conflictLabel, insufficientText, noRecordText } = params;
   const [item, setItem] = React.useState<any>(null);
   const [trajectories, setTrajectories] = React.useState<any[]>([]);
   const [cost, setCost] = React.useState<any>(null);
@@ -53,5 +55,17 @@ export function useProgramDetail(programId: string, conflictLabel: (kind: string
     });
   }, [programId, conflictLabel]);
 
-  return { item, trajectories, cost, sla, efficiency, conflicts };
+  const vm = React.useMemo(() => buildProgramDetailDashboardVM({
+    programId,
+    item,
+    trajectories,
+    cost,
+    sla,
+    efficiency,
+    conflicts,
+    insufficientText,
+    noRecordText,
+  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, insufficientText, noRecordText]);
+
+  return { vm };
 }

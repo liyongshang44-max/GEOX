@@ -66,13 +66,7 @@ function buildSparklinePath(series: DashboardTrendSeries): { path: string; lastL
 }
 
 export default function CommercialDashboardPage({ expert }: DashboardProps): React.ReactElement {
-  const { overview, session, loading, message } = useDashboard();
-
-  const summary = overview?.summary ?? { field_count: 0, online_device_count: 0, open_alert_count: 0, running_task_count: 0 };
-  const trendSeries = overview?.trend_series ?? [];
-  const latestAlerts = overview?.latest_alerts ?? [];
-  const latestReceipts = overview?.latest_receipts ?? [];
-  const quickActions = overview?.quick_actions ?? [];
+  const { overview, summary, trendSeries, latestAlerts, latestReceipts, quickActions, session, loading, message } = useDashboard();
 
   return (
     <div className="consolePage">
