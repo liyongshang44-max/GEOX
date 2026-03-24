@@ -7,17 +7,30 @@ import {
   fetchProgramTrajectories,
   fetchSchedulingConflicts,
 } from "../api";
+import { resolveLocale, t, type Locale } from "../lib/i18n";
 import { buildProgramDetailDashboardVM } from "../viewmodels/programDashboardViewModel";
 
-export function useProgramDetail(params: {
-  programId: string;
-  conflictLabel: (kind: string) => string;
-  insufficientText: string;
-  noRecordText: string;
-}): {
+function conflictLabel(kind: string, tf: (k: string) => string): string {
+  const k = String(kind ?? "").toUpperCase();
+  if (k === "DEVICE_CONFLICT") return tf("portfolio.deviceConflict");
+  if (k === "FIELD_CONFLICT") return tf("portfolio.fieldConflict");
+  if (k === "PROGRAM_INTENT_CONFLICT") return tf("portfolio.intentConflict");
+  return tf("common.noRecord");
+}
+
+function resolveDisplayText(value: string, tf: (k: string) => string): string {
+  if (value.startsWith("program.") || value.startsWith("portfolio.") || value.startsWith("common.")) return tf(value);
+  return value;
+}
+
+export function useProgramDetail(programId: string): {
   vm: ReturnType<typeof buildProgramDetailDashboardVM>;
+  label: (key: string) => string;
+  displayText: (value: string) => string;
 } {
-  const { programId, conflictLabel, insufficientText, noRecordText } = params;
+  const [locale] = React.useState<Locale>(() => resolveLocale());
+  const label = React.useCallback((key: string) => t(locale, key), [locale]);
+
   const [item, setItem] = React.useState<any>(null);
   const [trajectories, setTrajectories] = React.useState<any[]>([]);
   const [cost, setCost] = React.useState<any>(null);
@@ -43,7 +56,7 @@ export function useProgramDetail(params: {
       setEfficiency(efficiencyData);
       const kinds = (Array.isArray(conflictList) ? conflictList : [])
         .filter((c: any) => Array.isArray(c?.related_program_ids) && c.related_program_ids.some((pid: unknown) => String(pid) === id))
-        .map((c: any) => conflictLabel(String(c?.kind ?? "")));
+        .map((c: any) => conflictLabel(String(c?.kind ?? ""), label));
       setConflicts(Array.from(new Set(kinds)));
     }).catch(() => {
       setItem(null);
@@ -53,7 +66,7 @@ export function useProgramDetail(params: {
       setEfficiency(null);
       setConflicts([]);
     });
-  }, [programId, conflictLabel]);
+  }, [programId, label]);
 
   const vm = React.useMemo(() => buildProgramDetailDashboardVM({
     programId,
@@ -63,9 +76,11 @@ export function useProgramDetail(params: {
     sla,
     efficiency,
     conflicts,
-    insufficientText,
-    noRecordText,
-  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, insufficientText, noRecordText]);
+    insufficientText: label("common.insufficientData"),
+    noRecordText: label("common.noRecord"),
+  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, label]);
 
-  return { vm };
+  const displayText = React.useCallback((value: string) => resolveDisplayText(value, label), [label]);
+
+  return { vm, label, displayText };
 }
