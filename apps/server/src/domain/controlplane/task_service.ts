@@ -1760,7 +1760,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const taskPayload = taskFact.record_json?.payload ?? {};
-    const adapterType = String(taskPayload?.adapter_type ?? body.adapter_hint ?? "").trim();
+    const adapterType = String(body.adapter_hint ?? taskPayload?.adapter_type ?? "").trim();
     const actionType = resolveActionType(taskPayload);
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${String(adapterType).trim().toLowerCase()} action_type=${String(actionType).trim().toLowerCase()} task_type=${String(taskPayload?.task_type ?? "").trim().toLowerCase()}`);
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
@@ -1789,7 +1789,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         downlink_topic: typeof existingPayload.downlink_topic === "string" ? existingPayload.downlink_topic : null,
         qos: Math.max(0, Math.min(2, Number.parseInt(String(existingPayload.qos ?? body.qos ?? "1"), 10) || 1)),
         retain: Boolean(existingPayload.retain ?? body.retain ?? false),
-        adapter_hint: typeof existingPayload.adapter_hint === "string" ? normalizeAdapterHint(existingPayload.adapter_hint) : normalizeAdapterHint(body.adapter_hint)
+        adapter_hint: normalizeAdapterHint(body.adapter_hint ?? existingPayload.adapter_hint)
       });
       const dispatchedTransition = await ensureOperationPlanAtLeastDispatched(
         pool,
