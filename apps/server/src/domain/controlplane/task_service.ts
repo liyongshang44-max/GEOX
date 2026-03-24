@@ -1807,6 +1807,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         dispatch_fact_id: null,
         outbox_fact_id: existingOutbox.fact_id,
         already_queued: true,
+        debug_adapter_hint: body?.adapter_hint ?? null,
+        debug_has_explicit_adapter_hint: hasExplicitAdapterHint,
+        debug_content_type: String((req.headers as any)["content-type"] ?? ""),
         operation_plan_id,
         operation_plan_transition_fact_id: dispatchedTransition?.transition_fact_id ?? null,
         operation_plan_update_fact_id: dispatchedTransition?.operation_plan_fact_id ?? null
