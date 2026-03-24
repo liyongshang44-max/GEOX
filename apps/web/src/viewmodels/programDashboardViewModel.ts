@@ -19,6 +19,8 @@ export type ProgramListCardVM = {
   statusBadge: DisplayBadge;
   riskBadge: DisplayBadge;
   primaryActionKey: string;
+  riskReason: string;
+  updatedAtText: string;
   pendingPlan: string;
   pendingTask: string;
   metrics: [MetricBlock, MetricBlock, MetricBlock];
@@ -178,6 +180,8 @@ export function buildProgramListCards(args: {
       statusBadge: statusBadge(statusText, insufficientText),
       riskBadge: riskBadge(rawRisk),
       primaryActionKey: nextActionKey(x?.next_action_hint?.kind),
+      riskReason: safeText(x?.current_risk_summary?.reason, insufficientText),
+      updatedAtText: safeText(x?.updated_at ?? x?.updatedAt, insufficientText),
       pendingPlan: toShortId(x?.pending_operation_plan_id, noRecordText),
       pendingTask: toShortId(x?.pending_act_task_id, noRecordText),
       metrics: [
