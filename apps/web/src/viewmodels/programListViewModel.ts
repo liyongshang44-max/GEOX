@@ -85,7 +85,7 @@ export function buildProgramListPageVM(args: {
   const summary = {
     activePrograms: filtered.length,
     atRiskPrograms: filtered.filter((x) => x.sortRiskRank <= 1).length,
-    pendingActions: filtered.filter((x) => resolveDisplayText(x.primaryActionKey, tf) !== tf("common.insufficientData")).length,
+    pendingActions: filtered.filter((x) => x.primaryActionText !== "当前无需新增操作").length,
     lowEfficiencyOrInsufficient: filtered.filter((x) => x.sortEfficiencyValue == null || x.sortEfficiencyValue < 0.6).length,
   };
 
