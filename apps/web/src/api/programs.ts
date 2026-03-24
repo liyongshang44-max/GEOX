@@ -49,3 +49,40 @@ export async function fetchSchedulingHints(): Promise<SchedulingHintItemV1[]> {
   const res = await requestJson<{ ok?: boolean; items?: SchedulingHintItemV1[] }>("/api/v1/scheduling/hints");
   return Array.isArray(res.items) ? res.items : [];
 }
+
+
+export type AgronomyRecommendationItemV1 = {
+  fact_id: string;
+  occurred_at: string;
+  recommendation_id: string;
+  approval_request_id?: string | null;
+  operation_plan_id?: string | null;
+  act_task_id?: string | null;
+  receipt_fact_id?: string | null;
+  latest_status?: string | null;
+  field_id: string | null;
+  season_id: string | null;
+  device_id: string | null;
+  recommendation_type: string | null;
+  status: string;
+  reason_codes: string[];
+  evidence_refs: string[];
+  rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
+  confidence: number | null;
+  model_version: string | null;
+  suggested_action: { action_type: string; summary: string; parameters: Record<string, unknown> } | null;
+};
+
+export async function fetchAgronomyRecommendations(params?: {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  limit?: number;
+}): Promise<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }> {
+  return requestJson<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }>(withQuery('/api/v1/agronomy/recommendations', {
+    tenant_id: params?.tenant_id,
+    project_id: params?.project_id,
+    group_id: params?.group_id,
+    limit: params?.limit ?? 50,
+  }));
+}
