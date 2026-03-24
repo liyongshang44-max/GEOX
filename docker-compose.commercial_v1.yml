@@ -120,10 +120,11 @@ services:
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:-}
-      GEOX_TENANT_ID: ${GEOX_TENANT_ID:-tenantA}
-      GEOX_PROJECT_ID: ${GEOX_PROJECT_ID:-projectA}
-      GEOX_GROUP_ID: ${GEOX_GROUP_ID:-groupA}
+      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_TENANT_ID: tenantA
+      GEOX_PROJECT_ID: projectA
+      GEOX_GROUP_ID: groupA
+      GEOX_MQTT_URL: mqtt://mqtt:1883
     depends_on:
       postgres:
         condition: service_healthy
@@ -158,10 +159,11 @@ services:
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:-}
-      GEOX_TENANT_ID: ${GEOX_TENANT_ID:-tenantA}
-      GEOX_PROJECT_ID: ${GEOX_PROJECT_ID:-projectA}
-      GEOX_GROUP_ID: ${GEOX_GROUP_ID:-groupA}
+      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_TENANT_ID: tenantA
+      GEOX_PROJECT_ID: projectA
+      GEOX_GROUP_ID: groupA
+      GEOX_MQTT_URL: mqtt://mqtt:1883
     depends_on:
       postgres:
         condition: service_healthy
@@ -197,10 +199,11 @@ services:
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:-}
-      GEOX_TENANT_ID: ${GEOX_TENANT_ID:-tenantA}
-      GEOX_PROJECT_ID: ${GEOX_PROJECT_ID:-projectA}
-      GEOX_GROUP_ID: ${GEOX_GROUP_ID:-groupA}
+      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_TENANT_ID: tenantA
+      GEOX_PROJECT_ID: projectA
+      GEOX_GROUP_ID: groupA
+      GEOX_MQTT_URL: mqtt://mqtt:1883
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-3000}
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
