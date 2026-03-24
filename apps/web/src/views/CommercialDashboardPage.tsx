@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchAuthMe, fetchDashboardOverview, type AuthMe, type DashboardOverview, type DashboardTrendSeries } from "../lib/api";
+import { type DashboardTrendSeries } from "../api";
+import { useDashboard } from "../hooks/useDashboard";
 
 type DashboardProps = { expert: boolean };
 
@@ -15,13 +16,6 @@ function fmtIso(iso: string | null | undefined): string {
   return Number.isFinite(ms) ? fmtTs(ms) : iso;
 }
 
-function readToken(): string {
-  try {
-    return localStorage.getItem("geox_ao_act_token") || "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  } catch {
-    return "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-  }
-}
 
 function metricTitle(metric: string): string {
   if (metric === "soil_moisture") return "土壤湿度趋势";
@@ -72,43 +66,7 @@ function buildSparklinePath(series: DashboardTrendSeries): { path: string; lastL
 }
 
 export default function CommercialDashboardPage({ expert }: DashboardProps): React.ReactElement {
-  const [overview, setOverview] = React.useState<DashboardOverview | null>(null);
-  const [session, setSession] = React.useState<AuthMe | null>(null);
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [message, setMessage] = React.useState<string>("");
-
-  React.useEffect(() => {
-    let alive = true;
-    async function load(): Promise<void> {
-      setLoading(true);
-      const token = readToken();
-      const now = Date.now();
-      const start = now - 24 * 60 * 60 * 1000;
-      try {
-        const [nextOverview, nextSession] = await Promise.all([
-          fetchDashboardOverview(token, { from_ts_ms: start, to_ts_ms: now }),
-          fetchAuthMe(token).catch(() => null),
-        ]);
-        if (!alive) return;
-        setOverview(nextOverview);
-        setSession(nextSession);
-        setMessage(`当前会话：${nextSession?.role === "operator" ? "操作员" : nextSession?.role === "admin" ? "管理员" : "未识别"}；已同步最近 24 小时首页数据。`);
-      } catch (e: any) {
-        if (!alive) return;
-        setMessage(`暂未读取到首页总览：${e?.message || String(e)}`);
-      } finally {
-        if (alive) setLoading(false);
-      }
-    }
-    void load();
-    return () => { alive = false; };
-  }, []);
-
-  const summary = overview?.summary ?? { field_count: 0, online_device_count: 0, open_alert_count: 0, running_task_count: 0 };
-  const trendSeries = overview?.trend_series ?? [];
-  const latestAlerts = overview?.latest_alerts ?? [];
-  const latestReceipts = overview?.latest_receipts ?? [];
-  const quickActions = overview?.quick_actions ?? [];
+  const { overview, summary, trendSeries, latestAlerts, latestReceipts, quickActions, session, loading, message } = useDashboard();
 
   return (
     <div className="consolePage">
