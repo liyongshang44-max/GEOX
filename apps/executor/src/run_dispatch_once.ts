@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { createAdapterRegistry, findAdapterByType, type AoActTask } from "./adapters";
+import { createAdapterRegistry, findAdapterByType } from "./adapters";
+import type { AoActTask } from "./adapters";
 import { claimDispatchTasks } from "./lib/claim";
 
 type Args = {
