@@ -1,173 +1,165 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { type OperationStateItemV1 } from "../api";
 import { useOperations } from "../hooks/useOperations";
-import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
-type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
-
-function fmtTs(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return "-";
-  return new Date(ms).toLocaleTimeString();
+function toneStyle(tone: "success" | "inProgress" | "warning" | "danger"): React.CSSProperties {
+  if (tone === "success") return { background: "#ecfdf3", color: "#027a48" };
+  if (tone === "inProgress") return { background: "#eff8ff", color: "#175cd3" };
+  if (tone === "warning") return { background: "#fffaeb", color: "#b54708" };
+  return { background: "#fef3f2", color: "#b42318" };
 }
 
-function statusOf(item: OperationStateItemV1): StatusKey {
-  const s = String(item.final_status ?? "").toUpperCase();
-  if (s === "SUCCESS") return "SUCCESS";
-  if (s === "FAILED") return "FAILED";
-  if (s === "RUNNING") return "RUNNING";
-  return "PENDING";
+function OperationsSummary({ data }: { data: { ready: number; inProgress: number; completed: number; failed: number } }): React.ReactElement {
+  const cards = [
+    { label: "待执行", value: data.ready, hint: "已生成但尚未派发至设备" },
+    { label: "执行中", value: data.inProgress, hint: "已派发或已收到设备回执" },
+    { label: "已完成", value: data.completed, hint: "作业执行已结束" },
+    { label: "需复核", value: data.failed, hint: "执行未达标，建议检查或重做" },
+  ];
+
+  return (
+    <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
+      {cards.map((card) => (
+        <article key={card.label} className="card" style={{ padding: 12, display: "grid", gap: 6 }}>
+          <div className="muted">{card.label}</div>
+          <div style={{ fontSize: 24, fontWeight: 700 }}>{card.value}</div>
+          <div className="muted">{card.hint}</div>
+        </article>
+      ))}
+    </section>
+  );
 }
 
-function statusColor(status: StatusKey): string {
-  if (status === "SUCCESS") return "#16a34a";
-  if (status === "FAILED") return "#dc2626";
-  if (status === "RUNNING") return "#2563eb";
-  return "#6b7280";
+function QueueGroup({
+  title,
+  items,
+  onSelect,
+  selectedId,
+}: {
+  title: string;
+  items: any[];
+  onSelect: (id: string) => void;
+  selectedId: string;
+}): React.ReactElement {
+  return (
+    <div className="card" style={{ padding: 10, display: "grid", gap: 8 }}>
+      <strong>{title}（{items.length}）</strong>
+      {items.map((item) => (
+        <button
+          key={item.operationId}
+          className="btn"
+          type="button"
+          onClick={() => onSelect(item.operationId)}
+          style={{ textAlign: "left", borderColor: selectedId === item.operationId ? "#101828" : undefined }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+            <strong>{item.operationType}</strong>
+            <span className="pill" style={toneStyle(item.statusTone)}>{item.status}</span>
+          </div>
+          <div className="muted">Program：{item.programId}</div>
+          <div className="muted">设备 / 地块：{item.deviceField}</div>
+          <div className="muted">最近更新时间：{item.updatedAt}</div>
+          <div>验收状态：{item.acceptance}</div>
+        </button>
+      ))}
+      {items.length === 0 ? <div className="muted">暂无作业</div> : null}
+    </div>
+  );
 }
 
-function actionLabel(value: string | null | undefined, locale: Locale): string {
-  const raw = String(value ?? "").toLowerCase();
-  if (raw.includes("irrig")) return locale === "zh" ? "灌溉" : "Irrigation";
-  if (raw.includes("spray")) return locale === "zh" ? "喷洒" : "Spray";
-  if (raw.includes("seed")) return locale === "zh" ? "播种" : "Seeding";
-  return locale === "zh" ? "作业" : (raw ? raw.toUpperCase() : t(locale, "common.unknown"));
+function OperationGroups({ groups, onSelect, selectedId }: { groups: any; onSelect: (id: string) => void; selectedId: string }): React.ReactElement {
+  return (
+    <section style={{ display: "grid", gap: 10 }}>
+      <h3 style={{ margin: 0 }}>作业队列（分组）</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+        <QueueGroup title="待执行（READY）" items={groups.ready} onSelect={onSelect} selectedId={selectedId} />
+        <QueueGroup title="执行中（DISPATCHED / ACKED）" items={groups.inProgress} onSelect={onSelect} selectedId={selectedId} />
+        <QueueGroup title="已完成（SUCCEEDED）" items={groups.completed} onSelect={onSelect} selectedId={selectedId} />
+        <QueueGroup title="需复核（FAILED）" items={groups.failed} onSelect={onSelect} selectedId={selectedId} />
+      </div>
+    </section>
+  );
 }
 
-function timelineItemVisual(type: string): { icon: string; color: string } {
-  if (type === "RECOMMENDATION_CREATED") return { icon: "🧠", color: "#6b7280" };
-  if (type === "APPROVED") return { icon: "✅", color: "#16a34a" };
-  if (type === "TASK_DISPATCHED") return { icon: "📤", color: "#2563eb" };
-  if (type === "EXECUTING" || type === "DEVICE_ACK") return { icon: "⚙️", color: "#2563eb" };
-  if (type === "SUCCEEDED") return { icon: "✅", color: "#16a34a" };
-  if (type === "FAILED") return { icon: "❌", color: "#dc2626" };
-  return { icon: "•", color: "#6b7280" };
+function OperationDetail({ item }: { item: any | null }): React.ReactElement {
+  if (!item) return <section className="card" style={{ padding: 12 }}>请选择作业查看详情。</section>;
+
+  return (
+    <section className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
+      <h3 style={{ margin: 0 }}>作业详情</h3>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>1. 基本信息</strong>
+        <div>作业类型：{item.operationType}</div>
+        <div>Program：{item.programId}</div>
+        <div>设备 / 地块：{item.deviceField}</div>
+      </div>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>2. 执行状态</strong>
+        <div>当前状态：{item.status}</div>
+        <div className="muted">{item.status === "已回执" ? "系统已收到设备回执，正在等待验收。" : item.status === "已派发" ? "系统正在等待设备回执。" : "状态已更新。"}</div>
+      </div>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>3. 回执信息（Receipt）</strong>
+        <div>状态：{item.receipt.status}</div>
+        <div>时间：{item.receipt.time}</div>
+        <div>设备返回信息：{item.receipt.message}</div>
+      </div>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>4. 验收结果（核心）</strong>
+        <div>执行状态：{item.status}</div>
+        <div>验收状态：{item.acceptance}</div>
+        <div>{item.acceptanceReason}</div>
+        <div className="muted">{item.nextSuggestion}</div>
+      </div>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>5. 轨迹 / 证据引用</strong>
+        <div>轨迹点数：{item.trajectoryPoints}</div>
+        <div>覆盖率：{item.coverage}</div>
+        <div>evidence id：{item.evidenceId}</div>
+      </div>
+
+      <div className="card" style={{ padding: 10, display: "grid", gap: 4 }}>
+        <strong>执行链路</strong>
+        <div>Operation Plan → Task({item.taskId}) → Dispatch({item.dispatchCommandId}) → Published(已下行) → Receipt({item.receipt.status}) → Acceptance({item.acceptance})</div>
+      </div>
+    </section>
+  );
+}
+
+function OperationEvidence({ item }: { item: any | null }): React.ReactElement {
+  return (
+    <section className="card" style={{ padding: 12, display: "grid", gap: 8 }}>
+      <h3 style={{ margin: 0 }}>证据与导出</h3>
+      <div>本作业证据：{item?.evidenceId ?? "-"}</div>
+      <button type="button">导出证据包</button>
+      <p className="muted" style={{ margin: 0 }}>说明：用于客户交付 / 审计 / 溯源</p>
+    </section>
+  );
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [locale] = React.useState<Locale>(() => resolveLocale());
-  const tt = React.useCallback((key: string) => t(locale, key), [locale]);
-  const [fieldFilter, setFieldFilter] = React.useState<string>("");
-  const [deviceFilter, setDeviceFilter] = React.useState<string>("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("");
-  const [programFilter, setProgramFilter] = React.useState<string>("");
-  const {
-    items,
-    programIds,
-    fieldOptions,
-    deviceOptions,
-    loading,
-    selectedId,
-    setSelectedId,
-    selected,
-    todayStats,
-    selectedStats,
-    refresh,
-  } = useOperations({ fieldFilter, deviceFilter, statusFilter, programFilter });
+  const { loading, error, vm, setSelectedOperationId } = useOperations();
 
-  const durationText = locale === "zh"
-    ? `${Math.floor(selectedStats.durationSec / 60)}分${selectedStats.durationSec % 60}秒`
-    : `${Math.floor(selectedStats.durationSec / 60)}m ${selectedStats.durationSec % 60}s`;
+  if (loading) return <div>加载中...</div>;
+  if (error) return <div>加载失败</div>;
 
   return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <section className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <h2 style={{ margin: 0 }}>{tt("operation.title")}</h2>
-          <div className="muted">{tt("operation.desc")}</div>
-        </div>
-        <button className="btn" onClick={() => void refresh()} disabled={loading}>{tt("operation.actions.refresh")}</button>
-      </section>
+    <div style={{ display: "grid", gap: 12 }}>
+      <OperationsSummary data={vm.summary} />
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 10 }}>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_today")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.total}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_success_rate")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.successRate}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_running")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.runningCount}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tt("operation.kpi_failed")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.failedCount}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">Program 聚合</div><div style={{ fontSize: 24, fontWeight: 700 }}>{todayStats.programCount}</div></div>
-      </section>
+      <OperationGroups
+        groups={vm.groups}
+        onSelect={setSelectedOperationId}
+        selectedId={vm.selectedOperation?.operationId ?? ""}
+      />
 
-      <section className="card" style={{ padding: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
-          <option value="">{tt("operation.filters.all_fields")}</option>
-          {fieldOptions.map((v) => <option value={v} key={v}>{v}</option>)}
-        </select>
-        <select className="select" value={deviceFilter} onChange={(e) => setDeviceFilter(e.target.value)}>
-          <option value="">{tt("operation.filters.all_devices")}</option>
-          {deviceOptions.map((v) => <option value={v} key={v}>{v}</option>)}
-        </select>
-        <select className="select" value={programFilter} onChange={(e) => setProgramFilter(e.target.value)}>
-          <option value="">全部 Program</option>
-          {programIds.map((v) => <option value={v} key={v}>{v}</option>)}
-        </select>
-        <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="">{tt("operation.filters.all_status")}</option>
-          <option value="SUCCESS">{mapStatusToText("SUCCESS", tt)}</option>
-          <option value="FAILED">{mapStatusToText("FAILED", tt)}</option>
-          <option value="RUNNING">{mapStatusToText("RUNNING", tt)}</option>
-          <option value="PENDING">{mapStatusToText("PENDING", tt)}</option>
-        </select>
-      </section>
+      <OperationDetail item={vm.selectedOperation} />
 
-      <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <div className="card" style={{ padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{tt("operation.list")}</h3>
-          <div style={{ display: "grid", gap: 8, maxHeight: 560, overflow: "auto" }}>
-            {items.map((item) => {
-              const status = statusOf(item);
-              const color = statusColor(status);
-              return (
-                <button key={item.operation_id} className="btn" onClick={() => setSelectedId(item.operation_id)} style={{ textAlign: "left", borderColor: selectedId === item.operation_id ? "#111" : undefined }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ width: 10, height: 10, borderRadius: 999, background: color, display: "inline-block" }} />
-                    <span><b>{actionLabel(item.action_type, locale)}</b> · {item.field_id || tt("common.none")}</span>
-                  </div>
-                  <div className="muted">{tt("operation.labels.device")}：{item.device_id || tt("common.none")} · {fmtTs(item.timeline?.[0]?.ts ?? item.last_event_ts)}</div>
-                  <div className="muted">{tt("operation.filters.status")}：{mapStatusToText(status, tt)}</div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: 12 }}>
-          <h3 style={{ marginTop: 0 }}>{tt("operation.detail")}</h3>
-          {selected ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              <div><b>{tt("operation.labels.action")}：</b>{actionLabel(selected.action_type, locale)}</div>
-              <div><b>{tt("operation.labels.field")}：</b>{selected.field_id || tt("common.none")}</div>
-              <div><b>{tt("operation.labels.device")}：</b>{selected.device_id || tt("common.none")}</div>
-              <div><b>{tt("operation.filters.status")}：</b><span style={{ color: statusColor(statusOf(selected)) }}>{statusOf(selected) === "SUCCESS" ? "✅" : statusOf(selected) === "FAILED" ? "❌" : "⏳"} {mapStatusToText(statusOf(selected), tt)}</span></div>
-              <div><b>{tt("operation.labels.duration")}：</b>{durationText}</div>
-
-              <details>
-                <summary className="muted">{tt("common.ids")}</summary>
-                <div className="mono" style={{ fontSize: 12 }}>
-                  <div>operation_id: {selected.operation_id}</div>
-                  <div>recommendation_id: {selected.recommendation_id || tt("common.none")}</div>
-                  <div>task_id: {selected.task_id || tt("common.none")}</div>
-                </div>
-              </details>
-
-              {selectedStats.failedReason ? <div><b>{tt("operation.labels.failure_reason")}：</b>{selectedStats.failedReason || tt("common.none")}</div> : null}
-              <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.gis.trajectory_summary")}</div>
-              <div><b>{tt("operation.gis.trajectory_points")}：</b>{selectedStats.trajectoryPointCount || tt("common.none")}</div>
-              <div><b>{tt("operation.gis.spatial_summary")}：</b>{tt("operation.gis.in_field_ratio")} {Number.isFinite(selectedStats.inFieldRatio) && selectedStats.inFieldRatio > 0 ? selectedStats.inFieldRatio.toFixed(3) : "-"}</div>
-              <div><b>{tt("operation.gis.trajectory_summary")}：</b>{selectedStats.trajectoryPointCount > 1 ? tt("operation.gis.trajectory_ready") : tt("operation.gis.trajectory_missing")}</div>
-              {selected?.field_id ? <Link className="btn" to={`/fields/${encodeURIComponent(String(selected.field_id))}?focusTask=${encodeURIComponent(String(selected.task_id ?? ""))}`}>{tt("operation.gis.jump_to_field")}</Link> : null}
-
-              <div style={{ marginTop: 8, fontWeight: 700 }}>{tt("operation.timeline")}</div>
-              <ul style={{ display: "grid", gap: 4, margin: 0, paddingLeft: 16 }}>
-                {(selected.timeline ?? []).map((x, idx) => {
-                  const v = timelineItemVisual(x.type);
-                  return <li key={`${x.type}_${idx}`} style={{ color: v.color, display: "flex", justifyContent: "space-between" }}><span>{v.icon} {tt(`operation.timelineLabel.${x.type}`)}</span><span className="muted">{fmtTs(x.ts)}</span></li>;
-                })}
-                {!selected.timeline?.length ? <li className="muted">{tt("common.none")}</li> : null}
-              </ul>
-            </div>
-          ) : <div className="muted">{tt("common.none")}</div>}
-        </div>
-      </section>
+      <OperationEvidence item={vm.selectedOperation} />
     </div>
   );
 }
