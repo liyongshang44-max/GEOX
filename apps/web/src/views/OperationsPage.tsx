@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchOperationStates, fetchPrograms, fetchTaskTrajectory, readStoredAoActToken, type OperationStateItemV1 } from "../lib/api";
+import { type OperationStateItemV1 } from "../api";
+import { useOperations } from "../hooks/useOperations";
 import { mapStatusToText, resolveLocale, t, type Locale } from "../lib/i18n";
 
 type StatusKey = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
@@ -44,50 +45,22 @@ function timelineItemVisual(type: string): { icon: string; color: string } {
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [token] = React.useState<string>(() => readStoredAoActToken());
   const [locale] = React.useState<Locale>(() => resolveLocale());
   const tt = React.useCallback((key: string) => t(locale, key), [locale]);
-  const [items, setItems] = React.useState<OperationStateItemV1[]>([]);
-  const [selectedId, setSelectedId] = React.useState<string>("");
-  const [loading, setLoading] = React.useState(false);
-  const [trajectory, setTrajectory] = React.useState<any | null>(null);
-
   const [fieldFilter, setFieldFilter] = React.useState<string>("");
   const [deviceFilter, setDeviceFilter] = React.useState<string>("");
   const [statusFilter, setStatusFilter] = React.useState<string>("");
   const [programFilter, setProgramFilter] = React.useState<string>("");
-  const [programIds, setProgramIds] = React.useState<string[]>([]);
-
-  const refresh = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const [res, programs] = await Promise.all([
-        fetchOperationStates(token, {
-          limit: 200,
-          field_id: fieldFilter || undefined,
-          device_id: deviceFilter || undefined,
-          final_status: statusFilter || undefined,
-        }),
-        fetchPrograms(token, { limit: 200 }),
-      ]);
-      let next = Array.isArray(res.items) ? res.items : [];
-      if (programFilter) next = next.filter((x) => String(x.program_id ?? "") === programFilter);
-      setProgramIds(Array.from(new Set((programs ?? []).map((p: any) => String(p.program_id ?? "")).filter(Boolean))));
-      setItems(next);
-      setSelectedId((prev) => (prev && next.some((x) => x.operation_id === prev) ? prev : (next[0]?.operation_id ?? "")));
-    } finally {
-      setLoading(false);
-    }
-  }, [token, fieldFilter, deviceFilter, statusFilter, programFilter]);
-
-  React.useEffect(() => { void refresh(); }, [refresh]);
-
-  const selected = React.useMemo(() => items.find((x) => x.operation_id === selectedId) ?? null, [items, selectedId]);
-  React.useEffect(() => {
-    const taskId = String(selected?.task_id ?? "").trim();
-    if (!taskId) { setTrajectory(null); return; }
-    fetchTaskTrajectory(token, taskId).then(setTrajectory).catch(() => setTrajectory(null));
-  }, [selected?.task_id, token]);
+  const {
+    items,
+    programIds,
+    loading,
+    selectedId,
+    setSelectedId,
+    selected,
+    trajectory,
+    refresh,
+  } = useOperations({ fieldFilter, deviceFilter, statusFilter, programFilter });
 
   const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.field_id ?? "")).filter(Boolean))), [items]);
   const deviceOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x.device_id ?? "")).filter(Boolean))), [items]);

@@ -1,12 +1,9 @@
 // GEOX/apps/web/src/views/AlertsPage.tsx
-import React from "react"; // React hooks for alerts page.
+import React from "react";
+import { useSession } from "../auth/useSession"; // React hooks for alerts page.
 import { ackAlertEvent, closeAlertEvent, createAlertRule, disableAlertRule, fetchAlertEvents, fetchAlertNotifications, fetchAlertRules, type AlertEventItem, type AlertEventStatus, type AlertNotificationItem, type AlertObjectType, type AlertRuleItem, type AlertRuleStatus } from "../lib/api"; // Alerts APIs.
 
 const TOKEN_KEY = "geox_delivery_token_v1"; // Shared token storage key.
-
-function readToken(): string { // Read token from local storage.
-  return localStorage.getItem(TOKEN_KEY) || ""; // Return stored token or empty string.
-} // End helper.
 
 function fmtTs(v: number | null | undefined): string { // Format timestamp for Chinese UI.
   if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) return "-"; // Missing => dash.
@@ -38,7 +35,7 @@ function parseNotifyChannels(raw: string | null | undefined): string { // Render
 } // End helper.
 
 export default function AlertsPage(): React.ReactElement { // Alerts commercial page.
-  const [token, setToken] = React.useState<string>(() => readToken()); // Token state.
+  const { token, setToken } = useSession(); // Token state.
   const [rules, setRules] = React.useState<AlertRuleItem[]>([]); // Rule list.
   const [events, setEvents] = React.useState<AlertEventItem[]>([]); // Event list.
   const [notifications, setNotifications] = React.useState<AlertNotificationItem[]>([]); // Minimal notification records.
@@ -57,11 +54,7 @@ export default function AlertsPage(): React.ReactElement { // Alerts commercial 
   const [createNotifyWebhook, setCreateNotifyWebhook] = React.useState<boolean>(false); // Webhook notification toggle.
   const [lastAction, setLastAction] = React.useState<string>("-"); // Last action feedback.
 
-  function persistToken(next: string): void { // Persist shared token.
-    setToken(next); // Update state.
-    localStorage.setItem(TOKEN_KEY, next); // Persist for sibling pages.
-  } // End helper.
-
+  
   async function refresh(): Promise<void> { // Load rules and events together.
     setBusy(true); // Enter busy state.
     setStatus("正在同步告警规则与事件..."); // Loading message.
@@ -172,7 +165,7 @@ export default function AlertsPage(): React.ReactElement { // Alerts commercial 
       <div className="contentGridTwo alignStart">
         <section className="card sectionBlock">
           <div className="sectionHeader"><div><div className="sectionTitle">创建规则</div><div className="sectionDesc">先支持最小阈值规则和最小通知渠道。若设备当前最新遥测已越过阈值，会立即生成事件并写入通知记录。</div></div></div>
-          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => persistToken(e.target.value)} /></label>
+          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           <div className="formGridTwo">
             <label className="field">对象类型<select className="input" value={createObjectType} onChange={(e) => setCreateObjectType(e.target.value as AlertObjectType)}><option value="DEVICE">DEVICE</option><option value="FIELD">FIELD</option></select></label>
             <label className="field">对象 ID<input className="input" value={createObjectId} onChange={(e) => setCreateObjectId(e.target.value)} /></label>
