@@ -1,5 +1,4 @@
 import React from "react";
-import { useSession } from "../auth/useSession";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
@@ -20,7 +19,6 @@ export default function FieldDetailPage(): React.ReactElement {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("focusTask") || "";
   }, []);
-  const { token, setToken } = useSession();
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
@@ -231,7 +229,6 @@ export default function FieldDetailPage(): React.ReactElement {
           {isDev ? (
             <details style={{ marginTop: 12 }}>
               <summary className="muted">{labels.devDebug}</summary>
-              <label className="field"><span>AO-ACT Token</span><input className="input" value={token} onChange={(e) => setToken(e.target.value)} placeholder="token" /></label>
               <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify({ timelineEvents, mapInput, detail: model?.detail }, null, 2)}</pre>
             </details>
           ) : null}
