@@ -1620,7 +1620,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const adapterType = String(operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
+    const adapterType = String(body?.adapter_type ?? operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
     const requestedActionType = resolveActionType(body);
     const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
