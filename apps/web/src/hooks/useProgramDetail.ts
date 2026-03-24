@@ -7,29 +7,26 @@ import {
   fetchProgramTrajectories,
   fetchSchedulingConflicts,
 } from "../api";
-import { resolveLocale, t, type Locale } from "../lib/i18n";
-import { buildProgramDetailDashboardVM } from "../viewmodels/programDashboardViewModel";
+import {
+  buildProgramDetailViewModel,
+  type ProgramDetailViewModel,
+} from "../viewmodels/programDetailViewModel";
 
-function conflictLabel(kind: string, tf: (k: string) => string): string {
-  const k = String(kind ?? "").toUpperCase();
-  if (k === "DEVICE_CONFLICT") return tf("portfolio.deviceConflict");
-  if (k === "FIELD_CONFLICT") return tf("portfolio.fieldConflict");
-  if (k === "PROGRAM_INTENT_CONFLICT") return tf("portfolio.intentConflict");
-  return tf("common.noRecord");
-}
-
-function resolveDisplayText(value: string, tf: (k: string) => string): string {
-  if (value.startsWith("program.") || value.startsWith("portfolio.") || value.startsWith("common.")) return tf(value);
-  return value;
+function conflictLabel(kind: string): string {
+  const normalized = String(kind ?? "").toUpperCase();
+  if (normalized === "DEVICE_CONFLICT") return "设备冲突";
+  if (normalized === "FIELD_CONFLICT") return "地块冲突";
+  if (normalized === "PROGRAM_INTENT_CONFLICT") return "策略冲突";
+  return "未知冲突";
 }
 
 export function useProgramDetail(programId: string): {
-  vm: ReturnType<typeof buildProgramDetailDashboardVM>;
-  label: (key: string) => string;
-  displayText: (value: string) => string;
+  loading: boolean;
+  error: string | null;
+  viewModel: ProgramDetailViewModel | null;
 } {
-  const [locale] = React.useState<Locale>(() => resolveLocale());
-  const label = React.useCallback((key: string) => t(locale, key), [locale]);
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const [item, setItem] = React.useState<any>(null);
   const [trajectories, setTrajectories] = React.useState<any[]>([]);
@@ -39,8 +36,17 @@ export function useProgramDetail(programId: string): {
   const [conflicts, setConflicts] = React.useState<string[]>([]);
 
   React.useEffect(() => {
-    const id = decodeURIComponent(programId);
-    if (!id) return;
+    let active = true;
+    const id = decodeURIComponent(programId || "").trim();
+    if (!id) {
+      setLoading(false);
+      setError("缺少 Program ID");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
     Promise.all([
       fetchProgramDetail(id).catch(() => null),
       fetchProgramTrajectories(id).catch(() => []),
@@ -48,39 +54,56 @@ export function useProgramDetail(programId: string): {
       fetchProgramSla(id).catch(() => null),
       fetchProgramEfficiency(id).catch(() => null),
       fetchSchedulingConflicts().catch(() => []),
-    ]).then(([detail, traj, costData, slaData, efficiencyData, conflictList]) => {
-      setItem(detail);
-      setTrajectories(traj);
-      setCost(costData);
-      setSla(slaData);
-      setEfficiency(efficiencyData);
-      const kinds = (Array.isArray(conflictList) ? conflictList : [])
-        .filter((c: any) => Array.isArray(c?.related_program_ids) && c.related_program_ids.some((pid: unknown) => String(pid) === id))
-        .map((c: any) => conflictLabel(String(c?.kind ?? ""), label));
-      setConflicts(Array.from(new Set(kinds)));
-    }).catch(() => {
-      setItem(null);
-      setTrajectories([]);
-      setCost(null);
-      setSla(null);
-      setEfficiency(null);
-      setConflicts([]);
+    ])
+      .then(([detail, traj, costData, slaData, efficiencyData, conflictList]) => {
+        if (!active) return;
+
+        setItem(detail);
+        setTrajectories(Array.isArray(traj) ? traj : []);
+        setCost(costData);
+        setSla(slaData);
+        setEfficiency(efficiencyData);
+
+        const kinds = (Array.isArray(conflictList) ? conflictList : [])
+          .filter((entry: any) =>
+            Array.isArray(entry?.related_program_ids) &&
+            entry.related_program_ids.some((pid: unknown) => String(pid) === id),
+          )
+          .map((entry: any) => conflictLabel(String(entry?.kind ?? "")));
+        setConflicts(Array.from(new Set(kinds)));
+
+        setLoading(false);
+        if (!detail) setError("暂无足够数据支持判断");
+      })
+      .catch(() => {
+        if (!active) return;
+        setItem(null);
+        setTrajectories([]);
+        setCost(null);
+        setSla(null);
+        setEfficiency(null);
+        setConflicts([]);
+        setError("暂无足够数据支持判断");
+        setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [programId]);
+
+  const viewModel = React.useMemo(() => {
+    if (!item) return null;
+    return buildProgramDetailViewModel({
+      programId,
+      item,
+      trajectories,
+      cost,
+      sla,
+      efficiency,
+      conflicts,
     });
-  }, [programId, label]);
+  }, [programId, item, trajectories, cost, sla, efficiency, conflicts]);
 
-  const vm = React.useMemo(() => buildProgramDetailDashboardVM({
-    programId,
-    item,
-    trajectories,
-    cost,
-    sla,
-    efficiency,
-    conflicts,
-    insufficientText: label("common.insufficientData"),
-    noRecordText: label("common.noRecord"),
-  }), [programId, item, trajectories, cost, sla, efficiency, conflicts, label]);
-
-  const displayText = React.useCallback((value: string) => resolveDisplayText(value, label), [label]);
-
-  return { vm, label, displayText };
+  return { loading, error, viewModel };
 }
