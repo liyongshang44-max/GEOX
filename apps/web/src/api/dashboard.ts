@@ -1,4 +1,4 @@
-import { requestJson, withQuery } from "./client";
+import { apiRequest, withQuery } from "./client";
 
 export type DashboardSummary = {
   field_count: number;
@@ -23,5 +23,5 @@ export type DashboardOverview = {
 };
 
 export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<DashboardOverview> {
-  return requestJson<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
+  return apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
 }
