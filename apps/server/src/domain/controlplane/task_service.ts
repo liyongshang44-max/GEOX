@@ -1776,7 +1776,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (latestReceipt) return badRequest(reply, "TASK_ALREADY_HAS_RECEIPT");
 
     const existingOutbox = await loadLatestFactByTypeAndKey(pool, "ao_act_dispatch_outbox_v1", "payload,act_task_id", act_task_id, tenant);
-    if (existingOutbox) {
+    const hasExplicitAdapterHint = String(body?.adapter_hint ?? "").trim().length > 0;
+    if (existingOutbox && !hasExplicitAdapterHint) {
       const existingPayload = existingOutbox.record_json?.payload ?? {};
       await upsertDispatchQueueReady(pool, {
         tenant,
