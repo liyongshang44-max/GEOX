@@ -1761,9 +1761,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const taskPayload = taskFact.record_json?.payload ?? {};
     const adapterType = String(taskPayload?.adapter_type ?? body.adapter_hint ?? "").trim();
+    const actionType = resolveActionType(taskPayload);
+    console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${String(adapterType).trim().toLowerCase()} action_type=${String(actionType).trim().toLowerCase()} task_type=${String(taskPayload?.task_type ?? "").trim().toLowerCase()}`);
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, resolveActionType(taskPayload))) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+    if (!adapterSupportsAction(adapterType, actionType)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
     const adapterValidation = validateAdapterTask(adapterType, taskPayload);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
