@@ -88,9 +88,12 @@ export default function ProgramListPage(): React.ReactElement {
                 </div>
               </div>
 
-              <div>
-                <div className="muted">{tf("portfolio.rowNextAction")}</div>
-                <div style={{ fontWeight: 600 }}>{resolveText(card.primaryActionKey)}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                <div>
+                  <div className="muted">{tf("portfolio.rowNextAction")}</div>
+                  <div style={{ fontWeight: 700, color: "#101828" }}>{card.primaryActionText}</div>
+                </div>
+                <span className="pill" style={{ background: "#f2f4f7", color: "#344054" }}>{card.actionStatusTag}</span>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
@@ -101,6 +104,18 @@ export default function ProgramListPage(): React.ReactElement {
                 <div className="card" style={{ padding: 10 }}>
                   <div className="muted">{tf("portfolio.pendingTask")}</div>
                   <div style={{ fontWeight: 600 }}>{card.pendingTask}</div>
+                </div>
+              </div>
+
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">风险原因</div>
+                  <div style={{ fontWeight: 600 }}>{resolveText(card.riskReason)}</div>
+                </div>
+                <div className="card" style={{ padding: 10 }}>
+                  <div className="muted">最近更新时间</div>
+                  <div style={{ fontWeight: 600 }}>{card.updatedAtText}</div>
                 </div>
               </div>
 

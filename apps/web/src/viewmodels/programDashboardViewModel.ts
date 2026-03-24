@@ -19,6 +19,10 @@ export type ProgramListCardVM = {
   statusBadge: DisplayBadge;
   riskBadge: DisplayBadge;
   primaryActionKey: string;
+  primaryActionText: string;
+  actionStatusTag: "监测中" | "待处理" | "待审批" | "已阻断";
+  riskReason: string;
+  updatedAtText: string;
   pendingPlan: string;
   pendingTask: string;
   metrics: [MetricBlock, MetricBlock, MetricBlock];
@@ -95,6 +99,26 @@ function nextActionKey(kind: unknown): string {
   if (s === "DATA_INSUFFICIENT") return "program.nextAction.dataInsufficient";
   return "program.nextAction.unknown";
 }
+
+function resolveNextStepText(item: any): string {
+  const mode = String(item?.next_action_hint?.mode ?? item?.next_action_hint?.decision_mode ?? "").toUpperCase();
+  const kind = String(item?.next_action_hint?.kind ?? "").toUpperCase();
+  if (mode === "BLOCKED") return "当前不可执行";
+  if (mode === "APPROVAL_REQUIRED") return "待人工确认";
+  if (kind === "ON_TRACK" || kind === "STABLE_EXECUTION") return "当前无需新增操作";
+  if (kind === "DATA_INSUFFICIENT") return "正在等待关键数据更新";
+  return "待处理";
+}
+
+function resolveActionStatusTag(item: any): "监测中" | "待处理" | "待审批" | "已阻断" {
+  const mode = String(item?.next_action_hint?.mode ?? item?.next_action_hint?.decision_mode ?? "").toUpperCase();
+  const kind = String(item?.next_action_hint?.kind ?? "").toUpperCase();
+  if (mode === "BLOCKED") return "已阻断";
+  if (mode === "APPROVAL_REQUIRED") return "待审批";
+  if (kind === "ON_TRACK" || kind === "STABLE_EXECUTION" || kind === "DATA_INSUFFICIENT") return "监测中";
+  return "待处理";
+}
+
 
 function slaText(status: unknown, insufficientText: string): string {
   const s = String(status ?? "").toUpperCase();
@@ -178,6 +202,10 @@ export function buildProgramListCards(args: {
       statusBadge: statusBadge(statusText, insufficientText),
       riskBadge: riskBadge(rawRisk),
       primaryActionKey: nextActionKey(x?.next_action_hint?.kind),
+      primaryActionText: resolveNextStepText(x),
+      actionStatusTag: resolveActionStatusTag(x),
+      riskReason: safeText(x?.current_risk_summary?.reason, insufficientText),
+      updatedAtText: safeText(x?.updated_at ?? x?.updatedAt, insufficientText),
       pendingPlan: toShortId(x?.pending_operation_plan_id, noRecordText),
       pendingTask: toShortId(x?.pending_act_task_id, noRecordText),
       metrics: [
