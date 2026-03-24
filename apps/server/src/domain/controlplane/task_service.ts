@@ -1228,10 +1228,19 @@ function assertTenantFieldDeviceTriple(taskPayload: any): { ok: true } | { ok: f
   return { ok: true };
 }
 
+function resolveActionType(input: any): string {
+  const actionType = typeof input?.action_type === "string" ? input.action_type.trim() : "";
+  if (actionType) return actionType;
+  const taskType = typeof input?.task_type === "string" ? input.task_type.trim() : "";
+  if (taskType) return taskType;
+  return "";
+}
+
 function adapterSupportsAction(adapterType: string, actionType: string): boolean {
   const a = String(adapterType ?? "").trim().toLowerCase();
   const action = String(actionType ?? "").trim().toLowerCase();
   if (!a || !action) return false;
+  if (a === "mqtt" && action === "irrigate") return true; // Explicitly allow adapter_type=mqtt + task_type/action_type=IRRIGATE.
   if (a === "mqtt") return true;
   if (a === "irrigation_real" || a === "irrigation_simulator" || a === "irrigation_http_v1") {
     return action === "irrigation.start" || action === "irrigate";
@@ -1445,7 +1454,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? proposal?.target ?? "" }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-      if (!adapterSupportsAction(planAdapterType, proposal?.action_type)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+      if (!adapterSupportsAction(planAdapterType, resolveActionType(proposal))) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
       const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? "" } });
       if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
       await insertFact(pool, "api/v1/approvals", {
@@ -1615,14 +1624,16 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
-    const adapterType = String(operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
+    const adapterType = String(body?.adapter_type ?? operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
+    const requestedActionType = resolveActionType(body);
     const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, body?.action_type)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+    if (!adapterSupportsAction(adapterType, requestedActionType)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
     const adapterValidation = validateAdapterTask(adapterType, body);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
       ...body,
+      action_type: requestedActionType,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
@@ -1751,7 +1762,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const adapterType = String(taskPayload?.adapter_type ?? body.adapter_hint ?? "").trim();
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, taskPayload?.action_type)) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+    if (!adapterSupportsAction(adapterType, resolveActionType(taskPayload))) return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
     const adapterValidation = validateAdapterTask(adapterType, taskPayload);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
