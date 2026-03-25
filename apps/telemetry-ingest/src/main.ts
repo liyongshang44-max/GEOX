@@ -76,7 +76,7 @@ async function main() { // Main bootstrap for telemetry + heartbeat ingest.
   const databaseUrl = resolveDatabaseUrl(); // Resolve Postgres connection string.
   if (!databaseUrl) throw new Error("DATABASE_URL_NOT_CONFIGURED"); // Require database before starting.
 
-  const mqttUrl = process.env.MQTT_URL || "mqtt://127.0.0.1:1883"; // Resolve MQTT broker URL with local default.
+  const mqttUrl = process.env.GEOX_MQTT_URL || process.env.MQTT_URL || "mqtt://127.0.0.1:1883"; // Prefer GEOX_MQTT_URL, keep MQTT_URL fallback for compatibility.
   const topicFilter = process.env.TELEMETRY_TOPIC_FILTER || "telemetry/+/+"; // Telemetry topic wildcard.
   const heartbeatFilter = process.env.HEARTBEAT_TOPIC_FILTER || "heartbeat/+/+"; // Heartbeat topic wildcard.
   const once = process.argv.includes("--once"); // One-shot mode for smoke tests.
