@@ -36,18 +36,18 @@ type BreadcrumbItem = {
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "总览";
-  if (pathname.startsWith("/delivery/export-jobs")) return "证据导出";
+  if (pathname.startsWith("/delivery/export-jobs")) return "证据中心";
   if (pathname === "/fields") return "田块与 GIS";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备中心";
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
-  if (pathname.startsWith("/operations")) return "作业控制";
+  if (pathname.startsWith("/operations")) return "待执行动作";
   if (pathname === "/programs") return "经营 Program";
   if (pathname.startsWith("/programs/")) return "Program 详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
   if (pathname.startsWith("/alerts")) return "告警中心";
-  if (pathname.startsWith("/audit-export")) return "审计与导出";
+  if (pathname.startsWith("/audit-export")) return "证据中心";
   if (pathname.startsWith("/settings")) return "系统设置";
   if (pathname.startsWith("/dev")) return "研发工具";
   return "GEOX 控制台";
@@ -55,18 +55,18 @@ function titleForPath(pathname: string): string {
 
 function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "当前页面汇总 Commercial v1 已完成能力、冻结基线与下一阶段收口任务。";
-  if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出任务、详情文件与下载入口。";
+  if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
-  if (pathname.startsWith("/operations")) return "围绕审批、任务、调度与回执形成中文作业控制工作面。";
+  if (pathname.startsWith("/operations")) return "查看 READY / DISPATCHED / ACKED 等需盯住动作，并快速跳转 Program 详情。";
   if (pathname === "/programs") return "按地块经营对象查看状态、阶段、风险与待执行计划。";
   if (pathname.startsWith("/programs/")) return "查看单个 Program 的目标约束、时间线和证据闭环状态。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
-  if (pathname.startsWith("/audit-export")) return "按对象和时间范围汇总导出、告警、回执与控制动作。";
+  if (pathname.startsWith("/audit-export")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname.startsWith("/settings")) return "查看当前会话、角色、令牌与最小门禁约束。";
   if (pathname.startsWith("/dev")) return "保留旧调试页作为 fallback，不参与商业演示主流程。";
   return "中文商业控制台外壳已建立，后续页面按产品信息架构持续收口。";
@@ -74,18 +74,18 @@ function leadForPath(pathname: string): string {
 
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "总览" }];
-  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据导出" }];
+  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
-  if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "作业控制" }];
+  if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营 Program" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营 Program", to: "/programs" }, { label: "Program 详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
   if (pathname.startsWith("/alerts")) return [{ label: "总览", to: "/dashboard" }, { label: "告警中心" }];
-  if (pathname.startsWith("/audit-export")) return [{ label: "总览", to: "/dashboard" }, { label: "审计与导出" }];
+  if (pathname.startsWith("/audit-export")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
   if (pathname.startsWith("/settings")) return [{ label: "总览", to: "/dashboard" }, { label: "系统设置" }];
   if (pathname.startsWith("/dev")) return [{ label: "总览", to: "/dashboard" }, { label: "研发工具" }];
   return [{ label: "总览", to: "/dashboard" }, { label: "控制台" }];
@@ -137,7 +137,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
           <SidebarLink to="/audit-export" label="审计与导出" />
-          <SidebarLink to="/delivery/export-jobs" label="证据导出" />
+          <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
 

@@ -1139,3 +1139,28 @@ button,input,select,textarea{font-family:inherit}
 
 .scopeWrap { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
 .bulletList { display:grid; gap:10px; color:#334155; }
+
+.productPage { display: grid; gap: 14px; max-width: 1240px; }
+.pageContextBar { padding: 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.summaryGrid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.summaryGrid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.summaryGrid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.metricLinkCard { padding: 14px; display: grid; gap: 8px; }
+.metricBig { font-size: 34px; font-weight: 700; line-height: 1.15; }
+.toolbarFilters { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.timelineItem { border-top: 1px solid #eaecf0; padding: 10px 0; display: grid; gap: 6px; }
+.timelineItem:first-of-type { border-top: none; }
+.timelineTitle { font-weight: 650; }
+.statusTag { display: inline-flex; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: 12px; border: 1px solid transparent; }
+.statusTag.tone-success { background: #ecfdf3; color: #027a48; border-color: #a6f4c5; }
+.statusTag.tone-warning { background: #eff8ff; color: #175cd3; border-color: #b2ddff; }
+.statusTag.tone-danger { background: #fef3f2; color: #b42318; border-color: #fecdca; }
+.statusTag.tone-neutral { background: #f2f4f7; color: #344054; border-color: #d0d5dd; }
+
+@media (max-width: 1200px) {
+  .summaryGrid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summaryGrid3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px) {
+  .summaryGrid4, .summaryGrid3, .summaryGrid2 { grid-template-columns: 1fr; }
+}
