@@ -2,8 +2,9 @@
 # Smoke test: backend + web UI (PowerShell)
 $ErrorActionPreference = "Stop"
 
-$base = "http://localhost:3000"
+$base = $(if ($env:GEOX_BASE_URL) { $env:GEOX_BASE_URL } else { "http://127.0.0.1:3001" })
 
+Write-Host "[acceptance] BASE_URL=$base"
 Write-Host "== GET /api/groups?projectId=P_DEFAULT =="
 $groups = Invoke-RestMethod "$base/api/groups?projectId=P_DEFAULT"
 $groups | ConvertTo-Json -Depth 10

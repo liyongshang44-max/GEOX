@@ -3,7 +3,8 @@
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); } // Small poll helper for async export jobs.
 
 (async () => {
-  const base = env('BASE_URL', 'http://127.0.0.1:3000'); // Resolve API base URL from env.
+  const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001'); // Resolve API base URL from env.
+  console.log(`[acceptance] BASE_URL=${base}`);
   const token = env('AO_ACT_TOKEN', ''); // Resolve AO-ACT bearer token from env.
   const tenant_id = env('TENANT_ID', 'tenantA'); // Resolve tenant id from env.
   const project_id = env('PROJECT_ID', 'projectA'); // Resolve project id from env.
