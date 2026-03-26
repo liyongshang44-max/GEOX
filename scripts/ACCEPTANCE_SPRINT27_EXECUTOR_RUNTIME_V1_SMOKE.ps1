@@ -1,5 +1,5 @@
 param(
-  [string]$baseUrl = "http://127.0.0.1:3000",
+  [string]$baseUrl = $(if ($env:GEOX_BASE_URL) { $env:GEOX_BASE_URL } else { "http://127.0.0.1:3001" }),
   [string]$token = ""
 )
 
@@ -56,7 +56,7 @@ function Curl-PostJsonFile([string]$url, [string]$jsonPath, [string]$t){
 $tok = Get-Token
 if ($tok -eq "") { Fail "no token found (set -token or GEOX_AO_ACT_TOKEN or config/auth/ao_act_tokens_v0.json)" }
 
-Info ("using baseUrl=" + $baseUrl)
+Info ("[acceptance] BASE_URL=" + $baseUrl)
 Info ("using token=" + $tok + " (len=" + $tok.Length + ")")
 
 & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "ACCEPTANCE_SPRINT16_DECISION_PLAN_V0_NEGATIVE.ps1") -baseUrl $baseUrl | Out-Null
