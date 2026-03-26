@@ -141,6 +141,16 @@ UPDATE field_index_v1
 SET name = COALESCE(name, field_name)
 WHERE name IS NULL;
 
+ALTER TABLE field_index_v1
+  ADD COLUMN IF NOT EXISTS area_ha DOUBLE PRECISION;
+
+ALTER TABLE field_index_v1
+  ADD COLUMN IF NOT EXISTS status TEXT;
+
+UPDATE field_index_v1
+SET area_ha = COALESCE(area_ha, area_m2 / 10000.0)
+WHERE area_m2 IS NOT NULL;
+
 CREATE TABLE IF NOT EXISTS device_credential_index_v1 (
   tenant_id TEXT NOT NULL,
   device_id TEXT NOT NULL,
