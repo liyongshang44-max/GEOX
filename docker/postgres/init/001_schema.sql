@@ -133,3 +133,59 @@ CREATE TABLE IF NOT EXISTS alert_notification_index_v1 (
 
 CREATE INDEX IF NOT EXISTS alert_notification_index_v1_lookup_idx
   ON alert_notification_index_v1 (tenant_id, event_id, rule_id, channel, created_ts_ms DESC);
+
+ALTER TABLE field_index_v1
+  ADD COLUMN IF NOT EXISTS name TEXT;
+
+UPDATE field_index_v1
+SET name = COALESCE(name, field_name)
+WHERE name IS NULL;
+
+CREATE TABLE IF NOT EXISTS device_credential_index_v1 (
+  tenant_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  credential_id TEXT NOT NULL,
+  credential_hash TEXT NOT NULL,
+  status TEXT NOT NULL,
+  issued_ts_ms BIGINT NOT NULL,
+  revoked_ts_ms BIGINT NULL,
+  created_ts_ms BIGINT NULL,
+  updated_ts_ms BIGINT NULL,
+  PRIMARY KEY (tenant_id, device_id, credential_id)
+);
+
+CREATE INDEX IF NOT EXISTS device_credential_index_v1_lookup_idx
+  ON device_credential_index_v1 (tenant_id, device_id, status, issued_ts_ms DESC);
+
+CREATE TABLE IF NOT EXISTS device_status_index_v1 (
+  tenant_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  last_telemetry_ts_ms BIGINT NULL,
+  last_heartbeat_ts_ms BIGINT NULL,
+  battery_percent INTEGER NULL,
+  rssi_dbm INTEGER NULL,
+  fw_ver TEXT NULL,
+  updated_ts_ms BIGINT NOT NULL,
+  PRIMARY KEY (tenant_id, device_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_device_binding_index_v1_tenant_device
+  ON device_binding_index_v1 (tenant_id, device_id);
+
+CREATE TABLE IF NOT EXISTS agronomy_signal_snapshot_v1 (
+  tenant_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  group_id TEXT NOT NULL,
+  device_id TEXT NOT NULL,
+  field_id TEXT NOT NULL,
+  season_id TEXT NULL,
+  soil_moisture_pct DOUBLE PRECISION,
+  canopy_temp_c DOUBLE PRECISION,
+  battery_percent INTEGER,
+  observed_ts_ms BIGINT,
+  updated_ts_ms BIGINT,
+  PRIMARY KEY (tenant_id, device_id)
+);
+
+CREATE INDEX IF NOT EXISTS agronomy_signal_snapshot_v1_lookup_idx
+  ON agronomy_signal_snapshot_v1 (tenant_id, field_id, device_id, updated_ts_ms DESC);
