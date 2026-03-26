@@ -4,7 +4,7 @@ This smoke test validates Web v1 against the Phase 1–5 backend.
 
 ## Preconditions
 
-- Backend server running on `http://localhost:3000`
+- Backend server running on `http://127.0.0.1:3001`
 - A valid group exists (default seed `G_DEFAULT` is OK)
 
 ## Run Web

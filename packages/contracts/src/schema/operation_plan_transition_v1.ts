@@ -14,7 +14,7 @@ export type OperationPlanTransitionV1 = {
     status: OperationPlanStatusV1;
     trigger: string;
     approval_request_id?: string | null;
-    decision?: "APPROVE" | "REJECT" | null;
+    decision?: "APPROVE" | "REJECT" | null; // API decision input uses APPROVE/REJECT; do not rename persisted APPROVED-like internal statuses.
     decision_fact_id?: string | null;
     act_task_id?: string | null;
     receipt_fact_id?: string | null;
