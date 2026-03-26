@@ -151,6 +151,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
       if (!auth) return;
 
       const body: any = req.body ?? {};
+      // Approval API decision input uses APPROVE/REJECT; persisted plan status remains APPROVED-like internal states.
       const tenant = assertTenantTriple(body);
       if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
@@ -261,6 +262,7 @@ export function registerControlApprovalRequestV1Routes(app: FastifyInstance, poo
       if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
       const body: any = req.body ?? {};
+      // Approval API decision input uses APPROVE/REJECT; persisted plan status remains APPROVED-like internal states.
       if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");
       const request_id = body.request_id;
 

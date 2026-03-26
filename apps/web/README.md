@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-The dev server proxies `/api/*` to `http://localhost:3000`.
+The dev server proxies `/api/*` to `http://127.0.0.1:3001`.
 
 ## Notes
 

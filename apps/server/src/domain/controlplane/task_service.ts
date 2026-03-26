@@ -34,6 +34,7 @@ function parseJsonMaybe(v: any): any {
   return null; // Unknown shape => null.
 }
 
+// Host entrypoint default is http://127.0.0.1:3001; container-internal service calls remain http://server:3000.
 function hostBaseUrl(req: FastifyRequest): string {
   const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim(); // Optional explicit internal base.
   if (envBase) return envBase; // Prefer explicit internal URL when present.
