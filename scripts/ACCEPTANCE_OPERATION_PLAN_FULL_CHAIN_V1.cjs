@@ -30,7 +30,8 @@ async function getJson(baseUrl, path, token) {
 }
 
 async function main() {
-  const baseUrl = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3000").trim();
+  const baseUrl = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001").trim();
+  console.log(`[acceptance] BASE_URL=${baseUrl}`);
   const token = mustEnv("GEOX_BEARER_TOKEN");
   const tenant_id = mustEnv("GEOX_TENANT_ID");
   const project_id = mustEnv("GEOX_PROJECT_ID");

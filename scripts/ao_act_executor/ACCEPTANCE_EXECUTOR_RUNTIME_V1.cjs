@@ -121,7 +121,8 @@ function sleep(ms) { // 简单 sleep，等待异步链路落库。
 } // sleep 结束。
 
 (async () => { // 主流程入口。
-  const base = env('BASE_URL', 'http://127.0.0.1:3000'); // 控制平面基地址。
+  const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001'); // 控制平面基地址。
+  console.log(`[acceptance] BASE_URL=${base}`);
   const adminToken = env('AO_ACT_TOKEN', env('GEOX_AO_ACT_TOKEN', '')); // admin token：用于 recommendation / submit-approval / approve / retry 等管理动作。
   const executorToken = env('AO_ACT_EXECUTOR_TOKEN', env('GEOX_AO_ACT_EXECUTOR_TOKEN', '')); // executor token：仅用于 dispatch/runtime 路径。
   const triple = { // 默认租户三元组。

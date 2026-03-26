@@ -1,5 +1,5 @@
 param(
-  [string]$baseUrl = "",
+  [string]$baseUrl = $(if ($env:GEOX_BASE_URL) { $env:GEOX_BASE_URL } else { "http://127.0.0.1:3001" }),
   [string]$token = ""
 )
 
@@ -16,17 +16,6 @@ function Sha256-File([string]$p){
     $b = $h.ComputeHash($fs)
     return ($b | ForEach-Object { $_.ToString("x2") }) -join ""
   } finally { $fs.Dispose(); $h.Dispose() }
-}
-
-function Detect-BaseUrl {
-  $candidates = @("http://127.0.0.1:3000","http://localhost:3000","http://[::1]:3000")
-  foreach ($u in $candidates) {
-    try {
-      $r = & curl.exe -s -m 2 "$u/api/health"
-      if ($LASTEXITCODE -eq 0 -and $r -match "ok") { return $u }
-    } catch {}
-  }
-  return "http://127.0.0.1:3000"
 }
 
 function Has-Prop($obj, [string]$name){
@@ -74,8 +63,7 @@ if (Test-Path $scriptSelf) {
   Info ("script_sha256=" + (Sha256-File $scriptSelf))
 }
 
-if ($baseUrl -eq "") { $baseUrl = Detect-BaseUrl }
-Info ("using baseUrl=" + $baseUrl)
+Info ("[acceptance] BASE_URL=" + $baseUrl)
 
 $tok = Get-Token
 if ($tok -eq "") { Info "warning: no token found; endpoints may reject auth" }
