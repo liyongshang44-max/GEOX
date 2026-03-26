@@ -1,165 +1,116 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useDashboard } from "../hooks/useDashboard";
+import { StatusTag } from "../components/StatusTag";
+import { RelativeTime } from "../components/RelativeTime";
 
 type DashboardProps = { expert?: boolean };
 
-function DashboardSummaryCards({
-  data,
-}: {
-  data: { activePrograms: number; priorityPrograms: number; pendingActions: number; dataIssues: number };
-}): React.ReactElement {
-  const cards = [
-    { label: "运行中 Program", value: data.activePrograms, hint: "当前可持续跟进的 Program 数量" },
-    { label: "需优先处理", value: data.priorityPrograms, hint: "存在动作/审批/阻断的 Program" },
-    { label: "待执行动作", value: data.pendingActions, hint: "已生成且未执行/未审批的动作" },
-    { label: "数据缺口 / 低效率", value: data.dataIssues, hint: "当前缺少关键采集数据，影响决策判断" },
-  ];
-
-  return (
-    <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
-      {cards.map((card) => (
-        <article key={card.label} className="card" style={{ padding: 12, display: "grid", gap: 6 }}>
-          <div className="muted">{card.label}</div>
-          <div style={{ fontSize: 24, fontWeight: 700 }}>{card.value}</div>
-          <div className="muted">{card.hint}</div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function PriorityProgramList({ items }: { items: any[] }): React.ReactElement {
-  return (
-    <section className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ margin: 0 }}>优先 Program</h3>
-        <Link className="btn" to="/programs">查看全部</Link>
-      </div>
-      {items.map((item) => (
-        <article key={item.id} className="card" style={{ padding: 10, display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-            <strong>{item.name}</strong>
-            <div style={{ display: "flex", gap: 6 }}>
-              <span className="pill" style={{ background: item.status === "BLOCKED" ? "#fef3f2" : "#ecfdf3", color: item.status === "BLOCKED" ? "#b42318" : "#027a48" }}>{item.status}</span>
-              <span className="pill" style={{ background: "#f2f4f7", color: "#344054" }}>{item.actionStatus}</span>
-            </div>
-          </div>
-          <div className="muted">{item.fieldCrop}</div>
-          <div><strong>下一步：</strong>{item.nextStep}</div>
-          <div><strong>风险原因：</strong>{item.riskReason}</div>
-          <div className="muted">最近更新时间：{item.updatedAt}</div>
-        </article>
-      ))}
-      {items.length === 0 ? <div className="muted">当前无需新增操作，系统将在下一轮数据更新后重新评估。</div> : null}
-    </section>
-  );
-}
-
-function ActionQueue({ items }: { items: any[] }): React.ReactElement {
-  return (
-    <section className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ margin: 0 }}>待处理动作</h3>
-        <Link className="btn" to="/operations">进入动作中心</Link>
-      </div>
-      {items.map((action) => (
-        <article key={action.id} className="card" style={{ padding: 10, display: "grid", gap: 6 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-            <strong>{action.actionType}</strong>
-            <span className="pill" style={{ background: "#f2f4f7", color: "#344054" }}>{action.mode}</span>
-          </div>
-          <div className="muted">所属 Program：{action.programName}</div>
-          <div>原因：{action.reason}</div>
-          <div>
-            <button type="button" disabled={action.disabled}>{action.buttonText}</button>
-          </div>
-        </article>
-      ))}
-      {items.length === 0 ? <div className="muted">当前无需新增操作，系统将在下一轮数据更新后重新评估。</div> : null}
-    </section>
-  );
-}
-
-function RiskPanel({ risks }: { risks: any }): React.ReactElement {
-  return (
-    <section className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-      <h3 style={{ margin: 0 }}>异常与风险</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-        <div className="card" style={{ padding: 10, display: "grid", gap: 8 }}>
-          <strong>验收失败 / 待复核</strong>
-          {risks.acceptance.map((item: any, idx: number) => (
-            <div key={`${item.programName}-${idx}`} style={{ borderTop: "1px solid #eaecf0", paddingTop: 6 }}>
-              <div>{item.title}</div>
-              <div className="muted">所属 Program：{item.programName}</div>
-              <div>失败原因：{item.reason}</div>
-              <div className="muted">{item.suggestion}</div>
-            </div>
-          ))}
-          {risks.acceptance.length === 0 ? <div className="muted">暂无待复核项。</div> : null}
-        </div>
-
-        <div className="card" style={{ padding: 10, display: "grid", gap: 8 }}>
-          <strong>数据缺口</strong>
-          {risks.dataGaps.map((item: any, idx: number) => (
-            <div key={`${item.title}-${idx}`} style={{ borderTop: "1px solid #eaecf0", paddingTop: 6 }}>
-              <div>{item.title}</div>
-              <div>{item.impact}</div>
-              <div className="muted">下一步：{item.nextStep}</div>
-            </div>
-          ))}
-          {risks.dataGaps.length === 0 ? <div className="muted">暂无数据缺口。</div> : null}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function EvidencePanel({ data }: { data: any }): React.ReactElement {
-  return (
-    <section className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ margin: 0 }}>证据与交付</h3>
-        <button type="button">导出生产证据包</button>
-      </div>
-      <p className="muted" style={{ margin: 0 }}>用于客户交付 / 审计 / 溯源证明</p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-        <div className="card" style={{ padding: 10 }}>
-          <strong>最近证据包</strong>
-          {data.recentPackages.map((e: any) => <div key={e.id}>{e.id} / {e.status} / {e.updatedAt}</div>)}
-        </div>
-        <div className="card" style={{ padding: 10 }}>
-          <strong>最近通过验收的作业</strong>
-          {data.recentPassed.map((e: any, idx: number) => <div key={`${e.programName}-${idx}`}>{e.programName} / {e.operation}</div>)}
-        </div>
-        <div className="card" style={{ padding: 10 }}>
-          <strong>最近失败的作业</strong>
-          {data.recentFailed.map((e: any, idx: number) => <div key={`${e.programName}-${idx}`}>{e.programName} / {e.operation}</div>)}
-        </div>
-      </div>
-    </section>
-  );
+function Empty({ text, action }: { text: string; action: string }): React.ReactElement {
+  return <div className="emptyState">{text}。<span className="muted">{action}</span></div>;
 }
 
 export default function CommercialDashboardPage(_: DashboardProps): React.ReactElement {
-  const { loading, error, vm } = useDashboard();
+  const { loading, error, vm, reload } = useDashboard();
 
-  if (loading) return <div>加载中...</div>;
-  if (error) return <div>加载失败</div>;
+  const summaryCards = [
+    { title: "运行中 Program", value: vm.summary.activePrograms, hint: "当前可持续跟进的经营对象", to: "/programs" },
+    { title: "需优先处理", value: vm.summary.priorityPrograms, hint: "建议优先处理的阻塞与风险项", to: "/programs?priority=true" },
+    { title: "待执行动作", value: vm.summary.pendingActions, hint: "已生成但尚未完结的动作", to: "/operations" },
+    { title: "数据缺口 / 低效率", value: vm.summary.dataIssues, hint: "采集缺口或效率偏低项", to: "/alerts" },
+  ];
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <DashboardSummaryCards data={vm.summary} />
+    <div className="productPage">
+      <section className="card pageContextBar">
+        <div>
+          <div className="eyebrow">GEOX / 农业运营控制台</div>
+          <h2 className="sectionTitle" style={{ marginTop: 4 }}>运营总览</h2>
+          <div className="muted">研发模式 · 管理员会话 · 中文界面</div>
+        </div>
+        <div style={{ display: "grid", gap: 8, justifyItems: "end" }}>
+          <div className="muted">最近更新时间：<RelativeTime value={Date.now()} /></div>
+          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新首页</button>
+        </div>
+      </section>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
-        <PriorityProgramList items={vm.priorityPrograms} />
-        <ActionQueue items={vm.pendingActions} />
+      {error ? <section className="card" style={{ padding: 16 }}>加载失败，请稍后刷新。<button className="btn" onClick={() => void reload()} style={{ marginLeft: 12 }}>重试</button></section> : null}
+
+      <section className="summaryGrid4">
+        {summaryCards.map((card) => (
+          <Link key={card.title} className="card metricLinkCard" to={card.to}>
+            <div className="muted">{card.title}</div>
+            <div className="metricBig">{loading ? "--" : card.value}</div>
+            <div className="muted">{card.hint}</div>
+          </Link>
+        ))}
+      </section>
+
+      <section className="card sectionBlock">
+        <div className="sectionHeader"><div className="sectionTitle">优先 Program</div><Link className="btn" to="/programs">查看 Program 列表</Link></div>
+        <div className="list modernList">
+          {vm.priorityPrograms.map((item) => (
+            <article key={item.id} className="infoCard">
+              <div className="jobTitleRow">
+                <div className="title">{item.name}</div>
+                <StatusTag status={item.status} />
+              </div>
+              <div className="meta wrapMeta">
+                <span>{item.fieldCrop}</span>
+                <span>建议：{item.nextStep}</span>
+                <span>风险：{item.riskReason}</span>
+                <span>更新：{item.updatedAt}</span>
+              </div>
+              <div style={{ marginTop: 8 }}><Link className="btn" to={`/programs/${encodeURIComponent(item.id)}`}>查看详情</Link></div>
+            </article>
+          ))}
+          {!vm.priorityPrograms.length ? <Empty text="暂无可展示 Program" action="请等待新一轮 recommendation 与审批状态更新" /> : null}
+        </div>
+      </section>
+
+      <div className="contentGridTwo alignStart">
+        <section className="card sectionBlock">
+          <div className="sectionHeader"><div className="sectionTitle">待处理动作</div><Link className="btn" to="/operations">进入待执行动作页</Link></div>
+          <div className="list modernList compactList">
+            {vm.pendingActions.map((a) => (
+              <article key={a.id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">{a.actionType}</div><StatusTag status={a.mode} showCode={false} /></div>
+                <div className="meta wrapMeta"><span>{a.programName}</span><span>来源：建议 / 审批 / 计划</span><span>{a.reason}</span></div>
+              </article>
+            ))}
+            {!vm.pendingActions.length ? <Empty text="当前没有待执行动作" action="系统会在下一轮评估后自动补充" /> : null}
+          </div>
+        </section>
+
+        <section className="card sectionBlock">
+          <div className="sectionHeader"><div className="sectionTitle">最近证据</div><Link className="btn" to="/audit-export">进入证据页</Link></div>
+          <div className="list modernList compactList">
+            {vm.evidence.recentPackages.map((e) => (
+              <article key={e.id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">证据导出作业 {e.id}</div><StatusTag status={e.status} /></div>
+                <div className="meta"><span>更新时间：{e.updatedAt}</span></div>
+              </article>
+            ))}
+            {!vm.evidence.recentPackages.length ? <Empty text="最近暂无证据导出" action="可在证据页手动刷新" /> : null}
+          </div>
+        </section>
       </div>
 
-      <RiskPanel risks={vm.risks} />
-
-      <EvidencePanel data={vm.evidence} />
+      <section className="card sectionBlock">
+        <div className="sectionHeader"><div className="sectionTitle">风险摘要</div><Link className="btn" to="/alerts">查看风险中心</Link></div>
+        <div className="summaryGrid2">
+          <div className="card" style={{ padding: 14 }}>
+            <div className="muted">验收风险</div>
+            <div className="metricBig" style={{ fontSize: 24 }}>{vm.risks.acceptance.length}</div>
+            {!vm.risks.acceptance.length ? <div className="muted">当前未发现高风险项</div> : vm.risks.acceptance.slice(0, 3).map((i, idx) => <div key={idx}>{i.title} · {i.reason}</div>)}
+          </div>
+          <div className="card" style={{ padding: 14 }}>
+            <div className="muted">数据缺口</div>
+            <div className="metricBig" style={{ fontSize: 24 }}>{vm.risks.dataGaps.length}</div>
+            {!vm.risks.dataGaps.length ? <div className="muted">暂无明显数据缺口</div> : vm.risks.dataGaps.slice(0, 3).map((i, idx) => <div key={idx}>{i.title} · {i.nextStep}</div>)}
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
