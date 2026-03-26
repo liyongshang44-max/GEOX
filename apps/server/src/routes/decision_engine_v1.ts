@@ -4,6 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
+import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -96,9 +97,8 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id;
 }
 
-function recommendationEvidenceFacts(body: any): Array<{ key: string; value: number | null; unit: string | null; source: string }> {
-  const telemetry = (body?.telemetry && typeof body.telemetry === "object") ? body.telemetry : {};
-  const image = (body?.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
+function recommendationEvidenceFacts(telemetry: any, imageInput: any): Array<{ key: string; value: number | null; unit: string | null; source: string }> {
+  const image = (imageInput && typeof imageInput === "object") ? imageInput : {};
   const toNum = (x: any): number | null => Number.isFinite(Number(x)) ? Number(x) : null;
   return [
     { key: "soil_moisture_pct", value: toNum(telemetry.soil_moisture_pct), unit: "%", source: "telemetry" },
@@ -109,14 +109,14 @@ function recommendationEvidenceFacts(body: any): Array<{ key: string; value: num
   ];
 }
 
-function buildRecommendations(body: any): RecommendationV1[] {
+function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
   const program_id = String(body.program_id ?? "").trim() || null;
   if (!field_id || !season_id || !device_id) return [];
 
-  const telemetry = (body.telemetry && typeof body.telemetry === "object") ? body.telemetry : {};
+  const telemetry = (telemetryInput && typeof telemetryInput === "object") ? telemetryInput : {};
   const image = (body.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
   const now = Date.now();
 
@@ -515,7 +515,22 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: String(body.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    const recommendations = buildRecommendations(body);
+    const requestedDeviceId = String(body.device_id ?? "").trim();
+    if (!requestedDeviceId) return badRequest(reply, "MISSING_DEVICE_ID");
+    const snapshot = await getAgronomySnapshot(pool, tenant.tenant_id, requestedDeviceId);
+    if (!snapshot) return badRequest(reply, "AGRONOMY_SNAPSHOT_NOT_FOUND");
+
+    const telemetry = {
+      soil_moisture_pct: snapshot.soil_moisture_pct,
+      canopy_temp_c: snapshot.canopy_temp_c,
+      battery_percent: snapshot.battery_percent
+    };
+
+    if (telemetry.soil_moisture_pct == null || telemetry.canopy_temp_c == null) {
+      return badRequest(reply, "AGRONOMY_SNAPSHOT_INCOMPLETE");
+    }
+
+    const recommendations = buildRecommendations(body, telemetry);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
@@ -532,7 +547,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           field_id: rec.field_id,
           season_id: rec.season_id,
           device_id: rec.device_id,
-          evidence_facts: recommendationEvidenceFacts(body),
+          evidence_facts: recommendationEvidenceFacts(telemetry, body.image_recognition),
           created_ts: Date.now()
         }
       });
@@ -545,7 +560,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           ...rec,
           recommendation_input_fact_id,
           data_sources: {
-            telemetry: body.telemetry ?? null,
+            telemetry,
             image_recognition: body.image_recognition ?? null
           }
         }
