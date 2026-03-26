@@ -36,7 +36,7 @@ type BreadcrumbItem = {
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "总览";
-  if (pathname.startsWith("/delivery/export-jobs")) return "证据导出";
+  if (pathname.startsWith("/delivery/export-jobs")) return "证据中心";
   if (pathname === "/fields") return "田块与 GIS";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备中心";
@@ -55,7 +55,7 @@ function titleForPath(pathname: string): string {
 
 function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "当前页面汇总 Commercial v1 已完成能力、冻结基线与下一阶段收口任务。";
-  if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出任务、详情文件与下载入口。";
+  if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
@@ -74,7 +74,7 @@ function leadForPath(pathname: string): string {
 
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "总览" }];
-  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据导出" }];
+  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
@@ -137,7 +137,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
           <SidebarLink to="/audit-export" label="审计与导出" />
-          <SidebarLink to="/delivery/export-jobs" label="证据导出" />
+          <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
 
