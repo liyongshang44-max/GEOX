@@ -1,9 +1,11 @@
-import { readSessionToken } from "../auth/authStorage";
+import { readSessionToken, readTenantContext } from "../auth/authStorage";
+
+const DEFAULT_BROWSER_API_BASE = "http://127.0.0.1:3001";
 
 export const API_BASE_URL = String(
   (import.meta as any)?.env?.VITE_API_BASE_URL ??
   (import.meta as any)?.env?.VITE_API_BASE ??
-  "/api"
+  (typeof window !== "undefined" ? DEFAULT_BROWSER_API_BASE : "/api")
 ).replace(/\/+$/, "");
 
 export class ApiError extends Error {
@@ -21,7 +23,15 @@ export class ApiError extends Error {
 
 export function withQuery(path: string, params?: Record<string, unknown>): string {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params ?? {})) {
+  const tenant = readTenantContext();
+  const merged = {
+    ...params,
+    tenant_id: (params?.tenant_id as string | undefined) ?? tenant.tenant_id,
+    project_id: (params?.project_id as string | undefined) ?? tenant.project_id,
+    group_id: (params?.group_id as string | undefined) ?? tenant.group_id,
+  };
+
+  for (const [key, value] of Object.entries(merged ?? {})) {
     if (value === undefined || value === null || value === "") continue;
     if (Array.isArray(value)) {
       for (const item of value) query.append(key, String(item));
@@ -39,6 +49,7 @@ function resolveUrl(path: string): string {
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = readSessionToken();
+  const tenant = readTenantContext();
   const finalUrl = resolveUrl(path);
   const baseHeaders = init?.body instanceof FormData
     ? { ...(init?.headers ?? {}) }
@@ -49,6 +60,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     headers: {
       ...baseHeaders,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(tenant.tenant_id ? { "x-tenant-id": tenant.tenant_id } : {}),
+      ...(tenant.project_id ? { "x-project-id": tenant.project_id } : {}),
+      ...(tenant.group_id ? { "x-group-id": tenant.group_id } : {}),
     },
   });
 

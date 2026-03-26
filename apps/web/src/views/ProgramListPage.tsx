@@ -1,148 +1,101 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { usePrograms } from "../hooks/usePrograms";
-import type { Locale } from "../lib/i18n";
-import { type BadgeTone } from "../viewmodels/programDashboardViewModel";
-import { badgeStyle } from "./badgeStyle";
+import { fetchProgramPortfolio } from "../api";
+import { StatusTag } from "../components/StatusTag";
+import { RelativeTime } from "../components/RelativeTime";
 
-function metricBlockStyle(tone?: BadgeTone): React.CSSProperties {
-  if (tone === "danger") return { border: "1px solid #fecaca", background: "#fff1f2" };
-  if (tone === "warning") return { border: "1px solid #fde68a", background: "#fffbeb" };
-  return { border: "1px solid #e5e7eb", background: "#f9fafb" };
-}
+function boolText(v: boolean): string { return v ? "是" : "否"; }
 
 export default function ProgramListPage(): React.ReactElement {
-  const {
-    locale,
-    setLocale,
-    seasonFilter,
-    setSeasonFilter,
-    riskFilter,
-    setRiskFilter,
-    sortBy,
-    setSortBy,
-    loading,
-    refresh,
-    tf,
-    seasons,
-    grouped,
-    summary,
-    resolveText,
-    conflictText,
-  } = usePrograms();
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [statusFilter, setStatusFilter] = React.useState("ALL");
+  const [fieldFilter, setFieldFilter] = React.useState("ALL");
+  const [executableFilter, setExecutableFilter] = React.useState("ALL");
+  const [riskFilter, setRiskFilter] = React.useState("ALL");
+  const [approvalFilter, setApprovalFilter] = React.useState("ALL");
+  const [sortBy, setSortBy] = React.useState("updated_desc");
+
+  const reload = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchProgramPortfolio({ limit: 300 });
+      setItems(Array.isArray(data) ? data : []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => { void reload(); }, [reload]);
+
+  const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x?.field_id || "-")).filter(Boolean))), [items]);
+
+  const filtered = React.useMemo(() => {
+    const list = items.filter((x) => {
+      const status = String(x?.status || "UNKNOWN").toUpperCase();
+      const risk = String(x?.current_risk_summary?.level || "LOW").toUpperCase();
+      const mode = String(x?.next_action_hint?.mode || x?.next_action_hint?.decision_mode || "AUTO").toUpperCase();
+      const executable = !(mode.includes("BLOCKED") || mode.includes("APPROVAL"));
+      const hasApproval = mode.includes("APPROVAL");
+      if (statusFilter !== "ALL" && status !== statusFilter) return false;
+      if (fieldFilter !== "ALL" && String(x?.field_id || "-") !== fieldFilter) return false;
+      if (executableFilter !== "ALL" && boolText(executable) !== executableFilter) return false;
+      if (riskFilter !== "ALL" && risk !== riskFilter) return false;
+      if (approvalFilter !== "ALL" && boolText(hasApproval) !== approvalFilter) return false;
+      return true;
+    });
+
+    list.sort((a, b) => {
+      const ta = Date.parse(String(a?.updated_at || "")) || 0;
+      const tb = Date.parse(String(b?.updated_at || "")) || 0;
+      if (sortBy === "updated_asc") return ta - tb;
+      return tb - ta;
+    });
+    return list;
+  }, [items, statusFilter, fieldFilter, executableFilter, riskFilter, approvalFilter, sortBy]);
 
   return (
-    <div style={{ display: "grid", gap: 12 }}>
-      <section className="card" style={{ padding: 16, display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          <h2 style={{ margin: 0 }}>{tf("portfolio.title")}</h2>
-          <div className="muted">{tf("portfolio.consoleDesc")}</div>
+    <div className="productPage">
+      <section className="card sectionBlock">
+        <div className="sectionHeader">
+          <div>
+            <div className="sectionTitle">经营 Program</div>
+            <div className="muted">结果数：{loading ? "-" : filtered.length}</div>
+          </div>
+          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
         </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <select className="select" value={locale} onChange={(e) => setLocale(e.target.value as Locale)}>
-            <option value="zh">中文</option>
-            <option value="en">English</option>
-          </select>
-          <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
-            <option value="ALL">{tf("portfolio.season")}</option>
-            {seasons.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-            <option value="ALL">{tf("portfolio.riskLabel")}</option>
-            <option value="HIGH">{tf("portfolio.riskHigh")}</option>
-            <option value="MEDIUM">{tf("portfolio.riskMedium")}</option>
-            <option value="LOW">{tf("portfolio.riskLow")}</option>
-            <option value="INSUFFICIENT_DATA">{tf("portfolio.riskInsufficient")}</option>
-          </select>
-          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="risk">{tf("portfolio.sortRisk")}</option>
-            <option value="priority">{tf("portfolio.sortPriority")}</option>
-            <option value="cost">{tf("portfolio.sortCost")}</option>
-            <option value="sla">{tf("portfolio.sortSla")}</option>
-            <option value="efficiency">{tf("portfolio.sortEfficiency")}</option>
-          </select>
-          <button className="btn" onClick={() => void refresh()} disabled={loading}>{tf("operation.actions.refresh")}</button>
+        <div className="toolbarFilters">
+          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">状态（全部）</option><option value="ACTIVE">运行中</option><option value="BLOCKED">阻塞</option></select>
+          <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}><option value="ALL">田块（全部）</option>{fieldOptions.map((f) => <option key={f} value={f}>{f}</option>)}</select>
+          <select className="select" value={executableFilter} onChange={(e) => setExecutableFilter(e.target.value)}><option value="ALL">可执行（全部）</option><option value="是">可执行</option><option value="否">不可执行</option></select>
+          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}><option value="ALL">风险（全部）</option><option value="HIGH">高</option><option value="MEDIUM">中</option><option value="LOW">低</option></select>
+          <select className="select" value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}><option value="ALL">待审批（全部）</option><option value="是">是</option><option value="否">否</option></select>
+          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}><option value="updated_desc">最近更新时间（新→旧）</option><option value="updated_asc">最近更新时间（旧→新）</option></select>
         </div>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12 }}>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.activePrograms")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.activePrograms}</div><div className="muted">{tf("portfolio.activeProgramsDesc")}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.atRisk")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.atRiskPrograms}</div><div className="muted">{tf("portfolio.atRiskDesc")}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.pendingActions")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.pendingActions}</div><div className="muted">{tf("portfolio.pendingActionsDesc")}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{tf("portfolio.lowEfficiency")}</div><div style={{ fontSize: 24, fontWeight: 700 }}>{summary.lowEfficiencyOrInsufficient}</div><div className="muted">{tf("portfolio.lowEfficiencyDesc")}</div></div>
-      </section>
-
-      {grouped.map(([seasonId, seasonCards]) => (
-        <section key={seasonId} className="card" style={{ padding: 12, display: "grid", gap: 10 }}>
-          <h3 style={{ margin: 0 }}>{tf("portfolio.season")} {seasonId} ({seasonCards.length})</h3>
-          {seasonCards.map((card) => (
-            <article key={card.href} style={{ border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, display: "grid", gap: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{card.title}</div>
-                  <div className="muted">{card.subtitleParts.field} · {card.subtitleParts.crop} · {card.subtitleParts.status}</div>
-                </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <span className="pill" style={badgeStyle(card.statusBadge.tone)}>{card.statusBadge.text}</span>
-                  <span className="pill" style={badgeStyle(card.riskBadge.tone)}>{resolveText(card.riskBadge.text)}</span>
-                </div>
+      <section className="list modernList">
+        {filtered.map((p) => {
+          const mode = String(p?.next_action_hint?.mode || p?.next_action_hint?.decision_mode || "AUTO");
+          const executable = !(mode.toUpperCase().includes("BLOCKED") || mode.toUpperCase().includes("APPROVAL"));
+          return (
+            <article key={String(p?.program_id)} className="infoCard">
+              <div className="jobTitleRow"><div className="title">{String(p?.program_id || "-")}</div><StatusTag status={String(p?.status || "UNKNOWN")} /></div>
+              <div className="meta wrapMeta">
+                <span>田块：{String(p?.field_id || "-")}</span>
+                <span>季节：{String(p?.season_id || "-")}</span>
+                <span>作物：{String(p?.crop_code || "-")}</span>
+                <span>可执行：{boolText(executable)}</span>
+                <span>风险：{String(p?.current_risk_summary?.level || "LOW")}</span>
+                <span>更新时间：<RelativeTime value={String(p?.updated_at || "")} /></span>
               </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-                <div>
-                  <div className="muted">{tf("portfolio.rowNextAction")}</div>
-                  <div style={{ fontWeight: 700, color: "#101828" }}>{card.primaryActionText}</div>
-                </div>
-                <span className="pill" style={{ background: "#f2f4f7", color: "#344054" }}>{card.actionStatusTag}</span>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                <div className="card" style={{ padding: 10 }}>
-                  <div className="muted">{tf("portfolio.pendingPlan")}</div>
-                  <div style={{ fontWeight: 600 }}>{card.pendingPlan}</div>
-                </div>
-                <div className="card" style={{ padding: 10 }}>
-                  <div className="muted">{tf("portfolio.pendingTask")}</div>
-                  <div style={{ fontWeight: 600 }}>{card.pendingTask}</div>
-                </div>
-              </div>
-
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
-                <div className="card" style={{ padding: 10 }}>
-                  <div className="muted">风险原因</div>
-                  <div style={{ fontWeight: 600 }}>{resolveText(card.riskReason)}</div>
-                </div>
-                <div className="card" style={{ padding: 10 }}>
-                  <div className="muted">最近更新时间</div>
-                  <div style={{ fontWeight: 600 }}>{card.updatedAtText}</div>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-                {card.metrics.map((metric) => (
-                  <div key={metric.labelKey} style={{ borderRadius: 8, padding: 10, ...metricBlockStyle(metric.tone) }}>
-                    <div className="muted">{tf(metric.labelKey)}</div>
-                    <div style={{ fontWeight: 700 }}>{resolveText(metric.value)}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {card.conflictTags.map((k) => (
-                    <span key={k} className="pill" style={{ background: "#fff4e5", color: "#b54708" }}>{conflictText(k)}</span>
-                  ))}
-                  {card.conflictTags.length === 0 ? <span className="muted">{tf("common.noRecord")}</span> : null}
-                </div>
-                <Link className="btn" to={card.href}>{tf("portfolio.viewDetail")}</Link>
-              </div>
+              <div style={{ marginTop: 8 }}>下一步建议：{String(p?.next_action_hint?.kind || "等待下一轮评估")}</div>
+              <div style={{ marginTop: 10 }}><Link className="btn" to={`/programs/${encodeURIComponent(String(p?.program_id || ""))}`}>查看详情</Link></div>
             </article>
-          ))}
-        </section>
-      ))}
-
-      {!grouped.length ? <section className="card" style={{ padding: 12 }}><div className="muted">{tf("common.noRecord")}</div></section> : null}
+          );
+        })}
+        {!loading && !filtered.length ? <div className="emptyState">暂无可展示 Program。请调整筛选条件或稍后刷新。</div> : null}
+      </section>
     </div>
   );
 }
