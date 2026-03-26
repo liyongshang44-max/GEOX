@@ -3,7 +3,7 @@ import crypto from "node:crypto"; // Node crypto for stable random IDs and hashi
 import process from "node:process"; // Node process for env + exit codes.
 
 type Args = { // CLI arguments parsed from process.argv.
-  baseUrl: string; // Server base URL, e.g. http://server:3000.
+  baseUrl: string; // Server base URL, e.g. http://127.0.0.1:3001.
   token: string; // Bearer token for AO-ACT scoped calls.
   tenant_id: string; // Tenant id for hard isolation triple.
   project_id: string; // Project id for hard isolation triple.
@@ -25,7 +25,7 @@ function parseArgs(argv: string[]): Args { // Parse flags from argv.
     return v; // Return parsed value.
   };
 
-  const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://server:3000"; // Resolve baseUrl from args/env/default.
+  const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001"; // Resolve baseUrl from args/env/default.
   const token = get("token") ?? process.env.GEOX_AO_ACT_TOKEN ?? ""; // Resolve token from args/env.
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA"; // Resolve tenant id.
   const project_id = get("project_id") ?? process.env.GEOX_PROJECT_ID ?? "projectA"; // Resolve project id.

@@ -43,7 +43,7 @@ function parseArgs(argv: string[]): Args {
     return v; // Return raw string value.
   }; // End flag reader.
 
-  const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://server:3000"; // Resolve base URL.
+  const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001"; // Resolve base URL.
   const token = get("token") ?? process.env.GEOX_AO_ACT_TOKEN ?? ""; // Resolve bearer token.
   const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA"; // Resolve tenant id.
   const project_id = get("project_id") ?? process.env.GEOX_PROJECT_ID ?? "projectA"; // Resolve project id.
