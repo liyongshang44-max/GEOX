@@ -54,19 +54,19 @@ function titleForPath(pathname: string): string {
 }
 
 function leadForPath(pathname: string): string {
-  if (pathname === "/" || pathname === "/dashboard") return "当前页面汇总 Commercial v1 已完成能力、冻结基线与下一阶段收口任务。";
+  if (pathname === "/" || pathname === "/dashboard") return "一眼查看 Program 运行态、待执行动作、证据状态与风险摘要。";
   if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
-  if (pathname.startsWith("/operations")) return "查看 READY / DISPATCHED / ACKED 等需盯住动作，并快速跳转 Program 详情。";
-  if (pathname === "/programs") return "按地块经营对象查看状态、阶段、风险与待执行计划。";
-  if (pathname.startsWith("/programs/")) return "查看单个 Program 的目标约束、时间线和证据闭环状态。";
+  if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯 Program。";
+  if (pathname === "/programs") return "按状态和风险筛选 Program，快速判断优先级并进入详情。";
+  if (pathname.startsWith("/programs/")) return "查看 Program 的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
-  if (pathname.startsWith("/audit-export")) return "统一查看证据导出、回执追踪与完整性提示。";
+  if (pathname.startsWith("/audit-export")) return "统一管理证据导出、回执追踪与完整性校验。";
   if (pathname.startsWith("/settings")) return "查看当前会话、角色、令牌与最小门禁约束。";
   if (pathname.startsWith("/dev")) return "保留旧调试页作为 fallback，不参与商业演示主流程。";
   return "中文商业控制台外壳已建立，后续页面按产品信息架构持续收口。";
@@ -132,11 +132,11 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/fields" label="田块与 GIS" />
           <SidebarLink to="/devices" label="设备中心" />
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/operations" label="作业控制" />
+          <SidebarLink to="/operations" label="待执行动作" />
           <SidebarLink to="/programs" label="经营 Program" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/audit-export" label="审计与导出" />
+          <SidebarLink to="/audit-export" label="证据页" />
           <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
@@ -173,6 +173,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           </div>
           <div className="headerActions">
             <div className="pill">中文界面</div>
+            <div className="pill">Phase2 页面</div>
             <div className="pill">{session?.role === "operator" ? "操作员" : session?.role === "admin" ? "管理员" : "未识别会话"}</div>
             {expert ? <NavLink className="btn" to="/dev">研发工具</NavLink> : null}
             <button className="btn" onClick={onToggleExpert}>{expert ? "研发模式：开启" : "研发模式：关闭"}</button>
