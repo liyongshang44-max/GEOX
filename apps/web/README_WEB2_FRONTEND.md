@@ -9,7 +9,7 @@
 ```powershell
 cd apps\web
 npm install
-# 如需自定义后端地址：$env:VITE_API_BASE="http://127.0.0.1:3001"
+# 如需自定义后端地址：$env:VITE_API_BASE_URL="http://127.0.0.1:3001"
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
@@ -44,7 +44,7 @@ npm run dev -- --host 0.0.0.0 --port 5173
 
 ## 环境变量
 
-- `VITE_API_BASE`（可选）
+- `VITE_API_BASE_URL`（可选）
   - 默认：`http://127.0.0.1:3001`
   - 用途：后端 API / 媒体访问前缀
 
