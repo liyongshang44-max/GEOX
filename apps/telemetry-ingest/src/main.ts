@@ -6,6 +6,7 @@ import process from "node:process"; // Access environment variables and argv.
 import { Pool } from "pg"; // Postgres client pool to write ledger + projection.
 import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
+import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -291,6 +292,22 @@ record = { // Telemetry record.
         ts_ms: p.ts_ms,
       }); // Log success after commit.
 
+      if (parsed.kind === "telemetry" && projInserted) {
+        // eslint-disable-next-line no-console
+        console.log("[snapshot trigger]", {
+          tenant_id: parsed.tenant_id,
+          device_id: parsed.device_id,
+          metric: String((p as any).metric ?? ""),
+          ts_ms: p.ts_ms
+        });
+        try {
+          await updateAgronomySnapshot(pool, parsed.tenant_id, parsed.device_id);
+        } catch (snapshotErr: any) {
+          // eslint-disable-next-line no-console
+          console.error("[telemetry-ingest] agronomy_snapshot_update_error", { tenant_id: parsed.tenant_id, device_id: parsed.device_id, err: String(snapshotErr?.message ?? snapshotErr) });
+        }
+      }
+
       if (parsed.kind === "telemetry" && projInserted) { // Only evaluate alerts for new telemetry points.
         try { // Best-effort alert evaluation.
           const rulesQ = await pool.query(
@@ -327,7 +344,7 @@ record = { // Telemetry record.
               `SELECT 1 FROM alert_event_index_v1 WHERE tenant_id = $1 AND event_id = $2 LIMIT 1`,
               [parsed.tenant_id, event_id]
             ); // Check if already raised.
-            if (existQ.rowCount > 0) continue; // Skip existing event.
+            if ((existQ.rowCount ?? 0) > 0) continue; // Skip existing event.
 
             const fact_id2 = `alev_raise_${randomUUID()}`; // Fact id for alert event.
             const record2 = {
