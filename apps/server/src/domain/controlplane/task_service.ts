@@ -640,6 +640,55 @@ async function loadLatestOperationPlanByApprovalRequestId(
   return loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,approval_request_id", approval_request_id, tenant);
 }
 
+
+async function createOperationPlanForApproval(
+  pool: Pool,
+  tenant: TenantTriple,
+  request_id: string,
+  requestPayload: any,
+  source: string
+): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; transition_fact_id: string }> {
+  const proposal = requestPayload?.proposal ?? {};
+  const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
+  const operation_plan_fact_id = await insertFact(pool, source, {
+    type: "operation_plan_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      recommendation_id: requestPayload?.meta?.recommendation_id ?? null,
+      program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
+      field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
+      season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
+      approval_request_id: request_id,
+      action_type: proposal?.action_type ?? null,
+      adapter_type: requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      target: proposal?.target ?? null,
+      parameters: proposal?.parameters ?? {},
+      status: "CREATED",
+      created_ts: Date.now(),
+      updated_ts: Date.now()
+    }
+  });
+
+  const transition_fact_id = await insertFact(pool, source, {
+    type: "operation_plan_transition_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      status: "CREATED",
+      trigger: "approval_operation_plan_auto_create",
+      approval_request_id: request_id,
+      created_ts: Date.now()
+    }
+  });
+
+  return { operation_plan_id, operation_plan_fact_id, transition_fact_id };
+}
+
 type OperationPlanStatusV1 = "CREATED" | "APPROVED" | "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
 
 const OPERATION_PLAN_NEXT_STATUS_V1: Record<Exclude<OperationPlanStatusV1, "SUCCEEDED" | "FAILED">, OperationPlanStatusV1> = {
@@ -1437,7 +1486,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     let ao_act_fact_id: string | null = null; // Will remain null for REJECT.
     let wrapper_task_created_fact_id: string | null = null; // Wrapper fact id for Commercial v1 paths.
 
-    const operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    let operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    if (!operationPlan && decision === "APPROVE") {
+      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, "api/v1/approvals");
+      operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
+    }
     const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
     if (!operationPlan) return badRequest(reply, "OPERATION_PLAN_NOT_FOUND");
