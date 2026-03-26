@@ -135,11 +135,18 @@ CREATE INDEX IF NOT EXISTS alert_notification_index_v1_lookup_idx
   ON alert_notification_index_v1 (tenant_id, event_id, rule_id, channel, created_ts_ms DESC);
 
 ALTER TABLE field_index_v1
+  ALTER COLUMN field_name DROP NOT NULL;
+
+ALTER TABLE field_index_v1
   ADD COLUMN IF NOT EXISTS name TEXT;
 
 UPDATE field_index_v1
 SET name = COALESCE(name, field_name)
 WHERE name IS NULL;
+
+UPDATE field_index_v1
+SET field_name = COALESCE(field_name, name)
+WHERE field_name IS NULL;
 
 ALTER TABLE field_index_v1
   ADD COLUMN IF NOT EXISTS area_ha DOUBLE PRECISION;
@@ -150,6 +157,14 @@ ALTER TABLE field_index_v1
 UPDATE field_index_v1
 SET area_ha = COALESCE(area_ha, area_m2 / 10000.0)
 WHERE area_m2 IS NOT NULL;
+
+UPDATE field_index_v1
+SET area_m2 = COALESCE(area_m2, area_ha * 10000.0)
+WHERE area_ha IS NOT NULL;
+
+UPDATE field_index_v1
+SET status = COALESCE(status, 'ACTIVE')
+WHERE status IS NULL;
 
 CREATE TABLE IF NOT EXISTS device_credential_index_v1 (
   tenant_id TEXT NOT NULL,
