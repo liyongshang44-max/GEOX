@@ -20,7 +20,7 @@ export type OperationPlanV1 = {
     recommendation_id?: string | null;
     recommendation_fact_id?: string | null;
     approval_request_id?: string | null;
-    approval_decision?: "APPROVE" | "REJECT" | null;
+    approval_decision?: "APPROVE" | "REJECT" | null; // API decision input enum; plan.status persists internal states such as APPROVED.
     approval_decision_fact_id?: string | null;
     act_task_id?: string | null;
     receipt_fact_id?: string | null;
