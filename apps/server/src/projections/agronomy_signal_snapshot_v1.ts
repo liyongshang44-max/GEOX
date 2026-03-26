@@ -15,6 +15,24 @@ function intOrNull(v: any): number | null {
 }
 
 export async function updateAgronomySnapshot(db: DbConn, tenant_id: string, device_id: string): Promise<AgronomySignalSnapshotV1> {
+  const telemetryRows = await db.query(
+    `SELECT metric, EXTRACT(EPOCH FROM ts) * 1000 AS ts_ms, value_num
+       FROM telemetry_index_v1
+      WHERE tenant_id = $1
+        AND device_id = $2
+        AND metric IN ('soil_moisture', 'canopy_temp')
+      ORDER BY ts DESC
+      LIMIT 10`,
+    [tenant_id, device_id]
+  );
+
+  // eslint-disable-next-line no-console
+  console.log("[snapshot telemetry rows]", {
+    tenant_id,
+    device_id,
+    rows: telemetryRows.rows
+  });
+
   const latest = await db.query(
     `WITH latest_soil AS (
        SELECT value_num, EXTRACT(EPOCH FROM ts) * 1000 AS ts_ms
@@ -49,19 +67,29 @@ export async function updateAgronomySnapshot(db: DbConn, tenant_id: string, devi
   );
 
   const row: any = latest.rows?.[0] ?? {};
-  const now = Date.now();
-  const observed = intOrNull(row.observed_ts_ms);
+  const payload = {
+    tenant_id,
+    device_id,
+    field_id: String(row.field_id ?? "unbound"),
+    season_id: row.season_id ? String(row.season_id) : null,
+    observed_ts_ms: intOrNull(row.observed_ts_ms),
+    soil_moisture_pct: numOrNull(row.soil_moisture_pct),
+    canopy_temp_c: numOrNull(row.canopy_temp_c),
+    battery_percent: intOrNull(row.battery_percent),
+    updated_ts_ms: Date.now()
+  };
+
+  // eslint-disable-next-line no-console
+  console.log("[snapshot upsert payload]", payload);
 
   const upsert = await db.query(
     `INSERT INTO agronomy_signal_snapshot_v1 (
-       tenant_id, project_id, group_id, field_id, season_id, device_id,
+       tenant_id, device_id, field_id, season_id,
        observed_ts_ms, soil_moisture_pct, canopy_temp_c, battery_percent, updated_ts_ms
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      ON CONFLICT (tenant_id, device_id)
      DO UPDATE SET
-       project_id = EXCLUDED.project_id,
-       group_id = EXCLUDED.group_id,
        field_id = EXCLUDED.field_id,
        season_id = EXCLUDED.season_id,
        observed_ts_ms = EXCLUDED.observed_ts_ms,
@@ -71,17 +99,15 @@ export async function updateAgronomySnapshot(db: DbConn, tenant_id: string, devi
        updated_ts_ms = EXCLUDED.updated_ts_ms
      RETURNING *`,
     [
-      tenant_id,
-      "unknown_project",
-      "unknown_group",
-      String(row.field_id ?? "unbound"),
-      row.season_id ? String(row.season_id) : null,
-      device_id,
-      observed,
-      numOrNull(row.soil_moisture_pct),
-      numOrNull(row.canopy_temp_c),
-      intOrNull(row.battery_percent),
-      now
+      payload.tenant_id,
+      payload.device_id,
+      payload.field_id,
+      payload.season_id,
+      payload.observed_ts_ms,
+      payload.soil_moisture_pct,
+      payload.canopy_temp_c,
+      payload.battery_percent,
+      payload.updated_ts_ms
     ]
   );
 

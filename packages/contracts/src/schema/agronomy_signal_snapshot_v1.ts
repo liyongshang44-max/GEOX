@@ -2,8 +2,6 @@ import { z } from "zod";
 
 export const AgronomySignalSnapshotV1Schema = z.object({
   tenant_id: z.string().min(1),
-  project_id: z.string().min(1),
-  group_id: z.string().min(1),
   field_id: z.string().min(1),
   season_id: z.string().min(1).nullable(),
   device_id: z.string().min(1),

@@ -174,8 +174,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_device_binding_index_v1_tenant_device
 
 CREATE TABLE IF NOT EXISTS agronomy_signal_snapshot_v1 (
   tenant_id TEXT NOT NULL,
-  project_id TEXT NOT NULL,
-  group_id TEXT NOT NULL,
   device_id TEXT NOT NULL,
   field_id TEXT NOT NULL,
   season_id TEXT NULL,

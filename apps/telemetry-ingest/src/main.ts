@@ -293,6 +293,13 @@ record = { // Telemetry record.
       }); // Log success after commit.
 
       if (parsed.kind === "telemetry" && projInserted) {
+        // eslint-disable-next-line no-console
+        console.log("[snapshot trigger]", {
+          tenant_id: parsed.tenant_id,
+          device_id: parsed.device_id,
+          metric: String((p as any).metric ?? ""),
+          ts_ms: p.ts_ms
+        });
         try {
           await updateAgronomySnapshot(pool, parsed.tenant_id, parsed.device_id);
         } catch (snapshotErr: any) {
