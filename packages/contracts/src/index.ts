@@ -18,6 +18,7 @@ export * from "./schema/agronomy_recommendation_v1";
 export * from "./schema/actuator_adapter_v1";
 export * from "./schema/operation_plan_v1";
 export * from "./schema/operation_plan_transition_v1";
+export * from "./schema/agronomy_signal_snapshot_v1";
 
 export * from "./schema/field_program_v1";
 export * from "./schema/field_program_transition_v1";
