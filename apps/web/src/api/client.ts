@@ -3,7 +3,7 @@ import { readSessionToken } from "../auth/authStorage";
 export const API_BASE_URL = String(
   (import.meta as any)?.env?.VITE_API_BASE_URL ??
   (import.meta as any)?.env?.VITE_API_BASE ??
-  "http://127.0.0.1:3001"
+  "/api"
 ).replace(/\/+$/, "");
 
 export class ApiError extends Error {

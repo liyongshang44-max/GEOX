@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react"; // Import React plugin for Vite.
 import path from "node:path"; // Import Node path utilities.
 
 const webRoot = path.resolve(__dirname); // Resolve apps/web as the Vite project root.
+const apiProxyTarget = process.env.GEOX_WEB_PROXY_TARGET || "http://127.0.0.1:3001"; // Host default; container can override to http://server:3000.
 
 export default defineConfig({
   root: webRoot, // Force Vite root to apps/web so index.html is found correctly.
@@ -29,7 +30,7 @@ export default defineConfig({
   port: 5173,
   proxy: {
     "/api": {
-      target: "http://127.0.0.1:3001",
+      target: apiProxyTarget,
       changeOrigin: true,
     },
   },

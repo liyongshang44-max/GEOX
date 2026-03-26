@@ -241,7 +241,8 @@ services:
       - geox_v1_pnpm_store:/pnpm-store
       - geox_v1_pnpm_vstore:/pnpm-vstore
     environment:
-      VITE_API_BASE_URL: http://127.0.0.1:3001
+      VITE_API_BASE_URL: /api
+      GEOX_WEB_PROXY_TARGET: http://server:3000
       GEOX_SYSTEM_PROFILE: commercial_v1
     ports:
       - "5173:5173"
