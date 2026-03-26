@@ -14,6 +14,26 @@ function intOrNull(v: any): number | null {
   return Math.trunc(n);
 }
 
+function toNullableNumber(v: any): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function normalizeSnapshotRow(row: any): any {
+  return {
+    tenant_id: String(row?.tenant_id ?? ""),
+    device_id: String(row?.device_id ?? ""),
+    field_id: String(row?.field_id ?? ""),
+    season_id: row?.season_id == null ? null : String(row.season_id),
+    observed_ts_ms: toNullableNumber(row?.observed_ts_ms),
+    soil_moisture_pct: toNullableNumber(row?.soil_moisture_pct),
+    canopy_temp_c: toNullableNumber(row?.canopy_temp_c),
+    battery_percent: toNullableNumber(row?.battery_percent),
+    updated_ts_ms: toNullableNumber(row?.updated_ts_ms)
+  };
+}
+
 export async function updateAgronomySnapshot(db: DbConn, tenant_id: string, device_id: string): Promise<AgronomySignalSnapshotV1> {
   const telemetryRows = await db.query(
     `SELECT metric, EXTRACT(EPOCH FROM ts) * 1000 AS ts_ms, value_num
@@ -111,7 +131,7 @@ export async function updateAgronomySnapshot(db: DbConn, tenant_id: string, devi
     ]
   );
 
-  const snapshot = AgronomySignalSnapshotV1Schema.parse(upsert.rows[0]);
+  const snapshot = AgronomySignalSnapshotV1Schema.parse(normalizeSnapshotRow(upsert.rows[0]));
   return snapshot;
 }
 
@@ -121,5 +141,5 @@ export async function getAgronomySnapshot(db: DbConn, tenant_id: string, device_
     [tenant_id, device_id]
   );
   if (!res.rows?.length) return null;
-  return AgronomySignalSnapshotV1Schema.parse(res.rows[0]);
+  return AgronomySignalSnapshotV1Schema.parse(normalizeSnapshotRow(res.rows[0]));
 }
