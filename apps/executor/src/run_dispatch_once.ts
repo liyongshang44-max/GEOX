@@ -283,8 +283,16 @@ async function runDispatchOnce(cliArgs) {
         try {
             const supportsAction = task.task_type || task.action_type;
             const supportsInput = adapterType === "mqtt" ? task : supportsAction;
-            console.log(`DISPATCH_RUNTIME_CONTRACT act_task_id=${task.act_task_id} adapter_type=${adapterType} action_type=${task.action_type} task_type=${task.task_type || ""} supports_input=${supportsAction}`);
-            if (typeof adapter.supports === "function" && !adapter.supports(supportsInput)) {
+            const supportsResult = typeof adapter.supports === "function" ? adapter.supports(supportsInput) : true;
+            console.log("[dispatch-debug]", {
+                selected_adapter: adapterTypeForLog,
+                adapter_type: adapterType,
+                task_type: task.task_type || "",
+                action_type: task.action_type,
+                supports_input: typeof supportsInput === "string" ? supportsInput : "[task-object]",
+                supports_result: supportsResult
+            });
+            if (!supportsResult) {
                 throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${supportsAction}`);
             }
             if (typeof adapter.validate === "function") {

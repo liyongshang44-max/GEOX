@@ -1870,10 +1870,20 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const actionType = resolveActionType(taskPayload);
     const canonicalDispatchActionType = canonicalActionType(actionType);
     const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
+    const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
+    const supportsResult = adapterSupportsAction(adapterType, supportsInput);
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
+    console.log("[dispatch-debug]", {
+      selected_adapter: selectedAdapter,
+      adapter_type: String(adapterType ?? ""),
+      task_type: String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? ""),
+      action_type: String(taskPayload?.action_type ?? ""),
+      supports_input: supportsInput,
+      supports_result: supportsResult
+    });
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, actionType)) {
+    if (!supportsResult) {
       console.error("[ADAPTER_UNSUPPORTED_ACTION_DISPATCH]", JSON.stringify({
         act_task_id,
         selected_adapter: selectedAdapter,
