@@ -86,29 +86,29 @@ export default function ProgramDetailPage(): React.ReactElement {
 
       <section className="summaryGrid3">
         {[
-          ["recommendation", String(detail?.latest_recommendation?.status || "PENDING")],
-          ["approval", String(detail?.latest_approval?.status || "PENDING")],
-          ["operation plan", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY")],
-          ["task/executor", String(latestOp?.dispatch_status || "READY")],
-          ["receipt", String(latestOp?.receipt_status || "PENDING")],
-          ["evidence", evidences[0]?.status || "PENDING"],
+          ["建议状态", String(detail?.latest_recommendation?.status || "PENDING")],
+          ["审批状态", String(detail?.latest_approval?.status || "PENDING")],
+          ["作业计划", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY")],
+          ["执行状态", String(latestOp?.dispatch_status || "READY")],
+          ["回执结果", String(latestOp?.receipt_status || "PENDING")],
+          ["证据状态", evidences[0]?.status || "PENDING"],
         ].map(([label, status]) => <div key={label} className="card" style={{ padding: 12 }}><div className="muted">{label}</div><StatusTag status={status} /></div>)}
       </section>
 
       <section className="contentGridTwo alignStart">
         <article className="card sectionBlock">
           <div className="sectionTitle">决策链时间线</div>
-          {chainItem("recommendation", String(detail?.latest_recommendation?.status || "PENDING"), String(detail?.latest_recommendation?.recommendation_id || "-"), detail?.latest_recommendation?.occurred_at)}
-          {chainItem("approval request", String(detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.approval_request_id || "-"), detail?.latest_approval?.occurred_at)}
-          {chainItem("approval decision", String(detail?.latest_approval?.decision || detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.decision_id || "-"), detail?.latest_approval?.updated_at)}
+          {chainItem("建议生成", String(detail?.latest_recommendation?.status || "PENDING"), String(detail?.latest_recommendation?.recommendation_id || "-"), detail?.latest_recommendation?.occurred_at)}
+          {chainItem("审批申请", String(detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.approval_request_id || "-"), detail?.latest_approval?.occurred_at)}
+          {chainItem("审批决策", String(detail?.latest_approval?.decision || detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.decision_id || "-"), detail?.latest_approval?.updated_at)}
         </article>
 
         <article className="card sectionBlock">
           <div className="sectionTitle">执行链时间线</div>
-          {chainItem("operation plan", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY"), String(detail?.latest_operation_plan?.operation_plan_id || "-"), detail?.latest_operation_plan?.updated_at)}
-          {chainItem("act task", String(latestOp?.dispatch_status || "READY"), String(latestOp?.task_id || "-"), latestOp?.last_event_ts)}
-          {chainItem("dispatch", String(latestOp?.dispatch_status || "PENDING"), String(latestOp?.operation_id || "-"), latestOp?.last_event_ts)}
-          {chainItem("receipt", String(latestOp?.receipt_status || "PENDING"), String(latestOp?.receipt_fact_id || "-"), latestOp?.last_event_ts)}
+          {chainItem("作业计划", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY"), String(detail?.latest_operation_plan?.operation_plan_id || "-"), detail?.latest_operation_plan?.updated_at)}
+          {chainItem("作业执行号", String(latestOp?.dispatch_status || "READY"), String(latestOp?.task_id || "-"), latestOp?.last_event_ts)}
+          {chainItem("下发状态", String(latestOp?.dispatch_status || "PENDING"), String(latestOp?.operation_id || "-"), latestOp?.last_event_ts)}
+          {chainItem("执行回执", String(latestOp?.receipt_status || "PENDING"), String(latestOp?.receipt_fact_id || "-"), latestOp?.last_event_ts)}
         </article>
       </section>
 

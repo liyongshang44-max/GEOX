@@ -3,12 +3,10 @@ import { Link } from "react-router-dom";
 import { useDashboard } from "../hooks/useDashboard";
 import { StatusTag } from "../components/StatusTag";
 import { RelativeTime } from "../components/RelativeTime";
+import EmptyState from "../components/common/EmptyState";
+import ErrorState from "../components/common/ErrorState";
 
 type DashboardProps = { expert?: boolean };
-
-function Empty({ text, action }: { text: string; action: string }): React.ReactElement {
-  return <div className="emptyState">{text}。<span className="muted">{action}</span></div>;
-}
 
 export default function CommercialDashboardPage(_: DashboardProps): React.ReactElement {
   const { loading, error, vm, reload } = useDashboard();
@@ -34,7 +32,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
         </div>
       </section>
 
-      {error ? <section className="card" style={{ padding: 16 }}>加载失败，请稍后刷新。<button className="btn" onClick={() => void reload()} style={{ marginLeft: 12 }}>重试</button></section> : null}
+      {error ? <ErrorState title="首页数据加载失败" message="请稍后刷新，或检查后端服务状态。" onRetry={() => void reload()} /> : null}
 
       <section className="summaryGrid4">
         {summaryCards.map((card) => (
@@ -64,7 +62,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
               <div style={{ marginTop: 8 }}><Link className="btn" to={`/programs/${encodeURIComponent(item.id)}`}>查看详情</Link></div>
             </article>
           ))}
-          {!vm.priorityPrograms.length ? <Empty text="暂无可展示 Program" action="请等待新一轮 recommendation 与审批状态更新" /> : null}
+          {!vm.priorityPrograms.length ? <EmptyState title="暂无可展示 Program" hint="请等待新一轮建议与审批状态更新" /> : null}
         </div>
       </section>
 
@@ -78,7 +76,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
                 <div className="meta wrapMeta"><span>{a.programName}</span><span>来源：建议 / 审批 / 计划</span><span>{a.reason}</span></div>
               </article>
             ))}
-            {!vm.pendingActions.length ? <Empty text="当前没有待执行动作" action="系统会在下一轮评估后自动补充" /> : null}
+            {!vm.pendingActions.length ? <EmptyState title="当前没有待执行动作" hint="系统会在下一轮评估后自动补充" /> : null}
           </div>
         </section>
 
@@ -91,7 +89,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
                 <div className="meta"><span>更新时间：{e.updatedAt}</span></div>
               </article>
             ))}
-            {!vm.evidence.recentPackages.length ? <Empty text="最近暂无证据导出" action="可在证据页手动刷新" /> : null}
+            {!vm.evidence.recentPackages.length ? <EmptyState title="最近暂无证据导出" hint="可在证据页手动刷新" /> : null}
           </div>
         </section>
       </div>

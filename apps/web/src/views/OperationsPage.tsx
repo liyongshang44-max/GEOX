@@ -4,6 +4,7 @@ import { fetchOperationStates } from "../api";
 import { StatusTag } from "../components/StatusTag";
 import { RelativeTime } from "../components/RelativeTime";
 import { CopyButton } from "../components/CopyButton";
+import EmptyState from "../components/common/EmptyState";
 
 export default function OperationsPage(): React.ReactElement {
   const [items, setItems] = React.useState<any[]>([]);
@@ -52,7 +53,7 @@ export default function OperationsPage(): React.ReactElement {
             </div>
           </article>
         ))}
-        {!loading && !items.length ? <div className="emptyState">当前没有待执行动作。建议稍后刷新查看最新计划状态。</div> : null}
+        {!loading && !items.length ? <EmptyState title="当前没有待执行动作" hint="建议稍后刷新查看最新计划状态" /> : null}
       </section>
     </div>
   );
