@@ -7,13 +7,13 @@
 #
 # Environment:
 # - Windows PowerShell
-# - Backend must already be running at $base (default http://127.0.0.1:3000)
+# - Backend must already be running at $base (default http://127.0.0.1:3001)
 # - Does NOT start Web frontend
 # - Uses Invoke-RestMethod + curl.exe (multipart)
 
 param(
   [Parameter(Mandatory = $false)]
-  [string]$base = "http://127.0.0.1:3000",
+  [string]$base = "http://127.0.0.1:3001",
 
   # Use switch + Disable semantics (most stable to call)
   [Parameter(Mandatory = $false)]

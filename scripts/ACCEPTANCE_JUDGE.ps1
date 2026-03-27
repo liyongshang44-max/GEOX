@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:3000",
+  [string]$BaseUrl = "http://localhost:3001",
   [Parameter(Mandatory=$true)][string]$InputJsonPath
 )
 

@@ -94,7 +94,7 @@ async function runDispatchExecutorOnce({ base, token, tenant_id, project_id, gro
 }
 
 (async () => {
-  const base = env('BASE_URL', 'http://127.0.0.1:3000');
+  const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');

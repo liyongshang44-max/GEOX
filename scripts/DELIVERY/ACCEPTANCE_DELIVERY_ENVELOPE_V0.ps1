@@ -1,5 +1,5 @@
 param( # Parameter block for delivery acceptance entrypoint.
-  [string]$baseUrl = "http://localhost:3000", # Base URL for the running server under test.
+  [string]$baseUrl = "http://localhost:3001", # Base URL for the running server under test.
   [string]$nodeCmd = "node" # Node executable used to run the JS runner.
 ) # End param block.
 

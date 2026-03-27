@@ -6,7 +6,7 @@ function requiredEnv(name) {
   return v;
 }
 
-const base = String(process.env.GEOX_BASE_URL || 'http://127.0.0.1:3000').trim();
+const base = String(process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001').trim();
 const token = requiredEnv('AO_ACT_TOKEN');
 const tenant_id = requiredEnv('GEOX_TENANT_ID');
 const project_id = requiredEnv('GEOX_PROJECT_ID');

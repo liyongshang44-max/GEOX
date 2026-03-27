@@ -12,10 +12,11 @@ docker compose up --build server
 
 2) 成功标志（示例）：
 - Server 日志出现 `Server listening on http://0.0.0.0:3000`
+- 宿主机入口使用 `http://127.0.0.1:3001`（容器内服务地址仍为 `http://server:3000`）
 - 健康检查：
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:3000/health
+Invoke-RestMethod http://127.0.0.1:3001/health
 ```
 
 二、数据库 bootstrap（无需手动建表）

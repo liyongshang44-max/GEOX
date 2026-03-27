@@ -25,11 +25,12 @@ import {
   type FieldListItem,
   type FieldDetail,
 } from "../lib/api";
+import StatusBadge from "../components/common/StatusBadge";
+import ErrorState from "../components/common/ErrorState";
+import { formatTimeOrFallback } from "../lib/presentation/time";
 
 function fmtTs(v: number | null | undefined): string {
-  return typeof v === "number" && Number.isFinite(v) && v > 0
-    ? new Date(v).toLocaleString("zh-CN", { hour12: false })
-    : "-";
+  return formatTimeOrFallback(v);
 }
 
 function prettyValue(vn: number | null, vt: string | null): string {
@@ -65,7 +66,6 @@ function withTimeout<T>(name: string, promise: Promise<T>, ms = 8000): Promise<N
 
 async function resolveBoundFieldFromFields(token: string, deviceId: string): Promise<BoundFieldInfo> {
   const fields: FieldListItem[] = await fetchFields(token);
-  console.log("resolveBoundFieldFromFields fields", fields.length, fields);
   for (const field of fields) {
     try {
       const detail: FieldDetail = await fetchFieldDetail(token, field.field_id);
@@ -76,9 +76,7 @@ async function resolveBoundFieldFromFields(token: string, deviceId: string): Pro
           bound_ts_ms: matched.bound_ts_ms ?? null,
         };
       }
-    } catch (e) {
-      console.warn("resolveBoundFieldFromFields single field failed", field.field_id, e);
-    }
+    } catch {}
   }
   return { field_id: null, bound_ts_ms: null };
 }
@@ -103,11 +101,12 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [newCredentialId, setNewCredentialId] = React.useState<string>("");
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
+  const [error, setError] = React.useState<string | null>(null);
   async function refresh(): Promise<void> {
     if (!deviceId) return;
 
-    console.log("refresh start", deviceId);
     setBusy(true);
+    setError(null);
     setStatus(`正在读取设备 ${deviceId} ...`);
 
     try {
@@ -122,8 +121,6 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchDevices", fetchDevices(token)),
         withTimeout("fetchFields", fetchFields(token)),
       ]);
-
-      console.log("refresh named results", results);
 
       const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
 
@@ -155,8 +152,6 @@ export default function DeviceDetailPage(): React.ReactElement {
       const nextFields =
         byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
 
-      console.log("refresh nextFields", nextFields, Array.isArray(nextFields), nextFields.length);
-
       const matchedDevice =
         nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
 
@@ -165,13 +160,8 @@ export default function DeviceDetailPage(): React.ReactElement {
         bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null,
       };
 
-      console.log("refresh matchedDevice", matchedDevice);
-      console.log("refresh initial boundFieldInfo", boundFieldInfo);
-
       if (!boundFieldInfo.field_id && nextFields.length) {
-        console.log("refresh resolving bound field from fields");
         boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
-        console.log("refresh resolved boundFieldInfo", boundFieldInfo);
       }
 
       setDetail(nextDetail);
@@ -184,11 +174,10 @@ export default function DeviceDetailPage(): React.ReactElement {
       setMetrics(nextMetrics);
       setSeries(nextSeries);
       setAvailableFields(nextFields as FieldListItem[]);
-      console.log("after setAvailableFields", nextFields.length);
       setBindFieldId(String(boundFieldInfo.field_id || ""));
       setStatus(`设备 ${deviceId} 已加载。`);
     } catch (e: any) {
-      console.error("refresh failed", e);
+      setError("设备详情加载失败，请稍后重试");
       setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
     } finally {
       setBusy(false);
@@ -253,10 +242,6 @@ export default function DeviceDetailPage(): React.ReactElement {
     void refresh();
   }, [deviceId]);
 
-  React.useEffect(() => {
-    console.log("availableFields state", availableFields.length, availableFields);
-  }, [availableFields]);
-
   const boundFieldId =
     resolvedBoundField.field_id ||
     deviceListItem?.field_id ||
@@ -279,7 +264,7 @@ export default function DeviceDetailPage(): React.ReactElement {
     <div className="consolePage">
       <section className="hero card compactHero">
         <div>
-          <div className="eyebrow">Device Detail · Sprint D2</div>
+          <div className="eyebrow">设备详情</div>
           <h2 className="heroTitle">{hero?.title || (detail as any)?.device?.display_name || deviceId || "设备详情"}</h2>
           <p className="heroText">
             {hero?.subtitle || "用于查看设备在线状态、接入信息、最近命令与执行回执。"}
@@ -291,6 +276,7 @@ export default function DeviceDetailPage(): React.ReactElement {
           <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新详情</button>
         </div>
       </section>
+      {error ? <ErrorState title="设备详情暂不可用" message={error} technical={status} onRetry={() => void refresh()} /> : null}
 
       <div className="summaryGrid">
         <div className="metricCard card">
@@ -408,7 +394,7 @@ export default function DeviceDetailPage(): React.ReactElement {
             <label className="field">
               <span>绑定田块</span>
               <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-                availableFields.length = {availableFields.length}
+                当前可绑定田块数：{availableFields.length}
               </div>
               <select className="select" value={bindFieldId} onChange={(e) => setBindFieldId(e.target.value)}>
                 <option value="">选择田块</option>
@@ -446,7 +432,7 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div key={item.credential_id} className="infoCard">
                 <div className="jobTitleRow">
                   <div className="title">{item.credential_id}</div>
-                  <div className={`pill tone-${item.status === "ACTIVE" ? "ok" : "warn"}`}>{item.status}</div>
+                  <StatusBadge status={item.status} />
                 </div>
                 <div className="meta">
                   <span>签发：{fmtTs(item.issued_ts_ms)}</span>
@@ -477,7 +463,7 @@ export default function DeviceDetailPage(): React.ReactElement {
                     <div className="title">{item.action_type || "命令"}</div>
                     <div className="metaText">{item.act_task_id}</div>
                   </div>
-                  <div className="pill tone-info">{item.state}</div>
+                  <StatusBadge status={item.state} />
                 </div>
                 <div className="meta wrapMeta">
                   <span>设备：{item.device_id}</span>
@@ -499,7 +485,7 @@ export default function DeviceDetailPage(): React.ReactElement {
                     <div className="title">{item.act_task_id}</div>
                     <div className="metaText">{item.fact_id}</div>
                   </div>
-                  <div className="pill tone-ok">{item.status || "-"}</div>
+                  <StatusBadge status={item.status || "PENDING"} />
                 </div>
                 <div className="meta wrapMeta">
                   <span>Uplink：{item.uplink_topic || "-"}</span>

@@ -38,7 +38,7 @@ function parseJsonMaybe(v: any): any {
 function hostBaseUrl(req: FastifyRequest): string {
   const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim(); // Optional explicit internal base.
   if (envBase) return envBase; // Prefer explicit internal URL when present.
-  const host = String((req.headers as any).host ?? "127.0.0.1:3000"); // Fallback to request Host header.
+  const host = String((req.headers as any).host ?? "127.0.0.1:3001"); // Fallback to request Host header.
   return `http://${host}`; // Same-process HTTP delegation target.
 }
 

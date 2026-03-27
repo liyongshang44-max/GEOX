@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:3000",
+  [string]$BaseUrl = "http://localhost:3001",
   [string]$ProjectId = "P_DEFAULT",
   [string]$GroupId = "G_CAF",
   [string]$ExecutorKind = "human",     # "human" | "device" (audit only; no auth semantics)

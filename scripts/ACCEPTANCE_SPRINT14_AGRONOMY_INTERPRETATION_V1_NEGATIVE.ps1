@@ -3,7 +3,7 @@
 
 [CmdletBinding()] # Enable advanced function semantics for parameters
 param( # Parameter block
-  [string]$baseUrl = "http://127.0.0.1:3000" # API base URL (docker-compose server)
+  [string]$baseUrl = "http://127.0.0.1:3001" # API base URL (docker-compose server)
 ) # End param
 
 Set-StrictMode -Version Latest # Enable strict mode (catches undefined variables/properties)

@@ -4,7 +4,7 @@
 # - Use curl.exe with --data-binary "@file" to avoid quoting/escaping issues.
 
 param(
-  [string]$baseUrl = ""
+  [string]$baseUrl = "http://127.0.0.1:3001"
 )
 
 Set-StrictMode -Version Latest
@@ -16,37 +16,6 @@ function Fail([string]$m) {
 
 function Info([string]$m) {
   Write-Host ("INFO: " + $m)
-}
-
-function DetectBaseUrl {
-  $candidates = @(
-    "http://127.0.0.1:3000",
-    "http://localhost:3000",
-    "http://[::1]:3000"
-  )
-
-  foreach ($u in $candidates) {
-    try {
-      $r = curl.exe -s "$u/api/health"
-      if ($LASTEXITCODE -eq 0 -and $r) {
-        # Prefer the one that actually has the approval route mounted.
-        $probePath = "$u/api/control/approval_request/v1/requests?tenant_id=tenantA&project_id=projectA&group_id=groupA&limit=1"
-        $probe = curl.exe -s -H "Authorization: Bearer dev_ao_act_admin_v0" $probePath
-        if ($LASTEXITCODE -eq 0 -and $probe -and ($probe -notmatch '"statusCode"\s*:\s*404')) {
-          return $u
-        }
-      }
-    } catch { }
-  }
-
-  foreach ($u in $candidates) {
-    try {
-      $r = curl.exe -s "$u/api/health"
-      if ($LASTEXITCODE -eq 0 -and $r) { return $u }
-    } catch { }
-  }
-
-  Fail "Could not detect a reachable baseUrl on :3000 (health check failed)."
 }
 
 function Ensure-ApiReachable([string]$u) {
@@ -99,9 +68,6 @@ function Get-PropAny([object]$o, [string[]]$names) {
   return $null
 }
 
-if ($baseUrl -eq "") {
-  $baseUrl = DetectBaseUrl
-}
 Info ("using baseUrl=" + $baseUrl)
 Ensure-ApiReachable $baseUrl
 

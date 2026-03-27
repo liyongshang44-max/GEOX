@@ -5,10 +5,10 @@
 # - verifies /api/series returns moisture + soil_temp_c samples for the window
 #
 # Usage:
-#   powershell -ExecutionPolicy Bypass -File .\scripts\ACCEPTANCE_DEVICE_INGEST.ps1 -Base http://127.0.0.1:3000 -Port COM4 -SensorId S1
+#   powershell -ExecutionPolicy Bypass -File .\scripts\ACCEPTANCE_DEVICE_INGEST.ps1 -Base http://127.0.0.1:3001 -Port COM4 -SensorId S1
 #
 param(
-  [string]$Base = "http://127.0.0.1:3000",
+  [string]$Base = "http://127.0.0.1:3001",
   [string]$Port = "COM4",
   [int]$DeviceId = 1,
   [string]$SensorId = "S1",

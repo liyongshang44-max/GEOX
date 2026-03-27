@@ -7,7 +7,7 @@ $repoRoot = Resolve-Path (Join-Path $here "..") # Repository root.
 
 # Constants.
 $profile = "commercial_v0" # Commercial profile name for report metadata.
-$baseUrl = "http://127.0.0.1:3000" # Backend base URL (host port mapping).
+$baseUrl = "http://127.0.0.1:3001" # Backend base URL (host port mapping).
 $reportDir = Join-Path $repoRoot "artifacts\system_acceptance\commercial_v0" # Artifact output directory.
 $reportPath = Join-Path $reportDir "system_acceptance_report.json" # Report output path.
 

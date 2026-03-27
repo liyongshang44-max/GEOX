@@ -87,7 +87,7 @@ function deterministicFileList(dir) { // List files relative to dir in determini
 
 async function main() {
   const args = parseArgs(process.argv); // Parse args.
-  const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL.
+  const baseUrl = String(args.baseUrl || "http://127.0.0.1:3001"); // Base URL.
   const tenant_id = String(args.tenant_id || "").trim(); // Tenant id.
   const project_id = String(args.project_id || "").trim(); // Project id.
   const group_id = String(args.group_id || "").trim(); // Group id.

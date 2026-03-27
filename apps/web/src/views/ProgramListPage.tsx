@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchProgramPortfolio } from "../api";
 import { StatusTag } from "../components/StatusTag";
 import { RelativeTime } from "../components/RelativeTime";
+import EmptyState from "../components/common/EmptyState";
 
 function boolText(v: boolean): string { return v ? "是" : "否"; }
 
@@ -78,9 +79,12 @@ export default function ProgramListPage(): React.ReactElement {
         {filtered.map((p) => {
           const mode = String(p?.next_action_hint?.mode || p?.next_action_hint?.decision_mode || "AUTO");
           const executable = !(mode.toUpperCase().includes("BLOCKED") || mode.toUpperCase().includes("APPROVAL"));
+          const title = String(p?.title || p?.display_name || p?.program_name || p?.program_id || "-");
+          const nextStep = String(p?.next_action_hint?.human_summary || p?.next_action_hint?.kind || "等待下一轮评估");
+          const riskReason = String(p?.current_risk_summary?.reason || p?.current_risk_summary?.summary || "当前暂无明确风险");
           return (
             <article key={String(p?.program_id)} className="infoCard">
-              <div className="jobTitleRow"><div className="title">{String(p?.program_id || "-")}</div><StatusTag status={String(p?.status || "UNKNOWN")} /></div>
+              <div className="jobTitleRow"><div className="title">{title}</div><StatusTag status={String(p?.status || "UNKNOWN")} /></div>
               <div className="meta wrapMeta">
                 <span>田块：{String(p?.field_id || "-")}</span>
                 <span>季节：{String(p?.season_id || "-")}</span>
@@ -89,12 +93,13 @@ export default function ProgramListPage(): React.ReactElement {
                 <span>风险：{String(p?.current_risk_summary?.level || "LOW")}</span>
                 <span>更新时间：<RelativeTime value={String(p?.updated_at || "")} /></span>
               </div>
-              <div style={{ marginTop: 8 }}>下一步建议：{String(p?.next_action_hint?.kind || "等待下一轮评估")}</div>
+              <div style={{ marginTop: 8 }}>下一步建议：{nextStep}</div>
+              <div className="muted" style={{ marginTop: 4 }}>风险原因：{riskReason}</div>
               <div style={{ marginTop: 10 }}><Link className="btn" to={`/programs/${encodeURIComponent(String(p?.program_id || ""))}`}>查看详情</Link></div>
             </article>
           );
         })}
-        {!loading && !filtered.length ? <div className="emptyState">暂无可展示 Program。请调整筛选条件或稍后刷新。</div> : null}
+        {!loading && !filtered.length ? <EmptyState title="暂无可展示 Program" description="请调整筛选条件或稍后刷新" /> : null}
       </section>
     </div>
   );
