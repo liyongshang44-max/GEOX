@@ -1320,7 +1320,7 @@ function adapterSupportsAction(adapterType: string, actionType: string): boolean
   if (adapter === "mqtt" && (action === "irrigate" || action === "irrigation.start")) return true; // Explicitly allow irrigation aliases.
   if (adapter === "mqtt") return true;
   if (adapter === "irrigation_real" || adapter === "irrigation_simulator" || adapter === "irrigation_http_v1") {
-    return action === "irrigation.start" || action === "irrigate";
+    return action === "irrigation.start";
   }
   return false;
 }
