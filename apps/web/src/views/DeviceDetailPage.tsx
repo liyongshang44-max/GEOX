@@ -3,6 +3,7 @@ import { useSession } from "../auth/useSession";
 import { Link, useParams } from "react-router-dom";
 import {
   bindDeviceToField,
+  fetchDeviceControlPlane,
   fetchDeviceConsole,
   fetchDeviceDetail,
   fetchDeviceStatus,
@@ -15,6 +16,7 @@ import {
   issueDeviceCredential,
   revokeDeviceCredential,
   type DeviceConsoleView,
+  type DeviceControlPlaneView,
   type DeviceDetail,
   type DeviceListItem,
   type DeviceStatus,
@@ -87,6 +89,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<DeviceDetail | null>(null);
   const [consoleView, setConsoleView] = React.useState<DeviceConsoleView | null>(null);
+  const [controlPlane, setControlPlane] = React.useState<DeviceControlPlaneView | null>(null);
   const [statusObj, setStatusObj] = React.useState<DeviceStatus | null>(null);
   const [deviceListItem, setDeviceListItem] = React.useState<DeviceListItem | null>(null);
   const [resolvedBoundField, setResolvedBoundField] = React.useState<BoundFieldInfo>({ field_id: null, bound_ts_ms: null });
@@ -111,6 +114,7 @@ export default function DeviceDetailPage(): React.ReactElement {
       const results = await Promise.all([
         withTimeout("fetchDeviceDetail", fetchDeviceDetail(token, deviceId)),
         withTimeout("fetchDeviceConsole", fetchDeviceConsole(token, deviceId)),
+        withTimeout("fetchDeviceControlPlane", fetchDeviceControlPlane(token, deviceId)),
         withTimeout("fetchDeviceStatus", fetchDeviceStatus(token, deviceId)),
         withTimeout("fetchTelemetryLatest", fetchTelemetryLatest(token, { device_id: deviceId })),
         withTimeout("fetchTelemetryMetrics", fetchTelemetryMetrics(token, { device_id: deviceId })),
@@ -131,6 +135,8 @@ export default function DeviceDetailPage(): React.ReactElement {
 
       const nextStatus =
         byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
+      const nextControlPlane =
+        byName.fetchDeviceControlPlane?.status === "fulfilled" ? byName.fetchDeviceControlPlane.value : null;
 
       const nextLatest =
         byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
@@ -170,6 +176,7 @@ export default function DeviceDetailPage(): React.ReactElement {
 
       setDetail(nextDetail);
       setConsoleView(nextConsole);
+      setControlPlane(nextControlPlane);
       setStatusObj(nextStatus);
       setDeviceListItem(matchedDevice);
       setResolvedBoundField(boundFieldInfo);
@@ -262,15 +269,22 @@ export default function DeviceDetailPage(): React.ReactElement {
     (detail as any)?.device?.bound_ts_ms ||
     null;
 
+  const cp = (controlPlane as any)?.item;
+  const hero = cp?.device;
+  const cpSummary = cp?.summary;
+  const cpOverview = cp?.overview;
+  const cpConnectivity = cp?.connectivity;
+
   return (
     <div className="consolePage">
       <section className="hero card compactHero">
         <div>
           <div className="eyebrow">Device Detail · Sprint D2</div>
-          <h2 className="heroTitle">{(detail as any)?.device?.display_name || deviceId || "设备详情"}</h2>
+          <h2 className="heroTitle">{hero?.title || (detail as any)?.device?.display_name || deviceId || "设备详情"}</h2>
           <p className="heroText">
-            本轮把设备详情收口成“接入与执行控制台”：不仅看状态和遥测，还能查看接入 topic、凭据生命周期提示，以及最近命令与设备回执。
+            {hero?.subtitle || "用于查看设备在线状态、接入信息、最近命令与执行回执。"}
           </p>
+          <div className="muted">状态：{hero?.status?.label || statusObj?.status || "-"} · 更新：{hero?.updated_at_label || "-"}</div>
         </div>
         <div className="heroActions">
           <Link className="btn" to="/devices">返回设备列表</Link>
@@ -281,26 +295,26 @@ export default function DeviceDetailPage(): React.ReactElement {
       <div className="summaryGrid">
         <div className="metricCard card">
           <div className="metricLabel">在线状态</div>
-          <div className="metricValue">{statusObj?.status || "-"}</div>
-          <div className="metricHint">最近心跳：{fmtTs(statusObj?.last_heartbeat_ts_ms)}</div>
+          <div className="metricValue">{cpSummary?.online_status?.label || statusObj?.status || "-"}</div>
+          <div className="metricHint">最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div>
         </div>
 
         <div className="metricCard card">
           <div className="metricLabel">绑定田块</div>
-          <div className="metricValue">{boundFieldId || "未绑定"}</div>
-          <div className="metricHint">绑定时间：{fmtTs(boundTsMs)}</div>
+          <div className="metricValue">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定"}</div>
+          <div className="metricHint">绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div>
         </div>
 
         <div className="metricCard card">
           <div className="metricLabel">最近命令</div>
-          <div className="metricValue">{consoleView?.recent_commands?.length ?? 0}</div>
-          <div className="metricHint">最近 20 条 device 定向下发</div>
+          <div className="metricValue">{cpSummary?.recent_commands?.count ?? consoleView?.recent_commands?.length ?? 0}</div>
+          <div className="metricHint">{cpSummary?.recent_commands?.label || "最近 20 条 device 定向下发"}</div>
         </div>
 
         <div className="metricCard card">
           <div className="metricLabel">最近设备回执</div>
-          <div className="metricValue">{consoleView?.recent_receipts?.length ?? 0}</div>
-          <div className="metricHint">设备 ACK / 执行回执留痕</div>
+          <div className="metricValue">{cpSummary?.recent_receipts?.count ?? consoleView?.recent_receipts?.length ?? 0}</div>
+          <div className="metricHint">{cpSummary?.recent_receipts?.label || "设备 ACK / 执行回执留痕"}</div>
         </div>
       </div>
 
@@ -309,7 +323,7 @@ export default function DeviceDetailPage(): React.ReactElement {
           <div className="sectionHeader">
             <div>
               <div className="sectionTitle">设备概览</div>
-              <div className="sectionDesc">展示设备注册、凭据摘要和状态信息。</div>
+              <div className="sectionDesc">展示设备在线、心跳、遥测与运行摘要信息。</div>
             </div>
           </div>
 
@@ -318,10 +332,12 @@ export default function DeviceDetailPage(): React.ReactElement {
             <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
           </label>
 
-          <div className="kv"><span className="k">设备 ID</span><span className="v">{(detail as any)?.device?.device_id || deviceId || "-"}</span></div>
-          <div className="kv"><span className="k">显示名称</span><span className="v">{(detail as any)?.device?.display_name || "-"}</span></div>
-          <div className="kv"><span className="k">最新凭据</span><span className="v">{(detail as any)?.device?.last_credential_id || "-"}</span></div>
-          <div className="kv"><span className="k">凭据状态</span><span className="v">{(detail as any)?.device?.last_credential_status || "-"}</span></div>
+          <div className="kv"><span className="k">设备 ID</span><span className="v">{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</span></div>
+          <div className="kv"><span className="k">显示名称</span><span className="v">{cpOverview?.display_name || (detail as any)?.device?.display_name || "-"}</span></div>
+          <div className="kv"><span className="k">在线状态</span><span className="v">{hero?.status?.label || "-"}</span></div>
+          <div className="kv"><span className="k">最近心跳</span><span className="v">{cpOverview?.last_heartbeat_label || "-"}</span></div>
+          <div className="kv"><span className="k">最近遥测</span><span className="v">{cpOverview?.last_telemetry_label || "-"}</span></div>
+          <div className="kv"><span className="k">电量</span><span className="v">{cpOverview?.battery_percent ?? "-"}%</span></div>
           <div className="kv"><span className="k">页面状态</span><span className="v">{status}</span></div>
           <div className="kv"><span className="k">绑定田块</span><span className="v">{boundFieldId || "未绑定"}</span></div>
           <div className="kv"><span className="k">绑定时间</span><span className="v">{fmtTs(boundTsMs)}</span></div>
@@ -335,14 +351,33 @@ export default function DeviceDetailPage(): React.ReactElement {
             </div>
           </div>
 
-          <div className="kv"><span className="k">MQTT Client ID</span><span className="v">{consoleView?.access_info?.mqtt_client_id || "-"}</span></div>
-          <div className="kv"><span className="k">遥测 Topic</span><span className="v">{consoleView?.access_info?.telemetry_topic || "-"}</span></div>
-          <div className="kv"><span className="k">心跳 Topic</span><span className="v">{consoleView?.access_info?.heartbeat_topic || "-"}</span></div>
-          <div className="kv"><span className="k">下发 Topic</span><span className="v">{consoleView?.access_info?.downlink_topic || "-"}</span></div>
-          <div className="kv"><span className="k">回执 Topic</span><span className="v">{consoleView?.access_info?.receipt_topic || "-"}</span></div>
-          <div className="kv"><span className="k">协议版本</span><span className="v">{consoleView?.access_info?.payload_contract_version || "-"}</span></div>
+          <div className="kv"><span className="k">MQTT Client ID</span><span className="v">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</span></div>
+          <div className="kv"><span className="k">遥测 Topic</span><span className="v">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"}</span></div>
+          <div className="kv"><span className="k">心跳 Topic</span><span className="v">{cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</span></div>
+          <div className="kv"><span className="k">下发 Topic</span><span className="v">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"}</span></div>
+          <div className="kv"><span className="k">回执 Topic</span><span className="v">{cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</span></div>
+          <div className="kv"><span className="k">协议版本</span><span className="v">{cpConnectivity?.protocol_version || consoleView?.access_info?.payload_contract_version || "-"}</span></div>
         </section>
       </div>
+
+      {Array.isArray(cp?.lifecycle_hints) && cp.lifecycle_hints.length ? (
+        <section className="card sectionBlock">
+          <div className="sectionHeader">
+            <div>
+              <div className="sectionTitle">生命周期提示</div>
+              <div className="sectionDesc">帮助快速判断当前设备可用性与接入状态。</div>
+            </div>
+          </div>
+          <div className="list modernList">
+            {cp.lifecycle_hints.map((hint: any, idx: number) => (
+              <div key={`${hint?.kind || "hint"}_${idx}`} className="infoCard">
+                <div className="title">{hint?.title || "-"}</div>
+                <div className="metaText">{hint?.description || "-"}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <div className="contentGridTwo alignStart">
         <section className="card sectionBlock">
