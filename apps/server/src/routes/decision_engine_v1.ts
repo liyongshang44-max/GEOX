@@ -70,7 +70,7 @@ function hasExecutorRuntimeScopes(auth: AoActAuthContextV0): boolean {
 function hostBaseUrl(req: FastifyRequest): string {
   const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim();
   if (envBase) return envBase;
-  const host = String((req.headers as any).host ?? "127.0.0.1:3000");
+  const host = String((req.headers as any).host ?? "127.0.0.1:3001");
   return `http://${host}`;
 }
 

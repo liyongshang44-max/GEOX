@@ -31,7 +31,7 @@ function readTokenRecords(): TokenRecord[] {
 }
 
 function hostBase(req: any): string {
-  const host = String(req?.headers?.host ?? "127.0.0.1:3000");
+  const host = String(req?.headers?.host ?? "127.0.0.1:3001");
   const proto = String(req?.headers?.["x-forwarded-proto"] ?? "http");
   return `${proto}://${host}`;
 }
