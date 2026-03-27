@@ -7,7 +7,7 @@
 
 [CmdletBinding()]
 param(
-  [string]$baseUrl = "http://127.0.0.1:3000"
+  [string]$baseUrl = "http://127.0.0.1:3001"
 )
 
 Set-StrictMode -Version Latest

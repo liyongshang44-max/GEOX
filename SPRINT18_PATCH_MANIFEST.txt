@@ -17,13 +17,13 @@ GEOX · Sprint 18 · AO-ACT Audit Tools v0 (Evidence Pack + Integrity Check) —
 
 2) Run (最短运行方式)
 
-前置：server 已在 http://127.0.0.1:3000 运行，且 host 可连 Postgres 127.0.0.1:5432
+前置：server 已在 http://127.0.0.1:3001 运行，且 host 可连 Postgres 127.0.0.1:5432
 
 A) Acceptance（推荐）
 - powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
 
 可选：指定 baseUrl
-- $env:GEOX_BASE_URL = "http://127.0.0.1:3000"
+- $env:GEOX_BASE_URL = "http://127.0.0.1:3001"
 - powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_AUDIT_V0.ps1
 
 B) 手动运行工具（DB-only）

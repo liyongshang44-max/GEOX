@@ -27,7 +27,7 @@ if ! docker compose version >/dev/null 2>&1; then  # Probe docker compose.
   fi  # End compose check.
 fi  # End compose probe.
 
-base_url="http://127.0.0.1:3000"  # Commercial default backend base URL.
+base_url="http://127.0.0.1:3001"  # Commercial default backend base URL.
 health_url="${base_url}/api/health"  # Backend health endpoint.
 admin_healthz_url="${base_url}/api/admin/healthz"  # Backend DB+bootstrap health endpoint.
 

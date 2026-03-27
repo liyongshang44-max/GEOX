@@ -3,7 +3,8 @@
 All commands below are designed to be copy/paste runnable on Windows PowerShell.
 
 Assumptions:
-- Server listens on `http://localhost:3000`
+- Host entrypoint: `http://localhost:3001`
+- In-container service URL: `http://server:3000`
 - DB file is created automatically by the server
 - Canopy media is served at `/media/(no further steps in this file)`
 
@@ -15,7 +16,7 @@ From repo root `GEOX`:
 
 ```powershell
 docker run --rm -it `
-  -p 3000:3000 `
+  -p 3001:3000 `
   -e HOST=0.0.0.0 `
   -e PORT=3000 `
   -e TS_NODE_PROJECT=/app/tsconfig.json `
@@ -30,7 +31,7 @@ docker run --rm -it `
 ## 2) Groups sanity
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 Invoke-RestMethod "$base/api/groups?projectId=P_DEFAULT" | ConvertTo-Json -Depth 10
 ```
 
@@ -39,7 +40,7 @@ Invoke-RestMethod "$base/api/groups?projectId=P_DEFAULT" | ConvertTo-Json -Depth
 ## 3) Insert raw (S1/S2 moisture)
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $t0  = $now - 600000
 $t1  = $now - 540000
@@ -66,7 +67,7 @@ Post-Json "$base/api/raw" @{ ts=$t3; sensorId="S2"; metric="moisture"; value=22;
 ## 4) Insert marker
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $ts  = $now - 480000
 
@@ -82,7 +83,7 @@ Post-Json "$base/api/marker" @{ ts=$ts; sensorId="S1"; type="device_fault"; note
 ## 5) Manual derive overlays (candidate only)
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $start = $now - 24*60*60*1000
 
@@ -106,7 +107,7 @@ $deriveRes | ConvertTo-Json -Depth 10
 ## 6) Replay series and inspect overlays
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $start = $now - 24*60*60*1000
 
@@ -135,7 +136,7 @@ $img = "C:\Users\mylr1\Pictures\test.jpg"
 Upload:
 
 ```powershell
-$base="http://localhost:3000"
+$base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 
 $form = @{

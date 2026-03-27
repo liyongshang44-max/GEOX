@@ -22,7 +22,7 @@ function parseArgs(argv) { // Parse CLI args of form --key value.
 } // End parseArgs.
 
 const args = parseArgs(process.argv); // Parse process argv.
-const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL for server under test.
+const baseUrl = String(args.baseUrl || "http://127.0.0.1:3001"); // Base URL for server under test.
 console.log(`[INFO] Sprint22 MultiTenant Isolation acceptance (baseUrl=${baseUrl})`); // Print run header.
 
 const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Tenant A triple.

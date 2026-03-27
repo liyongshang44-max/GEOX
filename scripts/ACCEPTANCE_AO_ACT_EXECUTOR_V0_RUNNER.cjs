@@ -205,7 +205,7 @@ async function runCaseDevice(baseUrl, repoRoot, artifactsDir, nodeCmd, requestLo
 
 async function main() { // Runner entrypoint.
   const args = parseArgs(process.argv.slice(2)); // Parse CLI args.
-  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000"; // Resolve base URL.
+  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3001"; // Resolve base URL.
   const repoRoot = path.resolve(__dirname, ".."); // Resolve repo root from scripts directory.
   const artifactsDir = path.join(repoRoot, "acceptance", `ao_act_executor_v0_${isoStampForPath(new Date())}`); // Create unique artifacts dir.
   fs.mkdirSync(artifactsDir, { recursive: true }); // Ensure artifacts dir exists.

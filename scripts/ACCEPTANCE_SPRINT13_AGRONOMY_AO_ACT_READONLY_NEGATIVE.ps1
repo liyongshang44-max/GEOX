@@ -3,7 +3,7 @@
 
 [CmdletBinding()]
 param(
-  [string]$baseUrl = "http://127.0.0.1:3000" # API base URL (docker-compose server)
+  [string]$baseUrl = "http://127.0.0.1:3001" # API base URL (docker-compose server)
 )
 
 Set-StrictMode -Version Latest # Enable strict mode for safer scripting

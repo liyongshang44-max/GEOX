@@ -31,7 +31,7 @@ function tryGit(args, cwd) {
 }
 
 function parseArgs(argv) {
-  const out = { baseUrl: "http://localhost:3000", repoRoot: process.cwd() };
+  const out = { baseUrl: "http://localhost:3001", repoRoot: process.cwd() };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--baseUrl") out.baseUrl = argv[++i];

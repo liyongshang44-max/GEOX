@@ -70,7 +70,7 @@ async function claimOnce(baseUrl, token, body) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const baseUrl = String(readArg(argv, "baseUrl") || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000").trim();
+  const baseUrl = String(readArg(argv, "baseUrl") || process.env.GEOX_BASE_URL || "http://127.0.0.1:3001").trim();
   const token = resolveToken(argv);
   const tenant_id = must("GEOX_TENANT_ID", readArg(argv, "tenant_id"));
   const project_id = must("GEOX_PROJECT_ID", readArg(argv, "project_id"));

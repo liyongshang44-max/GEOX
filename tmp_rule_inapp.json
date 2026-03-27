@@ -1,1 +1,0 @@
-{"rule_id":"rule_patch_notify_test_inapp","threshold_num":45,"metric":"soil_temp","object_id":"dev_d1_demo","notify_channels":["INAPP"],"object_type":"DEVICE","operator":"GT"}
