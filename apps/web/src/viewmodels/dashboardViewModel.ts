@@ -1,6 +1,7 @@
 import type { DashboardAcceptanceRiskItem, DashboardEvidenceItem, DashboardPendingActionItem } from "../api/dashboard";
 
 export type DashboardVM = {
+  controlPlane?: any | null;
   summary: {
     activePrograms: number;
     priorityPrograms: number;
@@ -93,12 +94,30 @@ function pendingReason(action: DashboardPendingActionItem): string {
 }
 
 export function buildDashboardViewModel(params: {
+  controlPlane?: any | null;
   overview: any;
   portfolio: any[];
   pendingActions: DashboardPendingActionItem[];
   riskItems: DashboardAcceptanceRiskItem[];
   evidenceItems: DashboardEvidenceItem[];
 }): DashboardVM {
+  const cp = params.controlPlane?.item ?? null;
+  if (cp) {
+    return {
+      controlPlane: cp,
+      summary: {
+        activePrograms: Number(cp?.headline_cards?.find((x: any) => x.key === "active_programs")?.value ?? 0),
+        priorityPrograms: Number(cp?.headline_cards?.find((x: any) => x.key === "priority_items")?.value ?? 0),
+        pendingActions: Number(cp?.headline_cards?.find((x: any) => x.key === "pending_actions")?.value ?? 0),
+        dataIssues: Number(cp?.headline_cards?.find((x: any) => x.key === "data_gap")?.value ?? 0),
+      },
+      priorityPrograms: [],
+      pendingActions: [],
+      risks: { acceptance: [], dataGaps: [] },
+      evidence: { recentPackages: [], recentPassed: [], recentFailed: [] },
+    };
+  }
+
   const portfolio = Array.isArray(params.portfolio) ? params.portfolio : [];
   const activePrograms = portfolio.filter((p) => String(p?.status ?? "").toUpperCase() !== "ARCHIVED");
 

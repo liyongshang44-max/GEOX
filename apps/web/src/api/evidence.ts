@@ -20,3 +20,7 @@ export async function fetchRecentEvidenceControlPlane(limit = 30): Promise<any[]
   const res = await apiRequest<{ ok?: boolean; items?: any[] }>(withQuery("/api/v1/dashboard/evidence/recent", { limit }));
   return Array.isArray(res.items) ? res.items : [];
 }
+
+export async function fetchEvidenceControlPlane(params?: { limit?: number; program_id?: string; operation_plan_id?: string }): Promise<{ ok: boolean; item: any }> {
+  return apiRequest<{ ok: boolean; item: any }>(withQuery("/api/v1/evidence/control-plane", params));
+}

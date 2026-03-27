@@ -1,22 +1,16 @@
 import React from "react";
-import { fetchEvidenceJobs, fetchRecentEvidenceControlPlane } from "../api";
+import { fetchEvidenceControlPlane } from "../api";
 import { StatusTag } from "../components/StatusTag";
-import { RelativeTime } from "../components/RelativeTime";
 
 export default function AuditExportPage(): React.ReactElement {
-  const [jobs, setJobs] = React.useState<any[]>([]);
-  const [recent, setRecent] = React.useState<any[]>([]);
+  const [item, setItem] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [j, r] = await Promise.all([
-        fetchEvidenceJobs(50).catch(() => []),
-        fetchRecentEvidenceControlPlane(30).catch(() => []),
-      ]);
-      setJobs(j);
-      setRecent(r);
+      const res = await fetchEvidenceControlPlane({ limit: 30 }).catch(() => ({ ok: true, item: null }));
+      setItem(res.item ?? null);
     } finally {
       setLoading(false);
     }
@@ -24,59 +18,81 @@ export default function AuditExportPage(): React.ReactElement {
 
   React.useEffect(() => { void reload(); }, [reload]);
 
+  const cards = Array.isArray(item?.headline_cards) ? item.headline_cards : [];
+  const evidenceItems = Array.isArray(item?.recent_evidence_items) ? item.recent_evidence_items : [];
+  const exportJobs = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
+  const detail = item?.selected_detail;
+
   return (
     <div className="productPage">
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="eyebrow">Evidence / Receipt / Export</div>
-            <div className="sectionTitle">证据中心</div>
-            <div className="muted">用于审计、交付与执行证明的统一页面</div>
+            <div className="sectionTitle">{item?.meta?.page_title || "证据页"}</div>
+            <div className="muted">{item?.meta?.page_subtitle || "集中查看执行回执、证据包与导出任务。"}</div>
           </div>
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新证据数据</button>
         </div>
       </section>
 
-      <section className="summaryGrid3">
-        <div className="card" style={{ padding: 12 }}><div className="muted">证据导出作业</div><div className="metricBig">{loading ? "--" : jobs.length}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">最近 evidence 事件</div><div className="metricBig">{loading ? "--" : recent.length}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">完整性提示</div><div className="muted">manifest / hash 将在可用时显示</div></div>
+      <section className="summaryGrid4">
+        {cards.map((card: any) => (
+          <div key={card.key} className="card" style={{ padding: 12 }}>
+            <div className="muted">{card.title}</div>
+            <div className="metricBig">{loading ? "--" : card.value}</div>
+            <div className="muted">{card.description}</div>
+          </div>
+        ))}
       </section>
 
       <div className="contentGridTwo alignStart">
         <section className="card sectionBlock">
-          <div className="sectionTitle">evidence-export jobs</div>
+          <div className="sectionTitle">最近证据与导出任务</div>
           <div className="list modernList compactList">
-            {jobs.map((job) => (
-              <article key={job.job_id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{job.job_id}</div><StatusTag status={String(job.status || "UNKNOWN")} /></div>
+            {evidenceItems.map((ev: any) => (
+              <article key={ev.evidence_id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">{ev.title}</div><StatusTag status={ev.status?.code || "EXECUTED"} /></div>
                 <div className="meta wrapMeta">
-                  <span>类型：证据包导出作业</span>
-                  <span>关联对象：{String(job.scope_type || "-")} / {String(job.scope_id || "-")}</span>
-                  <span>时间：<RelativeTime value={job.updated_at || job.created_at} /></span>
-                  <span>完整性：{job.artifact_sha256 ? "已生成 hash" : "待生成"}</span>
+                  <span>{ev.subtitle}</span>
+                  <span>{ev.summary}</span>
+                  <span>更新时间：{ev.updated_at_label}</span>
+                  <span>是否可下载：见导出任务状态</span>
                 </div>
               </article>
             ))}
-            {!jobs.length ? <div className="emptyState">最近无新的证据导出记录。可稍后刷新重试。</div> : null}
+            {exportJobs.map((job: any) => (
+              <article key={job.job_id} className="infoCard">
+                <div className="jobTitleRow"><div className="title">{job.title}</div><StatusTag status={job.status?.code || "PENDING"} /></div>
+                <div className="meta wrapMeta">
+                  <span>{job.summary}</span>
+                  <span>关联对象：{job.refs?.program_id || "未关联 Program"}</span>
+                  <span>状态：{job.status?.label || "-"}</span>
+                  <span>{job.download?.available ? "可下载" : "暂不可下载"}</span>
+                </div>
+              </article>
+            ))}
+            {!evidenceItems.length && !exportJobs.length ? <div className="emptyState">最近暂无证据与导出记录。</div> : null}
           </div>
         </section>
 
         <section className="card sectionBlock">
-          <div className="sectionTitle">recent evidence / receipt traces</div>
-          <div className="list modernList compactList">
-            {recent.map((item, idx) => (
-              <article key={`${item.job_id || item.fact_id || idx}`} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{String(item.job_id || item.fact_id || "证据事件")}</div><StatusTag status={String(item.status || "PENDING")} /></div>
+          <div className="sectionTitle">证据详情</div>
+          {!detail ? <div className="emptyState">请选择左侧记录查看详情。</div> : (
+            <div className="list modernList compactList">
+              <article className="infoCard">
+                <div className="jobTitleRow"><div className="title">{detail.title}</div><StatusTag status={detail.status?.code || "EXECUTED"} /></div>
+                <div className="meta wrapMeta"><span>{detail.summary}</span></div>
                 <div className="meta wrapMeta">
-                  <span>证据类型：{String(item.scope_type || item.type || "执行回执")}</span>
-                  <span>关联对象：{String(item.scope_id || item.object_id || "-")}</span>
-                  <span>时间：<RelativeTime value={item.updated_at || item.created_at || item.occurred_at} /></span>
+                  {(detail.timeline || []).map((x: any, idx: number) => <span key={idx}>{x.title} · {x.ts_label}</span>)}
+                </div>
+                <div className="meta wrapMeta">
+                  <span>完整性：{detail.integrity?.label || "待检查"}</span>
+                  <span>{detail.integrity?.manifest_present ? "manifest 可用" : "manifest 缺失"}</span>
+                  <span>{detail.integrity?.sha256_present ? "sha256 可用" : "sha256 缺失"}</span>
                 </div>
               </article>
-            ))}
-            {!recent.length ? <div className="emptyState">最近暂无证据事件。待下一轮回执与导出后更新。</div> : null}
-          </div>
+            </div>
+          )}
         </section>
       </div>
     </div>

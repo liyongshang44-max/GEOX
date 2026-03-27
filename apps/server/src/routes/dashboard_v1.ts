@@ -11,6 +11,8 @@ function badRequest(reply: any, error: string) { return reply.status(400).send({
 function parseWindowStart(q: any): number { const raw = Number(q?.from_ts_ms ?? Date.now() - 24 * 60 * 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() - 24 * 60 * 60 * 1000; } // Parse dashboard window start.
 function parseWindowEnd(q: any): number { const raw = Number(q?.to_ts_ms ?? Date.now() + 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() + 60 * 1000; } // Parse dashboard window end.
 function parseJsonMaybe(v: any): any { if (v && typeof v === "object") return v; if (typeof v !== "string") return null; try { return JSON.parse(v); } catch { return null; } } // Parse json/jsonb/string payloads.
+function relativeLabel(tsMs: number | null | undefined): string { if (!Number.isFinite(Number(tsMs))) return "-"; const d = Date.now() - Number(tsMs); if (d < 60_000) return "刚刚"; if (d < 3_600_000) return `${Math.max(1, Math.floor(d / 60_000))} 分钟前`; if (d < 86_400_000) return `${Math.max(1, Math.floor(d / 3_600_000))} 小时前`; return `${Math.max(1, Math.floor(d / 86_400_000))} 天前`; }
+function statusTone(status: string): "success" | "info" | "warning" | "neutral" { const s = String(status ?? "").toUpperCase(); if (["ACTIVE", "DONE", "EXECUTED", "SUCCESS"].includes(s)) return "success"; if (["ACKED", "DISPATCHED", "RUNNING"].includes(s)) return "info"; if (["BLOCKED", "FAILED", "ERROR"].includes(s)) return "warning"; return "neutral"; }
 
 function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): DashboardTrendSeries[] { // Convert raw telemetry rows into fixed buckets.
   const metrics = ["soil_moisture", "soil_temp"]; // Blueprint default metrics.
@@ -43,6 +45,78 @@ function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): Das
 }
 
 export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): void { // Register dashboard summary routes.
+  app.get("/api/v1/dashboard/control-plane", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant_id = String(auth.tenant_id ?? "");
+    const project_id = String(auth.project_id ?? "");
+    const group_id = String(auth.group_id ?? "");
+    const nowTs = Date.now();
+
+    const [programQ, pendingQ, riskQ, evidenceQ, exportQ, offlineQ] = await Promise.all([
+      pool.query(`SELECT program_id, status, field_id, crop_code, updated_at, current_risk_summary, next_action_hint FROM field_program_state_v1 WHERE tenant_id = $1 ORDER BY updated_at DESC LIMIT 12`, [tenant_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT operation_plan_id, status, field_id, device_id, updated_ts_ms, program_id FROM operation_plan_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND status IN ('PENDING','APPROVED','ACKED','DISPATCHED') ORDER BY updated_ts_ms DESC LIMIT 10`, [tenant_id, project_id, group_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT event_id, metric, status, object_id, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 AND status IN ('OPEN','ACKED') ORDER BY raised_ts_ms DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb #>> '{payload,status}') AS status FROM facts WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 ORDER BY occurred_at DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT job_id, status, created_ts_ms, updated_ts_ms, scope_id, artifact_sha256 FROM evidence_export_job_index_v1 WHERE tenant_id = $1 ORDER BY updated_ts_ms DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT COUNT(*)::bigint AS count FROM device_status_index_v1 WHERE tenant_id = $1 AND (last_heartbeat_ts_ms IS NULL OR last_heartbeat_ts_ms < $2)`, [tenant_id, nowTs - 15 * 60 * 1000]).catch(() => ({ rows: [{ count: 0 }] })),
+    ]);
+
+    const programs = (programQ.rows ?? []).map((row: any) => ({
+      program_id: String(row.program_id),
+      title: "经营 Program",
+      subtitle: `田块 ${String(row.field_id ?? "-")} · 作物 ${String(row.crop_code ?? "-")}`,
+      status: { code: String(row.status ?? "ACTIVE").toUpperCase(), label: String(row.status ?? "").toUpperCase() === "BLOCKED" ? "阻断" : "运行中", tone: String(row.status ?? "").toUpperCase() === "BLOCKED" ? "warning" : "success" },
+      next_action: "建议尽快执行下一步动作",
+      risk_reason: String(parseJsonMaybe(row.current_risk_summary)?.reason ?? "缺少设备回执数据，暂无法确认执行结果。"),
+      updated_at_label: relativeLabel(Date.parse(String(row.updated_at ?? "")) || nowTs),
+      actions: [{ label: "查看详情", href: `/programs/${encodeURIComponent(String(row.program_id))}` }, { label: "查看证据", href: `/evidence?program_id=${encodeURIComponent(String(row.program_id))}` }],
+    }));
+    const pendingItems = (pendingQ.rows ?? []).map((row: any) => ({
+      id: String(row.operation_plan_id ?? "-"),
+      title: "作业动作",
+      status: { code: String(row.status ?? "PENDING").toUpperCase(), label: String(row.status ?? "PENDING").toUpperCase(), tone: statusTone(String(row.status ?? "PENDING")) },
+      field_name: String(row.field_id ?? "-"),
+      device_name: String(row.device_id ?? "-"),
+      updated_at_label: relativeLabel(Number(row.updated_ts_ms ?? nowTs)),
+      href: row.program_id ? `/programs/${encodeURIComponent(String(row.program_id))}` : "/actions"
+    }));
+    const evidenceItems = [
+      ...(evidenceQ.rows ?? []).map((row: any) => ({ id: `receipt_${String(row.fact_id).slice(0, 8)}`, kind: "receipt", title: "执行回执", summary: "已记录最近作业执行回执。", status: { code: String(row.status ?? "EXECUTED").toUpperCase(), label: "已回执", tone: statusTone(String(row.status ?? "EXECUTED")) }, updated_at_label: relativeLabel(Date.parse(String(row.occurred_at ?? "")) || nowTs), href: "/evidence" })),
+      ...(exportQ.rows ?? []).map((row: any) => ({ id: `job_${String(row.job_id)}`, kind: "export", title: "证据导出任务", summary: "证据包导出任务状态更新。", status: { code: String(row.status ?? "DONE").toUpperCase(), label: String(row.status ?? "DONE").toUpperCase() === "DONE" ? "已生成" : "处理中", tone: statusTone(String(row.status ?? "DONE")) }, updated_at_label: relativeLabel(Number(row.updated_ts_ms ?? row.created_ts_ms ?? nowTs)), href: "/evidence" })),
+    ].slice(0, 10);
+
+    const riskItems = (riskQ.rows ?? []).map((row: any) => ({
+      id: String(row.event_id ?? ""),
+      title: String(row.metric ?? "风险项"),
+      severity: { code: "MEDIUM", label: "中等风险", tone: "warning" },
+      summary: "存在待处理告警或阻塞项，建议关注。"
+    }));
+
+    return reply.send({
+      ok: true,
+      item: {
+        meta: {
+          page_title: "运营总览",
+          page_subtitle: "一眼查看 Program 运行状态、待执行动作、证据状态与风险摘要。",
+          updated_ts_ms: nowTs,
+          updated_at_label: relativeLabel(nowTs),
+          context: { tenant_id, project_id, group_id, user_role: "管理员", ui_language: "中文界面", mode_label: "研发模式：关闭" }
+        },
+        headline_cards: [
+          { key: "active_programs", title: "运行中 Program", value: programs.length, description: "当前持续跟进的经营对象", tone: "neutral", updated_at_label: "刚刚", action: { label: "查看 Program 列表", href: "/programs" } },
+          { key: "priority_items", title: "需优先处理", value: riskItems.length + pendingItems.length, description: "建议优先处理的阻塞与风险项", tone: "warning", updated_at_label: "刚刚", action: { label: "查看风险项", href: "/dashboard/risks" } },
+          { key: "pending_actions", title: "待执行动作", value: pendingItems.length, description: "已生成但尚未完成的动作", tone: "info", updated_at_label: "刚刚", action: { label: "查看待执行动作", href: "/actions" } },
+          { key: "data_gap", title: "数据缺口 / 低效率", value: Number(offlineQ.rows?.[0]?.count ?? 0), description: "采集缺口或效率偏低项", tone: "warning", updated_at_label: "刚刚", action: { label: "查看风险摘要", href: "/dashboard/risks" } }
+        ],
+        priority_programs: { title: "优先 Program", subtitle: "优先展示当前最值得关注的经营对象。", items: programs.slice(0, 8), action: { label: "查看 Program 列表", href: "/programs" } },
+        pending_action_list: { title: "待处理动作", subtitle: "优先关注仍在推进中的作业动作。", items: pendingItems, empty_state: { title: "当前暂无待处理动作", description: "所有动作均已完成或暂无新的作业安排。" }, action: { label: "查看待执行动作", href: "/actions" } },
+        recent_evidence: { title: "最近证据", subtitle: "查看最近生成的回执、证据与导出任务。", items: evidenceItems, empty_state: { title: "最近暂无新的证据记录", description: "系统将在有回执或证据导出时自动展示。" }, action: { label: "查看证据页", href: "/evidence" } },
+        risk_summary: { title: "风险摘要", subtitle: "当前系统中需要关注的风险与阻塞项。", items: riskItems, metrics: { offline_devices: Number(offlineQ.rows?.[0]?.count ?? 0), failed_receipts: 0, pending_approvals: 0 }, empty_state: { title: "当前未发现高风险项", description: "系统运行稳定，可继续关注实时变更。" }, action: { label: "查看风险详情", href: "/dashboard/risks" } }
+      }
+    });
+  });
+
   app.get("/api/v1/dashboard/overview", async (req, reply) => { // Provide commercial dashboard overview payload.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Shared read scope for admin/operator ops views.
     if (!auth) return; // Auth helper already responded.
