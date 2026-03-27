@@ -8,7 +8,7 @@
 # Requires: pymodbus>=3, pyserial, requests
 #
 # Example:
-#   (.venv) PS> python .\scripts\ingest_soilprobe_modbus.py --port COM4 --base http://127.0.0.1:3000 --sensor-id S1
+#   (.venv) PS> python .\scripts\ingest_soilprobe_modbus.py --port COM4 --base http://127.0.0.1:3001 --sensor-id S1
 #
 # Stop: Ctrl+C
 
@@ -111,7 +111,7 @@ def main() -> int:
     p.add_argument("--stopbits", type=int, default=1, choices=[1, 2], help="Stop bits (default 1)")
     p.add_argument("--bytesize", type=int, default=8, choices=[7, 8], help="Data bits (default 8)")
     p.add_argument("--device-id", type=int, default=1, help="Modbus device_id (default 1)")
-    p.add_argument("--base", default="http://127.0.0.1:3000", help="Backend base URL")
+    p.add_argument("--base", default="http://127.0.0.1:3001", help="Backend base URL")
     p.add_argument("--sensor-id", default="S1", help="sensorId used in GEOX ingest")
     p.add_argument("--interval", type=float, default=30.0, help="Polling interval seconds (default 30)")
     p.add_argument("--timeout", type=float, default=1.0, help="Serial request timeout seconds (default 1.0)")

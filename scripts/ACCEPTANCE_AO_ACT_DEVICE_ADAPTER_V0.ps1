@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop" # Fail fast on any PowerShell error.
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")) # Resolve repo root from scripts directory.
 $runner = Join-Path $repoRoot "scripts\ACCEPTANCE_AO_ACT_DEVICE_ADAPTER_V0_RUNNER.cjs" # Node runner path.
 $baseUrl = $env:GEOX_BASE_URL # Optional override for server base url.
-if (-not $baseUrl) { $baseUrl = "http://localhost:3000" } # Default base url.
+if (-not $baseUrl) { $baseUrl = "http://localhost:3001" } # Default base url.
 $nodeCmd = $env:NODE_CMD # Optional override for node binary.
 if (-not $nodeCmd) { $nodeCmd = "node" } # Default node command.
 

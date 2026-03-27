@@ -4,7 +4,7 @@
 
 [CmdletBinding()] # 启用高级参数绑定
 param( # 参数定义
-  [string]$baseUrl = "http://127.0.0.1:3000" # API Base URL（docker-compose server）
+  [string]$baseUrl = "http://127.0.0.1:3001" # API Base URL（docker-compose server）
 )
 
 Set-StrictMode -Version Latest # 严格模式：禁止隐式变量/属性误用

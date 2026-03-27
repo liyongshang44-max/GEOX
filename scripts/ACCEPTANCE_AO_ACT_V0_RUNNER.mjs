@@ -60,7 +60,7 @@ async function mustBe200Any(baseUrl, paths) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000";
+  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3001";
 
   console.log(`[INFO] AO-ACT v0 acceptance runner (baseUrl=${baseUrl})`);
 

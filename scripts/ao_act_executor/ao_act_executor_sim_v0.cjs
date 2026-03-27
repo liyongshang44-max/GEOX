@@ -51,7 +51,7 @@ async function selectTaskRowDemoOnce(baseUrl) { // Demo-only selection: pick fir
 async function main() { // Main executor flow.
   const args = parseArgs(process.argv.slice(2)); // Parse args after node+script.
   if (args.autoEvaluate) console.log("WARN: --auto_evaluate=true ignored; execution and acceptance remain decoupled."); // Explicitly keep execution != acceptance.
-  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000"; // Resolve base URL with env fallback.
+  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3001"; // Resolve base URL with env fallback.
   const hasExplicit = Boolean(args.taskFactId) || Boolean(args.actTaskId); // Compute whether explicit selection is configured.
   if (!hasExplicit && !args.once) { // Enforce that some selection mode is provided.
     throw new Error("MISSING_TASK_SELECTOR: use --taskFactId or --actTaskId (preferred), or --once (demo-only)"); // Provide stable guidance.

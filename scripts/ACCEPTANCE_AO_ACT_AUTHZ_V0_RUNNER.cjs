@@ -25,7 +25,7 @@ function parseArgs(argv) { // Parse CLI args of form --key value.
 } // End parseArgs.
 
 const args = parseArgs(process.argv); // Parse process args.
-const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Server base URL.
+const baseUrl = String(args.baseUrl || "http://127.0.0.1:3001"); // Server base URL.
 console.log(`[INFO] Sprint19 AuthZ acceptance (baseUrl=${baseUrl})`); // Header log.
 
 function joinUrl(base, pathname) { // Join base URL + path.

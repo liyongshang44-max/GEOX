@@ -174,7 +174,7 @@ async function createTask(base, token, triple, suffix, deviceId) {
 }
 
 (async () => {
-  const base = env('BASE_URL', 'http://127.0.0.1:3000');
+  const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const baseTokenRecord = readDefaultTokenRecord();
   const token = env('AO_ACT_TOKEN', env('GEOX_AO_ACT_TOKEN', baseTokenRecord?.token ? String(baseTokenRecord.token) : ''));
   const tenant_id = env('TENANT_ID', env('GEOX_AO_ACT_TENANT_ID', 'tenantA'));

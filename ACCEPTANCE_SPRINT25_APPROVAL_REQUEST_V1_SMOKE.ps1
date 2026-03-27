@@ -20,9 +20,9 @@ function Info([string]$m) {
 
 function DetectBaseUrl {
   $candidates = @(
-    "http://127.0.0.1:3000",
-    "http://localhost:3000",
-    "http://[::1]:3000"
+    "http://127.0.0.1:3001",
+    "http://localhost:3001",
+    "http://[::1]:3001"
   )
 
   foreach ($u in $candidates) {
@@ -46,7 +46,7 @@ function DetectBaseUrl {
     } catch { }
   }
 
-  Fail "Could not detect a reachable baseUrl on :3000 (health check failed)."
+  Fail "Could not detect a reachable baseUrl on host :3001 (health check failed; container-internal endpoint remains server:3000)."
 }
 
 function Ensure-ApiReachable([string]$u) {

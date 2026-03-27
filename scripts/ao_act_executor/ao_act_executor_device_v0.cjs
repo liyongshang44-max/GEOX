@@ -60,7 +60,7 @@ async function selectTaskRowDemoOnce(baseUrl) { // Demo-only selection: pick fir
 async function main() { // Main executor flow.
   const args = parseArgs(process.argv.slice(2)); // Parse args after node+script.
   if (args.autoEvaluate) console.log("WARN: --auto_evaluate=true ignored; execution and acceptance remain decoupled."); // Explicit decoupling.
-  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3000"; // Resolve base URL.
+  const baseUrl = args.baseUrl || process.env.GEOX_BASE_URL || "http://127.0.0.1:3001"; // Resolve base URL.
   const deviceGatewayUrl = String(args.deviceGatewayUrl || "").trim(); // Read device gateway URL.
   assert(deviceGatewayUrl.length > 0, "MISSING_DEVICE_GATEWAY_URL"); // Require gateway URL.
 

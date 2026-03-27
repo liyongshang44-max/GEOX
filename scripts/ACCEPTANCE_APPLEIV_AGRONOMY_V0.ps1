@@ -1,5 +1,5 @@
 param(
-  [string]$BaseUrl = "http://localhost:3000", # Base URL for server endpoints.
+  [string]$BaseUrl = "http://localhost:3001", # Base URL for server endpoints.
   [string]$ProjectId = "P_DEFAULT", # Project identifier for agronomy queries.
   [string]$GroupId = "G_CAF", # Group identifier for agronomy queries.
   [int64]$StartTs = 1430294400000, # Inclusive window start timestamp (ms).

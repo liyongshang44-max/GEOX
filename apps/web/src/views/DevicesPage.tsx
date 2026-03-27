@@ -55,7 +55,7 @@ export default function DevicesPage(): React.ReactElement {
     <div className="consolePage">
       <section className="hero card compactHero">
         <div>
-          <div className="eyebrow">Devices · Sprint D2</div>
+          <div className="eyebrow">设备运营中心</div>
           <h2 className="heroTitle">设备中心</h2>
           <p className="heroText">设备列表页作为“设备运营入口”：支持按在线、绑定、回执状态筛选并快速进入详情。</p>
         </div>
@@ -117,7 +117,7 @@ export default function DevicesPage(): React.ReactElement {
                 <span>最近心跳：{formatTimeOrFallback(item.last_heartbeat_ts_ms)}</span>
                 <span>凭据状态：{item.last_credential_status || "未知"}</span>
                 <span>最近命令：{item.last_command_type || "-"}</span>
-                <span>最近回执：{item.last_receipt_status || "无"}</span>
+                <span>最近回执：<StatusBadge status={item.last_receipt_status || "PENDING"} /></span>
               </div>
             </Link>
           ))}
