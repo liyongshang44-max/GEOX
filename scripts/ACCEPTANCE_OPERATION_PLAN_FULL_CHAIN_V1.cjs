@@ -60,11 +60,31 @@ async function main() {
   assert.equal(approve.status, 200, `APPROVE_STATUS_${approve.status}`);
   const act_task_id = String(approve.json?.act_task_id ?? "");
   assert.ok(act_task_id, "MISSING_ACT_TASK_ID");
+  const task = await getJson(
+    baseUrl,
+    `/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+    token
+  );
+  if (task.status === 200) {
+    const payload = task.json?.item?.task?.payload ?? {};
+    console.log("[acceptance] TASK_DETAILS", JSON.stringify({
+      act_task_id,
+      task_type: payload?.task_type ?? payload?.meta?.task_type ?? null,
+      adapter_type: payload?.adapter_type ?? payload?.meta?.adapter_type ?? null,
+      action_type: payload?.action_type ?? null,
+      meta_device_id: payload?.meta?.device_id ?? null,
+      meta_topic: payload?.meta?.topic ?? null,
+      parameters: payload?.parameters ?? null
+    }, null, 2));
+  } else {
+    console.error("[acceptance] TASK_DETAILS_LOAD_FAIL", JSON.stringify(task, null, 2));
+  }
 
   const dispatch = await postJson(baseUrl, `/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}/dispatch`, token, {
     tenant_id, project_id, group_id, command_id: act_task_id, device_id
   });
   if (dispatch.status !== 200) {
+    console.error("[acceptance] DISPATCH_TASK_CONTEXT", JSON.stringify(task, null, 2));
     console.error("DISPATCH_FAIL", JSON.stringify(dispatch, null, 2));
   }
   assert.equal(dispatch.status, 200, `DISPATCH_STATUS_${dispatch.status}`);
