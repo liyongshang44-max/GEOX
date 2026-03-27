@@ -53,7 +53,7 @@ export default function OperationsPage(): React.ReactElement {
             </div>
           </article>
         ))}
-        {!loading && !items.length ? <EmptyState title="当前没有待执行动作" hint="建议稍后刷新查看最新计划状态" /> : null}
+        {!loading && !items.length ? <EmptyState title="当前没有待执行动作" description="建议稍后刷新查看最新计划状态" /> : null}
       </section>
     </div>
   );

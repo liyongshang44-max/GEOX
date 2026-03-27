@@ -1,4 +1,4 @@
-export function toMs(v: string | number | null | undefined): number | null {
+function toMs(v: string | number | null | undefined): number | null {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim()) {
     const asNum = Number(v);
@@ -9,21 +9,35 @@ export function toMs(v: string | number | null | undefined): number | null {
   return null;
 }
 
-export function formatAbsoluteZh(v: string | number | null | undefined): string {
+export function formatDateTimeZh(v: string | number | null | undefined): string {
   const ms = toMs(v);
   return ms ? new Date(ms).toLocaleString("zh-CN", { hour12: false }) : "-";
 }
 
-export function formatRelativeZh(v: string | number | null | undefined): string {
+export function formatRelativeTimeZh(v: string | number | null | undefined): string {
   const ms = toMs(v);
   if (!ms) return "-";
-  const diff = Date.now() - ms;
+  const now = Date.now();
+  const diff = now - ms;
   const abs = Math.abs(diff);
-  const minute = 60_000;
-  const hour = 3_600_000;
-  const day = 86_400_000;
-  if (abs < minute) return "刚刚";
-  if (abs < hour) return `${Math.floor(abs / minute)} 分钟前`;
-  if (abs < day) return `${Math.floor(abs / hour)} 小时前`;
-  return `${Math.floor(abs / day)} 天前`;
+  const m = 60_000;
+  const h = 3_600_000;
+  const d = 86_400_000;
+
+  if (abs < m) return "刚刚";
+  if (abs < h) return `${Math.floor(abs / m)} 分钟前`;
+
+  const dt = new Date(ms);
+  const today = new Date(now);
+  const yesterday = new Date(now - d);
+  const hm = dt.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  if (dt.toDateString() === today.toDateString()) return `今天 ${hm}`;
+  if (dt.toDateString() === yesterday.toDateString()) return `昨天 ${hm}`;
+  if (abs < 7 * d) return `${Math.floor(abs / d)} 天前`;
+  return formatDateTimeZh(ms);
+}
+
+export function formatTimeOrFallback(v: string | number | null | undefined, fallback = "-"): string {
+  const s = formatRelativeTimeZh(v);
+  return s === "-" ? fallback : s;
 }

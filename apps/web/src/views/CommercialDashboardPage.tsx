@@ -62,7 +62,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
               <div style={{ marginTop: 8 }}><Link className="btn" to={`/programs/${encodeURIComponent(item.id)}`}>查看详情</Link></div>
             </article>
           ))}
-          {!vm.priorityPrograms.length ? <EmptyState title="暂无可展示 Program" hint="请等待新一轮建议与审批状态更新" /> : null}
+          {!vm.priorityPrograms.length ? <EmptyState title="暂无可展示 Program" description="请等待新一轮建议与审批状态更新" /> : null}
         </div>
       </section>
 
@@ -76,7 +76,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
                 <div className="meta wrapMeta"><span>{a.programName}</span><span>来源：建议 / 审批 / 计划</span><span>{a.reason}</span></div>
               </article>
             ))}
-            {!vm.pendingActions.length ? <EmptyState title="当前没有待执行动作" hint="系统会在下一轮评估后自动补充" /> : null}
+            {!vm.pendingActions.length ? <EmptyState title="当前没有待执行动作" description="系统会在下一轮评估后自动补充" /> : null}
           </div>
         </section>
 
@@ -89,7 +89,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
                 <div className="meta"><span>更新时间：{e.updatedAt}</span></div>
               </article>
             ))}
-            {!vm.evidence.recentPackages.length ? <EmptyState title="最近暂无证据导出" hint="可在证据页手动刷新" /> : null}
+            {!vm.evidence.recentPackages.length ? <EmptyState title="最近暂无证据导出" description="可在证据页手动刷新" /> : null}
           </div>
         </section>
       </div>

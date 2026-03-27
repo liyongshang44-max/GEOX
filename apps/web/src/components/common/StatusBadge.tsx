@@ -1,9 +1,7 @@
 import React from "react";
-import { mapStatusToZh, statusTone } from "../../lib/presentation/statusMap";
+import { mapGenericStatus, type StatusPresentation } from "../../lib/presentation/statusMap";
 
-export default function StatusBadge({ status, showCode = false }: { status: string | null | undefined; showCode?: boolean }): React.ReactElement {
-  const tone = statusTone(status);
-  const label = mapStatusToZh(status);
-  const code = String(status || "").toUpperCase();
-  return <span className={`statusTag tone-${tone}`}>{label}{showCode && code ? `（${code}）` : ""}</span>;
+export default function StatusBadge({ status, showCode = false, presentation }: { status?: string | null; showCode?: boolean; presentation?: StatusPresentation }): React.ReactElement {
+  const p = presentation ?? mapGenericStatus(status);
+  return <span className={`statusTag tone-${p.tone}`} title={`原始状态码：${p.raw}`}>{p.label}{showCode ? `（${p.raw}）` : ""}</span>;
 }

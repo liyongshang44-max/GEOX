@@ -53,7 +53,7 @@ export default function FieldsPage(): React.ReactElement {
               <div className="jobListAction">查看详情</div>
             </button>
           ))}
-          {!fields.length ? <EmptyState title="暂无可展示田块" hint="可在数据接入后刷新重试" /> : null}
+          {!fields.length ? <EmptyState title="暂无可展示田块" description="可在数据接入后刷新重试" /> : null}
         </div>
       </section>
     </div>

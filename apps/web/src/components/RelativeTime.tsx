@@ -1,11 +1,11 @@
 import React from "react";
-import { formatAbsoluteZh, formatRelativeZh } from "../lib/presentation/time";
+import { formatDateTimeZh, formatRelativeTimeZh } from "../lib/presentation/time";
 
 export function RelativeTime({ value }: { value: string | number | null | undefined }): React.ReactElement {
-  const full = formatAbsoluteZh(value);
-  return <span title={full}>{formatRelativeZh(value)}</span>;
+  const full = formatDateTimeZh(value);
+  return <span title={full}>{formatRelativeTimeZh(value)}</span>;
 }
 
 export function absoluteTime(value: string | number | null | undefined): string {
-  return formatAbsoluteZh(value);
+  return formatDateTimeZh(value);
 }
