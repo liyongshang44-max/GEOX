@@ -1,6 +1,8 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useFields } from "../hooks/useFields";
+import EmptyState from "../components/common/EmptyState";
+import ErrorState from "../components/common/ErrorState";
 
 function fmtTs(ms: number | null | undefined): string {
   if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "-";
@@ -37,6 +39,8 @@ export default function FieldsPage(): React.ReactElement {
         <div className="kv"><span className="k">最新更新时间</span><span className="v">{fields[0] ? fmtTs(fields[0].updated_ts_ms) : "-"}</span></div>
       </section>
 
+      {status.includes("失败") || status.includes("error") || status.includes("500") ? <ErrorState title="田块数据读取异常" message="接口暂不可用，已保留页面可操作状态。" onRetry={() => void refresh()} /> : null}
+
       <section className="card sectionBlock">
         <div className="sectionHeader"><div><div className="sectionTitle">田块列表</div><div className="sectionDesc">点击进入地块详情。</div></div></div>
         <div className="list modernList">
@@ -49,7 +53,7 @@ export default function FieldsPage(): React.ReactElement {
               <div className="jobListAction">查看详情</div>
             </button>
           ))}
-          {!fields.length ? <div className="emptyState">当前还没有可展示的田块。可先通过 acceptance 或 API 创建 field 再刷新。</div> : null}
+          {!fields.length ? <EmptyState title="暂无可展示田块" description="可在数据接入后刷新重试" /> : null}
         </div>
       </section>
     </div>

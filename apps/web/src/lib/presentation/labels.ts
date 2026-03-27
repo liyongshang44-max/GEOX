@@ -1,0 +1,18 @@
+export const PRODUCT_LABELS = {
+  recommendation: "建议",
+  approval: "审批",
+  approvalDecision: "审批决策",
+  operationPlan: "作业计划",
+  task: "执行任务",
+  taskId: "作业执行号",
+  dispatch: "下发",
+  receipt: "执行回执",
+  evidence: "证据",
+  risk: "风险",
+  pending: "待处理",
+  executed: "已执行",
+  acked: "已回执",
+  failed: "执行失败",
+  running: "运行中",
+  unknownReason: "暂未归类",
+} as const;

@@ -19,46 +19,49 @@ export function useFieldDetail(params: {
   const { fieldId, lang, labels, playbackTs } = params;
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
-  const [state, setState] = React.useState<{
-    detail: any;
-    activeOperations: any[];
-    recentRecommendations: any[];
-    currentProgram: any;
-    programsBySeason: Array<{ season_id: string; count: number; programs: any[] }>;
-  } | null>(null);
+  const [state, setState] = React.useState<any>(null);
 
   const refresh = React.useCallback(async () => {
     if (!fieldId) return;
     setBusy(true);
-    setStatus(lang === "zh" ? "加载中..." : "Loading...");
-    try {
-      const [detail, ops, recs, currentProgram, geometryRes, bySeason] = await Promise.all([
-        fetchFieldDetail(fieldId),
-        fetchOperationStates({ field_id: fieldId, limit: 20 }),
-        fetchAgronomyRecommendations({ limit: 30 }),
-        fetchFieldCurrentProgram(fieldId).catch(() => null),
-        fetchFieldGeometry(fieldId).catch(() => null),
-        fetchFieldProgramsBySeason(fieldId).catch(() => []),
-      ]);
-      const stableGeometry = geometryRes?.geometry ?? detail?.geometry ?? null;
-      setState({
-        detail: { ...detail, geometry: stableGeometry },
-        activeOperations: (ops.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))),
-        recentRecommendations: (recs.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8),
-        currentProgram,
-        programsBySeason: Array.isArray(bySeason) ? bySeason : [],
-      });
+    setStatus(lang === "zh" ? "正在加载田块视图…" : "Loading...");
+
+    const [detailRes, opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
+      fetchFieldDetail(fieldId),
+      fetchOperationStates({ field_id: fieldId, limit: 20 }),
+      fetchAgronomyRecommendations({ limit: 30 }),
+      fetchFieldCurrentProgram(fieldId),
+      fetchFieldGeometry(fieldId),
+      fetchFieldProgramsBySeason(fieldId),
+    ]);
+
+    const detail = detailRes.status === "fulfilled" ? detailRes.value : {
+      field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
+      latest_season: null,
+      summary: { device_count: 0 },
+      geometry: null,
+    };
+    const geometry = geometryRes.status === "fulfilled" ? geometryRes.value?.geometry : null;
+
+    setState({
+      detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null },
+      activeOperations: opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [],
+      recentRecommendations: recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [],
+      currentProgram: currentRes.status === "fulfilled" ? currentRes.value : null,
+      programsBySeason: bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [],
+    });
+
+    const detailFail = detailRes.status === "rejected";
+    if (detailFail) {
+      setStatus(lang === "zh" ? "田块详情暂不可读，已展示可用数据。" : "Partial data loaded.");
+    } else {
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
-    } catch (e: any) {
-      setStatus(e?.message || String(e));
-    } finally {
-      setBusy(false);
     }
+
+    setBusy(false);
   }, [fieldId, lang]);
 
-  React.useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  React.useEffect(() => { void refresh(); }, [refresh]);
 
   const model = React.useMemo(() => {
     if (!state) return null;

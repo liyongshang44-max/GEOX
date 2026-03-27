@@ -63,7 +63,7 @@ const I18N = {
     otherType: "其他建议",
     noType: "未标注类型",
     noReason: "无明确原因",
-    otherReason: "其他原因",
+    otherReason: "暂未归类",
     debugTitle: "开发调试信息（原始字段）",
     rawType: "原始类型",
     rawStatus: "原始状态",
