@@ -7,7 +7,7 @@ function INFO($m){ Write-Host "[INFO] $m" -ForegroundColor Cyan }
 function OK($m){ Write-Host "[OK]   $m" -ForegroundColor Green }
 function FAIL($m){ Write-Host "[FAIL] $m" -ForegroundColor Red; throw $m }
 
-$BASE = "http://127.0.0.1:3000"
+$BASE = "http://127.0.0.1:3001"
 $PORT = "COM4"
 $DEVICE_ID = 1
 $SENSOR_ID = "S1"

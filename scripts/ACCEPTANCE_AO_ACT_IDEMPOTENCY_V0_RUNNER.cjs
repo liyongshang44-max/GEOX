@@ -25,7 +25,7 @@ function parseArgs(argv) { // Parse CLI args --key value.
 } // End parseArgs.
 
 const args = parseArgs(process.argv); // Parse args.
-const baseUrl = String(args.baseUrl || "http://127.0.0.1:3000"); // Base URL.
+const baseUrl = String(args.baseUrl || "http://127.0.0.1:3001"); // Base URL.
 console.log(`[INFO] Sprint20 Idempotency acceptance (baseUrl=${baseUrl})`); // Header log.
 
 function joinUrl(base, pathname) { // Join base URL and path.

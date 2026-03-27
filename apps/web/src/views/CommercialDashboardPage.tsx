@@ -58,7 +58,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
                 <span>{item.subtitle || item.fieldCrop}</span>
                 <span>建议：{item.next_action || item.nextStep}</span>
                 <span>风险：{item.risk_reason || item.riskReason}</span>
-                <span>更新：{item.updated_at_label || item.updatedAt}</span>
+                <span>更新：<RelativeTime value={item.updated_ts_ms || item.updated_at || item.updatedAt} /></span>
               </div>
               <div style={{ marginTop: 8 }}><Link className="btn" to={item.actions?.[0]?.href || `/programs/${encodeURIComponent(item.program_id || item.id)}`}>查看详情</Link></div>
             </article>
@@ -74,7 +74,11 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
             {(cp?.pending_action_list?.items || vm.pendingActions).map((a: any) => (
               <article key={a.id} className="infoCard">
                 <div className="jobTitleRow"><div className="title">{a.title || a.actionType}</div><StatusTag status={a.status?.code || a.mode} showCode={false} /></div>
-                <div className="meta wrapMeta"><span>{a.field_name || a.programName || "-"}</span><span>{a.device_name || "设备待分配"}</span><span>{a.updated_at_label || a.reason}</span></div>
+                <div className="meta wrapMeta">
+                  <span>{a.field_name || a.programName || "-"}</span>
+                  <span>{a.device_name || "设备待分配"}</span>
+                  <span>更新：<RelativeTime value={a.updated_ts_ms || a.updated_at} /></span>
+                </div>
               </article>
             ))}
             {!(cp?.pending_action_list?.items || vm.pendingActions).length ? <EmptyState title="当前没有待执行动作" description="系统会在下一轮评估后自动补充" /> : null}
@@ -87,7 +91,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
             {(cp?.recent_evidence?.items || vm.evidence.recentPackages).map((e: any) => (
               <article key={e.id} className="infoCard">
                 <div className="jobTitleRow"><div className="title">{e.title || `证据导出作业 ${e.id}`}</div><StatusTag status={e.status?.code || e.status} /></div>
-                <div className="meta"><span>{e.summary || `更新时间：${e.updatedAt}`}</span></div>
+                <div className="meta"><span>{e.summary || <>更新时间：<RelativeTime value={e.updated_ts_ms || e.updated_at || e.updatedAt} /></>}</span></div>
               </article>
             ))}
             {!(cp?.recent_evidence?.items || vm.evidence.recentPackages).length ? <EmptyState title="最近暂无证据导出" description="可在证据页手动刷新" /> : null}

@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $runner  = Join-Path $PSScriptRoot "ACCEPTANCE_AO_ACT_AUDIT_V0_RUNNER.cjs"
 $baseUrl = $env:GEOX_BASE_URL
-if ([string]::IsNullOrWhiteSpace($baseUrl)) { $baseUrl = "http://localhost:3000" }
+if ([string]::IsNullOrWhiteSpace($baseUrl)) { $baseUrl = "http://localhost:3001" }
 
 # Preflight: verify the server TCP port is reachable before running Node runner.
 try {

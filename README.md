@@ -97,6 +97,11 @@ docker compose up --build server
 成功标志：
 
 Server listening on http://0.0.0.0:3000
+
+端口说明（避免混淆）：
+
+- **宿主机入口**：`http://127.0.0.1:3001`
+- **容器内调用**：`http://server:3000`（容器间通信保持不变）
 九、数据库初始化（Groups）
 public.groups 是 group 的唯一事实来源。
 

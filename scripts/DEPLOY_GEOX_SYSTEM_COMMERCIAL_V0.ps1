@@ -77,7 +77,7 @@ try {  # Probe whether docker compose works.
   if (Get-Command "docker-compose" -ErrorAction SilentlyContinue) { $composeCmd = "docker-compose" } else { Fail "Docker Compose not available (need docker compose or docker-compose)" }  # Choose fallback or fail.
 }  # End compose probe.
 
-$baseUrl = "http://127.0.0.1:3000"  # Commercial default backend base URL.
+$baseUrl = "http://127.0.0.1:3001"  # Commercial default backend base URL.
 $healthUrl = "$baseUrl/api/health"  # Backend health URL.
 $adminHealthzUrl = "$baseUrl/api/admin/healthz"  # Backend DB/bootstrap health URL.
 

@@ -50,11 +50,11 @@ How to run (manual)
 Prereq: apps/server is running and reachable (GEOX_BASE_URL).
 
 Sim executor
-- node scripts/ao_act_executor/ao_act_executor_sim_v0.cjs --baseUrl http://localhost:3000 --taskFactId <fact_id>
+- node scripts/ao_act_executor/ao_act_executor_sim_v0.cjs --baseUrl http://localhost:3001 --taskFactId <fact_id>
 
 Device executor with stub gateway
 - node scripts/ao_act_executor/device_gateway_stub_v0.cjs --port 18080
-- node scripts/ao_act_executor/ao_act_executor_device_v0.cjs --baseUrl http://localhost:3000 --deviceGatewayUrl http://127.0.0.1:18080 --taskFactId <fact_id>
+- node scripts/ao_act_executor/ao_act_executor_device_v0.cjs --baseUrl http://localhost:3001 --deviceGatewayUrl http://127.0.0.1:18080 --taskFactId <fact_id>
 
 Acceptance
 - powershell -NoProfile -ExecutionPolicy Bypass -File scripts\ACCEPTANCE_AO_ACT_EXECUTOR_V0.ps1

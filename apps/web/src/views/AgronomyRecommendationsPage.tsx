@@ -4,6 +4,10 @@ import {
   fetchAgronomyRecommendationsControlPlane,
   submitRecommendationApproval,
 } from "../lib/api";
+import ErrorState from "../components/common/ErrorState";
+import EmptyState from "../components/common/EmptyState";
+import StatusBadge from "../components/common/StatusBadge";
+import { RelativeTime } from "../components/RelativeTime";
 
 type ListItem = any;
 type DetailItem = any;
@@ -25,12 +29,6 @@ function StepChain({ steps }: { steps: Array<{ label: string; done: boolean }> }
       ))}
     </div>
   );
-}
-
-function StatusBadge({ status }: { status: any }): React.ReactElement {
-  const tone = status?.tone === "success" ? "#1d6b42" : status?.tone === "info" ? "#1e4b7a" : "#7a5a0a";
-  const bg = status?.tone === "success" ? "#e8f7ef" : status?.tone === "info" ? "#e8f1fc" : "#fff8e1";
-  return <span style={{ display: "inline-flex", borderRadius: 999, padding: "2px 8px", fontSize: 12, color: tone, background: bg }}>{status?.label || "-"}</span>;
 }
 
 export default function AgronomyRecommendationsPage(): React.ReactElement {
@@ -86,9 +84,9 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
             <h3 style={{ margin: 0 }}>建议列表</h3>
             <span className="muted">共 {items.length} 条</span>
           </div>
-          {loading ? <div>加载中…</div> : null}
-          {error ? <div className="err">{error}</div> : null}
-          {!loading && !items.length ? <div className="emptyState">暂无建议。</div> : null}
+          {loading ? <div className="muted">加载中…</div> : null}
+          {error ? <ErrorState title="建议数据加载失败" message="请稍后重试，或检查后端服务状态。" technical={error} onRetry={() => void refreshAndSelect()} /> : null}
+          {!loading && !items.length ? <EmptyState title="当前暂无农业建议" description="系统会在下一轮规则评估后补充建议" /> : null}
           <div style={{ display: "grid", gap: 12 }}>
             {items.map((item) => (
               <div key={item.recommendation_id} className="card" style={{ padding: 16, borderColor: selected?.recommendation?.recommendation_id === item.recommendation_id ? "#111" : undefined, display: "grid", gap: 10 }}>
@@ -100,7 +98,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                   <div style={{ display: "grid", gap: 8, textAlign: "left", width: "100%" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
                       <h4 style={{ margin: 0, fontSize: 15 }}>{item.title}</h4>
-                      <StatusBadge status={item.status} />
+                      <StatusBadge status={item?.status?.code || item?.status?.label || "PENDING"} />
                     </div>
 
                     <div className="muted">建议单号：<span className="mono">{shortId(item.recommendation_id)}</span></div>
@@ -111,7 +109,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                       <span>证据数 {item.evidence_count ?? 0}</span>
                       <span>规则数 {item.rule_count ?? 0}</span>
                       <span>置信度 {item.confidence ?? "-"}</span>
-                      <span>更新时间 {item.updated_at_label ?? "-"}</span>
+                      <span>更新时间 <RelativeTime value={item.updated_ts_ms || item.updated_at} /></span>
                     </div>
                   </div>
                 </button>
@@ -134,7 +132,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
 
         <section className="card" style={{ padding: 16 }}>
           <h3 style={{ marginTop: 0 }}>建议详情</h3>
-          {!selected ? <div className="emptyState">请选择左侧建议。</div> : (
+          {!selected ? <EmptyState title="请选择左侧建议" description="可查看建议原因、链路状态与关联审批信息" /> : (
             <div style={{ display: "grid", gap: 10 }}>
               <div className="infoCard">
                 <div className="title">A. 建议动作</div>
@@ -144,7 +142,9 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
 
               <div className="infoCard">
                 <div className="title">B. 触发原因</div>
-                <div style={{ marginTop: 6 }}>{selected?.reasoning?.trigger_reason || "-"}</div>
+                <div style={{ marginTop: 6 }}>
+                  {selected?.reasoning?.trigger_reason && selected.reasoning.trigger_reason !== "其他原因" ? selected.reasoning.trigger_reason : "触发原因：监测指标出现异常波动，建议尽快处理。"}
+                </div>
                 <div className="muted" style={{ marginTop: 6 }}>
                   {(selected?.reasoning?.rule_hits || []).map((hit: any) => `${hit.label}: ${hit.summary}`).join("；") || "暂无规则说明"}
                 </div>

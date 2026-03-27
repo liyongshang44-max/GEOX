@@ -100,7 +100,7 @@ function Ensure-ApiReachable([string]$baseUrl) {
       Fail ("API probe failed: GET /api/groups returned HTTP {0}" -f $resp.StatusCode)
     }
   } catch {
-    Fail ("API not reachable at {0}. Ensure docker compose server is up and port 3000 is exposed. Error: {1}" -f $baseUrl, $_.Exception.Message)
+    Fail ("API not reachable at {0}. Ensure docker compose server is up and host port 3001 is exposed (container listens on 3000). Error: {1}" -f $baseUrl, $_.Exception.Message)
   }
 }
 
@@ -191,7 +191,7 @@ if ($sensor_id -ne "CAF009") { Fail ("frozen acceptance only supports sensor_id=
 if ($hours -ne 1) { Fail ("frozen acceptance only supports hours=1 (got '{0}')" -f $hours) }
 
 Ensure-DockerAvailable
-$baseUrl = "http://127.0.0.1:3000"
+$baseUrl = "http://127.0.0.1:3001"
 Ensure-ApiReachable -baseUrl $baseUrl
 Ensure-PostgresPsql
 

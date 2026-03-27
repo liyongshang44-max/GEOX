@@ -6,7 +6,7 @@ param(
   [Parameter(Mandatory=$true)][string]$ProjectId, # Project id within the tenant.
   [Parameter(Mandatory=$true)][string]$GroupId, # Group id within the project.
   [Parameter(Mandatory=$true)][string]$TaskId, # act_task_id for AO-ACT task.
-  [string]$BaseUrl = "http://localhost:3000" # Base URL for server (used for 404 isolation check).
+  [string]$BaseUrl = "http://localhost:3001" # Base URL for server (used for 404 isolation check).
 )
 
 $ErrorActionPreference = "Stop" # Fail fast on any error.

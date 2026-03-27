@@ -166,7 +166,7 @@ function bundleContainsId(bundleNode, id) {
 }
 
 (async () => {
-  const base = env('BASE_URL', 'http://127.0.0.1:3000');
+  const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const baseRecord = readDefaultTokenRecord();
   const token = env('AO_ACT_TOKEN', env('GEOX_AO_ACT_TOKEN', baseRecord?.token ? String(baseRecord.token) : ''));
   const tenant_id = env('TENANT_ID', 'tenantA');

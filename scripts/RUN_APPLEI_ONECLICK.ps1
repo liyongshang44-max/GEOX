@@ -1,6 +1,6 @@
 # RUN_APPLEI_ONECLICK.ps1
 # One-click Apple I end-to-end (backend+web+device ingest + acceptance)
-# - Starts geox-server (docker) on Base port (default :3000)
+# - Starts geox-server (docker) on host Base port (default :3001, container still :3000)
 # - Starts geox-web   (docker) on Web port (default :5173)
 # - Starts device ingest via venv python (COM port -> /api/raw)
 # - Asserts series sample count grows (3 rounds)
@@ -12,7 +12,7 @@
 # - Containers are kept by default.
 
 param(
-  [string]$Base = "http://127.0.0.1:3000",
+  [string]$Base = "http://127.0.0.1:3001",
   [string]$Web  = "http://127.0.0.1:5173",
 
   # Device / ingest

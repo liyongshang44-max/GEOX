@@ -10,10 +10,16 @@ function mustEnv(name) {
   return v;
 }
 
+function authHeader(rawToken) {
+  const token = String(rawToken ?? "").trim();
+  if (!token) throw new Error("MISSING_ENV:GEOX_BEARER_TOKEN");
+  return /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`;
+}
+
 async function postJson(baseUrl, path, token, body) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: token },
+    headers: { "content-type": "application/json", authorization: authHeader(token) },
     body: JSON.stringify(body)
   });
   const json = await res.json().catch(() => null);
@@ -23,7 +29,7 @@ async function postJson(baseUrl, path, token, body) {
 async function getJson(baseUrl, path, token) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: "GET",
-    headers: { accept: "application/json", authorization: token }
+    headers: { accept: "application/json", authorization: authHeader(token) }
   });
   const json = await res.json().catch(() => null);
   return { status: res.status, json };
@@ -37,6 +43,7 @@ async function main() {
   const project_id = mustEnv("GEOX_PROJECT_ID");
   const group_id = mustEnv("GEOX_GROUP_ID");
   const recommendation_id = mustEnv("GEOX_RECOMMENDATION_ID");
+  const device_id = mustEnv("GEOX_DEVICE_ID");
 
   const submit = await postJson(baseUrl, `/api/v1/recommendations/${encodeURIComponent(recommendation_id)}/submit-approval`, token, {
     tenant_id, project_id, group_id, rationale: "acceptance operation plan full chain"
@@ -55,12 +62,12 @@ async function main() {
   assert.ok(act_task_id, "MISSING_ACT_TASK_ID");
 
   const dispatch = await postJson(baseUrl, `/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}/dispatch`, token, {
-    tenant_id, project_id, group_id, command_id: act_task_id, device_id: "device_acceptance_01"
+    tenant_id, project_id, group_id, command_id: act_task_id, device_id
   });
   assert.equal(dispatch.status, 200, `DISPATCH_STATUS_${dispatch.status}`);
 
   const receipt = await postJson(baseUrl, `/api/v1/ao-act/receipts/uplink`, token, {
-    tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id: "device_acceptance_01",
+    tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id,
     meta: { idempotency_key: `acceptance_${Date.now()}` }
   });
   assert.equal(receipt.status, 200, `RECEIPT_STATUS_${receipt.status}`);
