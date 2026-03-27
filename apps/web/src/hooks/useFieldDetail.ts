@@ -13,6 +13,8 @@ export function useFieldDetail(params: {
 }): {
   busy: boolean;
   status: string;
+  error: string | null;
+  technical: string | null;
   model: ReturnType<typeof buildFieldDetailViewModel> | null;
   refresh: () => Promise<void>;
 } {
@@ -20,10 +22,14 @@ export function useFieldDetail(params: {
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
   const [state, setState] = React.useState<any>(null);
+  const [error, setError] = React.useState<string | null>(null);
+  const [technical, setTechnical] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
     if (!fieldId) return;
     setBusy(true);
+    setError(null);
+    setTechnical(null);
     setStatus(lang === "zh" ? "正在加载田块视图…" : "Loading...");
 
     const [detailRes, opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
@@ -53,8 +59,12 @@ export function useFieldDetail(params: {
 
     const detailFail = detailRes.status === "rejected";
     if (detailFail) {
+      setError(lang === "zh" ? "当前暂无地块详情数据" : "Field detail is unavailable.");
+      setTechnical(String((detailRes as PromiseRejectedResult).reason?.bodyText || (detailRes as PromiseRejectedResult).reason?.message || (detailRes as PromiseRejectedResult).reason || ""));
       setStatus(lang === "zh" ? "田块详情暂不可读，已展示可用数据。" : "Partial data loaded.");
     } else {
+      const noDetailData = !detail?.field && !detail?.latest_season && !detail?.summary;
+      if (noDetailData) setError(lang === "zh" ? "当前暂无地块详情数据" : "No field detail data.");
       setStatus(lang === "zh" ? "加载成功" : "Loaded");
     }
 
@@ -77,5 +87,5 @@ export function useFieldDetail(params: {
     });
   }, [state, labels, lang, playbackTs]);
 
-  return { busy, status, model, refresh };
+  return { busy, status, error, technical, model, refresh };
 }

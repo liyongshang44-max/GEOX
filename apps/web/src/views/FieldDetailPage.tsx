@@ -6,9 +6,15 @@ import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
 import FieldLegend from "../components/field/FieldLegend";
 import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
-import { FIELD_TEXT, getRiskColor, mapFieldStatusToLabel, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
+import { FIELD_TEXT, getRiskColor, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
 import { mapStatusToText, t } from "../lib/i18n";
 import { useFieldDetail } from "../hooks/useFieldDetail";
+import ErrorState from "../components/common/ErrorState";
+import EmptyState from "../components/common/EmptyState";
+import SectionSkeleton from "../components/common/SectionSkeleton";
+import StatusBadge from "../components/common/StatusBadge";
+import { mapOperationPlanStatus } from "../lib/presentation/statusMap";
+import { formatTimeOrFallback } from "../lib/presentation/time";
 
 type FieldTab = "overview" | "map" | "operations" | "alerts";
 
@@ -33,12 +39,15 @@ export default function FieldDetailPage(): React.ReactElement {
   const tt = (key: string) => t(lang, key);
   const isDev = Boolean(import.meta.env.DEV);
 
-  const { model, busy, status, refresh } = useFieldDetail({
+  const { model, busy, status, error, technical, refresh } = useFieldDetail({
     fieldId,
     lang,
     labels,
     playbackTs: playing ? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER,
   });
+
+
+  if (busy && !model) return <SectionSkeleton kind="detail" />;
 
   const timelineEvents = model?.timelineEvents ?? [];
 
@@ -126,6 +135,10 @@ export default function FieldDetailPage(): React.ReactElement {
         </div>
       </section>
 
+      {error ? <ErrorState title="地块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
+
+      {!model && !busy ? <EmptyState title="当前暂无地块详情数据" description="请确认地块已同步，或稍后重试" actionText="重试" onAction={() => void refresh()} /> : null}
+
       <FieldSummaryCards items={model?.summaryCards ?? []} />
 
       <section className="card" style={{ padding: 12 }}>
@@ -166,7 +179,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.area}：</b>{model?.detail?.field?.area_ha ? `${model.detail.field.area_ha} ha` : "-"}</div>
               <div><b>{labels.currentSeason}：</b>{model?.detail?.latest_season?.name || model?.detail?.latest_season?.season_id || "-"}</div>
               <div><b>当前运行 Program：</b>{String(model?.currentProgram?.program_id ?? "-")}</div>
-              <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(model?.detail?.field?.status, lang)}</div>
+              <div><b>{labels.currentStatus}：</b><StatusBadge presentation={mapOperationPlanStatus(String(model?.detail?.field?.status || "UNKNOWN"))} /></div>
               <div><b>{labels.devices}：</b>{model?.detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{model?.operationItems?.[0]?.type || "-"}</div>
               <div><b>{labels.activeAlerts}：</b>{model?.alertItems?.length ?? 0}</div>
@@ -183,9 +196,9 @@ export default function FieldDetailPage(): React.ReactElement {
               <div style={{ marginTop: 12 }}><b>{tt("field.recentTimeline")}</b></div>
               <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {(model?.recentTimeline ?? []).map((x: any, idx: number) => (
-                  <li key={`${x.ts}_${idx}`}>[{new Date(x.ts).toLocaleTimeString()}] {x.text}</li>
+                  <li key={`${x.ts}_${idx}`}>[{formatTimeOrFallback(x.ts)}] {x.text}</li>
                 ))}
-                {!(model?.recentTimeline ?? []).length ? <li className="muted">-</li> : null}
+                {!(model?.recentTimeline ?? []).length ? <li className="muted">暂无最近动态</li> : null}
               </ul>
             </div>
           ) : null}
