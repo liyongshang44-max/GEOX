@@ -1,281 +1,56 @@
 import React from "react";
-import { fetchAgronomyRecommendationDetail, fetchAgronomyRecommendations, submitRecommendationApproval, type AgronomyRecommendationItemV1 } from "../lib/api";
-import { mapStatusToText, t } from "../lib/i18n";
+import {
+  fetchAgronomyRecommendationDetailControlPlane,
+  fetchAgronomyRecommendationsControlPlane,
+  submitRecommendationApproval,
+} from "../lib/api";
 
-type Lang = "zh" | "en";
-type RecommendationStatus = "pending" | "in_approval" | "planned" | "tasked" | "completed";
-
-type RecommendationViewModel = {
-  raw: AgronomyRecommendationItemV1;
-  recommendationId: string;
-  shortRecommendationId: string;
-  typeLabel: string;
-  status: RecommendationStatus;
-  statusLabel: string;
-  executionLabel: string;
-  reasonLabels: string[];
-  canSubmit: boolean;
-  evidenceCount: number;
-  ruleHitCount: number;
-};
-
-const I18N = {
-  zh: {
-    pageTitle: "农业建议控制台",
-    pageDesc: "以产品语言呈现建议、审批与执行链路，便于快速识别待处理项。",
-    language: "语言",
-    summaryTotal: "总建议",
-    summaryPending: "待处理",
-    summaryApproval: "审批中",
-    summaryClosed: "已回执",
-    filterAllStatus: "全部状态",
-    filterAllType: "全部类型",
-    filterKeyword: "关键词（ID / 类型 / 状态 / 原因）",
-    filterPendingOnly: "只看待处理项",
-    listTitle: "推荐列表",
-    listCount: "筛选后",
-    listCountSuffix: "条",
-    loading: "加载中…",
-    empty: "暂无建议。",
-    openDetailHint: "请选择左侧建议。",
-    submit: "提交到审批链",
-    detailTitle: "建议详情",
-    recommendationId: "建议单号",
-    approvalId: "审批单号",
-    operationPlanId: "作业计划号",
-    taskId: "作业执行号",
-    receiptId: "执行回执号",
-    status: "流程状态",
-    type: "建议类型",
-    reasons: "触发原因",
-    action: "建议动作",
-    evidence: "证据",
-    rule: "规则",
-    confidence: "置信度",
-    flow: ["建议", "审批", "作业计划", "作业执行", "执行回执"],
-    statusMap: {
-      pending: "待提交审批",
-      in_approval: "审批中",
-      planned: "已生成作业计划",
-      tasked: "已下发作业执行",
-      completed: "已回执",
-    },
-    otherType: "其他建议",
-    noType: "未标注类型",
-    noReason: "无明确原因",
-    otherReason: "暂未归类",
-    debugTitle: "开发调试信息（原始字段）",
-    rawType: "原始类型",
-    rawStatus: "原始状态",
-    rawLatestStatus: "原始 latest_status",
-    rawReasons: "原始 reason codes",
-    idsAndFields: "完整 ID 与字段",
-  },
-  en: {
-    pageTitle: "Agronomy Recommendation Console",
-    pageDesc: "Product-facing view for recommendation, approval, and execution tracking.",
-    language: "Language",
-    summaryTotal: "Total",
-    summaryPending: "Pending",
-    summaryApproval: "In Approval",
-    summaryClosed: "Completed",
-    filterAllStatus: "All Status",
-    filterAllType: "All Types",
-    filterKeyword: "Keyword (ID / Type / Status / Reason)",
-    filterPendingOnly: "Pending only",
-    listTitle: "Recommendations",
-    listCount: "Filtered",
-    listCountSuffix: "items",
-    loading: "Loading...",
-    empty: "No recommendations.",
-    openDetailHint: "Select an item from the list.",
-    submit: "Submit to Approval",
-    detailTitle: "Recommendation Details",
-    recommendationId: "Recommendation ID",
-    approvalId: "Approval ID",
-    operationPlanId: "Operation Plan ID",
-    taskId: "Task ID",
-    receiptId: "Receipt ID",
-    status: "Status",
-    type: "Type",
-    reasons: "Reasons",
-    action: "Suggested Action",
-    evidence: "Evidence",
-    rule: "Rules",
-    confidence: "Confidence",
-    flow: ["Recommendation", "Approval", "Operation Plan", "Task", "Receipt"],
-    statusMap: {
-      pending: "Pending Approval",
-      in_approval: "In Approval",
-      planned: "Plan Generated",
-      tasked: "Task Created",
-      completed: "Receipt Recorded",
-    },
-    otherType: "Other Recommendation",
-    noType: "Unlabeled Type",
-    noReason: "No Explicit Reason",
-    otherReason: "Other Reason",
-    debugTitle: "Developer Debug Fields",
-    rawType: "Raw Type",
-    rawStatus: "Raw Status",
-    rawLatestStatus: "Raw latest_status",
-    rawReasons: "Raw reason codes",
-    idsAndFields: "Full IDs and fields",
-  },
-} as const;
-
-const TYPE_LABELS: Record<string, { zh: string; en: string }> = {
-  irrigation_adjustment: { zh: "灌溉调整", en: "Irrigation Adjustment" },
-  irrigation_recommendation_v1: { zh: "灌溉建议", en: "Irrigation Recommendation" },
-  fertilization_adjustment: { zh: "施肥调整", en: "Fertilization Adjustment" },
-  fertilization_recommendation_v1: { zh: "施肥建议", en: "Fertilization Recommendation" },
-  crop_health_alert_v1: { zh: "作物健康预警", en: "Crop Health Alert" },
-  pest_control: { zh: "病虫害处置", en: "Pest Control" },
-  pest_control_v1: { zh: "病虫害防治", en: "Pest & Disease Control" },
-  disease_control: { zh: "病害防治", en: "Disease Control" },
-  alert_only: { zh: "告警提示", en: "Alert" },
-};
-
-const REASON_LABELS: Record<string, { zh: string; en: string }> = {
-  image_health_risk_high: { zh: "图像识别健康风险高", en: "High health risk from imagery" },
-  canopy_temperature_high: { zh: "冠层温度偏高", en: "Canopy temperature is high" },
-  soil_moisture_low: { zh: "土壤含水量偏低", en: "Soil moisture is low" },
-  disease_risk_high: { zh: "病害风险高", en: "High disease risk" },
-  pest_risk_high: { zh: "虫害风险高", en: "High pest risk" },
-  growth_stress_detected: { zh: "检测到生长胁迫", en: "Growth stress detected" },
-};
+type ListItem = any;
+type DetailItem = any;
 
 function shortId(value: string | null | undefined): string {
   const id = String(value ?? "").trim();
   if (!id) return "-";
-  return id.length <= 12 ? id : `${id.slice(0, 6)}...${id.slice(-4)}`;
+  return id.length <= 16 ? id : `${id.slice(0, 8)}...${id.slice(-4)}`;
 }
 
-function deriveStatus(item: AgronomyRecommendationItemV1): RecommendationStatus {
-  if (item.receipt_fact_id) return "completed";
-  if (item.act_task_id) return "tasked";
-  if (item.operation_plan_id) return "planned";
-  if (item.approval_request_id) return "in_approval";
-  return "pending";
-}
-
-function recommendationTypeLabel(value: string | null, lang: Lang): string {
-  const key = String(value ?? "").trim().toLowerCase();
-  if (!key) return I18N[lang].noType;
-  return TYPE_LABELS[key]?.[lang] ?? I18N[lang].otherType;
-}
-
-function reasonLabel(code: string, lang: Lang): string {
-  const key = String(code ?? "").trim().toLowerCase();
-  if (!key) return I18N[lang].noReason;
-  return REASON_LABELS[key]?.[lang] ?? I18N[lang].otherReason;
-}
-
-function toViewModel(item: AgronomyRecommendationItemV1, lang: Lang): RecommendationViewModel {
-  const status = deriveStatus(item);
-  const reasons = Array.isArray(item.reason_codes) ? item.reason_codes : [];
-  const tt = (key: string) => t(lang, key);
-  return {
-    raw: item,
-    recommendationId: item.recommendation_id,
-    shortRecommendationId: shortId(item.recommendation_id),
-    typeLabel: recommendationTypeLabel(item.recommendation_type, lang),
-    status,
-    statusLabel: I18N[lang].statusMap[status],
-    executionLabel:
-      status === "completed"
-        ? mapStatusToText("SUCCESS", tt)
-        : String(item.latest_status ?? "").toUpperCase().includes("FAIL")
-          ? mapStatusToText("FAILED", tt)
-          : mapStatusToText("PENDING", tt),
-    reasonLabels: reasons.length ? reasons.map((code) => reasonLabel(code, lang)) : [I18N[lang].noReason],
-    canSubmit: status === "pending",
-    evidenceCount: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
-    ruleHitCount: Array.isArray(item.rule_hit) ? item.rule_hit.length : 0,
-  };
-}
-
-function StatusBadge({ statusLabel, status }: { statusLabel: string; status: RecommendationStatus }): React.ReactElement {
-  const tone = status === "pending" ? "#7a5a0a" : status === "in_approval" ? "#1e4b7a" : status === "completed" ? "#1d6b42" : "#495057";
-  const bg = status === "pending" ? "#fff8e1" : status === "in_approval" ? "#e8f1fc" : status === "completed" ? "#e8f7ef" : "#f0f1f3";
-  return <span style={{ display: "inline-flex", borderRadius: 999, padding: "2px 8px", fontSize: 12, color: tone, background: bg }}>{statusLabel}</span>;
-}
-
-function RecommendationStatusChain({ item, labels }: { item: RecommendationViewModel; labels: string[] }): React.ReactElement {
-  const doneFlags = [
-    true,
-    Boolean(item.raw.approval_request_id),
-    Boolean(item.raw.operation_plan_id),
-    Boolean(item.raw.act_task_id),
-    Boolean(item.raw.receipt_fact_id),
-  ];
+function StepChain({ steps }: { steps: Array<{ label: string; done: boolean }> }): React.ReactElement {
   return (
     <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-      {labels.map((label, idx) => (
-        <React.Fragment key={label}>
-          <span style={{ fontSize: 11, color: doneFlags[idx] ? "#1d1d1f" : "#8a8a8f", fontWeight: doneFlags[idx] ? 600 : 400 }}>{label}</span>
-          {idx < labels.length - 1 ? <span style={{ color: "#b1b1b6", fontSize: 11 }}>→</span> : null}
+      {steps.map((step, idx) => (
+        <React.Fragment key={step.label}>
+          <span style={{ fontSize: 11, color: step.done ? "#1d1d1f" : "#8a8a8f", fontWeight: step.done ? 600 : 400 }}>{step.label}</span>
+          {idx < steps.length - 1 ? <span style={{ color: "#b1b1b6", fontSize: 11 }}>→</span> : null}
         </React.Fragment>
       ))}
     </div>
   );
 }
 
-function RecommendationCard(props: {
-  item: RecommendationViewModel;
-  active: boolean;
-  labels: (typeof I18N)[Lang];
-  onOpen: () => void;
-  onSubmit: () => void;
-}): React.ReactElement {
-  const { item, active, labels, onOpen, onSubmit } = props;
-  return (
-    <div className="card" style={{ padding: 16, borderColor: active ? "#111" : undefined, display: "grid", gap: 10 }}>
-      <button className="btn" style={{ justifyContent: "space-between", background: "transparent", border: "none", padding: 0 }} onClick={onOpen}>
-        <div style={{ display: "grid", gap: 8, textAlign: "left" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <h4 style={{ margin: 0, fontSize: 15 }}>{item.typeLabel}</h4>
-            <StatusBadge status={item.status} statusLabel={item.statusLabel} />
-          </div>
-          <div className="muted">{labels.recommendationId}: <span className="mono">{item.shortRecommendationId}</span></div>
-          <RecommendationStatusChain item={item} labels={labels.flow as unknown as string[]} />
-        </div>
-      </button>
-      <div className="muted" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <span>{labels.evidence} {item.evidenceCount}</span>
-        <span>{labels.rule} {item.ruleHitCount}</span>
-        <span>{labels.confidence} {item.raw.confidence ?? "-"}</span>
-        <span>{item.executionLabel}</span>
-      </div>
-      {item.canSubmit ? <button className="btn primary" onClick={onSubmit}>{labels.submit}</button> : null}
-    </div>
-  );
+function StatusBadge({ status }: { status: any }): React.ReactElement {
+  const tone = status?.tone === "success" ? "#1d6b42" : status?.tone === "info" ? "#1e4b7a" : "#7a5a0a";
+  const bg = status?.tone === "success" ? "#e8f7ef" : status?.tone === "info" ? "#e8f1fc" : "#fff8e1";
+  return <span style={{ display: "inline-flex", borderRadius: 999, padding: "2px 8px", fontSize: 12, color: tone, background: bg }}>{status?.label || "-"}</span>;
 }
 
 export default function AgronomyRecommendationsPage(): React.ReactElement {
-  const [items, setItems] = React.useState<AgronomyRecommendationItemV1[]>([]);
-  const [selected, setSelected] = React.useState<AgronomyRecommendationItemV1 | null>(null);
+  const [items, setItems] = React.useState<ListItem[]>([]);
+  const [summary, setSummary] = React.useState<{ total: number; pending: number; in_approval: number; receipted: number }>({ total: 0, pending: 0, in_approval: 0, receipted: 0 });
+  const [selected, setSelected] = React.useState<DetailItem | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>("");
-  const [statusFilter, setStatusFilter] = React.useState<string>("all");
-  const [typeFilter, setTypeFilter] = React.useState<string>("all");
-  const [keyword, setKeyword] = React.useState<string>("");
-  const [pendingOnly, setPendingOnly] = React.useState<boolean>(false);
-  const [lang, setLang] = React.useState<Lang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
-
-  const labels = I18N[lang];
-  const isDev = Boolean(import.meta.env.DEV);
 
   async function refreshAndSelect(recommendationId?: string): Promise<void> {
     setLoading(true);
     setError("");
     try {
-      const res = await fetchAgronomyRecommendations({ limit: 50 });
+      const res = await fetchAgronomyRecommendationsControlPlane({ limit: 50 });
       const nextItems = Array.isArray(res.items) ? res.items : [];
       setItems(nextItems);
+      setSummary(res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 });
       const targetId = recommendationId || nextItems?.[0]?.recommendation_id;
       if (targetId) {
-        const detail = await fetchAgronomyRecommendationDetail({ recommendation_id: targetId });
+        const detail = await fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: targetId });
         setSelected(detail.item);
       } else {
         setSelected(null);
@@ -291,139 +66,110 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
     void refreshAndSelect();
   }, []);
 
-  const viewItems = React.useMemo(() => items.map((item) => toViewModel(item, lang)), [items, lang]);
-
-  const statusOptions = React.useMemo(
-    () => ["all", ...Array.from(new Set(viewItems.map((v) => v.status)))],
-    [viewItems],
-  );
-  const typeOptions = React.useMemo(
-    () => ["all", ...Array.from(new Set(viewItems.map((v) => v.typeLabel)))],
-    [viewItems],
-  );
-
-  const filteredItems = React.useMemo(() => {
-    const k = keyword.trim().toLowerCase();
-    return viewItems.filter((item) => {
-      if (pendingOnly && !item.canSubmit) return false;
-      if (statusFilter !== "all" && item.status !== statusFilter) return false;
-      if (typeFilter !== "all" && item.typeLabel !== typeFilter) return false;
-      if (!k) return true;
-      return item.recommendationId.toLowerCase().includes(k)
-        || item.typeLabel.toLowerCase().includes(k)
-        || item.statusLabel.toLowerCase().includes(k)
-        || item.reasonLabels.join(" ").toLowerCase().includes(k);
-    });
-  }, [keyword, pendingOnly, statusFilter, typeFilter, viewItems]);
-
-  const selectedView = React.useMemo(() => (selected ? toViewModel(selected, lang) : null), [selected, lang]);
-
-  const summary = React.useMemo(() => ({
-    total: viewItems.length,
-    pending: viewItems.filter((x) => x.status === "pending").length,
-    inApproval: viewItems.filter((x) => x.status === "in_approval").length,
-    closed: viewItems.filter((x) => x.status === "completed").length,
-  }), [viewItems]);
-
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <section className="card" style={{ padding: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18 }}>{labels.pageTitle}</h2>
-            <div className="muted" style={{ marginTop: 4 }}>{labels.pageDesc}</div>
-          </div>
-          <label className="muted" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-            {labels.language}
-            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as Lang)}>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-        </div>
+        <h2 style={{ margin: 0, fontSize: 18 }}>农业建议控制台</h2>
+        <div className="muted" style={{ marginTop: 4 }}>以产品语言呈现建议、审批与执行链路，便于快速识别待处理项。</div>
       </section>
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{labels.summaryTotal}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.total}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{labels.summaryPending}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.pending}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{labels.summaryApproval}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.inApproval}</div></div>
-        <div className="card" style={{ padding: 12 }}><div className="muted">{labels.summaryClosed}</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.closed}</div></div>
-      </section>
-
-      <section className="card" style={{ padding: 12, display: "grid", gap: 8 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            {statusOptions.map((option) => <option value={option} key={option}>{option === "all" ? labels.filterAllStatus : labels.statusMap[option as RecommendationStatus]}</option>)}
-          </select>
-          <select className="select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            {typeOptions.map((option) => <option value={option} key={option}>{option === "all" ? labels.filterAllType : option}</option>)}
-          </select>
-          <input className="input" placeholder={labels.filterKeyword} value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-          <label className="muted" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            <input type="checkbox" checked={pendingOnly} onChange={(e) => setPendingOnly(e.target.checked)} />
-            {labels.filterPendingOnly}
-          </label>
-        </div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">总建议</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.total}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">待处理</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.pending}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">审批中</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.in_approval}</div></div>
+        <div className="card" style={{ padding: 12 }}><div className="muted">已回执</div><div style={{ fontSize: 20, fontWeight: 700 }}>{summary.receipted}</div></div>
       </section>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 14 }}>
         <section className="card" style={{ padding: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <h3 style={{ margin: 0 }}>{labels.listTitle}</h3>
-            <span className="muted">{labels.listCount} {filteredItems.length} {labels.listCountSuffix}</span>
+            <h3 style={{ margin: 0 }}>建议列表</h3>
+            <span className="muted">共 {items.length} 条</span>
           </div>
-          {loading ? <div>{labels.loading}</div> : null}
+          {loading ? <div>加载中…</div> : null}
           {error ? <div className="err">{error}</div> : null}
-          {!loading && !filteredItems.length ? <div className="emptyState">{labels.empty}</div> : null}
+          {!loading && !items.length ? <div className="emptyState">暂无建议。</div> : null}
           <div style={{ display: "grid", gap: 12 }}>
-            {filteredItems.map((item) => (
-              <RecommendationCard
-                key={item.recommendationId}
-                item={item}
-                active={selected?.recommendation_id === item.recommendationId}
-                labels={labels}
-                onOpen={() => {
-                  fetchAgronomyRecommendationDetail({ recommendation_id: item.recommendationId })
+            {items.map((item) => (
+              <div key={item.recommendation_id} className="card" style={{ padding: 16, borderColor: selected?.recommendation?.recommendation_id === item.recommendation_id ? "#111" : undefined, display: "grid", gap: 10 }}>
+                <button className="btn" style={{ justifyContent: "space-between", background: "transparent", border: "none", padding: 0 }} onClick={() => {
+                  fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: item.recommendation_id })
                     .then((res) => setSelected(res.item))
                     .catch((e: any) => setError(String(e?.message ?? e)));
-                }}
-                onSubmit={() => {
-                  submitRecommendationApproval({ recommendation_id: item.recommendationId })
-                    .then(() => refreshAndSelect(item.recommendationId))
-                    .catch((e: any) => setError(String(e?.message ?? e)));
-                }}
-              />
+                }}>
+                  <div style={{ display: "grid", gap: 8, textAlign: "left", width: "100%" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                      <h4 style={{ margin: 0, fontSize: 15 }}>{item.title}</h4>
+                      <StatusBadge status={item.status} />
+                    </div>
+
+                    <div className="muted">建议单号：<span className="mono">{shortId(item.recommendation_id)}</span></div>
+                    <div>{item.reason_summary || "-"}</div>
+                    <StepChain steps={Array.isArray(item?.progress?.steps) ? item.progress.steps : []} />
+
+                    <div className="muted" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      <span>证据数 {item.evidence_count ?? 0}</span>
+                      <span>规则数 {item.rule_count ?? 0}</span>
+                      <span>置信度 {item.confidence ?? "-"}</span>
+                      <span>更新时间 {item.updated_at_label ?? "-"}</span>
+                    </div>
+                  </div>
+                </button>
+                {!item.linked_refs?.approval_request_id ? (
+                  <button
+                    className="btn primary"
+                    onClick={() => {
+                      submitRecommendationApproval({ recommendation_id: item.recommendation_id })
+                        .then(() => refreshAndSelect(item.recommendation_id))
+                        .catch((e: any) => setError(String(e?.message ?? e)));
+                    }}
+                  >
+                    提交到审批链
+                  </button>
+                ) : null}
+              </div>
             ))}
           </div>
         </section>
 
         <section className="card" style={{ padding: 16 }}>
-          <h3 style={{ marginTop: 0 }}>{labels.detailTitle}</h3>
-          {!selected ? <div className="emptyState">{labels.openDetailHint}</div> : (
-            <div style={{ display: "grid", gap: 8 }}>
-              <div><b>{labels.recommendationId}：</b><span className="mono">{selectedView?.shortRecommendationId}</span></div>
-              <div><b>{labels.approvalId}：</b><span className="mono">{shortId(selected.approval_request_id)}</span></div>
-              <div><b>{labels.operationPlanId}：</b><span className="mono">{shortId(selected.operation_plan_id)}</span></div>
-              <div><b>{labels.taskId}：</b><span className="mono">{shortId(selected.act_task_id)}</span></div>
-              <div><b>{labels.receiptId}：</b><span className="mono">{shortId(selected.receipt_fact_id)}</span></div>
-              <div><b>{labels.status}：</b>{selectedView?.statusLabel} / {selectedView?.executionLabel}</div>
-              <div><b>{labels.type}：</b>{selectedView?.typeLabel}</div>
-              <div><b>{labels.reasons}：</b>{selectedView?.reasonLabels.join(" / ") || labels.noReason}</div>
-              <div><b>{labels.action}：</b>{selected.suggested_action?.summary || "-"}</div>
+          <h3 style={{ marginTop: 0 }}>建议详情</h3>
+          {!selected ? <div className="emptyState">请选择左侧建议。</div> : (
+            <div style={{ display: "grid", gap: 10 }}>
+              <div className="infoCard">
+                <div className="title">A. 建议动作</div>
+                <div style={{ marginTop: 6 }}><b>{selected?.suggested_action?.title || "建议动作"}</b></div>
+                <div className="muted">{selected?.suggested_action?.summary || "-"}</div>
+              </div>
 
-              {isDev ? (
-                <details style={{ marginTop: 8 }}>
-                  <summary className="muted">{labels.debugTitle}</summary>
-                  <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
-                    <div><b>{labels.rawType}：</b><span className="mono">{selected.recommendation_type || "-"}</span></div>
-                    <div><b>{labels.rawStatus}：</b><span className="mono">{selected.status || "-"}</span></div>
-                    <div><b>{labels.rawLatestStatus}：</b><span className="mono">{selected.latest_status || "-"}</span></div>
-                    <div><b>{labels.rawReasons}：</b><span className="mono">{selected.reason_codes.join(", ") || "-"}</span></div>
-                    <div><b>{labels.idsAndFields}：</b></div>
-                    <pre className="mono" style={{ whiteSpace: "pre-wrap", margin: 0 }}>{JSON.stringify(selected, null, 2)}</pre>
-                  </div>
-                </details>
-              ) : null}
+              <div className="infoCard">
+                <div className="title">B. 触发原因</div>
+                <div style={{ marginTop: 6 }}>{selected?.reasoning?.trigger_reason || "-"}</div>
+                <div className="muted" style={{ marginTop: 6 }}>
+                  {(selected?.reasoning?.rule_hits || []).map((hit: any) => `${hit.label}: ${hit.summary}`).join("；") || "暂无规则说明"}
+                </div>
+              </div>
+
+              <div className="infoCard">
+                <div className="title">C. 当前链路状态</div>
+                <div style={{ marginTop: 6, display: "grid", gap: 4 }}>
+                  <div>审批：{selected?.pipeline?.approval?.status?.label || "-"}</div>
+                  <div>作业计划：{selected?.pipeline?.operation_plan?.status?.label || "-"}</div>
+                  <div>作业执行：{selected?.pipeline?.execution?.status?.label || "-"}</div>
+                  <div>执行回执：{selected?.pipeline?.receipt?.status?.label || "-"}</div>
+                </div>
+              </div>
+
+              <details>
+                <summary className="muted">D. 技术折叠区</summary>
+                <div style={{ display: "grid", gap: 6, marginTop: 8 }}>
+                  <div><b>recommendation_id：</b><span className="mono">{selected?.technical_details?.recommendation_id || "-"}</span></div>
+                  <div><b>approval_request_id：</b><span className="mono">{selected?.technical_details?.approval_request_id || "-"}</span></div>
+                  <div><b>operation_plan_id：</b><span className="mono">{selected?.technical_details?.operation_plan_id || "-"}</span></div>
+                  <div><b>act_task_id：</b><span className="mono">{selected?.technical_details?.act_task_id || "-"}</span></div>
+                  <div><b>raw_status：</b><span className="mono">{selected?.technical_details?.raw_status || "-"}</span></div>
+                </div>
+              </details>
             </div>
           )}
         </section>

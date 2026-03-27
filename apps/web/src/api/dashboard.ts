@@ -25,6 +25,8 @@ export type DashboardOverview = {
   quick_actions: DashboardQuickAction[];
 };
 
+export type DashboardControlPlaneItem = any;
+
 async function firstOk<T>(paths: string[]): Promise<T> {
   let lastErr: unknown = null;
   for (const path of paths) {
@@ -39,6 +41,10 @@ async function firstOk<T>(paths: string[]): Promise<T> {
 
 export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<DashboardOverview> {
   return apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
+}
+
+export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{ ok: boolean; item: DashboardControlPlaneItem }> {
+  return apiRequest<{ ok: boolean; item: DashboardControlPlaneItem }>(withQuery("/api/v1/dashboard/control-plane", params));
 }
 
 export async function fetchDashboardEvidenceSummary(limit = 6): Promise<DashboardEvidenceItem[]> {

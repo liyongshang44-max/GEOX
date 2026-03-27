@@ -539,6 +539,7 @@ export type DeviceListItem = any;
 export type DeviceDetail = any;
 export type DeviceStatus = any;
 export type DeviceConsoleView = any;
+export type DeviceControlPlaneView = any;
 export type TelemetryLatestItem = any;
 export type TelemetryMetricsItem = any;
 export type TelemetrySeriesResponse = any;
@@ -575,6 +576,12 @@ export async function fetchDeviceStatus(token: string, deviceId: string): Promis
 
 export async function fetchDeviceConsole(token: string, deviceId: string): Promise<DeviceConsoleView> {
   return requestJson<DeviceConsoleView>(`/api/v1/devices/${encodeURIComponent(deviceId)}/console`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function fetchDeviceControlPlane(token: string, deviceId: string): Promise<DeviceControlPlaneView> {
+  return requestJson<DeviceControlPlaneView>(`/api/v1/devices/${encodeURIComponent(deviceId)}/control-plane`, {
     headers: authHeaders(token),
   });
 }
@@ -1086,6 +1093,9 @@ export type AgronomyRecommendationItemV1 = {
   suggested_action: { action_type: string; summary: string; parameters: Record<string, unknown> } | null;
 };
 
+export type AgronomyRecommendationControlPlaneListItem = any;
+export type AgronomyRecommendationControlPlaneDetailItem = any;
+
 export async function fetchAgronomyRecommendations(params: {
   tenant_id?: string;
   project_id?: string;
@@ -1095,6 +1105,22 @@ export async function fetchAgronomyRecommendations(params: {
 }): Promise<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }> {
   const token = params.token ?? readStoredAoActToken();
   return requestJson<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }>(withQuery('/api/v1/agronomy/recommendations', {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+    limit: params.limit ?? 50,
+  }), { headers: authHeaders(token) });
+}
+
+export async function fetchAgronomyRecommendationsControlPlane(params: {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  limit?: number;
+  token?: string;
+}): Promise<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }> {
+  const token = params.token ?? readStoredAoActToken();
+  return requestJson<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }>(withQuery('/api/v1/agronomy/recommendations/control-plane', {
     tenant_id: params.tenant_id,
     project_id: params.project_id,
     group_id: params.group_id,
@@ -1139,6 +1165,21 @@ export async function fetchAgronomyRecommendationDetail(params: {
 }): Promise<{ ok: boolean; item: AgronomyRecommendationItemV1 }> {
   const token = params.token ?? readStoredAoActToken();
   return requestJson<{ ok: boolean; item: AgronomyRecommendationItemV1 }>(withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}`, {
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+  }), { headers: authHeaders(token) });
+}
+
+export async function fetchAgronomyRecommendationDetailControlPlane(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  token?: string;
+}): Promise<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }> {
+  const token = params.token ?? readStoredAoActToken();
+  return requestJson<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }>(withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}/control-plane`, {
     tenant_id: params.tenant_id,
     project_id: params.project_id,
     group_id: params.group_id,

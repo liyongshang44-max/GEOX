@@ -1263,6 +1263,8 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
 } // End runJob.
 
 const running = new Set<string>(); // In-memory guard to prevent duplicate in-process execution per (tenant_id, job_id).
+function relLabel(tsMs: number | null | undefined): string { if (!Number.isFinite(Number(tsMs))) return "-"; const d = Date.now() - Number(tsMs); if (d < 60_000) return "刚刚"; if (d < 3_600_000) return `${Math.max(1, Math.floor(d / 60_000))} 分钟前`; if (d < 86_400_000) return `${Math.max(1, Math.floor(d / 3_600_000))} 小时前`; return `${Math.max(1, Math.floor(d / 86_400_000))} 天前`; }
+function toneByStatus(status: string): "success" | "info" | "warning" | "neutral" { const s = String(status ?? "").toUpperCase(); if (["DONE", "EXECUTED", "SUCCESS"].includes(s)) return "success"; if (["RUNNING", "ACKED", "DISPATCHED"].includes(s)) return "info"; if (["ERROR", "FAILED", "PENDING"].includes(s)) return "warning"; return "neutral"; }
 
 export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: Pool) { // Register evidence export routes.
   // Schema-compat: make sure evidence_export_job_index_v1 and evidence_pack_index_v1 exist and have required columns.
@@ -1384,6 +1386,96 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
 
     return reply.send({ ok: true, jobs: q.rows.map((row: any) => enrichJobRow(row)) }); // Return enriched rows.
   }); // End GET list.
+
+  app.get("/api/v1/evidence/control-plane", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "evidence_export.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 20) || 20, 100));
+    const program_id = normalizeId(q.program_id);
+    const operation_plan_id = normalizeId(q.operation_plan_id);
+    const nowTs = Date.now();
+
+    const jobsQ = await pool.query(
+      `SELECT job_id, status, created_ts_ms, updated_ts_ms, scope_id, artifact_sha256
+         FROM evidence_export_job_index_v1
+        WHERE tenant_id = $1
+        ORDER BY updated_ts_ms DESC
+        LIMIT $2`,
+      [auth.tenant_id, limit]
+    ).catch(() => ({ rows: [] }));
+
+    const receiptsQ = await pool.query(
+      `SELECT fact_id, occurred_at, (record_json::jsonb #>> '{payload,status}') AS status,
+              (record_json::jsonb #>> '{payload,operation_plan_id}') AS operation_plan_id,
+              (record_json::jsonb #>> '{payload,act_task_id}') AS act_task_id,
+              (record_json::jsonb #>> '{payload,program_id}') AS program_id
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND ($2::text IS NULL OR (record_json::jsonb #>> '{payload,program_id}') = $2)
+          AND ($3::text IS NULL OR (record_json::jsonb #>> '{payload,operation_plan_id}') = $3)
+        ORDER BY occurred_at DESC
+        LIMIT $4`,
+      [auth.tenant_id, program_id, operation_plan_id, limit]
+    ).catch(() => ({ rows: [] }));
+
+    const recentEvidenceItems = (receiptsQ.rows ?? []).map((row: any) => ({
+      evidence_id: `receipt_${String(row.fact_id).slice(0, 8)}`,
+      kind: "receipt",
+      title: "灌溉执行回执",
+      subtitle: row.operation_plan_id ? `关联作业计划 ${row.operation_plan_id}` : "关联作业计划待补充",
+      status: { code: String(row.status ?? "EXECUTED").toUpperCase(), label: "已回执", tone: toneByStatus(String(row.status ?? "EXECUTED")) },
+      program: { program_id: row.program_id ?? null, title: row.program_id ? "经营 Program" : "未关联 Program" },
+      operation_plan_id: row.operation_plan_id ?? null,
+      act_task_id: row.act_task_id ?? null,
+      updated_at_label: relLabel(Date.parse(String(row.occurred_at ?? "")) || nowTs),
+      summary: "本轮作业执行结果已记录，可用于审计与复核。",
+      resource_usage: { water_l: null, electric_kwh: null },
+      href: `/evidence?focus=receipt_${String(row.fact_id).slice(0, 8)}`
+    }));
+
+    const exportJobs = (jobsQ.rows ?? []).map((row: any) => ({
+      job_id: String(row.job_id),
+      title: "证据包导出任务",
+      status: { code: String(row.status ?? "DONE").toUpperCase(), label: String(row.status ?? "DONE").toUpperCase() === "DONE" ? "已生成" : "处理中", tone: toneByStatus(String(row.status ?? "DONE")) },
+      created_at_label: relLabel(Number(row.created_ts_ms ?? nowTs)),
+      summary: "可用于审计与下载的证据导出任务。",
+      download: { available: String(row.status ?? "").toUpperCase() === "DONE", label: "下载证据包", url: null },
+      refs: { program_id: row.scope_id ?? null, operation_plan_id: null }
+    }));
+
+    const selected = recentEvidenceItems[0] ?? null;
+    return reply.send({
+      ok: true,
+      item: {
+        meta: { page_title: "证据页", page_subtitle: "集中查看执行回执、证据包与导出任务。", updated_ts_ms: nowTs, updated_at_label: relLabel(nowTs) },
+        headline_cards: [
+          { key: "recent_receipts", title: "最近回执", value: recentEvidenceItems.length, description: "最近产生的执行回执记录", tone: "neutral" },
+          { key: "export_jobs", title: "导出任务", value: exportJobs.length, description: "证据导出任务总数", tone: "neutral" },
+          { key: "ready_downloads", title: "可下载证据", value: exportJobs.filter((x: any) => x.download.available).length, description: "已生成且可下载的证据包", tone: "success" },
+          { key: "failed_jobs", title: "异常任务", value: exportJobs.filter((x: any) => x.status.code === "ERROR").length, description: "最近导出失败或异常的任务", tone: "warning" }
+        ],
+        recent_evidence_items: recentEvidenceItems,
+        export_jobs: exportJobs,
+        selected_detail: selected ? {
+          kind: selected.kind,
+          title: selected.title,
+          status: selected.status,
+          summary: selected.summary,
+          timeline: [{ title: "生成作业计划", ts_label: "近期" }, { title: "执行任务下发", ts_label: "近期" }, { title: "写入执行回执", ts_label: selected.updated_at_label }],
+          files: [{ kind: "log_ref", label: "执行日志引用", value: selected.act_task_id || "-" }],
+          integrity: { manifest_present: true, sha256_present: true, label: "完整性信息可用" }
+        } : null,
+        technical_details: {
+          receipt_fact_id: receiptsQ.rows?.[0]?.fact_id ?? null,
+          job_id: jobsQ.rows?.[0]?.job_id ?? null,
+          operation_plan_id: receiptsQ.rows?.[0]?.operation_plan_id ?? null,
+          act_task_id: receiptsQ.rows?.[0]?.act_task_id ?? null
+        }
+      }
+    });
+  });
 
   app.get("/api/v1/evidence-export/jobs/:job_id", async (req, reply) => { // Get job status.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "evidence_export.read"); // Require read scope.

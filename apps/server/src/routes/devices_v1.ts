@@ -61,6 +61,20 @@ function buildAccessInfo(tenant_id: string, device_id: string) {
   };
 }
 
+function relativeTimeLabel(tsMs: number | null | undefined): string {
+  if (!Number.isFinite(Number(tsMs))) return "-";
+  const delta = Date.now() - Number(tsMs);
+  if (delta < 60_000) return "刚刚";
+  if (delta < 3_600_000) return `${Math.max(1, Math.floor(delta / 60_000))} 分钟前`;
+  if (delta < 86_400_000) return `${Math.max(1, Math.floor(delta / 3_600_000))} 小时前`;
+  return `${Math.max(1, Math.floor(delta / 86_400_000))} 天前`;
+}
+
+function deviceStatusMeta(status: string | null | undefined): { code: string; label: string; tone: "success" | "warning" } {
+  const code = String(status ?? "").toUpperCase() === "ONLINE" ? "ONLINE" : "OFFLINE";
+  return { code, label: code === "ONLINE" ? "在线" : "离线", tone: code === "ONLINE" ? "success" : "warning" };
+}
+
 function normalizeCapabilities(input: any): string[] | null {
   if (!Array.isArray(input)) return null;
   const allowed = new Set(["irrigation", "valve"]);
@@ -629,6 +643,155 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       recent_receipts: receiptsQ.rows ?? [], // Recent device receipt history.
     }); // End response.
   }); // End device console route.
+
+  app.get("/api/v1/devices/:device_id/control-plane", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read");
+    if (!auth) return;
+    const params: any = (req as any).params ?? {};
+    const device_id = normalizeDeviceId(params.device_id);
+    if (!device_id) return notFound(reply);
+
+    const detailQ = await pool.query(
+      `SELECT
+          d.device_id,
+          d.display_name,
+          d.last_credential_id,
+          d.last_credential_status,
+          b.field_id,
+          b.bound_ts_ms,
+          f.name AS field_name,
+          s.last_telemetry_ts_ms,
+          s.last_heartbeat_ts_ms,
+          s.battery_percent,
+          s.fw_ver,
+          s.rssi_dbm,
+          CASE WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE' ELSE 'OFFLINE' END AS connection_status
+       FROM device_index_v1 d
+       LEFT JOIN device_binding_index_v1 b ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+       LEFT JOIN field_index_v1 f ON f.tenant_id = d.tenant_id AND f.field_id = b.field_id
+       LEFT JOIN device_status_index_v1 s ON s.tenant_id = d.tenant_id AND s.device_id = d.device_id
+      WHERE d.tenant_id = $1 AND d.device_id = $2
+      LIMIT 1`,
+      [auth.tenant_id, device_id, Date.now() - 15 * 60 * 1000]
+    );
+    if ((detailQ.rowCount ?? 0) < 1) return notFound(reply);
+    const row: any = detailQ.rows[0];
+    const status = deviceStatusMeta(row.connection_status);
+
+    const access_info = buildAccessInfo(auth.tenant_id, device_id);
+    const commandsQ = await pool.query(
+      `SELECT dq.act_task_id, dq.state, EXTRACT(EPOCH FROM dq.created_at) * 1000 AS ts_ms, COALESCE((task_fact.record_json::jsonb #>> '{payload,action_type}'), '') AS action_type
+       FROM dispatch_queue_v1 dq
+       LEFT JOIN facts task_fact ON task_fact.fact_id = dq.task_fact_id
+       WHERE dq.tenant_id = $1 AND dq.device_id = $2
+       ORDER BY dq.created_at DESC, dq.queue_id DESC
+       LIMIT 20`,
+      [auth.tenant_id, device_id]
+    );
+    const receiptsQ = await pool.query(
+      `SELECT fact_id, (record_json::jsonb #>> '{payload,status}') AS status, ((record_json::jsonb #>> '{payload,created_at_ts}'))::bigint AS ts_ms
+         FROM facts
+        WHERE (record_json::jsonb ->> 'type') = 'ao_act_device_ack_received_v1'
+          AND (record_json::jsonb #>> '{payload,tenant_id}') = $1
+          AND (record_json::jsonb #>> '{payload,device_id}') = $2
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 20`,
+      [auth.tenant_id, device_id]
+    );
+
+    const latestCommand: any = (commandsQ.rows ?? [])[0] ?? null;
+    const latestReceipt: any = (receiptsQ.rows ?? [])[0] ?? null;
+    const nowTs = Date.now();
+    const updatedTs = Number(row.last_heartbeat_ts_ms ?? row.last_telemetry_ts_ms ?? nowTs);
+
+    return reply.send({
+      ok: true,
+      item: {
+        device: {
+          device_id: row.device_id,
+          display_name: row.display_name || row.device_id,
+          title: row.display_name || row.device_id,
+          subtitle: "用于查看设备在线状态、接入信息、最近命令与执行回执。",
+          status,
+          updated_ts_ms: updatedTs,
+          updated_at_label: relativeTimeLabel(updatedTs)
+        },
+        summary: {
+          online_status: status,
+          bound_field: {
+            field_id: row.field_id,
+            field_name: row.field_name || row.field_id || "未绑定",
+            bound_ts_ms: row.bound_ts_ms == null ? null : Number(row.bound_ts_ms),
+            bound_at_label: row.bound_ts_ms == null ? "未绑定" : "近期已绑定"
+          },
+          recent_commands: { count: commandsQ.rows?.length ?? 0, label: "最近 20 条 device 定向下发" },
+          recent_receipts: { count: receiptsQ.rows?.length ?? 0, label: "设备 ACK / 执行回执留痕" }
+        },
+        overview: {
+          device_id: row.device_id,
+          display_name: row.display_name || row.device_id,
+          credential_id: row.last_credential_id,
+          credential_status: {
+            code: String(row.last_credential_status ?? "UNKNOWN").toUpperCase(),
+            label: String(row.last_credential_status ?? "").toUpperCase() === "ACTIVE" ? "有效" : "无效",
+            tone: String(row.last_credential_status ?? "").toUpperCase() === "ACTIVE" ? "success" : "warning"
+          },
+          last_heartbeat_ts_ms: row.last_heartbeat_ts_ms == null ? null : Number(row.last_heartbeat_ts_ms),
+          last_heartbeat_label: relativeTimeLabel(row.last_heartbeat_ts_ms == null ? null : Number(row.last_heartbeat_ts_ms)),
+          last_telemetry_ts_ms: row.last_telemetry_ts_ms == null ? null : Number(row.last_telemetry_ts_ms),
+          last_telemetry_label: relativeTimeLabel(row.last_telemetry_ts_ms == null ? null : Number(row.last_telemetry_ts_ms)),
+          battery_percent: row.battery_percent == null ? null : Number(row.battery_percent),
+          fw_ver: row.fw_ver ?? null,
+          rssi_dbm: row.rssi_dbm == null ? null : Number(row.rssi_dbm)
+        },
+        connectivity: {
+          mqtt_client_id: access_info.mqtt_client_id,
+          telemetry_topic: access_info.telemetry_topic,
+          heartbeat_topic: access_info.heartbeat_topic,
+          downlink_topic: access_info.downlink_topic,
+          receipt_topic: access_info.receipt_topic,
+          protocol_version: access_info.payload_contract_version
+        },
+        latest_command: latestCommand ? {
+          command_id: latestCommand.act_task_id,
+          title: latestCommand.action_type || "设备命令",
+          status: { code: String(latestCommand.state ?? "DISPATCHED").toUpperCase(), label: "已下发", tone: "info" },
+          ts_ms: Number(latestCommand.ts_ms ?? nowTs),
+          ts_label: relativeTimeLabel(Number(latestCommand.ts_ms ?? nowTs)),
+          summary: "最新作业命令已发送到设备执行链路。"
+        } : null,
+        latest_receipt: latestReceipt ? {
+          receipt_fact_id: latestReceipt.fact_id,
+          title: "执行回执",
+          status: { code: String(latestReceipt.status ?? "EXECUTED").toUpperCase(), label: "已回执", tone: "success" },
+          ts_ms: Number(latestReceipt.ts_ms ?? nowTs),
+          ts_label: relativeTimeLabel(Number(latestReceipt.ts_ms ?? nowTs)),
+          summary: "设备回执已记录。"
+        } : null,
+        lifecycle_hints: [
+          { kind: "status", title: status.code === "ONLINE" ? "设备当前在线" : "设备当前离线", description: status.code === "ONLINE" ? "最近已收到心跳与遥测数据。" : "长时间未收到心跳，请检查网络与供电。" },
+          { kind: "binding", title: row.field_id ? "设备已绑定田块" : "设备尚未绑定田块", description: row.field_id ? `当前绑定到 ${row.field_name || row.field_id}。` : "请先绑定田块，便于联动作业编排。" },
+          { kind: "credential", title: String(row.last_credential_status ?? "").toUpperCase() === "ACTIVE" ? "凭据状态正常" : "凭据状态异常", description: String(row.last_credential_status ?? "").toUpperCase() === "ACTIVE" ? "当前凭据有效，可继续接入。" : "请签发新凭据或检查凭据状态。" }
+        ],
+        recent_activity: {
+          commands: (commandsQ.rows ?? []).map((x: any) => ({ id: x.act_task_id, title: x.action_type || "设备命令", status: { code: String(x.state ?? "DISPATCHED").toUpperCase(), label: "已下发", tone: "info" }, ts_label: relativeTimeLabel(Number(x.ts_ms ?? nowTs)) })),
+          receipts: (receiptsQ.rows ?? []).map((x: any) => ({ id: x.fact_id, title: "执行回执", status: { code: String(x.status ?? "EXECUTED").toUpperCase(), label: "已回执", tone: "success" }, ts_label: relativeTimeLabel(Number(x.ts_ms ?? nowTs)) }))
+        },
+        technical_details: {
+          device_id: row.device_id,
+          credential_id: row.last_credential_id,
+          raw_status: row.connection_status,
+          mqtt_client_id: access_info.mqtt_client_id,
+          topics: {
+            telemetry: access_info.telemetry_topic,
+            heartbeat: access_info.heartbeat_topic,
+            downlink: access_info.downlink_topic,
+            receipt: access_info.receipt_topic
+          }
+        }
+      }
+    });
+  });
 
   app.get("/api/v1/devices/:device_id", async (req, reply) => { // Get a single device with绑定/状态/最近遥测摘要.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require devices.read.

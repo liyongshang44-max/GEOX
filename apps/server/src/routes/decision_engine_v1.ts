@@ -434,6 +434,47 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
   };
 }
 
+function msLabel(tsMs: number | null | undefined): string {
+  if (!Number.isFinite(Number(tsMs))) return "-";
+  const delta = Date.now() - Number(tsMs);
+  if (delta < 60_000) return "刚刚";
+  if (delta < 3_600_000) return `${Math.max(1, Math.floor(delta / 60_000))} 分钟前`;
+  if (delta < 86_400_000) return `${Math.max(1, Math.floor(delta / 3_600_000))} 小时前`;
+  return `${Math.max(1, Math.floor(delta / 86_400_000))} 天前`;
+}
+
+function statusTone(code: string): "success" | "info" | "warning" | "danger" {
+  const c = String(code ?? "").toUpperCase();
+  if (["APPROVED", "ACKED", "EXECUTED", "COMPLETED", "SUCCESS", "RECEIPTED"].includes(c)) return "success";
+  if (["DISPATCHED", "PLANNED", "IN_APPROVAL"].includes(c)) return "info";
+  if (["PENDING", "PROPOSED"].includes(c)) return "warning";
+  return "warning";
+}
+
+function recommendationStatusLabel(code: string): string {
+  const c = String(code ?? "").toUpperCase();
+  if (c === "DISPATCHED") return "已下发作业执行";
+  if (c === "ACKED") return "已确认";
+  if (c === "APPROVED") return "已批准";
+  if (c === "EXECUTED") return "已回执";
+  if (c === "PENDING") return "待回执";
+  if (c === "PROPOSED") return "待提交审批";
+  return c || "待处理";
+}
+
+function toProgress(chain: { approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }, statusCode: string) {
+  return {
+    current_step: recommendationStatusLabel(statusCode),
+    steps: [
+      { key: "recommendation", label: "建议", done: true },
+      { key: "approval", label: "审批", done: Boolean(chain.approval_request_id) },
+      { key: "plan", label: "作业计划", done: Boolean(chain.operation_plan_id) },
+      { key: "execution", label: "作业执行", done: Boolean(chain.act_task_id) },
+      { key: "receipt", label: "执行回执", done: Boolean(chain.receipt_fact_id) }
+    ]
+  };
+}
+
 function toAoActActionType(rec: any): string {
   const recommendationType = String(rec?.recommendation_type ?? "").trim();
   if (recommendationType === "irrigation_recommendation_v1") return "IRRIGATE";
@@ -503,6 +544,136 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
     return reply.send({ ok: true, item: normalizeRecommendationOutput(row, chain) });
+  });
+
+  app.get("/api/v1/agronomy/recommendations/control-plane", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
+    const rows = await loadRecommendations(pool, tenant, limit);
+    const normalized = await Promise.all(rows.map(async (row) => {
+      const item = normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant));
+      const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
+      return {
+        recommendation_id: item.recommendation_id,
+        title: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议",
+        status: {
+          code: statusCode,
+          label: recommendationStatusLabel(statusCode),
+          tone: statusTone(statusCode)
+        },
+        progress: toProgress(item, statusCode),
+        field: {
+          field_id: item.field_id,
+          field_name: item.field_id
+        },
+        program: {
+          program_id: null,
+          program_title: null
+        },
+        evidence_count: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
+        rule_count: Array.isArray(item.rule_hit) ? item.rule_hit.length : 0,
+        confidence: item.confidence ?? null,
+        pending: !item.receipt_fact_id,
+        reason_summary: item?.suggested_action?.summary || "建议已生成，等待链路执行。",
+        updated_ts_ms: Date.parse(String(item.occurred_at ?? "")) || Date.now(),
+        updated_at_label: msLabel(Date.parse(String(item.occurred_at ?? "")) || Date.now()),
+        linked_refs: {
+          approval_request_id: item.approval_request_id,
+          operation_plan_id: item.operation_plan_id,
+          act_task_id: item.act_task_id,
+          receipt_fact_id: item.receipt_fact_id
+        }
+      };
+    }));
+
+    const summary = {
+      total: normalized.length,
+      pending: normalized.filter((x) => x.pending).length,
+      in_approval: normalized.filter((x) => x.linked_refs.approval_request_id && !x.linked_refs.receipt_fact_id).length,
+      receipted: normalized.filter((x) => x.linked_refs.receipt_fact_id).length
+    };
+    return reply.send({ ok: true, summary, items: normalized });
+  });
+
+  app.get("/api/v1/agronomy/recommendations/:recommendation_id/control-plane", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const p: any = (req as any).params ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const recommendation_id = String(p.recommendation_id ?? "").trim();
+    if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
+    const row = await loadRecommendationById(pool, recommendation_id, tenant);
+    if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
+    const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
+    const item = normalizeRecommendationOutput(row, chain);
+    const updatedTs = Date.parse(String(item.occurred_at ?? "")) || Date.now();
+    const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
+    return reply.send({
+      ok: true,
+      item: {
+        recommendation: {
+          recommendation_id: item.recommendation_id,
+          title: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议",
+          subtitle: item?.suggested_action?.summary || "建议已生成，待执行链路推进。",
+          status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) },
+          type: {
+            code: item.recommendation_type,
+            label: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"
+          },
+          updated_ts_ms: updatedTs,
+          updated_at_label: msLabel(updatedTs)
+        },
+        summary: {
+          confidence: item.confidence ?? null,
+          rule_count: Array.isArray(item.rule_hit) ? item.rule_hit.length : 0,
+          evidence_count: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
+          processing_status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) }
+        },
+        reasoning: {
+          trigger_reason: item?.suggested_action?.summary || "建议由规则与证据触发。",
+          rule_hits: (Array.isArray(item.rule_hit) ? item.rule_hit : []).map((rule: any) => ({
+            rule_id: rule.rule_id,
+            label: String(rule.rule_id || "规则"),
+            matched: Boolean(rule.matched),
+            summary: `阈值 ${rule.threshold ?? "-"}，实际 ${rule.actual ?? "-"}。`
+          })),
+          evidence_refs: (Array.isArray(item.evidence_refs) ? item.evidence_refs : []).map((ref: string) => ({ kind: "evidence", label: ref, value: ref }))
+        },
+        suggested_action: {
+          title: "建议动作",
+          summary: item?.suggested_action?.summary || "-",
+          parameters: item?.suggested_action?.parameters || {}
+        },
+        pipeline: {
+          approval: { request_id: item.approval_request_id, status: { code: item.approval_request_id ? "APPROVED" : "PENDING", label: item.approval_request_id ? "已批准" : "待审批", tone: item.approval_request_id ? "success" : "warning" } },
+          operation_plan: { operation_plan_id: item.operation_plan_id, status: { code: item.operation_plan_id ? "ACKED" : "PENDING", label: item.operation_plan_id ? "已确认" : "待生成", tone: item.operation_plan_id ? "info" : "warning" } },
+          execution: { act_task_id: item.act_task_id, status: { code: item.act_task_id ? "DISPATCHED" : "PENDING", label: item.act_task_id ? "已下发" : "待下发", tone: item.act_task_id ? "info" : "warning" } },
+          receipt: { receipt_fact_id: item.receipt_fact_id, status: { code: item.receipt_fact_id ? "EXECUTED" : "PENDING", label: item.receipt_fact_id ? "已回执" : "待回执", tone: item.receipt_fact_id ? "success" : "warning" } }
+        },
+        technical_details: {
+          recommendation_id: item.recommendation_id,
+          approval_request_id: item.approval_request_id,
+          operation_plan_id: item.operation_plan_id,
+          act_task_id: item.act_task_id,
+          raw_type: item.recommendation_type,
+          raw_status: item.latest_status ?? item.status
+        }
+      }
+    });
   });
 
   app.post("/api/v1/recommendations/generate", async (req, reply) => {
