@@ -119,7 +119,7 @@ export default function FieldDetailPage(): React.ReactElement {
             <div className="muted" style={{ marginTop: 4 }}>field_id: <span className="mono">{shortId(fieldId)}</span></div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as FieldLang)}><option value="zh">中文</option><option value="en">English</option></select>
+            <select className="select" value={lang} onChange={(e) => setLang(e.target.value as FieldLang)}><option value="zh">中文</option></select>
             <Link className="btn" to="/fields">{labels.back}</Link>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>{labels.refresh}</button>
           </div>
@@ -131,11 +131,11 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="card" style={{ padding: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <div>
-            <b>Season Program Summary</b>
-            <div className="muted">同一地块跨 season 的 program 视图。</div>
+            <b>季节 Program 概览</b>
+            <div className="muted">同一地块跨季节 Program 运行视图。</div>
           </div>
           <select className="select" value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)}>
-            <option value="ALL">全部 Season</option>
+            <option value="ALL">全部季节</option>
             {(model?.seasonOptions ?? []).map((s: string) => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -143,11 +143,11 @@ export default function FieldDetailPage(): React.ReactElement {
           {filteredSeasonPrograms.map((s: any) => (
             <div key={s.season_id} className="card" style={{ padding: 10 }}>
               <div style={{ fontWeight: 700 }}>{s.season_id}</div>
-              <div className="muted">Programs: {s.count}</div>
-              <div className="muted">Active: {s.programs.filter((p: any) => String(p.status).toUpperCase() === "ACTIVE").length}</div>
+              <div className="muted">Program 数：{s.count}</div>
+              <div className="muted">运行中：{s.programs.filter((p: any) => String(p.status).toUpperCase() === "ACTIVE").length}</div>
             </div>
           ))}
-          {!filteredSeasonPrograms.length ? <div className="muted">暂无 season program 数据</div> : null}
+          {!filteredSeasonPrograms.length ? <div className="muted">暂无季节 Program 数据</div> : null}
         </div>
       </section>
 
@@ -165,7 +165,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.fieldName}：</b>{model?.detail?.field?.name || "-"}</div>
               <div><b>{labels.area}：</b>{model?.detail?.field?.area_ha ? `${model.detail.field.area_ha} ha` : "-"}</div>
               <div><b>{labels.currentSeason}：</b>{model?.detail?.latest_season?.name || model?.detail?.latest_season?.season_id || "-"}</div>
-              <div><b>当前 active program：</b>{String(model?.currentProgram?.program_id ?? "-")}</div>
+              <div><b>当前运行 Program：</b>{String(model?.currentProgram?.program_id ?? "-")}</div>
               <div><b>{labels.currentStatus}：</b>{mapFieldStatusToLabel(model?.detail?.field?.status, lang)}</div>
               <div><b>{labels.devices}：</b>{model?.detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{model?.operationItems?.[0]?.type || "-"}</div>
@@ -193,7 +193,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
-              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>Geometry unavailable for this field.</div> : null}
+              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>当前田块暂无可用地理边界数据。</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -203,11 +203,11 @@ export default function FieldDetailPage(): React.ReactElement {
                 </div>
               </div>
               <div className="card" style={{ padding: 10 }}>
-                <div className="muted">Timeline</div>
+                <div className="muted">时间线回放</div>
                 <input type="range" min={0} max={Math.max(0, timelineEvents.length - 1)} value={timelineIndex} onChange={(e) => setTimelineIndex(Number(e.target.value))} style={{ width: "100%" }} />
                 <div className="muted" style={{ display: "flex", justifyContent: "space-between" }}>
                   <span>{timelineEvents[timelineIndex]?.label || "-"}</span>
-                  <button className="btn" onClick={() => setPlaying((v) => !v)}>{playing ? "Pause" : "Play"}</button>
+                  <button className="btn" onClick={() => setPlaying((v) => !v)}>{playing ? "暂停" : "播放"}</button>
                 </div>
               </div>
               <FieldGisMap

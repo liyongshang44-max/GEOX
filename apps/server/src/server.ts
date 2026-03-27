@@ -227,6 +227,12 @@ if (!DATABASE_URL) {
 }
 const pool = new Pool({ connectionString: DATABASE_URL }); // 创建 pg 连接池
 
+const TENANT_HEADERS = [
+  "x-tenant-id",
+  "x-project-id",
+  "x-group-id",
+] as const; // 浏览器侧租户三元组请求头（必须允许跨域）。
+
 const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 }); // 初始化服务（限制 body）
 
 if (!GEOX_DISABLE_APPLE_II) { // 允许在非商用 profile 下显式启用 Apple II（默认）
@@ -300,11 +306,19 @@ app.register(fastifyStatic, {
   decorateReply: false, // 不覆盖 reply
 });
 
+
 app.addHook("onRequest", async (req, reply) => {
-  reply.header("Access-Control-Allow-Origin", "*"); // 允许跨域
-  reply.header("Access-Control-Allow-Headers", "content-type, authorization"); // 允许 content-type
-  reply.header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS"); // 允许方法
-  if (req.method === "OPTIONS") return reply.code(204).send(); // 预检请求直接 204
+  reply.header("Access-Control-Allow-Origin", req.headers.origin ?? "*"); // 允许任意来源（开发态）。
+  reply.header("Vary", "Origin");
+  reply.header("Access-Control-Allow-Credentials", "true");
+  reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  reply.header(
+    "Access-Control-Allow-Headers",
+    ["Content-Type", "Authorization", ...TENANT_HEADERS].join(", "),
+  );
+  reply.header("Access-Control-Expose-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return reply.code(204).send(); // 浏览器预检请求直接返回。
 });
 
 // ---------- helpers: gaps ----------
