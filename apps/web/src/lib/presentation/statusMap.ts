@@ -54,6 +54,7 @@ export function mapTaskStatus(raw: string | null | undefined): StatusPresentatio
     ACKED: { label: "已确认", tone: "info" },
     SUCCEEDED: { label: "执行成功", tone: "success" },
     SUCCESS: { label: "执行成功", tone: "success" },
+    EXECUTED: { label: "已执行", tone: "success" },
     FAILED: { label: "执行失败", tone: "danger" },
     NOT_EXECUTED: { label: "未执行", tone: "neutral" },
   }, DEFAULT_UNKNOWN);
@@ -64,6 +65,7 @@ export function mapReceiptStatus(raw: string | null | undefined): StatusPresenta
     ACKED: { label: "已回执", tone: "success" },
     SUCCEEDED: { label: "执行成功", tone: "success" },
     SUCCESS: { label: "执行成功", tone: "success" },
+    EXECUTED: { label: "已执行", tone: "success" },
     FAILED: { label: "执行失败", tone: "danger" },
     PENDING: { label: "待回执", tone: "warning" },
   }, DEFAULT_PENDING);
@@ -72,6 +74,7 @@ export function mapReceiptStatus(raw: string | null | undefined): StatusPresenta
 export function mapEvidenceStatus(raw: string | null | undefined): StatusPresentation {
   return build(String(raw), {
     DONE: { label: "证据已生成", tone: "success" },
+    AVAILABLE: { label: "证据可用", tone: "success" },
     RUNNING: { label: "证据生成中", tone: "info" },
     PENDING: { label: "证据待生成", tone: "warning" },
     FAILED: { label: "证据生成失败", tone: "danger" },
@@ -81,8 +84,8 @@ export function mapEvidenceStatus(raw: string | null | undefined): StatusPresent
 export function mapGenericStatus(raw: string | null | undefined): StatusPresentation {
   const key = normalize(raw);
   if (["PROPOSED", "APPROVED", "PENDING"].includes(key)) return mapApprovalStatus(key);
-  if (["READY", "DISPATCHED", "ACKED", "SUCCEEDED", "SUCCESS", "FAILED", "NOT_EXECUTED"].includes(key)) return mapTaskStatus(key);
-  if (["DONE", "RUNNING"].includes(key)) return mapEvidenceStatus(key);
+  if (["READY", "DISPATCHED", "ACKED", "SUCCEEDED", "SUCCESS", "EXECUTED", "FAILED", "NOT_EXECUTED"].includes(key)) return mapTaskStatus(key);
+  if (["DONE", "AVAILABLE", "RUNNING"].includes(key)) return mapEvidenceStatus(key);
   if (key === "ACTIVE" || key === "BLOCKED") return mapOperationPlanStatus(key);
   return build(key, {}, DEFAULT_UNKNOWN);
 }

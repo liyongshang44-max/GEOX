@@ -1,19 +1,35 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { fetchProgramDetail, fetchProgramCost, fetchProgramEfficiency, fetchProgramSla, fetchOperationStates, fetchDashboardEvidenceSummary } from "../api";
-import { StatusTag } from "../components/StatusTag";
+import { fetchProgramControlPlane, fetchProgramDetail, fetchProgramCost, fetchProgramEfficiency, fetchProgramSla, fetchOperationStates, fetchDashboardEvidenceSummary, type ProgramControlPlaneItem } from "../api";
 import { RelativeTime, absoluteTime } from "../components/RelativeTime";
 import { CopyButton } from "../components/CopyButton";
+import StatusBadge from "../components/common/StatusBadge";
+import ErrorState from "../components/common/ErrorState";
+import EmptyState from "../components/common/EmptyState";
+import SectionSkeleton from "../components/common/SectionSkeleton";
+import { PRODUCT_LABELS } from "../lib/presentation/labels";
+import { mapApprovalStatus, mapEvidenceStatus, mapOperationPlanStatus, mapReceiptStatus, mapRecommendationStatus, mapTaskStatus, type StatusPresentation } from "../lib/presentation/statusMap";
 
-function chainItem(title: string, status: string, id: string, ts?: string | number): React.ReactElement {
+function fromStatusObject(status: { code?: string | null; label?: string | null; tone?: string | null } | null | undefined, fallback: (code: string | null | undefined) => StatusPresentation): StatusPresentation {
+  const base = fallback(status?.code || "UNKNOWN");
+  return {
+    label: status?.label || base.label,
+    tone: (status?.tone as StatusPresentation["tone"]) || base.tone,
+    raw: String(status?.code || base.raw || "UNKNOWN"),
+  };
+}
+
+function chainItem(item: { title?: string; status?: any; refs?: Record<string, string>; ts_label?: string; ts_ms?: number; summary?: string }, fallback: (code: string | null | undefined) => StatusPresentation): React.ReactElement {
+  const refs = item.refs ? Object.values(item.refs).filter(Boolean).join(" · ") : "-";
   return (
     <div className="timelineItem">
-      <div className="timelineTitle">{title}</div>
+      <div className="timelineTitle">{item.title || "-"}</div>
       <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <StatusTag status={status} />
-        <span className="muted">时间：{ts ? absoluteTime(ts) : "-"}</span>
-        <span className="mono">{id || "-"}</span>
+        <StatusBadge presentation={fromStatusObject(item.status, fallback)} />
+        <span className="muted">时间：{item.ts_label || (item.ts_ms ? absoluteTime(item.ts_ms) : "-")}</span>
+        <span className="mono">{refs || "-"}</span>
       </div>
+      {item.summary ? <div className="muted" style={{ marginTop: 6 }}>{item.summary}</div> : null}
     </div>
   );
 }
@@ -22,6 +38,8 @@ export default function ProgramDetailPage(): React.ReactElement {
   const { programId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [technical, setTechnical] = React.useState<string | undefined>(undefined);
+  const [controlPlane, setControlPlane] = React.useState<ProgramControlPlaneItem | null>(null);
   const [detail, setDetail] = React.useState<any>(null);
   const [cost, setCost] = React.useState<any>(null);
   const [efficiency, setEfficiency] = React.useState<any>(null);
@@ -34,8 +52,21 @@ export default function ProgramDetailPage(): React.ReactElement {
     if (!programId) return;
     setLoading(true);
     setError(null);
+    setTechnical(undefined);
+    setControlPlane(null);
     try {
       const id = decodeURIComponent(programId);
+      try {
+        const cp = await fetchProgramControlPlane(id);
+        if (cp?.program || cp?.summary) {
+          setControlPlane(cp);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // fallback to legacy chain
+      }
+
       const [d, c, e, s, o, ev] = await Promise.all([
         fetchProgramDetail(id),
         fetchProgramCost(id).catch(() => null),
@@ -50,9 +81,10 @@ export default function ProgramDetailPage(): React.ReactElement {
       setSla(s);
       setOps((o?.items || []).filter((x: any) => String(x?.program_id || "") === id));
       setEvidences((ev || []).filter((x: any) => String(x?.scope_id || "").includes(id)).slice(0, 6));
-      if (!d) setError("该 Program 暂无可展示详情");
+      if (!d) setError("当前暂无 Program 详情数据");
     } catch (err: any) {
-      setError(String(err?.message || "加载失败"));
+      setError("Program 详情加载失败，请稍后重试");
+      setTechnical(String(err?.bodyText || err?.message || err));
     } finally {
       setLoading(false);
     }
@@ -60,11 +92,94 @@ export default function ProgramDetailPage(): React.ReactElement {
 
   React.useEffect(() => { void reload(); }, [reload]);
 
-  if (loading) return <div className="card" style={{ padding: 16 }}>正在加载 Program 控制链路…</div>;
-  if (error || !detail) return <div className="card" style={{ padding: 16 }}>{error || "未找到 Program"}</div>;
+  if (loading) return <SectionSkeleton kind="detail" />;
+  if (error) return <ErrorState title="Program 详情暂不可用" message={error} onRetry={() => void reload()} technical={technical} />;
+
+  if (controlPlane) {
+    const p = controlPlane.program || {};
+    const summary = controlPlane.summary || {};
+    const decisionTimeline = controlPlane.decision_timeline || [];
+    const executionTimeline = controlPlane.execution_timeline || [];
+    const evidenceList = controlPlane.evidence?.recent_items || [];
+    return (
+      <div className="productPage">
+        <section className="card sectionBlock">
+          <div className="sectionHeader">
+            <div>
+              <div className="eyebrow">Program 控制平面</div>
+              <h2 className="sectionTitle" style={{ marginTop: 4 }}>{p.title || p.program_id || "-"}</h2>
+              <div className="meta"><span>{p.subtitle || "-"}</span></div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <StatusBadge presentation={fromStatusObject(p.status, mapOperationPlanStatus)} />
+              <Link className="btn" to="/audit-export">查看证据</Link>
+              <Link className="btn" to="/operations">查看作业</Link>
+              <CopyButton value={String(p.program_id || "")} />
+            </div>
+          </div>
+          <div className="muted">最近更新时间：{p.updated_at_label || <RelativeTime value={String(p.updated_ts_ms || "")} />}</div>
+        </section>
+
+        <section className="summaryGrid3">
+          {[
+            { label: "建议状态", value: summary.recommendation, mapper: mapRecommendationStatus },
+            { label: "审批状态", value: summary.approval, mapper: mapApprovalStatus },
+            { label: PRODUCT_LABELS.operationPlan, value: summary.operation_plan, mapper: mapOperationPlanStatus },
+            { label: "执行状态", value: summary.execution, mapper: mapTaskStatus },
+            { label: "回执结果", value: summary.receipt, mapper: mapReceiptStatus },
+            { label: "证据状态", value: summary.evidence, mapper: mapEvidenceStatus },
+          ].map((item) => (
+            <div key={item.label} className="card" style={{ padding: 12 }}>
+              <div className="muted">{item.label}</div>
+              <StatusBadge presentation={fromStatusObject(item.value, item.mapper)} />
+            </div>
+          ))}
+        </section>
+
+        <section className="contentGridTwo alignStart">
+          <article className="card sectionBlock">
+            <div className="sectionTitle">决策链时间线</div>
+            {decisionTimeline.map((item, idx) => <React.Fragment key={`${item.kind}_${idx}`}>{chainItem(item, mapRecommendationStatus)}</React.Fragment>)}
+            {!decisionTimeline.length ? <EmptyState title="暂无决策链事件" /> : null}
+          </article>
+
+          <article className="card sectionBlock">
+            <div className="sectionTitle">执行链时间线</div>
+            {executionTimeline.map((item, idx) => <React.Fragment key={`${item.kind}_${idx}`}>{chainItem(item, mapTaskStatus)}</React.Fragment>)}
+            {!executionTimeline.length ? <EmptyState title="暂无执行链事件" /> : null}
+          </article>
+        </section>
+
+        <section className="contentGridTwo alignStart">
+          <article className="card sectionBlock">
+            <div className="sectionTitle">证据链</div>
+            {evidenceList.map((ev, idx) => (
+              <div key={`${ev.kind}_${idx}`} className="kv"><span className="k">{ev.title || ev.kind || "证据"}</span><span className="v">{ev.summary || "-"}</span></div>
+            ))}
+            {!evidenceList.length ? <EmptyState title="最近暂无证据导出记录" description="可前往证据页查看全量导出作业" /> : null}
+          </article>
+
+          <article className="card sectionBlock">
+            <div className="sectionTitle">资源与结果</div>
+            <div className="kv"><span className="k">water_l</span><span className="v">{String(controlPlane.resources?.water_l ?? "-")}</span></div>
+            <div className="kv"><span className="k">electric_kwh</span><span className="v">{String(controlPlane.resources?.electric_kwh ?? "-")}</span></div>
+            <div className="kv"><span className="k">chemical_ml</span><span className="v">{String(controlPlane.resources?.chemical_ml ?? "-")}</span></div>
+            <div className="kv"><span className="k">fuel_l</span><span className="v">{String(controlPlane.resources?.fuel_l ?? "-")}</span></div>
+            <div className="kv"><span className="k">执行结果</span><span className="v">{String(controlPlane.execution_result?.result_label || "-")}</span></div>
+          </article>
+        </section>
+
+        <section className="card sectionBlock">
+          <button className="btn" onClick={() => setShowTech((s) => !s)}>{showTech ? "收起技术细节" : "展开技术细节"}</button>
+          {showTech ? <pre className="mono" style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>{JSON.stringify(controlPlane.technical_details || {}, null, 2)}</pre> : null}
+        </section>
+      </div>
+    );
+  }
+
+  if (!detail) return <ErrorState title="Program 详情暂不可用" message="当前暂无 Program 详情数据" onRetry={() => void reload()} technical={technical} />;
 
   const latestOp = ops[0];
-
   return (
     <div className="productPage">
       <section className="card sectionBlock">
@@ -72,77 +187,14 @@ export default function ProgramDetailPage(): React.ReactElement {
           <div>
             <div className="eyebrow">Program 控制平面</div>
             <h2 className="sectionTitle" style={{ marginTop: 4 }}>{String(detail?.program_id || "-")}</h2>
-            <div className="meta"><span>田块 {String(detail?.field_id || "-")}</span><span>季节 {String(detail?.season_id || "-")}</span><span>作物 {String(detail?.crop_code || "-")}</span></div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <StatusTag status={String(detail?.status || "UNKNOWN")} />
-            <Link className="btn" to="/audit-export">查看证据</Link>
-            <Link className="btn" to="/operations">查看作业</Link>
-            <CopyButton value={String(detail?.program_id || "")} />
           </div>
         </div>
-        <div className="muted">最近更新时间：<RelativeTime value={String(detail?.updated_at || "")} /></div>
       </section>
-
-      <section className="summaryGrid3">
-        {[
-          ["建议状态", String(detail?.latest_recommendation?.status || "PENDING")],
-          ["审批状态", String(detail?.latest_approval?.status || "PENDING")],
-          ["作业计划", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY")],
-          ["执行状态", String(latestOp?.dispatch_status || "READY")],
-          ["回执结果", String(latestOp?.receipt_status || "PENDING")],
-          ["证据状态", evidences[0]?.status || "PENDING"],
-        ].map(([label, status]) => <div key={label} className="card" style={{ padding: 12 }}><div className="muted">{label}</div><StatusTag status={status} /></div>)}
-      </section>
-
-      <section className="contentGridTwo alignStart">
-        <article className="card sectionBlock">
-          <div className="sectionTitle">决策链时间线</div>
-          {chainItem("建议生成", String(detail?.latest_recommendation?.status || "PENDING"), String(detail?.latest_recommendation?.recommendation_id || "-"), detail?.latest_recommendation?.occurred_at)}
-          {chainItem("审批申请", String(detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.approval_request_id || "-"), detail?.latest_approval?.occurred_at)}
-          {chainItem("审批决策", String(detail?.latest_approval?.decision || detail?.latest_approval?.status || "PENDING"), String(detail?.latest_approval?.decision_id || "-"), detail?.latest_approval?.updated_at)}
-        </article>
-
-        <article className="card sectionBlock">
-          <div className="sectionTitle">执行链时间线</div>
-          {chainItem("作业计划", String(detail?.latest_operation_plan?.status || latestOp?.final_status || "READY"), String(detail?.latest_operation_plan?.operation_plan_id || "-"), detail?.latest_operation_plan?.updated_at)}
-          {chainItem("作业执行号", String(latestOp?.dispatch_status || "READY"), String(latestOp?.task_id || "-"), latestOp?.last_event_ts)}
-          {chainItem("下发状态", String(latestOp?.dispatch_status || "PENDING"), String(latestOp?.operation_id || "-"), latestOp?.last_event_ts)}
-          {chainItem("执行回执", String(latestOp?.receipt_status || "PENDING"), String(latestOp?.receipt_fact_id || "-"), latestOp?.last_event_ts)}
-        </article>
-      </section>
-
-      <section className="contentGridTwo alignStart">
-        <article className="card sectionBlock">
-          <div className="sectionTitle">证据链</div>
-          {evidences.map((ev: any) => (
-            <div key={ev.job_id} className="kv"><span className="k">{ev.job_id}</span><span className="v"><StatusTag status={String(ev.status || "PENDING")} /></span></div>
-          ))}
-          {!evidences.length ? <div className="emptyState">最近暂无证据导出记录。可前往证据页查看全量作业。</div> : null}
-        </article>
-
-        <article className="card sectionBlock">
-          <div className="sectionTitle">资源与结果</div>
-          <div className="kv"><span className="k">water_l</span><span className="v">{String(cost?.water_l ?? "-")}</span></div>
-          <div className="kv"><span className="k">electric_kwh</span><span className="v">{String(cost?.electric_kwh ?? "-")}</span></div>
-          <div className="kv"><span className="k">chemical_ml</span><span className="v">{String(cost?.chemical_ml ?? "-")}</span></div>
-          <div className="kv"><span className="k">fuel_l</span><span className="v">{String(cost?.fuel_l ?? "-")}</span></div>
-          <div className="kv"><span className="k">observed_parameters</span><span className="v">{String(efficiency?.observed_parameters_count ?? "-")}</span></div>
-          <div className="kv"><span className="k">constraint_check</span><span className="v">{String(sla?.constraint_check || "-")}</span></div>
-        </article>
-      </section>
-
       <section className="card sectionBlock">
-        <button className="btn" onClick={() => setShowTech((s) => !s)}>{showTech ? "收起技术细节" : "展开技术细节"}</button>
-        {showTech ? (
-          <div style={{ marginTop: 12 }}>
-            <div className="kv"><span className="k">recommendation_id</span><span className="v">{String(detail?.latest_recommendation?.recommendation_id || "-")}</span></div>
-            <div className="kv"><span className="k">approval_request_id</span><span className="v">{String(detail?.latest_approval?.approval_request_id || "-")}</span></div>
-            <div className="kv"><span className="k">operation_plan_id</span><span className="v">{String(detail?.latest_operation_plan?.operation_plan_id || "-")}</span></div>
-            <div className="kv"><span className="k">act_task_id</span><span className="v">{String(latestOp?.task_id || "-")}</span></div>
-            <div className="kv"><span className="k">receipt_fact_id</span><span className="v">{String(latestOp?.receipt_fact_id || "-")}</span></div>
-          </div>
-        ) : null}
+        <div className="kv"><span className="k">water_l</span><span className="v">{String(cost?.water_l ?? "-")}</span></div>
+        <div className="kv"><span className="k">observed_parameters</span><span className="v">{String(efficiency?.observed_parameters_count ?? "-")}</span></div>
+        <div className="kv"><span className="k">constraint_check</span><span className="v">{String(sla?.constraint_check || "-")}</span></div>
+        <div className="kv"><span className="k">task_id</span><span className="v">{String(latestOp?.task_id || "-")}</span></div>
       </section>
     </div>
   );

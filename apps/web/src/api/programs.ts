@@ -5,6 +5,46 @@ export type ProgramPortfolioItemV1 = any;
 export type SchedulingConflictItemV1 = any;
 export type SchedulingHintItemV1 = any;
 
+export type ControlPlaneStatus = {
+  code?: string | null;
+  label?: string | null;
+  tone?: "success" | "warning" | "neutral" | "danger" | "info" | null;
+};
+
+export type ProgramControlPlaneItem = {
+  program?: {
+    program_id?: string;
+    title?: string;
+    subtitle?: string;
+    field_id?: string;
+    season_id?: string;
+    crop_code?: string;
+    status?: ControlPlaneStatus;
+    updated_ts_ms?: number;
+    updated_at_label?: string;
+  };
+  summary?: {
+    recommendation?: ControlPlaneStatus;
+    approval?: ControlPlaneStatus;
+    operation_plan?: ControlPlaneStatus;
+    execution?: ControlPlaneStatus;
+    receipt?: ControlPlaneStatus;
+    evidence?: ControlPlaneStatus;
+  };
+  next_action?: { title?: string; description?: string; priority?: string };
+  risk_summary?: Array<{ code?: string; label?: string; severity?: string; description?: string }>;
+  decision_timeline?: Array<{ kind?: string; title?: string; status?: ControlPlaneStatus; ts_ms?: number; ts_label?: string; summary?: string; refs?: Record<string, string> }>;
+  execution_timeline?: Array<{ kind?: string; title?: string; status?: ControlPlaneStatus; ts_ms?: number; ts_label?: string; summary?: string; refs?: Record<string, string> }>;
+  evidence?: {
+    status?: ControlPlaneStatus;
+    recent_items?: Array<{ kind?: string; title?: string; summary?: string; ts_ms?: number; downloadable?: boolean }>;
+    export_jobs?: Array<{ job_id?: string; status?: string; label?: string; download_url?: string | null }>;
+  };
+  resources?: { water_l?: number; electric_kwh?: number; fuel_l?: number; chemical_ml?: number };
+  execution_result?: { result_label?: string; constraint_check?: { violated?: boolean; violations?: unknown[] }; observed_parameters?: Record<string, unknown> };
+  technical_details?: Record<string, unknown>;
+};
+
 export async function fetchPrograms(params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await apiRequest<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery("/api/v1/programs", params));
   return Array.isArray(res.items) ? res.items : [];
@@ -17,6 +57,11 @@ export async function fetchProgramPortfolio(params?: Record<string, unknown>): P
 
 export async function fetchProgramDetail(programId: string): Promise<ProgramStateItemV1 | null> {
   const res = await apiRequest<{ ok?: boolean; item?: ProgramStateItemV1 }>(`/api/v1/programs/${encodeURIComponent(programId)}`);
+  return res.item ?? null;
+}
+
+export async function fetchProgramControlPlane(programId: string): Promise<ProgramControlPlaneItem | null> {
+  const res = await apiRequest<{ ok?: boolean; item?: ProgramControlPlaneItem }>(`/api/v1/programs/${encodeURIComponent(programId)}/control-plane`);
   return res.item ?? null;
 }
 
