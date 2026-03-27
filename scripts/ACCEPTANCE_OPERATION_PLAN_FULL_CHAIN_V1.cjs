@@ -10,16 +10,16 @@ function mustEnv(name) {
   return v;
 }
 
-function authHeader(rawToken) {
-  const token = String(rawToken ?? "").trim();
-  if (!token) throw new Error("MISSING_ENV:GEOX_BEARER_TOKEN");
-  return /^Bearer\s+/i.test(token) ? token : `Bearer ${token}`;
+function authHeaderValue(raw) {
+  const v = String(raw ?? "").trim();
+  if (!v) throw new Error("MISSING_AUTH_TOKEN");
+  return /^Bearer\s+/i.test(v) ? v : `Bearer ${v}`;
 }
 
 async function postJson(baseUrl, path, token, body) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: authHeader(token) },
+    headers: { "content-type": "application/json", authorization: token },
     body: JSON.stringify(body)
   });
   const json = await res.json().catch(() => null);
@@ -29,7 +29,7 @@ async function postJson(baseUrl, path, token, body) {
 async function getJson(baseUrl, path, token) {
   const res = await fetch(`${baseUrl}${path}`, {
     method: "GET",
-    headers: { accept: "application/json", authorization: authHeader(token) }
+    headers: { accept: "application/json", authorization: token }
   });
   const json = await res.json().catch(() => null);
   return { status: res.status, json };
@@ -38,7 +38,7 @@ async function getJson(baseUrl, path, token) {
 async function main() {
   const baseUrl = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001").trim();
   console.log(`[acceptance] BASE_URL=${baseUrl}`);
-  const token = mustEnv("GEOX_BEARER_TOKEN");
+  const token = authHeaderValue(mustEnv("GEOX_BEARER_TOKEN"));
   const tenant_id = mustEnv("GEOX_TENANT_ID");
   const project_id = mustEnv("GEOX_PROJECT_ID");
   const group_id = mustEnv("GEOX_GROUP_ID");
@@ -64,12 +64,18 @@ async function main() {
   const dispatch = await postJson(baseUrl, `/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}/dispatch`, token, {
     tenant_id, project_id, group_id, command_id: act_task_id, device_id
   });
+  if (dispatch.status !== 200) {
+    console.error("DISPATCH_FAIL", JSON.stringify(dispatch, null, 2));
+  }
   assert.equal(dispatch.status, 200, `DISPATCH_STATUS_${dispatch.status}`);
 
   const receipt = await postJson(baseUrl, `/api/v1/ao-act/receipts/uplink`, token, {
     tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id,
     meta: { idempotency_key: `acceptance_${Date.now()}` }
   });
+  if (receipt.status !== 200) {
+    console.error("RECEIPT_FAIL", JSON.stringify(receipt, null, 2));
+  }
   assert.equal(receipt.status, 200, `RECEIPT_STATUS_${receipt.status}`);
 
   const plan = await getJson(baseUrl, `/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, token);
