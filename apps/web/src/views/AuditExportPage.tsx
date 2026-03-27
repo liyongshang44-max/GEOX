@@ -1,16 +1,23 @@
 import React from "react";
 import { fetchEvidenceControlPlane } from "../api";
 import { StatusTag } from "../components/StatusTag";
+import EmptyState from "../components/common/EmptyState";
+import ErrorState from "../components/common/ErrorState";
+import { RelativeTime } from "../components/RelativeTime";
 
 export default function AuditExportPage(): React.ReactElement {
   const [item, setItem] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string>("");
 
   const reload = React.useCallback(async () => {
     setLoading(true);
+    setError("");
     try {
-      const res = await fetchEvidenceControlPlane({ limit: 30 }).catch(() => ({ ok: true, item: null }));
+      const res = await fetchEvidenceControlPlane({ limit: 30 });
       setItem(res.item ?? null);
+    } catch (e: any) {
+      setError(String(e?.message || e));
     } finally {
       setLoading(false);
     }
@@ -34,6 +41,7 @@ export default function AuditExportPage(): React.ReactElement {
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新证据数据</button>
         </div>
       </section>
+      {error ? <ErrorState title="证据中心加载失败" message="请稍后重试，或检查证据服务状态。" technical={error} onRetry={() => void reload()} /> : null}
 
       <section className="summaryGrid4">
         {cards.map((card: any) => (
@@ -71,19 +79,19 @@ export default function AuditExportPage(): React.ReactElement {
                 </div>
               </article>
             ))}
-            {!evidenceItems.length && !exportJobs.length ? <div className="emptyState">最近暂无证据与导出记录。</div> : null}
+            {!evidenceItems.length && !exportJobs.length ? <EmptyState title="最近暂无证据与导出记录" description="可等待新的作业回执，或稍后刷新重试" /> : null}
           </div>
         </section>
 
         <section className="card sectionBlock">
           <div className="sectionTitle">证据详情</div>
-          {!detail ? <div className="emptyState">请选择左侧记录查看详情。</div> : (
+          {!detail ? <EmptyState title="请选择左侧记录查看详情" description="可查看回执摘要、时间线与完整性结果" /> : (
             <div className="list modernList compactList">
               <article className="infoCard">
                 <div className="jobTitleRow"><div className="title">{detail.title}</div><StatusTag status={detail.status?.code || "EXECUTED"} /></div>
                 <div className="meta wrapMeta"><span>{detail.summary}</span></div>
                 <div className="meta wrapMeta">
-                  {(detail.timeline || []).map((x: any, idx: number) => <span key={idx}>{x.title} · {x.ts_label}</span>)}
+                  {(detail.timeline || []).map((x: any, idx: number) => <span key={idx}>{x.title} · <RelativeTime value={x.ts_ms || x.ts} /></span>)}
                 </div>
                 <div className="meta wrapMeta">
                   <span>完整性：{detail.integrity?.label || "待检查"}</span>
