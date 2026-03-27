@@ -101,6 +101,10 @@ export default function ProgramDetailPage(): React.ReactElement {
     const decisionTimeline = controlPlane.decision_timeline || [];
     const executionTimeline = controlPlane.execution_timeline || [];
     const evidenceList = controlPlane.evidence?.recent_items || [];
+    const context = (controlPlane as any)?.context || {};
+    const nextActions = Array.isArray((controlPlane as any)?.next_actions)
+      ? (controlPlane as any).next_actions
+      : ((controlPlane as any)?.next_action ? [(controlPlane as any).next_action] : []);
     return (
       <div className="productPage">
         <section className="card sectionBlock">
@@ -108,7 +112,12 @@ export default function ProgramDetailPage(): React.ReactElement {
             <div>
               <div className="eyebrow">Program 控制平面</div>
               <h2 className="sectionTitle" style={{ marginTop: 4 }}>{p.title || p.program_id || "-"}</h2>
-              <div className="meta"><span>{p.subtitle || "-"}</span></div>
+              <div className="meta wrapMeta">
+                <span>{p.subtitle || "-"}</span>
+                <span>田块：{context.field_name || context.field_id || p.field_id || "-"}</span>
+                <span>季节：{context.season_name || context.season_id || p.season_id || "-"}</span>
+                <span>作物：{context.crop_name || context.crop_code || p.crop_code || "-"}</span>
+              </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <StatusBadge presentation={fromStatusObject(p.status, mapOperationPlanStatus)} />
@@ -118,6 +127,9 @@ export default function ProgramDetailPage(): React.ReactElement {
             </div>
           </div>
           <div className="muted">最近更新时间：{p.updated_at_label || <RelativeTime value={String(p.updated_ts_ms || "")} />}</div>
+          <div className="muted" style={{ marginTop: 6 }}>
+            下一步动作：{nextActions.length ? nextActions.map((x: any) => x?.title || x?.label).filter(Boolean).join("；") : "当前暂无待办动作"}
+          </div>
         </section>
 
         <section className="summaryGrid3">
@@ -161,10 +173,10 @@ export default function ProgramDetailPage(): React.ReactElement {
 
           <article className="card sectionBlock">
             <div className="sectionTitle">资源与结果</div>
-            <div className="kv"><span className="k">water_l</span><span className="v">{String(controlPlane.resources?.water_l ?? "-")}</span></div>
-            <div className="kv"><span className="k">electric_kwh</span><span className="v">{String(controlPlane.resources?.electric_kwh ?? "-")}</span></div>
-            <div className="kv"><span className="k">chemical_ml</span><span className="v">{String(controlPlane.resources?.chemical_ml ?? "-")}</span></div>
-            <div className="kv"><span className="k">fuel_l</span><span className="v">{String(controlPlane.resources?.fuel_l ?? "-")}</span></div>
+            <div className="kv"><span className="k">用水量（L）</span><span className="v">{String(controlPlane.resources?.water_l ?? "-")}</span></div>
+            <div className="kv"><span className="k">用电量（kWh）</span><span className="v">{String(controlPlane.resources?.electric_kwh ?? "-")}</span></div>
+            <div className="kv"><span className="k">药剂用量（ml）</span><span className="v">{String(controlPlane.resources?.chemical_ml ?? "-")}</span></div>
+            <div className="kv"><span className="k">燃料用量（L）</span><span className="v">{String(controlPlane.resources?.fuel_l ?? "-")}</span></div>
             <div className="kv"><span className="k">执行结果</span><span className="v">{String(controlPlane.execution_result?.result_label || "-")}</span></div>
           </article>
         </section>
