@@ -1581,6 +1581,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         constraints: proposal.constraints,
         meta: {
           ...(proposal.meta ?? {}),
+          task_type: String((proposal as any)?.task_type ?? resolvedProposalActionType ?? aoActActionType).trim() || aoActActionType,
           adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
             ? String(operationPlan.record_json.payload.adapter_type)
             : (proposal?.meta?.adapter_type ?? null)
@@ -1736,6 +1737,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
       ...body,
       action_type: aoActActionType,
+      meta: {
+        ...((body?.meta && typeof body.meta === "object") ? body.meta : {}),
+        task_type: String(body?.task_type ?? requestedActionType ?? aoActActionType).trim() || aoActActionType
+      },
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
