@@ -1,8 +1,8 @@
 export type DashboardOverviewVm = {
+  onlineDeviceCount: number;
   inProgressCount: number;
   completedTodayCount: number;
   pendingCount: number;
-  riskDeviceCount: number;
 };
 
 export type DashboardActionVm = {
