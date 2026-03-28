@@ -13,6 +13,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type for tenant triple checks.
+import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization for export/dashboard consistency.
 
 type ExportJobState = "queued" | "running" | "done" | "error"; // Evidence export job state machine (in-memory).
 type ExportJob = { // Evidence export job record stored in memory.
@@ -78,30 +79,6 @@ function parseRecordJson(rowValue: unknown): any { // Parse facts.record_json wh
     return null; // Fail closed to null.
   } // End catch.
 } // End parseRecordJson.
-
-function normalizeReceiptEvidence(input: { fact_id: string; occurred_at: any; record_json: any }, factType: string): any { // Normalize v0/v1 receipt payloads into one export-friendly shape.
-  const payload = input?.record_json?.payload ?? {}; // Common payload wrapper.
-  const executionTime = payload?.execution_time ?? {}; // execution_time exists in v0 and may be absent in v1 summary facts.
-  const resourceUsage = payload?.resource_usage ?? {}; // resource usage appears in v0 receipt runtime.
-  const logsRefs = Array.isArray(payload?.logs_refs) ? payload.logs_refs : []; // logs_refs may be omitted on v1 wrapper facts.
-  const constraintCheck = payload?.constraint_check ?? {}; // constraint check payload when available.
-  const executor = payload?.executor_id ?? {}; // executor identity object for runtime-generated receipts.
-  const statusRaw = String(payload?.status ?? payload?.receipt_status ?? "").trim(); // Read status from both schemas.
-  return {
-    receipt_type: factType, // Source receipt schema type.
-    receipt_fact_id: String(input?.fact_id ?? ""), // Fact id for traceability.
-    receipt_status: statusRaw || null, // Unified status field.
-    recorded_at: payload?.received_ts ?? payload?.created_at_ts ?? input?.occurred_at ?? null, // Prefer payload ts, fallback to fact occurred_at.
-    execution_started_at: executionTime?.start_ts ?? null, // Start timestamp when available.
-    execution_finished_at: executionTime?.end_ts ?? null, // End timestamp when available.
-    water_l: resourceUsage?.water_l ?? null, // Resource usage: water.
-    electric_kwh: resourceUsage?.electric_kwh ?? null, // Resource usage: electric.
-    chemical_ml: resourceUsage?.chemical_ml ?? null, // Resource usage: chemical.
-    log_ref_count: logsRefs.length, // Number of log refs.
-    constraint_violated: Boolean(constraintCheck?.violated ?? false), // Constraint violation marker.
-    executor_id: executor?.id ?? payload?.executor_id ?? null // Executor identifier best effort.
-  }; // Unified export evidence summary row.
-} // End normalizeReceiptEvidence.
 
 function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: { tenant_id: string; project_id: string; group_id: string }, reply: any): boolean { // Enforce tenant triple match or return 404 (non-enumerable).
   const ok = auth.tenant_id === tenant.tenant_id && auth.project_id === tenant.project_id && auth.group_id === tenant.group_id; // Compare hard triple.

@@ -6,6 +6,7 @@ import { useFieldDetail } from "../hooks/useFieldDetail";
 import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
+import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   ok: { color: "#067647", bg: "#ecfdf3", border: "#abefc6" },
@@ -97,16 +98,7 @@ export default function FieldDetailPage(): React.ReactElement {
 
         <article className="card" style={{ padding: 14 }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>证据</h3>
-          <div style={{ display: "grid", gap: 12 }}>
-            {(model?.evidence ?? []).slice(0, 3).map((item) => (
-              <div key={item.id} style={{ display: "grid", gap: 4 }}>
-                <div>✓ {item.title}</div>
-                <div className="muted">时间：{item.time}</div>
-                <div className="muted">设备：{item.device}</div>
-              </div>
-            ))}
-            {!(model?.evidence ?? []).length ? <div className="muted">暂无证据</div> : null}
-          </div>
+          <ReceiptEvidenceCard data={model?.latestEvidence} />
           <button className="btn" style={{ marginTop: 12 }}>下载证据包</button>
         </article>
       </section>

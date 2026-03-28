@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { DashboardVm } from "../viewmodels/dashboard";
+import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -22,7 +23,7 @@ export function useDashboard(api: any): DashboardVm {
     async function load(): Promise<void> {
       try {
         const overview = await api.getOverview();
-        const ops = await api.getOperations?.({ limit: 8 }) || [];
+        const executions = await api.getRecentExecutions?.({ limit: 8 }) || [];
 
         let evidences: any[] = [];
         try {
@@ -40,20 +41,25 @@ export function useDashboard(api: any): DashboardVm {
             pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
             riskDeviceCount: overview?.risk_devices ?? overview?.riskDeviceCount ?? 0,
           },
-          actions: (ops || []).map((o: any) => {
-            const status = String(o?.final_status || "").toUpperCase();
+          actions: (executions || []).map((o: any) => {
+            const status = String(o?.status || o?.final_status || "").toUpperCase();
             return {
               id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
               title: "作业执行",
-              subjectName: o?.field_name || o?.device_id || "-",
+              subjectName: o?.field_name || o?.field_id || o?.device_id || "-",
               actionLabel: o?.action_type || "执行任务",
-              occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || Date.now()).toLocaleString(),
+              occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
               statusLabel: status === "SUCCEEDED" ? "已完成" : status === "FAILED" ? "执行失败" : "执行中",
               finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
               hasEvidence: Boolean(o?.receipt_fact_id),
+              href: typeof o?.href === "string" ? o.href : `/operations?operation_plan_id=${encodeURIComponent(String(o?.operation_plan_id || o?.operation_id || ""))}`,
             };
           }),
-          evidences,
+          evidences: (evidences || []).map((item: any, i: number) => ({
+            id: String(item?.receipt_fact_id || item?.operation_plan_id || i),
+            href: typeof item?.href === "string" ? item.href : undefined,
+            card: mapDashboardEvidenceToVm(item),
+          })),
           risks: [],
         });
       } catch {
