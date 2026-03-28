@@ -5,12 +5,12 @@ export default function OperationExecutionCard({ model }: { model: OperationDeta
   return (
     <section className="card sectionBlock">
       <div className="sectionTitle">执行计划</div>
-      <div className="kv"><span className="k">执行动作</span><span className="v">{model.execution.actionType}</span></div>
-      <div className="kv"><span className="k">执行对象</span><span className="v">{model.execution.deviceId} / {model.execution.executorLabel}</span></div>
+      <div className="kv"><span className="k">计划动作</span><span className="v">{model.execution.actionType}</span></div>
+      <div className="kv"><span className="k">执行主体</span><span className="v">{model.execution.deviceId} / {model.execution.executorLabel}</span></div>
+      <div className="kv"><span className="k">下发时间</span><span className="v">{model.execution.dispatchedAtLabel}</span></div>
       <div className="kv"><span className="k">执行时段</span><span className="v">{model.execution.executionWindowLabel}</span></div>
-      <div className="kv"><span className="k">开始下发时间</span><span className="v">{model.execution.dispatchedAtLabel}</span></div>
-      <div className="kv"><span className="k">设备确认状态</span><span className="v">{model.execution.ackStatusLabel}（{model.execution.ackedAtLabel}）</span></div>
-      <div className="kv"><span className="k">执行结果</span><span className="v">{model.execution.finalStatusLabel}</span></div>
+      <div className="kv"><span className="k">当前步骤</span><span className="v">{model.execution.progressLabel}</span></div>
+      <div className="kv"><span className="k">当前状态</span><span className="v">{model.execution.finalStatusLabel}</span></div>
 
       <details style={{ marginTop: 10 }}>
         <summary className="muted" style={{ cursor: "pointer" }}>技术标识（次级）</summary>
