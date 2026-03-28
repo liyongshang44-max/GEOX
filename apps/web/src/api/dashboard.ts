@@ -124,14 +124,14 @@ export async function fetchDashboardPendingActions(limit = 6): Promise<Dashboard
   return Array.isArray(res.actions) ? res.actions : [];
 }
 
-export async function getOverview(): Promise<{ in_progress: number; completed_today: number; pending: number; risk_devices: number }> {
+export async function getOverview(): Promise<{ online_device_count: number; in_progress: number; completed_today: number; pending: number }> {
   const now = Date.now();
   const res = await fetchDashboardOverview({ from_ts_ms: now - 24 * 60 * 60 * 1000, to_ts_ms: now });
   return {
+    online_device_count: Number(res?.summary?.online_device_count ?? 0),
     in_progress: Number(res?.summary?.running_task_count ?? 0),
     completed_today: 0,
-    pending: 0,
-    risk_devices: Number(res?.summary?.open_alert_count ?? 0),
+    pending: Number(res?.summary?.open_alert_count ?? 0),
   };
 }
 
