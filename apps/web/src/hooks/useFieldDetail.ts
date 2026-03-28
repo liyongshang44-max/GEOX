@@ -69,29 +69,41 @@ export function useFieldDetail(params: {
   const [technical, setTechnical] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
-    if (!fieldId) return;
     setBusy(true);
     setError(null);
     setTechnical(null);
+
+    if (!fieldId) {
+      setState(null);
+      setBusy(false);
+      return;
+    }
+
     setStatus(lang === "zh" ? "正在加载田块视图…" : "Loading...");
+
+    let cp: any = null;
+    try {
+      cp = await fetchFieldControlPlane(fieldId);
+    } catch {}
 
     let detail: any = null;
     let controlPlaneHit = false;
-    const cp = await fetchFieldControlPlane(fieldId);
     if (cp?.field || cp?.overview || cp?.summary) {
       detail = mapControlPlaneToLegacyDetail(fieldId, cp);
       controlPlaneHit = true;
     }
     if (!detail) {
-      detail = await fetchFieldDetail(fieldId);
+      try {
+        detail = await fetchFieldDetail(fieldId);
+      } catch {}
     }
 
     const [opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
-      fetchOperationStates({ field_id: fieldId, limit: 20 }),
-      fetchAgronomyRecommendations({ limit: 30 }),
-      fetchFieldCurrentProgram(fieldId),
-      fetchFieldGeometry(fieldId),
-      fetchFieldProgramsBySeason(fieldId),
+      Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
+      Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
+      Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
+      Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
+      Promise.resolve().then(() => fetchFieldProgramsBySeason(fieldId)),
     ]);
 
     if (!detail) {
@@ -108,7 +120,13 @@ export function useFieldDetail(params: {
     const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
     const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
     const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
-    const latestEvidence = (detail as any)?.latestEvidence || (detail as any)?.latest_evidence || (detail as any)?.recent_receipts?.[0]?.receipt?.payload || null;
+    const latestEvidence =
+      (detail as any)?.latestEvidence ??
+      (detail as any)?.latest_evidence ??
+      (Array.isArray((detail as any)?.recent_receipts)
+        ? (detail as any).recent_receipts[0]?.receipt?.payload
+        : null) ??
+      null;
 
     setState({
       field: detail?.field ?? null,
