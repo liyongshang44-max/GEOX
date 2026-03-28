@@ -79,6 +79,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div style={{ fontWeight: 700 }}>{model.currentTask.action.toUpperCase()}</div>
               <div className="muted">状态：{model.currentTask.status}</div>
               <div className="muted">进度：{model.currentTask.progress}%</div>
+              {model.currentTask.operationPlanId ? <Link className="btn" to={`/operations/${encodeURIComponent(model.currentTask.operationPlanId)}`}>查看作业详情</Link> : null}
             </div>
           ) : <div className="muted">暂无执行任务</div>}
         </article>

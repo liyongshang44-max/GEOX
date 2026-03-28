@@ -53,7 +53,7 @@ export function useDashboard(api: any): DashboardVm {
               statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
               finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
               hasEvidence: Boolean(o?.receipt_fact_id),
-              href: typeof o?.href === "string" ? o.href : `/operations?operation_plan_id=${encodeURIComponent(String(o?.operation_plan_id || o?.operation_id || ""))}`,
+              href: typeof o?.href === "string" ? o.href : `/operations/${encodeURIComponent(String(o?.operation_plan_id || o?.operation_id || ""))}`,
             };
           }),
           evidences: (evidences || []).map((item: any, i: number) => ({

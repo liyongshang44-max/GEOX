@@ -71,7 +71,13 @@ export default function ProgramDetailPage(): React.ReactElement {
 
       <section className="card sectionBlock">
         <div className="sectionTitle">最近执行证据</div>
-        <ReceiptEvidenceCard data={viewModel.latestEvidence} />
+        {viewModel.latestEvidence?.href ? (
+          <Link to={viewModel.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}>
+            <ReceiptEvidenceCard data={viewModel.latestEvidence} />
+          </Link>
+        ) : (
+          <ReceiptEvidenceCard data={viewModel.latestEvidence} />
+        )}
         {viewModel.latestEvidence ? (
           <div style={{ marginTop: 12 }}>
             <div className="kv"><span className="k">时间</span><span className="v">{viewModel.latestEvidenceAtLabel}</span></div>

@@ -300,9 +300,11 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         executor_label: summary.executor_label,
         receipt_fact_id: summary.receipt_fact_id,
         receipt_type: summary.receipt_type,
-        href: fieldId
-          ? `/fields/${encodeURIComponent(fieldId)}`
-          : `/operations?operation_plan_id=${encodeURIComponent(String(summary.operation_plan_id ?? summary.act_task_id ?? ""))}`,
+        href: summary.operation_plan_id
+          ? `/operations/${encodeURIComponent(summary.operation_plan_id)}`
+          : fieldId
+            ? `/fields/${encodeURIComponent(fieldId)}`
+            : `/operations`,
         summary
       };
     });

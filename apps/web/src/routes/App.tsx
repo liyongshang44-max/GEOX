@@ -20,6 +20,7 @@ import DevicesPage from "../views/DevicesPage";
 import DeviceDetailPage from "../views/DeviceDetailPage";
 import DeviceOnboardingPage from "../views/DeviceOnboardingPage";
 import OperationsPage from "../views/OperationsPage";
+import OperationDetailPage from "../views/OperationDetailPage";
 import AlertsPage from "../views/AlertsPage";
 import AuditExportPage from "../views/AuditExportPage";
 import AgronomyRecommendationsPage from "../views/AgronomyRecommendationsPage";
@@ -42,6 +43,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/devices") return "设备中心";
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
+  if (pathname.startsWith("/operations/")) return "作业详情";
   if (pathname.startsWith("/operations")) return "待执行动作";
   if (pathname === "/programs") return "经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
@@ -61,6 +63,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
+  if (pathname.startsWith("/operations/")) return "查看作业状态、执行时间线与最新执行证据。";
   if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
   if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
   if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
@@ -80,6 +83,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
+  if (pathname.startsWith("/operations/")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作", to: "/operations" }, { label: "作业详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
@@ -191,6 +195,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/operations" element={<OperationsPage />} />
+            <Route path="/operations/:operationPlanId" element={<OperationDetailPage />} />
             <Route path="/programs" element={<ProgramListPage />} />
             <Route path="/programs/:programId" element={<ProgramDetailPage />} />
             <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />

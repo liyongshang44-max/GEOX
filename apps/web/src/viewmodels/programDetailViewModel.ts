@@ -132,7 +132,10 @@ export function buildProgramDetailViewModel(args: {
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
 
   const latestEvidenceRaw = detail?.latestEvidence || detail?.latest_evidence || controlPlane?.latestEvidence || controlPlane?.latest_evidence || controlPlane?.evidence?.recent_items?.[0];
-  const latestEvidenceVm = latestEvidenceRaw ? mapReceiptToVm(latestEvidenceRaw) : undefined;
+  const latestEvidenceVm = latestEvidenceRaw ? mapReceiptToVm({
+    ...latestEvidenceRaw,
+    href: latestOperation?.operation_id ? `/operations/${encodeURIComponent(String(latestOperation.operation_id))}` : undefined,
+  }) : undefined;
 
   const recommendationText =
     toText(controlPlane?.decision_timeline?.[0]?.summary, "") ||
