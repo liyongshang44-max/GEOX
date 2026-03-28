@@ -1,79 +1,71 @@
-import React from "react";
-import {
-  fetchDashboardAcceptanceRisks,
-  fetchDashboardControlPlane,
-  fetchDashboardEvidenceSummary,
-  fetchDashboardOverview,
-  fetchDashboardPendingActions,
-  fetchProgramPortfolio,
-} from "../api";
-import { buildDashboardViewModel, type DashboardVM } from "../viewmodels/dashboardViewModel";
+import { useEffect, useState } from "react";
+import type { DashboardVm } from "../viewmodels/dashboard";
 
-export function useDashboard(): {
-  loading: boolean;
-  error: string | null;
-  vm: DashboardVM;
-  reload: () => Promise<void>;
-} {
-  const [loading, setLoading] = React.useState<boolean>(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [overview, setOverview] = React.useState<any>(null);
-  const [controlPlane, setControlPlane] = React.useState<any>(null);
-  const [portfolio, setPortfolio] = React.useState<any[]>([]);
-  const [evidenceItems, setEvidenceItems] = React.useState<any[]>([]);
-  const [riskItems, setRiskItems] = React.useState<any[]>([]);
-  const [pendingActions, setPendingActions] = React.useState<any[]>([]);
+const DEFAULT_DASHBOARD_DATA: DashboardVm = {
+  overview: {
+    inProgressCount: 0,
+    completedTodayCount: 0,
+    pendingCount: 0,
+    riskDeviceCount: 0,
+  },
+  actions: [],
+  evidences: [],
+  risks: [],
+};
 
-  const reload = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const now = Date.now();
-      const start = now - 24 * 60 * 60 * 1000;
-      const [nextControlPlane, nextOverview, nextPortfolio, nextEvidence, nextRisks, nextPending] = await Promise.all([
-        fetchDashboardControlPlane({ from_ts_ms: start, to_ts_ms: now }).catch(() => null),
-        fetchDashboardOverview({ from_ts_ms: start, to_ts_ms: now }).catch(() => null),
-        fetchProgramPortfolio({ limit: 80 }).catch(() => []),
-        fetchDashboardEvidenceSummary(8).catch(() => []),
-        fetchDashboardAcceptanceRisks(8).catch(() => []),
-        fetchDashboardPendingActions(12).catch(() => []),
-      ]);
+export function useDashboard(api: any): DashboardVm {
+  const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
 
-      setControlPlane(nextControlPlane);
-      setOverview(nextOverview);
-      setPortfolio(Array.isArray(nextPortfolio) ? nextPortfolio : []);
-      setEvidenceItems(Array.isArray(nextEvidence) ? nextEvidence : []);
-      setRiskItems(Array.isArray(nextRisks) ? nextRisks : []);
-      setPendingActions(Array.isArray(nextPending) ? nextPending : []);
-    } catch (e: any) {
-      setError(String(e?.message || e || "未知错误"));
-      setOverview(null);
-      setControlPlane(null);
-      setPortfolio([]);
-      setEvidenceItems([]);
-      setRiskItems([]);
-      setPendingActions([]);
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    let mounted = true;
+
+    async function load(): Promise<void> {
+      try {
+        const overview = await api.getOverview();
+        const ops = await api.getOperations?.({ limit: 8 }) || [];
+
+        let evidences: any[] = [];
+        try {
+          evidences = await api.getRecentEvidence?.({ limit: 5 });
+        } catch {
+          evidences = [];
+        }
+
+        if (!mounted) return;
+
+        setData({
+          overview: {
+            inProgressCount: overview?.in_progress ?? overview?.inProgressCount ?? 0,
+            completedTodayCount: overview?.completed_today ?? overview?.completedTodayCount ?? 0,
+            pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
+            riskDeviceCount: overview?.risk_devices ?? overview?.riskDeviceCount ?? 0,
+          },
+          actions: (ops || []).map((o: any) => {
+            const status = String(o?.final_status || "").toUpperCase();
+            return {
+              id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
+              title: "作业执行",
+              subjectName: o?.field_name || o?.device_id || "-",
+              actionLabel: o?.action_type || "执行任务",
+              occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || Date.now()).toLocaleString(),
+              statusLabel: status === "SUCCEEDED" ? "已完成" : status === "FAILED" ? "执行失败" : "执行中",
+              finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
+              hasEvidence: Boolean(o?.receipt_fact_id),
+            };
+          }),
+          evidences,
+          risks: [],
+        });
+      } catch {
+        setData((d) => ({ ...d }));
+      }
     }
-  }, []);
 
-  React.useEffect(() => {
-    void reload();
-  }, [reload]);
+    void load();
+    return () => {
+      mounted = false;
+    };
+  }, [api]);
 
-  const vm = React.useMemo(
-    () =>
-      buildDashboardViewModel({
-        overview,
-        controlPlane,
-        portfolio,
-        pendingActions,
-        riskItems,
-        evidenceItems,
-      }),
-    [overview, controlPlane, portfolio, pendingActions, riskItems, evidenceItems],
-  );
-
-  return { loading, error, vm, reload };
+  return data;
 }
