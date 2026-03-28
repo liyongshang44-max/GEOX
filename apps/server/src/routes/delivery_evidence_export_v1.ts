@@ -38,6 +38,8 @@ type ExportJob = { // Evidence export job record stored in memory.
   error: string | null; // Terminal error message.
 }; // End ExportJob.
 
+type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+
 const exportJobs = new Map<string, ExportJob>(); // In-memory job store (similar to importJobs).
 
 function tailAppend(prev: string, next: string, max = 8000): string { // Append with truncation to keep only last max chars.
@@ -567,4 +569,19 @@ export function markJobFailed(job: ExportJob, error: unknown): void {
 
 export async function runQueuedEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
   await runEvidenceExportJob(pool, job);
+}
+
+export function findLatestExportJobSnapshotForTask(tenant: TenantTriple, actTaskId: string): { job_id: string; state: ExportJobState; updated_at: number } | null {
+  const targetTaskId = String(actTaskId ?? "").trim();
+  if (!targetTaskId) return null;
+  const matched = [...exportJobs.values()]
+    .filter((job) =>
+      job.tenant_id === tenant.tenant_id
+      && job.project_id === tenant.project_id
+      && job.group_id === tenant.group_id
+      && job.act_task_id === targetTaskId
+    )
+    .sort((a, b) => b.updated_at - a.updated_at)[0];
+  if (!matched) return null;
+  return { job_id: matched.job_id, state: matched.state, updated_at: matched.updated_at };
 }

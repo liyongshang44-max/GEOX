@@ -4,8 +4,11 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence";
+import { findLatestExportJobSnapshotForTask } from "./delivery_evidence_export_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -22,6 +25,117 @@ function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply
     return false;
   }
   return true;
+}
+
+function parseRecordJson(v: unknown): any {
+  if (v && typeof v === "object") return v;
+  if (typeof v !== "string" || !v.trim()) return null;
+  try {
+    return JSON.parse(v);
+  } catch {
+    return null;
+  }
+}
+
+function toText(v: unknown): string | null {
+  if (typeof v === "string") {
+    const x = v.trim();
+    return x || null;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return null;
+}
+
+function toMs(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim()) {
+    const x = Date.parse(v);
+    return Number.isFinite(x) ? x : null;
+  }
+  return null;
+}
+
+function statusLabel(s: string | null): string {
+  const code = String(s ?? "").trim().toUpperCase();
+  if (!code) return "待推进";
+  if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(code)) return "执行成功";
+  if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED"].includes(code)) return "执行失败";
+  if (["RUNNING", "DISPATCHED", "ACKED", "APPROVED", "READY", "IN_PROGRESS"].includes(code)) return "执行中";
+  if (["PENDING", "CREATED", "PROPOSED", "PENDING_APPROVAL"].includes(code)) return "待审批";
+  return code;
+}
+
+async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
+  const sql = `
+    SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+    FROM facts
+    WHERE (record_json::jsonb#>>'{payload,tenant_id}') = $1
+      AND (record_json::jsonb#>>'{payload,project_id}') = $2
+      AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      AND (
+        (record_json::jsonb->>'type') = 'operation_plan_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+        OR (record_json::jsonb->>'type') = 'operation_plan_transition_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+      )
+    ORDER BY occurred_at ASC, fact_id ASC
+  `;
+  const base = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]);
+  const rows: FactRow[] = (base.rows ?? []).map((row: any) => ({
+    fact_id: String(row.fact_id ?? ""),
+    occurred_at: String(row.occurred_at ?? ""),
+    source: typeof row.source === "string" ? row.source : null,
+    record_json: parseRecordJson(row.record_json) ?? row.record_json
+  }));
+  const latestPlan = [...rows].reverse().find((x) => x.record_json?.type === "operation_plan_v1");
+  const planPayload = latestPlan?.record_json?.payload ?? {};
+  const approvalRequestId = toText(planPayload.approval_request_id);
+  const recommendationId = toText(planPayload.recommendation_id);
+  const taskId = toText(planPayload.act_task_id);
+  const q = async (type: string, keyPath: string, keyValue: string): Promise<FactRow[]> => {
+    const r = await pool.query(
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = $1
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+          AND (record_json::jsonb#>>'{payload,project_id}') = $3
+          AND (record_json::jsonb#>>'{payload,group_id}') = $4
+          AND (record_json::jsonb#>>'{payload,${keyPath}}') = $5
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [type, tenant.tenant_id, tenant.project_id, tenant.group_id, keyValue]
+    );
+    return (r.rows ?? []).map((row: any) => ({
+      fact_id: String(row.fact_id ?? ""),
+      occurred_at: String(row.occurred_at ?? ""),
+      source: typeof row.source === "string" ? row.source : null,
+      record_json: parseRecordJson(row.record_json) ?? row.record_json
+    }));
+  };
+  const extra: FactRow[] = [];
+  if (approvalRequestId) extra.push(...await q("approval_request_v1", "request_id", approvalRequestId));
+  if (approvalRequestId) extra.push(...await q("approval_decision_v1", "request_id", approvalRequestId));
+  if (recommendationId) extra.push(...await q("decision_recommendation_v1", "recommendation_id", recommendationId));
+  if (taskId) {
+    extra.push(...await q("ao_act_task_v0", "act_task_id", taskId));
+    const receiptByTask = await pool.query(
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+          AND ((record_json::jsonb#>>'{payload,act_task_id}') = $4 OR (record_json::jsonb#>>'{payload,task_id}') = $4)
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, taskId]
+    );
+    extra.push(...(receiptByTask.rows ?? []).map((row: any) => ({
+      fact_id: String(row.fact_id ?? ""),
+      occurred_at: String(row.occurred_at ?? ""),
+      source: typeof row.source === "string" ? row.source : null,
+      record_json: parseRecordJson(row.record_json) ?? row.record_json
+    })));
+  }
+  const all = [...rows, ...extra];
+  all.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
+  return all;
 }
 
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -59,5 +173,132 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const item = items.find((x) => x.operation_id === operation_id);
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, item });
+  });
+
+  app.get("/api/v1/operations/:operationPlanId/detail", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const operationPlanId = String((req.params as any)?.operationPlanId ?? "").trim();
+    if (!operationPlanId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+
+    const states = await projectOperationStateV1(pool, tenant);
+    const state = states.find((x) => x.operation_id === operationPlanId || x.operation_plan_id === operationPlanId);
+    if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
+    const latestByType = (type: string) => [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === type) ?? null;
+    const rec = latestByType("decision_recommendation_v1");
+    const approvalReq = latestByType("approval_request_v1");
+    const approvalDecision = latestByType("approval_decision_v1");
+    const plan = latestByType("operation_plan_v1");
+    const task = latestByType("ao_act_task_v0");
+    const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
+    const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
+
+    const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
+      id: `${item.type}_${item.ts}_${idx}`,
+      kind: String(item.type ?? "UNKNOWN"),
+      label: item.label || statusLabel(item.type),
+      status: state.final_status,
+      occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
+      actor_label: null,
+      summary: item.label || ""
+    }));
+    if (approvalDecision) {
+      timeline.push({
+        id: `approval_decision_${approvalDecision.fact_id}`,
+        kind: "APPROVAL_DECISION",
+        label: "审批决策",
+        status: toText(approvalDecision.record_json?.payload?.decision) ?? "",
+        occurred_at: approvalDecision.occurred_at,
+        actor_label: toText(approvalDecision.record_json?.payload?.decider ?? approvalDecision.record_json?.payload?.actor_label),
+        summary: statusLabel(toText(approvalDecision.record_json?.payload?.decision))
+      });
+    }
+    timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
+
+    const taskId = toText(state.task_id ?? plan?.record_json?.payload?.act_task_id);
+    const latestExport = taskId ? findLatestExportJobSnapshotForTask(tenant, taskId) : null;
+    const latestBundleName = latestExport ? `${latestExport.job_id}.json` : null;
+    const downloadUrl = latestExport?.state === "done" ? `/api/delivery/evidence_export/v1/jobs/${encodeURIComponent(latestExport.job_id)}/download` : null;
+
+    return reply.send({
+      ok: true,
+      item: {
+        operation_plan_id: operationPlanId,
+        field_id: toText(state.field_id),
+        field_name: toText(plan?.record_json?.payload?.field_name) ?? toText(state.field_id),
+        program_id: toText(state.program_id),
+        program_name: toText(plan?.record_json?.payload?.program_name) ?? toText(state.program_id),
+        final_status: state.final_status,
+        status_label: statusLabel(state.final_status),
+        recommendation: {
+          recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
+          title: toText(rec?.record_json?.payload?.title) ?? "系统建议",
+          summary: toText(rec?.record_json?.payload?.summary ?? rec?.record_json?.payload?.reason),
+          reason_codes: Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [],
+          created_at: rec?.occurred_at ?? null
+        },
+        approval: {
+          approval_request_id: toText(state.approval_request_id ?? approvalReq?.record_json?.payload?.request_id),
+          decision: toText(approvalDecision?.record_json?.payload?.decision),
+          decision_label: statusLabel(toText(approvalDecision?.record_json?.payload?.decision)),
+          actor_label: toText(approvalDecision?.record_json?.payload?.decider ?? approvalDecision?.record_json?.payload?.actor_label),
+          decided_at: approvalDecision?.occurred_at ?? null
+        },
+        plan: {
+          operation_plan_id: toText(operationPlanId),
+          task_id: toText(plan?.record_json?.payload?.act_task_id ?? state.task_id),
+          action_type: toText(plan?.record_json?.payload?.action_type ?? state.action_type),
+          device_id: toText(plan?.record_json?.payload?.device_id ?? state.device_id),
+          executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
+          dispatched_at: task?.occurred_at ?? null,
+          acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
+        },
+        task: {
+          task_id: toText(task?.record_json?.payload?.act_task_id ?? state.task_id),
+          action_type: toText(task?.record_json?.payload?.action_type ?? state.action_type),
+          device_id: toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id),
+          executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
+          dispatched_at: task?.occurred_at ?? null,
+          acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
+        },
+        dispatch: {
+          operation_plan_id: toText(operationPlanId),
+          task_id: taskId,
+          action_type: toText(state.action_type),
+          device_id: toText(state.device_id),
+          executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
+          dispatched_at: task?.occurred_at ?? null,
+          acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
+        },
+        receipt: normalizedReceipt ? {
+          receipt_fact_id: normalizedReceipt.receipt_fact_id,
+          receipt_type: normalizedReceipt.receipt_type,
+          receipt_status: normalizedReceipt.receipt_status,
+          execution_started_at: normalizedReceipt.execution_started_at,
+          execution_finished_at: normalizedReceipt.execution_finished_at,
+          water_l: normalizedReceipt.water_l,
+          electric_kwh: normalizedReceipt.electric_kwh,
+          chemical_ml: normalizedReceipt.chemical_ml,
+          log_ref_count: normalizedReceipt.log_ref_count,
+          constraint_violated: normalizedReceipt.constraint_violated,
+          executor_label: normalizedReceipt.executor_label
+        } : null,
+        timeline,
+        evidence_export: {
+          latest_job_id: latestExport?.job_id ?? null,
+          latest_job_status: latestExport?.state ?? null,
+          latest_bundle_name: latestBundleName,
+          download_url: downloadUrl,
+          has_exportable_bundle: Boolean(downloadUrl)
+        },
+        links: {
+          export_jobs: "/delivery/export-jobs",
+          operation_detail: `/operations/${encodeURIComponent(operationPlanId)}`
+        }
+      }
+    });
   });
 }

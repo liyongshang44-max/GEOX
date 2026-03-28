@@ -27,6 +27,32 @@ export async function fetchOperationStates(params?: { field_id?: string; device_
   return apiRequest<{ ok: boolean; count: number; items: OperationStateItemV1[] }>(withQuery("/api/v1/operations", params));
 }
 
+export type OperationDetailResponse = {
+  operation_plan_id: string;
+  field_id?: string | null;
+  field_name?: string | null;
+  program_id?: string | null;
+  program_name?: string | null;
+  final_status?: string | null;
+  status_label?: string | null;
+  recommendation?: any;
+  approval?: any;
+  plan?: any;
+  task?: any;
+  dispatch?: any;
+  receipt?: any;
+  timeline?: any[];
+  evidence_export?: any;
+  links?: Record<string, string>;
+};
+
+export async function fetchOperationDetail(operationPlanId: string): Promise<OperationDetailResponse | null> {
+  const id = String(operationPlanId ?? "").trim();
+  if (!id) return null;
+  const res = await apiRequest<{ ok?: boolean; item?: OperationDetailResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/detail`);
+  return res?.item ?? null;
+}
+
 export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null> {
   const res = await apiRequest<{ ok?: boolean; trajectory?: any }>(`/api/v1/tasks/${encodeURIComponent(actTaskId)}/trajectory`);
   return res.trajectory ?? null;
