@@ -41,6 +41,7 @@ export type OperationDetailPageVm = {
     dispatchedAtLabel: string;
     ackedAtLabel: string;
     ackStatusLabel: string;
+    progressLabel: string;
     finalStatusLabel: string;
   };
   receiptEvidence?: ReceiptEvidenceVm;
@@ -76,6 +77,32 @@ function toDateLabel(v: unknown): string {
 function toMs(v: unknown): number | null {
   const raw = typeof v === "number" ? v : Date.parse(String(v ?? ""));
   return Number.isFinite(raw) ? raw : null;
+}
+
+function mapStatusLabel(raw: unknown): string {
+  const key = String(raw ?? "").toUpperCase().trim();
+  if (!key) return "待推进";
+  if (key === "READY") return "待执行";
+  if (key === "DISPATCHED") return "已下发";
+  if (key === "ACKED") return "已确认执行";
+  if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
+  if (key === "FAILED" || key === "ERROR") return "执行失败";
+  if (key === "NOT_EXECUTED") return "未执行";
+  return toText(raw, "待推进");
+}
+
+function resolveExecutionProgress(detail: any): string {
+  const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+  if (["SUCCEEDED", "SUCCESS", "EXECUTED"].includes(finalStatus)) return "已完成并回传结果";
+  if (["FAILED", "ERROR", "NOT_EXECUTED"].includes(finalStatus)) return "执行结束（异常）";
+
+  const ackTs = toMs(detail?.dispatch?.acked_at ?? detail?.task?.acked_at ?? detail?.plan?.acked_at);
+  if (ackTs != null) return "设备已确认，正在执行";
+
+  const dispatchTs = toMs(detail?.dispatch?.dispatched_at ?? detail?.task?.dispatched_at ?? detail?.plan?.dispatched_at);
+  if (dispatchTs != null) return "已下发，等待设备确认";
+
+  return "等待下发";
 }
 
 const STORY_TIMELINE_ORDER = [
@@ -195,7 +222,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     operationPlanId: toText(detail?.operation_plan_id),
     fieldLabel: toText(detail?.field_name, toText(detail?.field_id)),
     programLabel: toText(detail?.program_name, toText(detail?.program_id)),
-    statusLabel: toText(detail?.status_label, toText(detail?.final_status, "待推进")),
+    statusLabel: mapStatusLabel(detail?.status_label ?? detail?.final_status),
     finalStatus: toText(detail?.final_status),
     latestUpdatedAtLabel: latestTs != null ? new Date(latestTs).toLocaleString() : "-",
     recommendation: {
@@ -225,7 +252,8 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       dispatchedAtLabel: toDateLabel(detail?.dispatch?.dispatched_at),
       ackedAtLabel: toDateLabel(detail?.dispatch?.acked_at),
       ackStatusLabel: ackTs != null ? "已确认" : "待确认",
-      finalStatusLabel: toText(detail?.status_label, toText(detail?.final_status)),
+      progressLabel: resolveExecutionProgress(detail),
+      finalStatusLabel: mapStatusLabel(detail?.status_label ?? detail?.final_status),
     },
     receiptEvidence: receipt,
     timeline,

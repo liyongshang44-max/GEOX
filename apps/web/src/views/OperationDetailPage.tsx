@@ -25,6 +25,11 @@ export default function OperationDetailPage(): React.ReactElement {
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !detail) return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   const model = buildOperationDetailViewModel(detail);
+  const minimumAcceptanceLabel = !model.receiptEvidence
+    ? "待回传执行证据"
+    : model.receiptEvidence.constraintCheckLabel === "符合约束"
+      ? "已满足（已回传证据且符合约束）"
+      : "未满足（需人工复核）";
 
   return (
     <div className="productPage" style={{ display: "grid", gap: 14 }}>
@@ -57,12 +62,13 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">验收标准</div>
-        <div className="kv"><span className="k">结果状态</span><span className="v">{model.execution.finalStatusLabel}</span></div>
+        <div className="sectionTitle">验收结果</div>
+        <div className="kv"><span className="k">最终结果状态</span><span className="v">{model.execution.finalStatusLabel}</span></div>
         <div className="kv"><span className="k">约束核验</span><span className="v">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</span></div>
         {model.receiptEvidence?.violationSummary ? (
           <div className="kv"><span className="k">风险提示</span><span className="v">{model.receiptEvidence.violationSummary}</span></div>
         ) : null}
+        <div className="kv"><span className="k">最低验收</span><span className="v">{minimumAcceptanceLabel}</span></div>
       </section>
 
       <OperationStoryTimeline items={model.timeline} />
