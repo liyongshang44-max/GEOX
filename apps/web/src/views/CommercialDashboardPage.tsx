@@ -39,7 +39,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
           <h2 className="sectionTitle" style={{ marginTop: 4 }}>运营总览</h2>
           <div className="muted">统一看板（执行、证据、风险）</div>
         </div>
-        <Link className="btn" to="/programs">查看 Program 列表</Link>
+        <Link className="btn" to="/programs">查看经营方案列表</Link>
       </section>
 
       <section className="summaryGrid4">

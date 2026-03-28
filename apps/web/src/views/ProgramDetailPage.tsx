@@ -18,7 +18,7 @@ export default function ProgramDetailPage(): React.ReactElement {
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !viewModel) {
-    return <ErrorState title="Program 详情暂不可用" message={error || "当前暂无 Program 详情数据"} onRetry={() => void reload()} />;
+    return <ErrorState title="经营方案详情暂不可用" message={error || "当前暂无经营方案详情数据"} onRetry={() => void reload()} />;
   }
 
   return (
