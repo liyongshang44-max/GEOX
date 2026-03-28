@@ -1,11 +1,12 @@
 import type { FastifyInstance } from "fastify"; // Fastify route host typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
+import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
 type DashboardAlertItem = { event_id: string; rule_id: string; object_type: string; object_id: string; metric: string; status: string; raised_ts_ms: number; }; // Compact alert row.
-type DashboardReceiptItem = { fact_id: string; act_task_id: string | null; device_id: string | null; status: string | null; occurred_at: string; occurred_ts_ms: number; }; // Compact receipt row.
+type DashboardReceiptItem = { fact_id: string; act_task_id: string | null; device_id: string | null; status: string | null; occurred_at: string; occurred_ts_ms: number; summary: ReturnType<typeof normalizeReceiptEvidence>; }; // Compact receipt row + normalized summary.
 
 function badRequest(reply: any, error: string) { return reply.status(400).send({ ok: false, error }); } // Stable 400 helper.
 function parseWindowStart(q: any): number { const raw = Number(q?.from_ts_ms ?? Date.now() - 24 * 60 * 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() - 24 * 60 * 60 * 1000; } // Parse dashboard window start.
@@ -57,7 +58,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       pool.query(`SELECT program_id, status, field_id, crop_code, updated_at, current_risk_summary, next_action_hint FROM field_program_state_v1 WHERE tenant_id = $1 ORDER BY updated_at DESC LIMIT 12`, [tenant_id]).catch(() => ({ rows: [] })),
       pool.query(`SELECT operation_plan_id, status, field_id, device_id, updated_ts_ms, program_id FROM operation_plan_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND status IN ('PENDING','APPROVED','ACKED','DISPATCHED') ORDER BY updated_ts_ms DESC LIMIT 10`, [tenant_id, project_id, group_id]).catch(() => ({ rows: [] })),
       pool.query(`SELECT event_id, metric, status, object_id, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 AND status IN ('OPEN','ACKED') ORDER BY raised_ts_ms DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
-      pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb #>> '{payload,status}') AS status FROM facts WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 ORDER BY occurred_at DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
+      pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1') AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 ORDER BY occurred_at DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
       pool.query(`SELECT job_id, status, created_ts_ms, updated_ts_ms, scope_id, artifact_sha256 FROM evidence_export_job_index_v1 WHERE tenant_id = $1 ORDER BY updated_ts_ms DESC LIMIT 8`, [tenant_id]).catch(() => ({ rows: [] })),
       pool.query(`SELECT COUNT(*)::bigint AS count FROM device_status_index_v1 WHERE tenant_id = $1 AND (last_heartbeat_ts_ms IS NULL OR last_heartbeat_ts_ms < $2)`, [tenant_id, nowTs - 15 * 60 * 1000]).catch(() => ({ rows: [{ count: 0 }] })),
     ]);
@@ -82,7 +83,11 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       href: row.program_id ? `/programs/${encodeURIComponent(String(row.program_id))}` : "/actions"
     }));
     const evidenceItems = [
-      ...(evidenceQ.rows ?? []).map((row: any) => ({ id: `receipt_${String(row.fact_id).slice(0, 8)}`, kind: "receipt", title: "执行回执", summary: "已记录最近作业执行回执。", status: { code: String(row.status ?? "EXECUTED").toUpperCase(), label: "已回执", tone: statusTone(String(row.status ?? "EXECUTED")) }, updated_at_label: relativeLabel(Date.parse(String(row.occurred_at ?? "")) || nowTs), href: "/evidence" })),
+      ...(evidenceQ.rows ?? []).map((row: any) => {
+        const normalized = normalizeReceiptEvidence({ fact_id: row.fact_id, occurred_at: row.occurred_at, record_json: row.record_json }, String(row.record_json?.type ?? ""));
+        const statusCode = String(normalized.receipt_status ?? "EXECUTED").toUpperCase();
+        return { id: `receipt_${String(row.fact_id).slice(0, 8)}`, kind: "receipt", title: "执行回执", summary: "已记录最近作业执行回执。", status: { code: statusCode, label: "已回执", tone: statusTone(statusCode) }, updated_at_label: relativeLabel(Date.parse(String(normalized.recorded_at ?? row.occurred_at ?? "")) || nowTs), href: "/evidence" };
+      }),
       ...(exportQ.rows ?? []).map((row: any) => ({ id: `job_${String(row.job_id)}`, kind: "export", title: "证据导出任务", summary: "证据包导出任务状态更新。", status: { code: String(row.status ?? "DONE").toUpperCase(), label: String(row.status ?? "DONE").toUpperCase() === "DONE" ? "已生成" : "处理中", tone: statusTone(String(row.status ?? "DONE")) }, updated_at_label: relativeLabel(Number(row.updated_ts_ms ?? row.created_ts_ms ?? nowTs)), href: "/evidence" })),
     ].slice(0, 10);
 
@@ -137,7 +142,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       pool.query(`SELECT COUNT(*)::bigint AS count FROM alert_event_index_v1 WHERE tenant_id = $1 AND status IN ('OPEN','ACKED')`, [tenant_id]),
       pool.query(`SELECT metric, (EXTRACT(EPOCH FROM ts) * 1000)::bigint AS ts_ms, value_num FROM telemetry_index_v1 WHERE tenant_id = $1 AND metric = ANY($2::text[]) AND value_num IS NOT NULL AND ts >= to_timestamp($3::double precision / 1000.0) AND ts <= to_timestamp($4::double precision / 1000.0) ORDER BY ts ASC LIMIT 5000`, [tenant_id, ["soil_moisture", "soil_temp"], from_ts_ms, to_ts_ms]),
       pool.query(`SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 ORDER BY raised_ts_ms DESC LIMIT 10`, [tenant_id]),
-      pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') = 'ao_act_receipt_v0' AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 ORDER BY occurred_at DESC, fact_id DESC LIMIT 10`, [tenant_id, project_id, group_id]),
+      pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1') AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 ORDER BY occurred_at DESC, fact_id DESC LIMIT 10`, [tenant_id, project_id, group_id]),
     ]); // Parallelize independent reads.
 
     let running_task_count = 0; // Default queue count when runtime table is absent.
@@ -149,7 +154,22 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     }
 
     const latest_alerts: DashboardAlertItem[] = (latestAlertsQ.rows ?? []).map((row: any) => ({ event_id: String(row.event_id), rule_id: String(row.rule_id), object_type: String(row.object_type), object_id: String(row.object_id), metric: String(row.metric), status: String(row.status), raised_ts_ms: Number(row.raised_ts_ms ?? 0) })); // Normalize alert rows.
-    const latest_receipts: DashboardReceiptItem[] = (latestReceiptsQ.rows ?? []).map((row: any) => { const receipt = parseJsonMaybe(row.record_json) ?? row.record_json; const payload = receipt?.payload ?? {}; return { fact_id: String(row.fact_id), act_task_id: typeof payload.act_task_id === "string" ? payload.act_task_id : null, device_id: typeof payload?.meta?.device_id === "string" ? payload.meta.device_id : typeof payload?.executor_id?.id === "string" ? payload.executor_id.id : null, status: typeof payload.status === "string" ? payload.status : null, occurred_at: String(row.occurred_at), occurred_ts_ms: Date.parse(String(row.occurred_at)) }; }); // Normalize receipt rows.
+    const latest_receipts: DashboardReceiptItem[] = (latestReceiptsQ.rows ?? []).map((row: any) => {
+      const normalized = normalizeReceiptEvidence(
+        { fact_id: row.fact_id, occurred_at: row.occurred_at, record_json: parseJsonMaybe(row.record_json) ?? row.record_json },
+        String(row.record_json?.type ?? "")
+      );
+      const occurredAt = String(normalized.recorded_at ?? row.occurred_at ?? "");
+      return {
+        fact_id: String(normalized.receipt_fact_id ?? row.fact_id ?? ""),
+        act_task_id: normalized.act_task_id,
+        device_id: normalized.device_id,
+        status: normalized.receipt_status,
+        occurred_at: occurredAt,
+        occurred_ts_ms: Date.parse(occurredAt),
+        summary: normalized
+      };
+    }); // Normalize receipt rows via shared receipt normalizer.
 
     return reply.send({
       ok: true,
