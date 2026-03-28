@@ -72,6 +72,13 @@ export function useFieldDetail(params: {
     setBusy(true);
     setError(null);
     setTechnical(null);
+
+    if (!fieldId) {
+      setState(null);
+      setBusy(false);
+      return;
+    }
+
     setStatus(lang === "zh" ? "正在加载田块视图…" : "Loading...");
 
     try {
