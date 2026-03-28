@@ -4,29 +4,6 @@ import { fetchProgramPortfolio } from "../api";
 import EmptyState from "../components/common/EmptyState";
 import { RelativeTime } from "../components/RelativeTime";
 
-function toText(v: unknown, fallback = "-"): string {
-  if (typeof v === "string") {
-    const cleaned = v.trim();
-    return cleaned || fallback;
-  }
-  if (typeof v === "number" && Number.isFinite(v)) return String(v);
-  return fallback;
-}
-
-function fieldLabel(item: any): string {
-  const raw = String(item?.field_name || item?.field_label || item?.field_id || "");
-  if (!raw) return "未分配田块";
-  if (raw.startsWith("field_demo_")) return `示范田 ${raw.replace("field_demo_", "")}`;
-  return raw;
-}
-
-function planName(item: any): string {
-  const title = toText(item?.title || item?.display_name || item?.program_name, "");
-  if (title) return title;
-  const crop = toText(item?.crop_name || item?.crop_code, "作物");
-  return `${crop}种植方案`;
-}
-
 function toText(v: unknown, fallback = ""): string {
   if (typeof v === "string") {
     const cleaned = v.trim();
