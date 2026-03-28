@@ -81,73 +81,86 @@ export function useFieldDetail(params: {
 
     setStatus(lang === "zh" ? "正在加载田块视图…" : "Loading...");
 
-    let cp: any = null;
     try {
-      cp = await fetchFieldControlPlane(fieldId);
-    } catch {}
+      if (!fieldId) {
+        setState(null);
+        setStatus("");
+        return;
+      }
 
-    let detail: any = null;
-    let controlPlaneHit = false;
-    if (cp?.field || cp?.overview || cp?.summary) {
-      detail = mapControlPlaneToLegacyDetail(fieldId, cp);
-      controlPlaneHit = true;
-    }
-    if (!detail) {
+      let cp: any = null;
       try {
-        detail = await fetchFieldDetail(fieldId);
+        cp = await fetchFieldControlPlane(fieldId);
       } catch {}
+
+      let detail: any = null;
+      let controlPlaneHit = false;
+
+      if (cp?.field || cp?.overview || cp?.summary) {
+        detail = mapControlPlaneToLegacyDetail(fieldId, cp);
+        controlPlaneHit = true;
+      }
+
+      if (!detail) {
+        try {
+          detail = await fetchFieldDetail(fieldId);
+        } catch {}
+      }
+
+      const [opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
+        Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
+        Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
+        Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
+        Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
+        Promise.resolve().then(() => fetchFieldProgramsBySeason(fieldId)),
+      ]);
+
+      if (!detail) {
+        detail = {
+          field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
+          latest_season: null,
+          summary: { device_count: 0 },
+          geometry: null,
+        };
+      }
+
+      const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
+      const activeOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [];
+      const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
+      const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
+      const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
+      const latestEvidence =
+        (detail as any)?.latestEvidence ??
+        (detail as any)?.latest_evidence ??
+        (Array.isArray((detail as any)?.recent_receipts)
+          ? (detail as any).recent_receipts[0]?.receipt?.payload
+          : null) ??
+        null;
+
+      setState({
+        field: detail?.field ?? null,
+        geometry: geometry ?? detail?.geometry ?? null,
+        currentProgram,
+        controlPlane: cp ?? null,
+        operations: activeOperations,
+        recommendations,
+        latestEvidence,
+        error: null,
+        detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null, latestEvidence },
+        activeOperations,
+        recentRecommendations: recommendations,
+        programsBySeason,
+      });
+
+      setStatus(controlPlaneHit ? "已通过聚合接口加载" : (lang === "zh" ? "已加载（缺失接口已自动降级）" : "Loaded with fallbacks"));
+    } catch (e: any) {
+      setState(null);
+      setError(lang === "zh" ? "田块详情加载失败" : "Failed to load field detail");
+      setTechnical(e?.message ? String(e.message) : String(e ?? "unknown"));
+      setStatus(lang === "zh" ? "加载失败" : "Load failed");
+    } finally {
+      setBusy(false);
     }
-
-    const [opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
-      Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
-      Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
-      Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
-      Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
-      Promise.resolve().then(() => fetchFieldProgramsBySeason(fieldId)),
-    ]);
-
-    if (!detail) {
-      detail = {
-        field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
-        latest_season: null,
-        summary: { device_count: 0 },
-        geometry: null,
-      };
-    }
-
-    const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
-    const activeOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [];
-    const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
-    const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
-    const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
-    const latestEvidence =
-      (detail as any)?.latestEvidence ??
-      (detail as any)?.latest_evidence ??
-      (Array.isArray((detail as any)?.recent_receipts)
-        ? (detail as any).recent_receipts[0]?.receipt?.payload
-        : null) ??
-      null;
-
-    setState({
-      field: detail?.field ?? null,
-      geometry: geometry ?? detail?.geometry ?? null,
-      currentProgram,
-      controlPlane: cp ?? null,
-      operations: activeOperations,
-      recommendations,
-      latestEvidence,
-      error: null,
-      detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null, latestEvidence },
-      activeOperations,
-      recentRecommendations: recommendations,
-      programsBySeason,
-    });
-
-    setError(null);
-    setTechnical(null);
-    setStatus(controlPlaneHit ? "已通过聚合接口加载" : (lang === "zh" ? "已加载（缺失接口已自动降级）" : "Loaded with fallbacks"));
-
-    setBusy(false);
   }, [fieldId, lang]);
 
   React.useEffect(() => { void refresh(); }, [refresh]);
