@@ -9,17 +9,18 @@ type Props = {
 };
 
 export default function OperationEvidenceDownloadCard({ model, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
+  const status = model.evidenceExport.hasExportableBundle
+    ? "已生成（可下载）"
+    : model.evidenceExport.latestJobStatus.toUpperCase() === "RUNNING"
+      ? "生成中"
+      : "暂不可用";
+
   return (
     <section className="card sectionBlock">
       <div className="sectionTitle">{title}</div>
-      <div className="kv"><span className="k">当前是否可下载</span><span className="v">{model.evidenceExport.exportableLabel}</span></div>
-      <div className="kv"><span className="k">最近导出状态</span><span className="v">{model.evidenceExport.latestJobStatus}</span></div>
-      <div className="kv"><span className="k">最近导出包名称</span><span className="v">{model.evidenceExport.latestBundleName}</span></div>
+      <div className="kv"><span className="k">状态</span><span className="v">{status}</span></div>
       <div className="kv"><span className="k">最近导出时间</span><span className="v">{model.evidenceExport.latestExportedAtLabel}</span></div>
-      <div className="kv"><span className="k">最近导出任务</span><span className="v mono">{model.evidenceExport.latestJobId}</span></div>
-      {!model.evidenceExport.hasExportableBundle ? (
-        <div className="kv"><span className="k">无包原因</span><span className="v">{model.evidenceExport.missingReason}</span></div>
-      ) : null}
+      <div className="kv"><span className="k">包名</span><span className="v">{model.evidenceExport.latestBundleName}</span></div>
       {model.evidenceExport.hasExportableBundle && model.evidenceExport.downloadUrl ? (
         <a className="btn" href={model.evidenceExport.downloadUrl}>下载证据包</a>
       ) : model.evidenceExport.jumpUrl ? (
