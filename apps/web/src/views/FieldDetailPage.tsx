@@ -5,16 +5,13 @@ import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
 import FieldAlertList from "../components/field/FieldAlertList";
 import FieldLegend from "../components/field/FieldLegend";
-import FieldSeasonPanel from "../components/field/FieldSeasonPanel";
-import { FIELD_TEXT, getRiskColor, riskKey, shortId, type FieldLang } from "../lib/fieldViewModel";
-import { mapStatusToText, t } from "../lib/i18n";
+import { FIELD_TEXT, shortId, type FieldLang } from "../lib/fieldViewModel";
+import { t } from "../lib/i18n";
 import { useFieldDetail } from "../hooks/useFieldDetail";
 import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
-import StatusBadge from "../components/common/StatusBadge";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
-import { mapOperationPlanStatus } from "../lib/presentation/statusMap";
 import { formatTimeOrFallback } from "../lib/presentation/time";
 import { mapReceiptToVm } from "../viewmodels/evidence";
 
@@ -139,11 +136,32 @@ function FieldDetailRuntimeView(props: { fieldId: string }): React.ReactElement 
     { key: "alerts", label: labels.alerts },
   ];
 
-  const risk = riskKey(model?.detail);
   const latestEvidence =
     (model?.detail as any)?.latestEvidence ||
     (model?.detail as any)?.latest_evidence ||
     (model?.detail as any)?.recent_receipts?.[0]?.receipt?.payload;
+  const currentJob = model?.currentOperation;
+  const actionText = React.useMemo(() => {
+    const raw = String(currentJob?.action_type || "").toUpperCase();
+    if (raw.includes("IRRIGATE")) return "灌溉";
+    return "作业";
+  }, [currentJob?.action_type]);
+  const hasRecommendationRisk = React.useMemo(
+    () => (model?.recentRecommendations ?? []).some((x: any) => {
+      const raw = `${x?.recommendation_type || ""} ${x?.type || ""}`.toLowerCase();
+      return raw.includes("alert") || raw.includes("risk") || raw.includes("health");
+    }),
+    [model?.recentRecommendations]
+  );
+  const topStatus = currentJob ? "🟡 运行中" : hasRecommendationRisk ? "🔴 异常" : "🟢 正常";
+  const riskStatus = hasRecommendationRisk ? "异常" : "正常";
+  const mapOperationStatus = (raw: string | null | undefined): string => {
+    const status = String(raw || "").toUpperCase();
+    if (status.includes("RUN")) return "执行中";
+    if (status.includes("SUCC")) return "已完成";
+    if (status.includes("FAIL")) return "异常";
+    return "待执行";
+  };
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
@@ -199,45 +217,48 @@ function FieldDetailRuntimeView(props: { fieldId: string }): React.ReactElement 
         </div>
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 14 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16 }}>
         <div className="card" style={{ padding: 14 }}>
           {activeTab === "overview" ? (
-            <div style={{ display: "grid", gap: 8 }}>
-              <div><b>{labels.fieldName}：</b>{model?.detail?.field?.name || "-"}</div>
-              <div><b>{labels.area}：</b>{model?.detail?.field?.area_ha ? `${model.detail.field.area_ha} ha` : "-"}</div>
-              <div><b>{labels.currentSeason}：</b>{model?.detail?.latest_season?.name || model?.detail?.latest_season?.season_id || "-"}</div>
-              <div><b>当前运行 Program：</b>{model?.currentProgram?.program_id ? String(model?.currentProgram?.program_id) : "暂无经营方案"}</div>
-              <div><b>{labels.currentStatus}：</b><StatusBadge presentation={mapOperationPlanStatus(String(model?.detail?.field?.status || "UNKNOWN"))} /></div>
-              <div><b>{labels.devices}：</b>{model?.detail?.summary?.device_count ?? 0}</div>
-              <div><b>{labels.lastOperation}：</b>{model?.operationItems?.[0]?.type || "-"}</div>
-              <div><b>{labels.activeAlerts}：</b>{model?.alertItems?.length ?? 0}</div>
-              <div><b>{labels.riskStatus}：</b><span style={{ color: getRiskColor(risk), fontWeight: 700 }}>{model?.summaryCards?.[5]?.value ?? "-"}</span></div>
-
-              <div style={{ marginTop: 12 }}><b>{tt("field.currentOperation")}</b></div>
-              <div className="card" style={{ padding: 10 }}>
-                <div>{tt("operation.labels.action")}：{model?.currentOperation?.action_type || tt("common.none")}</div>
-                <div>{tt("operation.labels.device")}：{model?.currentOperation?.device_id || tt("common.none")}</div>
-                <div>{tt("operation.filters.status")}：{model?.currentOperation ? mapStatusToText(String(model.currentOperation.final_status), tt) : tt("common.none")}</div>
-                <div>{tt("field.progress")}：{model?.currentProgress ?? 0}%</div>
+            <div style={{ display: "grid", gap: 16 }}>
+              <div className="card" style={{ padding: 16, borderRadius: 12, boxShadow: "var(--shadow-sm)" }}>
+                <div style={{ fontSize: 19, fontWeight: 700, marginBottom: 10 }}>田块概览卡</div>
+                <div><b>田块名称：</b>{model?.detail?.field?.name || "field_c8_demo"}</div>
+                <div><b>当前状态：</b>{topStatus}</div>
+                <div><b>当前作业：</b>{currentJob ? `${actionText}中（${model?.currentProgress ?? 0}%）` : "当前无作业"}</div>
+                <div><b>设备：</b>{currentJob?.device_id || "dev_onboard_accept_001"}</div>
+                <div><b>风险状态：</b>{riskStatus}</div>
               </div>
 
-              <div style={{ marginTop: 12 }}><b>{tt("field.recentTimeline")}</b></div>
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
-                {(model?.recentTimeline ?? []).map((x: any, idx: number) => (
-                  <li key={`${x.ts}_${idx}`}>[{formatTimeOrFallback(x.ts)}] {x.text}</li>
-                ))}
-                {!(model?.recentTimeline ?? []).length ? <li className="muted">暂无最近动态</li> : null}
-              </ul>
+              <div className="card" style={{ padding: 16, borderRadius: 12, boxShadow: "var(--shadow-sm)" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>当前作业</div>
+                {currentJob ? (
+                  <div style={{ display: "grid", gap: 6, fontSize: 15 }}>
+                    <div>- 类型：{actionText}</div>
+                    <div>- 设备：{currentJob?.device_id || "-"}</div>
+                    <div>- 状态：{mapOperationStatus(currentJob?.final_status)}</div>
+                    <div>- 进度：{model?.currentProgress ?? 0}%</div>
+                    <div>- 开始时间：{formatTimeOrFallback(Number(currentJob?.last_event_ts ?? 0))}</div>
+                  </div>
+                ) : <div className="muted">当前无作业</div>}
+              </div>
 
-              <div style={{ marginTop: 12 }}><b>最新执行证据</b></div>
-              {latestEvidence ? <ReceiptEvidenceCard data={mapReceiptToVm(latestEvidence)} /> : <div className="card muted" style={{ padding: 10 }}>暂无执行证据</div>}
+              <div className="card" style={{ padding: 16, borderRadius: 12, boxShadow: "var(--shadow-sm)" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>最近动态</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 15 }}>
+                  {(model?.recentTimeline ?? []).map((x: any, idx: number) => (
+                    <li key={`${x.ts}_${idx}`}>[{formatTimeOrFallback(x.ts)}] {x.text}</li>
+                  ))}
+                  {!(model?.recentTimeline ?? []).length ? <li className="muted">暂无最近动态</li> : null}
+                </ul>
+              </div>
             </div>
           ) : null}
 
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
-              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>暂无可用轨迹数据</div> : null}
+              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>暂无轨迹数据</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -278,7 +299,14 @@ function FieldDetailRuntimeView(props: { fieldId: string }): React.ReactElement 
           ) : null}
         </div>
 
-        <FieldSeasonPanel labels={labels} selectedMapObject={selectedObject} />
+        <div className="card" style={{ padding: 16, borderRadius: 12, boxShadow: "var(--shadow-sm)", alignSelf: "start" }}>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 10 }}>最近执行证据</div>
+          {(model?.recentEvidence ?? []).length ? (
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 15 }}>
+              {(model?.recentEvidence ?? []).slice(0, 2).map((item: any) => <li key={item.id}>{item.text}</li>)}
+            </ul>
+          ) : latestEvidence ? <ReceiptEvidenceCard data={mapReceiptToVm(latestEvidence)} /> : <div className="muted">暂无执行证据</div>}
+        </div>
       </section>
     </div>
   );

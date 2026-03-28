@@ -31,12 +31,13 @@ export function buildFieldDetailViewModel(params: {
   labels: any;
   lang: FieldLang;
   activeOperations: any[];
+  allOperations: any[];
   recentRecommendations: any[];
   currentProgram: any;
   programsBySeason: Array<{ season_id: string; count: number; programs: any[] }>;
   playbackTs: number;
 }) {
-  const { detail, labels, lang, activeOperations, recentRecommendations, currentProgram, programsBySeason, playbackTs } = params;
+  const { detail, labels, lang, activeOperations, allOperations, recentRecommendations, currentProgram, programsBySeason, playbackTs } = params;
 
   const operationItems = (Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : []).map((item: any) => {
     const sourceRaw = String(item?.timing_source ?? "");
@@ -139,14 +140,42 @@ export function buildFieldDetailViewModel(params: {
           : 30
     : 0;
 
+  const toActionLabel = (action: string | null | undefined): string => {
+    const raw = String(action || "").toUpperCase();
+    if (raw.includes("IRRIGATE")) return "灌溉";
+    return "作业";
+  };
+
   const recentTimeline = [
-    ...activeOperations.slice(0, 4).map((x: any) => ({ ts: x.last_event_ts, text: `${x.action_type || "Operation"} ${String(x.final_status ?? "")}` })),
-    ...recentRecommendations.slice(0, 4).map((x: any) => ({ ts: Number(Date.parse(String(x.occurred_at ?? ""))) || 0, text: `${x.recommendation_type || "Recommendation"} ${x.latest_status || x.status || ""}`.trim() })),
-    ...alertItems.slice(0, 4).map((x) => ({ ts: Number(x.timeMs ?? 0), text: `${x.type} ${x.status}` })),
+    ...allOperations.slice(0, 6).map((x: any) => {
+      const statusRaw = String(x.final_status ?? "").toUpperCase();
+      const verb = statusRaw.includes("SUCC") || statusRaw.includes("FAIL") ? "完成" : "开始";
+      return { ts: Number(x.last_event_ts ?? 0), text: `${verb}${toActionLabel(x.action_type)}` };
+    }),
+    ...recentRecommendations.slice(0, 6).map((x: any) => {
+      const recType = String(x.recommendation_type || x.type || "").toLowerCase();
+      const prefix = recType.includes("alert") ? "风险提示" : "系统建议";
+      const content = recType.includes("health") ? "作物健康风险" : "田块风险关注";
+      return { ts: Number(Date.parse(String(x.occurred_at ?? ""))) || 0, text: `${prefix}：${content}` };
+    }),
   ]
     .filter((x) => Number.isFinite(x.ts) && x.ts > 0)
     .sort((a, b) => b.ts - a.ts)
     .slice(0, 8);
+
+  const recentEvidence = allOperations
+    .filter((x: any) => {
+      const status = String(x.final_status ?? "").toUpperCase();
+      return status.includes("SUCC") || status.includes("FAIL");
+    })
+    .slice(0, 6)
+    .map((x: any) => {
+      const status = String(x.final_status ?? "").toUpperCase();
+      return {
+        id: String(x.operation_plan_id ?? x.id ?? `${x.action_type}_${x.last_event_ts ?? 0}`),
+        text: `${toActionLabel(x.action_type)}完成（${status.includes("SUCC") ? "符合约束" : "未达标"}）`,
+      };
+    });
 
   return {
     detail,
@@ -157,6 +186,7 @@ export function buildFieldDetailViewModel(params: {
     currentOperation,
     currentProgress,
     recentTimeline,
+    recentEvidence,
     currentProgram,
     programsBySeason,
     seasonOptions,

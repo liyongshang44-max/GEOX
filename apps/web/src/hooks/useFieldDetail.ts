@@ -125,7 +125,8 @@ export function useFieldDetail(params: {
       }
 
       const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
-      const activeOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [];
+      const allOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []) : [];
+      const activeOperations = allOperations.filter((x) => !["SUCCESS", "FAILED", "SUCCEEDED"].includes(String(x.final_status).toUpperCase()));
       const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
       const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
       const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
@@ -148,6 +149,7 @@ export function useFieldDetail(params: {
         error: null,
         detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null, latestEvidence },
         activeOperations,
+        allOperations,
         recentRecommendations: recommendations,
         programsBySeason,
       });
@@ -174,6 +176,7 @@ export function useFieldDetail(params: {
       activeOperations: state.activeOperations,
       recentRecommendations: state.recentRecommendations,
       currentProgram: state.currentProgram,
+      allOperations: state.allOperations ?? [],
       programsBySeason: state.programsBySeason,
       playbackTs,
     });
