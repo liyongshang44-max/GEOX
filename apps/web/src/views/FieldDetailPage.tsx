@@ -99,7 +99,13 @@ export default function FieldDetailPage(): React.ReactElement {
 
         <article className="card" style={{ padding: 14 }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>证据</h3>
-          <ReceiptEvidenceCard data={model?.latestEvidence} />
+          {model?.latestEvidence?.href ? (
+            <Link to={model.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}>
+              <ReceiptEvidenceCard data={model.latestEvidence} />
+            </Link>
+          ) : (
+            <ReceiptEvidenceCard data={model?.latestEvidence} />
+          )}
           <button className="btn" style={{ marginTop: 12 }}>下载证据包</button>
         </article>
       </section>

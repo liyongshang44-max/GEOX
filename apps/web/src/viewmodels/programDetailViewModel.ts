@@ -1,5 +1,6 @@
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveTimelineLabel } from "./timelineLabels";
+import { toOperationDetailPath } from "../lib/operationLink";
 
 type ProgramConsoleStatus = "ok" | "risk" | "error" | "running";
 
@@ -134,7 +135,7 @@ export function buildProgramDetailViewModel(args: {
   const latestEvidenceRaw = detail?.latestEvidence || detail?.latest_evidence || controlPlane?.latestEvidence || controlPlane?.latest_evidence || controlPlane?.evidence?.recent_items?.[0];
   const latestEvidenceVm = latestEvidenceRaw ? mapReceiptToVm({
     ...latestEvidenceRaw,
-    href: latestOperation?.operation_id ? `/operations/${encodeURIComponent(String(latestOperation.operation_id))}` : undefined,
+    href: toOperationDetailPath({ ...latestEvidenceRaw, operation_plan_id: latestEvidenceRaw?.operation_plan_id ?? latestOperation?.operation_plan_id ?? latestOperation?.operation_id }),
   }) : undefined;
 
   const recommendationText =
