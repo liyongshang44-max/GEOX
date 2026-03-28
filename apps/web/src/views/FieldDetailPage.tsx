@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
@@ -22,11 +22,43 @@ type FieldTab = "overview" | "map" | "operations" | "alerts";
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
+  const location = useLocation();
   const fieldId = decodeURIComponent(params.fieldId || "");
+  const isolateHook = React.useMemo(() => new URLSearchParams(location.search).get("hookIsolation") === "1", [location.search]);
+
+  if (isolateHook) {
+    return <FieldDetailIsolationView fieldId={fieldId} />;
+  }
+
+  return <FieldDetailRuntimeView fieldId={fieldId} />;
+}
+
+function FieldDetailIsolationView(props: { fieldId: string }): React.ReactElement {
+  const { fieldId } = props;
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <section className="card" style={{ padding: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 20 }}>FieldDetail hook isolation mode</h2>
+        <div className="muted" style={{ marginTop: 8 }}>
+          已启用临时隔离模式：当前页面不加载 FieldDetail 运行态组件。
+        </div>
+        <div className="muted" style={{ marginTop: 8 }}>
+          field_id: <span className="mono">{shortId(fieldId)}</span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Link className="btn" to="/fields">返回列表</Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FieldDetailRuntimeView(props: { fieldId: string }): React.ReactElement {
+  const { fieldId } = props;
+  const location = useLocation();
   const focusTaskId = React.useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("focusTask") || "";
-  }, []);
+    return new URLSearchParams(location.search).get("focusTask") || "";
+  }, [location.search]);
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
@@ -45,7 +77,7 @@ export default function FieldDetailPage(): React.ReactElement {
     fieldId,
     lang,
     labels,
-    playbackTs: playing ? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER,
+    playbackTs: playing ? Date.now() : Number.MAX_SAFE_INTEGER,
   });
 
   const timelineEvents = model?.timelineEvents ?? [];
