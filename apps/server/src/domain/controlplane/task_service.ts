@@ -1871,7 +1871,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     const taskPayload = taskFact.record_json?.payload ?? {};
-    const adapterType = String(body.adapter_hint ?? taskPayload?.adapter_type ?? "").trim();
+    const bodyAdapterHint = typeof body?.adapter_hint === "string" ? body.adapter_hint.trim() : "";
+    const taskAdapterType = typeof taskPayload?.adapter_type === "string" ? taskPayload.adapter_type.trim() : "";
+    const metaAdapterType = typeof taskPayload?.meta?.adapter_type === "string" ? String(taskPayload.meta.adapter_type).trim() : "";
+    const adapterType = bodyAdapterHint || taskAdapterType || metaAdapterType;
     const actionType = resolveActionType(taskPayload);
     const canonicalDispatchActionType = normalizeActionType(actionType);
     const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
