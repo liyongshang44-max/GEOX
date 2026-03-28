@@ -4,6 +4,7 @@ import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import OperationDecisionCard from "../components/operations/OperationDecisionCard";
+import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
@@ -42,6 +43,7 @@ export default function OperationDetailPage(): React.ReactElement {
 
       <OperationDecisionCard model={model} />
       <OperationExecutionCard model={model} />
+      <OperationEvidenceDownloadCard model={model} />
 
       <section className="card sectionBlock">
         <div className="sectionTitle">执行证据</div>
