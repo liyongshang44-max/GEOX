@@ -5,6 +5,8 @@ import { StatusTag } from "../components/StatusTag";
 import { RelativeTime } from "../components/RelativeTime";
 import EmptyState from "../components/common/EmptyState";
 import ErrorState from "../components/common/ErrorState";
+import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
+import { mapReceiptToVm } from "../viewmodels/evidence";
 
 type DashboardProps = { expert?: boolean };
 
@@ -89,10 +91,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
           <div className="sectionHeader"><div className="sectionTitle">{cp?.recent_evidence?.title || "最近证据"}</div><Link className="btn" to={cp?.recent_evidence?.action?.href || "/evidence"}>进入证据页</Link></div>
           <div className="list modernList compactList">
             {(cp?.recent_evidence?.items || vm.evidence.recentPackages).map((e: any) => (
-              <article key={e.id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{e.title || `证据导出作业 ${e.id}`}</div><StatusTag status={e.status?.code || e.status} /></div>
-                <div className="meta"><span>{e.summary || <>更新时间：<RelativeTime value={e.updated_ts_ms || e.updated_at || e.updatedAt} /></>}</span></div>
-              </article>
+              <ReceiptEvidenceCard key={e.operationId || e.id} data={mapReceiptToVm(e)} />
             ))}
             {!(cp?.recent_evidence?.items || vm.evidence.recentPackages).length ? <EmptyState title="最近暂无证据导出" description="可在证据页手动刷新" /> : null}
           </div>
