@@ -8,6 +8,7 @@ export type OperationStoryTimelineItemVm = {
   occurredAtLabel: string;
   actorLabel: string;
   summary: string;
+  storySummary: string;
 };
 
 export type OperationDetailPageVm = {
@@ -88,6 +89,39 @@ const STORY_TIMELINE_ORDER = [
   "已记录执行回执",
 ];
 
+function buildStorySummary(label: string, sourceSummary: string, sourceActor: string, detail: any): string {
+  if (sourceSummary !== "-" && sourceSummary !== "等待推进") return sourceSummary;
+  const actor = sourceActor !== "-" ? sourceActor : "系统";
+  const recommendationSummary = toText(detail?.recommendation?.summary, "暂无建议摘要");
+  const deviceId = toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id, "目标设备"));
+  const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+
+  switch (label) {
+    case "已生成作业建议":
+      return `${actor}根据当前田间信号生成作业建议：${recommendationSummary}`;
+    case "已提交审批":
+      return `${actor}已将本次作业建议提交至审批流，等待管理员确认。`;
+    case "已批准执行":
+      return `${actor}确认执行本次作业，系统进入执行准备阶段。`;
+    case "已创建执行计划":
+      return `${actor}已完成执行计划拆解，明确目标设备与执行窗口。`;
+    case "已生成执行任务":
+      return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
+    case "已下发设备":
+      return `任务已发送至灌溉设备 ${deviceId}，等待设备 ACK 与执行反馈。`;
+    case "设备执行中":
+      return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
+    case "已记录执行回执":
+      return `${actor}已回传执行完成回执，并记录资源消耗数据。`;
+    case "作业已完成":
+      return "本次作业流程已闭环完成，可进行后续审计与复盘。";
+    case "作业执行失败":
+      return "作业进入失败终态，请核查设备回执与失败原因。";
+    default:
+      return finalStatus === "PENDING" ? "等待推进" : `${actor}已更新作业状态。`;
+  }
+}
+
 export function buildOperationDetailViewModel(detail: any): OperationDetailPageVm {
   const receipt = detail?.receipt
     ? mapReceiptToVm({ ...detail.receipt, status: detail.receipt?.receipt_status })
@@ -110,14 +144,17 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
 
   const timeline: OperationStoryTimelineItemVm[] = STORY_TIMELINE_ORDER.map((label, idx) => {
     const hit = byLabel.get(label);
+    const actorLabel = hit?.actorLabel ?? "-";
+    const summary = hit?.summary ?? "等待推进";
     return {
       id: hit?.id ?? `story_${idx}`,
       kind: hit?.kind ?? "STORY_STAGE",
       label,
       status: hit?.status ?? "PENDING",
       occurredAtLabel: hit?.occurredAtLabel ?? "-",
-      actorLabel: hit?.actorLabel ?? "-",
-      summary: hit?.summary ?? "等待推进",
+      actorLabel,
+      summary,
+      storySummary: buildStorySummary(label, summary, actorLabel, detail),
     };
   });
   const terminalLabel = ["SUCCEEDED", "SUCCESS"].includes(String(detail?.final_status ?? "").toUpperCase())
@@ -134,6 +171,12 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     occurredAtLabel: terminalSource?.occurredAtLabel ?? "-",
     actorLabel: terminalSource?.actorLabel ?? "-",
     summary: terminalSource?.summary ?? (terminalLabel === "作业状态更新中" ? "尚未进入终态" : terminalLabel),
+    storySummary: buildStorySummary(
+      terminalLabel,
+      terminalSource?.summary ?? (terminalLabel === "作业状态更新中" ? "尚未进入终态" : terminalLabel),
+      terminalSource?.actorLabel ?? "-",
+      detail,
+    ),
   });
 
   const latestTs = timelineSource
