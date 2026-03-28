@@ -3,10 +3,15 @@ import type { OperationStoryTimelineItemVm } from "../../viewmodels/operationDet
 
 const TIMELINE_TITLE = "全链路时间线";
 
-export default function OperationStoryTimeline({ items }: { items: OperationStoryTimelineItemVm[] }): React.ReactElement {
+type Props = {
+  items: OperationStoryTimelineItemVm[];
+  title?: string;
+};
+
+export default function OperationStoryTimeline({ items, title = TIMELINE_TITLE }: Props): React.ReactElement {
   return (
     <section className="card sectionBlock">
-      <div className="sectionTitle">{TIMELINE_TITLE}</div>
+      <div className="sectionTitle">{title}</div>
       <div className="operationStoryTimeline">
         {items.map((item, idx) => (
           <div key={item.id} className={`operationStoryItem ${item.status === "PENDING" ? "isPending" : "isDone"}`}>
@@ -15,8 +20,8 @@ export default function OperationStoryTimeline({ items }: { items: OperationStor
               <div>
                 <div className="operationStoryLabel">{item.label}</div>
                 <div className="operationStoryMeta">
-                  <span><b>时间：</b>{item.occurredAtLabel}</span>
-                  <span><b>参与者：</b>{item.actorLabel}</span>
+                  <span><b>发生时间：</b>{item.occurredAtLabel}</span>
+                  <span><b>谁在推进：</b>{item.actorLabel}</span>
                 </div>
               </div>
             </div>
