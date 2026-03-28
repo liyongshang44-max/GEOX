@@ -3,7 +3,6 @@ import { fetchEvidenceControlPlane } from "../api";
 import { StatusTag } from "../components/StatusTag";
 import EmptyState from "../components/common/EmptyState";
 import ErrorState from "../components/common/ErrorState";
-import { RelativeTime } from "../components/RelativeTime";
 
 export default function AuditExportPage(): React.ReactElement {
   const [item, setItem] = React.useState<any>(null);
@@ -23,86 +22,81 @@ export default function AuditExportPage(): React.ReactElement {
     }
   }, []);
 
-  React.useEffect(() => { void reload(); }, [reload]);
+  React.useEffect(() => {
+    void reload();
+  }, [reload]);
 
-  const cards = Array.isArray(item?.headline_cards) ? item.headline_cards : [];
   const evidenceItems = Array.isArray(item?.recent_evidence_items) ? item.recent_evidence_items : [];
   const exportJobs = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
-  const detail = item?.selected_detail;
 
   return (
     <div className="productPage">
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">{item?.meta?.page_title || "证据页"}</div>
-            <div className="muted">{item?.meta?.page_subtitle || "集中查看执行回执、证据包与导出任务。"}</div>
+            <div className="sectionTitle">执行证据与导出</div>
+            <div className="muted">证明“这个系统不是只会说，它真的能交付证据”。</div>
           </div>
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新证据数据</button>
         </div>
       </section>
-      {error ? <ErrorState title="证据中心加载失败" message="请稍后重试，或检查证据服务状态。" technical={error} onRetry={() => void reload()} /> : null}
 
-      <section className="summaryGrid4">
-        {cards.map((card: any) => (
-          <div key={card.key} className="card" style={{ padding: 12 }}>
-            <div className="muted">{card.title}</div>
-            <div className="metricBig">{loading ? "--" : card.value}</div>
-            <div className="muted">{card.description}</div>
-          </div>
-        ))}
+      {error ? <ErrorState title="证据页加载失败" message="请稍后重试，或检查证据服务状态。" technical={error} onRetry={() => void reload()} /> : null}
+
+      <section className="card sectionBlock">
+        <div className="sectionTitle">最近证据包</div>
+        <div className="list modernList compactList">
+          {exportJobs.map((job: any) => (
+            <article key={job.job_id} className="infoCard">
+              <div className="jobTitleRow">
+                <div className="title mono">{job.job_id}</div>
+                <StatusTag status={job.status?.code || "PENDING"} />
+              </div>
+              <div className="meta wrapMeta">
+                <span>对应作业：{job.refs?.program_id || "未关联"}</span>
+                <span>导出状态：{job.status?.label || "-"}</span>
+                <span>更新时间：{job.created_at_label || "-"}</span>
+              </div>
+              <div style={{ marginTop: 8 }}>
+                {job.download?.available ? (
+                  <button type="button" className="btn">下载</button>
+                ) : (
+                  <button type="button" className="btn" disabled>下载</button>
+                )}
+              </div>
+            </article>
+          ))}
+          {!exportJobs.length ? <EmptyState title="最近暂无证据包" description="请先发起导出任务并等待生成完成。" /> : null}
+        </div>
       </section>
 
-      <div className="contentGridTwo alignStart">
-        <section className="card sectionBlock">
-          <div className="sectionTitle">最近证据与导出任务</div>
-          <div className="list modernList compactList">
-            {evidenceItems.map((ev: any) => (
-              <article key={ev.evidence_id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{ev.title}</div><StatusTag status={ev.status?.code || "EXECUTED"} /></div>
-                <div className="meta wrapMeta">
-                  <span>{ev.subtitle}</span>
-                  <span>{ev.summary}</span>
-                  <span>更新时间：{ev.updated_at_label}</span>
-                  <span>是否可下载：见导出任务状态</span>
-                </div>
-              </article>
-            ))}
-            {exportJobs.map((job: any) => (
-              <article key={job.job_id} className="infoCard">
-                <div className="jobTitleRow"><div className="title">{job.title}</div><StatusTag status={job.status?.code || "PENDING"} /></div>
-                <div className="meta wrapMeta">
-                  <span>{job.summary}</span>
-                  <span>关联对象：{job.refs?.program_id || "未关联 Program"}</span>
-                  <span>状态：{job.status?.label || "-"}</span>
-                  <span>{job.download?.available ? "可下载" : "暂不可下载"}</span>
-                </div>
-              </article>
-            ))}
-            {!evidenceItems.length && !exportJobs.length ? <EmptyState title="最近暂无证据与导出记录" description="可等待新的作业回执，或稍后刷新重试" /> : null}
-          </div>
-        </section>
+      <section className="card sectionBlock">
+        <div className="sectionTitle">最近回执</div>
+        <div className="list modernList compactList">
+          {evidenceItems.map((ev: any) => (
+            <article key={ev.evidence_id} className="infoCard">
+              <div className="jobTitleRow">
+                <div className="title">{ev.operation_plan_id || ev.subtitle || "未关联作业"}</div>
+                <StatusTag status={ev.status?.code || "EXECUTED"} />
+              </div>
+              <div className="meta wrapMeta">
+                <span>作业：{ev.operation_plan_id || "未关联"}</span>
+                <span>状态：{ev.status?.label || "-"}</span>
+                <span>时间：{ev.updated_at_label || "-"}</span>
+                <span>日志数量：{ev.act_task_id ? 1 : 0}</span>
+              </div>
+            </article>
+          ))}
+          {!evidenceItems.length ? <EmptyState title="最近暂无回执" description="执行链路产生回执后会显示在这里。" /> : null}
+        </div>
+      </section>
 
-        <section className="card sectionBlock">
-          <div className="sectionTitle">证据详情</div>
-          {!detail ? <EmptyState title="请选择左侧记录查看详情" description="可查看回执摘要、时间线与完整性结果" /> : (
-            <div className="list modernList compactList">
-              <article className="infoCard">
-                <div className="jobTitleRow"><div className="title">{detail.title}</div><StatusTag status={detail.status?.code || "EXECUTED"} /></div>
-                <div className="meta wrapMeta"><span>{detail.summary}</span></div>
-                <div className="meta wrapMeta">
-                  {(detail.timeline || []).map((x: any, idx: number) => <span key={idx}>{x.title} · <RelativeTime value={x.ts_ms || x.ts} /></span>)}
-                </div>
-                <div className="meta wrapMeta">
-                  <span>完整性：{detail.integrity?.label || "待检查"}</span>
-                  <span>{detail.integrity?.manifest_present ? "manifest 可用" : "manifest 缺失"}</span>
-                  <span>{detail.integrity?.sha256_present ? "sha256 可用" : "sha256 缺失"}</span>
-                </div>
-              </article>
-            </div>
-          )}
-        </section>
-      </div>
+      <section className="card sectionBlock">
+        <div className="sectionTitle">证据说明</div>
+        <p style={{ margin: "8px 0 0", color: "#475467" }}>
+          证据包包含建议、审批、计划、执行、回执等完整链路，用于审计、交付与溯源。
+        </p>
+      </section>
     </div>
   );
 }
