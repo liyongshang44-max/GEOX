@@ -13,9 +13,11 @@ import { buildOperationDetailViewModel } from "../viewmodels/operationDetailView
 const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
-  detailTitle: "作业详情",
+  detailTitle: "A. 顶部概览",
   backToList: "返回作业列表",
-  executionEvidence: "执行证据",
+  executionEvidence: "D. 执行证据",
+  evidenceBundle: "E. 证据包",
+  timeline: "F. 全链路时间线",
 } as const;
 
 export default function OperationDetailPage(): React.ReactElement {
@@ -37,7 +39,6 @@ export default function OperationDetailPage(): React.ReactElement {
         <div className="sectionHeader">
           <div>
             <div className="sectionTitle">{COPY.detailTitle}</div>
-            <div className="muted">作业编号（次级）：{model.operationPlanId}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
@@ -50,16 +51,21 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="kv"><span className="k">所属经营方案</span><span className="v">{model.programLabel}</span></div>
           <div className="kv"><span className="k">最近更新时间</span><span className="v">{model.latestUpdatedAtLabel}</span></div>
         </div>
+        <details style={{ marginTop: 10 }}>
+          <summary className="muted" style={{ cursor: "pointer" }}>展开查看次级信息</summary>
+          <div className="kv"><span className="k">作业编号</span><span className="v mono">{model.operationPlanId}</span></div>
+        </details>
       </section>
 
       <OperationDecisionCard model={model} />
       <OperationExecutionCard model={model} />
-      <OperationEvidenceDownloadCard model={model} />
 
       <section className="card sectionBlock">
         <div className="sectionTitle">{COPY.executionEvidence}</div>
         <ReceiptEvidenceCard data={model.receiptEvidence} />
       </section>
+
+      <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
 
       <section className="card sectionBlock">
         <div className="sectionTitle">验收结果</div>
@@ -71,7 +77,7 @@ export default function OperationDetailPage(): React.ReactElement {
         <div className="kv"><span className="k">最低验收</span><span className="v">{minimumAcceptanceLabel}</span></div>
       </section>
 
-      <OperationStoryTimeline items={model.timeline} />
+      <OperationStoryTimeline items={model.timeline} title={COPY.timeline} />
     </div>
   );
 }

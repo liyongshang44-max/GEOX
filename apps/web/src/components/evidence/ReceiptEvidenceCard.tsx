@@ -34,12 +34,12 @@ export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement
       </div>
 
       <div className="text-sm text-gray-600 space-y-1">
-        {data.metaLabel ? <div>{data.metaLabel}</div> : null}
-        {data.href ? <div>详情：{data.href}</div> : null}
-        {data.executorLabel ? <div>执行器标识：{data.executorLabel}</div> : null}
-        {data.startedAtLabel ? <div>开始：{data.startedAtLabel}</div> : null}
-        {data.finishedAtLabel ? <div>结束：{data.finishedAtLabel}</div> : null}
-        {data.durationLabel ? <div>耗时：{data.durationLabel}</div> : null}
+        {data.metaLabel ? <div>回执摘要：{data.metaLabel}</div> : null}
+        {data.href ? <div>回执链接：{data.href}</div> : null}
+        {data.executorLabel ? <div>执行设备：{data.executorLabel}</div> : null}
+        {data.startedAtLabel ? <div>开始执行：{data.startedAtLabel}</div> : null}
+        {data.finishedAtLabel ? <div>执行结束：{data.finishedAtLabel}</div> : null}
+        {data.durationLabel ? <div>总耗时：{data.durationLabel}</div> : null}
       </div>
 
       <div className="flex gap-4 text-sm">
@@ -49,9 +49,9 @@ export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement
       </div>
 
       <div className="text-sm text-gray-600 space-y-1">
-        {data.logCountLabel ? <div>{data.logCountLabel}</div> : null}
-        {data.constraintCheckLabel ? <div>{data.constraintCheckLabel}</div> : null}
-        {data.violationSummary ? <div className="text-red-500">{data.violationSummary}</div> : null}
+        {data.logCountLabel ? <div>过程记录：{data.logCountLabel}</div> : null}
+        {data.constraintCheckLabel ? <div>约束核验：{data.constraintCheckLabel}</div> : null}
+        {data.violationSummary ? <div className="text-red-500">风险提示：{data.violationSummary}</div> : null}
       </div>
     </div>
   );
