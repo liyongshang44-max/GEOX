@@ -95,6 +95,33 @@ async function waitForDispatchReady(baseUrl, token, tenant_id, project_id, group
   throw new Error("DISPATCH_NOT_READY_FOR_RECEIPT");
 }
 
+async function waitForTerminalPlanStatus(baseUrl, operation_plan_id, tenant_id, project_id, group_id, token, timeoutMs = 30000) {
+  const started = Date.now();
+  let last = null;
+  const pollMs = 1000;
+
+  while (Date.now() - started < timeoutMs) {
+    const plan = await getJson(
+      baseUrl,
+      `/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+      token
+    );
+    last = plan;
+    const status = String(plan.json?.item?.plan?.record_json?.payload?.status ?? "");
+    if (status === "SUCCEEDED" || status === "FAILED") {
+      return { plan, status };
+    }
+    await sleep(pollMs);
+  }
+
+  console.error("[acceptance] TERMINAL_STATUS_TIMEOUT", JSON.stringify({
+    operation_plan_id,
+    last_status: String(last?.json?.item?.plan?.record_json?.payload?.status ?? ""),
+    last_plan_body: last?.json ?? null
+  }, null, 2));
+  throw new Error("TERMINAL_STATUS_TIMEOUT");
+}
+
 async function main() {
   const baseUrl = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001").trim();
   console.log(`[acceptance] BASE_URL=${baseUrl}`);
@@ -163,14 +190,21 @@ async function main() {
     assert.equal(receipt.status, 200, `RECEIPT_STATUS_${receipt.status}`);
   }
 
-  const plan = await getJson(baseUrl, `/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, token);
+  const { plan, status } = await waitForTerminalPlanStatus(
+    baseUrl,
+    operation_plan_id,
+    tenant_id,
+    project_id,
+    group_id,
+    token,
+    Math.max(5000, Number.parseInt(String(process.env.GEOX_TERMINAL_STATUS_TIMEOUT_MS ?? "45000"), 10) || 45000)
+  );
   assert.equal(plan.status, 200, `PLAN_STATUS_${plan.status}`);
   const item = plan.json?.item ?? {};
   assert.ok(item.plan, "PLAN_MISSING");
   assert.ok(item.approval, "APPROVAL_MISSING");
   assert.ok(item.task, "TASK_MISSING");
   assert.ok(item.receipt, "RECEIPT_MISSING");
-  const status = String(item.plan?.record_json?.payload?.status ?? "");
   assert.ok(status === "SUCCEEDED" || status === "FAILED", `FINAL_STATUS_INVALID:${status}`);
 
   console.log(JSON.stringify({
