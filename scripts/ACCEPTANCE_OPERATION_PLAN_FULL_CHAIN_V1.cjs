@@ -35,6 +35,57 @@ async function getJson(baseUrl, path, token) {
   return { status: res.status, json };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function hasDispatchOrPublishSignal(taskDetail) {
+  const item = taskDetail?.json?.item ?? {};
+  const dispatchPayload = item?.dispatch?.payload ?? {};
+  const hasDispatchFact = Boolean(item?.dispatch_fact_id || item?.dispatch?.fact_id || item?.dispatch);
+  const hasPublishedLike =
+    Boolean(dispatchPayload?.published_fact_id) ||
+    Boolean(dispatchPayload?.downlink_topic) ||
+    Boolean(dispatchPayload?.topic) ||
+    Boolean(dispatchPayload?.publish_status);
+  return hasDispatchFact || hasPublishedLike;
+}
+
+async function waitForDispatchReady(baseUrl, token, tenant_id, project_id, group_id, act_task_id) {
+  const timeoutMs = Math.max(5000, Number.parseInt(String(process.env.GEOX_DISPATCH_PUBLISH_TIMEOUT_MS ?? "45000"), 10) || 45000);
+  const intervalMs = Math.max(250, Number.parseInt(String(process.env.GEOX_DISPATCH_PUBLISH_POLL_MS ?? "1000"), 10) || 1000);
+  const startedAt = Date.now();
+  let lastTask = null;
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const task = await getJson(
+      baseUrl,
+      `/api/v1/ao-act/tasks/${encodeURIComponent(act_task_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+      token
+    );
+    lastTask = task;
+    if (task.status === 200 && hasDispatchOrPublishSignal(task)) {
+      console.log("[acceptance] DISPATCH_READY", JSON.stringify({
+        act_task_id,
+        elapsed_ms: Date.now() - startedAt,
+        dispatch_fact_id: task.json?.item?.dispatch_fact_id ?? null,
+        downlink_topic: task.json?.item?.dispatch?.payload?.downlink_topic ?? null,
+        publish_status: task.json?.item?.dispatch?.payload?.publish_status ?? null
+      }, null, 2));
+      return task;
+    }
+    await sleep(intervalMs);
+  }
+
+  console.error("[acceptance] DISPATCH_READY_TIMEOUT", JSON.stringify({
+    act_task_id,
+    timeout_ms: timeoutMs,
+    last_task_status: lastTask?.status ?? null,
+    last_task_body: lastTask?.json ?? null
+  }, null, 2));
+  throw new Error("DISPATCH_NOT_READY_FOR_RECEIPT");
+}
+
 async function main() {
   const baseUrl = String(process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001").trim();
   console.log(`[acceptance] BASE_URL=${baseUrl}`);
@@ -88,6 +139,7 @@ async function main() {
     console.error("DISPATCH_FAIL", JSON.stringify(dispatch, null, 2));
   }
   assert.equal(dispatch.status, 200, `DISPATCH_STATUS_${dispatch.status}`);
+  await waitForDispatchReady(baseUrl, token, tenant_id, project_id, group_id, act_task_id);
 
   const receipt = await postJson(baseUrl, `/api/v1/ao-act/receipts/uplink`, token, {
     tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id,
