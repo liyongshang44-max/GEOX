@@ -1,6 +1,7 @@
 import { mapOperationTypeToLabel, type FieldLang } from "../lib/fieldViewModel";
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveTimelineLabel } from "./timelineLabels";
+import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
@@ -161,7 +162,7 @@ export function buildFieldViewModel(params: {
       status: String(currentOperation.final_status || "执行中"),
       progress: taskProgress(String(currentOperation.final_status || "")),
       startedAt: Number(currentOperation.last_event_ts ?? 0) || null,
-      operationPlanId: String(currentOperation.operation_plan_id || ""),
+      operationPlanId: resolveOperationPlanId(currentOperation),
     }
     : null;
 
@@ -194,7 +195,15 @@ export function buildFieldViewModel(params: {
         device: String(x.device_id || currentTask?.deviceId || "dev_onboard_accept_001"),
       };
     });
-  const latestEvidence = detail?.latestEvidence ? mapReceiptToVm(detail.latestEvidence) : undefined;
+  const latestEvidence = detail?.latestEvidence
+    ? mapReceiptToVm({
+      ...detail.latestEvidence,
+      href: toOperationDetailPath({
+        ...detail.latestEvidence,
+        operation_plan_id: detail?.latestEvidence?.operation_plan_id ?? resolveOperationPlanId(latestOperation),
+      }),
+    })
+    : undefined;
 
   const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
   const trajectorySegments = trajectories

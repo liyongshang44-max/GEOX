@@ -5,6 +5,7 @@ import { StatusTag } from "../components/StatusTag";
 import { RelativeTime } from "../components/RelativeTime";
 import { CopyButton } from "../components/CopyButton";
 import EmptyState from "../components/common/EmptyState";
+import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 
 export default function OperationsPage(): React.ReactElement {
   const [items, setItems] = React.useState<any[]>([]);
@@ -35,7 +36,7 @@ export default function OperationsPage(): React.ReactElement {
 
       <section className="list modernList">
         {items.map((x) => (
-          <article key={x.operation_id} className="infoCard">
+          <article key={resolveOperationPlanId(x) || x.operation_id} className="infoCard">
             <div className="jobTitleRow"><div className="title">{String(x.action_type || "动作")}</div><StatusTag status={String(x.final_status || "UNKNOWN")} /></div>
             <div className="meta wrapMeta">
               <span>field_id：{String(x.field_id || "-")}</span>
@@ -44,12 +45,12 @@ export default function OperationsPage(): React.ReactElement {
               <span>updated：<RelativeTime value={Number(x.last_event_ts || 0)} /></span>
               <span>recommendation_id：{String(x.recommendation_id || "-")}</span>
               <span>approval_request_id：{String(x.approval_request_id || "-")}</span>
-              <span>operation_plan_id：{String(x.operation_id || "-")}</span>
+              <span>operation_plan_id：{resolveOperationPlanId(x) || "-"}</span>
               <span>act_task_id：{String(x.task_id || "-")}</span>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <Link className="btn" to={`/programs/${encodeURIComponent(String(x.program_id || ""))}`}>跳转经营方案详情</Link>
-              <CopyButton value={String(x.operation_id || "")} label="复制 operation_plan_id" />
+              <Link className="btn" to={toOperationDetailPath(x)}>查看作业详情</Link>
+              <CopyButton value={resolveOperationPlanId(x)} label="复制 operation_plan_id" />
             </div>
           </article>
         ))}
