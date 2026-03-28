@@ -1,110 +1,76 @@
 import React from "react";
 import {
-  fetchProgramCost,
+  fetchOperationStates,
+  fetchProgramControlPlane,
   fetchProgramDetail,
-  fetchProgramEfficiency,
-  fetchProgramSla,
-  fetchProgramTrajectories,
-  fetchSchedulingConflicts,
 } from "../api";
 import {
   buildProgramDetailViewModel,
-  missingDataExplanation,
-  type ProgramDetailViewModel,
+  type ProgramConsoleViewModel,
 } from "../viewmodels/programDetailViewModel";
-
-function conflictLabel(kind: string): string {
-  const normalized = String(kind ?? "").toUpperCase();
-  if (normalized === "DEVICE_CONFLICT") return "设备冲突";
-  if (normalized === "FIELD_CONFLICT") return "地块冲突";
-  if (normalized === "PROGRAM_INTENT_CONFLICT") return "策略冲突";
-  return "未知冲突";
-}
 
 export function useProgramDetail(programId: string): {
   loading: boolean;
   error: string | null;
-  viewModel: ProgramDetailViewModel | null;
+  viewModel: ProgramConsoleViewModel | null;
+  reload: () => Promise<void>;
 } {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const [item, setItem] = React.useState<any>(null);
-  const [trajectories, setTrajectories] = React.useState<any[]>([]);
-  const [cost, setCost] = React.useState<any>(null);
-  const [sla, setSla] = React.useState<any>(null);
-  const [efficiency, setEfficiency] = React.useState<any>(null);
-  const [conflicts, setConflicts] = React.useState<string[]>([]);
+  const [detail, setDetail] = React.useState<any>(null);
+  const [controlPlane, setControlPlane] = React.useState<any>(null);
+  const [ops, setOps] = React.useState<any[]>([]);
 
-  React.useEffect(() => {
-    let active = true;
+  const load = React.useCallback(async () => {
     const id = decodeURIComponent(programId || "").trim();
     if (!id) {
-      setLoading(false);
       setError("缺少 Program ID");
+      setLoading(false);
       return;
     }
 
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      fetchProgramDetail(id).catch(() => null),
-      fetchProgramTrajectories(id).catch(() => []),
-      fetchProgramCost(id).catch(() => null),
-      fetchProgramSla(id).catch(() => null),
-      fetchProgramEfficiency(id).catch(() => null),
-      fetchSchedulingConflicts().catch(() => []),
-    ])
-      .then(([detail, traj, costData, slaData, efficiencyData, conflictList]) => {
-        if (!active) return;
+    try {
+      const [detailData, controlPlaneData, opStates] = await Promise.all([
+        fetchProgramDetail(id).catch(() => null),
+        fetchProgramControlPlane(id).catch(() => null),
+        fetchOperationStates({ limit: 100 }).catch(() => ({ items: [] } as any)),
+      ]);
 
-        setItem(detail);
-        setTrajectories(Array.isArray(traj) ? traj : []);
-        setCost(costData);
-        setSla(slaData);
-        setEfficiency(efficiencyData);
+      const programOps = (opStates?.items || []).filter((item: any) => String(item?.program_id || "") === id);
+      setDetail(detailData);
+      setControlPlane(controlPlaneData);
+      setOps(programOps);
 
-        const kinds = (Array.isArray(conflictList) ? conflictList : [])
-          .filter((entry: any) =>
-            Array.isArray(entry?.related_program_ids) &&
-            entry.related_program_ids.some((pid: unknown) => String(pid) === id),
-          )
-          .map((entry: any) => conflictLabel(String(entry?.kind ?? "")));
-        setConflicts(Array.from(new Set(kinds)));
-
-        setLoading(false);
-        if (!detail) setError(missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议"));
-      })
-      .catch(() => {
-        if (!active) return;
-        setItem(null);
-        setTrajectories([]);
-        setCost(null);
-        setSla(null);
-        setEfficiency(null);
-        setConflicts([]);
-        setError(missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议"));
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
+      if (!detailData && !controlPlaneData) {
+        setError("当前暂无 Program 详情数据");
+      }
+    } catch {
+      setDetail(null);
+      setControlPlane(null);
+      setOps([]);
+      setError("Program 详情加载失败，请稍后重试");
+    } finally {
+      setLoading(false);
+    }
   }, [programId]);
 
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
   const viewModel = React.useMemo(() => {
-    if (!item) return null;
+    if (!detail && !controlPlane) return null;
     return buildProgramDetailViewModel({
       programId,
-      item,
-      trajectories,
-      cost,
-      sla,
-      efficiency,
-      conflicts,
+      detail,
+      controlPlane,
+      ops,
     });
-  }, [programId, item, trajectories, cost, sla, efficiency, conflicts]);
+  }, [programId, detail, controlPlane, ops]);
 
-  return { loading, error, viewModel };
+  return { loading, error, viewModel, reload: load };
 }

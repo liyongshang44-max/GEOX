@@ -1,60 +1,53 @@
+import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
+
+type ProgramConsoleStatus = "ok" | "risk" | "error" | "running";
+
 export type BadgeStatus = "success" | "warning" | "failed" | "pending";
+export type ProgramActionExpectation = { label: string; value: string };
+export type ProgramDetailAction = { type: string; mode: string; reason: string; expectedEffect: string; expectation: ProgramActionExpectation };
+export type ProgramDetailTimelineItem = { kind: string; status: string; occurredAt: string; summary: string };
+export type ProgramDetailMetric = { label: string; value: string };
+export type ProgramDetailViewModel = any;
 
-export type ProgramActionMode = "AUTO" | "APPROVAL_REQUIRED" | "BLOCKED" | "PENDING";
+type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
 
-export type ProgramActionExpectation = {
-  label: "下一次评估时间" | "触发条件";
-  value: string;
-};
+export type ProgramConsoleViewModel = {
+  title: string;
+  status: ProgramConsoleStatus;
+  statusLabel: string;
+  stageLabel: string;
+  latestActionLabel: string;
 
-export type ProgramDetailAction = {
-  type: string;
-  mode: ProgramActionMode;
-  reason: string;
-  expectedEffect: string;
-  expectation: ProgramActionExpectation;
-};
-
-export type ProgramDetailTimelineItem = {
-  kind: string;
-  status: string;
-  occurredAt: string;
-  summary: string;
-};
-
-export type ProgramDetailMetric = {
-  label: string;
-  value: string;
-};
-
-export type ProgramDetailViewModel = {
-  header: {
-    title: string;
-    subtitle: string;
-    status: BadgeStatus;
+  goalSummary: Array<{ label: string; value: string }>;
+  currentExecution: {
+    latestRecommendation?: string;
+    latestApproval?: string;
+    currentTask?: string;
+    currentTaskStatus?: string;
   };
-  goals: Array<{ label: string; value: string }>;
-  constraints: Array<{ label: string; value: string }>;
-  actions: ProgramDetailAction[];
-  noActionExpectation: ProgramActionExpectation;
-  timeline: ProgramDetailTimelineItem[];
-  metrics: ProgramDetailMetric[];
+
+  resultSummary: Array<{ label: string; value: string }>;
+  latestEvidence?: ReceiptEvidenceVm;
+  latestEvidenceAtLabel?: string;
+  latestEvidenceDeviceLabel?: string;
+  latestEvidenceResultLabel?: string;
+  timeline: Array<{
+    ts: number;
+    label: string;
+    type: TimelineType;
+  }>;
 };
 
-export function missingDataExplanation(subject: string, followUp: string): string {
-  return `当前缺少${subject}，暂无法判断，${followUp}。`;
-}
-
-function safeText(value: unknown, fallback: string): string {
+function toText(value: unknown, fallback = "-"): string {
   if (typeof value === "string") {
-    const text = value.trim();
-    return text || fallback;
+    const cleaned = value.trim();
+    return cleaned || fallback;
   }
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return fallback;
 }
 
-function asNumber(value: unknown): number | null {
+function toNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim()) {
     const n = Number(value);
@@ -63,141 +56,155 @@ function asNumber(value: unknown): number | null {
   return null;
 }
 
-function toBadgeStatus(status: unknown): BadgeStatus {
-  const normalized = String(status ?? "").toUpperCase();
-  if (["SUCCEEDED", "SUCCESS", "MET", "PASSED", "READY", "STABLE"].includes(normalized)) return "success";
-  if (["APPROVAL_REQUIRED", "PENDING", "RUNNING", "ACTIVE", "APPROVAL_REQUESTED"].includes(normalized)) return "warning";
-  if (["FAILED", "BREACHED", "BLOCKED", "REJECTED"].includes(normalized)) return "failed";
-  return "pending";
+function toPriorityLabel(value: unknown, fallback = "中"): string {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (["HIGH", "P1", "STRICT", "TIGHT"].includes(code)) return "高";
+  if (["LOW", "P3", "RELAXED", "LOOSE"].includes(code)) return "低";
+  if (["MEDIUM", "MID", "NORMAL", "P2"].includes(code)) return "中";
+  return fallback;
 }
 
-function toMode(mode: unknown): ProgramActionMode {
-  const normalized = String(mode ?? "").toUpperCase();
-  if (normalized === "AUTO") return "AUTO";
-  if (normalized === "APPROVAL_REQUIRED") return "APPROVAL_REQUIRED";
-  if (normalized === "BLOCKED") return "BLOCKED";
-  return "PENDING";
+function formatDateTime(msOrText: unknown, fallback = "-"): string {
+  const ms = typeof msOrText === "number" ? msOrText : Date.parse(String(msOrText ?? ""));
+  if (!Number.isFinite(ms)) return fallback;
+  const date = new Date(ms);
+  return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-function toActionType(kind: unknown): string {
-  const normalized = String(kind ?? "").toUpperCase();
-  if (normalized === "CHECK_DEVICE_PATH_OR_BINDING") return "检查设备路径与绑定";
-  if (normalized === "REVIEW_IRRIGATION_PLAN") return "复核灌溉计划";
-  if (normalized === "STABLE_EXECUTION" || normalized === "ON_TRACK") return "维持当前执行";
-  if (normalized === "DATA_INSUFFICIENT") return "补充关键数据";
-  return "系统建议动作";
+function readableActionType(code: unknown): string {
+  const text = String(code ?? "").toUpperCase();
+  if (text.includes("IRRIGATION") || text.includes("WATER")) return "灌溉";
+  if (text.includes("SPRAY")) return "喷施";
+  if (text.includes("SCOUT") || text.includes("INSPECT")) return "巡检";
+  return "作业";
 }
 
-function toHumanMode(mode: ProgramActionMode): string {
-  if (mode === "APPROVAL_REQUIRED") return "需人工确认";
-  if (mode === "BLOCKED") return "当前不可执行";
-  if (mode === "AUTO") return "可自动执行";
-  return "待确认";
+function topStatus(code: unknown): { status: ProgramConsoleStatus; label: string } {
+  const normalized = String(code ?? "").toUpperCase();
+  if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED", "BLOCKED"].includes(normalized)) return { status: "error", label: "异常" };
+  if (["RISK", "VIOLATED", "BREACHED"].includes(normalized)) return { status: "risk", label: "风险" };
+  if (["RUNNING", "PENDING", "ACTIVE", "APPROVAL_REQUIRED", "APPROVAL_REQUESTED"].includes(normalized)) return { status: "running", label: "运行中" };
+  return { status: "ok", label: "正常" };
 }
 
-function shortDate(value: unknown, fallback: string): string {
-  const text = safeText(value, "");
-  if (!text) return fallback;
-  const ms = Date.parse(text);
-  if (!Number.isFinite(ms)) return text;
-  return new Date(ms).toLocaleString();
+function mapProgramStage(data: { ops: any[]; controlPlane: any; detail: any }): string {
+  const hasRunningTask = data.ops.some((op) => ["RUNNING", "IN_PROGRESS", "DISPATCHED"].includes(String(op?.final_status ?? op?.dispatch_status ?? "").toUpperCase()));
+  if (hasRunningTask) return "执行中";
+
+  const approvalCode = String(data.controlPlane?.summary?.approval?.code ?? data.detail?.latest_approval?.status ?? "").toUpperCase();
+  const hasApprovedPlan = ["APPROVED", "SUCCEEDED", "READY"].includes(approvalCode);
+  if (hasApprovedPlan) return "待执行";
+
+  const hasRecommendation = Boolean(data.controlPlane?.summary?.recommendation?.code || data.detail?.latest_recommendation);
+  if (hasRecommendation) return "待决策";
+
+  return "运行中";
 }
 
-function buildExpectation(item: any): ProgramActionExpectation {
-  const nextEvaluateAt = safeText(item?.next_action_hint?.next_evaluate_at ?? item?.next_evaluation_at, "");
-  if (nextEvaluateAt) {
-    return {
-      label: "下一次评估时间",
-      value: shortDate(nextEvaluateAt, missingDataExplanation("轨迹数据", "下一轮采集后重新评估")),
-    };
-  }
-
-  const triggerCondition = safeText(item?.next_action_hint?.trigger_condition, "");
-  if (triggerCondition) {
-    return {
-      label: "触发条件",
-      value: triggerCondition,
-    };
-  }
-
-  return {
-    label: "触发条件",
-    value: missingDataExplanation("设备回执", "收到设备回执后更新状态"),
-  };
+function dedupeTimeline(items: ProgramConsoleViewModel["timeline"]): ProgramConsoleViewModel["timeline"] {
+  const seen = new Set<string>();
+  return items
+    .filter((item) => Number.isFinite(item.ts))
+    .sort((a, b) => a.ts - b.ts)
+    .filter((item) => {
+      const key = `${item.type}_${item.ts}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
 
 export function buildProgramDetailViewModel(args: {
   programId: string;
-  item: any;
-  trajectories: any[];
-  cost: any;
-  sla: any;
-  efficiency: any;
-  conflicts: string[];
-}): ProgramDetailViewModel {
-  const { programId, item, trajectories, cost, sla, efficiency, conflicts } = args;
+  controlPlane: any;
+  detail: any;
+  ops: any[];
+}): ProgramConsoleViewModel {
+  const { programId, controlPlane, detail, ops } = args;
+  const program = controlPlane?.program || detail || {};
+  const summary = controlPlane?.summary || {};
 
-  const subtitleFallback = missingDataExplanation("土壤湿度数据", "下一轮采集后重新评估");
-  const titleId = decodeURIComponent(programId || "");
-  const actionMode = toMode(item?.next_action_hint?.mode ?? item?.next_action_hint?.decision_mode);
-  const expectation = buildExpectation(item);
+  const displayTitle = toText(program?.title || detail?.program_name || detail?.name, "默认经营方案");
+  const cropName = toText(detail?.crop_name || program?.crop_name || detail?.crop_code || program?.crop_code, "-");
 
-  const missingRiskReason = missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议");
-  const primaryAction: ProgramDetailAction = {
-    type: toActionType(item?.next_action_hint?.kind),
-    mode: actionMode,
-    reason: safeText(item?.current_risk_summary?.reason ?? item?.latest_acceptance_result?.summary, missingRiskReason),
-    expectedEffect: safeText(item?.next_action_hint?.expected_effect, "执行后预计降低当前风险，并提高任务执行稳定性。"),
-    expectation,
-  };
+  const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
+  const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
 
-  const inFieldRatio = asNumber(item?.latest_acceptance_result?.metrics?.in_field_ratio);
-  const efficiencyIndex = asNumber(efficiency?.efficiency_index ?? item?.execution_reliability);
-  const costTotal = asNumber(cost?.total_cost);
+  const latestEvidenceRaw = detail?.latestEvidence || detail?.latest_evidence || controlPlane?.latestEvidence || controlPlane?.latest_evidence || controlPlane?.evidence?.recent_items?.[0];
+  const latestEvidenceVm = latestEvidenceRaw ? mapReceiptToVm(latestEvidenceRaw) : undefined;
+
+  const recommendationText =
+    toText(controlPlane?.decision_timeline?.[0]?.summary, "") ||
+    toText(detail?.latest_recommendation?.summary || detail?.current_risk_summary?.reason, "") ||
+    undefined;
+
+  const approvalText = toText(controlPlane?.summary?.approval?.label || detail?.latest_approval?.status, "") || undefined;
+  const currentTask = latestOperation ? readableActionType(latestOperation?.action_type) : undefined;
+  const currentTaskStatus = latestOperation ? topStatus(latestOperation?.final_status || latestOperation?.dispatch_status).label : undefined;
+
+  const totalWater = ops.reduce((sum, item) => sum + (toNumber(item?.water_l) || 0), 0) + (toNumber(controlPlane?.resources?.water_l) || 0);
+  const totalElectric = ops.reduce((sum, item) => sum + (toNumber(item?.electric_kwh) || 0), 0) + (toNumber(controlPlane?.resources?.electric_kwh) || 0);
+  const violated = Boolean(controlPlane?.execution_result?.constraint_check?.violated || latestEvidenceRaw?.constraint_violated);
+
+  const timeline = dedupeTimeline([
+    ...((controlPlane?.decision_timeline || []).map((item: any) => ({
+      ts: Number(item?.ts_ms || Date.parse(String(item?.ts_label || "")) || 0),
+      label: `系统建议：${toText(item?.summary || item?.title, "关注田块风险")}`,
+      type: "recommendation" as TimelineType,
+    }))),
+    ...((controlPlane?.execution_timeline || []).map((item: any) => ({
+      ts: Number(item?.ts_ms || Date.parse(String(item?.ts_label || "")) || 0),
+      label: toText(item?.title || item?.summary, "执行更新"),
+      type: "execution" as TimelineType,
+    }))),
+    ...ops.flatMap((op) => (Array.isArray(op?.timeline) ? op.timeline : []).map((event: any) => ({
+      ts: Number(event?.ts || 0),
+      label: toText(event?.label, "执行事件"),
+      type: "execution" as TimelineType,
+    }))),
+    approvalText ? [{ ts: Date.now(), label: `审批：${approvalText}`, type: "approval" as TimelineType }] : [],
+    latestEvidenceRaw
+      ? [{ ts: Date.parse(String(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at || "")) || Date.now(), label: `执行结果：${latestEvidenceVm?.statusLabel || "已回传"}`, type: "evidence" as TimelineType }]
+      : [],
+  ]);
+
+  const latestTimelineItem = timeline[timeline.length - 1];
 
   return {
-    header: {
-      title: titleId || safeText(item?.program_id, "Program"),
-      subtitle: `${safeText(item?.crop_code, subtitleFallback)} · ${safeText(item?.field_id, subtitleFallback)} · ${safeText(item?.status, subtitleFallback)}`,
-      status: toBadgeStatus(item?.status),
+    title: `${cropName}·${displayTitle}`,
+    status: top.status,
+    statusLabel: top.label,
+    stageLabel: mapProgramStage({ ops, controlPlane, detail }),
+    latestActionLabel: latestTimelineItem ? `${formatDateTime(latestTimelineItem.ts)} ${latestTimelineItem.label}` : "暂无最新动作",
+
+    goalSummary: [
+      { label: "作物", value: cropName },
+      { label: "目标品质", value: toPriorityLabel(detail?.goal_profile?.quality_priority || detail?.quality_priority, "高") },
+      { label: "目标产量", value: toPriorityLabel(detail?.goal_profile?.yield_priority || detail?.yield_priority, "中") },
+      { label: "农残限制", value: toPriorityLabel(detail?.goal_profile?.residue_priority || detail?.residue_priority, "严格") === "高" ? "严格" : "标准" },
+      { label: "节水优先", value: toPriorityLabel(detail?.goal_profile?.water_saving_priority || detail?.water_saving_priority, "高") === "高" ? "是" : "否" },
+      { label: "成本优先", value: toPriorityLabel(detail?.goal_profile?.cost_priority || detail?.cost_priority, "中") },
+    ],
+
+    currentExecution: {
+      latestRecommendation: recommendationText,
+      latestApproval: approvalText,
+      currentTask,
+      currentTaskStatus,
     },
-    goals: [
-      { label: "节水", value: safeText(item?.intent?.water_saving_target, "保持在目标区间") },
-      { label: "稳产", value: safeText(item?.intent?.yield_stability_target, "降低波动") },
-      { label: "无农药", value: safeText(item?.intent?.pesticide_free_target, "按约束执行") },
+
+    resultSummary: [
+      { label: "累计作业", value: `${ops.length} 次` },
+      { label: "累计用水", value: totalWater > 0 ? `${totalWater.toFixed(0)} L` : "-" },
+      { label: "累计耗电", value: totalElectric > 0 ? `${totalElectric.toFixed(2)} kWh` : "-" },
+      { label: "最近一次结果", value: latestEvidenceVm?.statusLabel || toText(controlPlane?.execution_result?.result_label, "等待结果") },
+      { label: "约束检查", value: violated ? "存在风险" : "符合约束" },
     ],
-    constraints: [
-      { label: "执行模式", value: toHumanMode(actionMode) },
-      { label: "调度冲突", value: conflicts.length > 0 ? conflicts.join("，") : "无" },
-    ],
-    actions: primaryAction.reason === missingRiskReason ? [] : [primaryAction],
-    noActionExpectation: expectation,
-    timeline: [
-      {
-        kind: "推荐生成",
-        status: safeText(item?.latest_recommendation?.status ?? item?.status, subtitleFallback),
-        occurredAt: shortDate(item?.latest_recommendation?.occurred_at ?? item?.updated_at, subtitleFallback),
-        summary: safeText(item?.latest_recommendation?.summary, "系统已给出下一步动作建议"),
-      },
-      {
-        kind: "执行反馈",
-        status: safeText(item?.latest_evidence?.status, missingDataExplanation("设备回执", "收到设备回执后更新状态")),
-        occurredAt: shortDate(item?.latest_evidence?.occurred_at ?? item?.updated_at, subtitleFallback),
-        summary: safeText(item?.latest_acceptance_result?.summary, "等待最新执行结果回传"),
-      },
-      {
-        kind: "验收结论",
-        status: safeText(item?.latest_acceptance_result?.verdict, subtitleFallback),
-        occurredAt: shortDate(item?.latest_acceptance_result?.occurred_at ?? item?.updated_at, subtitleFallback),
-        summary: safeText(item?.latest_acceptance_result?.summary, missingDataExplanation("最近执行结果", "当前作业完成后重新计算建议")),
-      },
-    ],
-    metrics: [
-      { label: "累计成本", value: costTotal == null ? missingDataExplanation("轨迹数据", "当前作业完成后重新计算建议") : `${costTotal.toFixed(2)}` },
-      { label: "SLA", value: safeText(sla?.latest_status, missingDataExplanation("设备回执", "收到设备回执后更新状态")) },
-      { label: "执行稳定度", value: efficiencyIndex == null ? missingDataExplanation("土壤湿度数据", "下一轮采集后重新评估") : efficiencyIndex.toFixed(3) },
-      { label: "在田覆盖率", value: inFieldRatio == null ? missingDataExplanation("轨迹数据", "当前作业完成后重新计算建议") : `${(inFieldRatio * 100).toFixed(1)}%` },
-      { label: "轨迹任务数", value: trajectories.length > 0 ? String(trajectories.length) : "0" },
-    ],
+
+    latestEvidence: latestEvidenceVm,
+    latestEvidenceAtLabel: formatDateTime(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at, "-"),
+    latestEvidenceDeviceLabel: toText(latestEvidenceRaw?.device_id || latestEvidenceRaw?.executor_id, "-"),
+    latestEvidenceResultLabel: latestEvidenceVm?.constraintCheckLabel,
+    timeline,
   };
 }
