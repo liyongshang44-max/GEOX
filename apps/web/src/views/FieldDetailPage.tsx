@@ -13,8 +13,10 @@ import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import StatusBadge from "../components/common/StatusBadge";
+import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import { mapOperationPlanStatus } from "../lib/presentation/statusMap";
 import { formatTimeOrFallback } from "../lib/presentation/time";
+import { mapReceiptToVm } from "../viewmodels/evidence";
 
 type FieldTab = "overview" | "map" | "operations" | "alerts";
 
@@ -117,6 +119,10 @@ export default function FieldDetailPage(): React.ReactElement {
   ];
 
   const risk = riskKey(model?.detail);
+  const latestEvidence =
+    (model?.detail as any)?.latestEvidence ||
+    (model?.detail as any)?.latest_evidence ||
+    (model?.detail as any)?.recent_receipts?.[0]?.receipt?.payload;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -200,6 +206,9 @@ export default function FieldDetailPage(): React.ReactElement {
                 ))}
                 {!(model?.recentTimeline ?? []).length ? <li className="muted">暂无最近动态</li> : null}
               </ul>
+
+              <div style={{ marginTop: 12 }}><b>最新执行证据</b></div>
+              <ReceiptEvidenceCard data={latestEvidence ? mapReceiptToVm(latestEvidence) : undefined} />
             </div>
           ) : null}
 
