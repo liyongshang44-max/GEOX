@@ -4,11 +4,11 @@ import type { OperationStoryTimelineItemVm } from "../../viewmodels/operationDet
 export default function OperationStoryTimeline({ items }: { items: OperationStoryTimelineItemVm[] }): React.ReactElement {
   return (
     <section className="card sectionBlock">
-      <div className="sectionTitle">作业故事时间线</div>
+      <div className="sectionTitle">全链路时间线</div>
       <div style={{ display: "grid", gap: 8 }}>
-        {items.map((item) => (
+        {items.map((item, idx) => (
           <div key={item.id} className="kv">
-            <span className="k">[{item.occurredAtLabel}] {item.label}</span>
+            <span className="k">{idx + 1}. [{item.occurredAtLabel}] {item.label}</span>
             <span className="v">{item.summary}{item.actorLabel !== "-" ? ` · ${item.actorLabel}` : ""}</span>
           </div>
         ))}
