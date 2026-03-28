@@ -1069,6 +1069,16 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
 
   try { // Job execution.
     const bundle = await buildEvidenceBundle(pool, tenant_id, scope, from_ts_ms, to_ts_ms); // Build evidence bundle.
+    const operationPlanIds = Array.isArray(bundle?.operation_bundles)
+      ? bundle.operation_bundles.map((x: any) => String(x?.operation_plan_id ?? "").trim()).filter(Boolean)
+      : [];
+    const factTaskIds = Array.isArray(bundle?.facts)
+      ? bundle.facts
+        .filter((f: any) => String(f?.record_json?.type ?? "") === "ao_act_task_v0")
+        .map((f: any) => String(f?.record_json?.payload?.act_task_id ?? "").trim())
+        .filter(Boolean)
+      : [];
+    const actTaskIds = Array.from(new Set(factTaskIds));
 
     const pack_dir = path.join(RUNTIME_DIR, job_id); // Evidence pack directory (self-describing bundle).
     ensureDir(pack_dir); // Ensure pack directory exists.
@@ -1180,6 +1190,10 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
         evidence_pack: pack_summary, // Self-describing pack outputs.
         export_format, // Requested export format.
         export_language, // Requested export language.
+        operation_plan_ids: operationPlanIds, // Operation-plan bridge for productized evidence lookup.
+        operation_plan_id: operationPlanIds[0] ?? null, // Single primary bridge (compat).
+        act_task_ids: actTaskIds, // Task bridge for backfill lookup.
+        act_task_id: actTaskIds[0] ?? null, // Single primary task bridge (compat).
         completed_ts_ms: done_ms, // Completion time.
         started_ts_ms: started_ms, // Start time.
       }, // End payload.
@@ -1236,7 +1250,7 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
     const record = { // Error fact record.
       type: "evidence_export_job_completed_v1", // Reuse completed fact type with ERROR status for MVP.
       entity: { tenant_id, job_id }, // Entity.
-      payload: { scope, program_id, field_id, season_id, from_ts_ms, to_ts_ms, status: "ERROR", error: msg, completed_ts_ms: err_ms, started_ts_ms: started_ms }, // Payload.
+      payload: { scope, program_id, field_id, season_id, from_ts_ms, to_ts_ms, status: "ERROR", error: msg, completed_ts_ms: err_ms, started_ts_ms: started_ms, operation_plan_ids: [], act_task_ids: [] }, // Payload.
     }; // End record.
 
     const clientConn = await pool.connect(); // Connection for atomic error update.

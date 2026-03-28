@@ -45,11 +45,15 @@ export type OperationDetailPageVm = {
   receiptEvidence?: ReceiptEvidenceVm;
   timeline: OperationStoryTimelineItemVm[];
   evidenceExport: {
+    exportableLabel: string;
     latestJobId: string;
     latestJobStatus: string;
+    latestExportedAtLabel: string;
     latestBundleName: string;
     hasExportableBundle: boolean;
     downloadUrl?: string;
+    jumpUrl?: string;
+    missingReason: string;
   };
 };
 
@@ -183,11 +187,15 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     receiptEvidence: receipt,
     timeline,
     evidenceExport: {
+      exportableLabel: Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle) ? "可导出" : "暂不可导出",
       latestJobId: toText(detail?.evidence_export?.latest_job_id),
       latestJobStatus: toText(detail?.evidence_export?.latest_job_status, "未开始"),
+      latestExportedAtLabel: toDateLabel(detail?.evidence_export?.latest_exported_at),
       latestBundleName: toText(detail?.evidence_export?.latest_bundle_name, "暂无证据包"),
-      hasExportableBundle: Boolean(detail?.evidence_export?.has_exportable_bundle),
+      hasExportableBundle: Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle),
       downloadUrl: typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined,
+      jumpUrl: typeof detail?.evidence_export?.jump_url === "string" ? detail.evidence_export.jump_url : undefined,
+      missingReason: toText(detail?.evidence_export?.missing_reason, "无"),
     },
   };
 }
