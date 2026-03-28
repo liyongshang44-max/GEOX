@@ -39,8 +39,27 @@ async function firstOk<T>(paths: string[]): Promise<T> {
   throw lastErr ?? new Error("No endpoint available");
 }
 
+async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await promise;
+  } catch (e: any) {
+    if (e?.status === 404 || e?.response?.status === 404) return fallback;
+    throw e;
+  }
+}
+
 export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<DashboardOverview> {
-  return apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
+  return safe(
+    apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params)),
+    {
+      window: { from_ts_ms: 0, to_ts_ms: 0 },
+      summary: { field_count: 0, online_device_count: 0, open_alert_count: 0, running_task_count: 0 },
+      trend_series: [],
+      latest_alerts: [],
+      latest_receipts: [],
+      quick_actions: [],
+    },
+  );
 }
 
 export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{ ok: boolean; item: DashboardControlPlaneItem }> {
@@ -48,27 +67,51 @@ export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number;
 }
 
 export async function fetchDashboardEvidenceSummary(limit = 6): Promise<DashboardEvidenceItem[]> {
-  const res = await firstOk<{ ok?: boolean; items?: DashboardEvidenceItem[]; jobs?: DashboardEvidenceItem[] }>([
-    withQuery("/api/v1/dashboard/evidence/recent", { limit }),
-    withQuery("/api/v1/evidence-export/jobs", { limit }),
-  ]);
+  const res = await safe(
+    firstOk<{ ok?: boolean; items?: DashboardEvidenceItem[]; jobs?: DashboardEvidenceItem[] }>([
+      withQuery("/api/v1/dashboard/evidence/recent", { limit }),
+      withQuery("/api/v1/evidence-export/jobs", { limit }),
+    ]),
+    { items: [] as DashboardEvidenceItem[] },
+  );
   if (Array.isArray(res.items)) return res.items;
   return Array.isArray(res.jobs) ? res.jobs : [];
 }
 
 export async function fetchDashboardAcceptanceRisks(limit = 6): Promise<DashboardAcceptanceRiskItem[]> {
-  const res = await firstOk<{ ok?: boolean; items?: DashboardAcceptanceRiskItem[] }>([
-    withQuery("/api/v1/dashboard/acceptance-risks", { limit }),
-    withQuery("/api/v1/dashboard/risk-summary", { limit }),
-  ]);
+  const res = await safe(
+    firstOk<{ ok?: boolean; items?: DashboardAcceptanceRiskItem[] }>([
+      withQuery("/api/v1/dashboard/acceptance-risks", { limit }),
+      withQuery("/api/v1/dashboard/risk-summary", { limit }),
+    ]),
+    { items: [] as DashboardAcceptanceRiskItem[] },
+  );
   return Array.isArray(res.items) ? res.items : [];
 }
 
 export async function fetchDashboardPendingActions(limit = 6): Promise<DashboardPendingActionItem[]> {
-  const res = await firstOk<{ ok?: boolean; items?: DashboardPendingActionItem[]; actions?: DashboardPendingActionItem[] }>([
-    withQuery("/api/v1/dashboard/pending-actions", { limit }),
-    withQuery("/api/v1/dashboard/actions", { limit }),
-  ]);
+  const res = await safe(
+    firstOk<{ ok?: boolean; items?: DashboardPendingActionItem[]; actions?: DashboardPendingActionItem[] }>([
+      withQuery("/api/v1/dashboard/pending-actions", { limit }),
+      withQuery("/api/v1/dashboard/actions", { limit }),
+    ]),
+    { items: [] as DashboardPendingActionItem[] },
+  );
   if (Array.isArray(res.items)) return res.items;
   return Array.isArray(res.actions) ? res.actions : [];
+}
+
+export async function getOverview(): Promise<{ in_progress: number; completed_today: number; pending: number; risk_devices: number }> {
+  const now = Date.now();
+  const res = await fetchDashboardOverview({ from_ts_ms: now - 24 * 60 * 60 * 1000, to_ts_ms: now });
+  return {
+    in_progress: Number(res?.summary?.running_task_count ?? 0),
+    completed_today: 0,
+    pending: 0,
+    risk_devices: Number(res?.summary?.open_alert_count ?? 0),
+  };
+}
+
+export async function getRecentEvidence(params?: { limit?: number }): Promise<DashboardEvidenceItem[]> {
+  return fetchDashboardEvidenceSummary(params?.limit ?? 5);
 }

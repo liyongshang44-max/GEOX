@@ -7,8 +7,10 @@ import StatusBadge from "../components/common/StatusBadge";
 import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
+import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import { PRODUCT_LABELS } from "../lib/presentation/labels";
 import { mapApprovalStatus, mapEvidenceStatus, mapOperationPlanStatus, mapReceiptStatus, mapRecommendationStatus, mapTaskStatus, type StatusPresentation } from "../lib/presentation/statusMap";
+import { mapReceiptToVm } from "../viewmodels/evidence";
 
 function fromStatusObject(status: { code?: string | null; label?: string | null; tone?: string | null } | null | undefined, fallback: (code: string | null | undefined) => StatusPresentation): StatusPresentation {
   const base = fallback(status?.code || "UNKNOWN");
@@ -101,6 +103,7 @@ export default function ProgramDetailPage(): React.ReactElement {
     const decisionTimeline = controlPlane.decision_timeline || [];
     const executionTimeline = controlPlane.execution_timeline || [];
     const evidenceList = controlPlane.evidence?.recent_items || [];
+    const latestEvidence = (controlPlane as any)?.latestEvidence || (controlPlane as any)?.latest_evidence || evidenceList[0];
     const context = (controlPlane as any)?.context || {};
     const nextActions = Array.isArray((controlPlane as any)?.next_actions)
       ? (controlPlane as any).next_actions
@@ -165,6 +168,7 @@ export default function ProgramDetailPage(): React.ReactElement {
         <section className="contentGridTwo alignStart">
           <article className="card sectionBlock">
             <div className="sectionTitle">证据链</div>
+            <ReceiptEvidenceCard data={latestEvidence ? mapReceiptToVm(latestEvidence) : undefined} />
             {evidenceList.map((ev, idx) => (
               <div key={`${ev.kind}_${idx}`} className="kv"><span className="k">{ev.title || ev.kind || "证据"}</span><span className="v">{ev.summary || "-"}</span></div>
             ))}
@@ -201,6 +205,10 @@ export default function ProgramDetailPage(): React.ReactElement {
             <h2 className="sectionTitle" style={{ marginTop: 4 }}>{String(detail?.program_id || "-")}</h2>
           </div>
         </div>
+      </section>
+      <section className="card sectionBlock">
+        <div className="sectionTitle">执行证据</div>
+        <ReceiptEvidenceCard data={detail?.latestEvidence ? mapReceiptToVm(detail.latestEvidence) : undefined} />
       </section>
       <section className="card sectionBlock">
         <div className="kv"><span className="k">water_l</span><span className="v">{String(cost?.water_l ?? "-")}</span></div>

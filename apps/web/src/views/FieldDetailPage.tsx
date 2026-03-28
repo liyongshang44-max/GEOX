@@ -13,8 +13,10 @@ import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import StatusBadge from "../components/common/StatusBadge";
+import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import { mapOperationPlanStatus } from "../lib/presentation/statusMap";
 import { formatTimeOrFallback } from "../lib/presentation/time";
+import { mapReceiptToVm } from "../viewmodels/evidence";
 
 type FieldTab = "overview" | "map" | "operations" | "alerts";
 
@@ -45,9 +47,6 @@ export default function FieldDetailPage(): React.ReactElement {
     labels,
     playbackTs: playing ? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER,
   });
-
-
-  if (busy && !model) return <SectionSkeleton kind="detail" />;
 
   const timelineEvents = model?.timelineEvents ?? [];
 
@@ -117,6 +116,13 @@ export default function FieldDetailPage(): React.ReactElement {
   ];
 
   const risk = riskKey(model?.detail);
+  const latestEvidence =
+    (model?.detail as any)?.latestEvidence ||
+    (model?.detail as any)?.latest_evidence ||
+    (model?.detail as any)?.recent_receipts?.[0]?.receipt?.payload;
+
+  if (busy && !model) return <SectionSkeleton kind="detail" />;
+  if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -136,8 +142,6 @@ export default function FieldDetailPage(): React.ReactElement {
       </section>
 
       {error ? <ErrorState title="地块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
-
-      {!model && !busy ? <EmptyState title="当前暂无地块详情数据" description="请确认地块已同步，或稍后重试" actionText="重试" onAction={() => void refresh()} /> : null}
 
       <FieldSummaryCards items={model?.summaryCards ?? []} />
 
@@ -178,7 +182,7 @@ export default function FieldDetailPage(): React.ReactElement {
               <div><b>{labels.fieldName}：</b>{model?.detail?.field?.name || "-"}</div>
               <div><b>{labels.area}：</b>{model?.detail?.field?.area_ha ? `${model.detail.field.area_ha} ha` : "-"}</div>
               <div><b>{labels.currentSeason}：</b>{model?.detail?.latest_season?.name || model?.detail?.latest_season?.season_id || "-"}</div>
-              <div><b>当前运行 Program：</b>{String(model?.currentProgram?.program_id ?? "-")}</div>
+              <div><b>当前运行 Program：</b>{model?.currentProgram?.program_id ? String(model?.currentProgram?.program_id) : "暂无经营方案"}</div>
               <div><b>{labels.currentStatus}：</b><StatusBadge presentation={mapOperationPlanStatus(String(model?.detail?.field?.status || "UNKNOWN"))} /></div>
               <div><b>{labels.devices}：</b>{model?.detail?.summary?.device_count ?? 0}</div>
               <div><b>{labels.lastOperation}：</b>{model?.operationItems?.[0]?.type || "-"}</div>
@@ -200,13 +204,16 @@ export default function FieldDetailPage(): React.ReactElement {
                 ))}
                 {!(model?.recentTimeline ?? []).length ? <li className="muted">暂无最近动态</li> : null}
               </ul>
+
+              <div style={{ marginTop: 12 }}><b>最新执行证据</b></div>
+              {latestEvidence ? <ReceiptEvidenceCard data={mapReceiptToVm(latestEvidence)} /> : <div className="card muted" style={{ padding: 10 }}>暂无执行证据</div>}
             </div>
           ) : null}
 
           {activeTab === "map" ? (
             <div style={{ display: "grid", gap: 10 }}>
               <FieldLegend labels={labels} />
-              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>当前田块暂无可用地理边界数据。</div> : null}
+              {!mapInput.polygonGeoJson ? <div className="card" style={{ padding: 10, color: "#b42318" }}>暂无可用轨迹数据</div> : null}
               <div className="card" style={{ padding: 10 }}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>{tt("field.layerControl")}</div>
                 <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
