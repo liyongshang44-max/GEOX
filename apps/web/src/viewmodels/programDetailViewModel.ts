@@ -1,4 +1,5 @@
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
+import { resolveTimelineLabel } from "./timelineLabels";
 
 type ProgramConsoleStatus = "ok" | "risk" | "error" | "running";
 
@@ -140,7 +141,7 @@ export function buildProgramDetailViewModel(args: {
 
   const approvalText = toText(controlPlane?.summary?.approval?.label || detail?.latest_approval?.status, "") || undefined;
   const currentTask = latestOperation ? readableActionType(latestOperation?.action_type) : undefined;
-  const currentTaskStatus = latestOperation ? topStatus(latestOperation?.final_status || latestOperation?.dispatch_status).label : undefined;
+  const currentTaskStatus = latestOperation ? resolveTimelineLabel({ operationPlanStatus: latestOperation?.final_status, dispatchState: latestOperation?.dispatch_status }) : undefined;
 
   const totalWater = ops.reduce((sum, item) => sum + (toNumber(item?.water_l) || 0), 0) + (toNumber(controlPlane?.resources?.water_l) || 0);
   const totalElectric = ops.reduce((sum, item) => sum + (toNumber(item?.electric_kwh) || 0), 0) + (toNumber(controlPlane?.resources?.electric_kwh) || 0);
@@ -149,22 +150,22 @@ export function buildProgramDetailViewModel(args: {
   const timeline = dedupeTimeline([
     ...((controlPlane?.decision_timeline || []).map((item: any) => ({
       ts: Number(item?.ts_ms || Date.parse(String(item?.ts_label || "")) || 0),
-      label: `系统建议：${toText(item?.summary || item?.title, "关注田块风险")}`,
+      label: resolveTimelineLabel({ factType: item?.fact_type || item?.type, approvalDecision: item?.decision }),
       type: "recommendation" as TimelineType,
     }))),
     ...((controlPlane?.execution_timeline || []).map((item: any) => ({
       ts: Number(item?.ts_ms || Date.parse(String(item?.ts_label || "")) || 0),
-      label: toText(item?.title || item?.summary, "执行更新"),
+      label: resolveTimelineLabel({ factType: item?.fact_type || item?.type, operationPlanStatus: item?.status, dispatchState: item?.dispatch_state }),
       type: "execution" as TimelineType,
     }))),
     ...ops.flatMap((op) => (Array.isArray(op?.timeline) ? op.timeline : []).map((event: any) => ({
       ts: Number(event?.ts || 0),
-      label: toText(event?.label, "执行事件"),
+      label: resolveTimelineLabel({ factType: event?.fact_type || event?.type, operationPlanStatus: event?.status || op?.final_status, dispatchState: event?.dispatch_state || op?.dispatch_status }),
       type: "execution" as TimelineType,
     }))),
-    approvalText ? [{ ts: Date.now(), label: `审批：${approvalText}`, type: "approval" as TimelineType }] : [],
+    approvalText ? [{ ts: Date.now(), label: resolveTimelineLabel({ factType: "approval_decision_v1", approvalDecision: detail?.latest_approval?.status || controlPlane?.summary?.approval?.code }), type: "approval" as TimelineType }] : [],
     latestEvidenceRaw
-      ? [{ ts: Date.parse(String(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at || "")) || Date.now(), label: `执行结果：${latestEvidenceVm?.statusLabel || "已回传"}`, type: "evidence" as TimelineType }]
+      ? [{ ts: Date.parse(String(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at || "")) || Date.now(), label: resolveTimelineLabel({ factType: latestEvidenceRaw?.receipt_type || latestEvidenceRaw?.type || "ao_act_receipt_v1" }), type: "evidence" as TimelineType }]
       : [],
   ]);
 

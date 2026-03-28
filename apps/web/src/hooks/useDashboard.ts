@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
+import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -49,7 +50,7 @@ export function useDashboard(api: any): DashboardVm {
               subjectName: o?.field_name || o?.field_id || o?.device_id || "-",
               actionLabel: o?.action_type || "执行任务",
               occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
-              statusLabel: status === "SUCCEEDED" ? "已完成" : status === "FAILED" ? "执行失败" : "执行中",
+              statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
               finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
               hasEvidence: Boolean(o?.receipt_fact_id),
               href: typeof o?.href === "string" ? o.href : `/operations?operation_plan_id=${encodeURIComponent(String(o?.operation_plan_id || o?.operation_id || ""))}`,

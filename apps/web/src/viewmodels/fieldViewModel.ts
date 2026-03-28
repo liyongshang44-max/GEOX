@@ -1,5 +1,6 @@
 import { mapOperationTypeToLabel, type FieldLang } from "../lib/fieldViewModel";
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
+import { resolveTimelineLabel } from "./timelineLabels";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
@@ -79,8 +80,7 @@ function mapStatusLabel(status: FieldConsoleStatus): string {
 function timelineItemFromOperation(x: any, lang: FieldLang) {
   const ts = Number(x.last_event_ts ?? 0);
   const action = mapOperationTypeToLabel(x.action_type, lang);
-  const statusRaw = String(x.final_status ?? "").toUpperCase();
-  const done = statusRaw.includes("SUCC") || statusRaw.includes("FAIL") || statusRaw.includes("SUCCESS");
+  const stageLabel = resolveTimelineLabel({ operationPlanStatus: x.final_status, dispatchState: x.dispatch_status, factType: x.fact_type });
   return {
     key: `op:${String(x.action_type || "op").toLowerCase()}`,
     id: String(x.operation_plan_id || x.id || `${x.action_type}_${x.last_event_ts ?? 0}`),
@@ -88,7 +88,7 @@ function timelineItemFromOperation(x: any, lang: FieldLang) {
     time: formatTimelineTime(ts),
     type: "operation" as const,
     icon: "🌱",
-    label: `${action}${done ? "完成" : "执行中"}`,
+    label: `${action}${stageLabel}`,
   };
 }
 
