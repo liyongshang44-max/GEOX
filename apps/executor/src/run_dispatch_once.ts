@@ -70,6 +70,7 @@ function toAoActTask(item, args) {
     const act_task_id = String(item?.act_task_id ?? taskPayload?.act_task_id ?? "").trim();
     const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
     const action_type = String(taskPayload?.action_type ?? "").trim();
+    const task_type = String(taskPayload?.task_type ?? taskMeta?.task_type ?? "").trim();
     const operation_plan_id = String(taskPayload?.operation_plan_id ??
         taskMeta?.operation_plan_id ??
         item?.operation_plan_id ??
@@ -85,6 +86,7 @@ function toAoActTask(item, args) {
         act_task_id,
         command_id,
         action_type,
+        task_type,
         operation_plan_id,
         adapter_type: String(taskPayload?.adapter_type ?? "").trim() || null,
         adapter_hint: String(item?.adapter_hint ?? "").trim() || null,
@@ -154,7 +156,7 @@ async function writeDispatchState(args, task, state) {
     }
     catch (error) {
         const msg = String(error?.message ?? error);
-        if ((state === "ACKED" || state === "FAILED") && msg.includes("http 409") && msg.includes("STATE_TRANSITION_DENIED")) {
+        if ((state === "ACKED" || state === "FAILED") && msg.includes("http 409") && (msg.includes("STATE_TRANSITION_DENIED") || msg.includes("OPERATION_PLAN_TERMINAL"))) {
             console.log(`WARN: dispatch state ${state.toLowerCase()} skipped act_task_id=${task.act_task_id} reason=already_terminal`);
             return;
         }
@@ -164,6 +166,34 @@ async function writeDispatchState(args, task, state) {
 async function getReceipts(args, task) {
     const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts?tenant_id=${encodeURIComponent(task.tenant_id)}&project_id=${encodeURIComponent(task.project_id)}&group_id=${encodeURIComponent(task.group_id)}&act_task_id=${encodeURIComponent(task.act_task_id)}&limit=50`, args.token, { method: "GET" });
     return Array.isArray(out?.items) ? out.items : [];
+}
+async function readOperationPlan(args, task) {
+    const out = await httpJson(`${args.baseUrl}/api/v1/operations/plans/${encodeURIComponent(task.operation_plan_id)}?tenant_id=${encodeURIComponent(task.tenant_id)}&project_id=${encodeURIComponent(task.project_id)}&group_id=${encodeURIComponent(task.group_id)}`, args.token, { method: "GET" });
+    return out?.item ?? null;
+}
+async function logPostReceiptPlanState(args, task, nextStep) {
+    try {
+        const planItem = await readOperationPlan(args, task);
+        const postStatus = String(planItem?.plan?.record_json?.payload?.status ?? "").trim().toUpperCase();
+        const receiptFactId = String(planItem?.plan?.record_json?.payload?.receipt_fact_id ?? "").trim();
+        console.log(JSON.stringify({
+            act_task_id: task.act_task_id,
+            post_receipt_plan_status: postStatus || null,
+            post_receipt_receipt_fact_id: receiptFactId || null,
+            next_step: nextStep
+        }));
+        return { status: postStatus, receipt_fact_id: receiptFactId || null };
+    }
+    catch (error) {
+        console.log(JSON.stringify({
+            act_task_id: task.act_task_id,
+            post_receipt_plan_status: null,
+            post_receipt_receipt_fact_id: null,
+            next_step: nextStep,
+            plan_read_error: String(error?.message ?? error)
+        }));
+        return { status: "", receipt_fact_id: null };
+    }
 }
 function hasReceiptIdempotencyKey(items, taskId, attemptNo, receiptCode) {
     const expected = `${taskId}:${attemptNo}:${receiptCode}`;
@@ -279,9 +309,19 @@ async function runDispatchOnce(cliArgs) {
         let executionStatus = "FAILED";
         let adapterTypeForLog = String(adapter.type ?? adapter.adapter_type ?? adapterType).trim() || adapterType;
         try {
-            const supportsInput = adapterType === "mqtt" ? task : task.action_type;
-            if (typeof adapter.supports === "function" && !adapter.supports(supportsInput)) {
-                throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
+            const supportsAction = task.task_type || task.action_type;
+            const supportsInput = adapterType === "mqtt" ? task : supportsAction;
+            const supportsResult = typeof adapter.supports === "function" ? adapter.supports(supportsInput) : true;
+            console.log("[dispatch-debug]", {
+                selected_adapter: adapterTypeForLog,
+                adapter_type: adapterType,
+                task_type: task.task_type || "",
+                action_type: task.action_type,
+                supports_input: typeof supportsInput === "string" ? supportsInput : "[task-object]",
+                supports_result: supportsResult
+            });
+            if (!supportsResult) {
+                throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${supportsAction}`);
             }
             if (typeof adapter.validate === "function") {
                 const validation = adapter.validate(task);
@@ -308,13 +348,25 @@ async function runDispatchOnce(cliArgs) {
             console.log(`INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${task.command_id} receipt_status=${receiptStatus}`);
             if (execution.status === "FAILED" || receiptStatus === "FAILED") {
                 await appendReceiptV1(args, task, attemptNo, "FAILED", adapterTypeNormalized, String(execMeta?.receipt_code ?? execMeta?.reason ?? "DISPATCH_FAILED"), typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : undefined);
-                await writeDispatchState(args, task, "FAILED");
+                const postReceipt = await logPostReceiptPlanState(args, task, "write_failed_state");
+                if (postReceipt.status === "SUCCEEDED" || postReceipt.status === "FAILED") {
+                    console.log(`WARN: skip failed state write act_task_id=${task.act_task_id} reason=plan_already_terminal`);
+                }
+                else {
+                    await writeDispatchState(args, task, "FAILED");
+                }
                 markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
                 executionStatus = "FAILED";
                 console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
                 continue;
             }
-            await writeDispatchState(args, task, "ACKED");
+            const postReceipt = await logPostReceiptPlanState(args, task, "write_acked_state");
+            if (postReceipt.status === "SUCCEEDED" || postReceipt.status === "FAILED") {
+                console.log(`WARN: skip acked state write act_task_id=${task.act_task_id} reason=plan_already_terminal`);
+            }
+            else {
+                await writeDispatchState(args, task, "ACKED");
+            }
             markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
             executionStatus = "SUCCEEDED";
             console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);

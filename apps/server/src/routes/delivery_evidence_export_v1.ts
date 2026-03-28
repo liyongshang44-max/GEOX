@@ -79,6 +79,30 @@ function parseRecordJson(rowValue: unknown): any { // Parse facts.record_json wh
   } // End catch.
 } // End parseRecordJson.
 
+function normalizeReceiptEvidence(input: { fact_id: string; occurred_at: any; record_json: any }, factType: string): any { // Normalize v0/v1 receipt payloads into one export-friendly shape.
+  const payload = input?.record_json?.payload ?? {}; // Common payload wrapper.
+  const executionTime = payload?.execution_time ?? {}; // execution_time exists in v0 and may be absent in v1 summary facts.
+  const resourceUsage = payload?.resource_usage ?? {}; // resource usage appears in v0 receipt runtime.
+  const logsRefs = Array.isArray(payload?.logs_refs) ? payload.logs_refs : []; // logs_refs may be omitted on v1 wrapper facts.
+  const constraintCheck = payload?.constraint_check ?? {}; // constraint check payload when available.
+  const executor = payload?.executor_id ?? {}; // executor identity object for runtime-generated receipts.
+  const statusRaw = String(payload?.status ?? payload?.receipt_status ?? "").trim(); // Read status from both schemas.
+  return {
+    receipt_type: factType, // Source receipt schema type.
+    receipt_fact_id: String(input?.fact_id ?? ""), // Fact id for traceability.
+    receipt_status: statusRaw || null, // Unified status field.
+    recorded_at: payload?.received_ts ?? payload?.created_at_ts ?? input?.occurred_at ?? null, // Prefer payload ts, fallback to fact occurred_at.
+    execution_started_at: executionTime?.start_ts ?? null, // Start timestamp when available.
+    execution_finished_at: executionTime?.end_ts ?? null, // End timestamp when available.
+    water_l: resourceUsage?.water_l ?? null, // Resource usage: water.
+    electric_kwh: resourceUsage?.electric_kwh ?? null, // Resource usage: electric.
+    chemical_ml: resourceUsage?.chemical_ml ?? null, // Resource usage: chemical.
+    log_ref_count: logsRefs.length, // Number of log refs.
+    constraint_violated: Boolean(constraintCheck?.violated ?? false), // Constraint violation marker.
+    executor_id: executor?.id ?? payload?.executor_id ?? null // Executor identifier best effort.
+  }; // Unified export evidence summary row.
+} // End normalizeReceiptEvidence.
+
 function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: { tenant_id: string; project_id: string; group_id: string }, reply: any): boolean { // Enforce tenant triple match or return 404 (non-enumerable).
   const ok = auth.tenant_id === tenant.tenant_id && auth.project_id === tenant.project_id && auth.group_id === tenant.group_id; // Compare hard triple.
   if (ok) return true; // Return true when matched.
@@ -109,12 +133,18 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     [job.act_task_id] // Parameters.
   ); // End task query.
 
-  // 2) Load AO-ACT receipt facts by act_task_id (may be empty if not executed yet).
-  const receiptFacts = await fetchFactsByJsonPath( // Query receipt facts.
+  // 2) Load AO-ACT receipt facts by act_task_id (v0 + v1 compatibility).
+  const receiptFactsV0 = await fetchFactsByJsonPath( // Query receipt v0 facts.
     pool, // Pool for query.
     "(record_json::jsonb->>'type')='ao_act_receipt_v0' AND (record_json::jsonb#>>'{payload,act_task_id}')=$1", // Filter by type + act_task_id.
     [job.act_task_id] // Parameters.
-  ); // End receipt query.
+  ); // End receipt v0 query.
+  const receiptFactsV1 = await fetchFactsByJsonPath( // Query receipt v1 facts.
+    pool, // Pool for query.
+    "(record_json::jsonb->>'type')='ao_act_receipt_v1' AND ((record_json::jsonb#>>'{payload,task_id}')=$1 OR (record_json::jsonb#>>'{payload,act_task_id}')=$1)", // Filter by type + task id aliases.
+    [job.act_task_id] // Parameters.
+  ); // End receipt v1 query.
+  const receiptFacts = [...receiptFactsV0, ...receiptFactsV1]; // Unified receipts list for downstream manifest + links.
 
   // 3) Load approval_decision_v1 facts referencing act_task_id (optional).
   const decisionFacts = await fetchFactsByJsonPath( // Query decision facts.
@@ -217,10 +247,15 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
   })).filter((x: any) => x.recommendation_id && x.act_task_id); // Keep only closed recommendation->task chains.
 
   const taskReceipts = receiptFacts.map((x: any) => ({ // Flatten task->receipt links for offline execution evidence closure.
-    act_task_id: String(x.record_json?.payload?.act_task_id ?? ""), // Task id tied to this receipt.
+    act_task_id: String(x.record_json?.payload?.act_task_id ?? x.record_json?.payload?.task_id ?? ""), // Task id tied to this receipt.
     receipt_fact_id: String(x.fact_id ?? ""), // Receipt fact id.
     command_id: String(x.record_json?.payload?.command_id ?? "") // Command id when present.
   })).filter((x: any) => x.act_task_id && x.receipt_fact_id); // Keep only complete task->receipt links.
+
+  const receiptEvidenceSummary = receiptFacts.map((x: any) => normalizeReceiptEvidence( // Build normalized summary for both receipt schemas.
+    x, // Receipt fact row.
+    String(x.record_json?.type ?? "") || "unknown_receipt_type" // Source fact type.
+  )); // End summary map.
 
   const artifact_core = { // Define deterministic core (excludes generated_at_ts and sha256 fields).
     tenant_id: job.tenant_id, // Tenant triple: tenant_id.
@@ -233,7 +268,8 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     template: job.template, // Template name.
     facts: { // Facts bundle.
       ao_act_task_v0: taskFacts, // Task facts list.
-      ao_act_receipt_v0: receiptFacts, // Receipt facts list.
+      ao_act_receipt_v0: receiptFactsV0, // Receipt v0 facts list.
+      ao_act_receipt_v1: receiptFactsV1, // Receipt v1 facts list.
       approval_decision_v1: decisionFacts, // Decision facts list.
       approval_request_v1: requestFacts, // Request facts list.
       decision_recommendation_approval_link_v1: recommendationLinkFacts, // Recommendation->approval link facts.
@@ -252,7 +288,11 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
         operation_plan_transition_v1: operationPlanTransitionFacts // Operation plan transition facts.
       },
       "task.json": taskFacts, // Task facts file content.
-      "receipt.json": receiptFacts, // Receipt facts file content.
+      "receipt.json": { // Receipt export keeps legacy filename while exposing v0/v1 + normalized summary.
+        ao_act_receipt_v0: receiptFactsV0,
+        ao_act_receipt_v1: receiptFactsV1,
+        summary: receiptEvidenceSummary
+      }, // Receipt facts file content.
       "recommendation_approval_links.json": recommendationApprovalLinks, // recommendation -> approval_request links.
       "recommendation_task_links.json": recommendationTaskLinks, // recommendation -> task links.
       "task_receipts.json": taskReceipts // task -> receipt links.
@@ -260,7 +300,8 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
     manifest: { // Minimal manifest for human inspection.
       counts: { // Counts of each fact type included.
         ao_act_task_v0: taskFacts.length, // Count task facts.
-        ao_act_receipt_v0: receiptFacts.length, // Count receipt facts.
+        ao_act_receipt_v0: receiptFactsV0.length, // Count receipt v0 facts.
+        ao_act_receipt_v1: receiptFactsV1.length, // Count receipt v1 facts.
         approval_decision_v1: decisionFacts.length, // Count decision facts.
         approval_request_v1: requestFacts.length, // Count request facts.
         decision_recommendation_approval_link_v1: recommendationLinkFacts.length, // Count link facts.
@@ -283,6 +324,12 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
         recommendation_task_links: recommendationTaskLinks.length,
         task_receipts: taskReceipts.length
       },
+      receipt: {
+        receipt_missing: receiptFacts.length < 1,
+        receipt_missing_reason: receiptFacts.length < 1 ? "NO_RECEIPT_FACT_FOR_ACT_TASK_ID" : null,
+        receipt_versions: Array.from(new Set(receiptFacts.map((x: any) => String(x.record_json?.type ?? "")).filter(Boolean))),
+        receipt_fact_ids: receiptFacts.map((x: any) => String(x.fact_id))
+      },
       required_chain: { // Task Pack 7.1 mandatory bundle sections.
         recommendation: recommendationFacts.length,
         approval: decisionFacts.length + requestFacts.length,
@@ -299,7 +346,6 @@ async function runEvidenceExportJob(pool: Pool, job: ExportJob): Promise<void> {
   if (decisionFacts.length + requestFacts.length < 1) requiredMissing.push("approval");
   if (operationPlanFacts.length + operationPlanTransitionFacts.length < 1) requiredMissing.push("plan");
   if (taskFacts.length < 1) requiredMissing.push("task");
-  if (receiptFacts.length < 1) requiredMissing.push("receipt");
   if (requiredMissing.length > 0) { // Reject export jobs without closed commercial chain evidence.
     throw new Error(`EVIDENCE_CHAIN_INCOMPLETE:${requiredMissing.join(",")}`);
   }
