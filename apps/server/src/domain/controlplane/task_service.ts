@@ -1878,11 +1878,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
     const supportsResult = adapterSupportsAction(adapterType, supportsInput);
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
-    console.log("[dispatch-debug]", {
-      selected_adapter: selectedAdapter,
+    console.log("[dispatch-debug-server]", {
       adapter_type: String(adapterType ?? ""),
-      task_type: String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? ""),
+      task_type: String(taskPayload?.task_type ?? ""),
       action_type: String(taskPayload?.action_type ?? ""),
+      meta_task_type: String(taskPayload?.meta?.task_type ?? ""),
       supports_input: supportsInput,
       supports_result: supportsResult
     });
