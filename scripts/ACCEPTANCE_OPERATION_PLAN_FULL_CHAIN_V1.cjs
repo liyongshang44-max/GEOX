@@ -64,6 +64,15 @@ async function waitForDispatchReady(baseUrl, token, tenant_id, project_id, group
       token
     );
     lastTask = task;
+    const item = task?.json?.item ?? {};
+    if (task.status === 200 && item?.receipt_fact_id) {
+      console.log("[acceptance] ALREADY_FINISHED_BEFORE_RECEIPT", JSON.stringify({
+        act_task_id,
+        elapsed_ms: Date.now() - startedAt,
+        receipt_fact_id: item.receipt_fact_id
+      }, null, 2));
+      return "already_finished";
+    }
     if (task.status === 200 && hasDispatchOrPublishSignal(task)) {
       console.log("[acceptance] DISPATCH_READY", JSON.stringify({
         act_task_id,
@@ -72,7 +81,7 @@ async function waitForDispatchReady(baseUrl, token, tenant_id, project_id, group
         downlink_topic: task.json?.item?.dispatch?.payload?.downlink_topic ?? null,
         publish_status: task.json?.item?.dispatch?.payload?.publish_status ?? null
       }, null, 2));
-      return task;
+      return "dispatch_ready";
     }
     await sleep(intervalMs);
   }
@@ -139,16 +148,20 @@ async function main() {
     console.error("DISPATCH_FAIL", JSON.stringify(dispatch, null, 2));
   }
   assert.equal(dispatch.status, 200, `DISPATCH_STATUS_${dispatch.status}`);
-  await waitForDispatchReady(baseUrl, token, tenant_id, project_id, group_id, act_task_id);
+  const dispatchState = await waitForDispatchReady(baseUrl, token, tenant_id, project_id, group_id, act_task_id);
 
-  const receipt = await postJson(baseUrl, `/api/v1/ao-act/receipts/uplink`, token, {
-    tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id,
-    meta: { idempotency_key: `acceptance_${Date.now()}` }
-  });
-  if (receipt.status !== 200) {
-    console.error("RECEIPT_FAIL", JSON.stringify(receipt, null, 2));
+  if (dispatchState === "already_finished") {
+    console.log("[acceptance] SKIP_RECEIPT_ALREADY_FINISHED", JSON.stringify({ act_task_id }, null, 2));
+  } else {
+    const receipt = await postJson(baseUrl, `/api/v1/ao-act/receipts/uplink`, token, {
+      tenant_id, project_id, group_id, task_id: act_task_id, command_id: act_task_id, device_id,
+      meta: { idempotency_key: `acceptance_${Date.now()}` }
+    });
+    if (receipt.status !== 200) {
+      console.error("RECEIPT_FAIL", JSON.stringify(receipt, null, 2));
+    }
+    assert.equal(receipt.status, 200, `RECEIPT_STATUS_${receipt.status}`);
   }
-  assert.equal(receipt.status, 200, `RECEIPT_STATUS_${receipt.status}`);
 
   const plan = await getJson(baseUrl, `/api/v1/operations/plans/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, token);
   assert.equal(plan.status, 200, `PLAN_STATUS_${plan.status}`);
