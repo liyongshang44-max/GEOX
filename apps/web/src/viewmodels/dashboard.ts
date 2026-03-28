@@ -14,9 +14,10 @@ export type DashboardActionVm = {
   statusLabel: string;
   finalStatus: "pending" | "running" | "succeeded" | "failed";
   hasEvidence: boolean;
+  href?: string;
 };
 
-export type DashboardEvidenceVm = any;
+export type DashboardEvidenceVm = { id: string; href?: string; card: any; };
 
 export type DashboardVm = {
   overview: DashboardOverviewVm;

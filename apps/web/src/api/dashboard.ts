@@ -12,7 +12,24 @@ export type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint
 export type DashboardAlertItem = { event_id: string; rule_id: string; object_type: string; object_id: string; metric: string; status: string; raised_ts_ms: number };
 export type DashboardReceiptItem = { fact_id: string; act_task_id: string | null; device_id: string | null; status: string | null; occurred_at: string; occurred_ts_ms: number };
 export type DashboardQuickAction = { key: string; label: string; to: string };
-export type DashboardEvidenceItem = { job_id: string; status: string; scope_type?: string | null; created_at?: string | null; updated_at?: string | null };
+export type DashboardEvidenceItem = {
+  operation_plan_id: string | null;
+  field_id: string | null;
+  field_name: string | null;
+  program_name: string | null;
+  status: string | null;
+  finished_at: string | null;
+  water_l: number | null;
+  electric_kwh: number | null;
+  log_ref_count: number | null;
+  constraint_violated: boolean | null;
+  executor_label: string | null;
+  receipt_fact_id: string | null;
+  receipt_type: string | null;
+  href: string;
+  summary?: any;
+};
+export type DashboardRecentExecutionItem = { id: string; operation_plan_id: string; field_id: string | null; status: string; updated_ts_ms: number; href: string };
 export type DashboardAcceptanceRiskItem = { id: string; field_id?: string | null; title: string; level: string; occurred_at?: string | null };
 export type DashboardPendingActionItem = { id: string; key: string; label: string; status?: string | null; to?: string | null };
 
@@ -68,14 +85,20 @@ export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number;
 
 export async function fetchDashboardEvidenceSummary(limit = 6): Promise<DashboardEvidenceItem[]> {
   const res = await safe(
-    firstOk<{ ok?: boolean; items?: DashboardEvidenceItem[]; jobs?: DashboardEvidenceItem[] }>([
+    firstOk<{ ok?: boolean; items?: DashboardEvidenceItem[] }>([
       withQuery("/api/v1/dashboard/evidence/recent", { limit }),
-      withQuery("/api/v1/evidence-export/jobs", { limit }),
     ]),
     { items: [] as DashboardEvidenceItem[] },
   );
-  if (Array.isArray(res.items)) return res.items;
-  return Array.isArray(res.jobs) ? res.jobs : [];
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchDashboardRecentExecutions(limit = 8): Promise<DashboardRecentExecutionItem[]> {
+  const res = await safe(
+    apiRequest<{ ok?: boolean; items?: DashboardRecentExecutionItem[] }>(withQuery("/api/v1/dashboard/executions/recent", { limit })),
+    { items: [] as DashboardRecentExecutionItem[] },
+  );
+  return Array.isArray(res.items) ? res.items : [];
 }
 
 export async function fetchDashboardAcceptanceRisks(limit = 6): Promise<DashboardAcceptanceRiskItem[]> {

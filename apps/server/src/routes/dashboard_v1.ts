@@ -7,11 +7,30 @@ type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
 type DashboardAlertItem = { event_id: string; rule_id: string; object_type: string; object_id: string; metric: string; status: string; raised_ts_ms: number; }; // Compact alert row.
 type DashboardReceiptItem = { fact_id: string; act_task_id: string | null; device_id: string | null; status: string | null; occurred_at: string; occurred_ts_ms: number; summary: ReturnType<typeof normalizeReceiptEvidence>; }; // Compact receipt row + normalized summary.
+type DashboardRecentEvidenceItem = {
+  operation_plan_id: string | null;
+  field_id: string | null;
+  field_name: string | null;
+  program_name: string | null;
+  status: string | null;
+  finished_at: string | null;
+  water_l: number | null;
+  electric_kwh: number | null;
+  log_ref_count: number | null;
+  constraint_violated: boolean | null;
+  executor_label: string | null;
+  receipt_fact_id: string | null;
+  receipt_type: string | null;
+  href: string;
+  summary: ReturnType<typeof normalizeReceiptEvidence>;
+}; // Dashboard recent evidence view model used by ReceiptEvidenceCard.
+type DashboardRecentExecutionItem = { id: string; operation_plan_id: string; field_id: string | null; status: string; updated_ts_ms: number; href: string; }; // Dashboard recent execution card row.
 
 function badRequest(reply: any, error: string) { return reply.status(400).send({ ok: false, error }); } // Stable 400 helper.
 function parseWindowStart(q: any): number { const raw = Number(q?.from_ts_ms ?? Date.now() - 24 * 60 * 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() - 24 * 60 * 60 * 1000; } // Parse dashboard window start.
 function parseWindowEnd(q: any): number { const raw = Number(q?.to_ts_ms ?? Date.now() + 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() + 60 * 1000; } // Parse dashboard window end.
 function parseJsonMaybe(v: any): any { if (v && typeof v === "object") return v; if (typeof v !== "string") return null; try { return JSON.parse(v); } catch { return null; } } // Parse json/jsonb/string payloads.
+function parseLimit(q: any, fallback = 8, max = 50): number { const n = Number(q?.limit ?? fallback); return Number.isFinite(n) ? Math.max(1, Math.min(max, Math.floor(n))) : fallback; } // Parse bounded list limit.
 function relativeLabel(tsMs: number | null | undefined): string { if (!Number.isFinite(Number(tsMs))) return "-"; const d = Date.now() - Number(tsMs); if (d < 60_000) return "刚刚"; if (d < 3_600_000) return `${Math.max(1, Math.floor(d / 60_000))} 分钟前`; if (d < 86_400_000) return `${Math.max(1, Math.floor(d / 3_600_000))} 小时前`; return `${Math.max(1, Math.floor(d / 86_400_000))} 天前`; }
 function statusTone(status: string): "success" | "info" | "warning" | "neutral" { const s = String(status ?? "").toUpperCase(); if (["ACTIVE", "DONE", "EXECUTED", "SUCCESS"].includes(s)) return "success"; if (["ACKED", "DISPATCHED", "RUNNING"].includes(s)) return "info"; if (["BLOCKED", "FAILED", "ERROR"].includes(s)) return "warning"; return "neutral"; }
 
@@ -190,4 +209,103 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       ],
     }); // End response.
   }); // End route.
+
+  app.get("/api/v1/dashboard/executions/recent", async (req, reply) => { // Provide recent execution rows used by dashboard cards.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const limit = parseLimit(q, 8, 20);
+    const tenant_id = String(auth.tenant_id ?? "");
+    const project_id = String(auth.project_id ?? "");
+    const group_id = String(auth.group_id ?? "");
+    const rowsQ = await pool.query(
+      `SELECT operation_plan_id, field_id, status, updated_ts_ms
+         FROM operation_plan_index_v1
+        WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
+        ORDER BY updated_ts_ms DESC
+        LIMIT $4`,
+      [tenant_id, project_id, group_id, limit]
+    ).catch(() => ({ rows: [] }));
+    const items: DashboardRecentExecutionItem[] = (rowsQ.rows ?? []).map((row: any) => ({
+      id: String(row.operation_plan_id ?? ""),
+      operation_plan_id: String(row.operation_plan_id ?? ""),
+      field_id: typeof row.field_id === "string" ? row.field_id : null,
+      status: String(row.status ?? ""),
+      updated_ts_ms: Number(row.updated_ts_ms ?? Date.now()),
+      href: `/operations?operation_plan_id=${encodeURIComponent(String(row.operation_plan_id ?? ""))}`
+    }));
+    return reply.send({ ok: true, items });
+  });
+
+  app.get("/api/v1/dashboard/evidence/recent", async (req, reply) => { // Return normalized recent receipt evidence for dashboard card rendering.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const limit = parseLimit(q, 8, 20);
+    const tenant_id = String(auth.tenant_id ?? "");
+    const project_id = String(auth.project_id ?? "");
+    const group_id = String(auth.group_id ?? "");
+    const receiptQ = await pool.query(
+      `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1')
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT $4`,
+      [tenant_id, project_id, group_id, limit]
+    ).catch(() => ({ rows: [] }));
+    const normalizedRows = (receiptQ.rows ?? []).map((row: any) => {
+      const recordJson = parseJsonMaybe(row.record_json) ?? row.record_json;
+      return normalizeReceiptEvidence({ fact_id: row.fact_id, occurred_at: row.occurred_at, record_json: recordJson }, String(recordJson?.type ?? ""));
+    });
+    const operationPlanIds = Array.from(new Set(normalizedRows.map((x: any) => x.operation_plan_id).filter((x: any) => typeof x === "string" && x.trim())));
+    const operationPlanQ = operationPlanIds.length > 0
+      ? await pool.query(
+        `SELECT operation_plan_id, field_id
+           FROM operation_plan_index_v1
+          WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND operation_plan_id = ANY($4::text[])`,
+        [tenant_id, project_id, group_id, operationPlanIds]
+      ).catch(() => ({ rows: [] }))
+      : { rows: [] as any[] };
+    const fieldIds = Array.from(new Set(operationPlanQ.rows.map((x: any) => String(x.field_id ?? "")).filter(Boolean)));
+    const fieldQ = fieldIds.length > 0
+      ? await pool.query(
+        `SELECT field_id, name FROM field_index_v1 WHERE tenant_id = $1 AND field_id = ANY($2::text[])`,
+        [tenant_id, fieldIds]
+      ).catch(() => ({ rows: [] }))
+      : { rows: [] as any[] };
+    const operationPlanMap = new Map<string, { field_id: string | null }>();
+    for (const row of operationPlanQ.rows ?? []) operationPlanMap.set(String(row.operation_plan_id), { field_id: typeof row.field_id === "string" ? row.field_id : null });
+    const fieldNameMap = new Map<string, string>();
+    for (const row of fieldQ.rows ?? []) fieldNameMap.set(String(row.field_id), String(row.name ?? row.field_id));
+    const items: DashboardRecentEvidenceItem[] = (receiptQ.rows ?? []).map((row: any, idx: number) => {
+      const recordJson = parseJsonMaybe(row.record_json) ?? row.record_json;
+      const summary = normalizedRows[idx];
+      const bridge = summary.operation_plan_id ? operationPlanMap.get(summary.operation_plan_id) : null;
+      const fieldId = (typeof recordJson?.payload?.field_id === "string" ? recordJson.payload.field_id : null) ?? bridge?.field_id ?? null;
+      const programName = typeof recordJson?.payload?.program_name === "string" ? recordJson.payload.program_name : null;
+      return {
+        operation_plan_id: summary.operation_plan_id,
+        field_id: fieldId,
+        field_name: fieldId ? fieldNameMap.get(fieldId) ?? fieldId : null,
+        program_name: programName,
+        status: summary.receipt_status,
+        finished_at: summary.execution_finished_at ?? summary.recorded_at,
+        water_l: summary.water_l,
+        electric_kwh: summary.electric_kwh,
+        log_ref_count: summary.log_ref_count,
+        constraint_violated: summary.constraint_violated,
+        executor_label: summary.executor_label,
+        receipt_fact_id: summary.receipt_fact_id,
+        receipt_type: summary.receipt_type,
+        href: fieldId
+          ? `/fields/${encodeURIComponent(fieldId)}`
+          : `/operations?operation_plan_id=${encodeURIComponent(String(summary.operation_plan_id ?? summary.act_task_id ?? ""))}`,
+        summary
+      };
+    });
+    return reply.send({ ok: true, items });
+  });
 } // End registration.
