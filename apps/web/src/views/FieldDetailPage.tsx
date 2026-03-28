@@ -25,36 +25,9 @@ export default function FieldDetailPage(): React.ReactElement {
   const location = useLocation();
   const fieldId = decodeURIComponent(params.fieldId || "");
   const isolateHook = React.useMemo(() => new URLSearchParams(location.search).get("hookIsolation") === "1", [location.search]);
-
-  if (isolateHook) return <FieldDetailIsolationView fieldId={fieldId} />;
-  return <FieldDetailRuntimeView fieldId={fieldId} search={location.search} />;
-}
-
-function FieldDetailIsolationView(props: { fieldId: string }): React.ReactElement {
-  const { fieldId } = props;
-  return (
-    <div style={{ display: "grid", gap: 14 }}>
-      <section className="card" style={{ padding: 16 }}>
-        <h2 style={{ margin: 0, fontSize: 20 }}>FieldDetail hook isolation mode</h2>
-        <div className="muted" style={{ marginTop: 8 }}>
-          已启用临时隔离：当前页面未调用 useFieldDetail。用于验证 hooks 报错是否来自 useFieldDetail.ts。
-        </div>
-        <div className="muted" style={{ marginTop: 8 }}>
-          field_id: <span className="mono">{shortId(fieldId)}</span>
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <Link className="btn" to="/fields">返回列表</Link>
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function FieldDetailRuntimeView(props: { fieldId: string; search: string }): React.ReactElement {
-  const { fieldId, search } = props;
   const focusTaskId = React.useMemo(() => {
-    return new URLSearchParams(search).get("focusTask") || "";
-  }, [search]);
+    return new URLSearchParams(location.search).get("focusTask") || "";
+  }, [location.search]);
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
@@ -167,6 +140,27 @@ function FieldDetailRuntimeView(props: { fieldId: string; search: string }): Rea
     (model?.detail as any)?.latestEvidence ||
     (model?.detail as any)?.latest_evidence ||
     (model?.detail as any)?.recent_receipts?.[0]?.receipt?.payload;
+
+  if (isolateHook) {
+    return (
+      <div style={{ display: "grid", gap: 14 }}>
+        <section className="card" style={{ padding: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 20 }}>FieldDetail hook isolation mode</h2>
+          <div className="muted" style={{ marginTop: 8 }}>
+            已启用临时隔离：当前页面仍会执行 hooks，但渲染隔离提示用于验证 UI 稳定性。
+          </div>
+          <div className="muted" style={{ marginTop: 8 }}>
+            field_id: <span className="mono">{shortId(fieldId)}</span>
+          </div>
+          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+            <Link className="btn" to="/fields">返回列表</Link>
+            <button className="btn" onClick={() => void refresh()} disabled={busy}>重试数据加载</button>
+          </div>
+          {error ? <div className="muted" style={{ marginTop: 8, color: "#b42318" }}>数据加载失败：{error}</div> : null}
+        </section>
+      </div>
+    );
+  }
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
