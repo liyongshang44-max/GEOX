@@ -27,6 +27,10 @@ export default function FieldDetailPage(): React.ReactElement {
     if (typeof window === "undefined") return "";
     return new URLSearchParams(window.location.search).get("focusTask") || "";
   }, []);
+  const isolateHook = React.useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("hookIsolation") === "1";
+  }, []);
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
@@ -40,6 +44,25 @@ export default function FieldDetailPage(): React.ReactElement {
   const labels = FIELD_TEXT[lang];
   const tt = (key: string) => t(lang, key);
   const isDev = Boolean(import.meta.env.DEV);
+
+  if (isolateHook) {
+    return (
+      <div style={{ display: "grid", gap: 14 }}>
+        <section className="card" style={{ padding: 16 }}>
+          <h2 style={{ margin: 0, fontSize: 20 }}>FieldDetail hook isolation mode</h2>
+          <div className="muted" style={{ marginTop: 8 }}>
+            已启用临时隔离：当前页面未调用 useFieldDetail。用于验证 hooks 报错是否来自 useFieldDetail.ts。
+          </div>
+          <div className="muted" style={{ marginTop: 8 }}>
+            field_id: <span className="mono">{shortId(fieldId)}</span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <Link className="btn" to="/fields">返回列表</Link>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const { model, busy, status, error, technical, refresh } = useFieldDetail({
     fieldId,
