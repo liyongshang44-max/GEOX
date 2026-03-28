@@ -2,15 +2,15 @@ import { mapOperationTypeToLabel, type FieldLang } from "../lib/fieldViewModel";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
+type TimelineType = "operation" | "alert" | "recommendation";
+
 export type FieldViewModel = {
   fieldId: string;
   fieldName: string;
   status: FieldConsoleStatus;
   statusLabel: string;
-  statusDot: string;
   statusReason?: string;
-  deviceCount: number;
-  kpis: Array<{ label: string; value: string }>;
+  device?: string;
   currentTask: null | {
     action: string;
     deviceId: string;
@@ -24,16 +24,9 @@ export type FieldViewModel = {
     happenedAt: number | null;
     relativeText: string;
   };
-  program: null | {
-    programId: string;
-    title: string;
-    objective: string;
-    status: string;
-    expectedYield: string;
-    expectedCost: string;
-  };
-  timeline: Array<{ ts: number; timeLabel: string; text: string }>;
-  evidence: Array<{ id: string; text: string; timeLabel: string; deviceId: string }>;
+  kpis: Array<{ label: string; value: string }>;
+  timeline: Array<{ id: string; ts: number; time: string; type: TimelineType; icon: string; label: string }>;
+  evidence: Array<{ id: string; title: string; time: string; device: string }>;
   map: {
     polygonGeoJson: any;
     heatGeoJson: any;
@@ -69,10 +62,67 @@ function formatRelative(ts: number | null): string {
   return `${days}天前`;
 }
 
-function resolveStatus(args: { hasAlert: boolean; hasFailedTask: boolean }): { code: FieldConsoleStatus; label: string; dot: string } {
-  if (args.hasFailedTask) return { code: "error", label: "异常", dot: "🔴" };
-  if (args.hasAlert) return { code: "risk", label: "风险", dot: "⚠" };
-  return { code: "ok", label: "正常", dot: "●" };
+function computeStatus(data: { hasAlert: boolean; hasFailedTask: boolean }): FieldConsoleStatus {
+  if (data.hasFailedTask) return "error";
+  if (data.hasAlert) return "risk";
+  return "ok";
+}
+
+function mapStatusLabel(status: FieldConsoleStatus): string {
+  if (status === "error") return "异常";
+  if (status === "risk") return "风险";
+  return "正常";
+}
+
+function timelineItemFromOperation(x: any, lang: FieldLang) {
+  const ts = Number(x.last_event_ts ?? 0);
+  const action = mapOperationTypeToLabel(x.action_type, lang);
+  const statusRaw = String(x.final_status ?? "").toUpperCase();
+  const done = statusRaw.includes("SUCC") || statusRaw.includes("FAIL") || statusRaw.includes("SUCCESS");
+  return {
+    key: `op:${String(x.action_type || "op").toLowerCase()}`,
+    id: String(x.operation_plan_id || x.id || `${x.action_type}_${x.last_event_ts ?? 0}`),
+    ts,
+    time: formatTimelineTime(ts),
+    type: "operation" as const,
+    icon: "🌱",
+    label: `${action}${done ? "完成" : "执行中"}`,
+  };
+}
+
+function timelineItemFromRecommendation(x: any) {
+  const ts = Number(Date.parse(String(x.occurred_at ?? ""))) || 0;
+  const raw = `${x?.recommendation_type || ""} ${x?.type || ""}`.toLowerCase();
+  const isAlert = raw.includes("alert") || raw.includes("risk") || raw.includes("health");
+  return {
+    key: isAlert ? "alert:health" : "rec:watch",
+    id: String(x.recommendation_id || `${raw}_${ts}`),
+    ts,
+    time: formatTimelineTime(ts),
+    type: (isAlert ? "alert" : "recommendation") as TimelineType,
+    icon: isAlert ? "⚠️" : "💡",
+    label: isAlert ? "作物健康风险" : "系统建议：关注田块",
+  };
+}
+
+function buildTimeline(allOperations: any[], recentRecommendations: any[], lang: FieldLang): FieldViewModel["timeline"] {
+  const raw = [
+    ...allOperations.slice(0, 12).map((x) => timelineItemFromOperation(x, lang)),
+    ...recentRecommendations.slice(0, 12).map((x) => timelineItemFromRecommendation(x)),
+  ]
+    .filter((x) => x.ts > 0)
+    .sort((a, b) => b.ts - a.ts);
+
+  const deduped = raw.filter((item, idx, arr) => arr.findIndex((candidate) => candidate.key === item.key) === idx);
+
+  return deduped.slice(0, 8).map((item) => ({
+    id: item.id,
+    ts: item.ts,
+    time: item.time,
+    type: item.type,
+    icon: item.icon,
+    label: item.label,
+  }));
 }
 
 export function buildFieldViewModel(params: {
@@ -84,18 +134,19 @@ export function buildFieldViewModel(params: {
   currentProgram: any;
   recentRecommendations: any[];
 }): FieldViewModel {
-  const { fieldId, lang, detail, activeOperations, allOperations, currentProgram, recentRecommendations } = params;
+  const { fieldId, lang, detail, activeOperations, allOperations, recentRecommendations } = params;
   const latestAlert = (Array.isArray(detail?.recent_alerts) ? detail.recent_alerts : [])[0] ?? null;
+
   const hasAlert = Number(detail?.recent_alerts?.length ?? 0) > 0 || recentRecommendations.some((x: any) => {
     const raw = `${x?.recommendation_type || ""} ${x?.type || ""}`.toLowerCase();
     return raw.includes("alert") || raw.includes("risk") || raw.includes("health");
   });
   const hasFailedTask = allOperations.some((x: any) => String(x?.final_status || "").toUpperCase().includes("FAIL"));
-  const status = resolveStatus({ hasAlert, hasFailedTask });
+  const status = computeStatus({ hasAlert, hasFailedTask });
 
   let statusReason = "运行稳定";
-  if (hasFailedTask) statusReason = "存在失败作业（最新执行异常）";
-  else if (hasAlert) {
+  if (status === "error") statusReason = "存在失败作业（最新执行异常）";
+  if (status === "risk") {
     const metric = String(latestAlert?.metric || latestAlert?.title || "").toLowerCase();
     statusReason = metric.includes("health") ? "作物健康风险（最新告警）" : "存在风险提示（最新告警）";
   }
@@ -122,54 +173,25 @@ export function buildFieldViewModel(params: {
     }
     : null;
 
-  const program = currentProgram
-    ? {
-      programId: String(currentProgram?.program_id || ""),
-      title: String(currentProgram?.title || currentProgram?.program_name || currentProgram?.program_id || "经营方案"),
-      objective: String(currentProgram?.target || currentProgram?.goal || "无农药 / 高品质"),
-      status: String(currentProgram?.status || "运行中"),
-      expectedYield: String(currentProgram?.expected_yield ?? currentProgram?.yield_target ?? "--"),
-      expectedCost: String(currentProgram?.expected_cost ?? currentProgram?.budget_cost ?? "--"),
-    }
-    : null;
+  const timeline = buildTimeline(allOperations, recentRecommendations, lang);
 
-  const timeline = [
-    ...allOperations.slice(0, 8).map((x: any) => {
-      const ts = Number(x.last_event_ts ?? 0);
-      const action = mapOperationTypeToLabel(x.action_type, lang);
-      return { ts, timeLabel: formatTimelineTime(ts), text: `${action}完成` };
-    }),
-    ...recentRecommendations.slice(0, 8).map((x: any) => {
-      const ts = Number(Date.parse(String(x.occurred_at ?? ""))) || 0;
-      const raw = `${x?.recommendation_type || ""} ${x?.type || ""}`.toLowerCase();
-      const text = raw.includes("health") ? "风险提示：作物健康" : "系统建议：关注田块";
-      return { ts, timeLabel: formatTimelineTime(ts), text };
-    }),
-  ]
-    .filter((x) => x.ts > 0)
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, 8);
-
-  const evidenceFromOps = allOperations
+  const evidence = allOperations
     .filter((x: any) => {
       const s = String(x.final_status || "").toUpperCase();
-      return s.includes("SUCC") || s.includes("FAIL");
+      return s.includes("SUCC") || s.includes("FAIL") || s.includes("SUCCESS");
     })
     .slice(0, 4)
     .map((x: any) => {
       const s = String(x.final_status || "").toUpperCase();
       const ts = Number(x.last_event_ts ?? 0);
+      const action = mapOperationTypeToLabel(x.action_type, lang);
       return {
         id: String(x.operation_plan_id || x.id || `${x.action_type}_${x.last_event_ts ?? 0}`),
-        text: `${mapOperationTypeToLabel(x.action_type, lang)}${s.includes("SUCC") ? "完成（符合约束）" : "失败（需复核）"}`,
-        timeLabel: formatTimelineTime(ts),
-        deviceId: String(x.device_id || currentTask?.deviceId || "dev_onboard_accept_001"),
+        title: `${action}${s.includes("SUCC") || s.includes("SUCCESS") ? "完成（符合约束）" : "完成（需复核）"}`,
+        time: formatTimelineTime(ts),
+        device: String(x.device_id || currentTask?.deviceId || "dev_onboard_accept_001"),
       };
     });
-
-  const defaultEvidence = detail?.latest_evidence
-    ? [{ id: String(detail.latest_evidence?.evidence_id || "latest"), text: "无农药检测通过", timeLabel: "--:--", deviceId: String(currentTask?.deviceId || "dev_onboard_accept_001") }]
-    : [];
 
   const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
   const trajectorySegments = trajectories
@@ -193,23 +215,21 @@ export function buildFieldViewModel(params: {
   return {
     fieldId,
     fieldName: String(detail?.field?.name || "field_c8_demo"),
-    status: status.code,
-    statusLabel: status.label,
-    statusDot: status.dot,
+    status,
+    statusLabel: mapStatusLabel(status),
     statusReason,
-    deviceCount: Number(detail?.summary?.device_count ?? 0),
-    kpis: [
-      { label: "面积", value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "--" },
-      { label: "作物", value: String(detail?.latest_season?.crop || detail?.season?.crop || "苹果") },
-      { label: "季节", value: String(detail?.latest_season?.name || detail?.latest_season?.season_id || "春季") },
-      { label: "风险", value: status.label },
-      { label: "设备", value: String(detail?.summary?.device_count ?? 0) },
-    ],
+    device: String(currentTask?.deviceId || "dev_onboard_accept_001"),
     currentTask,
     lastEvent,
-    program,
+    kpis: [
+      { label: "面积", value: detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "--" },
+      { label: "当前作物", value: String(detail?.latest_season?.crop || detail?.season?.crop || "苹果") },
+      { label: "当前季节", value: String(detail?.latest_season?.name || detail?.latest_season?.season_id || "春季") },
+      { label: "设备数", value: String(detail?.summary?.device_count ?? 0) },
+      { label: "最近作业", value: lastEvent?.action || "--" },
+    ],
     timeline,
-    evidence: evidenceFromOps.length ? evidenceFromOps : defaultEvidence,
+    evidence,
     map: {
       polygonGeoJson: detail?.geometry || detail?.polygon?.geojson_json || null,
       heatGeoJson: detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] },
