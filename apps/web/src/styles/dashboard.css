@@ -1,1 +1,81 @@
 /* dashboard specific rules gradually move here */
+
+.demoDashboardPage {
+  display: grid;
+  gap: 20px;
+}
+
+.demoHero {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: #fff;
+}
+
+.demoHeroTitle {
+  margin: 8px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+}
+
+.demoHeroSubTitle {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.demoSummaryGrid {
+  gap: 12px;
+}
+
+.demoMetricCard {
+  min-height: 126px;
+  padding: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.demoMetricLabel {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.demoMetricValue {
+  margin-top: 16px;
+  font-size: 36px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.demoContentGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.demoSectionHeader {
+  margin-bottom: 8px;
+}
+
+.demoList {
+  gap: 10px;
+}
+
+.demoInfoCard {
+  padding: 14px;
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  min-height: 132px;
+}
+
+.demoCardTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}

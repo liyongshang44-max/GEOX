@@ -6,10 +6,10 @@ import { toOperationDetailPath } from "../lib/operationLink";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
+    onlineDeviceCount: 0,
     inProgressCount: 0,
     completedTodayCount: 0,
     pendingCount: 0,
-    riskDeviceCount: 0,
   },
   actions: [],
   evidences: [],
@@ -38,10 +38,10 @@ export function useDashboard(api: any): DashboardVm {
 
         setData({
           overview: {
+            onlineDeviceCount: overview?.online_device_count ?? overview?.onlineDeviceCount ?? 0,
             inProgressCount: overview?.in_progress ?? overview?.inProgressCount ?? 0,
             completedTodayCount: overview?.completed_today ?? overview?.completedTodayCount ?? 0,
             pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
-            riskDeviceCount: overview?.risk_devices ?? overview?.riskDeviceCount ?? 0,
           },
           actions: (executions || []).map((o: any) => {
             const status = String(o?.status || o?.final_status || "").toUpperCase();
