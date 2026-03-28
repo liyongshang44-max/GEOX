@@ -1,10 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
-import { fetchOperationStates } from "../api/operations";
-import { getOverview, getRecentEvidence } from "../api/dashboard";
+import { fetchDashboardRecentExecutions, getOverview, getRecentEvidence } from "../api/dashboard";
 import { useDashboard } from "../hooks/useDashboard";
-import { mapReceiptToVm } from "../viewmodels/evidence";
 
 type DashboardProps = { expert?: boolean };
 
@@ -25,10 +23,7 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
   const api = React.useMemo(
     () => ({
       getOverview,
-      getOperations: async (params?: { limit?: number }) => {
-        const res = await fetchOperationStates({ limit: params?.limit ?? 8 });
-        return res?.items ?? [];
-      },
+      getRecentExecutions: async (params?: { limit?: number }) => fetchDashboardRecentExecutions(params?.limit ?? 8),
       getRecentEvidence,
     }),
     [],
@@ -62,12 +57,12 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
               <EmptyBlock text="暂无执行记录" />
             ) : (
               d.actions.map((a) => (
-                <div key={a.id} className="infoCard" style={{ padding: 12 }}>
+                <Link key={a.id} to={a.href || "/operations"} className="infoCard" style={{ padding: 12, display: "block", textDecoration: "none" }}>
                   <div className="title">{a.subjectName}</div>
                   <div className="muted">{a.actionLabel}</div>
                   <div className="muted" style={{ fontSize: 12 }}>{a.occurredAtLabel}</div>
                   <div>{a.statusLabel}</div>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -80,7 +75,9 @@ export default function CommercialDashboardPage(_: DashboardProps): React.ReactE
               <EmptyBlock text="暂无执行证据" />
             ) : (
               d.evidences.map((e: any, i: number) => (
-                <ReceiptEvidenceCard key={e?.id || e?.operation_id || i} data={mapReceiptToVm(e)} />
+                <Link key={e?.id || i} to={e?.href || e?.card?.href || "/operations"} style={{ textDecoration: "none", color: "inherit" }}>
+                  <ReceiptEvidenceCard data={e?.card} />
+                </Link>
               ))
             )}
           </div>

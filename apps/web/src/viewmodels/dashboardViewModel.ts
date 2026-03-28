@@ -168,9 +168,9 @@ export function buildDashboardViewModel(params: {
     }));
 
   const recentPackages = (Array.isArray(params.evidenceItems) ? params.evidenceItems : []).slice(0, 6).map((e) => ({
-    id: String(e.job_id ?? "-"),
-    status: String(e.status ?? "UNKNOWN"),
-    updatedAt: formatTs(e.updated_at ?? e.created_at),
+    id: String((e as any).receipt_fact_id ?? (e as any).operation_plan_id ?? "-"),
+    status: String((e as any).status ?? "UNKNOWN"),
+    updatedAt: formatTs((e as any).finished_at ?? (e as any).created_at),
   }));
 
   const recentPassed = activePrograms

@@ -18,6 +18,7 @@ export type ReceiptEvidenceVm = {
   violationSummary?: string;
 
   rawReceiptType?: string;
+  href?: string;
 };
 
 function toMs(value: unknown): number | null {
@@ -62,7 +63,7 @@ export function mapReceiptToVm(r: any): ReceiptEvidenceVm {
 
     statusTone: tone,
 
-    executorLabel: r?.executor_id || undefined,
+    executorLabel: r?.executor_label || r?.executor_id || undefined,
 
     startedAtLabel: formatTimeLabel(r?.execution_started_at),
     finishedAtLabel: formatTimeLabel(r?.execution_finished_at),
@@ -82,5 +83,23 @@ export function mapReceiptToVm(r: any): ReceiptEvidenceVm {
     violationSummary: r?.constraint_violated ? "检测到违规操作" : undefined,
 
     rawReceiptType: r?.receipt_type,
+    href: typeof r?.href === "string" ? r.href : undefined,
   };
+}
+
+export function mapDashboardEvidenceToVm(item: any): ReceiptEvidenceVm {
+  const source = item?.summary ?? item ?? {};
+  return mapReceiptToVm({
+    ...source,
+    receipt_status: item?.status ?? source?.receipt_status,
+    execution_finished_at: item?.finished_at ?? source?.execution_finished_at,
+    water_l: item?.water_l ?? source?.water_l,
+    electric_kwh: item?.electric_kwh ?? source?.electric_kwh,
+    log_ref_count: item?.log_ref_count ?? source?.log_ref_count,
+    constraint_violated: item?.constraint_violated ?? source?.constraint_violated,
+    executor_label: item?.executor_label ?? source?.executor_label,
+    receipt_fact_id: item?.receipt_fact_id ?? source?.receipt_fact_id,
+    receipt_type: item?.receipt_type ?? source?.receipt_type,
+    href: item?.href,
+  });
 }
