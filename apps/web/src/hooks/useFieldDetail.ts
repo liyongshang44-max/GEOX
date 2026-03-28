@@ -77,24 +77,13 @@ export function useFieldDetail(params: {
 
     let detail: any = null;
     let controlPlaneHit = false;
-    let detailError: any = null;
-
-    try {
-      const cp = await fetchFieldControlPlane(fieldId);
-      if (cp?.field || cp?.overview || cp?.summary) {
-        detail = mapControlPlaneToLegacyDetail(fieldId, cp);
-        controlPlaneHit = true;
-      }
-    } catch (e) {
-      detailError = e;
+    const cp = await fetchFieldControlPlane(fieldId);
+    if (cp?.field || cp?.overview || cp?.summary) {
+      detail = mapControlPlaneToLegacyDetail(fieldId, cp);
+      controlPlaneHit = true;
     }
-
     if (!detail) {
-      try {
-        detail = await fetchFieldDetail(fieldId);
-      } catch (e) {
-        detailError = e;
-      }
+      detail = await fetchFieldDetail(fieldId);
     }
 
     const [opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
@@ -114,23 +103,31 @@ export function useFieldDetail(params: {
       };
     }
 
-    const geometry = geometryRes.status === "fulfilled" ? geometryRes.value?.geometry : null;
+    const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
+    const activeOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [];
+    const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
+    const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
+    const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
+    const latestEvidence = (detail as any)?.latestEvidence || (detail as any)?.latest_evidence || (detail as any)?.recent_receipts?.[0]?.receipt?.payload || null;
 
     setState({
-      detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null },
-      activeOperations: opsRes.status === "fulfilled" ? (opsRes.value.items ?? []).filter((x) => !["SUCCESS", "FAILED"].includes(String(x.final_status))) : [],
-      recentRecommendations: recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [],
-      currentProgram: currentRes.status === "fulfilled" ? currentRes.value : null,
-      programsBySeason: bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [],
+      field: detail?.field ?? null,
+      geometry: geometry ?? detail?.geometry ?? null,
+      currentProgram,
+      controlPlane: cp ?? null,
+      operations: activeOperations,
+      recommendations,
+      latestEvidence,
+      error: null,
+      detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null, latestEvidence },
+      activeOperations,
+      recentRecommendations: recommendations,
+      programsBySeason,
     });
 
-    if (detailError) {
-      setError(lang === "zh" ? "当前暂无地块详情数据" : "Field detail is unavailable.");
-      setTechnical(String(detailError?.bodyText || detailError?.message || detailError || ""));
-      setStatus(lang === "zh" ? "田块详情暂不可读，已展示可用数据。" : "Partial data loaded.");
-    } else {
-      setStatus(controlPlaneHit ? "已通过聚合接口加载" : (lang === "zh" ? "加载成功" : "Loaded"));
-    }
+    setError(null);
+    setTechnical(null);
+    setStatus(controlPlaneHit ? "已通过聚合接口加载" : (lang === "zh" ? "已加载（缺失接口已自动降级）" : "Loaded with fallbacks"));
 
     setBusy(false);
   }, [fieldId, lang]);

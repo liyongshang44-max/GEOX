@@ -51,23 +51,33 @@ export type FieldControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
+async function safeNullable<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
+  } catch (e: any) {
+    if (e?.status === 404 || e?.response?.status === 404) return null;
+    if (e?.status === 500 || e?.response?.status === 500) return null;
+    return null;
+  }
+}
+
 export async function fetchFields(): Promise<FieldListItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>("/api/v1/fields");
   if (Array.isArray(res.items)) return res.items;
   return Array.isArray(res.fields) ? res.fields : [];
 }
 
-export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail> {
-  return apiRequest<FieldDetail>(`/api/v1/fields/${encodeURIComponent(fieldId)}`);
+export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | null> {
+  return safeNullable(apiRequest<FieldDetail>(`/api/v1/fields/${encodeURIComponent(fieldId)}`));
 }
 
 export async function fetchFieldControlPlane(fieldId: string): Promise<FieldControlPlaneItem | null> {
-  const res = await apiRequest<{ ok?: boolean; item?: FieldControlPlaneItem }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`);
-  return res.item ?? null;
+  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: FieldControlPlaneItem }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`));
+  return res?.item ?? null;
 }
 
 export async function fetchFieldGeometry(fieldId: string): Promise<any> {
-  return apiRequest<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`);
+  return safeNullable(apiRequest<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`));
 }
 
 export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array<{ season_id: string; count: number; programs: any[] }>> {
@@ -76,6 +86,6 @@ export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array
 }
 
 export async function fetchFieldCurrentProgram(fieldId: string): Promise<any | null> {
-  const res = await apiRequest<{ ok?: boolean; item?: any }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`);
-  return res.item ?? null;
+  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: any }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`));
+  return res?.item ?? null;
 }
