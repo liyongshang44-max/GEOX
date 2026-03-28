@@ -459,6 +459,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           act_task_id,
           issuer: body.issuer,
           action_type: body.action_type,
+          task_type: String(body.meta?.task_type ?? body.action_type).trim() || body.action_type,
           target: body.target,
           time_window: body.time_window,
           parameter_schema: body.parameter_schema,
@@ -635,7 +636,69 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
         act_task_id: body.act_task_id
       });
 
-      return reply.send({ ok: true, fact_id });
+      const latestPlanSql = `
+        SELECT fact_id, (record_json::jsonb) AS record_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+          AND (record_json::jsonb#>>'{payload,project_id}') = $3
+          AND (record_json::jsonb#>>'{payload,group_id}') = $4
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 1
+      `;
+      const latestPlanRes = await pool.query(latestPlanSql, [body.operation_plan_id, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+      if ((latestPlanRes.rowCount ?? 0) === 0) throw new Error("PLAN_NOT_FOUND");
+      const latestPlan = latestPlanRes.rows[0]?.record_json ?? {};
+      const planPayload = latestPlan?.payload ?? {};
+      const currentStatus = String(planPayload.status ?? "").trim().toUpperCase();
+      if (currentStatus === "SUCCEEDED" || currentStatus === "FAILED") {
+        return reply.send({ ok: true, fact_id, terminal_deduped: true });
+      }
+
+      const receiptStatus = String(body.status ?? "").toLowerCase();
+      const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
+
+      const transitionFactId = randomUUID();
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [transitionFactId, FACT_SOURCE_AO_ACT_V0, {
+          type: "operation_plan_transition_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: body.operation_plan_id,
+            from_status: currentStatus || "ACKED",
+            status: terminalState,
+            trigger: "receipt",
+            act_task_id: body.act_task_id,
+            receipt_fact_id: fact_id,
+            created_ts: Date.now()
+          }
+        }]
+      );
+
+      const planFactId = randomUUID();
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [planFactId, FACT_SOURCE_AO_ACT_V0, {
+          type: "operation_plan_v1",
+          payload: {
+            ...planPayload,
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: body.operation_plan_id,
+            act_task_id: body.act_task_id,
+            status: terminalState,
+            receipt_fact_id: fact_id,
+            updated_ts: Date.now()
+          }
+        }]
+      );
+
+      return reply.send({ ok: true, fact_id, operation_plan_transition_fact_id: transitionFactId, operation_plan_fact_id: planFactId });
     } catch (e: any) {
       const msg = String(e?.message ?? "BAD_REQUEST"); // Normalize error message.
       if (msg === "NOT_FOUND") return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Enforce non-enumerable cross-tenant failure.
