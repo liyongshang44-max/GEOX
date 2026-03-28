@@ -17,7 +17,13 @@ export type DashboardActionVm = {
   href?: string;
 };
 
-export type DashboardEvidenceVm = { id: string; href?: string; card: any; };
+export type DashboardEvidenceVm = {
+  id: string;
+  href?: string;
+  fieldName?: string;
+  operationName?: string;
+  card: any;
+};
 
 export type DashboardVm = {
   overview: DashboardOverviewVm;

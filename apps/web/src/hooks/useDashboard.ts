@@ -60,6 +60,8 @@ export function useDashboard(api: any): DashboardVm {
           evidences: (evidences || []).map((item: any, i: number) => ({
             id: String(item?.receipt_fact_id || item?.operation_plan_id || i),
             href: toOperationDetailPath(item),
+            fieldName: item?.field_name || item?.field_id || "田块",
+            operationName: item?.program_name || item?.executor_label || "作业",
             card: mapDashboardEvidenceToVm({
               ...item,
               href: toOperationDetailPath(item),
