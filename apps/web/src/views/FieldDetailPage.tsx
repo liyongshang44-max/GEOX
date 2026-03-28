@@ -7,49 +7,59 @@ import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 
-const STATUS_COLOR: Record<string, string> = {
-  ok: "#12b76a",
-  risk: "#f79009",
-  error: "#f04438",
+const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
+  ok: { color: "#067647", bg: "#ecfdf3", border: "#abefc6" },
+  risk: { color: "#b54708", bg: "#fffaeb", border: "#fedf89" },
+  error: { color: "#b42318", bg: "#fef3f2", border: "#fecdca" },
 };
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
-  const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
+  const [lang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const labels = FIELD_TEXT[lang];
 
-  const { model, busy, status, error, technical, refresh } = useFieldDetail({ fieldId, lang });
+  const { model, busy, error, technical, refresh } = useFieldDetail({ fieldId, lang });
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
 
-  const currentTask = model?.currentTask;
-  const currentProgram = model?.program;
+  const statusStyle = STATUS_STYLE[model?.status || "ok"];
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <section className="card" style={{ padding: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "grid", gap: 8 }}>
+          <div style={{ display: "grid", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ fontSize: 22, fontWeight: 700 }}>[ {model?.fieldName || "field_c8_demo"} ]</div>
-              <div style={{ color: STATUS_COLOR[model?.status || "ok"], fontWeight: 700, fontSize: 18 }}>整体状态：{model?.statusDot || "●"} {model?.statusLabel || "正常"}</div>
+              <div style={{ fontSize: 22, fontWeight: 700 }}>{model?.fieldName || "field_c8_demo"}</div>
+              <span
+                style={{
+                  color: statusStyle.color,
+                  background: statusStyle.bg,
+                  border: `1px solid ${statusStyle.border}`,
+                  borderRadius: 999,
+                  padding: "2px 12px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                {model?.statusLabel || "正常"}
+              </span>
             </div>
-            <div className="muted">原因：{model?.statusReason || "运行稳定"}</div>
-            <div className="muted">设备：{model?.currentTask?.deviceId || "dev_onboard_accept_001"}</div>
+            <div style={{ fontWeight: 600 }}>{model?.statusReason || "运行稳定"}</div>
+            <div className="muted">设备：{model?.device || "dev_onboard_accept_001"}</div>
             <div className="muted">当前作业：{model?.currentTask ? `${model.currentTask.action}中` : "无"}</div>
             <div className="muted">最近动作：{model?.lastEvent?.relativeText || "暂无"}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
             <Link className="btn" to="/fields">返回</Link>
-            <button className="btn" onClick={() => setLang((x) => (x === "zh" ? "en" : "zh"))}>切换语言</button>
           </div>
         </div>
       </section>
 
-      {error ? <ErrorState title="地块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
+      {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
 
       <section style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(120px,1fr))", gap: 10 }}>
         {(model?.kpis ?? []).map((item) => (
@@ -60,7 +70,7 @@ export default function FieldDetailPage(): React.ReactElement {
         ))}
       </section>
 
-      <section style={{ display: "grid", gridTemplateColumns: "1.6fr 1.4fr 1fr", gap: 12 }}>
+      <section style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 12 }}>
         <article className="card" style={{ padding: 14 }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>当前作业</h3>
           {model?.currentTask ? (
@@ -68,35 +78,21 @@ export default function FieldDetailPage(): React.ReactElement {
               <div style={{ fontWeight: 700 }}>{model.currentTask.action.toUpperCase()}</div>
               <div className="muted">状态：{model.currentTask.status}</div>
               <div className="muted">进度：{model.currentTask.progress}%</div>
-              <button className="btn" style={{ width: "fit-content", marginTop: 8 }}>查看执行详情</button>
             </div>
-          ) : <div className="muted">暂无执行中的作业</div>}
-
-          <hr style={{ border: "none", borderTop: "1px solid #eaecf0", margin: "14px 0" }} />
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Program（经营方案）</h3>
-          {model?.program ? (
-            <div style={{ display: "grid", gap: 6 }}>
-              <div className="muted">目标：{model.program.objective || "无农药 / 高品质"}</div>
-              <div className="muted">状态：{model.program.status || "运行中"}</div>
-              <div className="muted">预计产量：{model.program.expectedYield || "--"}</div>
-              <div className="muted">预计成本：{model.program.expectedCost || "--"}</div>
-              <Link className="btn" style={{ width: "fit-content", marginTop: 8 }} to={model.program.programId ? `/programs/${encodeURIComponent(model.program.programId)}` : "/programs"}>查看方案</Link>
-            </div>
-          ) : <div className="muted">暂无经营方案</div>}
+          ) : <div className="muted">暂无执行任务</div>}
         </article>
 
         <article className="card" style={{ padding: 14 }}>
           <h3 style={{ marginTop: 0, marginBottom: 8 }}>时间线</h3>
           <div style={{ display: "grid", gap: 10 }}>
-            {(model?.timeline ?? []).slice(0, 6).map((item, idx) => (
-              <div key={`${item.ts}_${idx}`} style={{ display: "grid", gridTemplateColumns: "56px 1fr", gap: 8 }}>
-                <div className="mono" style={{ color: "#475467" }}>[{item.timeLabel}]</div>
-                <div>{item.text}</div>
+            {(model?.timeline ?? []).slice(0, 6).map((item) => (
+              <div key={item.id} style={{ display: "grid", gridTemplateColumns: "58px 1fr", gap: 8 }}>
+                <div className="mono" style={{ color: "#475467" }}>[{item.time}]</div>
+                <div>{item.icon} {item.label}</div>
               </div>
             ))}
             {!(model?.timeline ?? []).length ? <div className="muted">暂无时间线事件</div> : null}
           </div>
-          <button className="btn" style={{ marginTop: 12 }}>查看更多</button>
         </article>
 
         <article className="card" style={{ padding: 14 }}>
@@ -104,9 +100,9 @@ export default function FieldDetailPage(): React.ReactElement {
           <div style={{ display: "grid", gap: 12 }}>
             {(model?.evidence ?? []).slice(0, 3).map((item) => (
               <div key={item.id} style={{ display: "grid", gap: 4 }}>
-                <div>✓ {item.text}</div>
-                <div className="muted">时间：{item.timeLabel}</div>
-                <div className="muted">设备：{item.deviceId}</div>
+                <div>✓ {item.title}</div>
+                <div className="muted">时间：{item.time}</div>
+                <div className="muted">设备：{item.device}</div>
               </div>
             ))}
             {!(model?.evidence ?? []).length ? <div className="muted">暂无证据</div> : null}
@@ -133,12 +129,10 @@ export default function FieldDetailPage(): React.ReactElement {
         )}
         {!model?.map.hasTrajectory ? (
           <div style={{ marginTop: 10, border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 16, color: "#667085" }}>
-            暂无轨迹
+            暂无轨迹数据
           </div>
         ) : null}
       </section>
-
-      <div className="muted">{status}</div>
     </div>
   );
 }
