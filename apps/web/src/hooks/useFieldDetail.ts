@@ -1,8 +1,8 @@
 import React from "react";
-import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, fetchFieldProgramsBySeason, type FieldControlPlaneItem } from "../api/fields";
+import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, type FieldControlPlaneItem } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
-import { buildFieldDetailViewModel } from "../viewmodels/fieldDetailViewModel";
+import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
 import type { FieldLang } from "../lib/fieldViewModel";
 
 function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneItem): any {
@@ -51,17 +51,15 @@ function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneIte
 export function useFieldDetail(params: {
   fieldId: string;
   lang: FieldLang;
-  labels: any;
-  playbackTs: number;
 }): {
   busy: boolean;
   status: string;
   error: string | null;
   technical: string | null;
-  model: ReturnType<typeof buildFieldDetailViewModel> | null;
+  model: FieldViewModel | null;
   refresh: () => Promise<void>;
 } {
-  const { fieldId, lang, labels, playbackTs } = params;
+  const { fieldId, lang } = params;
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
   const [state, setState] = React.useState<any>(null);
@@ -107,12 +105,11 @@ export function useFieldDetail(params: {
         } catch {}
       }
 
-      const [opsRes, recsRes, currentRes, geometryRes, bySeasonRes] = await Promise.allSettled([
+      const [opsRes, recsRes, currentRes, geometryRes] = await Promise.allSettled([
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
         Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
-        Promise.resolve().then(() => fetchFieldProgramsBySeason(fieldId)),
       ]);
 
       if (!detail) {
@@ -129,7 +126,6 @@ export function useFieldDetail(params: {
       const activeOperations = allOperations.filter((x) => !["SUCCESS", "FAILED", "SUCCEEDED"].includes(String(x.final_status).toUpperCase()));
       const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
       const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
-      const programsBySeason = bySeasonRes.status === "fulfilled" && Array.isArray(bySeasonRes.value) ? bySeasonRes.value : [];
       const latestEvidence =
         (detail as any)?.latestEvidence ??
         (detail as any)?.latest_evidence ??
@@ -151,10 +147,9 @@ export function useFieldDetail(params: {
         activeOperations,
         allOperations,
         recentRecommendations: recommendations,
-        programsBySeason,
       });
 
-      setStatus(controlPlaneHit ? "已通过聚合接口加载" : (lang === "zh" ? "已加载（缺失接口已自动降级）" : "Loaded with fallbacks"));
+      setStatus(controlPlaneHit ? "已加载田块控制台" : (lang === "zh" ? "已加载田块控制台" : "Field console loaded"));
     } catch (e: any) {
       setState(null);
       setError(lang === "zh" ? "田块详情加载失败" : "Failed to load field detail");
@@ -169,18 +164,16 @@ export function useFieldDetail(params: {
 
   const model = React.useMemo(() => {
     if (!state) return null;
-    return buildFieldDetailViewModel({
-      detail: state.detail,
-      labels,
+    return buildFieldViewModel({
+      fieldId,
       lang,
+      detail: state.detail,
       activeOperations: state.activeOperations,
       recentRecommendations: state.recentRecommendations,
       currentProgram: state.currentProgram,
       allOperations: state.allOperations ?? [],
-      programsBySeason: state.programsBySeason,
-      playbackTs,
     });
-  }, [state, labels, lang, playbackTs]);
+  }, [state, fieldId, lang]);
 
   return { busy, status, error, technical, model, refresh };
 }
