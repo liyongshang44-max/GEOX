@@ -70,5 +70,7 @@ apps/web/tsconfig.tsbuildinfo
 # local export artifacts
 *.bundle
 _tmp_*
+_data_backup/
+*.dump
 # NOTE: do not add global *.json/*.pdf/*.csv ignores here.
 # Fixtures/manifests/templates/schemas must remain visible to git.
