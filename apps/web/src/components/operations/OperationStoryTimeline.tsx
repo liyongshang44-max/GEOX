@@ -1,10 +1,12 @@
 import React from "react";
 import type { OperationStoryTimelineItemVm } from "../../viewmodels/operationDetailViewModel";
 
+const TIMELINE_TITLE = "全链路时间线";
+
 export default function OperationStoryTimeline({ items }: { items: OperationStoryTimelineItemVm[] }): React.ReactElement {
   return (
     <section className="card sectionBlock">
-      <div className="sectionTitle">全链路时间线</div>
+      <div className="sectionTitle">{TIMELINE_TITLE}</div>
       <div className="operationStoryTimeline">
         {items.map((item, idx) => (
           <div key={item.id} className={`operationStoryItem ${item.status === "PENDING" ? "isPending" : "isDone"}`}>

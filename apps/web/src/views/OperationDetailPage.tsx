@@ -10,12 +10,20 @@ import OperationStoryTimeline from "../components/operations/OperationStoryTimel
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
 
+const COPY = {
+  detailUnavailable: "作业详情暂不可用",
+  operationNotFound: "未找到对应作业",
+  detailTitle: "作业详情",
+  backToList: "返回作业列表",
+  executionEvidence: "执行证据",
+} as const;
+
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
 
   if (loading) return <SectionSkeleton kind="detail" />;
-  if (error || !detail) return <ErrorState title="作业详情暂不可用" message={error || "未找到对应作业"} onRetry={() => void reload()} />;
+  if (error || !detail) return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   const model = buildOperationDetailViewModel(detail);
 
   return (
@@ -23,11 +31,11 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">作业详情</div>
+            <div className="sectionTitle">{COPY.detailTitle}</div>
             <div className="muted">作业编号（次级）：{model.operationPlanId}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <Link className="btn" to="/operations">返回作业列表</Link>
+            <Link className="btn" to="/operations">{COPY.backToList}</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
@@ -44,7 +52,7 @@ export default function OperationDetailPage(): React.ReactElement {
       <OperationEvidenceDownloadCard model={model} />
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">执行证据</div>
+        <div className="sectionTitle">{COPY.executionEvidence}</div>
         <ReceiptEvidenceCard data={model.receiptEvidence} />
       </section>
 
