@@ -48,7 +48,7 @@ export default function OperationsPage(): React.ReactElement {
               <span>act_task_id：{String(x.task_id || "-")}</span>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <Link className="btn" to={`/programs/${encodeURIComponent(String(x.program_id || ""))}`}>跳转 Program 详情</Link>
+              <Link className="btn" to={`/programs/${encodeURIComponent(String(x.program_id || ""))}`}>跳转经营方案详情</Link>
               <CopyButton value={String(x.operation_id || "")} label="复制 operation_plan_id" />
             </div>
           </article>
