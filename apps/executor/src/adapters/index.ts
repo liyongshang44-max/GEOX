@@ -6,6 +6,7 @@ export type AoActTask = {
   command_id: string;
   operation_plan_id: string;
   action_type: string;
+  task_type?: string;
   adapter_type: string | null;
   adapter_hint: string | null;
   parameters: Record<string, unknown>;
