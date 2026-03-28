@@ -1,21 +1,66 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchProgramPortfolio } from "../api";
-import { StatusTag } from "../components/StatusTag";
-import { RelativeTime } from "../components/RelativeTime";
 import EmptyState from "../components/common/EmptyState";
 
-function boolText(v: boolean): string { return v ? "是" : "否"; }
+function toText(v: unknown, fallback = ""): string {
+  if (typeof v === "string") {
+    const cleaned = v.trim();
+    return cleaned || fallback;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return fallback;
+}
+
+function planName(item: any): string {
+  const title = toText(item?.title || item?.display_name || item?.program_name, "");
+  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) {
+    return title;
+  }
+  const crop = toText(item?.crop_name || item?.crop_code, "");
+  return crop ? `${crop}种植方案` : "默认经营方案";
+}
+
+function fieldLabel(item: any): string {
+  const raw = toText(item?.field_name || item?.field_label || item?.field_id, "");
+  if (!raw) return "未命名田块";
+  if (/^field_demo_/i.test(raw)) return `示范田 ${raw.replace(/^field_demo_/i, "")}`;
+  if (/^field_/i.test(raw)) return "未命名田块";
+  return raw;
+}
+
+function riskLabel(item: any): "高风险" | "中风险" | "低风险" {
+  const risk = String(item?.current_risk_summary?.level || "LOW").toUpperCase();
+  if (risk === "HIGH") return "高风险";
+  if (risk === "MEDIUM") return "中风险";
+  return "低风险";
+}
+
+function stageLabel(item: any): "运行中" | "待执行" | "异常" {
+  const status = String(item?.status || "").toUpperCase();
+  const mode = String(item?.next_action_hint?.mode || item?.next_action_hint?.decision_mode || "").toUpperCase();
+  if (status.includes("FAILED") || status.includes("ERROR") || mode.includes("BLOCKED")) return "异常";
+  if (mode.includes("APPROVAL") || status.includes("PENDING")) return "待执行";
+  return "运行中";
+}
+
+function nextSuggestion(item: any): string {
+  const hint = toText(item?.next_action_hint?.human_summary || item?.next_action_hint?.expected_effect, "");
+  return hint || "等待下一轮评估";
+}
+
+function badgeClass(stage: string): string {
+  if (stage === "异常") return "bg-red-50 text-red-700";
+  if (stage === "待执行") return "bg-amber-50 text-amber-700";
+  return "bg-blue-50 text-blue-700";
+}
 
 export default function ProgramListPage(): React.ReactElement {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [fieldFilter, setFieldFilter] = React.useState("ALL");
-  const [executableFilter, setExecutableFilter] = React.useState("ALL");
   const [riskFilter, setRiskFilter] = React.useState("ALL");
-  const [approvalFilter, setApprovalFilter] = React.useState("ALL");
-  const [sortBy, setSortBy] = React.useState("updated_desc");
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -29,77 +74,77 @@ export default function ProgramListPage(): React.ReactElement {
 
   React.useEffect(() => { void reload(); }, [reload]);
 
-  const fieldOptions = React.useMemo(() => Array.from(new Set(items.map((x) => String(x?.field_id || "-")).filter(Boolean))), [items]);
+  const fieldOptions = React.useMemo(
+    () => Array.from(new Set(items.map((x) => fieldLabel(x)).filter(Boolean))),
+    [items],
+  );
 
   const filtered = React.useMemo(() => {
-    const list = items.filter((x) => {
-      const status = String(x?.status || "UNKNOWN").toUpperCase();
-      const risk = String(x?.current_risk_summary?.level || "LOW").toUpperCase();
-      const mode = String(x?.next_action_hint?.mode || x?.next_action_hint?.decision_mode || "AUTO").toUpperCase();
-      const executable = !(mode.includes("BLOCKED") || mode.includes("APPROVAL"));
-      const hasApproval = mode.includes("APPROVAL");
-      if (statusFilter !== "ALL" && status !== statusFilter) return false;
-      if (fieldFilter !== "ALL" && String(x?.field_id || "-") !== fieldFilter) return false;
-      if (executableFilter !== "ALL" && boolText(executable) !== executableFilter) return false;
+    return items.filter((x) => {
+      const stage = stageLabel(x);
+      const field = fieldLabel(x);
+      const risk = riskLabel(x);
+      if (statusFilter !== "ALL" && stage !== statusFilter) return false;
+      if (fieldFilter !== "ALL" && field !== fieldFilter) return false;
       if (riskFilter !== "ALL" && risk !== riskFilter) return false;
-      if (approvalFilter !== "ALL" && boolText(hasApproval) !== approvalFilter) return false;
       return true;
     });
-
-    list.sort((a, b) => {
-      const ta = Date.parse(String(a?.updated_at || "")) || 0;
-      const tb = Date.parse(String(b?.updated_at || "")) || 0;
-      if (sortBy === "updated_asc") return ta - tb;
-      return tb - ta;
-    });
-    return list;
-  }, [items, statusFilter, fieldFilter, executableFilter, riskFilter, approvalFilter, sortBy]);
+  }, [items, statusFilter, fieldFilter, riskFilter]);
 
   return (
     <div className="productPage">
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">经营 Program</div>
+            <div className="sectionTitle">经营方案列表</div>
             <div className="muted">结果数：{loading ? "-" : filtered.length}</div>
           </div>
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
         </div>
         <div className="toolbarFilters">
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="ALL">状态（全部）</option><option value="ACTIVE">运行中</option><option value="BLOCKED">阻塞</option></select>
-          <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}><option value="ALL">田块（全部）</option>{fieldOptions.map((f) => <option key={f} value={f}>{f}</option>)}</select>
-          <select className="select" value={executableFilter} onChange={(e) => setExecutableFilter(e.target.value)}><option value="ALL">可执行（全部）</option><option value="是">可执行</option><option value="否">不可执行</option></select>
-          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}><option value="ALL">风险（全部）</option><option value="HIGH">高</option><option value="MEDIUM">中</option><option value="LOW">低</option></select>
-          <select className="select" value={approvalFilter} onChange={(e) => setApprovalFilter(e.target.value)}><option value="ALL">待审批（全部）</option><option value="是">是</option><option value="否">否</option></select>
-          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}><option value="updated_desc">最近更新时间（新→旧）</option><option value="updated_asc">最近更新时间（旧→新）</option></select>
+          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="ALL">阶段（全部）</option>
+            <option value="运行中">运行中</option>
+            <option value="待执行">待执行</option>
+            <option value="异常">异常</option>
+          </select>
+          <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
+            <option value="ALL">田块（全部）</option>
+            {fieldOptions.map((f) => <option key={f} value={f}>{f}</option>)}
+          </select>
+          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
+            <option value="ALL">风险等级（全部）</option>
+            <option value="高风险">高风险</option>
+            <option value="中风险">中风险</option>
+            <option value="低风险">低风险</option>
+          </select>
         </div>
       </section>
 
       <section className="list modernList">
-        {filtered.map((p) => {
-          const mode = String(p?.next_action_hint?.mode || p?.next_action_hint?.decision_mode || "AUTO");
-          const executable = !(mode.toUpperCase().includes("BLOCKED") || mode.toUpperCase().includes("APPROVAL"));
-          const title = String(p?.title || p?.display_name || p?.program_name || p?.program_id || "-");
-          const nextStep = String(p?.next_action_hint?.human_summary || p?.next_action_hint?.kind || "等待下一轮评估");
-          const riskReason = String(p?.current_risk_summary?.reason || p?.current_risk_summary?.summary || "当前暂无明确风险");
+        {filtered.map((p, idx) => {
+          const pid = String(p?.program_id || p?.id || "");
+          const stage = stageLabel(p);
           return (
-            <article key={String(p?.program_id)} className="infoCard">
-              <div className="jobTitleRow"><div className="title">{title}</div><StatusTag status={String(p?.status || "UNKNOWN")} /></div>
-              <div className="meta wrapMeta">
-                <span>田块：{String(p?.field_id || "-")}</span>
-                <span>季节：{String(p?.season_id || "-")}</span>
-                <span>作物：{String(p?.crop_code || "-")}</span>
-                <span>可执行：{boolText(executable)}</span>
-                <span>风险：{String(p?.current_risk_summary?.level || "LOW")}</span>
-                <span>更新时间：<RelativeTime value={String(p?.updated_at || "")} /></span>
+            <article key={pid || idx} className="infoCard">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <strong>方案概览</strong>
+                <span className={`text-sm px-3 py-1 rounded ${badgeClass(stage)}`}>{stage}</span>
               </div>
-              <div style={{ marginTop: 8 }}>下一步建议：{nextStep}</div>
-              <div className="muted" style={{ marginTop: 4 }}>风险原因：{riskReason}</div>
-              <div style={{ marginTop: 10 }}><Link className="btn" to={`/programs/${encodeURIComponent(String(p?.program_id || ""))}`}>查看详情</Link></div>
+
+              <div className="kv"><span className="k">方案名称</span><span className="v">{planName(p)}</span></div>
+              <div className="kv"><span className="k">所属田块</span><span className="v">{fieldLabel(p)}</span></div>
+              <div className="kv"><span className="k">当前阶段</span><span className="v">{stage}</span></div>
+              <div className="kv"><span className="k">风险等级</span><span className="v">{riskLabel(p)}</span></div>
+              <div className="kv"><span className="k">下一步建议</span><span className="v">{nextSuggestion(p)}</span></div>
+
+              <div style={{ marginTop: 10 }}>
+                <Link className="btn" to={`/programs/${encodeURIComponent(pid)}`}>查看详情</Link>
+              </div>
             </article>
           );
         })}
-        {!loading && !filtered.length ? <EmptyState title="暂无可展示 Program" description="请调整筛选条件或稍后刷新" /> : null}
+        {!loading && !filtered.length ? <EmptyState title="暂无可展示经营方案" description="请调整筛选条件或稍后刷新" /> : null}
       </section>
     </div>
   );
