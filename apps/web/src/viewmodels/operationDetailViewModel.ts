@@ -108,7 +108,7 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
     case "已生成执行任务":
       return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
     case "已下发设备":
-      return `任务已发送至灌溉设备 ${deviceId}，等待设备 ACK 与执行反馈。`;
+      return `任务已发送至灌溉设备 ${deviceId}，等待设备确认与执行反馈。`;
     case "设备执行中":
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
     case "已记录执行回执":
@@ -224,7 +224,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
         : "-",
       dispatchedAtLabel: toDateLabel(detail?.dispatch?.dispatched_at),
       ackedAtLabel: toDateLabel(detail?.dispatch?.acked_at),
-      ackStatusLabel: ackTs != null ? "已 ACK" : "未 ACK",
+      ackStatusLabel: ackTs != null ? "已确认" : "待确认",
       finalStatusLabel: toText(detail?.status_label, toText(detail?.final_status)),
     },
     receiptEvidence: receipt,
