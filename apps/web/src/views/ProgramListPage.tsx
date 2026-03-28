@@ -27,25 +27,56 @@ function planName(item: any): string {
   return `${crop}种植方案`;
 }
 
-function riskLabel(item: any): string {
+function toText(v: unknown, fallback = ""): string {
+  if (typeof v === "string") {
+    const cleaned = v.trim();
+    return cleaned || fallback;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  return fallback;
+}
+
+function planName(item: any): string {
+  const title = toText(item?.title || item?.display_name || item?.program_name, "");
+  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) {
+    return title;
+  }
+  const crop = toText(item?.crop_name || item?.crop_code, "");
+  return crop ? `${crop}种植方案` : "默认经营方案";
+}
+
+function fieldLabel(item: any): string {
+  const raw = toText(item?.field_name || item?.field_label || item?.field_id, "");
+  if (!raw) return "未命名田块";
+  if (/^field_demo_/i.test(raw)) return `示范田 ${raw.replace(/^field_demo_/i, "")}`;
+  if (/^field_/i.test(raw)) return "未命名田块";
+  return raw;
+}
+
+function riskLabel(item: any): "高风险" | "中风险" | "低风险" {
   const risk = String(item?.current_risk_summary?.level || "LOW").toUpperCase();
   if (risk === "HIGH") return "高风险";
   if (risk === "MEDIUM") return "中风险";
   return "低风险";
 }
 
-function stageLabel(item: any): string {
+function stageLabel(item: any): "运行中" | "待执行" | "异常" {
   const status = String(item?.status || "").toUpperCase();
   const mode = String(item?.next_action_hint?.mode || item?.next_action_hint?.decision_mode || "").toUpperCase();
-  if (status.includes("RUNNING") || status.includes("ACTIVE")) return "运行中";
-  if (mode.includes("APPROVAL")) return "待审批";
-  if (mode.includes("BLOCKED")) return "异常";
+  if (status.includes("FAILED") || status.includes("ERROR") || mode.includes("BLOCKED")) return "异常";
+  if (mode.includes("APPROVAL") || status.includes("PENDING")) return "待执行";
   return "运行中";
 }
 
-function adviceLabel(item: any): string {
+function nextSuggestion(item: any): string {
   const hint = toText(item?.next_action_hint?.human_summary || item?.next_action_hint?.expected_effect, "");
   return hint || "等待下一轮评估";
+}
+
+function badgeClass(stage: string): string {
+  if (stage === "异常") return "bg-red-50 text-red-700";
+  if (stage === "待执行") return "bg-amber-50 text-amber-700";
+  return "bg-blue-50 text-blue-700";
 }
 
 export default function ProgramListPage(): React.ReactElement {
@@ -54,7 +85,6 @@ export default function ProgramListPage(): React.ReactElement {
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [fieldFilter, setFieldFilter] = React.useState("ALL");
   const [riskFilter, setRiskFilter] = React.useState("ALL");
-  const [sortBy, setSortBy] = React.useState("updated_desc");
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -74,7 +104,7 @@ export default function ProgramListPage(): React.ReactElement {
   );
 
   const filtered = React.useMemo(() => {
-    const list = items.filter((x) => {
+    return items.filter((x) => {
       const stage = stageLabel(x);
       const field = fieldLabel(x);
       const risk = riskLabel(x);
@@ -83,15 +113,7 @@ export default function ProgramListPage(): React.ReactElement {
       if (riskFilter !== "ALL" && risk !== riskFilter) return false;
       return true;
     });
-
-    list.sort((a, b) => {
-      const ta = Date.parse(String(a?.updated_at || "")) || 0;
-      const tb = Date.parse(String(b?.updated_at || "")) || 0;
-      if (sortBy === "updated_asc") return ta - tb;
-      return tb - ta;
-    });
-    return list;
-  }, [items, statusFilter, fieldFilter, riskFilter, sortBy]);
+  }, [items, statusFilter, fieldFilter, riskFilter]);
 
   return (
     <div className="productPage">
@@ -107,7 +129,7 @@ export default function ProgramListPage(): React.ReactElement {
           <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="ALL">阶段（全部）</option>
             <option value="运行中">运行中</option>
-            <option value="待审批">待审批</option>
+            <option value="待执行">待执行</option>
             <option value="异常">异常</option>
           </select>
           <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
@@ -120,28 +142,26 @@ export default function ProgramListPage(): React.ReactElement {
             <option value="中风险">中风险</option>
             <option value="低风险">低风险</option>
           </select>
-          <select className="select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-            <option value="updated_desc">最近更新时间（新→旧）</option>
-            <option value="updated_asc">最近更新时间（旧→新）</option>
-          </select>
         </div>
       </section>
 
       <section className="list modernList">
-        {filtered.map((p) => {
+        {filtered.map((p, idx) => {
           const pid = String(p?.program_id || p?.id || "");
+          const stage = stageLabel(p);
           return (
-            <article key={pid || Math.random()} className="infoCard">
-              <div className="jobTitleRow">
-                <div className="title">方案名称：{planName(p)}</div>
+            <article key={pid || idx} className="infoCard">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <strong>方案概览</strong>
+                <span className={`text-sm px-3 py-1 rounded ${badgeClass(stage)}`}>{stage}</span>
               </div>
-              <div className="meta wrapMeta">
-                <span>所属田块：{fieldLabel(p)}</span>
-                <span>当前阶段：{stageLabel(p)}</span>
-                <span>风险等级：{riskLabel(p)}</span>
-                <span>更新时间：<RelativeTime value={String(p?.updated_at || "")} /></span>
-              </div>
-              <div style={{ marginTop: 8 }}>下一步建议：{adviceLabel(p)}</div>
+
+              <div className="kv"><span className="k">方案名称</span><span className="v">{planName(p)}</span></div>
+              <div className="kv"><span className="k">所属田块</span><span className="v">{fieldLabel(p)}</span></div>
+              <div className="kv"><span className="k">当前阶段</span><span className="v">{stage}</span></div>
+              <div className="kv"><span className="k">风险等级</span><span className="v">{riskLabel(p)}</span></div>
+              <div className="kv"><span className="k">下一步建议</span><span className="v">{nextSuggestion(p)}</span></div>
+
               <div style={{ marginTop: 10 }}>
                 <Link className="btn" to={`/programs/${encodeURIComponent(pid)}`}>查看详情</Link>
               </div>
