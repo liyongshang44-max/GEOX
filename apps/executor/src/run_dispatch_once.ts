@@ -70,6 +70,7 @@ function toAoActTask(item, args) {
     const act_task_id = String(item?.act_task_id ?? taskPayload?.act_task_id ?? "").trim();
     const command_id = String(item?.command_id ?? taskPayload?.command_id ?? act_task_id).trim();
     const action_type = String(taskPayload?.action_type ?? "").trim();
+    const task_type = String(taskPayload?.task_type ?? taskMeta?.task_type ?? "").trim();
     const operation_plan_id = String(taskPayload?.operation_plan_id ??
         taskMeta?.operation_plan_id ??
         item?.operation_plan_id ??
@@ -85,6 +86,7 @@ function toAoActTask(item, args) {
         act_task_id,
         command_id,
         action_type,
+        task_type,
         operation_plan_id,
         adapter_type: String(taskPayload?.adapter_type ?? "").trim() || null,
         adapter_hint: String(item?.adapter_hint ?? "").trim() || null,
@@ -279,9 +281,19 @@ async function runDispatchOnce(cliArgs) {
         let executionStatus = "FAILED";
         let adapterTypeForLog = String(adapter.type ?? adapter.adapter_type ?? adapterType).trim() || adapterType;
         try {
-            const supportsInput = adapterType === "mqtt" ? task : task.action_type;
-            if (typeof adapter.supports === "function" && !adapter.supports(supportsInput)) {
-                throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${task.action_type}`);
+            const supportsAction = task.task_type || task.action_type;
+            const supportsInput = adapterType === "mqtt" ? task : supportsAction;
+            const supportsResult = typeof adapter.supports === "function" ? adapter.supports(supportsInput) : true;
+            console.log("[dispatch-debug]", {
+                selected_adapter: adapterTypeForLog,
+                adapter_type: adapterType,
+                task_type: task.task_type || "",
+                action_type: task.action_type,
+                supports_input: typeof supportsInput === "string" ? supportsInput : "[task-object]",
+                supports_result: supportsResult
+            });
+            if (!supportsResult) {
+                throw new Error(`ADAPTER_UNSUPPORTED_ACTION:${adapterType}:${supportsAction}`);
             }
             if (typeof adapter.validate === "function") {
                 const validation = adapter.validate(task);
