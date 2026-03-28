@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
+import { fetchOperationDetail, fetchOperationEvidenceExport, type OperationDetailResponse } from "../api/operations";
 
 export function useOperationDetail(operationPlanId: string): {
   loading: boolean;
@@ -23,8 +23,12 @@ export function useOperationDetail(operationPlanId: string): {
     setLoading(true);
     setError(null);
     try {
-      const item = await fetchOperationDetail(id).catch(() => null);
-      setDetail(item);
+      const [item, evidenceExport] = await Promise.all([
+        fetchOperationDetail(id).catch(() => null),
+        fetchOperationEvidenceExport(id).catch(() => null),
+      ]);
+      const merged = item ? { ...item, evidence_export: evidenceExport ?? item.evidence_export ?? null } : null;
+      setDetail(merged);
       if (!item) setError("未找到该作业详情");
     } catch {
       setDetail(null);

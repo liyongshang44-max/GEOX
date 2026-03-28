@@ -23,29 +23,34 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">作业详情</div>
-            <div className="muted">operation_plan_id：{model.operationPlanId}</div>
+            <div className="sectionTitle">顶部概览</div>
+            <div className="muted">作业编号（次级）：{model.operationPlanId}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link className="btn" to="/operations">返回作业列表</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
-        <div className="kv"><span className="k">作业状态</span><span className="v">{model.statusLabel}</span></div>
-        <div className="kv"><span className="k">所属田块</span><span className="v">{model.fieldLabel}</span></div>
-        <div className="kv"><span className="k">所属经营方案</span><span className="v">{model.programLabel}</span></div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+          <div className="kv"><span className="k">作业状态</span><span className="v">{model.statusLabel}</span></div>
+          <div className="kv"><span className="k">所属田块</span><span className="v">{model.fieldLabel}</span></div>
+          <div className="kv"><span className="k">所属经营方案</span><span className="v">{model.programLabel}</span></div>
+          <div className="kv"><span className="k">最新更新时间</span><span className="v">{model.latestUpdatedAtLabel}</span></div>
+          <div className="kv"><span className="k">执行动作</span><span className="v">{model.execution.actionType}</span></div>
+          <div className="kv"><span className="k">执行设备/执行人</span><span className="v">{model.execution.deviceId} / {model.execution.executorLabel}</span></div>
+        </div>
       </section>
 
       <OperationDecisionCard model={model} />
       <OperationExecutionCard model={model} />
+      <OperationEvidenceDownloadCard model={model} />
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">最新执行证据</div>
+        <div className="sectionTitle">执行证据</div>
         <ReceiptEvidenceCard data={model.receiptEvidence} />
       </section>
 
       <OperationStoryTimeline items={model.timeline} />
-      <OperationEvidenceDownloadCard model={model} />
     </div>
   );
 }

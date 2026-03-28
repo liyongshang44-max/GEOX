@@ -65,6 +65,16 @@ function statusLabel(s: string | null): string {
   return code;
 }
 
+function mapExportJobStatusLabel(s: string | null): string {
+  const code = String(s ?? "").trim().toUpperCase();
+  if (!code) return "未开始";
+  if (code === "DONE") return "已完成";
+  if (code === "RUNNING") return "执行中";
+  if (code === "QUEUED") return "排队中";
+  if (code === "ERROR") return "失败";
+  return code;
+}
+
 async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
   const sql = `
     SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
@@ -139,6 +149,110 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
 }
 
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/operations/:operationPlanId/evidence-export", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const operationPlanId = String((req.params as any)?.operationPlanId ?? "").trim();
+    if (!operationPlanId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+
+    const planQ = await pool.query(
+      `SELECT record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 1`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
+    );
+    const planPayload = planQ.rows?.[0]?.record_json?.payload ?? {};
+    const actTaskId = toText(planPayload?.act_task_id);
+
+    const receiptQ = await pool.query(
+      `SELECT 1
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1')
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (
+            (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
+            OR ($3::text IS NOT NULL AND ((record_json::jsonb#>>'{payload,act_task_id}') = $3 OR (record_json::jsonb#>>'{payload,task_id}') = $3))
+          )
+        LIMIT 1`,
+      [tenant.tenant_id, operationPlanId, actTaskId]
+    ).catch(() => ({ rowCount: 0 }));
+
+    const exportFactQ = await pool.query(
+      `SELECT occurred_at, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'evidence_export_job_completed_v1'
+          AND (record_json::jsonb#>>'{entity,tenant_id}') = $1
+          AND (
+            (record_json::jsonb#>>'{payload,operation_plan_id}') = $2
+            OR (record_json::jsonb#>'{payload,operation_plan_ids}') ? $2
+            OR ($3::text IS NOT NULL AND (
+              (record_json::jsonb#>>'{payload,act_task_id}') = $3
+              OR (record_json::jsonb#>'{payload,act_task_ids}') ? $3
+            ))
+          )
+        ORDER BY occurred_at DESC
+        LIMIT 1`,
+      [tenant.tenant_id, operationPlanId, actTaskId]
+    ).catch(() => ({ rowCount: 0, rows: [] }));
+
+    const latestFact = exportFactQ.rows?.[0]?.record_json ?? null;
+    const latestFactPayload = latestFact?.payload ?? {};
+    const latestJobId = toText(latestFact?.entity?.job_id);
+    const latestFactStatus = toText(latestFactPayload?.status);
+
+    const indexQ = latestJobId
+      ? await pool.query(
+        `SELECT status, updated_ts_ms, artifact_path
+           FROM evidence_export_job_index_v1
+          WHERE tenant_id = $1 AND job_id = $2
+          LIMIT 1`,
+        [tenant.tenant_id, latestJobId]
+      ).catch(() => ({ rowCount: 0, rows: [] }))
+      : { rowCount: 0, rows: [] as any[] };
+    const indexRow = indexQ.rows?.[0] ?? null;
+
+    const latestStatusRaw = toText(indexRow?.status) ?? latestFactStatus;
+    const isDone = String(latestStatusRaw ?? "").toUpperCase() === "DONE";
+    const downloadUrl = latestJobId && isDone ? `/api/v1/evidence-export/jobs/${encodeURIComponent(latestJobId)}/download` : null;
+    const artifactPath = toText(indexRow?.artifact_path) ?? toText(latestFactPayload?.artifact_path);
+    const latestBundleName = artifactPath ? artifactPath.split("/").pop() : null;
+    const latestExportedAt = indexRow?.updated_ts_ms != null
+      ? new Date(Number(indexRow.updated_ts_ms)).toISOString()
+      : (typeof exportFactQ.rows?.[0]?.occurred_at === "string" ? exportFactQ.rows[0].occurred_at : null);
+
+    const missingReason = downloadUrl
+      ? null
+      : !actTaskId
+        ? "MISSING_ACT_TASK_ID"
+        : (receiptQ.rowCount ?? 0) < 1
+          ? "NO_RECEIPT_FOR_OPERATION"
+          : latestJobId
+            ? "LATEST_JOB_NOT_DONE"
+            : "NO_EXPORT_JOB_FOR_OPERATION";
+
+    return reply.send({
+      ok: true,
+      item: {
+        has_bundle: Boolean(downloadUrl),
+        latest_job_id: latestJobId,
+        latest_job_status: mapExportJobStatusLabel(latestStatusRaw),
+        latest_exported_at: latestExportedAt,
+        latest_bundle_name: latestBundleName,
+        download_url: downloadUrl,
+        jump_url: `/delivery/export-jobs?operation_plan_id=${encodeURIComponent(operationPlanId)}`,
+        missing_reason: missingReason
+      }
+    });
+  });
+
   app.get("/api/v1/operations", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;

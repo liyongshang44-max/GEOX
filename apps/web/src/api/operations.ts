@@ -46,10 +46,28 @@ export type OperationDetailResponse = {
   links?: Record<string, string>;
 };
 
+export type OperationEvidenceExportResponse = {
+  has_bundle: boolean;
+  latest_job_id?: string | null;
+  latest_job_status?: string | null;
+  latest_exported_at?: string | null;
+  latest_bundle_name?: string | null;
+  download_url?: string | null;
+  jump_url?: string | null;
+  missing_reason?: string | null;
+};
+
 export async function fetchOperationDetail(operationPlanId: string): Promise<OperationDetailResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
   const res = await apiRequest<{ ok?: boolean; item?: OperationDetailResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/detail`);
+  return res?.item ?? null;
+}
+
+export async function fetchOperationEvidenceExport(operationPlanId: string): Promise<OperationEvidenceExportResponse | null> {
+  const id = String(operationPlanId ?? "").trim();
+  if (!id) return null;
+  const res = await apiRequest<{ ok?: boolean; item?: OperationEvidenceExportResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-export`);
   return res?.item ?? null;
 }
 
