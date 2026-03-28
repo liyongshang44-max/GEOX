@@ -5,11 +5,20 @@ export default function OperationStoryTimeline({ items }: { items: OperationStor
   return (
     <section className="card sectionBlock">
       <div className="sectionTitle">全链路时间线</div>
-      <div style={{ display: "grid", gap: 8 }}>
+      <div className="operationStoryTimeline">
         {items.map((item, idx) => (
-          <div key={item.id} className="kv">
-            <span className="k">{idx + 1}. [{item.occurredAtLabel}] {item.label}</span>
-            <span className="v">{item.summary}{item.actorLabel !== "-" ? ` · ${item.actorLabel}` : ""}</span>
+          <div key={item.id} className={`operationStoryItem ${item.status === "PENDING" ? "isPending" : "isDone"}`}>
+            <div className="operationStoryItemHeader">
+              <span className="operationStoryStep">{idx + 1}</span>
+              <div>
+                <div className="operationStoryLabel">{item.label}</div>
+                <div className="operationStoryMeta">
+                  <span><b>时间：</b>{item.occurredAtLabel}</span>
+                  <span><b>参与者：</b>{item.actorLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div className="operationStorySummary">{item.storySummary}</div>
           </div>
         ))}
         {!items.length ? <div className="muted">暂无时间线事件</div> : null}
