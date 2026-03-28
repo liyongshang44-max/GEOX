@@ -36,7 +36,7 @@ export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement
       <div className="text-sm text-gray-600 space-y-1">
         {data.metaLabel ? <div>{data.metaLabel}</div> : null}
         {data.href ? <div>详情：{data.href}</div> : null}
-        {data.executorLabel ? <div>执行器：{data.executorLabel}</div> : null}
+        {data.executorLabel ? <div>执行器标识：{data.executorLabel}</div> : null}
         {data.startedAtLabel ? <div>开始：{data.startedAtLabel}</div> : null}
         {data.finishedAtLabel ? <div>结束：{data.finishedAtLabel}</div> : null}
         {data.durationLabel ? <div>耗时：{data.durationLabel}</div> : null}
