@@ -38,9 +38,6 @@ apps/*/.env
 # local datasets (do not ship in repo bundles)
 datasets/
 
-# accidental windows artifact
-\
-
 sim_config_manifest.json
 
 # runtime media (do not commit)
@@ -73,5 +70,5 @@ apps/web/tsconfig.tsbuildinfo
 # local export artifacts
 *.bundle
 _tmp_*
-*.pdf
-*.json
+# NOTE: do not add global *.json/*.pdf/*.csv ignores here.
+# Fixtures/manifests/templates/schemas must remain visible to git.

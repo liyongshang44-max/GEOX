@@ -3,6 +3,7 @@ import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fet
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
 import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
+import { mapReceiptToVm, type ReceiptEvidenceVm } from "../viewmodels/evidence";
 import type { FieldLang } from "../lib/fieldViewModel";
 
 function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneItem): any {
@@ -48,6 +49,59 @@ function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneIte
   };
 }
 
+type FieldOverviewBuildResult = { detail: any; controlPlaneHit: boolean; };
+type FieldDetailState = {
+  detail: any;
+  activeOperations: any[];
+  allOperations: any[];
+  recentRecommendations: any[];
+  currentProgram: any;
+  latestEvidenceVm?: ReceiptEvidenceVm;
+} | null;
+
+function buildFieldOverviewVm(args: { fieldId: string; controlPlane: any; legacyDetail: any; geometry: any; }): FieldOverviewBuildResult {
+  const { fieldId, controlPlane, legacyDetail, geometry } = args;
+  const controlPlaneHit = Boolean(controlPlane?.field || controlPlane?.overview || controlPlane?.summary);
+  const base = legacyDetail || (controlPlaneHit ? mapControlPlaneToLegacyDetail(fieldId, controlPlane) : null) || {
+    field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
+    latest_season: null,
+    summary: { device_count: 0 },
+    geometry: null,
+    map_layers: {},
+    recent_receipts: [],
+  };
+  return {
+    controlPlaneHit,
+    detail: {
+      ...base,
+      geometry: geometry ?? base?.geometry ?? null,
+      map_layers: {
+        ...(base?.map_layers ?? {}),
+        trajectories: Array.isArray(base?.map_layers?.trajectories) ? base.map_layers.trajectories : [],
+      },
+    },
+  };
+}
+
+function buildLatestEvidenceVm(args: { detail: any; allOperations: any[]; controlPlane: any; }): ReceiptEvidenceVm | undefined {
+  const { detail, allOperations, controlPlane } = args;
+  const raw =
+    detail?.latestEvidence
+    ?? detail?.latest_evidence
+    ?? (Array.isArray(detail?.recent_receipts) ? detail.recent_receipts[0]?.receipt?.payload : null)
+    ?? controlPlane?.evidence?.recent_items?.[0]
+    ?? null;
+  if (raw) return mapReceiptToVm(raw);
+  const latestFinishedOp = (allOperations ?? []).find((x: any) => ["SUCCESS", "SUCCEEDED", "FAILED"].includes(String(x?.final_status ?? "").toUpperCase()));
+  if (!latestFinishedOp) return undefined;
+  return mapReceiptToVm({
+    status: latestFinishedOp.final_status,
+    execution_finished_at: latestFinishedOp.last_event_ts ? new Date(Number(latestFinishedOp.last_event_ts)).toISOString() : null,
+    executor_label: latestFinishedOp.device_id,
+    device_id: latestFinishedOp.device_id,
+  });
+}
+
 export function useFieldDetail(params: {
   fieldId: string;
   lang: FieldLang;
@@ -62,7 +116,7 @@ export function useFieldDetail(params: {
   const { fieldId, lang } = params;
   const [busy, setBusy] = React.useState(false);
   const [status, setStatus] = React.useState("");
-  const [state, setState] = React.useState<any>(null);
+  const [state, setState] = React.useState<FieldDetailState>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [technical, setTechnical] = React.useState<string | null>(null);
 
@@ -92,18 +146,9 @@ export function useFieldDetail(params: {
       } catch {}
 
       let detail: any = null;
-      let controlPlaneHit = false;
-
-      if (cp?.field || cp?.overview || cp?.summary) {
-        detail = mapControlPlaneToLegacyDetail(fieldId, cp);
-        controlPlaneHit = true;
-      }
-
-      if (!detail) {
-        try {
-          detail = await fetchFieldDetail(fieldId);
-        } catch {}
-      }
+      try {
+        detail = await fetchFieldDetail(fieldId);
+      } catch {}
 
       const [opsRes, recsRes, currentRes, geometryRes] = await Promise.allSettled([
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
@@ -112,44 +157,24 @@ export function useFieldDetail(params: {
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
       ]);
 
-      if (!detail) {
-        detail = {
-          field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
-          latest_season: null,
-          summary: { device_count: 0 },
-          geometry: null,
-        };
-      }
-
       const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
       const allOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []) : [];
       const activeOperations = allOperations.filter((x) => !["SUCCESS", "FAILED", "SUCCEEDED"].includes(String(x.final_status).toUpperCase()));
       const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
       const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
-      const latestEvidence =
-        (detail as any)?.latestEvidence ??
-        (detail as any)?.latest_evidence ??
-        (Array.isArray((detail as any)?.recent_receipts)
-          ? (detail as any).recent_receipts[0]?.receipt?.payload
-          : null) ??
-        null;
+      const overview = buildFieldOverviewVm({ fieldId, controlPlane: cp, legacyDetail: detail, geometry });
+      const latestEvidenceVm = buildLatestEvidenceVm({ detail: overview.detail, allOperations, controlPlane: cp });
 
       setState({
-        field: detail?.field ?? null,
-        geometry: geometry ?? detail?.geometry ?? null,
+        detail: overview.detail,
         currentProgram,
-        controlPlane: cp ?? null,
-        operations: activeOperations,
-        recommendations,
-        latestEvidence,
-        error: null,
-        detail: { ...detail, geometry: geometry ?? detail?.geometry ?? null, latestEvidence },
         activeOperations,
         allOperations,
         recentRecommendations: recommendations,
+        latestEvidenceVm,
       });
 
-      setStatus(controlPlaneHit ? "已加载田块控制台" : (lang === "zh" ? "已加载田块控制台" : "Field console loaded"));
+      setStatus(overview.controlPlaneHit ? "已加载田块控制台" : (lang === "zh" ? "已加载田块控制台" : "Field console loaded"));
     } catch (e: any) {
       setState(null);
       setError(lang === "zh" ? "田块详情加载失败" : "Failed to load field detail");
@@ -164,7 +189,7 @@ export function useFieldDetail(params: {
 
   const model = React.useMemo(() => {
     if (!state) return null;
-    return buildFieldViewModel({
+    const vm = buildFieldViewModel({
       fieldId,
       lang,
       detail: state.detail,
@@ -173,6 +198,7 @@ export function useFieldDetail(params: {
       currentProgram: state.currentProgram,
       allOperations: state.allOperations ?? [],
     });
+    return { ...vm, latestEvidence: state.latestEvidenceVm ?? vm.latestEvidence };
   }, [state, fieldId, lang]);
 
   return { busy, status, error, technical, model, refresh };

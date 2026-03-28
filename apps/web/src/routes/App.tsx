@@ -20,6 +20,7 @@ import DevicesPage from "../views/DevicesPage";
 import DeviceDetailPage from "../views/DeviceDetailPage";
 import DeviceOnboardingPage from "../views/DeviceOnboardingPage";
 import OperationsPage from "../views/OperationsPage";
+import OperationDetailPage from "../views/OperationDetailPage";
 import AlertsPage from "../views/AlertsPage";
 import AuditExportPage from "../views/AuditExportPage";
 import AgronomyRecommendationsPage from "../views/AgronomyRecommendationsPage";
@@ -42,9 +43,10 @@ function titleForPath(pathname: string): string {
   if (pathname === "/devices") return "设备中心";
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
+  if (pathname.startsWith("/operations/")) return "作业详情";
   if (pathname.startsWith("/operations")) return "待执行动作";
-  if (pathname === "/programs") return "经营 Program";
-  if (pathname.startsWith("/programs/")) return "Program 详情";
+  if (pathname === "/programs") return "经营方案";
+  if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
   if (pathname.startsWith("/alerts")) return "告警中心";
   if (pathname.startsWith("/audit-export")) return "证据中心";
@@ -54,16 +56,17 @@ function titleForPath(pathname: string): string {
 }
 
 function leadForPath(pathname: string): string {
-  if (pathname === "/" || pathname === "/dashboard") return "一眼查看 Program 运行态、待执行动作、证据状态与风险摘要。";
+  if (pathname === "/" || pathname === "/dashboard") return "一眼查看经营方案运行态、待执行动作、证据状态与风险摘要。";
   if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
-  if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯 Program。";
-  if (pathname === "/programs") return "按状态和风险筛选 Program，快速判断优先级并进入详情。";
-  if (pathname.startsWith("/programs/")) return "查看 Program 的决策链、执行链、证据链与资源结果。";
+  if (pathname.startsWith("/operations/")) return "查看作业状态、执行时间线与最新执行证据。";
+  if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
+  if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
+  if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
   if (pathname.startsWith("/audit-export")) return "统一管理证据导出、回执追踪与完整性校验。";
@@ -80,9 +83,10 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
+  if (pathname.startsWith("/operations/")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作", to: "/operations" }, { label: "作业详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作" }];
-  if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营 Program" }];
-  if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营 Program", to: "/programs" }, { label: "Program 详情" }];
+  if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
+  if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
   if (pathname.startsWith("/alerts")) return [{ label: "总览", to: "/dashboard" }, { label: "告警中心" }];
   if (pathname.startsWith("/audit-export")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
@@ -133,7 +137,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/devices" label="设备中心" />
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
           <SidebarLink to="/operations" label="待执行动作" />
-          <SidebarLink to="/programs" label="经营 Program" />
+          <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
           <SidebarLink to="/audit-export" label="证据页" />
@@ -191,6 +195,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/operations" element={<OperationsPage />} />
+            <Route path="/operations/:operationPlanId" element={<OperationDetailPage />} />
             <Route path="/programs" element={<ProgramListPage />} />
             <Route path="/programs/:programId" element={<ProgramDetailPage />} />
             <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />
