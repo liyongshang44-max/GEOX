@@ -1,4 +1,5 @@
 import { mapOperationTypeToLabel, type FieldLang } from "../lib/fieldViewModel";
+import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
@@ -27,6 +28,7 @@ export type FieldViewModel = {
   kpis: Array<{ label: string; value: string }>;
   timeline: Array<{ id: string; ts: number; time: string; type: TimelineType; icon: string; label: string }>;
   evidence: Array<{ id: string; title: string; time: string; device: string }>;
+  latestEvidence?: ReceiptEvidenceVm;
   map: {
     polygonGeoJson: any;
     heatGeoJson: any;
@@ -192,6 +194,7 @@ export function buildFieldViewModel(params: {
         device: String(x.device_id || currentTask?.deviceId || "dev_onboard_accept_001"),
       };
     });
+  const latestEvidence = detail?.latestEvidence ? mapReceiptToVm(detail.latestEvidence) : undefined;
 
   const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
   const trajectorySegments = trajectories
@@ -230,6 +233,7 @@ export function buildFieldViewModel(params: {
     ],
     timeline,
     evidence,
+    latestEvidence,
     map: {
       polygonGeoJson: detail?.geometry || detail?.polygon?.geojson_json || null,
       heatGeoJson: detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] },

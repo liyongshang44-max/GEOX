@@ -1,4 +1,5 @@
 export type ReceiptEvidenceVm = {
+  title: string;
   statusLabel: string;
   statusTone: "success" | "warning" | "danger" | "neutral";
 
@@ -17,7 +18,7 @@ export type ReceiptEvidenceVm = {
   constraintCheckLabel?: string;
   violationSummary?: string;
 
-  rawReceiptType?: string;
+  metaLabel?: string;
   href?: string;
 };
 
@@ -52,8 +53,13 @@ export function mapReceiptToVm(r: any): ReceiptEvidenceVm {
     startedAtMs != null && finishedAtMs != null
       ? `${Math.round((finishedAtMs - startedAtMs) / 1000)} 秒`
       : undefined;
+  const metaParts = [
+    typeof r?.device_id === "string" ? `设备 ${r.device_id}` : null,
+    typeof r?.executor_label === "string" ? `执行器 ${r.executor_label}` : null,
+  ].filter(Boolean);
 
   return {
+    title: "执行证据",
     statusLabel:
       status === "SUCCEEDED" || status === "EXECUTED"
         ? "已完成"
@@ -82,7 +88,7 @@ export function mapReceiptToVm(r: any): ReceiptEvidenceVm {
 
     violationSummary: r?.constraint_violated ? "检测到违规操作" : undefined,
 
-    rawReceiptType: r?.receipt_type,
+    metaLabel: metaParts.length > 0 ? metaParts.join(" · ") : undefined,
     href: typeof r?.href === "string" ? r.href : undefined,
   };
 }
