@@ -1292,7 +1292,7 @@ function resolveActionType(input: any): string {
   return "";
 }
 
-function canonicalActionType(raw: any): string {
+function normalizeActionType(raw: any): string {
   const normalized = String(raw ?? "").trim().toLowerCase();
   if (!normalized) return "";
   const compact = normalized.replace(/[\s_-]+/g, ".");
@@ -1307,20 +1307,25 @@ function canonicalActionType(raw: any): string {
 }
 
 function toAoActAllowlistAction(actionType: string): string {
-  const canonical = canonicalActionType(actionType);
+  const canonical = normalizeActionType(actionType);
   if (canonical === "irrigation.start") return "IRRIGATE";
   return canonical.toUpperCase();
 }
 
+function toTaskType(actionType: string): string {
+  return toAoActAllowlistAction(actionType);
+}
+
 function adapterSupportsAction(adapterType: string, actionType: string): boolean {
   const a = String(adapterType ?? "").trim().toLowerCase();
-  const action = canonicalActionType(actionType);
+  const action = normalizeActionType(actionType);
+  const taskType = toTaskType(actionType);
   if (!a || !action) return false;
   const adapter = a === "mqtt_downlink_once_v1" ? "mqtt" : a; // Keep mqtt alias aligned with normalizeAdapterHint("mqtt").
-  if (adapter === "mqtt" && (action === "irrigate" || action === "irrigation.start")) return true; // Explicitly allow irrigation aliases.
+  if (adapter === "mqtt" && (action === "irrigate" || action === "irrigation.start" || taskType === "IRRIGATE")) return true; // Explicitly allow irrigation aliases.
   if (adapter === "mqtt") return true;
   if (adapter === "irrigation_real" || adapter === "irrigation_simulator" || adapter === "irrigation_http_v1") {
-    return action === "irrigation.start";
+    return action === "irrigation.start" || action === "irrigate" || taskType === "IRRIGATE";
   }
   return false;
 }
@@ -1868,7 +1873,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const taskPayload = taskFact.record_json?.payload ?? {};
     const adapterType = String(body.adapter_hint ?? taskPayload?.adapter_type ?? "").trim();
     const actionType = resolveActionType(taskPayload);
-    const canonicalDispatchActionType = canonicalActionType(actionType);
+    const canonicalDispatchActionType = normalizeActionType(actionType);
     const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
     const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
     const supportsResult = adapterSupportsAction(adapterType, supportsInput);
