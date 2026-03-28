@@ -5,6 +5,7 @@ import { fetchAgronomyRecommendations } from "../api/programs";
 import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "../viewmodels/evidence";
 import type { FieldLang } from "../lib/fieldViewModel";
+import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 
 function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneItem): any {
   const operations = Array.isArray(cp.operations) ? cp.operations : [];
@@ -85,13 +86,14 @@ function buildFieldOverviewVm(args: { fieldId: string; controlPlane: any; legacy
 
 function buildLatestEvidenceVm(args: { detail: any; allOperations: any[]; controlPlane: any; }): ReceiptEvidenceVm | undefined {
   const { detail, allOperations, controlPlane } = args;
+  const latestOperationPlanId = resolveOperationPlanId(allOperations?.[0]);
   const raw =
     detail?.latestEvidence
     ?? detail?.latest_evidence
     ?? (Array.isArray(detail?.recent_receipts) ? detail.recent_receipts[0]?.receipt?.payload : null)
     ?? controlPlane?.evidence?.recent_items?.[0]
     ?? null;
-  if (raw) return mapReceiptToVm(raw);
+  if (raw) return mapReceiptToVm({ ...raw, href: toOperationDetailPath({ ...raw, operation_plan_id: raw?.operation_plan_id ?? latestOperationPlanId }) });
   const latestFinishedOp = (allOperations ?? []).find((x: any) => ["SUCCESS", "SUCCEEDED", "FAILED"].includes(String(x?.final_status ?? "").toUpperCase()));
   if (!latestFinishedOp) return undefined;
   return mapReceiptToVm({

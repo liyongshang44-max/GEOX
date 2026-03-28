@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
+import { toOperationDetailPath } from "../lib/operationLink";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -53,13 +54,16 @@ export function useDashboard(api: any): DashboardVm {
               statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
               finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
               hasEvidence: Boolean(o?.receipt_fact_id),
-              href: typeof o?.href === "string" ? o.href : `/operations/${encodeURIComponent(String(o?.operation_plan_id || o?.operation_id || ""))}`,
+              href: toOperationDetailPath(o),
             };
           }),
           evidences: (evidences || []).map((item: any, i: number) => ({
             id: String(item?.receipt_fact_id || item?.operation_plan_id || i),
-            href: typeof item?.href === "string" ? item.href : undefined,
-            card: mapDashboardEvidenceToVm(item),
+            href: toOperationDetailPath(item),
+            card: mapDashboardEvidenceToVm({
+              ...item,
+              href: toOperationDetailPath(item),
+            }),
           })),
           risks: [],
         });
