@@ -3,10 +3,15 @@ import type { OperationDetailPageVm } from "../../viewmodels/operationDetailView
 
 const EVIDENCE_BUNDLE_TITLE = "证据包";
 
-export default function OperationEvidenceDownloadCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
+type Props = {
+  model: OperationDetailPageVm;
+  title?: string;
+};
+
+export default function OperationEvidenceDownloadCard({ model, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
   return (
     <section className="card sectionBlock">
-      <div className="sectionTitle">{EVIDENCE_BUNDLE_TITLE}</div>
+      <div className="sectionTitle">{title}</div>
       <div className="kv"><span className="k">当前是否可下载</span><span className="v">{model.evidenceExport.exportableLabel}</span></div>
       <div className="kv"><span className="k">最近导出状态</span><span className="v">{model.evidenceExport.latestJobStatus}</span></div>
       <div className="kv"><span className="k">最近导出包名称</span><span className="v">{model.evidenceExport.latestBundleName}</span></div>
