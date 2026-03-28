@@ -459,6 +459,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           act_task_id,
           issuer: body.issuer,
           action_type: body.action_type,
+          task_type: String(body.meta?.task_type ?? body.action_type).trim() || body.action_type,
           target: body.target,
           time_window: body.time_window,
           parameter_schema: body.parameter_schema,
