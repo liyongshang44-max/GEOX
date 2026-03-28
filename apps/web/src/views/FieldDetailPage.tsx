@@ -26,6 +26,8 @@ export default function FieldDetailPage(): React.ReactElement {
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
 
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
+  const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
+  const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${(model?.currentPlanText || "--")}`;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -45,12 +47,11 @@ export default function FieldDetailPage(): React.ReactElement {
                   fontWeight: 700,
                 }}
               >
-                {model?.statusLabel || "正常"}
+                {headerStatusLabel}
               </span>
             </div>
-            <div className="muted">面积：{model?.areaText || "--"}</div>
-            <div className="muted">当前作物：{model?.currentCropText || "--"}</div>
-            <div className="muted">当前经营方案：{model?.currentPlanText || "--"}</div>
+            <div className="muted">{fieldSubline}</div>
+            <div className="muted">田块编号：{model?.fieldId || fieldId || "--"}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
@@ -63,7 +64,7 @@ export default function FieldDetailPage(): React.ReactElement {
 
       <section className="card" style={{ padding: 14 }}>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>当前状态</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(140px,1fr))", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(160px,1fr))", gap: 10 }}>
           <article className="card" style={{ padding: 12 }}>
             <div className="muted" style={{ fontSize: 12 }}>土壤湿度</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.soilMoisture || "--"}</div>
@@ -73,16 +74,12 @@ export default function FieldDetailPage(): React.ReactElement {
             <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.temperature || "--"}</div>
           </article>
           <article className="card" style={{ padding: 12 }}>
-            <div className="muted" style={{ fontSize: 12 }}>设备在线状态</div>
+            <div className="muted" style={{ fontSize: 12 }}>设备状态</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.deviceOnline || "--"}</div>
           </article>
           <article className="card" style={{ padding: 12 }}>
             <div className="muted" style={{ fontSize: 12 }}>最近心跳</div>
             <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.recentHeartbeat || "--"}</div>
-          </article>
-          <article className="card" style={{ padding: 12 }}>
-            <div className="muted" style={{ fontSize: 12 }}>最近一次建议摘要</div>
-            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.latestSuggestion || "--"}</div>
           </article>
         </div>
       </section>
@@ -94,7 +91,7 @@ export default function FieldDetailPage(): React.ReactElement {
             <div style={{ fontWeight: 700 }}>动作：{model.currentTask.action}</div>
             <div className="muted">状态：{model.currentTask.status}</div>
             <div className="muted">时间：{model.lastEvent?.relativeText || "刚刚"}</div>
-            {model.currentTask.operationPlanId ? <Link className="btn" to={`/operations/${encodeURIComponent(model.currentTask.operationPlanId)}`}>查看作业详情</Link> : null}
+            {model.currentTask.operationPlanId ? <Link className="btn" to={`/operations/${encodeURIComponent(model.currentTask.operationPlanId)}`}>查看详情 →</Link> : null}
           </div>
         ) : <div className="muted">暂无执行任务</div>}
       </section>
@@ -106,17 +103,13 @@ export default function FieldDetailPage(): React.ReactElement {
             <ReceiptEvidenceCard data={model.latestEvidence} />
           </Link>
         ) : (
-          <ReceiptEvidenceCard data={model?.latestEvidence} />
+          model?.latestEvidence ? <ReceiptEvidenceCard data={model.latestEvidence} /> : <div className="muted">暂无执行证据</div>
         )}
       </section>
 
       <section className="card" style={{ padding: 14 }}>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>地图 / 轨迹</h3>
-        {!model?.map.polygonGeoJson ? (
-          <div style={{ border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 24, color: "#667085" }}>
-            暂无田块边界数据
-          </div>
-        ) : (
+        {model?.map.polygonGeoJson && model?.map.hasTrajectory ? (
           <FieldGisMap
             polygonGeoJson={model.map.polygonGeoJson}
             heatGeoJson={model.map.heatGeoJson}
@@ -125,12 +118,11 @@ export default function FieldDetailPage(): React.ReactElement {
             acceptancePoints={model.map.acceptancePoints}
             labels={labels}
           />
-        )}
-        {!model?.map.hasTrajectory ? (
-          <div style={{ marginTop: 10, border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 16, color: "#667085" }}>
+        ) : (
+          <div style={{ border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 24, color: "#667085" }}>
             暂无可用轨迹数据
           </div>
-        ) : null}
+        )}
       </section>
     </div>
   );
