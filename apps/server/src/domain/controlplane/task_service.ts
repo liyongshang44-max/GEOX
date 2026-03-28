@@ -2382,6 +2382,54 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         received_ts: Number(body?.meta?.received_ts ?? Date.now())
       }
     });
+
+    const receiptStatus = String(body.status ?? "executed").trim().toLowerCase();
+    const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
+    await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, {
+      state: terminalState,
+      receipt_fact_id: delegated.json.fact_id
+    });
+
+    let latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+
+    if (terminalState === "SUCCEEDED") {
+      const s0 = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
+      if (s0 === "READY") {
+        await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
+          next_status: "DISPATCHED",
+          trigger: "receipt_uplink_pre_dispatch",
+          act_task_id,
+          receipt_fact_id: delegated.json.fact_id
+        }, "api/v1/ao-act/receipts/uplink");
+        latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+        if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+      }
+      const s1 = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
+      if (s1 === "DISPATCHED") {
+        await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
+          next_status: "ACKED",
+          trigger: "receipt_uplink_pre_terminal_ack",
+          act_task_id,
+          receipt_fact_id: delegated.json.fact_id
+        }, "api/v1/ao-act/receipts/uplink");
+        latestPlanForTerminal = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+        if (!latestPlanForTerminal) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+      }
+    }
+
+    let terminalTransition: { transition_fact_id: string; operation_plan_fact_id: string } | null = null;
+    const beforeTerminal = String(latestPlanForTerminal.record_json?.payload?.status ?? "").trim().toUpperCase();
+    if (beforeTerminal !== "SUCCEEDED" && beforeTerminal !== "FAILED") {
+      terminalTransition = await transitionOperationPlanStateV1(pool, tenant, latestPlanForTerminal, {
+        next_status: terminalState,
+        trigger: "receipt_uplink_terminal",
+        act_task_id,
+        receipt_fact_id: delegated.json.fact_id,
+        terminal_reason: terminalState === "FAILED" ? "receipt_status_failed" : "receipt_status_executed"
+      }, "api/v1/ao-act/receipts/uplink");
+    }
+
     return reply.send({
       ok: true,
       ack_fact_id,
@@ -2390,8 +2438,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       wrapper_fact_id: delegated.json.wrapper_fact_id,
       operation_plan_id,
       operation_plan_acked_transition_fact_id: ackedTransition.transition_fact_id,
-      operation_plan_transition_fact_id: delegated.json.operation_plan_transition_fact_id ?? null,
-      operation_plan_update_fact_id: delegated.json.operation_plan_update_fact_id ?? null
+      operation_plan_transition_fact_id: terminalTransition?.transition_fact_id ?? delegated.json.operation_plan_transition_fact_id ?? null,
+      operation_plan_update_fact_id: terminalTransition?.operation_plan_fact_id ?? delegated.json.operation_plan_update_fact_id ?? null
     });
   });
 
