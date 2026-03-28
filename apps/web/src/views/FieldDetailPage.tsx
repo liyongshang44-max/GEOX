@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import FieldSummaryCards from "../components/field/FieldSummaryCards";
 import FieldOperationList from "../components/field/FieldOperationList";
@@ -22,11 +22,39 @@ type FieldTab = "overview" | "map" | "operations" | "alerts";
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
+  const location = useLocation();
   const fieldId = decodeURIComponent(params.fieldId || "");
+  const isolateHook = React.useMemo(() => new URLSearchParams(location.search).get("hookIsolation") === "1", [location.search]);
+
+  if (isolateHook) return <FieldDetailIsolationView fieldId={fieldId} />;
+  return <FieldDetailRuntimeView fieldId={fieldId} search={location.search} />;
+}
+
+function FieldDetailIsolationView(props: { fieldId: string }): React.ReactElement {
+  const { fieldId } = props;
+  return (
+    <div style={{ display: "grid", gap: 14 }}>
+      <section className="card" style={{ padding: 16 }}>
+        <h2 style={{ margin: 0, fontSize: 20 }}>FieldDetail hook isolation mode</h2>
+        <div className="muted" style={{ marginTop: 8 }}>
+          已启用临时隔离：当前页面未调用 useFieldDetail。用于验证 hooks 报错是否来自 useFieldDetail.ts。
+        </div>
+        <div className="muted" style={{ marginTop: 8 }}>
+          field_id: <span className="mono">{shortId(fieldId)}</span>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Link className="btn" to="/fields">返回列表</Link>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FieldDetailRuntimeView(props: { fieldId: string; search: string }): React.ReactElement {
+  const { fieldId, search } = props;
   const focusTaskId = React.useMemo(() => {
-    if (typeof window === "undefined") return "";
-    return new URLSearchParams(window.location.search).get("focusTask") || "";
-  }, []);
+    return new URLSearchParams(search).get("focusTask") || "";
+  }, [search]);
   const [activeTab, setActiveTab] = React.useState<FieldTab>("overview");
   const [lang, setLang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
   const [selectedObject, setSelectedObject] = React.useState<any>(null);
