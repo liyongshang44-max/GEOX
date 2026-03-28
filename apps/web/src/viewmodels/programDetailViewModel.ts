@@ -124,7 +124,7 @@ export function buildProgramDetailViewModel(args: {
   const program = controlPlane?.program || detail || {};
   const summary = controlPlane?.summary || {};
 
-  const displayTitle = toText(program?.title || detail?.program_name || detail?.name || decodeURIComponent(programId), "经营方案");
+  const displayTitle = toText(program?.title || detail?.program_name || detail?.name, "默认经营方案");
   const cropName = toText(detail?.crop_name || program?.crop_name || detail?.crop_code || program?.crop_code, "-");
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
