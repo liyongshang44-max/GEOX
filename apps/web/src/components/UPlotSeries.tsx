@@ -299,8 +299,9 @@ export function UPlotSeries(props: {
       {model.panels.map((p, idx) => (
         <div
           key={p.metric}
-          ref={(el) => {
+          ref={(el: HTMLDivElement | null): void => {
             if (el) panelsRef.current[idx] = el;
+            else delete panelsRef.current[idx];
           }}
           style={{ width: "100%" }}
         />
