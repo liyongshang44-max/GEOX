@@ -28,14 +28,24 @@ export default function AuditExportPage(): React.ReactElement {
 
   const evidenceItems = Array.isArray(item?.recent_evidence_items) ? item.recent_evidence_items : [];
   const exportJobs = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
+  const formatJobLabel = React.useCallback((job: any): string => {
+    const fieldName = String(job?.refs?.program_id || "未标注田块");
+    const actionName = String(job?.title || "证据包导出");
+    return `${fieldName} + ${actionName}`;
+  }, []);
+  const formatReceiptLabel = React.useCallback((ev: any): string => {
+    const fieldName = String(ev?.program?.program_id || "未标注田块");
+    const actionName = String(ev?.title || "执行回执");
+    return `${fieldName} + ${actionName}`;
+  }, []);
 
   return (
     <div className="productPage">
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">执行证据与导出</div>
-            <div className="muted">证明“这个系统不是只会说，它真的能交付证据”。</div>
+            <div className="sectionTitle">证据页</div>
+            <div className="muted">执行证据与导出</div>
           </div>
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新证据数据</button>
         </div>
@@ -49,13 +59,13 @@ export default function AuditExportPage(): React.ReactElement {
           {exportJobs.map((job: any) => (
             <article key={job.job_id} className="infoCard">
               <div className="jobTitleRow">
-                <div className="title mono">{job.job_id}</div>
+                <div className="title">{formatJobLabel(job)}</div>
                 <StatusTag status={job.status?.code || "PENDING"} />
               </div>
               <div className="meta wrapMeta">
-                <span>对应作业：{job.refs?.program_id || "未关联"}</span>
-                <span>导出状态：{job.status?.label || "-"}</span>
-                <span>更新时间：{job.created_at_label || "-"}</span>
+                <span>作业：{formatJobLabel(job)}</span>
+                <span>状态：{job.status?.label || "-"}</span>
+                <span>时间：{job.created_at_label || "-"}</span>
               </div>
               <div style={{ marginTop: 8 }}>
                 {job.download?.available ? (
@@ -76,14 +86,14 @@ export default function AuditExportPage(): React.ReactElement {
           {evidenceItems.map((ev: any) => (
             <article key={ev.evidence_id} className="infoCard">
               <div className="jobTitleRow">
-                <div className="title">{ev.operation_plan_id || ev.subtitle || "未关联作业"}</div>
+                <div className="title">{formatReceiptLabel(ev)}</div>
                 <StatusTag status={ev.status?.code || "EXECUTED"} />
               </div>
               <div className="meta wrapMeta">
-                <span>作业：{ev.operation_plan_id || "未关联"}</span>
+                <span>作业：{formatReceiptLabel(ev)}</span>
                 <span>状态：{ev.status?.label || "-"}</span>
                 <span>时间：{ev.updated_at_label || "-"}</span>
-                <span>日志数量：{ev.act_task_id ? 1 : 0}</span>
+                <span>日志数：{ev.act_task_id ? 1 : 0}</span>
               </div>
             </article>
           ))}
@@ -92,9 +102,9 @@ export default function AuditExportPage(): React.ReactElement {
       </section>
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">证据说明</div>
+        <div className="sectionTitle">说明区</div>
         <p style={{ margin: "8px 0 0", color: "#475467" }}>
-          证据包包含建议、审批、计划、执行、回执等完整链路，用于审计、交付与溯源。
+          证据包包含建议、审批、执行计划、执行回执等完整链路，用于审计与交付。
         </p>
       </section>
     </div>
