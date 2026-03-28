@@ -24,6 +24,9 @@ export default function FieldDetailPage(): React.ReactElement {
   if (busy && !model) return <SectionSkeleton kind="detail" />;
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
 
+  const currentTask = model?.currentTask;
+  const currentProgram = model?.program;
+
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <section className="card" style={{ padding: 16 }}>
