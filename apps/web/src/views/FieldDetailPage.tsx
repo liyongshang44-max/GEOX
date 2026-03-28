@@ -48,10 +48,9 @@ export default function FieldDetailPage(): React.ReactElement {
                 {model?.statusLabel || "正常"}
               </span>
             </div>
-            <div style={{ fontWeight: 600 }}>{model?.statusReason || "运行稳定"}</div>
-            <div className="muted">设备：{model?.device || "dev_onboard_accept_001"}</div>
-            <div className="muted">当前作业：{model?.currentTask ? `${model.currentTask.action}中` : "无"}</div>
-            <div className="muted">最近动作：{model?.lastEvent?.relativeText || "暂无"}</div>
+            <div className="muted">面积：{model?.areaText || "--"}</div>
+            <div className="muted">当前作物：{model?.currentCropText || "--"}</div>
+            <div className="muted">当前经营方案：{model?.currentPlanText || "--"}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-start" }}>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
@@ -62,56 +61,57 @@ export default function FieldDetailPage(): React.ReactElement {
 
       {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
 
-      <section style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(120px,1fr))", gap: 10 }}>
-        {(model?.kpis ?? []).map((item) => (
-          <article key={item.label} className="card" style={{ padding: 12 }}>
-            <div className="muted" style={{ fontSize: 12 }}>{item.label}</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{item.value}</div>
+      <section className="card" style={{ padding: 14 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>当前状态</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(140px,1fr))", gap: 10 }}>
+          <article className="card" style={{ padding: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>土壤湿度</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.soilMoisture || "--"}</div>
           </article>
-        ))}
-      </section>
-
-      <section style={{ display: "grid", gridTemplateColumns: "1.3fr 1fr 1fr", gap: 12 }}>
-        <article className="card" style={{ padding: 14 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>当前作业</h3>
-          {model?.currentTask ? (
-            <div style={{ display: "grid", gap: 6 }}>
-              <div style={{ fontWeight: 700 }}>{model.currentTask.action.toUpperCase()}</div>
-              <div className="muted">状态：{model.currentTask.status}</div>
-              <div className="muted">进度：{model.currentTask.progress}%</div>
-              {model.currentTask.operationPlanId ? <Link className="btn" to={`/operations/${encodeURIComponent(model.currentTask.operationPlanId)}`}>查看作业详情</Link> : null}
-            </div>
-          ) : <div className="muted">暂无执行任务</div>}
-        </article>
-
-        <article className="card" style={{ padding: 14 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>时间线</h3>
-          <div style={{ display: "grid", gap: 10 }}>
-            {(model?.timeline ?? []).slice(0, 6).map((item) => (
-              <div key={item.id} style={{ display: "grid", gridTemplateColumns: "58px 1fr", gap: 8 }}>
-                <div className="mono" style={{ color: "#475467" }}>[{item.time}]</div>
-                <div>{item.icon} {item.label}</div>
-              </div>
-            ))}
-            {!(model?.timeline ?? []).length ? <div className="muted">暂无时间线事件</div> : null}
-          </div>
-        </article>
-
-        <article className="card" style={{ padding: 14 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 8 }}>证据</h3>
-          {model?.latestEvidence?.href ? (
-            <Link to={model.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}>
-              <ReceiptEvidenceCard data={model.latestEvidence} />
-            </Link>
-          ) : (
-            <ReceiptEvidenceCard data={model?.latestEvidence} />
-          )}
-          <button className="btn" style={{ marginTop: 12 }}>下载证据包</button>
-        </article>
+          <article className="card" style={{ padding: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>温度</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.temperature || "--"}</div>
+          </article>
+          <article className="card" style={{ padding: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>设备在线状态</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.deviceOnline || "--"}</div>
+          </article>
+          <article className="card" style={{ padding: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>最近心跳</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.recentHeartbeat || "--"}</div>
+          </article>
+          <article className="card" style={{ padding: 12 }}>
+            <div className="muted" style={{ fontSize: 12 }}>最近一次建议摘要</div>
+            <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{model?.currentStatus.latestSuggestion || "--"}</div>
+          </article>
+        </div>
       </section>
 
       <section className="card" style={{ padding: 14 }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>地图</h3>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>最近作业</h3>
+        {model?.currentTask ? (
+          <div style={{ display: "grid", gap: 6 }}>
+            <div style={{ fontWeight: 700 }}>动作：{model.currentTask.action}</div>
+            <div className="muted">状态：{model.currentTask.status}</div>
+            <div className="muted">时间：{model.lastEvent?.relativeText || "刚刚"}</div>
+            {model.currentTask.operationPlanId ? <Link className="btn" to={`/operations/${encodeURIComponent(model.currentTask.operationPlanId)}`}>查看作业详情</Link> : null}
+          </div>
+        ) : <div className="muted">暂无执行任务</div>}
+      </section>
+
+      <section className="card" style={{ padding: 14 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>执行证据摘要</h3>
+        {model?.latestEvidence?.href ? (
+          <Link to={model.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}>
+            <ReceiptEvidenceCard data={model.latestEvidence} />
+          </Link>
+        ) : (
+          <ReceiptEvidenceCard data={model?.latestEvidence} />
+        )}
+      </section>
+
+      <section className="card" style={{ padding: 14 }}>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>地图 / 轨迹</h3>
         {!model?.map.polygonGeoJson ? (
           <div style={{ border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 24, color: "#667085" }}>
             暂无田块边界数据
@@ -128,7 +128,7 @@ export default function FieldDetailPage(): React.ReactElement {
         )}
         {!model?.map.hasTrajectory ? (
           <div style={{ marginTop: 10, border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 16, color: "#667085" }}>
-            暂无轨迹数据
+            暂无可用轨迹数据
           </div>
         ) : null}
       </section>

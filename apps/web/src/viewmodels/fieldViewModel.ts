@@ -10,10 +10,20 @@ type TimelineType = "operation" | "alert" | "recommendation";
 export type FieldViewModel = {
   fieldId: string;
   fieldName: string;
+  areaText: string;
+  currentCropText: string;
+  currentPlanText: string;
   status: FieldConsoleStatus;
   statusLabel: string;
   statusReason?: string;
   device?: string;
+  currentStatus: {
+    soilMoisture: string;
+    temperature: string;
+    deviceOnline: string;
+    recentHeartbeat: string;
+    latestSuggestion: string;
+  };
   currentTask: null | {
     action: string;
     deviceId: string;
@@ -64,6 +74,19 @@ function formatRelative(ts: number | null): string {
   if (hours < 24) return `${hours}小时前`;
   const days = Math.floor(hours / 24);
   return `${days}天前`;
+}
+
+function formatDateTime(ts: number | null): string {
+  if (!ts || !Number.isFinite(ts) || ts <= 0) return "--";
+  return new Date(ts).toLocaleString();
+}
+
+function latestTrendValue(detail: any, key: "soil_moisture" | "soil_temp"): number | null {
+  const rows = Array.isArray(detail?.sensor_trends?.[key]) ? detail.sensor_trends[key] : [];
+  if (!rows.length) return null;
+  const latest = rows[rows.length - 1];
+  const value = Number(latest?.value_num ?? NaN);
+  return Number.isFinite(value) ? value : null;
 }
 
 function computeStatus(data: { hasAlert: boolean; hasFailedTask: boolean }): FieldConsoleStatus {
@@ -223,14 +246,39 @@ export function buildFieldViewModel(params: {
     .filter((x) => x.coordinates.length > 1);
 
   const markers = Array.isArray(detail?.map_layers?.markers) ? detail.map_layers.markers : [];
+  const areaText = detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "--";
+  const currentCropText = String(detail?.latest_season?.crop || detail?.season?.crop || "苹果");
+  const currentPlanText = String(params.currentProgram?.title || params.currentProgram?.program_name || params.currentProgram?.program_id || (currentTask ? `${currentTask.action}方案` : "--"));
+  const firstDevice = (Array.isArray(detail?.bound_devices) ? detail.bound_devices : [])[0] ?? null;
+  const onlineCount = Number(detail?.summary?.online_device_count ?? 0);
+  const deviceOnline = Number.isFinite(onlineCount)
+    ? `${onlineCount}/${Number(detail?.summary?.device_count ?? 0)} 在线`
+    : String(firstDevice?.connection_status || "未知");
+  const latestHeartbeatTs = firstDevice?.last_heartbeat_ts_ms == null ? null : Number(firstDevice.last_heartbeat_ts_ms);
+  const latestRecommendation = recentRecommendations[0] ?? null;
+  const latestSuggestion = latestRecommendation
+    ? String(latestRecommendation.summary || latestRecommendation.description || latestRecommendation.title || "系统建议：关注田块")
+    : "暂无建议";
+  const soilMoisture = latestTrendValue(detail, "soil_moisture");
+  const soilTemp = latestTrendValue(detail, "soil_temp");
 
   return {
     fieldId,
     fieldName: String(detail?.field?.name || "field_c8_demo"),
+    areaText,
+    currentCropText,
+    currentPlanText,
     status,
     statusLabel: mapStatusLabel(status),
     statusReason,
     device: String(currentTask?.deviceId || "dev_onboard_accept_001"),
+    currentStatus: {
+      soilMoisture: soilMoisture == null ? "--" : `${soilMoisture.toFixed(1)}%`,
+      temperature: soilTemp == null ? "--" : `${soilTemp.toFixed(1)}℃`,
+      deviceOnline,
+      recentHeartbeat: latestHeartbeatTs ? `${formatRelative(latestHeartbeatTs)}（${formatDateTime(latestHeartbeatTs)}）` : "--",
+      latestSuggestion,
+    },
     currentTask,
     lastEvent,
     kpis: [
