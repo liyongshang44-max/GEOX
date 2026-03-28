@@ -74,3 +74,5 @@ _data_backup/
 *.dump
 # NOTE: do not add global *.json/*.pdf/*.csv ignores here.
 # Fixtures/manifests/templates/schemas must remain visible to git.
+# simulator / acceptance runtime outputs
+apps/server/acceptance/simulator_evidence/
