@@ -23,7 +23,7 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">顶部概览</div>
+            <div className="sectionTitle">作业详情</div>
             <div className="muted">作业编号（次级）：{model.operationPlanId}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -35,9 +35,7 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="kv"><span className="k">作业状态</span><span className="v">{model.statusLabel}</span></div>
           <div className="kv"><span className="k">所属田块</span><span className="v">{model.fieldLabel}</span></div>
           <div className="kv"><span className="k">所属经营方案</span><span className="v">{model.programLabel}</span></div>
-          <div className="kv"><span className="k">最新更新时间</span><span className="v">{model.latestUpdatedAtLabel}</span></div>
-          <div className="kv"><span className="k">执行动作</span><span className="v">{model.execution.actionType}</span></div>
-          <div className="kv"><span className="k">执行设备/执行人</span><span className="v">{model.execution.deviceId} / {model.execution.executorLabel}</span></div>
+          <div className="kv"><span className="k">最近更新时间</span><span className="v">{model.latestUpdatedAtLabel}</span></div>
         </div>
       </section>
 
@@ -48,6 +46,15 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionTitle">执行证据</div>
         <ReceiptEvidenceCard data={model.receiptEvidence} />
+      </section>
+
+      <section className="card sectionBlock">
+        <div className="sectionTitle">验收标准</div>
+        <div className="kv"><span className="k">结果状态</span><span className="v">{model.execution.finalStatusLabel}</span></div>
+        <div className="kv"><span className="k">约束核验</span><span className="v">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</span></div>
+        {model.receiptEvidence?.violationSummary ? (
+          <div className="kv"><span className="k">风险提示</span><span className="v">{model.receiptEvidence.violationSummary}</span></div>
+        ) : null}
       </section>
 
       <OperationStoryTimeline items={model.timeline} />
