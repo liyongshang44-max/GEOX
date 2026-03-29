@@ -1,4 +1,5 @@
 import React from "react";
+import { apiRequest } from "../api/client";
 import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, type FieldControlPlaneItem } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
@@ -50,7 +51,7 @@ function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneIte
   };
 }
 
-type FieldOverviewBuildResult = { detail: any; controlPlaneHit: boolean; };
+type FieldOverviewBuildResult = { detail: any; controlPlaneHit: boolean };
 type FieldDetailState = {
   detail: any;
   activeOperations: any[];
@@ -60,45 +61,148 @@ type FieldDetailState = {
   latestEvidenceVm?: ReceiptEvidenceVm;
 } | null;
 
-function buildFieldOverviewVm(args: { fieldId: string; controlPlane: any; legacyDetail: any; geometry: any; }): FieldOverviewBuildResult {
-  const { fieldId, controlPlane, legacyDetail, geometry } = args;
+function normalizeMarkers(items: any[] | null | undefined): any[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item: any) => {
+      const payload = item?.payload ?? item ?? {};
+      const coordinates = payload?.point?.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+
+      const lon = Number(coordinates[0]);
+      const lat = Number(coordinates[1]);
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+
+      return {
+        device_id: String(payload?.device_id ?? item?.device_id ?? ""),
+        lon,
+        lat,
+        ts_ms: Number(payload?.ts ?? item?.ts_ms ?? 0) || null,
+        source: "device_position_v1",
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeTrajectories(items: any[] | null | undefined): any[] {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item: any, idx: number) => {
+      const payload = item?.payload ?? item ?? {};
+      const coordinates = payload?.line?.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+
+      const points = coordinates
+        .map((pair: any) => {
+          if (!Array.isArray(pair) || pair.length < 2) return null;
+          const lon = Number(pair[0]);
+          const lat = Number(pair[1]);
+          if (!Number.isFinite(lon) || !Number.isFinite(lat)) return null;
+          return { lon, lat, ts_ms: null };
+        })
+        .filter(Boolean);
+
+      if (points.length < 2) return null;
+
+      const deviceId = String(payload?.device_id ?? item?.device_id ?? `track_${idx + 1}`);
+
+      return {
+        device_id: deviceId,
+        points,
+        geojson: {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: points.map((p: any) => [p.lon, p.lat]),
+          },
+          properties: { device_id: deviceId },
+        },
+      };
+    })
+    .filter(Boolean);
+}
+
+function buildFieldOverviewVm(args: {
+  fieldId: string;
+  controlPlane: any;
+  legacyDetail: any;
+  geometry: any;
+  livePositions?: any[];
+  liveTrajectories?: any[];
+}): FieldOverviewBuildResult {
+  const { fieldId, controlPlane, legacyDetail, geometry, livePositions, liveTrajectories } = args;
+
   const controlPlaneHit = Boolean(controlPlane?.field || controlPlane?.overview || controlPlane?.summary);
-  const base = legacyDetail || (controlPlaneHit ? mapControlPlaneToLegacyDetail(fieldId, controlPlane) : null) || {
-    field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
-    latest_season: null,
-    summary: { device_count: 0 },
-    geometry: null,
-    map_layers: {},
-    recent_receipts: [],
-  };
+
+  const base =
+    legacyDetail ||
+    (controlPlaneHit ? mapControlPlaneToLegacyDetail(fieldId, controlPlane) : null) || {
+      field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
+      latest_season: null,
+      summary: { device_count: 0 },
+      geometry: null,
+      map_layers: {},
+      recent_receipts: [],
+    };
+
+  const existingLayers = base?.map_layers ?? {};
+  const normalizedMarkers = normalizeMarkers(livePositions);
+  const normalizedTrajectories = normalizeTrajectories(liveTrajectories);
+  const preferLiveMap = normalizedTrajectories.length > 0 || normalizedMarkers.length > 0;
+
   return {
     controlPlaneHit,
     detail: {
       ...base,
       geometry: geometry ?? base?.geometry ?? null,
       map_layers: {
-        ...(base?.map_layers ?? {}),
-        trajectories: Array.isArray(base?.map_layers?.trajectories) ? base.map_layers.trajectories : [],
+        ...existingLayers,
+        markers: preferLiveMap
+          ? normalizedMarkers
+          : Array.isArray(existingLayers.markers)
+            ? existingLayers.markers
+            : [],
+        trajectories: preferLiveMap
+          ? normalizedTrajectories
+          : Array.isArray(existingLayers.trajectories)
+            ? existingLayers.trajectories
+            : [],
       },
     },
   };
 }
 
-function buildLatestEvidenceVm(args: { detail: any; allOperations: any[]; controlPlane: any; }): ReceiptEvidenceVm | undefined {
+function buildLatestEvidenceVm(args: { detail: any; allOperations: any[]; controlPlane: any }): ReceiptEvidenceVm | undefined {
   const { detail, allOperations, controlPlane } = args;
   const latestOperationPlanId = resolveOperationPlanId(allOperations?.[0]);
   const raw =
-    detail?.latestEvidence
-    ?? detail?.latest_evidence
-    ?? (Array.isArray(detail?.recent_receipts) ? detail.recent_receipts[0]?.receipt?.payload : null)
-    ?? controlPlane?.evidence?.recent_items?.[0]
-    ?? null;
-  if (raw) return mapReceiptToVm({ ...raw, href: toOperationDetailPath({ ...raw, operation_plan_id: raw?.operation_plan_id ?? latestOperationPlanId }) });
-  const latestFinishedOp = (allOperations ?? []).find((x: any) => ["SUCCESS", "SUCCEEDED", "FAILED"].includes(String(x?.final_status ?? "").toUpperCase()));
+    detail?.latestEvidence ??
+    detail?.latest_evidence ??
+    (Array.isArray(detail?.recent_receipts) ? detail.recent_receipts[0]?.receipt?.payload : null) ??
+    controlPlane?.evidence?.recent_items?.[0] ??
+    null;
+
+  if (raw) {
+    return mapReceiptToVm({
+      ...raw,
+      href: toOperationDetailPath({
+        ...raw,
+        operation_plan_id: raw?.operation_plan_id ?? latestOperationPlanId,
+      }),
+    });
+  }
+
+  const latestFinishedOp = (allOperations ?? []).find((x: any) =>
+    ["SUCCESS", "SUCCEEDED", "FAILED"].includes(String(x?.final_status ?? "").toUpperCase())
+  );
+
   if (!latestFinishedOp) return undefined;
+
   return mapReceiptToVm({
     status: latestFinishedOp.final_status,
-    execution_finished_at: latestFinishedOp.last_event_ts ? new Date(Number(latestFinishedOp.last_event_ts)).toISOString() : null,
+    execution_finished_at: latestFinishedOp.last_event_ts
+      ? new Date(Number(latestFinishedOp.last_event_ts)).toISOString()
+      : null,
     executor_label: latestFinishedOp.device_id,
     device_id: latestFinishedOp.device_id,
   });
@@ -152,20 +256,46 @@ export function useFieldDetail(params: {
         detail = await fetchFieldDetail(fieldId);
       } catch {}
 
-      const [opsRes, recsRes, currentRes, geometryRes] = await Promise.allSettled([
+      const [opsRes, recsRes, currentRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
         Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
+        Promise.resolve().then(() =>
+          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
+        ),
+        Promise.resolve().then(() =>
+          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
+        ),
       ]);
 
-      const geometry = geometryRes.status === "fulfilled" ? (geometryRes.value?.geometry ?? geometryRes.value) : null;
-      const allOperations = opsRes.status === "fulfilled" ? (opsRes.value.items ?? []) : [];
-      const activeOperations = allOperations.filter((x) => !["SUCCESS", "FAILED", "SUCCEEDED"].includes(String(x.final_status).toUpperCase()));
-      const recommendations = recsRes.status === "fulfilled" ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8) : [];
-      const currentProgram = currentRes.status === "fulfilled" ? (currentRes.value ?? null) : null;
-      const overview = buildFieldOverviewVm({ fieldId, controlPlane: cp, legacyDetail: detail, geometry });
-      const latestEvidenceVm = buildLatestEvidenceVm({ detail: overview.detail, allOperations, controlPlane: cp });
+      const geometry = geometryRes.status === "fulfilled" ? geometryRes.value?.geometry ?? geometryRes.value : null;
+      const allOperations = opsRes.status === "fulfilled" ? opsRes.value.items ?? [] : [];
+      const activeOperations = allOperations.filter(
+        (x) => !["SUCCESS", "FAILED", "SUCCEEDED"].includes(String(x.final_status).toUpperCase())
+      );
+      const recommendations =
+        recsRes.status === "fulfilled"
+          ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8)
+          : [];
+      const currentProgram = currentRes.status === "fulfilled" ? currentRes.value ?? null : null;
+      const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
+      const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
+
+      const overview = buildFieldOverviewVm({
+        fieldId,
+        controlPlane: cp,
+        legacyDetail: detail,
+        geometry,
+        livePositions,
+        liveTrajectories,
+      });
+
+      const latestEvidenceVm = buildLatestEvidenceVm({
+        detail: overview.detail,
+        allOperations,
+        controlPlane: cp,
+      });
 
       setState({
         detail: overview.detail,
@@ -176,7 +306,7 @@ export function useFieldDetail(params: {
         latestEvidenceVm,
       });
 
-      setStatus(overview.controlPlaneHit ? "已加载田块控制台" : (lang === "zh" ? "已加载田块控制台" : "Field console loaded"));
+      setStatus(overview.controlPlaneHit ? "已加载田块控制台" : lang === "zh" ? "已加载田块控制台" : "Field console loaded");
     } catch (e: any) {
       setState(null);
       setError(lang === "zh" ? "田块详情加载失败" : "Failed to load field detail");
@@ -187,7 +317,9 @@ export function useFieldDetail(params: {
     }
   }, [fieldId, lang]);
 
-  React.useEffect(() => { void refresh(); }, [refresh]);
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const model = React.useMemo(() => {
     if (!state) return null;

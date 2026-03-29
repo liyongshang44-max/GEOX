@@ -1,7 +1,13 @@
 export type UiLocale = "zh" | "en";
 
 export function getUiLocale(input?: string | null): UiLocale {
-  return input === "en" ? "en" : "zh";
+  if (input === "en" || input === "en-US") return "en";
+  if (input === "zh" || input === "zh-CN") return "zh";
+  if (typeof window !== "undefined") {
+    const raw = window.localStorage.getItem("geox.locale");
+    if (raw === "en" || raw === "en-US") return "en";
+  }
+  return "zh";
 }
 
 export function localizeOperationType(
@@ -126,22 +132,49 @@ export function formatRelativeUpdateTime(
   return text;
 }
 
-export function buildOperationSummary(input: {
+type BuildOperationSummaryInput = {
   type?: string | null;
   status?: string | null;
   fieldName?: string | null;
   deviceName?: string | null;
   locale?: UiLocale;
-}): string {
-  const locale = input.locale ?? "zh";
-  const type = localizeOperationType(input.type, locale);
-  const status = localizeOperationStatus(input.status, locale);
-  const fieldName = localizeFieldName(input.fieldName, locale);
-  const deviceName = localizeDeviceName(input.deviceName, locale);
+};
 
-  if (locale === "en") {
+export function buildOperationSummary(input: BuildOperationSummaryInput): string;
+export function buildOperationSummary(status?: string | null, type?: string | null, locale?: UiLocale): string;
+export function buildOperationSummary(
+  inputOrStatus?: BuildOperationSummaryInput | string | null,
+  typeMaybe?: string | null,
+  localeMaybe?: UiLocale
+): string {
+  if (typeof inputOrStatus === "object" && inputOrStatus !== null) {
+    const locale = inputOrStatus.locale ?? "zh";
+    const type = localizeOperationType(inputOrStatus.type, locale);
+    const status = localizeOperationStatus(inputOrStatus.status, locale);
+    const fieldName = localizeFieldName(inputOrStatus.fieldName, locale);
+    const deviceName = localizeDeviceName(inputOrStatus.deviceName, locale);
     return `${type} · ${fieldName} · ${deviceName} · ${status}`;
   }
 
-  return `${type} · ${fieldName} · ${deviceName} · ${status}`;
+  const locale = localeMaybe ?? "zh";
+  const type = localizeOperationType(typeMaybe, locale);
+  const status = localizeOperationStatus(inputOrStatus, locale);
+  return `${type} · ${status}`;
+}
+
+// 兼容旧页面导出名
+export function mapFieldDisplayName(primary?: string | null, fallback?: string | null, locale: UiLocale = "zh"): string {
+  return localizeFieldName(primary || fallback, locale);
+}
+
+export function mapDeviceDisplayName(primary?: string | null, fallback?: string | null, locale: UiLocale = "zh"): string {
+  return localizeDeviceName(primary || fallback, locale);
+}
+
+export function mapOperationActionLabel(value?: string | null, locale: UiLocale = "zh"): string {
+  return localizeOperationType(value, locale);
+}
+
+export function mapOperationStatusLabel(value?: string | null, locale: UiLocale = "zh"): string {
+  return localizeOperationStatus(value, locale);
 }

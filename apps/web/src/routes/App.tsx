@@ -29,6 +29,7 @@ import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
 import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
+import { LocaleProvider } from "../lib/locale";
 
 type BreadcrumbItem = {
   label: string;
@@ -228,15 +229,17 @@ export default function App(): React.ReactElement {
   const [expert, setExpert] = React.useState<boolean>(() => readExpertModeFromStorage());
 
   return (
-    <div className="app appReset">
-      <Shell
-        expert={expert}
-        onToggleExpert={() => {
-          const next = !expert;
-          setExpert(next);
-          persistExpertMode(next);
-        }}
-      />
-    </div>
+    <LocaleProvider>
+      <div className="app appReset">
+        <Shell
+          expert={expert}
+          onToggleExpert={() => {
+            const next = !expert;
+            setExpert(next);
+            persistExpertMode(next);
+          }}
+        />
+      </div>
+    </LocaleProvider>
   );
 }

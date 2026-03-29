@@ -15,6 +15,77 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }
   error: { color: "#b42318", bg: "#fef3f2", border: "#fecdca" },
 };
 
+function collectPairs(raw: any, out: Array<[number, number]>): void {
+  if (!Array.isArray(raw)) return;
+  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
+    out.push([Number(raw[0]), Number(raw[1])]);
+    return;
+  }
+  for (const item of raw) collectPairs(item, out);
+}
+
+function extractPairs(geo: any): Array<[number, number]> {
+  if (!geo || typeof geo !== "object") return [];
+  const type = String(geo?.type ?? "");
+  if (type === "Feature") return extractPairs(geo?.geometry);
+  if (type === "FeatureCollection") return Array.isArray(geo?.features) ? geo.features.flatMap((f: any) => extractPairs(f)) : [];
+  if (type === "Polygon" || type === "MultiPolygon") {
+    const pairs: Array<[number, number]> = [];
+    collectPairs(geo?.coordinates, pairs);
+    return pairs;
+  }
+  return [];
+}
+
+function buildMockMapLayers(model: any) {
+  const basePairs = extractPairs(model?.map?.polygonGeoJson);
+  const seed = basePairs[0] ?? [121.012, 23.102];
+  const second = basePairs[Math.max(1, Math.floor(basePairs.length / 3))] ?? [seed[0] + 0.0025, seed[1] + 0.0018];
+  const third = basePairs[Math.max(2, Math.floor(basePairs.length / 2))] ?? [seed[0] + 0.0048, seed[1] + 0.0031];
+  const deviceId = model?.device || model?.currentTask?.deviceId || "dev_onboard_accept_001";
+
+  return {
+    polygonGeoJson: model?.map?.polygonGeoJson ?? {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [seed[0] - 0.0015, seed[1] - 0.0012],
+          [seed[0] + 0.0045, seed[1] - 0.0012],
+          [seed[0] + 0.0045, seed[1] + 0.0038],
+          [seed[0] - 0.0015, seed[1] + 0.0038],
+          [seed[0] - 0.0015, seed[1] - 0.0012],
+        ]],
+      },
+    },
+    heatGeoJson: {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: { type: "Point", coordinates: [second[0], second[1]] },
+          properties: { intensity: 2, event_id: "demo_attention", metric: "soil_moisture", status: "OPEN", time: model?.lastEvent?.relativeText || "刚刚" },
+        },
+      ],
+    },
+    markers: [
+      { device_id: deviceId, lon: seed[0], lat: seed[1], ts_ms: Date.now() - 15 * 60 * 1000 },
+    ],
+    trajectorySegments: [
+      {
+        id: "demo_track_1",
+        status: "SUCCEEDED",
+        color: "#2563eb",
+        label: `${deviceId} · 演示轨迹`,
+        coordinates: [seed, second, third],
+      },
+    ],
+    acceptancePoints: [
+      { id: "demo_accept_1", status: "PASS", lon: third[0], lat: third[1] },
+    ],
+  };
+}
+
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
@@ -29,6 +100,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
   const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
   const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${(model?.currentPlanText || "--")}`;
+  const mockMap = buildMockMapLayers(model);
+  const showMockMap = !model?.map.hasTrajectory;
 
   return (
     <div style={{ display: "grid", gap: 14 }}>
@@ -50,6 +123,7 @@ export default function FieldDetailPage(): React.ReactElement {
               >
                 {headerStatusLabel}
               </span>
+              {showMockMap ? <span className="statusTag tone-neutral">演示轨迹</span> : null}
             </div>
             <div className="muted">{fieldSubline}</div>
             <div className="muted">田块编号：{model?.fieldId || fieldId || "--"}</div>
@@ -110,27 +184,30 @@ export default function FieldDetailPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ padding: 14 }}>
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>地图 / 轨迹</h3>
-        {model?.map.polygonGeoJson && model?.map.hasTrajectory ? (
-          <FieldGisMap
-            polygonGeoJson={model.map.polygonGeoJson}
-            heatGeoJson={model.map.heatGeoJson}
-            markers={model.map.markers}
-            trajectorySegments={model.map.trajectorySegments}
-            acceptancePoints={model.map.acceptancePoints}
-            labels={labels}
-          />
-        ) : (
-          <div className="gisEmptyState">
-            <div className="gisEmptyTitle">当前尚未收到带定位的设备轨迹</div>
-            <div className="gisEmptyText">地图页会在系统收到 geo telemetry 后，展示设备路径、最近作业点和后续告警热区。页面本身可用，只是现场轨迹数据尚未进入。</div>
-            <div className="traceChipRow" style={{ marginTop: 12 }}>
-              <span className="traceChip">下一步补数：设备路径</span>
-              <span className="traceChip">下一步补数：作业定位点</span>
-              <span className="traceChip">下一步补数：告警热区</span>
-            </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>地图 / 轨迹</h3>
+          {showMockMap ? <span className="statusTag tone-neutral">当前为演示轨迹</span> : null}
+        </div>
+        <div className="muted" style={{ marginBottom: 10 }}>
+          {showMockMap
+            ? "当前真实 geo telemetry 尚未进入，页面先使用演示轨迹承接设备路径、作业点与热区表达。"
+            : "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。"}
+        </div>
+        <FieldGisMap
+          polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map.polygonGeoJson}
+          heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map.heatGeoJson}
+          markers={showMockMap ? mockMap.markers : model?.map.markers}
+          trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map.trajectorySegments}
+          acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map.acceptancePoints}
+          labels={labels}
+        />
+        {showMockMap ? (
+          <div className="traceChipRow" style={{ marginTop: 12 }}>
+            <span className="traceChip">演示设备路径</span>
+            <span className="traceChip">演示作业定位点</span>
+            <span className="traceChip">演示热区</span>
           </div>
-        )}
+        ) : null}
       </section>
     </div>
   );

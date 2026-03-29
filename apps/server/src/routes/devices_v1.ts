@@ -1057,45 +1057,73 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     });
   });
 
-  app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => { // Alias: issue credential under /api/v1 namespace.
+    app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => { // Alias: issue credential under /api/v1 namespace.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write");
     if (!auth) return;
+
     const device_id = normalizeDeviceId((req.params as any)?.device_id);
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
-    const host = String((req.headers as any)?.host ?? "127.0.0.1:3001");
-    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
-    const delegated = await fetch(`${proto}://${host}/api/devices/${encodeURIComponent(device_id)}/credentials`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: String((req.headers as any)?.authorization ?? ""),
-      },
-      body: JSON.stringify((req as any).body ?? {}),
-    });
+
+    const internalBaseUrl =
+      process.env.GEOX_INTERNAL_BASE_URL ||
+      process.env.INTERNAL_BASE_URL ||
+      "http://127.0.0.1:3000";
+
+    const delegated = await fetch(
+      `${internalBaseUrl}/api/devices/${encodeURIComponent(device_id)}/credentials`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: String((req.headers as any)?.authorization ?? ""),
+        },
+        body: JSON.stringify((req as any).body ?? {}),
+      }
+    );
+
     const text = await delegated.text();
     let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+    try {
+      parsed = text ? JSON.parse(text) : {};
+    } catch {
+      parsed = { raw: text };
+    }
+
     return reply.status(delegated.status).send(parsed);
   });
 
-  app.post("/api/v1/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => { // Alias: revoke credential under /api/v1 namespace.
+    app.post("/api/v1/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => { // Alias: revoke credential under /api/v1 namespace.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.revoke");
     if (!auth) return;
+
     const device_id = normalizeDeviceId((req.params as any)?.device_id);
     const credential_id = normalizeId((req.params as any)?.credential_id);
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
     if (!credential_id) return badRequest(reply, "MISSING_OR_INVALID:credential_id");
-    const host = String((req.headers as any)?.host ?? "127.0.0.1:3001");
-    const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
-    const delegated = await fetch(`${proto}://${host}/api/devices/${encodeURIComponent(device_id)}/credentials/${encodeURIComponent(credential_id)}/revoke`, {
-      method: "POST",
-      headers: {
-        authorization: String((req.headers as any)?.authorization ?? ""),
-      },
-    });
+
+    const internalBaseUrl =
+      process.env.GEOX_INTERNAL_BASE_URL ||
+      process.env.INTERNAL_BASE_URL ||
+      "http://127.0.0.1:3000";
+
+    const delegated = await fetch(
+      `${internalBaseUrl}/api/devices/${encodeURIComponent(device_id)}/credentials/${encodeURIComponent(credential_id)}/revoke`,
+      {
+        method: "POST",
+        headers: {
+          authorization: String((req.headers as any)?.authorization ?? ""),
+        },
+      }
+    );
+
     const text = await delegated.text();
     let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
+    try {
+      parsed = text ? JSON.parse(text) : {};
+    } catch {
+      parsed = { raw: text };
+    }
+
     return reply.status(delegated.status).send(parsed);
   });
 

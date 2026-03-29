@@ -9,7 +9,7 @@ import OperationExecutionCard from "../components/operations/OperationExecutionC
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
-import { mapOperationActionLabel, mapOperationStatusLabel } from "../lib/operationLabels";
+import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
 
 const COPY = {
   detailUnavailable: "作业详情暂不可用",
@@ -21,6 +21,20 @@ const COPY = {
   timeline: "全链路时间线",
 } as const;
 
+function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
+  const finalStatus = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
+  if (model.receiptEvidence?.constraintCheckLabel === "符合约束") {
+    return `已回传执行结果，当前状态为${finalStatus}，约束校验通过。`;
+  }
+  if (model.receiptEvidence?.violationSummary && model.receiptEvidence.violationSummary !== "-") {
+    return `已回传执行结果，当前状态为${finalStatus}，存在复核提示。`;
+  }
+  if (!model.receiptEvidence) {
+    return `当前状态为${finalStatus}，等待设备回传执行证据。`;
+  }
+  return `已回传执行结果，当前状态为${finalStatus}。`;
+}
+
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
@@ -30,33 +44,36 @@ export default function OperationDetailPage(): React.ReactElement {
   const model = buildOperationDetailViewModel(detail);
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
   const actionLabel = mapOperationActionLabel(model.execution.actionType || model.actionLabel);
+  const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);
+  const deviceLabel = mapDeviceDisplayName(model.execution.deviceId || model.deviceLabel, model.deviceLabel);
   const minimumAcceptanceLabel = !model.receiptEvidence
     ? "待回传执行证据"
     : model.receiptEvidence.constraintCheckLabel === "符合约束"
       ? "已满足（已回传证据且符合约束）"
       : "未满足（需人工复核）";
+  const resultSummary = buildResultSummary(model);
 
   return (
-    <div className="productPage operationDetailPageV2" style={{ display: "grid", gap: 14 }}>
-      <section className="card sectionBlock detailHeroCard">
+    <div className="productPage operationDetailPageV3" style={{ display: "grid", gap: 14 }}>
+      <section className="card sectionBlock detailHeroCard detailHeroCardV3">
         <div className="sectionHeader">
           <div>
-            <div className="eyebrow">GEOX / 作业闭环详情</div>
-            <h1 className="pageTitle" style={{ marginBottom: 6 }}>{actionLabel}</h1>
-            <div className="pageLead">{topStatusLabel} · {model.fieldLabel} · {model.execution.deviceId || model.deviceLabel}</div>
+            <div className="eyebrow">GEOX / 作业复盘页</div>
+            <h1 className="pageTitle" style={{ marginBottom: 6 }}>{actionLabel} · {fieldLabel} · {topStatusLabel}</h1>
+            <div className="pageLead">{resultSummary}</div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span className="statusTag tone-neutral">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
 
-        <div className="operationsSummaryGrid">
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{model.fieldLabel}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{model.execution.deviceId}</strong></div>
+        <div className="operationsSummaryGrid detailSummaryGridV3">
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{fieldLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{deviceLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{model.execution.progressLabel}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最新更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
 
         <details className="traceDetails" style={{ marginTop: 14 }}>
@@ -74,12 +91,13 @@ export default function OperationDetailPage(): React.ReactElement {
       <OperationExecutionCard model={model} />
       <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
 
-      <section className="card sectionBlock">
+      <section className="card sectionBlock detailEvidenceCardV3">
         <div className="sectionTitle">{COPY.executionEvidence}</div>
+        <div className="muted detailSectionLead">优先查看最近一次回执、资源消耗和约束校验，再决定是否需要人工复核。</div>
         <ReceiptEvidenceCard data={model.receiptEvidence} />
       </section>
 
-      <section className="card sectionBlock">
+      <section className="card sectionBlock detailAcceptanceCardV3">
         <div className="sectionTitle">{COPY.acceptanceResult}</div>
         <div className="kv"><span className="k">最终结果</span><span className="v">{model.execution.finalStatusLabel}</span></div>
         <div className="kv"><span className="k">约束校验</span><span className="v">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</span></div>
