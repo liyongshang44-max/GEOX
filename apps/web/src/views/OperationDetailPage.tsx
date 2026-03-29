@@ -9,16 +9,16 @@ import OperationExecutionCard from "../components/operations/OperationExecutionC
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
+import { mapOperationActionLabel, mapOperationStatusLabel } from "../lib/operationLabels";
 
 const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
-  detailTitle: "A. 顶部概览",
   backToList: "返回作业列表",
-  evidenceBundle: "D. 证据包",
-  executionEvidence: "E. 执行证据",
-  acceptanceResult: "F. 验收结果",
-  timeline: "G. 全链路时间线",
+  evidenceBundle: "证据包",
+  executionEvidence: "执行证据",
+  acceptanceResult: "验收结果",
+  timeline: "全链路时间线",
 } as const;
 
 export default function OperationDetailPage(): React.ReactElement {
@@ -28,43 +28,50 @@ export default function OperationDetailPage(): React.ReactElement {
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !detail) return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   const model = buildOperationDetailViewModel(detail);
+  const topStatusLabel = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
+  const actionLabel = mapOperationActionLabel(model.execution.actionType || model.actionLabel);
   const minimumAcceptanceLabel = !model.receiptEvidence
     ? "待回传执行证据"
     : model.receiptEvidence.constraintCheckLabel === "符合约束"
       ? "已满足（已回传证据且符合约束）"
       : "未满足（需人工复核）";
-  const topStatusLabel = ["SUCCEEDED", "SUCCESS", "EXECUTED"].includes(String(model.finalStatus).toUpperCase()) ? "已完成" : "进行中";
 
   return (
-    <div className="productPage" style={{ display: "grid", gap: 14 }}>
-      <section className="card sectionBlock">
+    <div className="productPage operationDetailPageV2" style={{ display: "grid", gap: 14 }}>
+      <section className="card sectionBlock detailHeroCard">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">{COPY.detailTitle}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>作业详情</div>
-            <div className="muted" style={{ marginTop: 4 }}>{model.fieldLabel} · {model.programLabel}</div>
+            <div className="eyebrow">GEOX / 作业闭环详情</div>
+            <h1 className="pageTitle" style={{ marginBottom: 6 }}>{actionLabel}</h1>
+            <div className="pageLead">{topStatusLabel} · {model.fieldLabel} · {model.execution.deviceId || model.deviceLabel}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <span className="badge neutral">{topStatusLabel}</span>
+            <span className="statusTag tone-neutral">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          <div className="kv"><span className="k">动作</span><span className="v">{model.execution.actionType}</span></div>
-          <div className="kv"><span className="k">执行器</span><span className="v">{model.execution.deviceId} / {model.execution.executorLabel}</span></div>
-          <div className="kv"><span className="k">更新时间</span><span className="v">{model.latestUpdatedAtLabel}</span></div>
-          <div className="kv"><span className="k">当前状态</span><span className="v">{model.statusLabel}</span></div>
+
+        <div className="operationsSummaryGrid">
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{model.fieldLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{model.execution.deviceId}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{model.execution.progressLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
-        <details style={{ marginTop: 10 }}>
-          <summary className="muted" style={{ cursor: "pointer" }}>展开查看次级信息</summary>
-          <div className="kv"><span className="k">作业编号</span><span className="v mono">{model.operationPlanId}</span></div>
+
+        <details className="traceDetails" style={{ marginTop: 14 }}>
+          <summary>技术追踪信息</summary>
+          <div className="traceGrid">
+            <span>建议编号：{model.technicalRefs.recommendationId}</span>
+            <span>审批编号：{model.technicalRefs.approvalRequestId}</span>
+            <span>作业计划编号：{model.technicalRefs.operationPlanId}</span>
+            <span>执行任务编号：{model.technicalRefs.actTaskId}</span>
+          </div>
         </details>
       </section>
 
       <OperationDecisionCard model={model} />
       <OperationExecutionCard model={model} />
-
       <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
 
       <section className="card sectionBlock">

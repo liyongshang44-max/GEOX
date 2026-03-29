@@ -25,7 +25,7 @@ export function useProgramDetail(programId: string): {
   const load = React.useCallback(async () => {
     const id = decodeURIComponent(programId || "").trim();
     if (!id) {
-      setError("缺少 Program ID");
+      setError("缺少经营方案 ID");
       setLoading(false);
       return;
     }
@@ -46,13 +46,13 @@ export function useProgramDetail(programId: string): {
       setOps(programOps);
 
       if (!detailData && !controlPlaneData) {
-        setError("当前暂无 Program 详情数据");
+        setError("当前暂无经营方案详情数据");
       }
     } catch {
       setDetail(null);
       setControlPlane(null);
       setOps([]);
-      setError("Program 详情加载失败，请稍后重试");
+      setError("经营方案详情加载失败，请稍后重试");
     } finally {
       setLoading(false);
     }

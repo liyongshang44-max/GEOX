@@ -12,6 +12,14 @@ export type OperationStoryTimelineItemVm = {
 };
 
 export type OperationDetailPageVm = {
+  actionLabel: string;
+  deviceLabel: string;
+  technicalRefs: {
+    recommendationId: string;
+    approvalRequestId: string;
+    operationPlanId: string;
+    actTaskId: string;
+  };
   operationPlanId: string;
   fieldLabel: string;
   programLabel: string;
@@ -219,6 +227,14 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const windowEnd = receiptEndTs ?? ackTs;
 
   return {
+    actionLabel: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type, "作业")),
+    deviceLabel: toText(detail?.dispatch?.device_name, toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id, "未指定设备"))),
+    technicalRefs: {
+      recommendationId: toText(detail?.recommendation?.recommendation_id),
+      approvalRequestId: toText(detail?.approval?.approval_request_id),
+      operationPlanId: toText(detail?.operation_plan_id),
+      actTaskId: toText(detail?.dispatch?.task_id, toText(detail?.task?.task_id)),
+    },
     operationPlanId: toText(detail?.operation_plan_id),
     fieldLabel: toText(detail?.field_name, toText(detail?.field_id)),
     programLabel: toText(detail?.program_name, toText(detail?.program_id)),

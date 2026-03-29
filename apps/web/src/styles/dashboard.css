@@ -79,3 +79,167 @@
   gap: 10px;
   margin-bottom: 8px;
 }
+
+.demoMetricHint {
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.dashboardHeroV2 {
+  padding: 22px;
+}
+.dashboardDecisionGrid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 12px;
+}
+.priorityStrip {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+.priorityMainValue {
+  font-size: 42px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.priorityMainTitle {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.fieldStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.fieldStatusItem {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255,255,255,0.75);
+}
+.fieldStatusItem span {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.fieldStatusItem strong {
+  font-size: 28px;
+  line-height: 1;
+}
+.dashboardActionCard,
+.dashboardEvidenceCard {
+  min-height: 154px;
+}
+.dashboardActionMeta {
+  margin-bottom: 8px;
+  color: #0f172a;
+  font-weight: 600;
+}
+.dashboardActionSummary {
+  margin: 8px 0 10px;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.operationsPageV2 {
+  display: grid;
+  gap: 16px;
+}
+.operationsCardGrid {
+  display: grid;
+  gap: 14px;
+}
+.operationsSummaryCard {
+  padding: 18px;
+}
+.operationsSummaryTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.operationsSummaryTitle {
+  font-size: 30px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.operationsSummaryLead {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.operationsSummaryGrid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.operationsSummaryMetric {
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  background: rgba(248,250,252,0.9);
+}
+.operationsSummaryMetric strong {
+  display: block;
+  font-size: 18px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.operationsSummaryLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: #64748b;
+  font-size: 12px;
+}
+.operationsSummaryActions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.traceDetails {
+  margin-top: 14px;
+}
+.traceDetails summary {
+  cursor: pointer;
+  color: #64748b;
+  font-size: 13px;
+}
+.traceGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.traceGrid span {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(248,250,252,0.95);
+  color: #334155;
+  overflow-wrap: anywhere;
+}
+.detailHeroCard {
+  padding: 20px;
+}
+@media (max-width: 1100px) {
+  .dashboardDecisionGrid,
+  .demoContentGrid,
+  .operationsSummaryGrid,
+  .fieldStatusGrid,
+  .traceGrid {
+    grid-template-columns: 1fr;
+  }
+}

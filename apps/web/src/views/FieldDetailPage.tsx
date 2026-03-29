@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import { FIELD_TEXT, type FieldLang } from "../lib/fieldViewModel";
+import { getUiLocale } from "../lib/operationLabels";
 import { useFieldDetail } from "../hooks/useFieldDetail";
 import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
@@ -17,7 +18,7 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
-  const [lang] = React.useState<FieldLang>(() => (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en"));
+  const [lang] = React.useState<FieldLang>(() => (getUiLocale() === "en" ? "en" : "zh"));
   const labels = FIELD_TEXT[lang];
 
   const { model, busy, error, technical, refresh } = useFieldDetail({ fieldId, lang });
@@ -98,6 +99,7 @@ export default function FieldDetailPage(): React.ReactElement {
 
       <section className="card" style={{ padding: 14 }}>
         <h3 style={{ marginTop: 0, marginBottom: 8 }}>执行证据摘要</h3>
+        <div className="muted" style={{ marginBottom: 10 }}>先确认最近一次回执与约束校验，再进入地图查看现场轨迹。</div>
         {model?.latestEvidence?.href ? (
           <Link to={model.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}>
             <ReceiptEvidenceCard data={model.latestEvidence} />
@@ -119,8 +121,14 @@ export default function FieldDetailPage(): React.ReactElement {
             labels={labels}
           />
         ) : (
-          <div style={{ border: "1px dashed #d0d5dd", background: "#f2f4f7", borderRadius: 10, padding: 24, color: "#667085" }}>
-            暂无可用轨迹数据
+          <div className="gisEmptyState">
+            <div className="gisEmptyTitle">当前尚未收到带定位的设备轨迹</div>
+            <div className="gisEmptyText">地图页会在系统收到 geo telemetry 后，展示设备路径、最近作业点和后续告警热区。页面本身可用，只是现场轨迹数据尚未进入。</div>
+            <div className="traceChipRow" style={{ marginTop: 12 }}>
+              <span className="traceChip">下一步补数：设备路径</span>
+              <span className="traceChip">下一步补数：作业定位点</span>
+              <span className="traceChip">下一步补数：告警热区</span>
+            </div>
           </div>
         )}
       </section>

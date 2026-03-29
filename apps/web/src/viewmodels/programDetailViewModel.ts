@@ -176,7 +176,7 @@ export function buildProgramDetailViewModel(args: {
   const latestTimelineItem = timeline[timeline.length - 1];
 
   return {
-    title: `${cropName}·${displayTitle}`,
+    title: `${displayTitle}` ,
     status: top.status,
     statusLabel: top.label,
     stageLabel: mapProgramStage({ ops, controlPlane, detail }),

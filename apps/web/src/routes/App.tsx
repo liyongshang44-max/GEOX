@@ -44,7 +44,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
   if (pathname.startsWith("/operations/")) return "作业详情";
-  if (pathname.startsWith("/operations")) return "待执行动作";
+  if (pathname.startsWith("/operations")) return "作业中心";
   if (pathname === "/programs") return "经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
@@ -83,8 +83,8 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
-  if (pathname.startsWith("/operations/")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作", to: "/operations" }, { label: "作业详情" }];
-  if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "待执行动作" }];
+  if (pathname.startsWith("/operations/")) return [{ label: "总览", to: "/dashboard" }, { label: "作业中心", to: "/operations" }, { label: "作业详情" }];
+  if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "作业中心" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
@@ -132,11 +132,11 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 
         <div className="sideGroupTitle">业务导航</div>
         <nav className="sideNav">
-          <SidebarLink to="/dashboard" label="总览" />
+          <SidebarLink to="/dashboard" label="监控台" />
           <SidebarLink to="/fields" label="田块与 GIS" />
           <SidebarLink to="/devices" label="设备中心" />
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/operations" label="待执行动作" />
+          <SidebarLink to="/operations" label="作业中心" />
           <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
@@ -144,11 +144,6 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
-
-        <div className="consoleNotice">
-          <div className="consoleNoticeTitle">当前阶段</div>
-          <div className="consoleNoticeBody">Commercial v1 中间冻结态，重点做收口与演示一致性，不再随意扩模块。</div>
-        </div>
 
         {expert ? (
           <>
@@ -163,7 +158,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
       <main className="consoleMain">
         <header className="consoleHeader card">
           <div>
-            <div className="eyebrow">GEOX / LandOS Control Plane</div>
+            <div className="eyebrow">GEOX / 远程农业运营控制台</div>
             <div className="breadcrumbBar">
               {crumbs.map((crumb, index) => (
                 <React.Fragment key={`${crumb.label}_${index}`}>
@@ -176,8 +171,6 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <div className="pageLead">{pageLead}</div>
           </div>
           <div className="headerActions">
-            <div className="pill">中文界面</div>
-            <div className="pill">Phase2 页面</div>
             <div className="pill">{session?.role === "operator" ? "操作员" : session?.role === "admin" ? "管理员" : "未识别会话"}</div>
             {expert ? <NavLink className="btn" to="/dev">研发工具</NavLink> : null}
             <button className="btn" onClick={onToggleExpert}>{expert ? "研发模式：开启" : "研发模式：关闭"}</button>
