@@ -17,6 +17,22 @@ function EmptyBlock({ text }: { text: string }): React.ReactElement {
   return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
 }
 
+function parseDurationSeconds(durationLabel?: string): number | null {
+  if (!durationLabel) return null;
+  const raw = durationLabel.trim();
+  const value = Number(raw.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(value)) return null;
+  if (raw.includes("分钟")) return value * 60;
+  if (raw.includes("小时")) return value * 3600;
+  return value;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds >= 3600) return `${(seconds / 3600).toFixed(1)} 小时`;
+  if (seconds >= 60) return `${Math.round(seconds / 60)} 分钟`;
+  return `${Math.round(seconds)} 秒`;
+}
+
 export default function CommercialDashboardPage(): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
@@ -64,6 +80,14 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const receiptCount = d.evidences.filter((x) => x.hasReceipt).length;
   const passCount = d.evidences.filter((x) => x.acceptanceVerdict === "PASS").length;
   const pendingEvidenceCount = d.evidences.filter((x) => x.isPendingAcceptance).length;
+  const completedOperationCount = d.actions.filter((x) => x.finalStatus === "succeeded").length;
+  const acceptancePassRate = receiptCount > 0 ? (passCount / receiptCount) * 100 : 0;
+  const executionDurations = d.evidences
+    .map((item) => parseDurationSeconds(item.card?.durationLabel))
+    .filter((v): v is number => v != null);
+  const avgDurationSeconds = executionDurations.length > 0
+    ? executionDurations.reduce((sum, current) => sum + current, 0) / executionDurations.length
+    : 0;
   const jumpTargets = {
     decisions: "/operations?status=pending",
     execution: "/operations?status=running",
@@ -260,6 +284,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
             {d.evidences.length === 0 ? <EmptyBlock text="当前没有可展示的作业证据" /> : null}
           </div>
         </article>
+      </section>
+
+      <section className="card detailHeroCard" style={{ marginTop: 16 }}>
+        <div className="sectionHeader">
+          <div>
+            <div className="sectionTitle">本周期表现</div>
+            <div className="sectionDesc">来源：operation + receipt + acceptance</div>
+          </div>
+        </div>
+        <div className="operationsSummaryGrid detailSummaryGridV3">
+          <div className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">完成作业数</span>
+            <strong>{completedOperationCount}</strong>
+          </div>
+          <div className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">验收通过率</span>
+            <strong>{acceptancePassRate.toFixed(0)}%</strong>
+          </div>
+          <div className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">平均执行时长</span>
+            <strong>{avgDurationSeconds > 0 ? formatDuration(avgDurationSeconds) : "-"}</strong>
+          </div>
+        </div>
       </section>
     </div>
   );
