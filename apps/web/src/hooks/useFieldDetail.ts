@@ -1,6 +1,6 @@
 import React from "react";
 import { apiRequestOptional } from "../api/client";
-import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, type FieldControlPlaneItem } from "../api/fields";
+import { fetchFieldDetail, fetchFieldGeometry } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
 import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
@@ -8,57 +8,6 @@ import { mapReceiptToVm, type ReceiptEvidenceVm } from "../viewmodels/evidence";
 import type { FieldLang } from "../lib/fieldViewModel";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 
-const unsupportedFieldControlPlaneIds = new Set<string>();
-const unsupportedFieldCurrentProgramIds = new Set<string>();
-const ENABLE_OPTIONAL_FIELD_CONTROL_PLANE = String((import.meta as any)?.env?.VITE_ENABLE_OPTIONAL_FIELD_CONTROL_PLANE ?? "").toLowerCase() === "true";
-const ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM = String((import.meta as any)?.env?.VITE_ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM ?? "").toLowerCase() === "true";
-
-function is404Error(error: any): boolean {
-  return error?.status === 404 || error?.response?.status === 404;
-}
-
-function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneItem): any {
-  const operations = Array.isArray(cp.operations) ? cp.operations : [];
-  const alerts = Array.isArray(cp.alerts) ? cp.alerts : [];
-  return {
-    field: {
-      field_id: cp.field?.field_id || fieldId,
-      name: cp.field?.field_name || cp.overview?.field_name || fieldId,
-      area_ha: cp.field?.area_ha ?? cp.overview?.area_ha ?? null,
-      status: cp.field?.status?.code || cp.overview?.status?.code || "UNKNOWN",
-    },
-    latest_season: {
-      season_id: cp.current_context?.season_id || cp.overview?.current_season || null,
-      name: cp.current_context?.season_id || cp.overview?.current_season || null,
-      crop: cp.current_context?.crop_code || null,
-    },
-    summary: {
-      device_count: cp.summary?.device_count ?? cp.overview?.device_count ?? 0,
-    },
-    geometry: cp.map?.geojson ?? null,
-    recent_alerts: alerts.map((item) => ({
-      event_id: item.alert_id,
-      metric: item.title,
-      status: String(item.status || "OPEN").toUpperCase(),
-      raised_at: item.ts_label,
-      raised_ts_ms: Date.now(),
-      object_id: fieldId,
-    })),
-    map_layers: {
-      job_history: operations.map((op) => ({
-        id: op.operation_plan_id,
-        act_task_id: op.act_task_id,
-        task_type: op.title,
-        ts_ms: op.updated_ts_ms,
-        timing_source: String(op.status?.code || "ACKED").toUpperCase().includes("ACK") ? "receipt" : "schedule",
-      })),
-      markers: [],
-      trajectories: cp.map?.operation_tracks || [],
-      alert_heat_geojson: cp.map?.geojson || { type: "FeatureCollection", features: [] },
-    },
-    recent_receipts: [],
-  };
-}
 
 type FieldOverviewBuildResult = { detail: any; controlPlaneHit: boolean };
 type FieldDetailState = {
@@ -136,19 +85,18 @@ function normalizeTrajectories(items: any[] | null | undefined): any[] {
 
 function buildFieldOverviewVm(args: {
   fieldId: string;
-  controlPlane: any;
   legacyDetail: any;
   geometry: any;
   livePositions?: any[];
   liveTrajectories?: any[];
 }): FieldOverviewBuildResult {
-  const { fieldId, controlPlane, legacyDetail, geometry, livePositions, liveTrajectories } = args;
+  const { fieldId, legacyDetail, geometry, livePositions, liveTrajectories } = args;
 
-  const controlPlaneHit = Boolean(controlPlane?.field || controlPlane?.overview || controlPlane?.summary);
+  const controlPlaneHit = false;
 
   const base =
     legacyDetail ||
-    (controlPlaneHit ? mapControlPlaneToLegacyDetail(fieldId, controlPlane) : null) || {
+    {
       field: { field_id: fieldId, name: fieldId, area_ha: null, status: "UNKNOWN" },
       latest_season: null,
       summary: { device_count: 0 },
@@ -261,17 +209,7 @@ export function useFieldDetail(params: {
         return;
       }
 
-      const cpPromise = ENABLE_OPTIONAL_FIELD_CONTROL_PLANE
-        ? Promise.resolve()
-            .then(() => {
-              if (unsupportedFieldControlPlaneIds.has(fieldId)) return null;
-              return fetchFieldControlPlane(fieldId);
-            })
-            .catch(() => {
-              unsupportedFieldControlPlaneIds.add(fieldId);
-              return null;
-            })
-        : Promise.resolve(null);
+      const cpPromise = Promise.resolve(null);
 
       const detail = await fetchFieldDetail(fieldId);
       if (!detail) {
@@ -282,7 +220,6 @@ export function useFieldDetail(params: {
 
       const baseOverview = buildFieldOverviewVm({
         fieldId,
-        controlPlane: null,
         legacyDetail: detail,
         geometry: null,
         livePositions: [],
@@ -306,23 +243,10 @@ export function useFieldDetail(params: {
       });
       setStatus(lang === "zh" ? "基础详情已加载" : "Base field detail loaded");
 
-      const [cpRes, opsRes, recsRes, currentRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
+      const [cpRes, opsRes, recsRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
         cpPromise,
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
-        Promise.resolve().then(async () => {
-          if (!ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM) return null;
-          if (unsupportedFieldCurrentProgramIds.has(fieldId)) return null;
-          try {
-            return await fetchFieldCurrentProgram(fieldId);
-          } catch (e: any) {
-            if (is404Error(e)) {
-              unsupportedFieldCurrentProgramIds.add(fieldId);
-              return null;
-            }
-            throw e;
-          }
-        }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
           apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
@@ -341,14 +265,13 @@ export function useFieldDetail(params: {
         recsRes.status === "fulfilled"
           ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8)
           : [];
-      const currentProgram = currentRes.status === "fulfilled" ? currentRes.value ?? null : null;
+      const currentProgram = null;
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
       const cp = cpRes.status === "fulfilled" ? cpRes.value : null;
 
       const overview = buildFieldOverviewVm({
         fieldId,
-        controlPlane: cp,
         legacyDetail: detail,
         geometry,
         livePositions,
