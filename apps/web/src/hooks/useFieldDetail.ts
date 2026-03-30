@@ -10,6 +10,8 @@ import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationL
 
 const unsupportedFieldControlPlaneIds = new Set<string>();
 const unsupportedFieldCurrentProgramIds = new Set<string>();
+const ENABLE_OPTIONAL_FIELD_CONTROL_PLANE = String((import.meta as any)?.env?.VITE_ENABLE_OPTIONAL_FIELD_CONTROL_PLANE ?? "").toLowerCase() === "true";
+const ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM = String((import.meta as any)?.env?.VITE_ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM ?? "").toLowerCase() === "true";
 
 function is404Error(error: any): boolean {
   return error?.status === 404 || error?.response?.status === 404;
@@ -259,9 +261,17 @@ export function useFieldDetail(params: {
         return;
       }
 
-      const cpPromise = Promise.resolve()
-        .then(() => fetchFieldControlPlane(fieldId))
-        .catch(() => null);
+      const cpPromise = ENABLE_OPTIONAL_FIELD_CONTROL_PLANE
+        ? Promise.resolve()
+            .then(() => {
+              if (unsupportedFieldControlPlaneIds.has(fieldId)) return null;
+              return fetchFieldControlPlane(fieldId);
+            })
+            .catch(() => {
+              unsupportedFieldControlPlaneIds.add(fieldId);
+              return null;
+            })
+        : Promise.resolve(null);
 
       const detail = await fetchFieldDetail(fieldId);
       if (!detail) {
@@ -301,6 +311,7 @@ export function useFieldDetail(params: {
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
         Promise.resolve().then(async () => {
+          if (!ENABLE_OPTIONAL_FIELD_CURRENT_PROGRAM) return null;
           if (unsupportedFieldCurrentProgramIds.has(fieldId)) return null;
           try {
             return await fetchFieldCurrentProgram(fieldId);

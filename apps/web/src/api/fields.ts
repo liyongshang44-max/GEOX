@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestOptional } from "./client";
+import { apiRequest, apiRequestOptional, request } from "./client";
 import type { ControlPlaneStatus } from "./programs";
 
 export type FieldListItem = any;
@@ -65,12 +65,12 @@ export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | n
 }
 
 export async function fetchFieldControlPlane(fieldId: string): Promise<FieldControlPlaneItem | null> {
-  const res = await apiRequestOptional<{ ok?: boolean; item?: FieldControlPlaneItem }>(
+  const res = await request<{ ok?: boolean; item?: FieldControlPlaneItem }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`,
     undefined,
-    { allowedStatuses: [404], dedupe: true },
+    { allow404: true, dedupe: true, silent: true },
   );
-  return res?.item ?? null;
+  return res.ok ? (res.data?.item ?? null) : null;
 }
 
 export async function fetchFieldGeometry(fieldId: string): Promise<any> {
@@ -88,10 +88,10 @@ export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array
 }
 
 export async function fetchFieldCurrentProgram(fieldId: string): Promise<any | null> {
-  const res = await apiRequestOptional<{ ok?: boolean; item?: any }>(
+  const res = await request<{ ok?: boolean; item?: any }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`,
     undefined,
-    { allowedStatuses: [404], dedupe: true },
+    { allow404: true, dedupe: true, silent: true },
   );
-  return res?.item ?? null;
+  return res.ok ? (res.data?.item ?? null) : null;
 }
