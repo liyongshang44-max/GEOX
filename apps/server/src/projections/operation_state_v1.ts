@@ -37,7 +37,7 @@ export type OperationStateV1 = {
   action_type: string | null;
   dispatch_status: string;
   receipt_status: string;
-  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
+  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE";
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
 };
@@ -71,7 +71,8 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
   const sql = `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts
     WHERE (record_json::jsonb->>'type') IN (
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
-      'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0'
+      'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
+      'acceptance_result_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
@@ -135,6 +136,14 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
     (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
   );
+  const acceptanceByPlan = latestByKey(
+    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
+    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim()
+  );
+  const acceptanceByTask = latestByKey(
+    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
+    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim()
+  );
 
   const transitionByPlan = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_transition_v1")) {
@@ -161,6 +170,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const decision = approval_request_id ? decisionByReq.get(approval_request_id) : undefined;
     const task = task_id ? taskById.get(task_id) : undefined;
     const receipt = task_id ? receiptByTask.get(task_id) : undefined;
+    const acceptance = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
 
     const timeline: OperationTimelineItemV1[] = [];
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
@@ -197,6 +207,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const final_status =
       finalStatusFromTransition(latestTransition)
       ?? finalStatusFromReceipt(receiptStatus)
+      ?? (acceptance ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;

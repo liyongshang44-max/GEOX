@@ -58,6 +58,7 @@ function toMs(v: unknown): number | null {
 function statusLabel(s: string | null): string {
   const code = String(s ?? "").trim().toUpperCase();
   if (!code) return "待推进";
+  if (code === "PENDING_ACCEPTANCE") return "待验收";
   if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(code)) return "执行成功";
   if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED"].includes(code)) return "执行失败";
   if (["RUNNING", "DISPATCHED", "ACKED", "APPROVED", "READY", "IN_PROGRESS"].includes(code)) return "执行中";
@@ -125,6 +126,7 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   if (recommendationId) extra.push(...await q("decision_recommendation_v1", "recommendation_id", recommendationId));
   if (taskId) {
     extra.push(...await q("ao_act_task_v0", "act_task_id", taskId));
+    extra.push(...await q("acceptance_result_v1", "act_task_id", taskId));
     const receiptByTask = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
          FROM facts
@@ -143,6 +145,7 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
       record_json: parseRecordJson(row.record_json) ?? row.record_json
     })));
   }
+  extra.push(...await q("acceptance_result_v1", "operation_plan_id", operationPlanId));
   const all = [...rows, ...extra];
   all.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
   return all;
@@ -309,6 +312,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const task = latestByType("ao_act_task_v0");
     const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
     const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
+    const acceptance = [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === "acceptance_result_v1") ?? null;
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -404,6 +408,15 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           constraint_violated: normalizedReceipt.constraint_violated,
           executor_label: normalizedReceipt.executor_label
         } : null,
+        acceptance: acceptance ? {
+          acceptance_id: toText(acceptance.record_json?.payload?.acceptance_id ?? acceptance.fact_id),
+          verdict: toText(acceptance.record_json?.payload?.verdict),
+          rule_id: toText(acceptance.record_json?.payload?.rule_id),
+          evaluated_at: toText(acceptance.record_json?.payload?.evaluated_at ?? acceptance.occurred_at),
+          evidence_refs: Array.isArray(acceptance.record_json?.payload?.evidence_refs) ? acceptance.record_json.payload.evidence_refs : []
+        } : {
+          status: "PENDING_ACCEPTANCE"
+        },
         timeline,
         evidence_export: {
           latest_job_id: latestExport?.job_id ?? null,
