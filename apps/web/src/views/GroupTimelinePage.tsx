@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getSeries, postMarker, postJudgeRun, type JudgeRunRequest, type PostMarkerBody } from "../lib/api";

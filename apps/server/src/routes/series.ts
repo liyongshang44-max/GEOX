@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
 // apps/server/src/routes/series.ts
 
 import type { FastifyInstance } from "fastify"; // Fastify 实例类型：用于注册路由。

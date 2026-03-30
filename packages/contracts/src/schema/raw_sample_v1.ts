@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
 import { z } from "zod";
 import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1, isValidTelemetryUnitV1 } from "./telemetry_metric_catalog_v1";
 
