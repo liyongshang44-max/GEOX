@@ -191,9 +191,9 @@ export default function DeviceDetailPage(): React.ReactElement {
         <section className="card detailHeroCard">
           <div className="demoSectionHeader"><div className="sectionTitle">接入信息</div><div className="detailSectionLead">给设备接入和调试同学看的最小信息面，只保留本轮接入一定会用到的关键 Topic。</div></div>
           <div className="decisionList">
-            <div className="decisionItemStatic"><div className="decisionItemTitle">MQTT Client ID</div><div className="decisionItemMeta">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</div></div>
-            <div className="decisionItemStatic"><div className="decisionItemTitle">遥测 / 心跳 Topic</div><div className="decisionItemMeta">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"} · {cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</div></div>
-            <div className="decisionItemStatic"><div className="decisionItemTitle">下发 / 回执 Topic</div><div className="decisionItemMeta">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"} · {cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">MQTT 客户端编号</div><div className="decisionItemMeta">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">遥测 / 心跳通道</div><div className="decisionItemMeta">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"} · {cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">下发 / 回执通道</div><div className="decisionItemMeta">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"} · {cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</div></div>
           </div>
         </section>
       </section>

@@ -120,7 +120,7 @@ export default function ProgramListPage(): React.ReactElement {
 
       <section className="summaryGrid4 demoSummaryGrid">
         <article className="card demoMetricCard">
-          <div className="demoMetricLabel">方案总数</div>
+          <div className="demoMetricLabel">经营方案总数</div>
           <div className="demoMetricValue">{stats.total}</div>
           <div className="demoMetricHint">当前筛选结果中的经营方案数量。</div>
         </article>
