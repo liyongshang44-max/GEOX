@@ -14,6 +14,7 @@ export type WorkAssignmentItem = {
 
 export async function fetchWorkAssignments(params?: {
   executor_id?: string;
+  act_task_id?: string;
   status?: WorkAssignmentStatus;
   limit?: number;
   offset?: number;
@@ -55,4 +56,24 @@ export async function submitWorkAssignment(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+
+export type WorkAssignmentAuditItem = {
+  audit_id: string;
+  assignment_id: string;
+  act_task_id: string;
+  executor_id: string;
+  status: WorkAssignmentStatus;
+  occurred_at: string;
+  actor_id?: string | null;
+  token_id?: string | null;
+  note?: string | null;
+};
+
+export async function fetchWorkAssignmentAudit(assignmentId: string): Promise<WorkAssignmentAuditItem[]> {
+  const id = String(assignmentId ?? "").trim();
+  if (!id) return [];
+  const res = await apiRequest<{ ok?: boolean; items?: WorkAssignmentAuditItem[] }>(`/api/v1/work-assignments/${encodeURIComponent(id)}/audit`);
+  return Array.isArray(res.items) ? res.items : [];
 }
