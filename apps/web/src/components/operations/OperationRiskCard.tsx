@@ -16,7 +16,7 @@ function buildRiskSummary(model: OperationDetailPageVm): { level: string; messag
 export default function OperationRiskCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
   const risk = buildRiskSummary(model);
   return (
-    <section className="card sectionBlock geoxSectionCard">
+    <section className="card sectionBlock geoxSectionCard operationBusinessCard">
       <div className="sectionTitle">风险（是否存在问题）</div>
       <div className="muted detailSectionLead">用于快速判断是否需要立刻介入、复核或补执行。</div>
       <div className="detailMeaningGrid">
@@ -32,4 +32,3 @@ export default function OperationRiskCard({ model }: { model: OperationDetailPag
     </section>
   );
 }
-

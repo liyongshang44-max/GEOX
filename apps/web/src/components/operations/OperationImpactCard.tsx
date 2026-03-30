@@ -24,8 +24,8 @@ function inferImpact(model: OperationDetailPageVm): { improve: string; riskIfSki
 export default function OperationImpactCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
   const copy = inferImpact(model);
   return (
-    <section className="card sectionBlock geoxSectionCard">
-      <div className="sectionTitle">经营影响评估（Operation Impact）</div>
+    <section className="card sectionBlock geoxSectionCard operationBusinessCard">
+      <div className="sectionTitle">经营影响评估</div>
       <div className="muted detailSectionLead">先给客户看“做了会变好什么”，再说明“不做会有什么风险”。</div>
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
@@ -40,4 +40,3 @@ export default function OperationImpactCard({ model }: { model: OperationDetailP
     </section>
   );
 }
-

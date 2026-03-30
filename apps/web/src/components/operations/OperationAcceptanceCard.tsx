@@ -1,27 +1,22 @@
 import React from "react";
-import { useLocale } from "../../lib/locale";
 import type { OperationDetailPageVm } from "../../viewmodels/operationDetailViewModel";
 
 export default function OperationAcceptanceCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
-  const { text } = useLocale();
-
   return (
-    <section className="card sectionBlock geoxSectionCard">
-      <div className="sectionTitle">{text("验收（是否达标）", "Acceptance (whether passed)")}</div>
-      <div className="muted detailSectionLead">
-        {text("直接回答是否达标，并提示是否需要补证或复核。", "Directly answers if this operation meets the target and whether rework is needed.")}
-      </div>
+    <section className="card sectionBlock geoxSectionCard operationBusinessCard">
+      <div className="sectionTitle">验收（是否达标）</div>
+      <div className="muted detailSectionLead">直接回答是否达标，并提示是否需要补证或复核。</div>
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">{text("验收状态", "Acceptance status")}</span>
+          <span className="detailMeaningLabel">验收状态</span>
           <strong>{model.acceptance.statusLabel}</strong>
         </div>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">{text("缺失项", "Missing evidence")}</span>
+          <span className="detailMeaningLabel">缺失项</span>
           <strong>{model.acceptance.missingEvidenceLabel}</strong>
         </div>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">{text("总结", "Summary")}</span>
+          <span className="detailMeaningLabel">总结</span>
           <strong>{model.acceptance.summary}</strong>
         </div>
       </div>

@@ -9,7 +9,6 @@ import OperationEvidenceDownloadCard from "../components/operations/OperationEvi
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
 import OperationImpactCard from "../components/operations/OperationImpactCard";
 import OperationRiskCard from "../components/operations/OperationRiskCard";
-import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
@@ -20,7 +19,6 @@ const COPY = {
   backToList: "返回作业列表",
   evidenceBundle: "证据包下载",
   executionEvidence: "证据（做了什么）",
-  timeline: "过程时间线（补充）",
 };
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
@@ -76,15 +74,6 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最新更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
 
-        <details className="traceDetails">
-          <summary>技术追踪信息</summary>
-          <div className="traceGrid">
-            <span>建议编号：{model.technicalRefs.recommendationId}</span>
-            <span>审批编号：{model.technicalRefs.approvalRequestId}</span>
-            <span>作业计划编号：{model.technicalRefs.operationPlanId}</span>
-            <span>执行任务编号：{model.technicalRefs.actTaskId}</span>
-          </div>
-        </details>
       </section>
 
       <section className="demoContentGrid">
@@ -106,14 +95,6 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="demoContentGrid">
         <OperationAcceptanceCard model={model} />
         <OperationRiskCard model={model} />
-      </section>
-
-      <section className="card detailHeroCard">
-        <div className="demoSectionHeader">
-          <div className="sectionTitle">{COPY.timeline}</div>
-          <div className="detailSectionLead">作为补充材料，按事件顺序展示流程轨迹。</div>
-        </div>
-        <OperationStoryTimeline items={model.timeline} title="" />
       </section>
     </div>
   );
