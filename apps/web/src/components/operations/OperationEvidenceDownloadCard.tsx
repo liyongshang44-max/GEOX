@@ -6,11 +6,11 @@ import type { OperationDetailPageVm } from "../../viewmodels/operationDetailView
 const EVIDENCE_BUNDLE_TITLE = "证据层";
 
 type Props = {
-  model: OperationDetailPageVm;
+  evidenceBundle: OperationDetailPageVm["evidenceExport"];
   title?: string;
 };
 
-export default function OperationEvidenceDownloadCard({ model, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
+export default function OperationEvidenceDownloadCard({ evidenceBundle, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
   const { text } = useLocale();
 
   return (
@@ -22,27 +22,27 @@ export default function OperationEvidenceDownloadCard({ model, title = EVIDENCE_
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("当前状态", "Current state")}</span>
-          <strong>{model.evidenceExport.bundleStatusLabel}</strong>
-          <p>{model.evidenceExport.latestJobStatusLabel}</p>
+          <strong>{evidenceBundle.bundleStatusLabel}</strong>
+          <p>{evidenceBundle.latestJobStatusLabel}</p>
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("最近导出", "Latest export")}</span>
-          <strong>{model.evidenceExport.latestExportedAtLabel}</strong>
-          <p>{text("包名", "Bundle")}：{model.evidenceExport.latestBundleName}</p>
+          <strong>{evidenceBundle.latestExportedAtLabel}</strong>
+          <p>{text("包名", "Bundle")}：{evidenceBundle.latestBundleName}</p>
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("为什么需要它", "Why it matters")}</span>
-          <strong>{model.evidenceExport.usageValueLabel}</strong>
-          <p>{model.evidenceExport.usageHintLabel}</p>
+          <strong>{evidenceBundle.usageValueLabel}</strong>
+          <p>{evidenceBundle.usageHintLabel}</p>
         </div>
       </div>
       <div className="operationsSummaryActions" style={{ marginTop: 14 }}>
-        {model.evidenceExport.hasExportableBundle && model.evidenceExport.downloadUrl ? (
-          <a className="btn" href={model.evidenceExport.downloadUrl}>{model.evidenceExport.actionLabel}</a>
-        ) : model.evidenceExport.jumpUrl ? (
-          <a className="btn" href={model.evidenceExport.jumpUrl}>{model.evidenceExport.actionLabel}</a>
+        {evidenceBundle.hasExportableBundle && evidenceBundle.downloadUrl ? (
+          <a className="btn" href={evidenceBundle.downloadUrl}>{evidenceBundle.actionLabel}</a>
+        ) : evidenceBundle.jumpUrl ? (
+          <a className="btn" href={evidenceBundle.jumpUrl}>{evidenceBundle.actionLabel}</a>
         ) : (
-          <button className="btn" type="button" disabled>{model.evidenceExport.actionLabel}</button>
+          <button className="btn" type="button" disabled>{evidenceBundle.actionLabel}</button>
         )}
       </div>
     </section>

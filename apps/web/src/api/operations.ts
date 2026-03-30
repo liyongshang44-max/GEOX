@@ -57,34 +57,17 @@ export type OperationEvidenceExportResponse = {
   missing_reason?: string | null;
 };
 
-export type OperationEvidenceBundleItem = {
-  operation_plan_id: string;
-  act_task_id?: string | null;
-  executor?: { id?: string | null; kind?: string | null; label?: string | null } | null;
-  receipt?: any;
-  artifacts?: any[];
-  acceptance?: any;
-  timeline?: Array<{ type?: string; label?: string; ts?: number }>;
-};
-
 export async function fetchOperationDetail(operationPlanId: string): Promise<OperationDetailResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
-  const res = await apiRequest<{ ok?: boolean; item?: OperationDetailResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/detail`);
-  return res?.item ?? null;
+  const res = await apiRequest<{ ok?: boolean; item?: OperationDetailResponse; operation?: OperationDetailResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/detail`);
+  return res?.operation ?? res?.item ?? null;
 }
 
 export async function fetchOperationEvidenceExport(operationPlanId: string): Promise<OperationEvidenceExportResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
   const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceExportResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-export`);
-  return res?.item ?? null;
-}
-
-export async function fetchEvidenceBundle(operationPlanId: string): Promise<OperationEvidenceBundleItem | null> {
-  const id = String(operationPlanId ?? "").trim();
-  if (!id) return null;
-  const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceBundleItem }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-bundle`);
   return res?.item ?? null;
 }
 

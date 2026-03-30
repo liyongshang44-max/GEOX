@@ -3,7 +3,12 @@ import React from "react";
 import { useLocale } from "../../lib/locale";
 import type { OperationDetailPageVm } from "../../viewmodels/operationDetailViewModel";
 
-export default function OperationDecisionCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
+type DecisionCardProps = {
+  recommendation: OperationDetailPageVm["recommendation"];
+  approval: OperationDetailPageVm["approval"];
+};
+
+export default function OperationDecisionCard({ recommendation, approval }: DecisionCardProps): React.ReactElement {
   const { text } = useLocale();
   return (
     <section className="card sectionBlock geoxSectionCard operationDecisionCardV2">
@@ -14,18 +19,18 @@ export default function OperationDecisionCard({ model }: { model: OperationDetai
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("系统建议", "System recommendation")}</span>
-          <strong>{model.recommendation.title}</strong>
-          <p>{model.recommendation.summary}</p>
+          <strong>{recommendation.title}</strong>
+          <p>{recommendation.summary}</p>
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("触发原因", "Why it was triggered")}</span>
-          <strong>{model.recommendation.reasonCodesLabel}</strong>
-          <p>{model.recommendation.triggerSummary}</p>
+          <strong>{recommendation.reasonCodesLabel}</strong>
+          <p>{recommendation.triggerSummary}</p>
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("审批结论", "Approval decision")}</span>
-          <strong>{model.approval.decisionLabel}</strong>
-          <p>{model.approval.decisionSummary}</p>
+          <strong>{approval.decisionLabel}</strong>
+          <p>{approval.decisionSummary}</p>
         </div>
       </div>
     </section>

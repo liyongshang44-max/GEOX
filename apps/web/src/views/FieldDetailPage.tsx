@@ -142,7 +142,7 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="card detailHeroCard">
         <div className="demoCardTopRow">
           <div>
-            <div className="sectionTitle">地图 / 轨迹</div>
+            <div className="sectionTitle">现场地图 / 轨迹</div>
             <div className="detailSectionLead">{showMockMap ? "当前真实 geo telemetry 尚未进入，页面先使用演示轨迹承接设备路径、作业点与热区表达。" : "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。"}</div>
           </div>
           {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}

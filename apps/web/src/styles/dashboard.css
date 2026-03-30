@@ -55,6 +55,16 @@
   gap: 12px;
 }
 
+.dashboardDecisionBoard {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboardDecisionBoard .decisionColumn {
+  min-height: 260px;
+}
+
 .demoSectionHeader {
   margin-bottom: 8px;
 }
