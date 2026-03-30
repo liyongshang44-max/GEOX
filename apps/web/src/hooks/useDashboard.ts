@@ -19,8 +19,8 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   decisions: {
     pendingApprovalCount: 0,
     pendingRecommendationCount: 0,
-    potentialBenefitEstimate: "0%",
-    nonExecutionRiskEstimate: "0%",
+    potentialBenefitEstimate: "0 条高置信建议",
+    nonExecutionRiskEstimate: "0 条执行风险",
   },
   execution: {
     runningTaskCount: 0,
@@ -100,10 +100,11 @@ export function useDashboard(api: any): DashboardVm {
           return !item?.linked_refs?.receipt_fact_id;
         }).length;
         const pendingApprovalCount = (pendingItems || []).length;
-        const confidenceItems = (recommendationItems || []).map((item: any) => Number(item?.confidence)).filter((x: number) => Number.isFinite(x) && x >= 0);
-        const avgConfidence = confidenceItems.length ? confidenceItems.reduce((a: number, b: number) => a + b, 0) / confidenceItems.length : 0;
-        const potentialBenefitScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 6 + avgConfidence * 20)));
-        const nonExecutionRiskScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 8 + mappedRiskItems.length * 5)));
+        const highConfidenceRecommendationCount = (recommendationItems || []).filter((item: any) => {
+          const confidence = Number(item?.confidence);
+          return Number.isFinite(confidence) && confidence >= 0.8;
+        }).length;
+        const executionRiskCount = (mappedRiskItems || []).filter((item: DashboardRiskVm) => item.source === "执行缺失").length;
 
         const isRunningOperation = (item: any): boolean => {
           const finalStatus = String(item?.final_status ?? "").toUpperCase();
@@ -150,8 +151,8 @@ export function useDashboard(api: any): DashboardVm {
           decisions: {
             pendingApprovalCount,
             pendingRecommendationCount,
-            potentialBenefitEstimate: `${potentialBenefitScore}%`,
-            nonExecutionRiskEstimate: `${nonExecutionRiskScore}%`,
+            potentialBenefitEstimate: `${highConfidenceRecommendationCount} 条高置信建议`,
+            nonExecutionRiskEstimate: `${executionRiskCount} 条执行风险`,
           },
           execution: {
             runningTaskCount,
