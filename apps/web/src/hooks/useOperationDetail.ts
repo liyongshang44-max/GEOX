@@ -1,8 +1,10 @@
 import React from "react";
 import { fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
+import { fetchEvidenceBundle } from "../api/evidence";
 import { fetchWorkAssignmentAudit, fetchWorkAssignments, type WorkAssignmentAuditItem, type WorkAssignmentItem } from "../api/humanAssignments";
 
 type OperationDetailWithHuman = OperationDetailResponse & {
+  evidence_bundle?: any;
   human_execution?: {
     mode: "device" | "human" | "hybrid";
     assignment: WorkAssignmentItem | null;
@@ -46,6 +48,7 @@ export function useOperationDetail(operationPlanId: string): {
         setError("未找到该作业详情");
         return;
       }
+      const bundle = await fetchEvidenceBundle(id);
 
       const actTaskId = String(item?.act_task_id || item?.task?.task_id || "");
       let assignment: WorkAssignmentItem | null = null;
@@ -60,6 +63,7 @@ export function useOperationDetail(operationPlanId: string): {
 
       setDetail({
         ...item,
+        evidence_bundle: bundle,
         human_execution: {
           mode: detectExecutionMode(item, assignment),
           assignment,

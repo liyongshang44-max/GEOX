@@ -17,7 +17,7 @@ const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
   backToList: "返回作业列表",
-  evidenceBundle: "证据包",
+  evidenceBundle: "证据层",
   executionEvidence: "执行证据",
   timeline: "全链路时间线",
 };

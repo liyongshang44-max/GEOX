@@ -159,10 +159,10 @@ function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): stri
   return "现场已回传执行结果，可继续查看资源消耗与完成时间";
 }
 
-function buildEvidenceBundleStatus(detail: any): string {
-  const hasBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
+function buildEvidenceBundleStatus(evidenceBundle: any): string {
+  const hasBundle = Boolean(evidenceBundle?.has_bundle ?? evidenceBundle?.has_exportable_bundle);
   if (hasBundle) return "已生成，可下载与归档";
-  const latestJobStatus = String(detail?.evidence_export?.latest_job_status ?? "").toUpperCase();
+  const latestJobStatus = String(evidenceBundle?.latest_job_status ?? "").toUpperCase();
   if (latestJobStatus === "RUNNING") return "正在生成证据包";
   return "当前暂不可导出";
 }
@@ -181,6 +181,14 @@ function resolveAcceptanceStatus(detail: any, receipt?: ReceiptEvidenceVm): "PAS
   return "PENDING";
 }
 
+function normalizeTimelineLabel(raw: unknown): string {
+  const label = toText(raw, "");
+  if (!label) return "";
+  if (label === "assignment accepted") return "accepted";
+  if (label === "receipt submitted") return "submitted";
+  return label;
+}
+
 const STORY_TIMELINE_ORDER = [
   "已生成作业建议",
   "已提交审批",
@@ -188,12 +196,13 @@ const STORY_TIMELINE_ORDER = [
   "已创建执行计划",
   "已生成执行任务",
   "assignment created",
-  "assignment accepted",
+  "accepted",
   "arrived",
   "已下发设备",
   "设备执行中",
-  "receipt submitted",
+  "submitted",
   "已记录执行回执",
+  "acceptance generated",
 ];
 
 function mapExecutionModeLabel(raw: string): string {
@@ -223,7 +232,7 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
     case "assignment created":
       return `${actor}已创建人工执行单，等待现场人员接单。`;
-    case "assignment accepted":
+    case "accepted":
       return `${actor}已接单，准备前往作业点。`;
     case "arrived":
       return `${actor}已到场，开始人工执行。`;
@@ -231,8 +240,10 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `任务已发送至设备 ${deviceId}，等待设备确认与执行反馈。`;
     case "设备执行中":
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
-    case "receipt submitted":
+    case "submitted":
       return `${actor}已提交人工执行回执，等待系统归档。`;
+    case "acceptance generated":
+      return `${actor}已生成验收结论，可用于复盘与归档。`;
     case "已记录执行回执":
       return `${actor}已回传执行完成回执，并记录资源消耗数据。`;
     case "作业已完成":
@@ -252,7 +263,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const timelineSource = (Array.isArray(detail?.timeline) ? detail.timeline : []).map((item: any, idx: number) => ({
     id: toText(item?.id, `timeline_${idx}`),
     kind: toText(item?.kind),
-    label: toText(item?.label),
+    label: normalizeTimelineLabel(item?.label),
     status: toText(item?.status),
     occurredAtLabel: toDateLabel(item?.occurred_at),
     occurredAtMs: toMs(item?.occurred_at),
@@ -264,11 +275,11 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     const label = status === "ASSIGNED"
       ? "assignment created"
       : status === "ACCEPTED"
-        ? "assignment accepted"
+        ? "accepted"
         : status === "ARRIVED"
           ? "arrived"
           : status === "SUBMITTED"
-            ? "receipt submitted"
+            ? "submitted"
             : "";
     return {
       id: toText(item?.audit_id, `human_audit_${idx}`),
@@ -281,7 +292,18 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       summary: toText(item?.note, label || status || "人工执行更新"),
     };
   }).filter((x: any) => x.label && x.label !== "-");
-  const mergedTimelineSource = [...timelineSource, ...humanAuditSource];
+  const acceptanceGeneratedAt = detail?.acceptance?.generated_at ?? detail?.acceptance_result?.generated_at ?? detail?.acceptance_result?.occurred_at;
+  const acceptanceSource = acceptanceGeneratedAt ? [{
+    id: "acceptance_generated",
+    kind: "ACCEPTANCE_RESULT",
+    label: "acceptance generated",
+    status: toText(detail?.acceptance?.verdict ?? detail?.acceptance_result?.verdict, "PENDING"),
+    occurredAtLabel: toDateLabel(acceptanceGeneratedAt),
+    occurredAtMs: toMs(acceptanceGeneratedAt),
+    actorLabel: toText(detail?.acceptance?.actor_label ?? detail?.acceptance_result?.actor_label, "系统"),
+    summary: toText(detail?.acceptance?.summary ?? detail?.acceptance_result?.summary, "已生成验收结论"),
+  }] : [];
+  const mergedTimelineSource = [...timelineSource, ...humanAuditSource, ...acceptanceSource];
   const byLabel = new Map<string, (typeof timelineSource)[number]>();
   mergedTimelineSource.forEach((item) => {
     if (item.label !== "-" && !byLabel.has(item.label)) byLabel.set(item.label, item);
@@ -346,11 +368,12 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const finalStatusLabel = mapStatusLabel(detail?.status_label ?? detail?.final_status);
   const executionMode = String(detail?.human_execution?.mode ?? "").toLowerCase();
   const assignmentExecutor = toText(detail?.human_execution?.assignment?.executor_id, "-");
-  const latestJobStatus = toText(detail?.evidence_export?.latest_job_status, "未开始");
-  const hasExportableBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
-  const downloadUrl = typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined;
-  const jumpUrl = typeof detail?.evidence_export?.jump_url === "string" ? detail.evidence_export.jump_url : undefined;
-  const evidenceBundleStatus = buildEvidenceBundleStatus(detail);
+  const evidenceBundle = detail?.evidence_bundle ?? detail?.evidence_export ?? {};
+  const latestJobStatus = toText(evidenceBundle?.latest_job_status, "未开始");
+  const hasExportableBundle = Boolean(evidenceBundle?.has_bundle ?? evidenceBundle?.has_exportable_bundle);
+  const downloadUrl = typeof evidenceBundle?.download_url === "string" ? evidenceBundle.download_url : undefined;
+  const jumpUrl = typeof evidenceBundle?.jump_url === "string" ? evidenceBundle.jump_url : undefined;
+  const evidenceBundleStatus = buildEvidenceBundleStatus(evidenceBundle);
   const evidenceActionLabel = hasExportableBundle && downloadUrl
     ? "下载证据包"
     : jumpUrl
@@ -419,18 +442,18 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     timeline,
     evidenceExport: {
       exportableLabel: hasExportableBundle ? "可导出" : "暂不可导出",
-      latestJobId: toText(detail?.evidence_export?.latest_job_id),
+      latestJobId: toText(evidenceBundle?.latest_job_id),
       latestJobStatus,
       bundleStatusLabel: evidenceBundleStatus,
       latestJobStatusLabel: `最近任务：${latestJobStatus}`,
-      latestExportedAtLabel: toDateLabel(detail?.evidence_export?.latest_exported_at),
-      latestBundleName: toText(detail?.evidence_export?.latest_bundle_name, "暂无证据包"),
+      latestExportedAtLabel: toDateLabel(evidenceBundle?.latest_exported_at),
+      latestBundleName: toText(evidenceBundle?.latest_bundle_name, "暂无证据包"),
       hasExportableBundle,
       downloadUrl,
       jumpUrl,
-      missingReason: toText(detail?.evidence_export?.missing_reason, "无"),
+      missingReason: toText(evidenceBundle?.missing_reason, "无"),
       usageValueLabel: "用于留痕、复验与交付",
-      usageHintLabel: `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
+      usageHintLabel: `缺失原因：${toText(evidenceBundle?.missing_reason, "无")}`,
       actionLabel: evidenceActionLabel,
     },
     acceptance: {
