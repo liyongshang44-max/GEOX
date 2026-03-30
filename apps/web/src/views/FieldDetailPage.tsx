@@ -73,12 +73,15 @@ export default function FieldDetailPage(): React.ReactElement {
 
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
   const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
-  const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${(model?.currentPlanText || "--")}`;
+  const rawCurrentPlanText = model?.currentPlanText || "--";
+  const hasCurrentPlan = rawCurrentPlanText !== "--";
+  const currentPlanText = hasCurrentPlan ? rawCurrentPlanText : "暂无当前经营方案";
+  const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${currentPlanText}`;
   const mockMap = buildMockMapLayers(model);
   const showMockMap = !model?.map.hasTrajectory;
   const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
-  const programHref = model?.currentPlanId ? `/programs/${encodeURIComponent(model.currentPlanId)}` : "/programs";
+  const programHref = "/programs";
 
   return (
     <div className="demoDashboardPage">
@@ -103,7 +106,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus.recentHeartbeat || "--"}</strong></div>
         </div>
         <div className="operationsSummaryActions">
-          <Link className="btn" to={programHref}>主入口：查看经营方案</Link>
+          {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <span className="traceChip">暂无当前经营方案</span>}
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>

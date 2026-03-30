@@ -5,7 +5,6 @@ import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import OperationAcceptanceCard from "../components/operations/OperationAcceptanceCard";
-import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
 import OperationImpactCard from "../components/operations/OperationImpactCard";
 import OperationRiskCard from "../components/operations/OperationRiskCard";
@@ -17,8 +16,7 @@ const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
   backToList: "返回作业列表",
-  evidenceBundle: "证据包下载",
-  executionEvidence: "证据（做了什么）",
+  executionEvidence: "做了什么（证据）",
 };
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
@@ -77,23 +75,29 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="demoContentGrid">
-        <OperationImpactCard model={model} />
         <OperationExecutionCard model={model} />
       </section>
 
       <section className="demoContentGrid">
-        <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">{COPY.executionEvidence}</div>
-            <div className="detailSectionLead">展示本次作业做了什么、消耗了什么、是否存在约束异常。</div>
+            <div className="detailSectionLead">以回执证据说明本次作业具体做了什么，并补充业务影响表达。</div>
           </div>
-          <ReceiptEvidenceCard data={model.receiptEvidence} />
+          <ReceiptEvidenceCard
+            data={model.receiptEvidence}
+            actionLabel={actionLabel}
+            executorTypeLabel={model.execution.executorTypeLabel}
+          />
         </section>
+        <OperationImpactCard model={model} />
       </section>
 
       <section className="demoContentGrid">
         <OperationAcceptanceCard model={model} />
+      </section>
+
+      <section className="demoContentGrid">
         <OperationRiskCard detail={detail} />
       </section>
     </div>

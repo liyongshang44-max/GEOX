@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { DashboardRiskVm, DashboardVm } from "../viewmodels/dashboard";
+import type { DashboardActionVm, DashboardRiskVm, DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
@@ -44,27 +44,47 @@ export function useDashboard(api: any): DashboardVm {
     let mounted = true;
 
     async function load(): Promise<void> {
+      const safeList = async <T,>(loader: (() => Promise<T[] | undefined> | undefined) | undefined): Promise<T[]> => {
+        if (!loader) return [];
+        try {
+          const request = loader();
+          if (!request) return [];
+          const list = await request;
+          return Array.isArray(list) ? list : [];
+        } catch {
+          return [];
+        }
+      };
+
       try {
         const overview = await api.getOverview();
-        const executions = (await api.getRecentExecutions?.({ limit: 8 })) ?? [];
-        const riskItems = (await api.getAcceptanceRisks?.({ limit: 6 })) ?? [];
-        const pendingItems = (await api.getPendingActions?.({ limit: 6 })) ?? [];
-        const recommendationItems = (await api.getRecommendations?.({ limit: 50 })) ?? [];
-        const operationStates = (await api.getOperationStates?.({ limit: 100 })) ?? [];
-        const assignments = (await api.getAssignments?.({ limit: 100 })) ?? [];
+        const executions = await safeList(() => api.getRecentExecutions?.({ limit: 8 }));
+        const useLegacyRiskEndpoints = Boolean(api?.enableLegacyDashboardEndpoints);
+        const riskItems = useLegacyRiskEndpoints
+          ? await safeList(() => api.getAcceptanceRisks?.({ limit: 6 }))
+          : [];
+        const pendingItems = useLegacyRiskEndpoints
+          ? await safeList(() => api.getPendingActions?.({ limit: 6 }))
+          : [];
+        const recommendationItems = await safeList(() => api.getRecommendations?.({ limit: 50 }));
+        const operationStates = await safeList(() => api.getOperationStates?.({ limit: 100 }));
+        const assignments = await safeList(() => api.getAssignments?.({ limit: 100 }));
 
         let evidences: any[] = [];
-        try {
-          evidences = await api.getRecentEvidence?.({ limit: 5 });
-        } catch {
-          evidences = [];
-        }
+        evidences = await safeList(() => api.getRecentEvidence?.({ limit: 5 }));
 
         if (!mounted) return;
 
         const executionList = executions ?? [];
-        const mappedActions = executionList.map((o: any) => {
+        const mappedActions: DashboardActionVm[] = executionList.map((o: any) => {
           const status = String(o?.status || o?.final_status || "").toUpperCase();
+          const finalStatus: DashboardActionVm["finalStatus"] = status === "SUCCEEDED"
+            ? "succeeded"
+            : status === "FAILED"
+              ? "failed"
+              : status === "PENDING"
+                ? "pending"
+                : "running";
           return {
             id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
             title: "作业执行",
@@ -72,7 +92,7 @@ export function useDashboard(api: any): DashboardVm {
             actionLabel: o?.action_type || "执行任务",
             occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
             statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
-            finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
+            finalStatus,
             hasEvidence: Boolean(o?.receipt_fact_id),
             href: toOperationDetailPath(o),
           };
