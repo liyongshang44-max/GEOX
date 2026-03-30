@@ -25,15 +25,15 @@ export default function OperationImpactCard({ model }: { model: OperationDetailP
   const copy = inferImpact(model);
   return (
     <section className="card sectionBlock geoxSectionCard operationBusinessCard">
-      <div className="sectionTitle">经营影响评估</div>
-      <div className="muted detailSectionLead">先给客户看“做了会变好什么”，再说明“不做会有什么风险”。</div>
+      <div className="sectionTitle">作业商业表达</div>
+      <div className="muted detailSectionLead">第一版使用规则映射，直接回答“做与不做”的业务后果。</div>
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">如果执行（预期改善）</span>
+          <span className="detailMeaningLabel">执行该作业：改善了什么</span>
           <strong>{copy.improve}</strong>
         </div>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">如果不执行（风险）</span>
+          <span className="detailMeaningLabel">不执行：风险是什么</span>
           <strong>{copy.riskIfSkipped}</strong>
         </div>
       </div>

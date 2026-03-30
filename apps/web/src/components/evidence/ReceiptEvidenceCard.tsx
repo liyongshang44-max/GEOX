@@ -3,9 +3,18 @@ import type { ReceiptEvidenceVm } from "../../viewmodels/evidence";
 
 type Props = {
   data?: ReceiptEvidenceVm;
+  actionLabel?: string;
+  executorTypeLabel?: string;
 };
 
-export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement {
+function buildReadableResultLabel(actionLabel: string | undefined, statusTone: ReceiptEvidenceVm["statusTone"]): string {
+  const normalizedAction = actionLabel?.trim() || "作业";
+  if (statusTone === "success") return `${normalizedAction}完成 ✔`;
+  if (statusTone === "danger") return `${normalizedAction}异常 ✖`;
+  return `${normalizedAction}进行中`;
+}
+
+export default function ReceiptEvidenceCard({ data, actionLabel, executorTypeLabel }: Props): React.ReactElement {
   if (!data) {
     return (
       <div className="p-4 border rounded-xl text-sm text-gray-500">
@@ -13,6 +22,11 @@ export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement
       </div>
     );
   }
+
+  const resultLabel = buildReadableResultLabel(actionLabel, data.statusTone);
+  const waterLabel = data.waterLabel || "-";
+  const durationLabel = data.durationLabel || "-";
+  const executorLabel = data.executorLabel || executorTypeLabel || "-";
 
   return (
     <div className="p-4 rounded-2xl border bg-white shadow-sm space-y-3">
@@ -31,6 +45,15 @@ export default function ReceiptEvidenceCard({ data }: Props): React.ReactElement
         >
           {data.statusLabel}
         </span>
+      </div>
+
+      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+        <div className="text-base font-semibold text-emerald-700">{resultLabel}</div>
+        <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+          <div>用水：{waterLabel}</div>
+          <div>耗时：{durationLabel}</div>
+          <div className="col-span-2">执行者：{executorLabel}</div>
+        </div>
       </div>
 
       <div className="text-sm text-gray-600 space-y-1">
