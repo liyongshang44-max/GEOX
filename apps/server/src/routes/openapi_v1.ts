@@ -420,6 +420,15 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/dashboard/overview_v2": {
+        get: {
+          tags: ["dashboard"],
+          summary: "Read dashboard overview v2",
+          responses: {
+            "200": { description: "Dashboard overview v2 returned successfully" }
+          }
+        }
+      },
       "/api/v1/operations/console": {
         get: {
           tags: ["operations"],

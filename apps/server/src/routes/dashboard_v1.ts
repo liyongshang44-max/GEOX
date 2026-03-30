@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify"; // Fastify route host typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
+import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -211,6 +212,143 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       ],
     }); // End response.
   }); // End route.
+
+  app.get("/api/v1/dashboard/overview_v2", async (req, reply) => { // Provide refactored dashboard v2 aggregate payload.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const tenant_id = String(auth.tenant_id ?? "");
+    const project_id = String(auth.project_id ?? "");
+    const group_id = String(auth.group_id ?? "");
+    const nowMs = Date.now();
+    const dayStartMs = new Date(new Date(nowMs).toISOString().slice(0, 10)).getTime();
+    const activeStates = ["CREATED", "READY", "DISPATCHED", "ACKED"];
+
+    const operationStates = await projectOperationStateV1(pool, { tenant_id, project_id, group_id }).catch(() => []);
+    const performanceCompletedStates = operationStates.filter((item: any) => Boolean(item?.receipt_id));
+    const performanceCompletedCount = performanceCompletedStates.length;
+    const performancePassCount = performanceCompletedStates.filter((item: any) => String(item?.acceptance?.status ?? "").toUpperCase() === "PASS").length;
+    const performancePassRate = performanceCompletedCount > 0 ? Number(((performancePassCount / performanceCompletedCount) * 100).toFixed(2)) : 0;
+
+    const [fieldTotalQ, fieldRiskQ, tasksTodayQ, pendingAcceptanceQ, riskBreakdownQ, pendingDecisionQ, executionBreakdownQ, delayedQ, acceptancePassRateQ] = await Promise.all([
+      pool.query(`SELECT COUNT(*)::bigint AS count FROM field_index_v1 WHERE tenant_id = $1`, [tenant_id]).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(`SELECT COUNT(*)::bigint AS count FROM field_program_state_v1 WHERE tenant_id = $1 AND UPPER(COALESCE(current_risk_summary->>'level', 'LOW')) IN ('HIGH', 'MEDIUM')`, [tenant_id]).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(`SELECT COUNT(*)::bigint AS count FROM operation_plan_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND updated_ts_ms >= $4`, [tenant_id, project_id, group_id, dayStartMs]).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(
+        `WITH latest_receipt AS (
+           SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+             (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id
+           FROM facts
+           WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1')
+             AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+             AND (record_json::jsonb#>>'{payload,project_id}') = $2
+             AND (record_json::jsonb#>>'{payload,group_id}') = $3
+             AND COALESCE((record_json::jsonb#>>'{payload,operation_plan_id}'), '') <> ''
+           ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}') ASC, occurred_at DESC, fact_id DESC
+         ),
+         latest_acceptance AS (
+           SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+             (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id,
+             UPPER(COALESCE((record_json::jsonb#>>'{payload,verdict}'), 'PENDING')) AS verdict
+           FROM facts
+           WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+             AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+             AND (record_json::jsonb#>>'{payload,project_id}') = $2
+             AND (record_json::jsonb#>>'{payload,group_id}') = $3
+             AND COALESCE((record_json::jsonb#>>'{payload,operation_plan_id}'), '') <> ''
+           ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}') ASC, occurred_at DESC, fact_id DESC
+         )
+         SELECT COUNT(*)::bigint AS count
+         FROM latest_receipt r
+         LEFT JOIN latest_acceptance a ON a.operation_plan_id = r.operation_plan_id
+         WHERE COALESCE(a.verdict, 'PENDING') <> 'PASS'`,
+        [tenant_id, project_id, group_id]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE UPPER(COALESCE(current_risk_summary->>'level', 'LOW')) = 'HIGH')::bigint AS high,
+           COUNT(*) FILTER (WHERE UPPER(COALESCE(current_risk_summary->>'level', 'LOW')) = 'MEDIUM')::bigint AS medium,
+           COUNT(*) FILTER (WHERE UPPER(COALESCE(current_risk_summary->>'level', 'LOW')) = 'LOW')::bigint AS low
+         FROM field_program_state_v1
+         WHERE tenant_id = $1`,
+        [tenant_id]
+      ).catch(() => ({ rows: [{ high: 0, medium: 0, low: 0 }] })),
+      pool.query(
+        `SELECT COUNT(*)::bigint AS count
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3
+            AND UPPER(COALESCE((record_json::jsonb#>>'{payload,status}'), 'PENDING')) = 'PENDING'`,
+        [tenant_id, project_id, group_id]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE state = ANY($4::text[]))::bigint AS running,
+           COUNT(*) FILTER (WHERE state = ANY($4::text[]) AND (device_id IS NULL OR device_id = ''))::bigint AS human,
+           COUNT(*) FILTER (WHERE state = ANY($4::text[]) AND (device_id IS NOT NULL AND device_id <> ''))::bigint AS device
+         FROM dispatch_queue_v1
+         WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3`,
+        [tenant_id, project_id, group_id, activeStates]
+      ).catch(() => ({ rows: [{ running: 0, human: 0, device: 0 }] })),
+      pool.query(
+        `SELECT COUNT(*)::bigint AS count
+           FROM dispatch_queue_v1
+          WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
+            AND state = ANY($4::text[])
+            AND EXTRACT(EPOCH FROM (now() - created_at)) * 1000 > $5`,
+        [tenant_id, project_id, group_id, activeStates, 2 * 60 * 60 * 1000]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(
+        `SELECT
+           COUNT(*) FILTER (WHERE UPPER(COALESCE((record_json::jsonb#>>'{payload,verdict}'), '')) = 'PASS')::bigint AS pass_count,
+           COUNT(*)::bigint AS total_count
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3`,
+        [tenant_id, project_id, group_id]
+      ).catch(() => ({ rows: [{ pass_count: 0, total_count: 0 }] })),
+    ]);
+
+    const acceptancePassCount = Number(acceptancePassRateQ.rows?.[0]?.pass_count ?? 0);
+    const acceptanceTotalCount = Number(acceptancePassRateQ.rows?.[0]?.total_count ?? 0);
+    const passRate = acceptanceTotalCount > 0 ? Number(((acceptancePassCount / acceptanceTotalCount) * 100).toFixed(2)) : 0;
+
+    return reply.send({
+      ok: true,
+      summary: {
+        fields_total: Number(fieldTotalQ.rows?.[0]?.count ?? 0),
+        fields_risk: Number(fieldRiskQ.rows?.[0]?.count ?? 0),
+        tasks_today: Number(tasksTodayQ.rows?.[0]?.count ?? 0),
+        pending_acceptance: Number(pendingAcceptanceQ.rows?.[0]?.count ?? 0),
+      },
+      risk: {
+        high: Number(riskBreakdownQ.rows?.[0]?.high ?? 0),
+        medium: Number(riskBreakdownQ.rows?.[0]?.medium ?? 0),
+        low: Number(riskBreakdownQ.rows?.[0]?.low ?? 0),
+      },
+      decisions: {
+        pending: Number(pendingDecisionQ.rows?.[0]?.count ?? 0),
+      },
+      execution: {
+        running: Number(executionBreakdownQ.rows?.[0]?.running ?? 0),
+        human: Number(executionBreakdownQ.rows?.[0]?.human ?? 0),
+        device: Number(executionBreakdownQ.rows?.[0]?.device ?? 0),
+        delayed: Number(delayedQ.rows?.[0]?.count ?? 0),
+      },
+      acceptance: {
+        pending: Number(pendingAcceptanceQ.rows?.[0]?.count ?? 0),
+        pass_rate: passRate,
+      },
+      performance: {
+        completed: performanceCompletedCount,
+        pass_rate: performancePassRate,
+      },
+    });
+  });
 
   app.get("/api/v1/dashboard/executions/recent", async (req, reply) => { // Provide recent execution rows used by dashboard cards.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
