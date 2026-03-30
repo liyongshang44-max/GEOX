@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1";
+import { projectOperationStateFromFacts, type OperationProjectionFactRow } from "../projections/operation_state_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -57,6 +58,87 @@ async function queryFacts(pool: Pool, sql: string, args: unknown[]): Promise<Fac
   }));
 }
 
+async function loadOperationProjectionFacts(input: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  actTaskId: string | null;
+  recommendationId: string | null;
+  approvalRequestId: string | null;
+}): Promise<OperationProjectionFactRow[]> {
+  const rows: FactRow[] = [];
+  const { pool, tenant, operationPlanId, actTaskId, recommendationId, approvalRequestId } = input;
+
+  rows.push(...await queryFacts(
+    pool,
+    `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (record_json::jsonb#>>'{payload,project_id}')=$2
+        AND (record_json::jsonb#>>'{payload,group_id}')=$3
+        AND (
+          ((record_json::jsonb->>'type')='operation_plan_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4)
+          OR ((record_json::jsonb->>'type')='operation_plan_transition_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4)
+          OR ((record_json::jsonb->>'type')='acceptance_result_v1' AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4)
+        )
+      ORDER BY occurred_at ASC, fact_id ASC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
+  ));
+
+  if (actTaskId) {
+    rows.push(...await queryFacts(
+      pool,
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb#>>'{payload,tenant_id}')=$1
+          AND (record_json::jsonb#>>'{payload,project_id}')=$2
+          AND (record_json::jsonb#>>'{payload,group_id}')=$3
+          AND (
+            ((record_json::jsonb->>'type')='ao_act_task_v0' AND (record_json::jsonb#>>'{payload,act_task_id}')=$4)
+            OR ((record_json::jsonb->>'type') IN ('ao_act_receipt_v0','ao_act_receipt_v1') AND ((record_json::jsonb#>>'{payload,act_task_id}')=$4 OR (record_json::jsonb#>>'{payload,task_id}')=$4))
+            OR ((record_json::jsonb->>'type')='acceptance_result_v1' AND (record_json::jsonb#>>'{payload,act_task_id}')=$4)
+            OR ((record_json::jsonb->>'type') IN ('work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1') AND (record_json::jsonb#>>'{payload,act_task_id}')=$4)
+          )
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId]
+    ));
+  }
+
+  if (recommendationId) {
+    rows.push(...await queryFacts(
+      pool,
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='decision_recommendation_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+          AND (record_json::jsonb#>>'{payload,project_id}')=$2
+          AND (record_json::jsonb#>>'{payload,group_id}')=$3
+          AND (record_json::jsonb#>>'{payload,recommendation_id}')=$4
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, recommendationId]
+    ));
+  }
+
+  if (approvalRequestId) {
+    rows.push(...await queryFacts(
+      pool,
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('approval_request_v1','approval_decision_v1')
+          AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+          AND (record_json::jsonb#>>'{payload,project_id}')=$2
+          AND (record_json::jsonb#>>'{payload,group_id}')=$3
+          AND (record_json::jsonb#>>'{payload,request_id}')=$4
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, approvalRequestId]
+    ));
+  }
+
+  const dedup = new Map<string, OperationProjectionFactRow>();
+  for (const row of rows) dedup.set(row.fact_id, row as OperationProjectionFactRow);
+  return [...dedup.values()].sort((a, b) => toMs(a.occurred_at) - toMs(b.occurred_at));
+}
+
 export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/operations/:operationPlanId/evidence-bundle", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -85,6 +167,8 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
 
     const planPayload = plan.record_json?.payload ?? {};
     const actTaskId = toText(planPayload.act_task_id);
+    const recommendationId = toText(planPayload.recommendation_id);
+    const approvalRequestId = toText(planPayload.approval_request_id);
 
     const taskRows = actTaskId
       ? await queryFacts(
@@ -192,11 +276,16 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
       label: toText(receiptPayload.executor_label) ?? toText(taskPayload.executor_label)
     };
 
-    const timeline = [
-      task ? { ts: toMs(task.occurred_at), type: "assignment", label: "assignment" } : null,
-      receipt ? { ts: toMs(receipt.occurred_at), type: "submit", label: "submit" } : null,
-      acceptance ? { ts: toMs(acceptance.generated_at), type: "acceptance", label: "acceptance" } : null
-    ].filter(Boolean).sort((a: any, b: any) => a.ts - b.ts);
+    const projectionFacts = await loadOperationProjectionFacts({
+      pool,
+      tenant,
+      operationPlanId,
+      actTaskId,
+      recommendationId,
+      approvalRequestId
+    });
+    const projected = projectOperationStateFromFacts(projectionFacts).find((x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId);
+    const timeline = (projected?.timeline ?? []).map((x) => ({ ts: x.ts, type: x.type, label: x.label }));
 
     return reply.send({
       ok: true,
