@@ -174,6 +174,7 @@ const STORY_TIMELINE_ORDER = [
   "设备执行中",
   "receipt submitted",
   "已记录执行回执",
+  "acceptance generated",
 ];
 
 function mapExecutionModeLabel(raw: string): string {
@@ -213,6 +214,8 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
     case "receipt submitted":
       return `${actor}已提交人工执行回执，等待系统归档。`;
+    case "acceptance generated":
+      return `${actor}已生成验收结论，可据此判断是否闭环。`;
     case "已记录执行回执":
       return `${actor}已回传执行完成回执，并记录资源消耗数据。`;
     case "作业已完成":
@@ -225,43 +228,41 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
 }
 
 export function buildOperationDetailViewModel(detail: any): OperationDetailPageVm {
-  const receipt = detail?.receipt
-    ? mapReceiptToVm({ ...detail.receipt, status: detail.receipt?.receipt_status })
+  const bundleReceipt = detail?.evidence_bundle?.receipt;
+  const bundleAcceptance = detail?.evidence_bundle?.acceptance;
+  const receiptSource = bundleReceipt ?? detail?.receipt;
+  const receipt = receiptSource
+    ? mapReceiptToVm({ ...receiptSource, status: receiptSource?.receipt_status ?? receiptSource?.status })
     : undefined;
 
-  const timelineSource = (Array.isArray(detail?.timeline) ? detail.timeline : []).map((item: any, idx: number) => ({
-    id: toText(item?.id, `timeline_${idx}`),
-    kind: toText(item?.kind),
-    label: toText(item?.label),
-    status: toText(item?.status),
-    occurredAtLabel: toDateLabel(item?.occurred_at),
-    occurredAtMs: toMs(item?.occurred_at),
-    actorLabel: toText(item?.actor_label),
-    summary: toText(item?.summary),
-  }));
-  const humanAuditSource = (Array.isArray(detail?.human_execution?.audit) ? detail.human_execution.audit : []).map((item: any, idx: number) => {
-    const status = String(item?.status ?? "").toUpperCase();
-    const label = status === "ASSIGNED"
+  const rawTimeline = Array.isArray(detail?.evidence_bundle?.timeline)
+    ? detail.evidence_bundle.timeline
+    : (Array.isArray(detail?.timeline) ? detail.timeline : []);
+  const timelineSource = rawTimeline.map((item: any, idx: number) => {
+    const rawType = String(item?.type ?? item?.kind ?? "").toUpperCase();
+    const normalizedLabel = rawType === "ASSIGNMENT_CREATED"
       ? "assignment created"
-      : status === "ACCEPTED"
+      : rawType === "ASSIGNMENT_ACCEPTED"
         ? "assignment accepted"
-        : status === "ARRIVED"
+        : rawType === "ASSIGNMENT_ARRIVED"
           ? "arrived"
-          : status === "SUBMITTED"
+          : rawType === "RECEIPT_SUBMITTED"
             ? "receipt submitted"
-            : "";
+            : rawType === "ACCEPTANCE_GENERATED"
+              ? "acceptance generated"
+              : toText(item?.label);
     return {
-      id: toText(item?.audit_id, `human_audit_${idx}`),
-      kind: "HUMAN_ASSIGNMENT_AUDIT",
-      label: label || status,
-      status: status || "PENDING",
-      occurredAtLabel: toDateLabel(item?.occurred_at),
-      occurredAtMs: toMs(item?.occurred_at),
-      actorLabel: toText(item?.executor_id, "人工执行者"),
-      summary: toText(item?.note, label || status || "人工执行更新"),
+      id: toText(item?.id, `timeline_${idx}`),
+      kind: toText(item?.kind ?? item?.type),
+      label: normalizedLabel,
+      status: toText(item?.status),
+      occurredAtLabel: toDateLabel(item?.occurred_at ?? item?.ts),
+      occurredAtMs: toMs(item?.occurred_at ?? item?.ts),
+      actorLabel: toText(item?.actor_label),
+      summary: toText(item?.summary),
     };
-  }).filter((x: any) => x.label && x.label !== "-");
-  const mergedTimelineSource = [...timelineSource, ...humanAuditSource];
+  });
+  const mergedTimelineSource = [...timelineSource];
   const byLabel = new Map<string, (typeof timelineSource)[number]>();
   mergedTimelineSource.forEach((item) => {
     if (item.label !== "-" && !byLabel.has(item.label)) byLabel.set(item.label, item);
@@ -312,8 +313,8 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
 
   const ackTs = toMs(detail?.dispatch?.acked_at ?? detail?.task?.acked_at ?? detail?.plan?.acked_at);
   const dispatchTs = toMs(detail?.dispatch?.dispatched_at ?? detail?.task?.dispatched_at ?? detail?.plan?.dispatched_at);
-  const receiptStartTs = toMs(detail?.receipt?.execution_started_at);
-  const receiptEndTs = toMs(detail?.receipt?.execution_finished_at);
+  const receiptStartTs = toMs(receiptSource?.execution_started_at);
+  const receiptEndTs = toMs(receiptSource?.execution_finished_at);
   const windowStart = receiptStartTs ?? dispatchTs;
   const windowEnd = receiptEndTs ?? ackTs;
   const reasonCodes = Array.isArray(detail?.recommendation?.reason_codes)
@@ -324,8 +325,9 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const approvalDecidedAtLabel = toDateLabel(detail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
   const finalStatusLabel = mapStatusLabel(detail?.status_label ?? detail?.final_status);
-  const executionMode = String(detail?.human_execution?.mode ?? "").toLowerCase();
-  const assignmentExecutor = toText(detail?.human_execution?.assignment?.executor_id, "-");
+  const executorKind = String(detail?.evidence_bundle?.executor?.kind ?? "").toLowerCase();
+  const executionMode = executorKind === "human" ? "human" : executorKind ? "hybrid" : "";
+  const assignmentExecutor = toText(detail?.evidence_bundle?.executor?.id, "-");
   const latestJobStatus = toText(detail?.evidence_export?.latest_job_status, "未开始");
   const hasExportableBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
   const downloadUrl = typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined;
@@ -409,7 +411,9 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       jumpUrl,
       missingReason: toText(detail?.evidence_export?.missing_reason, "无"),
       usageValueLabel: "用于留痕、复验与交付",
-      usageHintLabel: `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
+      usageHintLabel: bundleAcceptance?.verdict
+        ? `验收结论：${toText(bundleAcceptance?.verdict)}`
+        : `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
       actionLabel: evidenceActionLabel,
     },
   };
