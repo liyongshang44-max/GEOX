@@ -255,9 +255,13 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
   }
 }
 
-export function buildOperationDetailViewModel(detail: any): OperationDetailPageVm {
-  const safeDetail = detail ?? {};
-  const evidenceBundle = safeDetail?.evidence_bundle ?? safeDetail?.evidence_export ?? {};
+export function buildOperationDetailViewModel(args?: {
+  detail?: any;
+  evidenceBundle?: any;
+}): OperationDetailPageVm {
+  const safeArgs = args ?? {};
+  const safeDetail = safeArgs.detail ?? {};
+  const evidenceBundle = safeArgs.evidenceBundle ?? safeDetail?.evidence_bundle ?? safeDetail?.evidence_export ?? {};
   const bundleReceipt = evidenceBundle?.receipt;
   const bundleAcceptance = evidenceBundle?.acceptance;
   const receiptSource = bundleReceipt ?? safeDetail?.receipt;
@@ -368,7 +372,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     : jumpUrl
       ? "查看导出任务"
       : "暂无可下载证据包";
-  const acceptanceStatus = resolveAcceptanceStatus(detail, receipt);
+  const acceptanceStatus = resolveAcceptanceStatus(safeDetail, receipt);
 
   return {
     actionLabel: toText(safeDetail?.dispatch?.action_type, toText(safeDetail?.plan?.action_type, "作业")),
