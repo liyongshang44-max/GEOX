@@ -5,7 +5,6 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { findLatestExportJobSnapshotForTask } from "./delivery_evidence_export_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -313,6 +312,35 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
     const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
     const acceptance = [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === "acceptance_result_v1") ?? null;
+    const taskIdForBundle = toText(task?.record_json?.payload?.act_task_id ?? state.task_id ?? plan?.record_json?.payload?.act_task_id);
+    const artifactQ = await pool.query(
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='evidence_artifact_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+          AND (record_json::jsonb#>>'{payload,project_id}')=$2
+          AND (record_json::jsonb#>>'{payload,group_id}')=$3
+          AND (
+            (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+            OR ($5::text IS NOT NULL AND (record_json::jsonb#>>'{payload,act_task_id}')=$5)
+          )
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, taskIdForBundle]
+    ).catch(() => ({ rows: [] as any[] }));
+    const artifacts = (artifactQ.rows ?? []).map((row: any) => ({
+      fact_id: String(row.fact_id ?? ""),
+      occurred_at: String(row.occurred_at ?? ""),
+      source: String(row.source ?? ""),
+      payload: parseRecordJson(row.record_json)?.payload ?? {}
+    }));
+    const receiptLogs = receiptFact?.record_json?.payload?.logs_refs;
+    const logs = Array.isArray(receiptLogs) ? receiptLogs : [];
+    const media = artifacts
+      .filter((x: any) => {
+        const kind = String(x?.payload?.kind ?? "").toLowerCase();
+        return kind.includes("image") || kind.includes("video") || kind.includes("media");
+      })
+      .map((x: any) => x.payload);
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -336,24 +364,15 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
-    const taskId = toText(state.task_id ?? plan?.record_json?.payload?.act_task_id);
-    const latestExport = taskId ? findLatestExportJobSnapshotForTask(tenant, taskId) : null;
-    const latestBundleName = latestExport ? `${latestExport.job_id}.json` : null;
-    const downloadUrl = latestExport?.state === "done" ? `/api/delivery/evidence_export/v1/jobs/${encodeURIComponent(latestExport.job_id)}/download` : null;
-
     return reply.send({
       ok: true,
-      item: {
+      operation: {
         operation_plan_id: operationPlanId,
         recommendation_id: toText(state.recommendation_id),
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
-        field_id: toText(state.field_id),
-        field_name: toText(plan?.record_json?.payload?.field_name) ?? toText(state.field_id),
-        program_id: toText(state.program_id),
-        program_name: toText(plan?.record_json?.payload?.program_name) ?? toText(state.program_id),
-        final_status: state.final_status,
+        final_status: normalizedReceipt && !acceptance ? "PENDING_ACCEPTANCE" : state.final_status,
         status_label: statusLabel(state.final_status),
         recommendation: {
           recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
@@ -369,28 +388,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           actor_label: toText(approvalDecision?.record_json?.payload?.decider ?? approvalDecision?.record_json?.payload?.actor_label),
           decided_at: approvalDecision?.occurred_at ?? null
         },
-        plan: {
-          operation_plan_id: toText(operationPlanId),
-          task_id: toText(plan?.record_json?.payload?.act_task_id ?? state.task_id),
-          action_type: toText(plan?.record_json?.payload?.action_type ?? state.action_type),
-          device_id: toText(plan?.record_json?.payload?.device_id ?? state.device_id),
-          executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
-          dispatched_at: task?.occurred_at ?? null,
-          acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
-        },
         task: {
           task_id: toText(task?.record_json?.payload?.act_task_id ?? state.task_id),
           action_type: toText(task?.record_json?.payload?.action_type ?? state.action_type),
           device_id: toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id),
-          executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
-          dispatched_at: task?.occurred_at ?? null,
-          acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
-        },
-        dispatch: {
-          operation_plan_id: toText(operationPlanId),
-          task_id: taskId,
-          action_type: toText(state.action_type),
-          device_id: toText(state.device_id),
           executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
           dispatched_at: task?.occurred_at ?? null,
           acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
@@ -418,16 +419,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           status: "PENDING_ACCEPTANCE"
         },
         timeline,
-        evidence_export: {
-          latest_job_id: latestExport?.job_id ?? null,
-          latest_job_status: latestExport?.state ?? null,
-          latest_bundle_name: latestBundleName,
-          download_url: downloadUrl,
-          has_exportable_bundle: Boolean(downloadUrl)
-        },
-        links: {
-          export_jobs: "/delivery/export-jobs",
-          operation_detail: `/operations/${encodeURIComponent(operationPlanId)}`
+        evidence_bundle: {
+          artifacts,
+          logs,
+          media
         }
       }
     });

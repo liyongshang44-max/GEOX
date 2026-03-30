@@ -1,3 +1,5 @@
+// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// DO NOT use in new flows
 // GEOX/apps/server/src/routes/telemetry_v1.ts
 
 import type { FastifyInstance } from "fastify"; // Fastify app instance for route registration.
@@ -127,6 +129,9 @@ async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: str
  */
 export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { // Register telemetry v1 routes.
   app.get("/api/telemetry/v1/query", async (req, reply) => { // Query telemetry projection by tenant+device+time.
+    if ((req.query as any)?.__internal__ !== "true") {
+      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+    }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Enforce scope and obtain tenant context.
     if (!auth) return; // Authorization helper already replied (401/403/404 semantics).
 
@@ -155,6 +160,9 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   }); // End route.
 
   app.get("/api/v1/telemetry/latest", async (req, reply) => { // Return latest point per metric for one device.
+    if ((req.query as any)?.__internal__ !== "true") {
+      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+    }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 
@@ -184,6 +192,9 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   }); // End latest route.
 
   app.get("/api/v1/telemetry/series", async (req, reply) => { // Return point series for one device.
+    if ((req.query as any)?.__internal__ !== "true") {
+      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+    }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 
@@ -217,6 +228,9 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   }); // End series route.
 
   app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Return metric summary cards for one device.
+    if ((req.query as any)?.__internal__ !== "true") {
+      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+    }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 

@@ -1,3 +1,5 @@
+// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// DO NOT use in new flows
 // File: apps/server/src/routes/agronomy_v0.ts // Define Agronomy v0 routes and Sprint 14 interpretation append/read endpoints.
 
 import type { FastifyInstance, FastifyPluginAsync } from "fastify"; // Import Fastify types for plugin registration.
@@ -281,8 +283,16 @@ function buildReport(subject: SubjectRef, window: Window, metricStats: MetricSta
 
 export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build Fastify plugin for Agronomy v0 + Sprint 13/14 endpoints.
   const plugin: FastifyPluginAsync = async (app: FastifyInstance) => { // Register routes onto Fastify instance.
+    const denyDeprecated = (req: any, reply: any): boolean => {
+      if (req.query?.__internal__ !== "true") {
+        reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+        return true;
+      }
+      return false;
+    };
 
     app.get("/api/agronomy/v0/report", async (req, reply) => { // Provide full deterministic agronomy report for a window.
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch for consistent 400 errors.
         const q: any = (req as any).query ?? {}; // Read query object.
         const subject: SubjectRef = { // Parse subjectRef fields.
@@ -307,6 +317,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End /report route.
 
     app.get("/api/agronomy/v0/summary", async (req, reply) => { // Provide stable report_id/hash and counts for a window.
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q: any = (req as any).query ?? {}; // Read query.
         const subject: SubjectRef = { // Parse subject.
@@ -340,6 +351,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End /summary route.
 
     app.get("/api/agronomy/v0/evidence_refs", async (req, reply) => { // Provide pointer-only evidence refs for a window.
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q: any = (req as any).query ?? {}; // Read query.
         const subject: SubjectRef = { // Parse subject.
@@ -372,6 +384,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End /evidence_refs route.
 
     app.post("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: write a read-only interpretation fact derived from an AO-ACT receipt fact (no AO-ACT mutation).
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const body = z.object({ // Define input schema.
           receipt_fact_id: z.string().min(1), // Receipt fact_id pointer to interpret (ledger read).
@@ -419,6 +432,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End Sprint 13 write route.
 
     app.get("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: read interpretations by interpretation_id (read-only).
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q = z.object({ // Define query schema.
           interpretation_id: z.string().min(1) // Required interpretation id.
@@ -449,6 +463,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
 
     // Sprint 14: agronomy_interpretation_v1 minimal append-only write endpoint (contract: explain-only, non-executing semantics).
     app.post("/api/agronomy/interpretation_v1/append", async (req, reply) => { // Append an agronomy_interpretation_v1 fact into the ledger.
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch for consistent 400 errors.
         const bodyRaw = (req as any).body ?? {}; // Read raw request body (Fastify JSON).
         const hit = scanForbiddenKeyRecursive(bodyRaw); // Recursively scan for forbidden keys (write-side redline).
@@ -499,6 +514,7 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
 
     // Sprint 14: explain-only read endpoint (read-only; returns interpretations for a group, newest first).
     app.get("/api/agronomy/interpretation_v1/explain", async (req, reply) => { // Return explain-only interpretations without executable semantics.
+      if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q = z.object({ // Define query schema.
           groupId: z.string().min(1), // Require group id to scope the query.
