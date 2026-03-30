@@ -11,10 +11,8 @@ type TimelineType =
   | "RECEIPT_SUBMITTED"
   | "ACCEPTANCE_GENERATED"
   | "RECOMMENDATION_CREATED"
-  | "APPROVAL_REQUESTED"
-  | "APPROVED"
-  | "REJECTED"
-  | "TASK_DISPATCHED"
+  | "APPROVAL_DECIDED"
+  | "TASK_CREATED"
   | "DEVICE_ACK"
   | "EXECUTING"
   | "SUCCEEDED"
@@ -99,10 +97,8 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
   const status = statusRaw.toUpperCase();
   if (["CREATED", "PROPOSED"].includes(status)) return "RECOMMENDATION_CREATED";
-  if (status === "PENDING_APPROVAL") return "APPROVAL_REQUESTED";
-  if (status === "APPROVED") return "APPROVED";
-  if (status === "REJECTED") return "REJECTED";
-  if (["READY", "DISPATCHED"].includes(status)) return "TASK_DISPATCHED";
+  if (["PENDING_APPROVAL", "APPROVED", "REJECTED"].includes(status)) return "APPROVAL_DECIDED";
+  if (["READY", "DISPATCHED"].includes(status)) return "TASK_CREATED";
   if (["EXECUTING", "IN_PROGRESS", "RUNNING"].includes(status)) return "EXECUTING";
   if (["SUCCEEDED", "SUCCESS", "DONE"].includes(status)) return "SUCCEEDED";
   if (["FAILED", "ERROR"].includes(status)) return "FAILED";
@@ -116,10 +112,8 @@ function timelineLabel(type: TimelineType): string {
   if (type === "RECEIPT_SUBMITTED") return "receipt submitted";
   if (type === "ACCEPTANCE_GENERATED") return "acceptance generated";
   if (type === "RECOMMENDATION_CREATED") return "recommendation created";
-  if (type === "APPROVAL_REQUESTED") return "approval requested";
-  if (type === "APPROVED") return "approved";
-  if (type === "REJECTED") return "rejected";
-  if (type === "TASK_DISPATCHED") return "task dispatched";
+  if (type === "APPROVAL_DECIDED") return "approval decided";
+  if (type === "TASK_CREATED") return "task created";
   if (type === "DEVICE_ACK") return "device ack";
   if (type === "EXECUTING") return "executing";
   if (type === "SUCCEEDED") return "execution success";
@@ -215,13 +209,9 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     }
 
     if (rec && !timeline.some((x) => x.type === "RECOMMENDATION_CREATED")) timeline.unshift({ ts: toMs(rec.occurred_at), type: "RECOMMENDATION_CREATED", label: timelineLabel("RECOMMENDATION_CREATED") });
-    if (req && !timeline.some((x) => x.type === "APPROVAL_REQUESTED")) timeline.push({ ts: toMs(req.occurred_at), type: "APPROVAL_REQUESTED", label: timelineLabel("APPROVAL_REQUESTED") });
-    if (decision) {
-      const dec = String(decision.record_json?.payload?.decision ?? "").toUpperCase();
-      if (dec === "APPROVE" && !timeline.some((x) => x.type === "APPROVED")) timeline.push({ ts: toMs(decision.occurred_at), type: "APPROVED", label: timelineLabel("APPROVED") });
-      if (dec === "REJECT" && !timeline.some((x) => x.type === "REJECTED")) timeline.push({ ts: toMs(decision.occurred_at), type: "REJECTED", label: timelineLabel("REJECTED") });
-    }
-    if (task && !timeline.some((x) => x.type === "TASK_DISPATCHED")) timeline.push({ ts: toMs(task.occurred_at), type: "TASK_DISPATCHED", label: timelineLabel("TASK_DISPATCHED") });
+    if (req && !timeline.some((x) => x.type === "APPROVAL_DECIDED")) timeline.push({ ts: toMs(req.occurred_at), type: "APPROVAL_DECIDED", label: timelineLabel("APPROVAL_DECIDED") });
+    if (decision && !timeline.some((x) => x.type === "APPROVAL_DECIDED")) timeline.push({ ts: toMs(decision.occurred_at), type: "APPROVAL_DECIDED", label: timelineLabel("APPROVAL_DECIDED") });
+    if (task && !timeline.some((x) => x.type === "TASK_CREATED")) timeline.push({ ts: toMs(task.occurred_at), type: "TASK_CREATED", label: timelineLabel("TASK_CREATED") });
     const assignmentFacts = facts.filter((f) => {
       const t = String(f.record_json?.type ?? "");
       if (!["work_assignment_upserted_v1", "work_assignment_status_changed_v1", "work_assignment_submitted_v1"].includes(t)) return false;
@@ -263,6 +253,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
         ? "PENDING_ACCEPTANCE"
         : baseFinalStatus;
+    const finalStatusNormalized: OperationStateV1["final_status"] = receipt && !acceptanceFact ? "PENDING_ACCEPTANCE" : final_status;
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
     const approval_id = approval_decision_id ?? approval_request_id;
@@ -291,7 +282,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         status: acceptance.verdict,
         missing: acceptance.missing_evidence ?? []
       },
-      final_status,
+      final_status: finalStatusNormalized,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
       timeline: fullTimeline
     });

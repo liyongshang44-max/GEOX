@@ -1,4 +1,5 @@
-// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// ⚠️ DEPRECATED: legacy monitoring route
+// replaced by operation_state_v1 / dashboard_v1 / program_v1
 // DO NOT use in new flows
 import { FastifyInstance } from "fastify"; // Fastify app instance for route registration
 import { Pool } from "pg"; // Postgres connection pool (Ledger write)

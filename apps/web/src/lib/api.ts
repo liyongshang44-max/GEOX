@@ -1,10 +1,7 @@
 // ⚠️ DEPRECATED: legacy only, do not use in new flows
 // GEOX/apps/web/src/lib/api.ts
-import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1, MarkerKind } from "./contracts";
+import type { OverlaySegment, ExplainOverlayV1 } from "./contracts";
 import { requestJson as requestJsonClient } from "../api/client";
-
-export type GroupsResponse = { groups: SensorGroupV1[] };
-
 
 export function withMediaBase(url: string): string {
   if (!url) return url;
@@ -66,113 +63,6 @@ function withQuery(path: string, params?: Record<string, unknown>): string {
   }
   const qs = q.toString();
   return qs ? `${path}?${qs}` : path;
-}
-
-function uniqStrings(xs: unknown[]): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const x of xs) {
-    if (typeof x !== "string") continue;
-    const t = x.trim();
-    if (!t) continue;
-    if (seen.has(t)) continue;
-    seen.add(t);
-    out.push(t);
-  }
-  return out;
-}
-
-function toMsMaybe(v: unknown): number {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string") {
-    const ms = Date.parse(v);
-    if (Number.isFinite(ms)) return ms;
-  }
-  return 0;
-}
-
-function normalizeGroup(x: any): SensorGroupV1 | null {
-  if (!x || typeof x !== "object") return null;
-
-  if (typeof x.groupId === "string" && x.subjectRef && typeof x.subjectRef === "object" && Array.isArray(x.sensors)) {
-    return {
-      groupId: x.groupId,
-      subjectRef: {
-        projectId: String(x.subjectRef.projectId ?? "P_DEFAULT"),
-        plotId: x.subjectRef.plotId ? String(x.subjectRef.plotId) : undefined,
-        blockId: x.subjectRef.blockId ? String(x.subjectRef.blockId) : undefined,
-      },
-      displayName: typeof x.displayName === "string" && x.displayName.trim() ? x.displayName.trim() : String(x.groupId),
-      sensors: uniqStrings(x.sensors),
-      createdAt: typeof x.createdAt === "number" ? x.createdAt : 0,
-    };
-  }
-
-  const groupId = typeof x.group_id === "string" ? x.group_id.trim() : "";
-  if (!groupId) return null;
-
-  const projectId = typeof x.project_id === "string" && x.project_id.trim() ? x.project_id.trim() : "P_DEFAULT";
-  const plotId = typeof x.plot_id === "string" && x.plot_id.trim() ? x.plot_id.trim() : undefined;
-  const blockId = typeof x.block_id === "string" && x.block_id.trim() ? x.block_id.trim() : undefined;
-
-  const members = Array.isArray(x.members) ? x.members : [];
-  const sensors = uniqStrings(
-    members.map((m: any) =>
-      typeof m?.sensor_id === "string"
-        ? m.sensor_id
-        : typeof m?.sensorId === "string"
-          ? m.sensorId
-          : "",
-    ),
-  );
-
-  return {
-    groupId,
-    subjectRef: { projectId, plotId, blockId },
-    displayName: typeof x.display_name === "string" && x.display_name.trim() ? x.display_name.trim() : groupId,
-    sensors,
-    createdAt: toMsMaybe(x.created_at),
-  };
-}
-
-export async function fetchGroups(params: { projectId?: string; sensorId?: string }): Promise<GroupsResponse> {
-  const raw = await requestJson<any>(withQuery(`/api/groups`, params));
-  const arr = Array.isArray(raw?.groups) ? raw.groups : [];
-  const groups: SensorGroupV1[] = arr.map(normalizeGroup).filter(Boolean) as SensorGroupV1[];
-  return { groups };
-}
-
-export async function fetchSeries(params: {
-  groupId?: string;
-  sensorId?: string;
-  metrics: string[];
-  startTs: number;
-  endTs: number;
-  maxPoints?: number;
-}): Promise<SeriesResponseV1> {
-  return requestJson<SeriesResponseV1>(
-    withQuery(`/api/series`, {
-      groupId: params.groupId,
-      sensorId: params.sensorId,
-      metrics: params.metrics.join(","),
-      startTs: params.startTs,
-      endTs: params.endTs,
-      maxPoints: params.maxPoints,
-    }),
-  );
-}
-
-export async function postMarker(body: {
-  ts: number;
-  sensorId: string;
-  type: MarkerKind;
-  note?: string | null;
-  source: "device" | "gateway" | "system";
-}): Promise<{ ok: true }> {
-  return requestJson<{ ok: true }>(`/api/marker`, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
 }
 
 export function stableOverlays(overlays: OverlaySegment[]): OverlaySegment[] {
@@ -1067,10 +957,6 @@ export async function retryAoActTask(
     body: JSON.stringify(body),
   });
 }
-
-// --- compat exports for older UI code ---
-export { fetchSeries as getSeries };
-export type PostMarkerBody = Parameters<typeof postMarker>[0];
 
 export type AgronomyRecommendationItemV1 = {
   fact_id: string;

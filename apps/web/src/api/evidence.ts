@@ -25,10 +25,3 @@ export async function fetchEvidenceControlPlane(params?: { limit?: number; progr
   const res = await apiRequestOptional<{ ok: boolean; item: any }>(withQuery("/api/v1/evidence/control-plane", params));
   return res ?? { ok: true, item: null };
 }
-
-export async function fetchEvidenceBundle(id: string): Promise<any | null> {
-  const operationId = String(id ?? "").trim();
-  if (!operationId) return null;
-  const res = await apiRequestOptional<{ ok?: boolean; item?: any }>(`/api/v1/operations/${encodeURIComponent(operationId)}/evidence-bundle`);
-  return res?.item ?? null;
-}

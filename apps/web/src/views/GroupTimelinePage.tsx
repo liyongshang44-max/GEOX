@@ -5,7 +5,7 @@ export default function GroupTimelinePage(): React.ReactElement {
   return (
     <section className="card" style={{ padding: 16 }}>
       <h2>Legacy page retired</h2>
-      <p>Group timeline legacy semantics (sensor_group/raw_sample/marker/series) are frozen.</p>
+      <p>Legacy monitoring semantics are frozen.</p>
       <p>Use operation_state_v1-based pages and APIs for all new flows.</p>
     </section>
   );

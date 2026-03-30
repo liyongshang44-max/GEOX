@@ -364,6 +364,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
+    const finalStatus = normalizedReceipt && !acceptance ? "PENDING_ACCEPTANCE" : state.final_status;
     return reply.send({
       ok: true,
       operation: {
@@ -372,30 +373,30 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
-        final_status: normalizedReceipt && !acceptance ? "PENDING_ACCEPTANCE" : state.final_status,
-        status_label: statusLabel(state.final_status),
-        recommendation: {
+        final_status: finalStatus,
+        status_label: statusLabel(finalStatus),
+        recommendation: rec ? {
           recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
           title: toText(rec?.record_json?.payload?.title) ?? "系统建议",
           summary: toText(rec?.record_json?.payload?.summary ?? rec?.record_json?.payload?.reason),
           reason_codes: Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [],
           created_at: rec?.occurred_at ?? null
-        },
-        approval: {
+        } : null,
+        approval: approvalReq || approvalDecision ? {
           approval_request_id: toText(state.approval_request_id ?? approvalReq?.record_json?.payload?.request_id),
           decision: toText(approvalDecision?.record_json?.payload?.decision),
           decision_label: statusLabel(toText(approvalDecision?.record_json?.payload?.decision)),
           actor_label: toText(approvalDecision?.record_json?.payload?.decider ?? approvalDecision?.record_json?.payload?.actor_label),
           decided_at: approvalDecision?.occurred_at ?? null
-        },
-        task: {
+        } : null,
+        task: task ? {
           task_id: toText(task?.record_json?.payload?.act_task_id ?? state.task_id),
           action_type: toText(task?.record_json?.payload?.action_type ?? state.action_type),
           device_id: toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id),
           executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
           dispatched_at: task?.occurred_at ?? null,
           acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
-        },
+        } : null,
         receipt: normalizedReceipt ? {
           receipt_fact_id: normalizedReceipt.receipt_fact_id,
           receipt_type: normalizedReceipt.receipt_type,
@@ -410,14 +411,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           executor_label: normalizedReceipt.executor_label
         } : null,
         acceptance: acceptance ? {
-          acceptance_id: toText(acceptance.record_json?.payload?.acceptance_id ?? acceptance.fact_id),
           verdict: toText(acceptance.record_json?.payload?.verdict),
-          rule_id: toText(acceptance.record_json?.payload?.rule_id),
-          evaluated_at: toText(acceptance.record_json?.payload?.evaluated_at ?? acceptance.occurred_at),
-          evidence_refs: Array.isArray(acceptance.record_json?.payload?.evidence_refs) ? acceptance.record_json.payload.evidence_refs : []
-        } : {
-          status: "PENDING_ACCEPTANCE"
-        },
+          missing_evidence: Array.isArray(acceptance.record_json?.payload?.missing_evidence) ? acceptance.record_json.payload.missing_evidence : [],
+          generated_at: toText(acceptance.record_json?.payload?.generated_at ?? acceptance.record_json?.payload?.evaluated_at ?? acceptance.occurred_at)
+        } : null,
         timeline,
         evidence_bundle: {
           artifacts,

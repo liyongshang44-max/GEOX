@@ -1,4 +1,5 @@
-// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// ⚠️ DEPRECATED: legacy monitoring route
+// replaced by operation_state_v1 / dashboard_v1 / program_v1
 // DO NOT use in new flows
 // File: apps/server/src/routes/agronomy_v0.ts // Define Agronomy v0 routes and Sprint 14 interpretation append/read endpoints.
 
