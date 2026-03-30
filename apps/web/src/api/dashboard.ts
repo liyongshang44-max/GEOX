@@ -81,9 +81,8 @@ async function firstOk<T>(paths: string[]): Promise<T> {
 async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   try {
     return await promise;
-  } catch (e: any) {
-    if (e?.status === 404 || e?.response?.status === 404) return fallback;
-    throw e;
+  } catch {
+    return fallback;
   }
 }
 
@@ -102,7 +101,10 @@ export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_
 }
 
 export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{ ok: boolean; item: DashboardControlPlaneItem }> {
-  return apiRequest<{ ok: boolean; item: DashboardControlPlaneItem }>(withQuery("/api/v1/dashboard/control-plane", params));
+  return safe(
+    apiRequest<{ ok: boolean; item: DashboardControlPlaneItem }>(withQuery("/api/v1/dashboard/control-plane", params)),
+    { ok: true, item: null },
+  );
 }
 
 export async function fetchDashboardEvidenceSummary(limit = 6): Promise<DashboardEvidenceItem[]> {
@@ -112,7 +114,8 @@ export async function fetchDashboardEvidenceSummary(limit = 6): Promise<Dashboar
     ]),
     { items: [] as DashboardEvidenceItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardRecentExecutions(limit = 8): Promise<DashboardRecentExecutionItem[]> {
@@ -120,7 +123,8 @@ export async function fetchDashboardRecentExecutions(limit = 8): Promise<Dashboa
     apiRequest<{ ok?: boolean; items?: DashboardRecentExecutionItem[] }>(withQuery("/api/v1/dashboard/executions/recent", { limit })),
     { items: [] as DashboardRecentExecutionItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardAcceptanceRisks(limit = 6): Promise<DashboardAcceptanceRiskItem[]> {
@@ -131,7 +135,8 @@ export async function fetchDashboardAcceptanceRisks(limit = 6): Promise<Dashboar
     ]),
     { items: [] as DashboardAcceptanceRiskItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardPendingActions(limit = 6): Promise<DashboardPendingActionItem[]> {
@@ -142,8 +147,8 @@ export async function fetchDashboardPendingActions(limit = 6): Promise<Dashboard
     ]),
     { items: [] as DashboardPendingActionItem[] },
   );
-  if (Array.isArray(res.items)) return res.items;
-  return Array.isArray(res.actions) ? res.actions : [];
+  const list = res?.items ?? res?.actions ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardRecommendations(limit = 50): Promise<DashboardRecommendationItem[]> {
@@ -151,7 +156,8 @@ export async function fetchDashboardRecommendations(limit = 50): Promise<Dashboa
     apiRequest<{ ok?: boolean; items?: DashboardRecommendationItem[] }>(withQuery("/api/v1/agronomy/recommendations/control-plane", { limit })),
     { items: [] as DashboardRecommendationItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardOperationStates(limit = 100): Promise<DashboardOperationStateItem[]> {
@@ -159,7 +165,8 @@ export async function fetchDashboardOperationStates(limit = 100): Promise<Dashbo
     apiRequest<{ ok?: boolean; items?: DashboardOperationStateItem[] }>(withQuery("/api/v1/operations", { limit })),
     { items: [] as DashboardOperationStateItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function fetchDashboardAssignments(limit = 100): Promise<DashboardAssignmentItem[]> {
@@ -167,7 +174,8 @@ export async function fetchDashboardAssignments(limit = 100): Promise<DashboardA
     apiRequest<{ ok?: boolean; items?: DashboardAssignmentItem[] }>(withQuery("/api/v1/work-assignments", { limit })),
     { items: [] as DashboardAssignmentItem[] },
   );
-  return Array.isArray(res.items) ? res.items : [];
+  const list = res?.items ?? [];
+  return Array.isArray(list) ? list : [];
 }
 
 export async function getOverview(): Promise<{

@@ -19,8 +19,8 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   decisions: {
     pendingApprovalCount: 0,
     pendingRecommendationCount: 0,
-    potentialBenefitEstimate: "0%",
-    nonExecutionRiskEstimate: "0%",
+    potentialBenefitEstimate: "0 条高置信建议",
+    nonExecutionRiskEstimate: "0 条执行风险",
   },
   execution: {
     runningTaskCount: 0,
@@ -46,12 +46,12 @@ export function useDashboard(api: any): DashboardVm {
     async function load(): Promise<void> {
       try {
         const overview = await api.getOverview();
-        const executions = await api.getRecentExecutions?.({ limit: 8 }) || [];
-        const riskItems = await api.getAcceptanceRisks?.({ limit: 6 }) || [];
-        const pendingItems = await api.getPendingActions?.({ limit: 6 }) || [];
-        const recommendationItems = await api.getRecommendations?.({ limit: 50 }) || [];
-        const operationStates = await api.getOperationStates?.({ limit: 100 }) || [];
-        const assignments = await api.getAssignments?.({ limit: 100 }) || [];
+        const executions = (await api.getRecentExecutions?.({ limit: 8 })) ?? [];
+        const riskItems = (await api.getAcceptanceRisks?.({ limit: 6 })) ?? [];
+        const pendingItems = (await api.getPendingActions?.({ limit: 6 })) ?? [];
+        const recommendationItems = (await api.getRecommendations?.({ limit: 50 })) ?? [];
+        const operationStates = (await api.getOperationStates?.({ limit: 100 })) ?? [];
+        const assignments = (await api.getAssignments?.({ limit: 100 })) ?? [];
 
         let evidences: any[] = [];
         try {
@@ -62,7 +62,8 @@ export function useDashboard(api: any): DashboardVm {
 
         if (!mounted) return;
 
-        const mappedActions = (executions || []).map((o: any) => {
+        const executionList = executions ?? [];
+        const mappedActions = executionList.map((o: any) => {
           const status = String(o?.status || o?.final_status || "").toUpperCase();
           return {
             id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
@@ -78,11 +79,11 @@ export function useDashboard(api: any): DashboardVm {
         });
 
         const mappedRisks = [
-          ...(riskItems || []).map((item: any) => `RISK|${item?.title || "验收风险"}${item?.level ? ` · ${item.level}` : ""}`),
-          ...(pendingItems || []).map((item: any) => `APPROVAL|${item?.label || "待审批建议"}`),
+          ...(riskItems ?? []).map((item: any) => `RISK|${item?.title || "验收风险"}${item?.level ? ` · ${item.level}` : ""}`),
+          ...(pendingItems ?? []).map((item: any) => `APPROVAL|${item?.label || "待审批建议"}`),
         ].filter(Boolean).slice(0, 10);
 
-        const mappedRiskItems: DashboardRiskVm[] = (riskItems || []).map((item: any, idx: number) => {
+        const mappedRiskItems: DashboardRiskVm[] = (riskItems ?? []).map((item: any, idx: number) => {
           const rawLevel = String(item?.level || "").toUpperCase();
           const level: DashboardRiskVm["level"] = rawLevel === "HIGH" ? "HIGH" : rawLevel === "LOW" ? "LOW" : "MEDIUM";
           const title = String(item?.title || "验收风险");
@@ -95,24 +96,26 @@ export function useDashboard(api: any): DashboardVm {
           };
         });
 
-        const pendingRecommendationCount = (recommendationItems || []).filter((item: any) => {
+        const recommendationList = recommendationItems ?? [];
+        const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
         }).length;
-        const pendingApprovalCount = (pendingItems || []).length;
-        const confidenceItems = (recommendationItems || []).map((item: any) => Number(item?.confidence)).filter((x: number) => Number.isFinite(x) && x >= 0);
-        const avgConfidence = confidenceItems.length ? confidenceItems.reduce((a: number, b: number) => a + b, 0) / confidenceItems.length : 0;
-        const potentialBenefitScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 6 + avgConfidence * 20)));
-        const nonExecutionRiskScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 8 + mappedRiskItems.length * 5)));
+        const pendingApprovalCount = (pendingItems ?? []).length;
+        const highConfidenceRecommendationCount = recommendationList.filter((item: any) => {
+          const confidence = Number(item?.confidence);
+          return Number.isFinite(confidence) && confidence >= 0.8;
+        }).length;
+        const executionRiskCount = (mappedRiskItems ?? []).filter((item: DashboardRiskVm) => item.source === "执行缺失").length;
 
         const isRunningOperation = (item: any): boolean => {
           const finalStatus = String(item?.final_status ?? "").toUpperCase();
           if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(finalStatus)) return false;
           return true;
         };
-        const runningOperationItems = (operationStates || []).filter((item: any) => isRunningOperation(item));
+        const runningOperationItems = (operationStates ?? []).filter((item: any) => isRunningOperation(item));
         const activeAssignmentStatuses = new Set(["ASSIGNED", "ACCEPTED", "ARRIVED"]);
-        const activeAssignments = (assignments || []).filter((item: any) => activeAssignmentStatuses.has(String(item?.status || "").toUpperCase()));
+        const activeAssignments = (assignments ?? []).filter((item: any) => activeAssignmentStatuses.has(String(item?.status || "").toUpperCase()));
         const humanTaskIds = new Set(activeAssignments.map((item: any) => String(item?.act_task_id || "")).filter(Boolean));
         const humanExecutionCount = runningOperationItems.filter((item: any) => humanTaskIds.has(String(item?.task_id || ""))).length;
         const runningTaskCount = runningOperationItems.length;
@@ -132,7 +135,7 @@ export function useDashboard(api: any): DashboardVm {
             pendingAcceptanceCount: overview?.pending_acceptance_count ?? overview?.pendingAcceptanceCount ?? 0,
           },
           actions: mappedActions,
-          evidences: (evidences || []).map((item: any, i: number) => ({
+          evidences: (evidences ?? []).map((item: any, i: number) => ({
             id: String(item?.receipt_fact_id || item?.operation_plan_id || i),
             href: toOperationDetailPath(item),
             fieldName: item?.field_name || item?.field_id || "田块",
@@ -150,8 +153,8 @@ export function useDashboard(api: any): DashboardVm {
           decisions: {
             pendingApprovalCount,
             pendingRecommendationCount,
-            potentialBenefitEstimate: `${potentialBenefitScore}%`,
-            nonExecutionRiskEstimate: `${nonExecutionRiskScore}%`,
+            potentialBenefitEstimate: `${highConfidenceRecommendationCount} 条高置信建议`,
+            nonExecutionRiskEstimate: `${executionRiskCount} 条执行风险`,
           },
           execution: {
             runningTaskCount,

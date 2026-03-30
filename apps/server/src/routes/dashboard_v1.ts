@@ -28,6 +28,7 @@ type DashboardRecentEvidenceItem = {
   summary: ReturnType<typeof normalizeReceiptEvidence>;
 }; // Dashboard recent evidence view model used by ReceiptEvidenceCard.
 type DashboardRecentExecutionItem = { id: string; operation_plan_id: string; field_id: string | null; status: string; updated_ts_ms: number; href: string; }; // Dashboard recent execution card row.
+type DashboardRiskSummaryItem = { id: string; field_id: string | null; title: string; level: "HIGH" | "MEDIUM" | "LOW"; occurred_at: string | null; }; // Dashboard risk row for risk-summary endpoint.
 
 function badRequest(reply: any, error: string) { return reply.status(400).send({ ok: false, error }); } // Stable 400 helper.
 function parseWindowStart(q: any): number { const raw = Number(q?.from_ts_ms ?? Date.now() - 24 * 60 * 60 * 1000); return Number.isFinite(raw) ? raw : Date.now() - 24 * 60 * 60 * 1000; } // Parse dashboard window start.
@@ -473,6 +474,117 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         summary
       };
     });
+    return reply.send({ ok: true, items });
+  });
+
+  app.get("/api/v1/dashboard/risk-summary", async (req, reply) => { // Build risk list with stage-4 rules: task/receipt timeout/warning.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const limit = parseLimit(q, 12, 50);
+    const tenant_id = String(auth.tenant_id ?? "");
+    const project_id = String(auth.project_id ?? "");
+    const group_id = String(auth.group_id ?? "");
+
+    const executionStates = ["CREATED", "READY", "DISPATCHED", "ACKED"];
+    const overdueMs = 2 * 60 * 60 * 1000;
+    const overdueCutoffIso = new Date(Date.now() - overdueMs).toISOString();
+
+    const [highQ, mediumQ, lowQ] = await Promise.all([
+      pool.query(
+        `SELECT
+           q.queue_id AS id,
+           p.field_id AS field_id,
+           COALESCE(q.created_at, q.updated_at, now()) AS occurred_at
+         FROM dispatch_queue_v1 q
+         LEFT JOIN operation_plan_index_v1 p
+           ON p.operation_plan_id = q.operation_plan_id
+          AND p.tenant_id = q.tenant_id
+          AND p.project_id = q.project_id
+          AND p.group_id = q.group_id
+         LEFT JOIN LATERAL (
+           SELECT 1 AS receipt_exists
+           FROM facts f
+           WHERE (f.record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1')
+             AND (f.record_json::jsonb#>>'{payload,tenant_id}') = q.tenant_id
+             AND (f.record_json::jsonb#>>'{payload,project_id}') = q.project_id
+             AND (f.record_json::jsonb#>>'{payload,group_id}') = q.group_id
+             AND (
+               (COALESCE((f.record_json::jsonb#>>'{payload,act_task_id}'), '') <> '' AND (f.record_json::jsonb#>>'{payload,act_task_id}') = q.act_task_id)
+               OR
+               (COALESCE((f.record_json::jsonb#>>'{payload,operation_plan_id}'), '') <> '' AND (f.record_json::jsonb#>>'{payload,operation_plan_id}') = q.operation_plan_id)
+             )
+           ORDER BY f.occurred_at DESC, f.fact_id DESC
+           LIMIT 1
+         ) r ON TRUE
+         WHERE q.tenant_id = $1
+           AND q.project_id = $2
+           AND q.group_id = $3
+           AND q.state = ANY($4::text[])
+           AND r.receipt_exists IS NULL
+         ORDER BY COALESCE(q.updated_at, q.created_at, now()) DESC
+         LIMIT $5`,
+        [tenant_id, project_id, group_id, executionStates, limit]
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        `SELECT
+           q.queue_id AS id,
+           p.field_id AS field_id,
+           COALESCE(q.created_at, q.updated_at, now()) AS occurred_at
+         FROM dispatch_queue_v1 q
+         LEFT JOIN operation_plan_index_v1 p
+           ON p.operation_plan_id = q.operation_plan_id
+          AND p.tenant_id = q.tenant_id
+          AND p.project_id = q.project_id
+          AND p.group_id = q.group_id
+         WHERE q.tenant_id = $1
+           AND q.project_id = $2
+           AND q.group_id = $3
+           AND q.state = ANY($4::text[])
+           AND COALESCE(q.created_at, q.updated_at, now()) < $5::timestamptz
+         ORDER BY COALESCE(q.updated_at, q.created_at, now()) DESC
+         LIMIT $6`,
+        [tenant_id, project_id, group_id, executionStates, overdueCutoffIso, limit]
+      ).catch(() => ({ rows: [] })),
+      pool.query(
+        `SELECT
+           event_id AS id,
+           object_id AS field_id,
+           to_timestamp(raised_ts_ms::double precision / 1000.0) AS occurred_at,
+           metric,
+           status
+         FROM alert_event_index_v1
+         WHERE tenant_id = $1
+           AND status IN ('OPEN', 'ACKED')
+         ORDER BY raised_ts_ms DESC
+         LIMIT $2`,
+        [tenant_id, limit]
+      ).catch(() => ({ rows: [] })),
+    ]);
+
+    const highItems: DashboardRiskSummaryItem[] = (highQ.rows ?? []).map((row: any, idx: number) => ({
+      id: `high_${String(row.id ?? idx)}`,
+      field_id: typeof row.field_id === "string" ? row.field_id : null,
+      title: "执行任务缺少回执",
+      level: "HIGH",
+      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+    }));
+    const mediumItems: DashboardRiskSummaryItem[] = (mediumQ.rows ?? []).map((row: any, idx: number) => ({
+      id: `medium_${String(row.id ?? idx)}`,
+      field_id: typeof row.field_id === "string" ? row.field_id : null,
+      title: "执行任务超时",
+      level: "MEDIUM",
+      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+    }));
+    const lowItems: DashboardRiskSummaryItem[] = (lowQ.rows ?? []).map((row: any, idx: number) => ({
+      id: `low_${String(row.id ?? idx)}`,
+      field_id: typeof row.field_id === "string" ? row.field_id : null,
+      title: String(row.metric ?? row.status ?? "弱告警"),
+      level: "LOW",
+      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+    }));
+
+    const items = [...highItems, ...mediumItems, ...lowItems].slice(0, limit);
     return reply.send({ ok: true, items });
   });
 } // End registration.
