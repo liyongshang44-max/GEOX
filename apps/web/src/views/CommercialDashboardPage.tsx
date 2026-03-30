@@ -41,6 +41,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
       getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),
       getOperationStates: async (params?: { limit?: number }) => fetchDashboardOperationStates(params?.limit ?? 100),
       getAssignments: async (params?: { limit?: number }) => fetchDashboardAssignments(params?.limit ?? 100),
+      enableLegacyDashboardEndpoints: false,
     }),
     [],
   );

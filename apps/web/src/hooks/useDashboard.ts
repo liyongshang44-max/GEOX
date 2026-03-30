@@ -59,8 +59,13 @@ export function useDashboard(api: any): DashboardVm {
       try {
         const overview = await api.getOverview();
         const executions = await safeList(() => api.getRecentExecutions?.({ limit: 8 }));
-        const riskItems = await safeList(() => api.getAcceptanceRisks?.({ limit: 6 }));
-        const pendingItems = await safeList(() => api.getPendingActions?.({ limit: 6 }));
+        const useLegacyRiskEndpoints = Boolean(api?.enableLegacyDashboardEndpoints);
+        const riskItems = useLegacyRiskEndpoints
+          ? await safeList(() => api.getAcceptanceRisks?.({ limit: 6 }))
+          : [];
+        const pendingItems = useLegacyRiskEndpoints
+          ? await safeList(() => api.getPendingActions?.({ limit: 6 }))
+          : [];
         const recommendationItems = await safeList(() => api.getRecommendations?.({ limit: 50 }));
         const operationStates = await safeList(() => api.getOperationStates?.({ limit: 100 }));
         const assignments = await safeList(() => api.getAssignments?.({ limit: 100 }));
