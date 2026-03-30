@@ -26,6 +26,8 @@ export function useDashboard(api: any): DashboardVm {
       try {
         const overview = await api.getOverview();
         const executions = await api.getRecentExecutions?.({ limit: 8 }) || [];
+        const riskItems = await api.getAcceptanceRisks?.({ limit: 6 }) || [];
+        const pendingItems = await api.getPendingActions?.({ limit: 6 }) || [];
 
         let evidences: any[] = [];
         try {
@@ -36,6 +38,26 @@ export function useDashboard(api: any): DashboardVm {
 
         if (!mounted) return;
 
+        const mappedActions = (executions || []).map((o: any) => {
+          const status = String(o?.status || o?.final_status || "").toUpperCase();
+          return {
+            id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
+            title: "作业执行",
+            subjectName: o?.field_name || o?.field_id || o?.device_id || "-",
+            actionLabel: o?.action_type || "执行任务",
+            occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
+            statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
+            finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
+            hasEvidence: Boolean(o?.receipt_fact_id),
+            href: toOperationDetailPath(o),
+          };
+        });
+
+        const mappedRisks = [
+          ...(riskItems || []).map((item: any) => `${item?.title || "验收风险"}${item?.level ? ` · ${item.level}` : ""}`),
+          ...(pendingItems || []).map((item: any) => `${item?.label || "待处理事项"}`),
+        ].filter(Boolean).slice(0, 6);
+
         setData({
           overview: {
             onlineDeviceCount: overview?.online_device_count ?? overview?.onlineDeviceCount ?? 0,
@@ -43,20 +65,7 @@ export function useDashboard(api: any): DashboardVm {
             completedTodayCount: overview?.completed_today ?? overview?.completedTodayCount ?? 0,
             pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
           },
-          actions: (executions || []).map((o: any) => {
-            const status = String(o?.status || o?.final_status || "").toUpperCase();
-            return {
-              id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
-              title: "作业执行",
-              subjectName: o?.field_name || o?.field_id || o?.device_id || "-",
-              actionLabel: o?.action_type || "执行任务",
-              occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
-              statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
-              finalStatus: status === "SUCCEEDED" ? "succeeded" : status === "FAILED" ? "failed" : status === "PENDING" ? "pending" : "running",
-              hasEvidence: Boolean(o?.receipt_fact_id),
-              href: toOperationDetailPath(o),
-            };
-          }),
+          actions: mappedActions,
           evidences: (evidences || []).map((item: any, i: number) => ({
             id: String(item?.receipt_fact_id || item?.operation_plan_id || i),
             href: toOperationDetailPath(item),
@@ -67,7 +76,7 @@ export function useDashboard(api: any): DashboardVm {
               href: toOperationDetailPath(item),
             }),
           })),
-          risks: [],
+          risks: mappedRisks,
         });
       } catch {
         setData((d) => ({ ...d }));

@@ -1,3 +1,4 @@
+
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 
 export type OperationStoryTimelineItemVm = {
@@ -26,6 +27,8 @@ export type OperationDetailPageVm = {
   statusLabel: string;
   finalStatus: string;
   latestUpdatedAtLabel: string;
+  expectedOutcomeLabel: string;
+  actualOutcomeLabel: string;
   recommendation: {
     id: string;
     title: string;
@@ -113,6 +116,30 @@ function resolveExecutionProgress(detail: any): string {
   return "等待下发";
 }
 
+function buildExpectedOutcomeLabel(detail: any): string {
+  const action = String(detail?.dispatch?.action_type ?? detail?.plan?.action_type ?? "").toUpperCase();
+  if (action.includes("IRRIGATE") || action.includes("IRRIGATION")) {
+    return "提升土壤湿度，缓解热胁迫，恢复作物生长状态";
+  }
+  if (action.includes("SPRAY")) return "降低病虫害风险，稳定作物健康状态";
+  if (action.includes("FERTILIZE")) return "补充养分，改善生长势";
+  return "完成系统建议的现场动作，并获得可复盘证据";
+}
+
+function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
+  const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+  if (!receipt) {
+    return finalStatus ? `当前处于${mapStatusLabel(finalStatus)}阶段，仍在等待设备回传最终证据` : "尚未回传执行证据";
+  }
+  if (receipt.constraintCheckLabel === "符合约束") {
+    return "现场已回传执行结果，系统判断本次执行符合约束";
+  }
+  if (receipt.violationSummary && receipt.violationSummary !== "-") {
+    return `现场已回传执行结果，但存在复核提示：${receipt.violationSummary}`;
+  }
+  return "现场已回传执行结果，可继续查看资源消耗与完成时间";
+}
+
 const STORY_TIMELINE_ORDER = [
   "已生成作业建议",
   "已提交审批",
@@ -143,7 +170,7 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
     case "已生成执行任务":
       return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
     case "已下发设备":
-      return `任务已发送至灌溉设备 ${deviceId}，等待设备确认与执行反馈。`;
+      return `任务已发送至设备 ${deviceId}，等待设备确认与执行反馈。`;
     case "设备执行中":
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
     case "已记录执行回执":
@@ -192,6 +219,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       storySummary: buildStorySummary(label, summary, actorLabel, detail),
     };
   });
+
   const terminalLabel = ["SUCCEEDED", "SUCCESS"].includes(String(detail?.final_status ?? "").toUpperCase())
     ? "作业已完成"
     : ["FAILED", "ERROR"].includes(String(detail?.final_status ?? "").toUpperCase())
@@ -241,6 +269,8 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     statusLabel: mapStatusLabel(detail?.status_label ?? detail?.final_status),
     finalStatus: toText(detail?.final_status),
     latestUpdatedAtLabel: latestTs != null ? new Date(latestTs).toLocaleString() : "-",
+    expectedOutcomeLabel: buildExpectedOutcomeLabel(detail),
+    actualOutcomeLabel: buildActualOutcomeLabel(detail, receipt),
     recommendation: {
       id: toText(detail?.recommendation?.recommendation_id),
       title: toText(detail?.recommendation?.title, "系统建议"),

@@ -289,3 +289,115 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.dashboardDecisionBoard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.decisionColumn {
+  padding: 16px;
+}
+.decisionColumn.danger {
+  border: 1px solid rgba(220, 38, 38, 0.12);
+  background: linear-gradient(180deg, rgba(254,242,242,0.95), #fff 54%);
+}
+.decisionColumn.warning {
+  border: 1px solid rgba(217, 119, 6, 0.12);
+  background: linear-gradient(180deg, rgba(255,251,235,0.95), #fff 54%);
+}
+.decisionColumn.success {
+  border: 1px solid rgba(22, 163, 74, 0.12);
+  background: linear-gradient(180deg, rgba(240,253,244,0.95), #fff 54%);
+}
+.decisionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.decisionCount {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+.decisionList {
+  display: grid;
+  gap: 10px;
+}
+.decisionItemLink,
+.decisionItemStatic {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.82);
+  padding: 12px;
+}
+.decisionItemTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+.decisionItemMeta {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #475569;
+}
+.traceChipLive {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.18);
+  color: #1d4ed8;
+}
+.fieldTimeline {
+  display: grid;
+  gap: 10px;
+}
+.fieldTimelineItem {
+  display: grid;
+  grid-template-columns: 72px 34px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255,255,255,0.78);
+}
+.fieldTimelineTime {
+  font-size: 12px;
+  color: #64748b;
+}
+.fieldTimelineDot {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.04);
+  font-size: 15px;
+}
+.fieldTimelineContent {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+}
+.fieldObjectPanel {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  color: #334155;
+}
+@media (max-width: 1100px) {
+  .dashboardDecisionBoard {
+    grid-template-columns: 1fr;
+  }
+  .fieldTimelineItem {
+    grid-template-columns: 64px 32px 1fr;
+  }
+}

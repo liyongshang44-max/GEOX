@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import ErrorState from "../components/common/ErrorState";
@@ -19,7 +20,7 @@ const COPY = {
   executionEvidence: "执行证据",
   acceptanceResult: "验收结果",
   timeline: "全链路时间线",
-} as const;
+};
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
   const finalStatus = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
@@ -40,30 +41,28 @@ export default function OperationDetailPage(): React.ReactElement {
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
 
   if (loading) return <SectionSkeleton kind="detail" />;
-  if (error || !detail) return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
+  if (error || !detail) {
+    return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
+  }
+
   const model = buildOperationDetailViewModel(detail);
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
-  const actionLabel = mapOperationActionLabel(model.execution.actionType || model.actionLabel);
+  const actionLabel = mapOperationActionLabel(model.actionLabel);
   const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(model.execution.deviceId || model.deviceLabel, model.deviceLabel);
-  const minimumAcceptanceLabel = !model.receiptEvidence
-    ? "待回传执行证据"
-    : model.receiptEvidence.constraintCheckLabel === "符合约束"
-      ? "已满足（已回传证据且符合约束）"
-      : "未满足（需人工复核）";
   const resultSummary = buildResultSummary(model);
 
   return (
-    <div className="productPage operationDetailPageV3" style={{ display: "grid", gap: 14 }}>
-      <section className="card sectionBlock detailHeroCard detailHeroCardV3">
+    <div className="demoDashboardPage">
+      <section className="card detailHeroCard detailHeroCardV3">
         <div className="sectionHeader">
           <div>
             <div className="eyebrow">GEOX / 作业复盘页</div>
-            <h1 className="pageTitle" style={{ marginBottom: 6 }}>{actionLabel} · {fieldLabel} · {topStatusLabel}</h1>
-            <div className="pageLead">{resultSummary}</div>
+            <h1 className="demoHeroTitle" style={{ marginTop: 6 }}>{actionLabel} · {fieldLabel}</h1>
+            <p className="demoHeroSubTitle">{resultSummary}</p>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="statusTag tone-neutral">{topStatusLabel}</span>
+            <span className="traceChip traceChipLive">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
@@ -76,7 +75,7 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最新更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
 
-        <details className="traceDetails" style={{ marginTop: 14 }}>
+        <details className="traceDetails">
           <summary>技术追踪信息</summary>
           <div className="traceGrid">
             <span>建议编号：{model.technicalRefs.recommendationId}</span>
@@ -87,27 +86,41 @@ export default function OperationDetailPage(): React.ReactElement {
         </details>
       </section>
 
-      <OperationDecisionCard model={model} />
-      <OperationExecutionCard model={model} />
-      <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
-
-      <section className="card sectionBlock detailEvidenceCardV3">
-        <div className="sectionTitle">{COPY.executionEvidence}</div>
-        <div className="muted detailSectionLead">优先查看最近一次回执、资源消耗和约束校验，再决定是否需要人工复核。</div>
-        <ReceiptEvidenceCard data={model.receiptEvidence} />
+      <section className="demoContentGrid">
+        <OperationDecisionCard model={model} />
+        <OperationExecutionCard model={model} />
       </section>
 
-      <section className="card sectionBlock detailAcceptanceCardV3">
-        <div className="sectionTitle">{COPY.acceptanceResult}</div>
-        <div className="kv"><span className="k">最终结果</span><span className="v">{model.execution.finalStatusLabel}</span></div>
-        <div className="kv"><span className="k">约束校验</span><span className="v">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</span></div>
-        {model.receiptEvidence?.violationSummary ? (
-          <div className="kv"><span className="k">风险提示</span><span className="v">{model.receiptEvidence.violationSummary}</span></div>
-        ) : null}
-        <div className="kv"><span className="k">最低验收</span><span className="v">{minimumAcceptanceLabel}</span></div>
+      <section className="demoContentGrid">
+        <OperationEvidenceDownloadCard model={model} title={COPY.evidenceBundle} />
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">{COPY.executionEvidence}</div>
+            <div className="detailSectionLead">先看最近一次回执、资源消耗和约束校验，再决定是否需要人工复核或补执行。</div>
+          </div>
+          <ReceiptEvidenceCard data={model.receiptEvidence} />
+        </section>
       </section>
 
-      <OperationStoryTimeline items={model.timeline} title={COPY.timeline} />
+      <section className="card detailHeroCard">
+        <div className="demoSectionHeader">
+          <div className="sectionTitle">{COPY.acceptanceResult}</div>
+          <div className="detailSectionLead">把最终结果、约束校验和最低验收标准放在同一块，方便快速判断是否需要人工复核。</div>
+        </div>
+        <div className="decisionList">
+          <div className="decisionItemStatic"><div className="decisionItemTitle">最终结果</div><div className="decisionItemMeta">{model.execution.finalStatusLabel}</div></div>
+          <div className="decisionItemStatic"><div className="decisionItemTitle">约束校验</div><div className="decisionItemMeta">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</div></div>
+          {model.receiptEvidence?.violationSummary ? <div className="decisionItemStatic"><div className="decisionItemTitle">风险提示</div><div className="decisionItemMeta">{model.receiptEvidence.violationSummary}</div></div> : null}
+        </div>
+      </section>
+
+      <section className="card detailHeroCard">
+        <div className="demoSectionHeader">
+          <div className="sectionTitle">{COPY.timeline}</div>
+          <div className="detailSectionLead">从建议、审批到执行与回执，按顺序复盘整条链路。</div>
+        </div>
+        <OperationStoryTimeline items={model.timeline} title="" />
+      </section>
     </div>
   );
 }

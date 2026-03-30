@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchProgramPortfolio } from "../api";
@@ -15,11 +16,9 @@ function toText(v: unknown, fallback = ""): string {
 
 function planName(item: any): string {
   const title = toText(item?.title || item?.display_name || item?.program_name, "");
-  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) {
-    return title;
-  }
+  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) return title;
   const crop = toText(item?.crop_name || item?.crop_code, "");
-  return crop ? `${crop}种植方案` : "默认经营方案";
+  return crop ? `${crop}经营方案` : "默认经营方案";
 }
 
 function fieldLabel(item: any): string {
@@ -37,23 +36,23 @@ function riskLabel(item: any): "高风险" | "中风险" | "低风险" {
   return "低风险";
 }
 
-function stageLabel(item: any): "运行中" | "待执行" | "异常" {
+function stageLabel(item: any): "运行中" | "待决策" | "异常" {
   const status = String(item?.status || "").toUpperCase();
   const mode = String(item?.next_action_hint?.mode || item?.next_action_hint?.decision_mode || "").toUpperCase();
   if (status.includes("FAILED") || status.includes("ERROR") || mode.includes("BLOCKED")) return "异常";
-  if (mode.includes("APPROVAL") || status.includes("PENDING")) return "待执行";
+  if (mode.includes("APPROVAL") || status.includes("PENDING")) return "待决策";
   return "运行中";
 }
 
 function nextSuggestion(item: any): string {
   const hint = toText(item?.next_action_hint?.human_summary || item?.next_action_hint?.expected_effect, "");
-  return hint || "等待下一轮评估";
+  return hint || "等待下一轮系统评估";
 }
 
-function badgeClass(stage: string): string {
-  if (stage === "异常") return "bg-red-50 text-red-700";
-  if (stage === "待执行") return "bg-amber-50 text-amber-700";
-  return "bg-blue-50 text-blue-700";
+function tone(stage: string): "danger" | "warning" | "success" {
+  if (stage === "异常") return "danger";
+  if (stage === "待决策") return "warning";
+  return "success";
 }
 
 export default function ProgramListPage(): React.ReactElement {
@@ -92,21 +91,66 @@ export default function ProgramListPage(): React.ReactElement {
     });
   }, [items, statusFilter, fieldFilter, riskFilter]);
 
+  const stats = React.useMemo(() => ({
+    total: filtered.length,
+    running: filtered.filter((x) => stageLabel(x) === "运行中").length,
+    waiting: filtered.filter((x) => stageLabel(x) === "待决策").length,
+    risk: filtered.filter((x) => riskLabel(x) === "高风险").length,
+  }), [filtered]);
+
+  const groups = React.useMemo(() => ({
+    danger: filtered.filter((x) => stageLabel(x) === "异常" || riskLabel(x) === "高风险"),
+    warning: filtered.filter((x) => stageLabel(x) === "待决策" && riskLabel(x) !== "高风险"),
+    success: filtered.filter((x) => stageLabel(x) === "运行中" && riskLabel(x) !== "高风险"),
+  }), [filtered]);
+
   return (
-    <div className="productPage">
-      <section className="card sectionBlock">
-        <div className="sectionHeader">
-          <div>
-            <div className="sectionTitle">经营方案列表</div>
-            <div className="muted">结果数：{loading ? "-" : filtered.length}</div>
-          </div>
-          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
+    <div className="demoDashboardPage">
+      <section className="card demoHero dashboardHeroV2">
+        <div className="eyebrow">GEOX / 经营方案页</div>
+        <h1 className="demoHeroTitle">今天重点推进哪些方案</h1>
+        <p className="demoHeroSubTitle">
+          先看高风险和待决策方案，再看正在稳定运行的方案。这个页面不是方案档案，而是经营推进入口。
+        </p>
+        <div className="operationsSummaryActions">
+          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新方案</button>
+          <Link className="btn" to="/agronomy">查看农业建议</Link>
+        </div>
+      </section>
+
+      <section className="summaryGrid4 demoSummaryGrid">
+        <article className="card demoMetricCard">
+          <div className="demoMetricLabel">方案总数</div>
+          <div className="demoMetricValue">{stats.total}</div>
+          <div className="demoMetricHint">当前筛选结果中的经营方案数量。</div>
+        </article>
+        <article className="card demoMetricCard">
+          <div className="demoMetricLabel">运行中</div>
+          <div className="demoMetricValue">{stats.running}</div>
+          <div className="demoMetricHint">已进入持续推进阶段的方案。</div>
+        </article>
+        <article className="card demoMetricCard">
+          <div className="demoMetricLabel">待决策</div>
+          <div className="demoMetricValue">{stats.waiting}</div>
+          <div className="demoMetricHint">建议优先进入人工判断或审批链。</div>
+        </article>
+        <article className="card demoMetricCard">
+          <div className="demoMetricLabel">高风险</div>
+          <div className="demoMetricValue">{stats.risk}</div>
+          <div className="demoMetricHint">需要今天优先盯住的方案。</div>
+        </article>
+      </section>
+
+      <section className="card detailHeroCard">
+        <div className="demoSectionHeader">
+          <div className="sectionTitle">筛选条件</div>
+          <div className="sectionDesc">按阶段、田块和风险锁定今天要推进的经营方案。</div>
         </div>
         <div className="toolbarFilters">
           <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="ALL">阶段（全部）</option>
             <option value="运行中">运行中</option>
-            <option value="待执行">待执行</option>
+            <option value="待决策">待决策</option>
             <option value="异常">异常</option>
           </select>
           <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
@@ -122,31 +166,42 @@ export default function ProgramListPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="list modernList">
-        {filtered.map((p, idx) => {
-          const pid = String(p?.program_id || p?.id || "");
-          const stage = stageLabel(p);
+      <section className="dashboardDecisionBoard">
+        {(["danger","warning","success"] as const).map((key) => {
+          const title = key === "danger" ? "必须推进" : key === "warning" ? "建议推进" : "稳定运行";
+          const subtitle = key === "danger" ? "高风险或异常方案，建议优先人工处理。" :
+            key === "warning" ? "待决策方案，适合今天继续推进。" :
+            "已稳定运行，可继续观察结果与证据。";
+          const list = groups[key];
           return (
-            <article key={pid || idx} className="infoCard">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <strong>方案概览</strong>
-                <span className={`text-sm px-3 py-1 rounded ${badgeClass(stage)}`}>{stage}</span>
+            <article key={key} className={`card decisionColumn ${key}`}>
+              <div className="decisionHeader">
+                <div>
+                  <div className="sectionTitle">{title}</div>
+                  <div className="sectionDesc">{subtitle}</div>
+                </div>
+                <div className="decisionCount">{list.length}</div>
               </div>
-
-              <div className="kv"><span className="k">方案名称</span><span className="v">{planName(p)}</span></div>
-              <div className="kv"><span className="k">所属田块</span><span className="v">{fieldLabel(p)}</span></div>
-              <div className="kv"><span className="k">当前阶段</span><span className="v">{stage}</span></div>
-              <div className="kv"><span className="k">风险等级</span><span className="v">{riskLabel(p)}</span></div>
-              <div className="kv"><span className="k">下一步建议</span><span className="v">{nextSuggestion(p)}</span></div>
-
-              <div style={{ marginTop: 10 }}>
-                <Link className="btn" to={`/programs/${encodeURIComponent(pid)}`}>查看详情</Link>
+              <div className="decisionList">
+                {list.slice(0, 6).map((p) => (
+                  <Link key={String(p?.program_id || p?.id)} to={`/programs/${encodeURIComponent(String(p?.program_id || p?.id || ""))}`} className="decisionItemLink">
+                    <div className="decisionItemTitle">{planName(p)}</div>
+                    <div className="decisionItemMeta">
+                      {fieldLabel(p)} · {riskLabel(p)} · {nextSuggestion(p)}
+                    </div>
+                    <div className="decisionItemMeta" style={{ marginTop: 8 }}>
+                      最近更新：<RelativeTime value={p?.updated_at || p?.updated_ts_ms} />
+                    </div>
+                  </Link>
+                ))}
+                {!loading && !list.length ? <div className="decisionItemStatic">当前没有对应方案</div> : null}
               </div>
             </article>
           );
         })}
-        {!loading && !filtered.length ? <EmptyState title="暂无可展示经营方案" description="请调整筛选条件或稍后刷新" /> : null}
       </section>
+
+      {!loading && !filtered.length ? <EmptyState title="暂无可展示经营方案" description="请调整筛选条件或稍后刷新。" /> : null}
     </div>
   );
 }

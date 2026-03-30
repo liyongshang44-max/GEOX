@@ -1,4 +1,5 @@
-﻿import React from "react";
+
+import React from "react";
 import { useSession } from "../auth/useSession";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -32,50 +33,25 @@ import { formatTimeOrFallback } from "../lib/presentation/time";
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
 }
-
 function prettyValue(vn: number | null, vt: string | null): string {
   return typeof vn === "number" && Number.isFinite(vn) ? String(vn) : (vt || "-");
 }
-
-type BoundFieldInfo = {
-  field_id: string | null;
-  bound_ts_ms: number | null;
-};
-
-type NamedSettled<T = unknown> =
-  | { name: string; status: "fulfilled"; value: T }
-  | { name: string; status: "rejected"; reason: unknown };
+type BoundFieldInfo = { field_id: string | null; bound_ts_ms: number | null };
+type NamedSettled<T = unknown> = { name: string; status: "fulfilled"; value: T } | { name: string; status: "rejected"; reason: unknown };
 
 function withTimeout<T>(name: string, promise: Promise<T>, ms = 8000): Promise<NamedSettled<T>> {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      resolve({ name, status: "rejected", reason: new Error(`TIMEOUT:${name}`) });
-    }, ms);
-
-    promise
-      .then((value) => {
-        clearTimeout(timer);
-        resolve({ name, status: "fulfilled", value });
-      })
-      .catch((reason) => {
-        clearTimeout(timer);
-        resolve({ name, status: "rejected", reason });
-      });
+    const timer = setTimeout(() => resolve({ name, status: "rejected", reason: new Error(`TIMEOUT:${name}`) }), ms);
+    promise.then((value) => { clearTimeout(timer); resolve({ name, status: "fulfilled", value }); }).catch((reason) => { clearTimeout(timer); resolve({ name, status: "rejected", reason }); });
   });
 }
-
 async function resolveBoundFieldFromFields(token: string, deviceId: string): Promise<BoundFieldInfo> {
   const fields: FieldListItem[] = await fetchFields(token);
   for (const field of fields) {
     try {
       const detail: FieldDetail = await fetchFieldDetail(token, field.field_id);
       const matched = (detail.bound_devices || []).find((item: any) => item.device_id === deviceId);
-      if (matched) {
-        return {
-          field_id: field.field_id,
-          bound_ts_ms: matched.bound_ts_ms ?? null,
-        };
-      }
+      if (matched) return { field_id: field.field_id, bound_ts_ms: matched.bound_ts_ms ?? null };
     } catch {}
   }
   return { field_id: null, bound_ts_ms: null };
@@ -83,7 +59,6 @@ async function resolveBoundFieldFromFields(token: string, deviceId: string): Pro
 
 export default function DeviceDetailPage(): React.ReactElement {
   const { deviceId } = useParams();
-
   const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<DeviceDetail | null>(null);
   const [consoleView, setConsoleView] = React.useState<DeviceConsoleView | null>(null);
@@ -102,13 +77,10 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
+
   async function refresh(): Promise<void> {
     if (!deviceId) return;
-
-    setBusy(true);
-    setError(null);
-    setStatus(`正在读取设备 ${deviceId} ...`);
-
+    setBusy(true); setError(null); setStatus(`正在读取设备 ${deviceId} ...`);
     try {
       const results = await Promise.all([
         withTimeout("fetchDeviceDetail", fetchDeviceDetail(token, deviceId)),
@@ -121,462 +93,138 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchDevices", fetchDevices(token)),
         withTimeout("fetchFields", fetchFields(token)),
       ]);
-
       const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
-
-      const nextDetail =
-        byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
-
-      const nextConsole =
-        byName.fetchDeviceConsole?.status === "fulfilled" ? byName.fetchDeviceConsole.value : null;
-
-      const nextStatus =
-        byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
-      const nextControlPlane =
-        byName.fetchDeviceControlPlane?.status === "fulfilled" ? byName.fetchDeviceControlPlane.value : null;
-
-      const nextLatest =
-        byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
-
-      const nextMetrics =
-        byName.fetchTelemetryMetrics?.status === "fulfilled" ? byName.fetchTelemetryMetrics.value : [];
-
-      const nextSeries =
-        byName.fetchTelemetrySeries?.status === "fulfilled"
-          ? ((byName.fetchTelemetrySeries.value as any)?.series || (byName.fetchTelemetrySeries.value as any) || {})
-          : {};
-
-      const nextDevices =
-        byName.fetchDevices?.status === "fulfilled" ? byName.fetchDevices.value : [];
-
-      const nextFields =
-        byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
-
-      const matchedDevice =
-        nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
-
-      let boundFieldInfo: BoundFieldInfo = {
-        field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null,
-        bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null,
-      };
-
-      if (!boundFieldInfo.field_id && nextFields.length) {
-        boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
-      }
-
-      setDetail(nextDetail);
-      setConsoleView(nextConsole);
-      setControlPlane(nextControlPlane);
-      setStatusObj(nextStatus);
-      setDeviceListItem(matchedDevice);
-      setResolvedBoundField(boundFieldInfo);
-      setLatest(nextLatest);
-      setMetrics(nextMetrics);
-      setSeries(nextSeries);
-      setAvailableFields(nextFields as FieldListItem[]);
-      setBindFieldId(String(boundFieldInfo.field_id || ""));
-      setStatus(`设备 ${deviceId} 已加载。`);
+      const nextDetail = byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
+      const nextConsole = byName.fetchDeviceConsole?.status === "fulfilled" ? byName.fetchDeviceConsole.value : null;
+      const nextStatus = byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
+      const nextControlPlane = byName.fetchDeviceControlPlane?.status === "fulfilled" ? byName.fetchDeviceControlPlane.value : null;
+      const nextLatest = byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
+      const nextMetrics = byName.fetchTelemetryMetrics?.status === "fulfilled" ? byName.fetchTelemetryMetrics.value : [];
+      const nextSeries = byName.fetchTelemetrySeries?.status === "fulfilled" ? ((byName.fetchTelemetrySeries.value as any)?.series || (byName.fetchTelemetrySeries.value as any) || {}) : {};
+      const nextDevices = byName.fetchDevices?.status === "fulfilled" ? byName.fetchDevices.value : [];
+      const nextFields = byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
+      const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
+      let boundFieldInfo: BoundFieldInfo = { field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null, bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null };
+      if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
+      setDetail(nextDetail); setConsoleView(nextConsole); setControlPlane(nextControlPlane); setStatusObj(nextStatus); setDeviceListItem(matchedDevice); setResolvedBoundField(boundFieldInfo); setLatest(nextLatest); setMetrics(nextMetrics); setSeries(nextSeries); setAvailableFields(nextFields as FieldListItem[]); setBindFieldId(String(boundFieldInfo.field_id || "")); setStatus(`设备 ${deviceId} 已加载。`);
     } catch (e: any) {
-      setError("设备详情加载失败，请稍后重试");
-      setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
+      setError("设备详情加载失败，请稍后重试"); setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally { setBusy(false); }
   }
 
   async function handleIssueCredential(): Promise<void> {
     if (!deviceId) return;
-    setBusy(true);
-    setIssuedSecret("");
-    setIssuedCredentialId("");
-    setStatus(`正在为 ${deviceId} 签发凭据...`);
+    setBusy(true); setIssuedSecret(""); setIssuedCredentialId(""); setStatus(`正在为 ${deviceId} 签发凭据...`);
     try {
-      const created = await issueDeviceCredential(
-        token,
-        deviceId,
-        newCredentialId.trim() ? { credential_id: newCredentialId.trim() } : {},
-      );
-      setIssuedSecret(String(created?.credential_secret || ""));
-      setIssuedCredentialId(String(created?.credential_id || ""));
-      setNewCredentialId("");
-      await refresh();
-      setStatus(`凭据已签发：${created?.credential_id || "-"}`);
-    } catch (e: any) {
-      setStatus(`签发失败：${e?.bodyText || e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
+      const created = await issueDeviceCredential(token, deviceId, newCredentialId.trim() ? { credential_id: newCredentialId.trim() } : {});
+      setIssuedSecret(String(created?.credential_secret || "")); setIssuedCredentialId(String(created?.credential_id || "")); setNewCredentialId(""); await refresh(); setStatus(`凭据已签发：${created?.credential_id || "-"}`);
+    } catch (e: any) { setStatus(`签发失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
-
   async function handleRevokeCredential(credentialId: string): Promise<void> {
     if (!deviceId || !credentialId) return;
-    setBusy(true);
-    setStatus(`正在撤销凭据 ${credentialId} ...`);
-    try {
-      await revokeDeviceCredential(token, deviceId, credentialId);
-      await refresh();
-      setStatus(`凭据已撤销：${credentialId}`);
-    } catch (e: any) {
-      setStatus(`撤销失败：${e?.bodyText || e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setStatus(`正在撤销凭据 ${credentialId} ...`);
+    try { await revokeDeviceCredential(token, deviceId, credentialId); await refresh(); setStatus(`凭据已撤销：${credentialId}`); }
+    catch (e: any) { setStatus(`撤销失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
-
   async function handleBindField(): Promise<void> {
     if (!deviceId || !bindFieldId.trim()) return;
-    setBusy(true);
-    setStatus(`正在绑定到田块 ${bindFieldId} ...`);
-    try {
-      await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() });
-      await refresh();
-      setStatus(`设备已绑定到田块：${bindFieldId}`);
-    } catch (e: any) {
-      setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
+    setBusy(true); setStatus(`正在绑定到田块 ${bindFieldId} ...`);
+    try { await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() }); await refresh(); setStatus(`设备已绑定到田块：${bindFieldId}`); }
+    catch (e: any) { setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
 
-  React.useEffect(() => {
-    void refresh();
-  }, [deviceId]);
+  React.useEffect(() => { void refresh(); }, [deviceId]);
 
-  const boundFieldId =
-    resolvedBoundField.field_id ||
-    deviceListItem?.field_id ||
-    (detail as any)?.device?.field_id ||
-    null;
-
-  const boundTsMs =
-    resolvedBoundField.bound_ts_ms ||
-    deviceListItem?.bound_ts_ms ||
-    (detail as any)?.device?.bound_ts_ms ||
-    null;
-
-  const cp = (controlPlane as any)?.item;
-  const hero = cp?.device;
-  const cpSummary = cp?.summary;
-  const cpOverview = cp?.overview;
-  const cpConnectivity = cp?.connectivity;
+  const boundFieldId = resolvedBoundField.field_id || deviceListItem?.field_id || (detail as any)?.device?.field_id || null;
+  const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
+  const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
+  const recentLatest = latest[0]; const statusLabel = hero?.status?.label || statusObj?.status || "-";
+  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
+  const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
 
   return (
-    <div className="consolePage">
-      <section className="hero card compactHero">
-        <div>
-          <div className="eyebrow">设备详情</div>
-          <h2 className="heroTitle">{hero?.title || (detail as any)?.device?.display_name || deviceId || "设备详情"}</h2>
-          <p className="heroText">
-            {hero?.subtitle || "用于查看设备在线状态、接入信息、最近命令与执行回执。"}
-          </p>
-          <div className="muted">状态：{hero?.status?.label || statusObj?.status || "-"} · 更新：{hero?.updated_at_label || "-"}</div>
+    <div className="demoDashboardPage">
+      <section className="card demoHero detailHeroCard">
+        <div className="eyebrow">GEOX / 设备控制台</div>
+        <div className="demoCardTopRow" style={{ alignItems: "flex-start", marginTop: 8 }}>
+          <div>
+            <h1 className="demoHeroTitle">{hero?.title || (detail as any)?.device?.display_name || deviceId || "设备详情"}</h1>
+            <p className="demoHeroSubTitle">{hero?.subtitle || "用于查看设备在线状态、接入信息、最近命令与执行回执。"}</p>
+            <div className="demoMetricHint">{summaryLead}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span className="traceChip traceChipLive">{statusLabel}</span>
+            <Link className="btn" to="/devices">返回设备列表</Link>
+            <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
+          </div>
         </div>
-        <div className="heroActions">
-          <Link className="btn" to="/devices">返回设备列表</Link>
-          <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新详情</button>
+        <div className="operationsSummaryGrid" style={{ marginTop: 16 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">在线状态</span><strong>{statusLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">绑定田块</span><strong>{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近命令</span><strong>{cpSummary?.recent_commands?.count ?? consoleView?.recent_commands?.length ?? 0}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近回执</span><strong>{cpSummary?.recent_receipts?.count ?? consoleView?.recent_receipts?.length ?? 0}</strong></div>
+        </div>
+        <div className="operationsSummaryActions">
+          <Link className="btn" to={fieldHref}>查看绑定田块</Link>
+          <Link className="btn" to="/operations">查看作业中心</Link>
         </div>
       </section>
+
       {error ? <ErrorState title="设备详情暂不可用" message={error} technical={status} onRetry={() => void refresh()} /> : null}
 
-      <div className="summaryGrid">
-        <div className="metricCard card">
-          <div className="metricLabel">在线状态</div>
-          <div className="metricValue">{cpSummary?.online_status?.label || statusObj?.status || "-"}</div>
-          <div className="metricHint">最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div>
+      <section className="demoContentGrid">
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader"><div className="sectionTitle">现场状态</div><div className="detailSectionLead">先判断这台设备当前是否可联动、是否绑定到了正确田块，以及最近是否还在稳定回传数据。</div></div>
+          <div className="decisionList">
+            <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusLabel} · 最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div></div>
+          </div>
+          <div className="traceChipRow" style={{ marginTop: 12 }}>
+            <span className="traceChip">最近遥测：{cpOverview?.last_telemetry_label || "-"}</span>
+            <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
+            <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
+            <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader"><div className="sectionTitle">接入信息</div><div className="detailSectionLead">给设备接入和调试同学看的最小信息面，只保留本轮接入一定会用到的关键 Topic。</div></div>
+          <div className="decisionList">
+            <div className="decisionItemStatic"><div className="decisionItemTitle">MQTT Client ID</div><div className="decisionItemMeta">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">遥测 / 心跳 Topic</div><div className="decisionItemMeta">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"} · {cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">下发 / 回执 Topic</div><div className="decisionItemMeta">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"} · {cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</div></div>
+          </div>
+        </section>
+      </section>
+
+      <section className="card detailHeroCard">
+        <div className="demoSectionHeader"><div className="sectionTitle">凭据与接入动作</div><div className="detailSectionLead">在同一屏里完成签发、撤销和绑定，避免交付同学在设备页与接入向导之间来回切换。</div></div>
+        <div className="decisionItemStatic" style={{ marginBottom: 12 }}>{consoleView?.access_info?.secret_warning || "设备密钥仅在签发时显示一次。"}</div>
+        <div className="toolbarFilters" style={{ marginBottom: 12 }}>
+          <input className="input" value={token} onChange={(e) => setToken(e.target.value)} placeholder="调试令牌" />
+          <input className="input" value={newCredentialId} onChange={(e) => setNewCredentialId(e.target.value)} placeholder="新凭据 ID（可选）" />
+          <select className="select" value={bindFieldId} onChange={(e) => setBindFieldId(e.target.value)}>
+            <option value="">选择田块</option>
+            {availableFields.map((field: any) => <option key={String(field.field_id)} value={String(field.field_id)}>{String(field.name || field.field_id)}</option>)}
+          </select>
         </div>
-
-        <div className="metricCard card">
-          <div className="metricLabel">绑定田块</div>
-          <div className="metricValue">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定"}</div>
-          <div className="metricHint">绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div>
+        <div className="operationsSummaryActions">
+          <button className="btn" onClick={() => void handleIssueCredential()} disabled={busy}>签发一次性密钥</button>
+          <button className="btn" onClick={() => void handleBindField()} disabled={busy || !bindFieldId.trim()}>绑定到田块</button>
         </div>
-
-        <div className="metricCard card">
-          <div className="metricLabel">最近命令</div>
-          <div className="metricValue">{cpSummary?.recent_commands?.count ?? consoleView?.recent_commands?.length ?? 0}</div>
-          <div className="metricHint">{cpSummary?.recent_commands?.label || "最近 20 条 device 定向下发"}</div>
-        </div>
-
-        <div className="metricCard card">
-          <div className="metricLabel">最近设备回执</div>
-          <div className="metricValue">{cpSummary?.recent_receipts?.count ?? consoleView?.recent_receipts?.length ?? 0}</div>
-          <div className="metricHint">{cpSummary?.recent_receipts?.label || "设备 ACK / 执行回执留痕"}</div>
-        </div>
-      </div>
-
-      <div className="contentGridTwo alignStart">
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">设备概览</div>
-              <div className="sectionDesc">展示设备在线、心跳、遥测与运行摘要信息。</div>
-            </div>
-          </div>
-
-          <label className="field">
-            访问令牌
-            <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
-          </label>
-
-          <div className="kv"><span className="k">设备 ID</span><span className="v">{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</span></div>
-          <div className="kv"><span className="k">显示名称</span><span className="v">{cpOverview?.display_name || (detail as any)?.device?.display_name || "-"}</span></div>
-          <div className="kv"><span className="k">在线状态</span><span className="v">{hero?.status?.label || "-"}</span></div>
-          <div className="kv"><span className="k">最近心跳</span><span className="v">{cpOverview?.last_heartbeat_label || "-"}</span></div>
-          <div className="kv"><span className="k">最近遥测</span><span className="v">{cpOverview?.last_telemetry_label || "-"}</span></div>
-          <div className="kv"><span className="k">电量</span><span className="v">{cpOverview?.battery_percent ?? "-"}%</span></div>
-          <div className="kv"><span className="k">页面状态</span><span className="v">{status}</span></div>
-          <div className="kv"><span className="k">绑定田块</span><span className="v">{boundFieldId || "未绑定"}</span></div>
-          <div className="kv"><span className="k">绑定时间</span><span className="v">{fmtTs(boundTsMs)}</span></div>
-        </section>
-
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">接入信息</div>
-              <div className="sectionDesc">给交付和设备侧同学看的最小接入向导。</div>
-            </div>
-          </div>
-
-          <div className="kv"><span className="k">MQTT Client ID</span><span className="v">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</span></div>
-          <div className="kv"><span className="k">遥测 Topic</span><span className="v">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"}</span></div>
-          <div className="kv"><span className="k">心跳 Topic</span><span className="v">{cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</span></div>
-          <div className="kv"><span className="k">下发 Topic</span><span className="v">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"}</span></div>
-          <div className="kv"><span className="k">回执 Topic</span><span className="v">{cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</span></div>
-          <div className="kv"><span className="k">协议版本</span><span className="v">{cpConnectivity?.protocol_version || consoleView?.access_info?.payload_contract_version || "-"}</span></div>
-        </section>
-      </div>
-
-      {Array.isArray(cp?.lifecycle_hints) && cp.lifecycle_hints.length ? (
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">生命周期提示</div>
-              <div className="sectionDesc">帮助快速判断当前设备可用性与接入状态。</div>
-            </div>
-          </div>
-          <div className="list modernList">
-            {cp.lifecycle_hints.map((hint: any, idx: number) => (
-              <div key={`${hint?.kind || "hint"}_${idx}`} className="infoCard">
-                <div className="title">{hint?.title || "-"}</div>
-                <div className="metaText">{hint?.description || "-"}</div>
+        {issuedSecret ? <div className="decisionItemStatic" style={{ marginTop: 12 }}><div className="decisionItemTitle">新凭据已签发：{issuedCredentialId || "-"}</div><div className="decisionItemMeta">请立即复制并下发到设备侧，平台不会再次返回明文 secret。</div><pre className="jsonPreview">{issuedSecret}</pre></div> : null}
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          {(consoleView?.credentials || []).map((item) => (
+            <div key={item.credential_id} className="decisionItemStatic">
+              <div className="demoCardTopRow">
+                <div><div className="decisionItemTitle">{item.credential_id}</div><div className="decisionItemMeta">签发：{fmtTs(item.issued_ts_ms)} · 撤销：{fmtTs(item.revoked_ts_ms)}</div></div>
+                <StatusBadge status={item.status} />
               </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <div className="contentGridTwo alignStart">
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">凭据与接入向导</div>
-              <div className="sectionDesc">直接在设备详情页完成签发、撤销与绑定，减少交付同学来回跳页。</div>
-            </div>
-          </div>
-
-          <div className="emptyState" style={{ marginBottom: 12 }}>
-            {consoleView?.access_info?.secret_warning || "设备密钥仅在签发时显示一次。"}
-          </div>
-
-          <div className="formGridTwo" style={{ marginBottom: 12 }}>
-            <label className="field">
-              <span>新凭据 ID（可选）</span>
-              <input className="input" value={newCredentialId} onChange={(e) => setNewCredentialId(e.target.value)} placeholder="cred_dev_demo_001" />
-            </label>
-
-            <div className="field">
-              <span>签发动作</span>
-              <div className="heroActions">
-                <button className="btn primary" onClick={() => void handleIssueCredential()} disabled={busy}>签发一次性密钥</button>
-              </div>
-            </div>
-
-            <label className="field">
-              <span>绑定田块</span>
-              <div style={{ fontSize: 12, color: "#666", marginBottom: 8 }}>
-                当前可绑定田块数：{availableFields.length}
-              </div>
-              <select className="select" value={bindFieldId} onChange={(e) => setBindFieldId(e.target.value)}>
-                <option value="">选择田块</option>
-                {availableFields.map((field: any) => (
-                  <option key={String(field.field_id)} value={String(field.field_id)}>
-                    {String(field.name || field.field_id)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="field">
-              <span>绑定动作</span>
-              <div className="heroActions">
-                <button className="btn" onClick={() => void handleBindField()} disabled={busy || !bindFieldId.trim()}>绑定到田块</button>
-              </div>
-            </div>
-          </div>
-
-          {issuedSecret ? (
-            <div className="infoCard" style={{ marginBottom: 12 }}>
-              <div className="jobTitleRow">
-                <div>
-                  <div className="title">新凭据已签发：{issuedCredentialId || "-"}</div>
-                  <div className="metaText">请立即复制并下发到设备侧，平台不会再次返回明文 secret。</div>
-                </div>
-                <div className="pill tone-warn">仅显示一次</div>
-              </div>
-              <pre className="jsonPreview">{issuedSecret}</pre>
-            </div>
-          ) : null}
-
-          <div className="list modernList">
-            {(consoleView?.credentials || []).map((item) => (
-              <div key={item.credential_id} className="infoCard">
-                <div className="jobTitleRow">
-                  <div className="title">{item.credential_id}</div>
-                  <StatusBadge status={item.status} />
-                </div>
-                <div className="meta">
-                  <span>签发：{fmtTs(item.issued_ts_ms)}</span>
-                  <span>撤销：{fmtTs(item.revoked_ts_ms)}</span>
-                </div>
-                <div className="heroActions" style={{ marginTop: 8 }}>
-                  <button className="btn" onClick={() => void handleRevokeCredential(String(item.credential_id))} disabled={busy || item.status !== "ACTIVE"}>撤销凭据</button>
-                </div>
-              </div>
-            ))}
-            {!(consoleView?.credentials || []).length ? <div className="emptyState">当前还没有凭据记录。</div> : null}
-          </div>
-        </section>
-
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">最近命令与设备回执</div>
-              <div className="sectionDesc">把设备侧真正关心的最后一公里放到同一屏。</div>
-            </div>
-          </div>
-
-          <div className="list modernList" style={{ marginBottom: 12 }}>
-            {(consoleView?.recent_commands || []).map((item) => (
-              <div key={`${item.act_task_id}_${item.outbox_fact_id}`} className="infoCard">
-                <div className="jobTitleRow">
-                  <div>
-                    <div className="title">{item.action_type || "命令"}</div>
-                    <div className="metaText">{item.act_task_id}</div>
-                  </div>
-                  <StatusBadge status={item.state} />
-                </div>
-                <div className="meta wrapMeta">
-                  <span>设备：{item.device_id}</span>
-                  <span>Topic：{item.downlink_topic || "-"}</span>
-                  <span>QoS：{item.qos}</span>
-                  <span>尝试：{item.attempt_count}</span>
-                  <span>创建：{fmtTs(item.created_ts_ms)}</span>
-                </div>
-              </div>
-            ))}
-            {!(consoleView?.recent_commands || []).length ? <div className="emptyState">当前还没有针对本设备的下发命令。</div> : null}
-          </div>
-
-          <div className="list modernList">
-            {(consoleView?.recent_receipts || []).map((item) => (
-              <div key={item.fact_id} className="infoCard">
-                <div className="jobTitleRow">
-                  <div>
-                    <div className="title">{item.act_task_id}</div>
-                    <div className="metaText">{item.fact_id}</div>
-                  </div>
-                  <StatusBadge status={item.status || "PENDING"} />
-                </div>
-                <div className="meta wrapMeta">
-                  <span>Uplink：{item.uplink_topic || "-"}</span>
-                  <span>Runtime：{item.adapter_runtime || "-"}</span>
-                  <span>时间：{fmtTs(item.created_ts_ms)}</span>
-                </div>
-              </div>
-            ))}
-            {!(consoleView?.recent_receipts || []).length ? <div className="emptyState">当前还没有本设备的 ACK / 执行回执。</div> : null}
-          </div>
-        </section>
-      </div>
-
-      <div className="contentGridTwo alignStart">
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">最新遥测</div>
-              <div className="sectionDesc">按 metric 展示最近值。</div>
-            </div>
-          </div>
-
-          <div className="list modernList">
-            {latest.map((item) => (
-              <div key={`${item.metric}_${item.fact_id}`} className="infoCard">
-                <div className="jobTitleRow">
-                  <div className="title">{item.metric}</div>
-                  <div className="pill tone-info">{prettyValue(item.value_num, item.value_text)}</div>
-                </div>
-                <div className="meta wrapMeta">
-                  <span>时间：{fmtTs(item.ts_ms)}</span>
-                  <span>fact：{item.fact_id}</span>
-                </div>
-              </div>
-            ))}
-            {!latest.length ? <div className="emptyState">当前没有最新遥测数据。</div> : null}
-          </div>
-        </section>
-
-        <section className="card sectionBlock">
-          <div className="sectionHeader">
-            <div>
-              <div className="sectionTitle">指标摘要</div>
-              <div className="sectionDesc">展示 count / min / max / avg / latest。</div>
-            </div>
-          </div>
-
-          <div className="list modernList">
-            {metrics.map((item) => (
-              <div key={item.metric} className="infoCard">
-                <div className="jobTitleRow">
-                  <div className="title">{item.metric}</div>
-                  <div className="pill tone-ok">{item.count} 点</div>
-                </div>
-                <div className="meta wrapMeta">
-                  <span>最新：{prettyValue(item.latest_value_num, item.latest_value_text)}</span>
-                  <span>最小：{item.min_value_num ?? "-"}</span>
-                  <span>最大：{item.max_value_num ?? "-"}</span>
-                  <span>均值：{item.avg_value_num ?? "-"}</span>
-                </div>
-              </div>
-            ))}
-            {!metrics.length ? <div className="emptyState">当前还没有可聚合的指标摘要。</div> : null}
-          </div>
-        </section>
-      </div>
-
-      <section className="card sectionBlock">
-        <div className="sectionHeader">
-          <div>
-            <div className="sectionTitle">最小趋势</div>
-            <div className="sectionDesc">本轮先用文本序列展示每个 metric 的最近点。</div>
-          </div>
-        </div>
-
-        <div className="list modernList">
-          {Object.entries(series).map(([metric, points]) => (
-            <div key={metric} className="infoCard">
-              <div className="jobTitleRow">
-                <div className="title">{metric}</div>
-                <div className="pill tone-info">{points.length} 点</div>
-              </div>
-              <div className="seriesPreview">
-                {points
-                  .slice(-8)
-                  .map((point) => `${fmtTs(point.ts_ms)} = ${prettyValue(point.value_num, point.value_text)}`)
-                  .join("\n")}
-              </div>
+              <div className="operationsSummaryActions"><button className="btn" onClick={() => void handleRevokeCredential(String(item.credential_id))} disabled={busy || item.status !== "ACTIVE"}>撤销凭据</button></div>
             </div>
           ))}
-          {!Object.keys(series).length ? <div className="emptyState">当前还没有可展示的趋势点。</div> : null}
+          {!(consoleView?.credentials || []).length ? <div className="decisionItemStatic">当前还没有凭据记录。</div> : null}
         </div>
       </section>
     </div>

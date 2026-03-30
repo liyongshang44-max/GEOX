@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useLocale } from "../../lib/locale";
 import type { OperationDetailPageVm } from "../../viewmodels/operationDetailViewModel";
@@ -5,15 +6,22 @@ import type { OperationDetailPageVm } from "../../viewmodels/operationDetailView
 export default function OperationExecutionCard({ model }: { model: OperationDetailPageVm }): React.ReactElement {
   const { text } = useLocale();
   return (
-    <section className="card sectionBlock geoxSectionCard">
-      <div className="sectionTitle">{text("执行计划", "Execution Plan")}</div>
-      <div className="kv"><span className="k">{text("动作", "Action")}</span><span className="v">{model.execution.actionType}</span></div>
-      <div className="kv"><span className="k">{text("设备", "Device")}</span><span className="v">{model.execution.deviceId}</span></div>
-      <div className="kv"><span className="k">{text("执行窗口", "Execution Window")}</span><span className="v">{model.execution.executionWindowLabel}</span></div>
-      <div className="kv"><span className="k">{text("下发时间", "Dispatched At")}</span><span className="v">{model.execution.dispatchedAtLabel}</span></div>
-      <div className="kv"><span className="k">{text("确认状态", "Ack Status")}</span><span className="v">{model.execution.ackStatusLabel}</span></div>
-      <div className="kv"><span className="k">{text("执行状态", "Progress")}</span><span className="v">{model.execution.progressLabel}</span></div>
-      <div className="kv"><span className="k">{text("最终结果", "Final Result")}</span><span className="v">{model.execution.finalStatusLabel}</span></div>
+    <section className="card sectionBlock geoxSectionCard operationExecutionCardV2">
+      <div className="sectionTitle">{text("系统如何执行", "How the system executed it")}</div>
+      <div className="muted detailSectionLead">
+        {text("把设备、执行窗口、确认状态与终态放在同一组，方便判断链路是否闭合。", "Device, execution window, acknowledgement, and final state are grouped together so you can judge whether the chain closed properly.")}
+      </div>
+      <div className="operationsSummaryGrid detailSummaryGridV4">
+        <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("动作", "Action")}</span><strong>{model.execution.actionType}</strong></div>
+        <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("设备", "Device")}</span><strong>{model.execution.deviceId}</strong></div>
+        <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("执行窗口", "Window")}</span><strong>{model.execution.executionWindowLabel}</strong></div>
+        <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("链路状态", "Pipeline state")}</span><strong>{model.execution.progressLabel}</strong></div>
+      </div>
+      <div className="traceChipRow" style={{ marginTop: 12 }}>
+        <span className="traceChip">{text("下发时间", "Dispatched")}：{model.execution.dispatchedAtLabel}</span>
+        <span className="traceChip">{text("确认状态", "Ack")}：{model.execution.ackStatusLabel}</span>
+        <span className="traceChip">{text("最终结果", "Final result")}：{model.execution.finalStatusLabel}</span>
+      </div>
     </section>
   );
 }
