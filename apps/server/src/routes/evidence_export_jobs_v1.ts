@@ -9,7 +9,7 @@
 // 
 // Scope (v1 MVP):
 // - scope_type: TENANT | DEVICE | FIELD
-// - artifact format: JSON bundle file (not zip) to avoid extra dependencies.
+// - artifact format: JSON / CSV / PDF (not zip) to avoid extra dependencies.
 // - Filtering: performed in application layer by parsing facts.record_json JSON (source of truth).
 // 
 // Security:
@@ -1007,25 +1007,95 @@ function pdfEscapeText(s: string): string { // Helper: escape PDF text control c
   return s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)"); // Escape backslash and parens.
 } // End helper.
 
-function buildEvidencePdf(bundle: any, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_language: ExportLanguage): Buffer { // Helper: generate a minimal one-page PDF summary.
+function buildCommercialReportLines(bundle: any, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_language: ExportLanguage): string[] { // Helper: build customer-facing report lines for PDF.
   const facts = Array.isArray(bundle?.facts) ? bundle.facts : []; // Facts list.
-  const title = export_language === "en-US" ? "GEOX Evidence Export Summary" : "GEOX Evidence Export Summary"; // Localized title kept ASCII-safe for the built-in font.
-  const lines = [ // Human-readable summary lines.
+  const operationBundles = Array.isArray(bundle?.operation_bundles) ? bundle.operation_bundles : []; // Operation chains.
+  const acceptanceResults = Array.isArray(bundle?.acceptance_results) ? bundle.acceptance_results : []; // Acceptance rows.
+  const title = export_language === "en-US" ? "GEOX Commercial Report (Evidence Bundle)" : "GEOX 商业报告（证据包）";
+  const lines: string[] = [
     title,
     `Tenant: ${bundle?.meta?.tenant_id ?? "-"}`,
     `Scope: ${scope.scope_type}${scope.scope_id ? `:${scope.scope_id}` : ""}`,
     `Window: ${new Date(from_ts_ms).toISOString()} -> ${new Date(to_ts_ms).toISOString()}`,
-    `Facts exported: ${facts.length}`,
     `Language: ${export_language}`,
     `Built at: ${new Date(bundle?.meta?.built_at_ts_ms ?? Date.now()).toISOString()}`,
-  ]; // End lines.
+    "",
+    "[地块 / Field]",
+    `Field ID: ${bundle?.snapshot?.field?.field_id ?? bundle?.snapshot?.field?.id ?? scope.scope_id ?? "-"}`,
+    `Field Name: ${bundle?.snapshot?.field?.name ?? bundle?.snapshot?.field?.field_name ?? "-"}`,
+    `Area(ha): ${bundle?.snapshot?.field?.area_ha ?? "-"}`,
+    "",
+    `[作业 / Operations] total=${operationBundles.length}`,
+  ];
 
-  const streamLines: string[] = ["BT", "/F1 18 Tf", "50 780 Td"]; // PDF text operators.
-  for (let i = 0; i < lines.length; i += 1) { // Emit lines top-to-bottom.
-    const text = pdfEscapeText(String(lines[i] ?? "")); // Escape text for PDF literal string.
-    if (i > 0) streamLines.push("0 -24 Td"); // Move down for each next line.
+  for (let i = 0; i < Math.min(5, operationBundles.length); i += 1) { // Keep concise for customer readable output.
+    const row = operationBundles[i];
+    const b = row?.operation_bundle ?? {};
+    const plan = b?.operation_plan?.payload ?? {};
+    const task = b?.task?.payload ?? {};
+    const receipt = b?.receipt?.payload ?? {};
+    const operationId = row?.operation_plan_id ?? plan?.operation_plan_id ?? "-";
+    lines.push(`- OP#${i + 1}: ${operationId} status=${task?.status ?? receipt?.status ?? plan?.status ?? "-"}`);
+    lines.push(`  action=${plan?.action_type ?? task?.action_type ?? "-"}`);
+  }
+  if (operationBundles.length > 5) lines.push(`... +${operationBundles.length - 5} more operations`);
+
+  const executorRows = operationBundles.map((x: any) => {
+    const taskPayload = x?.operation_bundle?.task?.payload ?? {};
+    const receiptPayload = x?.operation_bundle?.receipt?.payload ?? {};
+    const executor = taskPayload?.executor_label ?? taskPayload?.executor_id ?? receiptPayload?.executor_label ?? receiptPayload?.operator_id ?? "UNKNOWN";
+    return String(executor);
+  }).filter((x: string) => x && x !== "UNKNOWN");
+  const uniqueExecutors = Array.from(new Set(executorRows));
+  lines.push("");
+  lines.push("[执行者 / Executors]");
+  lines.push(`Count: ${uniqueExecutors.length}`);
+  if (uniqueExecutors.length > 0) lines.push(`Top: ${uniqueExecutors.slice(0, 6).join(", ")}`);
+
+  const receiptFacts = facts.filter((f: any) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(f?.record_json?.type ?? "")));
+  lines.push("");
+  lines.push("[证据 / Evidence]");
+  lines.push(`Facts exported: ${facts.length}`);
+  lines.push(`Receipt evidence count: ${receiptFacts.length}`);
+  lines.push(`Acceptance records: ${acceptanceResults.length}`);
+
+  lines.push("");
+  lines.push("[验收结果 / Acceptance]");
+  const passCount = acceptanceResults.filter((x: any) => String(x?.record_json?.payload?.verdict ?? "").toUpperCase() === "PASS").length;
+  const failCount = acceptanceResults.filter((x: any) => String(x?.record_json?.payload?.verdict ?? "").toUpperCase() === "FAIL").length;
+  const pendingCount = Math.max(0, operationBundles.length - passCount - failCount);
+  lines.push(`PASS=${passCount} FAIL=${failCount} PENDING=${pendingCount}`);
+
+  lines.push("");
+  lines.push("[时间线 / Timeline]");
+  let timelineAdded = 0;
+  for (const row of operationBundles) {
+    const operationId = String(row?.operation_plan_id ?? "-");
+    const timeline = Array.isArray(row?.operation_bundle?.timeline) ? row.operation_bundle.timeline : [];
+    for (const t of timeline.slice(0, 4)) {
+      lines.push(`${operationId} | ${t?.ts ?? "-"} | ${t?.type ?? "-"} ${t?.status ?? t?.decision ?? ""}`.trim());
+      timelineAdded += 1;
+      if (timelineAdded >= 16) break;
+    }
+    if (timelineAdded >= 16) break;
+  }
+  if (timelineAdded === 0) lines.push("No timeline events");
+
+  return lines;
+}
+
+function buildEvidencePdf(bundle: any, scope: ExportScope, from_ts_ms: number, to_ts_ms: number, export_language: ExportLanguage): Buffer { // Helper: generate a minimal customer-facing PDF report.
+  const lines = buildCommercialReportLines(bundle, scope, from_ts_ms, to_ts_ms, export_language); // Expand report sections for business handoff.
+  const maxLines = 42; // Keep one-page simple layout for now.
+  const renderLines = lines.slice(0, maxLines);
+  if (lines.length > maxLines) renderLines.push(`...truncated, total lines=${lines.length}`);
+
+  const streamLines: string[] = ["BT", "/F1 12 Tf", "40 780 Td"]; // PDF text operators.
+  for (let i = 0; i < renderLines.length; i += 1) { // Emit lines top-to-bottom.
+    const text = pdfEscapeText(String(renderLines[i] ?? "")); // Escape text for PDF literal string.
+    if (i > 0) streamLines.push("0 -16 Td"); // Move down for each next line.
     streamLines.push(`(${text}) Tj`); // Draw one text line.
-  } // End loop.
+  }
   streamLines.push("ET"); // End text block.
   const stream = streamLines.join("\n"); // Final page content stream.
 
