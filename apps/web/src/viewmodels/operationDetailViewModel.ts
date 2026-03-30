@@ -117,6 +117,7 @@ function mapStatusLabel(raw: unknown): string {
   if (key === "ACKED") return "已确认执行";
   if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
   if (key === "FAILED" || key === "ERROR") return "执行失败";
+  if (key === "INVALID_EXECUTION") return "执行无效";
   if (key === "NOT_EXECUTED") return "未执行";
   return toText(raw, "待推进");
 }
@@ -147,8 +148,9 @@ function buildExpectedOutcomeLabel(detail: any): string {
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
   const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：未提供证据，无法完成验收";
   if (!receipt) {
-    return finalStatus ? `当前处于${mapStatusLabel(finalStatus)}阶段，仍在等待设备回传最终证据` : "尚未回传执行证据";
+    return "⚠️ 执行无效：未提供证据，无法完成验收";
   }
   if (receipt.constraintCheckLabel === "符合约束") {
     return "现场已回传执行结果，系统判断本次执行符合约束";
@@ -446,7 +448,7 @@ export function buildOperationDetailViewModel(args?: {
           ? receipt.violationSummary
           : receipt
             ? "已回传执行证据，等待最终验收结论。"
-            : "尚未回传执行证据。",
+            : "⚠️ 执行无效：未提供证据，无法完成验收。",
       ),
     },
   };

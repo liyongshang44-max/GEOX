@@ -32,6 +32,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const d = useDashboard(api);
 
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
+  const invalidExecutionTasks = d.actions.filter((x) => x.finalStatus === "invalid");
   const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
   const riskAlerts = d.riskItems;
   const acceptanceTasks = d.evidences
@@ -78,6 +79,13 @@ export default function CommercialDashboardPage(): React.ReactElement {
       detail: "作业已回执，需完成 PASS/FAIL 判定",
       status: "待验收",
       href: x?.href || "/operations?status=done_unaccepted",
+    })),
+    ...invalidExecutionTasks.slice(0, 2).map((x, idx) => ({
+      id: `invalid_${x.id}_${idx}`,
+      title: `执行无效：${x.actionLabel}`,
+      detail: "缺少有效证据，无法进入验收",
+      status: "需补证据",
+      href: x.href || "/operations",
     })),
   ].slice(0, 6);
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
@@ -240,10 +248,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
           </div>
         </article>
 
+        <article className="card decisionColumn danger">
+          <div className="decisionHeader">
+            <div>
+              <div className="sectionTitle">⑥ 无效执行任务</div>
+              <div className="sectionDesc">已执行但证据无效，禁止进入验收。</div>
+            </div>
+            <div className="decisionCount">{invalidExecutionTasks.length}</div>
+          </div>
+          <div className="decisionList">
+            {invalidExecutionTasks.slice(0, 4).map((item) => (
+              <Link key={item.id} to={item.href || "/operations"} className="decisionItemLink">
+                <div className="decisionItemTitle">{mapOperationActionLabel(item.actionLabel)}</div>
+                <div className="decisionItemMeta">⚠️ 执行无效：未提供证据，无法完成验收</div>
+              </Link>
+            ))}
+            {invalidExecutionTasks.length === 0 ? <EmptyBlock text="当前没有无效执行任务" /> : null}
+          </div>
+        </article>
+
         <article className="card decisionColumn">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">⑥ 今日关键动作</div>
+              <div className="sectionTitle">⑦ 今日关键动作</div>
               <div className="sectionDesc">按任务清单推进，不再只给提示。</div>
             </div>
             <div className="decisionCount">{keyActions.length}</div>

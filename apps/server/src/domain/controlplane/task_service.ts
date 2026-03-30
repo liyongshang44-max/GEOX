@@ -1226,6 +1226,35 @@ function enforceReceiptWriteRules(payload: { idempotency_key?: string | null; op
   if (!payload.operation_plan_id) throw new Error("INVALID_RECEIPT_NO_PLAN");
 }
 
+function isDoneLikeStatus(status: unknown): boolean {
+  const s = String(status ?? "").trim().toUpperCase();
+  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(s);
+}
+
+function hasFiniteMetricEvidence(resourceUsage: any): boolean {
+  if (!resourceUsage || typeof resourceUsage !== "object") return false;
+  return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
+}
+
+function evaluateReceiptEvidenceValidity(body: any): { valid: boolean; executorType: "device" | "human" } {
+  const executorTypeRaw = String(body?.executor_id?.kind ?? body?.executor_type ?? "device").toLowerCase();
+  const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
+  const evidenceIds = [
+    ...(Array.isArray(body?.evidence_artifact_ids) ? body.evidence_artifact_ids : []),
+    ...(Array.isArray(body?.evidence_refs) ? body.evidence_refs : []),
+  ].filter((x: unknown) => typeof x === "string" && x.trim().length > 0);
+  const logsRefs = Array.isArray(body?.logs_refs) ? body.logs_refs : [];
+  const photoRefs = [
+    ...(Array.isArray(body?.photos) ? body.photos : []),
+    ...(Array.isArray(body?.photo_refs) ? body.photo_refs : []),
+    ...logsRefs.filter((x: any) => ["photo", "image"].some((k) => String(x?.kind ?? "").toLowerCase().includes(k))),
+  ];
+  const hasMetrics = hasFiniteMetricEvidence(body?.resource_usage);
+  const hasLogs = logsRefs.length > 0;
+  if (executorType === "human") return { executorType, valid: photoRefs.length > 0 || evidenceIds.length > 0 };
+  return { executorType, valid: hasMetrics || hasLogs || evidenceIds.length > 0 };
+}
+
 async function createAcceptance(input: {
   pool: Pool;
   tenant: TenantTriple;
@@ -2435,6 +2464,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
     if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "RECEIPT_UPLINK_WRITE_FAILED" });
+    const uplinkEvidenceValidity = evaluateReceiptEvidenceValidity({
+      ...body,
+      executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
+      logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
+    });
+    if (isDoneLikeStatus(body?.status ?? body?.meta?.receipt_status) && !uplinkEvidenceValidity.valid) {
+      return badRequest(reply, "EVIDENCE_REQUIRED");
+    }
     const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
       type: "ao_act_receipt_v1",
       payload: {
@@ -2454,15 +2491,17 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         received_ts: Number(body?.meta?.received_ts ?? Date.now())
       }
     });
-    await createAcceptance({
-      pool,
-      tenant,
-      operation_plan_id,
-      receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
-    });
+    if (uplinkEvidenceValidity.valid) {
+      await createAcceptance({
+        pool,
+        tenant,
+        operation_plan_id,
+        receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
+      });
+    }
 
     const receiptStatus = String(body.status ?? "executed").trim().toLowerCase();
-    const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
+    const terminalState = !uplinkEvidenceValidity.valid ? "FAILED" : (receiptStatus === "executed" ? "SUCCEEDED" : "FAILED");
     await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, {
       state: terminalState,
       receipt_fact_id: delegated.json.fact_id
@@ -2776,6 +2815,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const evidenceArtifactIds = Array.isArray(body.evidence_artifact_ids)
       ? body.evidence_artifact_ids.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim())
       : [];
+    const evidenceValidity = evaluateReceiptEvidenceValidity({ ...body, evidence_artifact_ids: evidenceArtifactIds });
+    if (isDoneLikeStatus(body?.status ?? body?.meta?.receipt_status) && !evidenceValidity.valid) {
+      return badRequest(reply, "EVIDENCE_REQUIRED");
+    }
     const receiptV1Dup = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey);
     if (receiptV1Dup) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
@@ -2826,12 +2869,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         evidence_artifact_ids: evidenceArtifactIds
       }
     });
-    await createAcceptance({
-      pool,
-      tenant,
-      operation_plan_id,
-      receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
-    });
+    if (evidenceValidity.valid) {
+      await createAcceptance({
+        pool,
+        tenant,
+        operation_plan_id,
+        receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
+      });
+    }
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/receipts", {
       type: "ao_act_receipt_recorded_v1",
       payload: {
@@ -2846,7 +2891,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     });
     const receiptStatus = String(body.status ?? "").trim().toLowerCase();
-    const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
+    const terminalState = !evidenceValidity.valid ? "FAILED" : (receiptStatus === "executed" ? "SUCCEEDED" : "FAILED");
     await updateDispatchQueueStateByActTask(pool, tenant, task_id, { state: terminalState, receipt_fact_id: delegated.json.fact_id });
 
     // Reload the latest plan before terminal transition because a receipt may arrive via

@@ -32,7 +32,7 @@ export default function ReceiptEvidenceCard({ data, actionLabel, executorTypeLab
   if (!data) {
     return (
       <div className="p-4 border rounded-xl text-sm text-gray-500">
-        暂无执行证据
+        ⚠️ 执行无效：未提供证据，无法完成验收
       </div>
     );
   }
