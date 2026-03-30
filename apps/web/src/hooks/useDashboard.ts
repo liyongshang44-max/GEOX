@@ -1,20 +1,41 @@
 import { useEffect, useState } from "react";
-import type { DashboardVm } from "../viewmodels/dashboard";
+import type { DashboardRiskVm, DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
-    onlineDeviceCount: 0,
-    inProgressCount: 0,
-    completedTodayCount: 0,
-    pendingCount: 0,
+    fieldCount: 0,
+    normalFieldCount: 0,
+    riskFieldCount: 0,
+    todayExecutionCount: 0,
+    pendingAcceptanceCount: 0,
   },
   actions: [],
   evidences: [],
   risks: [],
+  riskItems: [],
+  decisions: {
+    pendingApprovalCount: 0,
+    pendingRecommendationCount: 0,
+    potentialBenefitEstimate: "0%",
+    nonExecutionRiskEstimate: "0%",
+  },
+  execution: {
+    runningTaskCount: 0,
+    humanExecutionCount: 0,
+    deviceExecutionCount: 0,
+    delayedTaskCount: 0,
+  },
 };
+
+function mapRiskSource(title: string): DashboardRiskVm["source"] {
+  const t = title.toLowerCase();
+  if (t.includes("旱") || t.includes("dry") || t.includes("moisture")) return "干旱";
+  if (t.includes("病") || t.includes("pest") || t.includes("disease")) return "病害";
+  return "执行缺失";
+}
 
 export function useDashboard(api: any): DashboardVm {
   const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
@@ -28,6 +49,9 @@ export function useDashboard(api: any): DashboardVm {
         const executions = await api.getRecentExecutions?.({ limit: 8 }) || [];
         const riskItems = await api.getAcceptanceRisks?.({ limit: 6 }) || [];
         const pendingItems = await api.getPendingActions?.({ limit: 6 }) || [];
+        const recommendationItems = await api.getRecommendations?.({ limit: 50 }) || [];
+        const operationStates = await api.getOperationStates?.({ limit: 100 }) || [];
+        const assignments = await api.getAssignments?.({ limit: 100 }) || [];
 
         let evidences: any[] = [];
         try {
@@ -58,12 +82,54 @@ export function useDashboard(api: any): DashboardVm {
           ...(pendingItems || []).map((item: any) => `APPROVAL|${item?.label || "待审批建议"}`),
         ].filter(Boolean).slice(0, 10);
 
+        const mappedRiskItems: DashboardRiskVm[] = (riskItems || []).map((item: any, idx: number) => {
+          const rawLevel = String(item?.level || "").toUpperCase();
+          const level: DashboardRiskVm["level"] = rawLevel === "HIGH" ? "HIGH" : rawLevel === "LOW" ? "LOW" : "MEDIUM";
+          const title = String(item?.title || "验收风险");
+          return {
+            id: String(item?.id || idx),
+            title,
+            level,
+            source: mapRiskSource(title),
+            fieldId: typeof item?.field_id === "string" && item.field_id ? item.field_id : undefined,
+          };
+        });
+
+        const pendingRecommendationCount = (recommendationItems || []).filter((item: any) => {
+          if (item?.pending != null) return Boolean(item.pending);
+          return !item?.linked_refs?.receipt_fact_id;
+        }).length;
+        const pendingApprovalCount = (pendingItems || []).length;
+        const confidenceItems = (recommendationItems || []).map((item: any) => Number(item?.confidence)).filter((x: number) => Number.isFinite(x) && x >= 0);
+        const avgConfidence = confidenceItems.length ? confidenceItems.reduce((a: number, b: number) => a + b, 0) / confidenceItems.length : 0;
+        const potentialBenefitScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 6 + avgConfidence * 20)));
+        const nonExecutionRiskScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 8 + mappedRiskItems.length * 5)));
+
+        const isRunningOperation = (item: any): boolean => {
+          const finalStatus = String(item?.final_status ?? "").toUpperCase();
+          if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(finalStatus)) return false;
+          return true;
+        };
+        const runningOperationItems = (operationStates || []).filter((item: any) => isRunningOperation(item));
+        const activeAssignmentStatuses = new Set(["ASSIGNED", "ACCEPTED", "ARRIVED"]);
+        const activeAssignments = (assignments || []).filter((item: any) => activeAssignmentStatuses.has(String(item?.status || "").toUpperCase()));
+        const humanTaskIds = new Set(activeAssignments.map((item: any) => String(item?.act_task_id || "")).filter(Boolean));
+        const humanExecutionCount = runningOperationItems.filter((item: any) => humanTaskIds.has(String(item?.task_id || ""))).length;
+        const runningTaskCount = runningOperationItems.length;
+        const deviceExecutionCount = Math.max(0, runningTaskCount - humanExecutionCount);
+        const nowMs = Date.now();
+        const delayedTaskCount = runningOperationItems.filter((item: any) => {
+          const lastEventTs = Number(item?.last_event_ts ?? 0);
+          return Number.isFinite(lastEventTs) && lastEventTs > 0 && nowMs - lastEventTs > 2 * 60 * 60 * 1000;
+        }).length;
+
         setData({
           overview: {
-            onlineDeviceCount: overview?.online_device_count ?? overview?.onlineDeviceCount ?? 0,
-            inProgressCount: overview?.in_progress ?? overview?.inProgressCount ?? 0,
-            completedTodayCount: overview?.completed_today ?? overview?.completedTodayCount ?? 0,
-            pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
+            fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
+            normalFieldCount: overview?.normal_field_count ?? overview?.normalFieldCount ?? 0,
+            riskFieldCount: overview?.risk_field_count ?? overview?.riskFieldCount ?? 0,
+            todayExecutionCount: overview?.today_execution_count ?? overview?.todayExecutionCount ?? 0,
+            pendingAcceptanceCount: overview?.pending_acceptance_count ?? overview?.pendingAcceptanceCount ?? 0,
           },
           actions: mappedActions,
           evidences: (evidences || []).map((item: any, i: number) => ({
@@ -80,6 +146,19 @@ export function useDashboard(api: any): DashboardVm {
             }),
           })),
           risks: mappedRisks,
+          riskItems: mappedRiskItems,
+          decisions: {
+            pendingApprovalCount,
+            pendingRecommendationCount,
+            potentialBenefitEstimate: `${potentialBenefitScore}%`,
+            nonExecutionRiskEstimate: `${nonExecutionRiskScore}%`,
+          },
+          execution: {
+            runningTaskCount,
+            humanExecutionCount,
+            deviceExecutionCount,
+            delayedTaskCount,
+          },
         });
       } catch {
         setData((d) => ({ ...d }));
