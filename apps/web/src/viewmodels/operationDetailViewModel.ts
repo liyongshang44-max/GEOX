@@ -205,9 +205,9 @@ const STORY_TIMELINE_ORDER = [
 
 function mapExecutionModeLabel(raw: string): string {
   const key = String(raw || "").toLowerCase();
-  if (key === "human") return "人工执行";
-  if (key === "hybrid") return "混合执行";
-  return "设备执行";
+  if (key === "human") return "人名";
+  if (key === "hybrid") return "服务队";
+  return "设备名称";
 }
 
 function buildStorySummary(label: string, sourceSummary: string, sourceActor: string, detail: any): string {
@@ -395,7 +395,7 @@ export function buildOperationDetailViewModel(args?: {
     },
     execution: {
       executionModeLabel: mapExecutionModeLabel(executionMode),
-      executorTypeLabel: executionMode === "human" ? "human" : executionMode === "hybrid" ? "hybrid" : "device",
+      executorTypeLabel: executionMode === "human" ? "人名" : executionMode === "hybrid" ? "服务队" : "设备名称",
       actionType: toText(safeDetail?.task?.action_type),
       planId: toText(safeDetail?.operation_plan_id),
       taskId: toText(safeDetail?.task?.task_id),
@@ -404,7 +404,7 @@ export function buildOperationDetailViewModel(args?: {
         ? assignmentExecutor
         : executionMode === "hybrid"
           ? `${toText(safeDetail?.task?.device_id, "设备")} + ${assignmentExecutor}`
-          : toText(safeDetail?.task?.executor_label, "系统"),
+          : toText(safeDetail?.task?.executor_label, toText(safeDetail?.task?.device_id, "设备名称待配置")),
       executionWindowLabel: windowStart != null
         ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
         : "-",

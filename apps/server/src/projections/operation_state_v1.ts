@@ -248,9 +248,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
     const acceptanceCompleted = acceptance.verdict === "PASS";
+    const hasReceipt = Boolean(receipt);
     const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
     const final_status =
-      (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
+      (baseFinalStatus === "SUCCESS" && (!hasReceipt || !evidenceComplete || !acceptanceCompleted))
         ? "PENDING_ACCEPTANCE"
         : baseFinalStatus;
     const finalStatusNormalized: OperationStateV1["final_status"] = receipt && !acceptanceFact ? "PENDING_ACCEPTANCE" : final_status;
