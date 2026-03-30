@@ -110,7 +110,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
-        {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制面板数据</div> : null}
+        {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制信息</div> : null}
       </section>
 
       {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}

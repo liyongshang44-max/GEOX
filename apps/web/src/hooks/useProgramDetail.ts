@@ -1,7 +1,6 @@
 import React from "react";
 import {
   fetchOperationStates,
-  fetchProgramControlPlane,
   fetchProgramDetail,
 } from "../api";
 import {
@@ -55,7 +54,7 @@ export function useProgramDetail(programId: string): {
       setOps([]);
 
       const [controlPlaneRes, opStatesRes] = await Promise.allSettled([
-        fetchProgramControlPlane(id),
+        Promise.resolve(null),
         fetchOperationStates({ limit: 100 }),
       ]);
 

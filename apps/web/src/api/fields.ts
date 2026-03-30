@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestOptional } from "./client";
+import { apiRequest, apiRequestOptional, request } from "./client";
 import type { ControlPlaneStatus } from "./programs";
 
 export type FieldListItem = any;
@@ -51,6 +51,18 @@ export type FieldControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
+const fieldOptionalApisUnsupported = new Map<string, Set<string>>();
+
+function isFieldOptionalApiUnsupported(fieldId: string, apiKey: string): boolean {
+  return fieldOptionalApisUnsupported.get(fieldId)?.has(apiKey) ?? false;
+}
+
+function markFieldOptionalApiUnsupported(fieldId: string, apiKey: string): void {
+  const current = fieldOptionalApisUnsupported.get(fieldId) ?? new Set<string>();
+  current.add(apiKey);
+  fieldOptionalApisUnsupported.set(fieldId, current);
+}
+
 export async function fetchFields(): Promise<FieldListItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>("/api/v1/fields");
   if (Array.isArray(res.items)) return res.items;
@@ -65,12 +77,17 @@ export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | n
 }
 
 export async function fetchFieldControlPlane(fieldId: string): Promise<FieldControlPlaneItem | null> {
-  const res = await apiRequestOptional<{ ok?: boolean; item?: FieldControlPlaneItem }>(
+  if (isFieldOptionalApiUnsupported(fieldId, "control-plane")) return null;
+  const res = await request<{ ok?: boolean; item?: FieldControlPlaneItem }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`,
     undefined,
-    { allowedStatuses: [404], dedupe: true },
+    { allow404: true, dedupe: true, silent: true },
   );
-  return res?.item ?? null;
+  if (!res.ok && res.status === 404) {
+    markFieldOptionalApiUnsupported(fieldId, "control-plane");
+    return null;
+  }
+  return res.ok ? (res.data?.item ?? null) : null;
 }
 
 export async function fetchFieldGeometry(fieldId: string): Promise<any> {
@@ -88,10 +105,15 @@ export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array
 }
 
 export async function fetchFieldCurrentProgram(fieldId: string): Promise<any | null> {
-  const res = await apiRequestOptional<{ ok?: boolean; item?: any }>(
+  if (isFieldOptionalApiUnsupported(fieldId, "current-program")) return null;
+  const res = await request<{ ok?: boolean; item?: any }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`,
     undefined,
-    { allowedStatuses: [404], dedupe: true },
+    { allow404: true, dedupe: true, silent: true },
   );
-  return res?.item ?? null;
+  if (!res.ok && res.status === 404) {
+    markFieldOptionalApiUnsupported(fieldId, "current-program");
+    return null;
+  }
+  return res.ok ? (res.data?.item ?? null) : null;
 }

@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestOptional, apiRequestWithPolicy, withQuery } from "./client";
+import { apiRequest, apiRequestOptional, apiRequestWithPolicy, request, withQuery } from "./client";
 
 export type ProgramStateItemV1 = any;
 export type ProgramPortfolioItemV1 = any;
@@ -45,7 +45,7 @@ export type ProgramControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
-let programControlPlaneUnsupported = false;
+const unsupportedProgramControlPlaneIds = new Set<string>();
 
 export async function fetchPrograms(params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await apiRequest<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery("/api/v1/programs", params));
@@ -67,14 +67,14 @@ export async function fetchProgramDetail(programId: string): Promise<ProgramStat
 }
 
 export async function fetchProgramControlPlane(programId: string): Promise<ProgramControlPlaneItem | null> {
-  if (programControlPlaneUnsupported) return null;
-  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: ProgramControlPlaneItem }>(
+  if (unsupportedProgramControlPlaneIds.has(programId)) return null;
+  const res = await request<{ ok?: boolean; item?: ProgramControlPlaneItem }>(
     `/api/v1/programs/${encodeURIComponent(programId)}/control-plane`,
     undefined,
-    { allowedStatuses: [404], dedupe: true },
+    { allow404: true, dedupe: true, silent: true },
   );
   if (!res.ok && res.status === 404) {
-    programControlPlaneUnsupported = true;
+    unsupportedProgramControlPlaneIds.add(programId);
     return null;
   }
   return res.ok ? (res.data?.item ?? null) : null;

@@ -27,6 +27,19 @@ export type ApiRequestResult<T> =
   | { ok: true; status: number; data: T }
   | { ok: false; status: number; data: null; bodyText: string; url: string };
 
+export type ApiRequestPolicyOptions = {
+  allowedStatuses?: number[];
+  dedupe?: boolean;
+  silent?: boolean;
+};
+
+export type RequestOptions = {
+  allow404?: boolean;
+  allow422?: boolean;
+  silent?: boolean;
+  dedupe?: boolean;
+};
+
 export function withQuery(path: string, params?: Record<string, unknown>): string {
   const query = new URLSearchParams();
   const tenant = readTenantContext();
@@ -72,7 +85,7 @@ const inflightRequests = new Map<string, Promise<ApiRequestResult<any>>>();
 export async function apiRequestWithPolicy<T>(
   path: string,
   init?: RequestInit,
-  options?: { allowedStatuses?: number[]; dedupe?: boolean },
+  options?: ApiRequestPolicyOptions,
 ): Promise<ApiRequestResult<T>> {
   const token = readSessionToken();
   const tenant = readTenantContext();
@@ -83,34 +96,41 @@ export async function apiRequestWithPolicy<T>(
   }
 
   const runner = (async () => {
-  const baseHeaders = init?.body instanceof FormData
-    ? { ...(init?.headers ?? {}) }
-    : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
+    try {
+      const baseHeaders = init?.body instanceof FormData
+        ? { ...(init?.headers ?? {}) }
+        : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
 
-  const response = await fetch(finalUrl, {
-    ...init,
-    headers: {
-      ...baseHeaders,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(tenant.tenant_id ? { "x-tenant-id": tenant.tenant_id } : {}),
-      ...(tenant.project_id ? { "x-project-id": tenant.project_id } : {}),
-      ...(tenant.group_id ? { "x-group-id": tenant.group_id } : {}),
-    },
-  });
+      const response = await fetch(finalUrl, {
+        ...init,
+        headers: {
+          ...baseHeaders,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(tenant.tenant_id ? { "x-tenant-id": tenant.tenant_id } : {}),
+          ...(tenant.project_id ? { "x-project-id": tenant.project_id } : {}),
+          ...(tenant.group_id ? { "x-group-id": tenant.group_id } : {}),
+        },
+      });
 
-  const text = await response.text();
-  if (!response.ok) {
-    if (Array.isArray(options?.allowedStatuses) && options!.allowedStatuses!.includes(response.status)) {
-      return { ok: false as const, status: response.status, data: null, bodyText: text, url: finalUrl };
+      const text = await response.text();
+      if (!response.ok) {
+        if (Array.isArray(options?.allowedStatuses) && options.allowedStatuses.includes(response.status)) {
+          return { ok: false as const, status: response.status, data: null, bodyText: text, url: finalUrl };
+        }
+        throw new ApiError(response.status, text, finalUrl);
+      }
+
+      try {
+        return { ok: true as const, status: response.status, data: text ? (JSON.parse(text) as T) : ({} as T) };
+      } catch {
+        throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 300)}`, finalUrl);
+      }
+    } catch (error) {
+      if (!options?.silent) {
+        // no-op: reserved hook for future centralized logging
+      }
+      throw error;
     }
-    throw new ApiError(response.status, text, finalUrl);
-  }
-
-  try {
-    return { ok: true as const, status: response.status, data: text ? (JSON.parse(text) as T) : ({} as T) };
-  } catch {
-    throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 300)}`, finalUrl);
-  }
   })();
 
   if (!options?.dedupe) return runner;
@@ -126,14 +146,26 @@ export async function apiRequestWithPolicy<T>(
 export async function apiRequestOptional<T>(
   path: string,
   init?: RequestInit,
-  options?: { allowedStatuses?: number[]; dedupe?: boolean },
+  options?: ApiRequestPolicyOptions,
 ): Promise<T | null> {
   const allowedStatuses = options?.allowedStatuses ?? [...OPTIONAL_API_STATUSES];
   const res = await apiRequestWithPolicy<T>(path, init, {
     allowedStatuses,
     dedupe: options?.dedupe,
+    silent: options?.silent,
   });
   return res.ok ? res.data : null;
+}
+
+export async function request<T>(path: string, init?: RequestInit, options?: RequestOptions): Promise<ApiRequestResult<T>> {
+  const allowedStatuses: number[] = [];
+  if (options?.allow404) allowedStatuses.push(404);
+  if (options?.allow422) allowedStatuses.push(422);
+  return apiRequestWithPolicy<T>(path, init, {
+    allowedStatuses,
+    dedupe: options?.dedupe,
+    silent: options?.silent,
+  });
 }
 
 export const requestJson = apiRequest;
