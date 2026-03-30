@@ -44,6 +44,24 @@ test('final_status priority: transition > receipt > acceptance_pending > fallbac
   assert.equal(fallback[0].final_status, 'RUNNING');
 });
 
+
+
+test('reads human receipt v1 minimal shape on the shared chain', () => {
+  const out = projectOperationStateFromFacts([
+    fact('operation_plan_v1', { operation_plan_id: 'op3', act_task_id: 't3' }, '2026-03-19T20:00:00.000Z', 'p3'),
+    fact('ao_act_receipt_v1', {
+      act_task_id: 't3',
+      executor_id: { kind: 'human', id: 'worker_01' },
+      status: 'executed',
+      execution_time: { start_ts: 1000, end_ts: 1200 }
+    }, '2026-03-19T20:02:00.000Z', 'rc3'),
+  ]);
+  assert.equal(out[0].receipt_status, 'executed');
+  assert.equal(out[0].final_status, 'SUCCESS');
+  assert.ok(out[0].timeline.some((x) => x.type === 'DEVICE_ACK'));
+  assert.ok(out[0].timeline.some((x) => x.type === 'SUCCEEDED'));
+});
+
 test('filters by field/device/final_status', () => {
   const out = projectOperationStateFromFacts([
     fact('operation_plan_v1', { operation_plan_id: 'a', target: { ref: 'field_1' }, device_id: 'dev_1', status: 'CREATED' }, '2026-03-19T20:00:00.000Z', 'a1'),
