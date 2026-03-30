@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "evidence_artifact_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "payload"],
+  "properties": {
+    "type": { "const": "evidence_artifact_v1" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["artifact_id", "act_task_id", "kind", "created_at", "created_by"],
+      "properties": {
+        "artifact_id": { "type": "string", "minLength": 1 },
+        "act_task_id": { "type": "string", "minLength": 1 },
+        "receipt_fact_id": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["image", "note"] },
+        "url": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 },
+        "created_at": { "type": "string", "minLength": 1 },
+        "created_by": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
