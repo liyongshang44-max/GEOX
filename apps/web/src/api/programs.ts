@@ -45,6 +45,15 @@ export type ProgramControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
+async function safeNullable<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
+  } catch (e: any) {
+    if (e?.status === 404 || e?.response?.status === 404) return null;
+    return null;
+  }
+}
+
 export async function fetchPrograms(params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await apiRequest<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery("/api/v1/programs", params));
   return Array.isArray(res.items) ? res.items : [];
