@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify"; // Fastify route host typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
+import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -223,7 +224,13 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const dayStartMs = new Date(new Date(nowMs).toISOString().slice(0, 10)).getTime();
     const activeStates = ["CREATED", "READY", "DISPATCHED", "ACKED"];
 
-    const [fieldTotalQ, fieldRiskQ, tasksTodayQ, pendingAcceptanceQ, riskBreakdownQ, pendingDecisionQ, executionBreakdownQ, delayedQ, completedQ, acceptancePassRateQ] = await Promise.all([
+    const operationStates = await projectOperationStateV1(pool, { tenant_id, project_id, group_id }).catch(() => []);
+    const performanceCompletedStates = operationStates.filter((item: any) => Boolean(item?.receipt_id));
+    const performanceCompletedCount = performanceCompletedStates.length;
+    const performancePassCount = performanceCompletedStates.filter((item: any) => String(item?.acceptance?.status ?? "").toUpperCase() === "PASS").length;
+    const performancePassRate = performanceCompletedCount > 0 ? Number(((performancePassCount / performanceCompletedCount) * 100).toFixed(2)) : 0;
+
+    const [fieldTotalQ, fieldRiskQ, tasksTodayQ, pendingAcceptanceQ, riskBreakdownQ, pendingDecisionQ, executionBreakdownQ, delayedQ, acceptancePassRateQ] = await Promise.all([
       pool.query(`SELECT COUNT(*)::bigint AS count FROM field_index_v1 WHERE tenant_id = $1`, [tenant_id]).catch(() => ({ rows: [{ count: 0 }] })),
       pool.query(`SELECT COUNT(*)::bigint AS count FROM field_program_state_v1 WHERE tenant_id = $1 AND UPPER(COALESCE(current_risk_summary->>'level', 'LOW')) IN ('HIGH', 'MEDIUM')`, [tenant_id]).catch(() => ({ rows: [{ count: 0 }] })),
       pool.query(`SELECT COUNT(*)::bigint AS count FROM operation_plan_index_v1 WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND updated_ts_ms >= $4`, [tenant_id, project_id, group_id, dayStartMs]).catch(() => ({ rows: [{ count: 0 }] })),
@@ -294,13 +301,6 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         [tenant_id, project_id, group_id, activeStates, 2 * 60 * 60 * 1000]
       ).catch(() => ({ rows: [{ count: 0 }] })),
       pool.query(
-        `SELECT COUNT(*)::bigint AS count
-           FROM operation_plan_index_v1
-          WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
-            AND UPPER(COALESCE(status, '')) IN ('DONE', 'EXECUTED', 'SUCCEEDED')`,
-        [tenant_id, project_id, group_id]
-      ).catch(() => ({ rows: [{ count: 0 }] })),
-      pool.query(
         `SELECT
            COUNT(*) FILTER (WHERE UPPER(COALESCE((record_json::jsonb#>>'{payload,verdict}'), '')) = 'PASS')::bigint AS pass_count,
            COUNT(*)::bigint AS total_count
@@ -344,8 +344,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         pass_rate: passRate,
       },
       performance: {
-        completed: Number(completedQ.rows?.[0]?.count ?? 0),
-        pass_rate: passRate,
+        completed: performanceCompletedCount,
+        pass_rate: performancePassRate,
       },
     });
   });
