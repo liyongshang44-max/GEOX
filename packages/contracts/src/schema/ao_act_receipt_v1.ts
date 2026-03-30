@@ -21,6 +21,7 @@ export type AoActReceiptV1 = {
     };
     logs_refs?: string[];
     evidence_refs?: string[];
+    evidence_artifact_ids?: string[];
     constraint_check?: {
       violated: boolean;
       summary?: string;

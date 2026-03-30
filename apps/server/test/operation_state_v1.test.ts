@@ -30,7 +30,7 @@ test('final_status priority: transition > receipt > acceptance_pending > fallbac
 
   const withReceipt = projectOperationStateFromFacts([
     base,
-    fact('ao_act_receipt_v1', { act_task_id: 't2', status: 'executed' }, '2026-03-19T20:02:00.000Z', 'rc2'),
+    fact('ao_act_receipt_v1', { act_task_id: 't2', status: 'executed', evidence_artifact_ids: ['ea_x'] }, '2026-03-19T20:02:00.000Z', 'rc2'),
   ]);
   assert.equal(withReceipt[0].final_status, 'SUCCESS');
 
@@ -57,9 +57,23 @@ test('reads human receipt v1 minimal shape on the shared chain', () => {
     }, '2026-03-19T20:02:00.000Z', 'rc3'),
   ]);
   assert.equal(out[0].receipt_status, 'executed');
-  assert.equal(out[0].final_status, 'SUCCESS');
+  assert.equal(out[0].final_status, 'PENDING_ACCEPTANCE');
   assert.ok(out[0].timeline.some((x) => x.type === 'DEVICE_ACK'));
   assert.ok(out[0].timeline.some((x) => x.type === 'SUCCEEDED'));
+});
+
+test('receipt evidence marks execution as complete success', () => {
+  const out = projectOperationStateFromFacts([
+    fact('operation_plan_v1', { operation_plan_id: 'op3b', act_task_id: 't3b' }, '2026-03-19T20:00:00.000Z', 'p3b'),
+    fact('ao_act_receipt_v1', {
+      act_task_id: 't3b',
+      executor_id: { kind: 'human', id: 'worker_02' },
+      status: 'executed',
+      execution_time: { start_ts: 1000, end_ts: 1200 },
+      evidence_artifact_ids: ['ea_001']
+    }, '2026-03-19T20:02:00.000Z', 'rc3b'),
+  ]);
+  assert.equal(out[0].final_status, 'SUCCESS');
 });
 
 test('filters by field/device/final_status', () => {

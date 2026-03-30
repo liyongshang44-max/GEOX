@@ -1221,6 +1221,27 @@ async function loadReceiptV1ByIdempotencyKey(
   return loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,idempotency_key", idempotencyKey, tenant);
 }
 
+async function loadFactById(pool: Pool, factId: string, tenant: TenantTriple): Promise<ParsedFactRow | null> {
+  const sql = `
+    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
+    FROM facts
+    WHERE fact_id = $1
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+      AND (record_json::jsonb#>>'{payload,project_id}') = $3
+      AND (record_json::jsonb#>>'{payload,group_id}') = $4
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [factId, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+  if ((res.rowCount ?? 0) === 0) return null;
+  const row: any = res.rows[0];
+  return {
+    fact_id: String(row.fact_id),
+    occurred_at: String(row.occurred_at),
+    source: String(row.source),
+    record_json: parseJsonMaybe(row.record_json) ?? row.record_json
+  };
+}
+
 async function listReceipts(pool: Pool, tenant: TenantTriple, limit: number, actTaskId?: string): Promise<any[]> {
   const sql = `
     SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
@@ -2591,6 +2612,97 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     return reply.send({ ok: true, items });
   });
 
+  // POST /api/v1/ao-act/receipts/evidence
+  // Minimal evidence artifact ingestion: up to 3 image urls + optional note, linked to a receipt.
+  app.post("/api/v1/ao-act/receipts/evidence", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+    if (!auth) return;
+    const body: any = req.body ?? {};
+    const tenant: TenantTriple = parseTenantFromBody(body);
+    if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const act_task_id = String(body.act_task_id ?? "").trim();
+    if (!act_task_id) return badRequest(reply, "MISSING_TASK_ID");
+    const imageUrls = Array.isArray(body.image_urls) ? body.image_urls.filter((x: unknown) => typeof x === "string" && x.trim()) : [];
+    if (imageUrls.length < 1 || imageUrls.length > 3) return badRequest(reply, "IMAGE_COUNT_INVALID");
+    const note = typeof body.note === "string" ? body.note.trim() : "";
+    if (note.length > 2000) return badRequest(reply, "NOTE_TOO_LONG");
+
+    const receiptFactIdInput = String(body.receipt_fact_id ?? "").trim();
+    let receiptFact: ParsedFactRow | null = null;
+    if (receiptFactIdInput) {
+      receiptFact = await loadFactById(pool, receiptFactIdInput, tenant);
+    }
+    if (!receiptFact || !["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(receiptFact.record_json?.type ?? ""))) {
+      receiptFact = await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant)
+        ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,task_id", act_task_id, tenant)
+        ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,act_task_id", act_task_id, tenant);
+    }
+    if (!receiptFact) return reply.status(404).send({ ok: false, error: "RECEIPT_NOT_FOUND" });
+
+    const receiptTask = String(receiptFact.record_json?.payload?.act_task_id ?? receiptFact.record_json?.payload?.task_id ?? "").trim();
+    if (receiptTask !== act_task_id) return badRequest(reply, "RECEIPT_TASK_MISMATCH");
+
+    const createdAt = new Date().toISOString();
+    const createdBy = auth.actor_id;
+    const execution_time = (body.execution_time && typeof body.execution_time === "object") ? body.execution_time : {};
+    const location = (body.location && typeof body.location === "object") ? body.location : undefined;
+    const inserted: Array<{ artifact_id: string; fact_id: string; kind: "image" | "note"; url?: string; text?: string }> = [];
+
+    for (const rawUrl of imageUrls) {
+      const url = String(rawUrl).trim();
+      const artifact_id = `evi_${randomUUID()}`;
+      const fact_id = await insertFact(pool, "api/v1/ao-act/receipts/evidence", {
+        type: "evidence_artifact_v1",
+        payload: {
+          artifact_id,
+          act_task_id,
+          receipt_fact_id: receiptFact.fact_id,
+          kind: "image",
+          url,
+          created_at: createdAt,
+          created_by: createdBy,
+          execution_time: {
+            start_ts: Number.isFinite(Number(execution_time.start_ts)) ? Number(execution_time.start_ts) : null,
+            end_ts: Number.isFinite(Number(execution_time.end_ts)) ? Number(execution_time.end_ts) : null
+          },
+          location: location ?? null,
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id
+        }
+      });
+      inserted.push({ artifact_id, fact_id, kind: "image", url });
+    }
+    if (note) {
+      const artifact_id = `evi_${randomUUID()}`;
+      const fact_id = await insertFact(pool, "api/v1/ao-act/receipts/evidence", {
+        type: "evidence_artifact_v1",
+        payload: {
+          artifact_id,
+          act_task_id,
+          receipt_fact_id: receiptFact.fact_id,
+          kind: "note",
+          text: note,
+          created_at: createdAt,
+          created_by: createdBy,
+          execution_time: {
+            start_ts: Number.isFinite(Number(execution_time.start_ts)) ? Number(execution_time.start_ts) : null,
+            end_ts: Number.isFinite(Number(execution_time.end_ts)) ? Number(execution_time.end_ts) : null
+          },
+          location: location ?? null,
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id
+        }
+      });
+      inserted.push({ artifact_id, fact_id, kind: "note", text: note });
+    }
+
+    return reply.send({ ok: true, act_task_id, receipt_fact_id: receiptFact.fact_id, items: inserted });
+  });
+
   // POST /api/v1/ao-act/receipts
   // Delegates to existing receipt runtime and adds a stable wrapper fact for Commercial v1 REST.
   app.post("/api/v1/ao-act/receipts", async (req, reply) => {
@@ -2607,6 +2719,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
     const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
     if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
+    const evidenceArtifactIds = Array.isArray(body.evidence_artifact_ids)
+      ? body.evidence_artifact_ids.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim())
+      : [];
     const receiptV1Dup = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey);
     if (receiptV1Dup) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
@@ -2648,7 +2763,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         receipt_code: String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED"),
         receipt_message: body?.meta?.receipt_message ?? null,
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
-        received_ts: Number(body?.meta?.received_ts ?? Date.now())
+        received_ts: Number(body?.meta?.received_ts ?? Date.now()),
+        evidence_artifact_ids: evidenceArtifactIds
       }
     });
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/receipts", {

@@ -127,6 +127,15 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
   return null;
 }
 
+function receiptHasEvidenceArtifacts(receipt: FactRow | undefined): boolean {
+  if (!receipt) return false;
+  const payload = receipt.record_json?.payload ?? {};
+  const evidenceRefs = Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [];
+  const evidenceArtifactIds = Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : [];
+  return evidenceRefs.some((x: unknown) => typeof x === "string" && x.trim().length > 0)
+    || evidenceArtifactIds.some((x: unknown) => typeof x === "string" && x.trim().length > 0);
+}
+
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
@@ -204,11 +213,16 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
 
     const latestTransition = transitions.length ? String(transitions[transitions.length - 1].record_json?.payload?.status ?? "") : "";
     const receiptStatus = String(receipt?.record_json?.payload?.status ?? "PENDING");
-    const final_status =
+    const baseFinalStatus =
       finalStatusFromTransition(latestTransition)
       ?? finalStatusFromReceipt(receiptStatus)
       ?? (acceptance ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
+    const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
+    const final_status =
+      (baseFinalStatus === "SUCCESS" && !evidenceComplete)
+        ? "PENDING_ACCEPTANCE"
+        : baseFinalStatus;
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
     const approval_id = approval_decision_id ?? approval_request_id;

@@ -55,6 +55,10 @@
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
         },
+        "evidence_artifact_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
         "constraint_check": {
           "type": "object",
           "additionalProperties": false,
