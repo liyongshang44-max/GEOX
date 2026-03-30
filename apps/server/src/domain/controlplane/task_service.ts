@@ -2643,6 +2643,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     const receiptTask = String(receiptFact.record_json?.payload?.act_task_id ?? receiptFact.record_json?.payload?.task_id ?? "").trim();
     if (receiptTask !== act_task_id) return badRequest(reply, "RECEIPT_TASK_MISMATCH");
+    const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
+    const operation_plan_id = String(
+      receiptFact.record_json?.payload?.operation_plan_id
+      ?? taskFact?.record_json?.payload?.operation_plan_id
+      ?? body.operation_plan_id
+      ?? ""
+    ).trim();
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
 
     const createdAt = new Date().toISOString();
     const createdBy = auth.actor_id;
@@ -2658,6 +2666,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         payload: {
           artifact_id,
           act_task_id,
+          operation_plan_id,
           receipt_fact_id: receiptFact.fact_id,
           kind: "image",
           url,
@@ -2682,6 +2691,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         payload: {
           artifact_id,
           act_task_id,
+          operation_plan_id,
           receipt_fact_id: receiptFact.fact_id,
           kind: "note",
           text: note,
@@ -2700,7 +2710,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       inserted.push({ artifact_id, fact_id, kind: "note", text: note });
     }
 
-    return reply.send({ ok: true, act_task_id, receipt_fact_id: receiptFact.fact_id, items: inserted });
+    return reply.send({ ok: true, act_task_id, operation_plan_id, receipt_fact_id: receiptFact.fact_id, items: inserted });
   });
 
   // POST /api/v1/ao-act/receipts
