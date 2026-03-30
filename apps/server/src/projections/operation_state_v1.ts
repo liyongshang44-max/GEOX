@@ -142,6 +142,10 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
   return null;
 }
 
+function receiptHasEvidenceArtifacts(receipt: FactRow | undefined): boolean {
+  return extractReceiptArtifacts(receipt).length > 0;
+}
+
 function extractReceiptArtifacts(receipt: FactRow | undefined): string[] {
   if (!receipt) return [];
   const payload = receipt.record_json?.payload ?? {};
@@ -253,10 +257,12 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ?? finalStatusFromReceipt(receiptStatus)
       ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
-    const pendingAcceptance =
-      Boolean(receipt)
-      && String(acceptance.verdict ?? "").toUpperCase() !== "PASS";
-    const final_status = pendingAcceptance ? "PENDING_ACCEPTANCE" : baseFinalStatus;
+    const acceptanceCompleted = acceptance.verdict === "PASS";
+    const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
+    const final_status =
+      (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
+        ? "PENDING_ACCEPTANCE"
+        : baseFinalStatus;
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
     const approval_id = approval_decision_id ?? approval_request_id;
