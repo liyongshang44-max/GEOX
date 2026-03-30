@@ -1,8 +1,9 @@
 export type DashboardOverviewVm = {
-  onlineDeviceCount: number;
-  inProgressCount: number;
-  completedTodayCount: number;
-  pendingCount: number;
+  fieldCount: number;
+  normalFieldCount: number;
+  riskFieldCount: number;
+  todayExecutionCount: number;
+  pendingAcceptanceCount: number;
 };
 
 export type DashboardActionVm = {
@@ -28,9 +29,26 @@ export type DashboardEvidenceVm = {
   card: any;
 };
 
+export type DashboardRiskVm = {
+  id: string;
+  title: string;
+  level: "HIGH" | "MEDIUM" | "LOW";
+  source: "干旱" | "病害" | "执行缺失";
+  fieldId?: string;
+};
+
+export type DashboardDecisionVm = {
+  pendingApprovalCount: number;
+  pendingRecommendationCount: number;
+  potentialBenefitEstimate: string;
+  nonExecutionRiskEstimate: string;
+};
+
 export type DashboardVm = {
   overview: DashboardOverviewVm;
   actions: DashboardActionVm[];
   evidences: DashboardEvidenceVm[];
   risks: string[];
+  riskItems: DashboardRiskVm[];
+  decisions: DashboardDecisionVm;
 };

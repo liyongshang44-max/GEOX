@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   fetchDashboardAcceptanceRisks,
   fetchDashboardPendingActions,
+  fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
   getOverview,
   getRecentEvidence,
@@ -22,6 +23,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
       getRecentEvidence,
       getAcceptanceRisks: async (params?: { limit?: number }) => fetchDashboardAcceptanceRisks(params?.limit ?? 6),
       getPendingActions: async (params?: { limit?: number }) => fetchDashboardPendingActions(params?.limit ?? 6),
+      getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),
     }),
     [],
   );
@@ -30,10 +32,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const failedActions = d.actions.filter((x) => x.finalStatus === "failed");
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
   const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
-  const riskAlerts = d.risks.filter((item) => item.startsWith("RISK|")).map((item) => item.replace("RISK|", ""));
+  const riskAlerts = d.riskItems;
   const acceptanceTasks = d.evidences
     .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
     .slice(0, 4);
+
+  const overviewPendingAcceptanceCount = Math.max(d.overview.pendingAcceptanceCount, acceptanceTasks.length);
+  const riskLevelCount = riskAlerts.reduce(
+    (acc, item) => {
+      if (item.level === "HIGH") acc.high += 1;
+      else if (item.level === "LOW") acc.low += 1;
+      else acc.medium += 1;
+      return acc;
+    },
+    { high: 0, medium: 0, low: 0 },
+  );
+  const riskSourceCount = riskAlerts.reduce(
+    (acc, item) => {
+      acc[item.source] += 1;
+      return acc;
+    },
+    { 干旱: 0, 病害: 0, 执行缺失: 0 },
+  );
+  const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
   const keyActions = [
     ...failedActions.slice(0, 2).map((item) => ({
@@ -58,40 +79,31 @@ export default function CommercialDashboardPage(): React.ReactElement {
 
   return (
     <div className="productPage demoDashboardPage">
-      <section className="card hero compactHero demoHero dashboardHeroV2">
-        <div>
-          <div className="eyebrow">GEOX / 经营监控台</div>
-          <h1 className="demoHeroTitle">Dashboard 收口：今日经营闭环</h1>
-          <p className="demoHeroSubTitle">围绕地块状态、风险、审批、执行与验收，聚焦今天必须推动的关键动作。</p>
-        </div>
-        <div className="heroActions">
-          <Link className="btn" to="/operations">查看作业</Link>
-          <Link className="btn ghost" to="/agronomy/recommendations">查看建议</Link>
-          <Link className="btn ghost" to="/audit-export">查看验收</Link>
-        </div>
-      </section>
-
       <section className="dashboardDecisionBoard">
         <article className="card decisionColumn success">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">地块状态</div>
-              <div className="sectionDesc">在线能力与今日完结情况，判断地块是否稳定可运营。</div>
+              <div className="sectionTitle">① 今日状态（Overview）</div>
+              <div className="sectionDesc">地块与任务核心状态总览（来源：/api/v1/dashboard/overview）。</div>
             </div>
-            <div className="decisionCount">{d.overview.onlineDeviceCount}</div>
+            <div className="decisionCount">{d.overview.fieldCount}</div>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">在线设备</div>
-              <div className="decisionItemMeta">{d.overview.onlineDeviceCount} 台设备可联动</div>
+              <div className="decisionItemTitle">地块数</div>
+              <div className="decisionItemMeta">{d.overview.fieldCount} 个地块</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">今日完成</div>
-              <div className="decisionItemMeta">{d.overview.completedTodayCount} 项任务进入终态</div>
+              <div className="decisionItemTitle">正常 / 风险地块</div>
+              <div className="decisionItemMeta">{d.overview.normalFieldCount} / {d.overview.riskFieldCount}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">执行中</div>
-              <div className="decisionItemMeta">{d.overview.inProgressCount} 项作业持续推进</div>
+              <div className="decisionItemTitle">今日执行任务数</div>
+              <div className="decisionItemMeta">{d.overview.todayExecutionCount} 项</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">待验收数量</div>
+              <div className="decisionItemMeta">{overviewPendingAcceptanceCount} 项</div>
             </div>
           </div>
         </article>
@@ -99,51 +111,69 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn danger">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">风险告警</div>
+              <div className="sectionTitle">② 风险与告警（Risk）</div>
               <div className="sectionDesc">失败作业与验收风险，优先消除阻断点。</div>
             </div>
-            <div className="decisionCount">{failedActions.length + riskAlerts.length}</div>
+            <div className="decisionCount">{riskAlerts.length}</div>
           </div>
           <div className="decisionList">
-            {failedActions.slice(0, 3).map((a) => (
-              <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
-                <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
-                <div className="decisionItemMeta">{mapFieldDisplayName(a.subjectName, a.subjectName)} · {mapOperationStatusLabel(a.statusLabel || a.finalStatus)}</div>
-              </Link>
-            ))}
-            {riskAlerts.slice(0, 3).map((risk, idx) => (
-              <div key={`risk_${idx}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">验收风险</div>
-                <div className="decisionItemMeta">{risk}</div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">风险等级（高 / 中 / 低）</div>
+              <div className="decisionItemMeta">{riskLevelCount.high} / {riskLevelCount.medium} / {riskLevelCount.low}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">风险来源（干旱 / 病害 / 执行缺失）</div>
+              <div className="decisionItemMeta">{riskSourceCount.干旱} / {riskSourceCount.病害} / {riskSourceCount.执行缺失}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">影响范围</div>
+              <div className="decisionItemMeta">影响 {impactFieldCount} 个地块</div>
+            </div>
+            {riskAlerts.slice(0, 2).map((risk) => (
+              <div key={risk.id} className="decisionItemStatic">
+                <div className="decisionItemTitle">{risk.title}</div>
+                <div className="decisionItemMeta">{risk.source} · {risk.level}</div>
               </div>
             ))}
-            {failedActions.length + riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
+            {riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
           </div>
         </article>
 
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">待审批建议</div>
-              <div className="sectionDesc">需要人工确认/审批后才能继续执行的建议事项。</div>
+              <div className="sectionTitle">③ 待决策（Decisions）</div>
+              <div className="sectionDesc">来自 recommendation + approval 的决策入口。</div>
             </div>
-            <div className="decisionCount">{pendingApprovals.length || d.overview.pendingCount}</div>
+            <div className="decisionCount">{d.decisions.pendingRecommendationCount + d.decisions.pendingApprovalCount}</div>
           </div>
           <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">待审批建议</div>
+              <div className="decisionItemMeta">建议 {d.decisions.pendingRecommendationCount} 条 · 审批 {d.decisions.pendingApprovalCount} 条</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">潜在收益（估算）</div>
+              <div className="decisionItemMeta">{d.decisions.potentialBenefitEstimate} 的产出改善空间</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">不执行风险（估算）</div>
+              <div className="decisionItemMeta">{d.decisions.nonExecutionRiskEstimate} 的风险暴露概率</div>
+            </div>
             {pendingApprovals.slice(0, 4).map((item, idx) => (
               <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
                 <div className="decisionItemTitle">建议待审批</div>
                 <div className="decisionItemMeta">{item}</div>
               </Link>
             ))}
-            {pendingApprovals.length === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
+            {pendingApprovals.length === 0 && d.decisions.pendingRecommendationCount === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
           </div>
         </article>
 
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">执行中任务</div>
+              <div className="sectionTitle">④ 执行中（Execution）</div>
               <div className="sectionDesc">持续跟进任务时序，避免执行链中断。</div>
             </div>
             <div className="decisionCount">{runningActions.length}</div>
@@ -163,10 +193,10 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">待验收任务</div>
+              <div className="sectionTitle">⑤ 待验收（Acceptance）</div>
               <div className="sectionDesc">已回传证据但仍需验收确认的任务。</div>
             </div>
-            <div className="decisionCount">{acceptanceTasks.length}</div>
+            <div className="decisionCount">{overviewPendingAcceptanceCount}</div>
           </div>
           <div className="decisionList">
             {acceptanceTasks.map((e: any, i: number) => {
@@ -185,7 +215,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">今日关键动作</div>
+              <div className="sectionTitle">⑥ 本周期表现（Performance）</div>
               <div className="sectionDesc">按业务优先级整理的跨模块动作清单。</div>
             </div>
             <div className="decisionCount">{keyActions.length}</div>
