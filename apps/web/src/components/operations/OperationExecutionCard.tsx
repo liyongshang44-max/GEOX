@@ -7,9 +7,9 @@ export default function OperationExecutionCard({ model }: { model: OperationDeta
   const { text } = useLocale();
   return (
     <section className="card sectionBlock geoxSectionCard operationExecutionCardV2">
-      <div className="sectionTitle">{text("执行层", "Execution layer")}</div>
+      <div className="sectionTitle">{text("执行结果（谁干的）", "Execution result (who executed)")}</div>
       <div className="muted detailSectionLead">
-        {text("聚焦执行者、执行时间和回执状态，快速确认动作是否真正落地。", "Focus on executor, execution time, and receipt state to verify the action landed in field.")}
+        {text("给业务方直接说明：由谁执行、何时执行、执行到什么状态。", "Business-facing summary: who executed, when, and current execution status.")}
       </div>
       <div className="operationsSummaryGrid detailSummaryGridV4">
         <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("执行者（human/device）", "Executor (human/device)")}</span><strong>{model.execution.executorTypeLabel}</strong></div>

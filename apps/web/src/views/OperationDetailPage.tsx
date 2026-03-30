@@ -4,10 +4,11 @@ import { Link, useParams } from "react-router-dom";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
-import OperationDecisionCard from "../components/operations/OperationDecisionCard";
 import OperationAcceptanceCard from "../components/operations/OperationAcceptanceCard";
 import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
+import OperationImpactCard from "../components/operations/OperationImpactCard";
+import OperationRiskCard from "../components/operations/OperationRiskCard";
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
@@ -17,9 +18,9 @@ const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
   backToList: "返回作业列表",
-  evidenceBundle: "证据层",
-  executionEvidence: "执行证据",
-  timeline: "全链路时间线",
+  evidenceBundle: "证据包下载",
+  executionEvidence: "证据（做了什么）",
+  timeline: "过程时间线（补充）",
 };
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
@@ -87,7 +88,7 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="demoContentGrid">
-        <OperationDecisionCard model={model} />
+        <OperationImpactCard model={model} />
         <OperationExecutionCard model={model} />
       </section>
 
@@ -96,18 +97,21 @@ export default function OperationDetailPage(): React.ReactElement {
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">{COPY.executionEvidence}</div>
-            <div className="detailSectionLead">先看最近一次回执、资源消耗和约束校验，再决定是否需要人工复核或补执行。</div>
+            <div className="detailSectionLead">展示本次作业做了什么、消耗了什么、是否存在约束异常。</div>
           </div>
           <ReceiptEvidenceCard data={model.receiptEvidence} />
         </section>
       </section>
 
-      <OperationAcceptanceCard model={model} />
+      <section className="demoContentGrid">
+        <OperationAcceptanceCard model={model} />
+        <OperationRiskCard model={model} />
+      </section>
 
       <section className="card detailHeroCard">
         <div className="demoSectionHeader">
           <div className="sectionTitle">{COPY.timeline}</div>
-          <div className="detailSectionLead">从建议、审批到执行与回执，按顺序复盘整条链路。</div>
+          <div className="detailSectionLead">作为补充材料，按事件顺序展示流程轨迹。</div>
         </div>
         <OperationStoryTimeline items={model.timeline} title="" />
       </section>
