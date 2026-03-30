@@ -10,16 +10,6 @@ import {
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel, mapOperationStatusLabel } from "../lib/operationLabels";
 
-function MetricCard({ title, value, desc }: { title: string; value: number; desc: string }): React.ReactElement {
-  return (
-    <article className="card demoMetricCard">
-      <div className="demoMetricLabel">{title}</div>
-      <div className="demoMetricValue">{value}</div>
-      <div className="demoMetricHint">{desc}</div>
-    </article>
-  );
-}
-
 function EmptyBlock({ text }: { text: string }): React.ReactElement {
   return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
 }
@@ -38,39 +28,79 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const d = useDashboard(api);
 
   const failedActions = d.actions.filter((x) => x.finalStatus === "failed");
-  const pendingActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
-  const stableEvidences = d.evidences.slice(0, 3);
+  const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
+  const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
+  const riskAlerts = d.risks.filter((item) => item.startsWith("RISK|")).map((item) => item.replace("RISK|", ""));
+  const acceptanceTasks = d.evidences.slice(0, 4);
+
+  const keyActions = [
+    ...failedActions.slice(0, 2).map((item) => ({
+      id: `failed_${item.id}`,
+      title: `立即处置：${mapOperationActionLabel(item.actionLabel)}`,
+      detail: `${mapFieldDisplayName(item.subjectName, item.subjectName)} · ${mapOperationStatusLabel(item.statusLabel || item.finalStatus)}`,
+      href: item.href || "/operations",
+    })),
+    ...runningActions.slice(0, 2).map((item) => ({
+      id: `running_${item.id}`,
+      title: `跟进执行：${mapOperationActionLabel(item.actionLabel)}`,
+      detail: `${buildOperationSummary(item.statusLabel || item.finalStatus, item.actionLabel)} · 更新于 ${item.occurredAtLabel}`,
+      href: item.href || "/operations",
+    })),
+    ...pendingApprovals.slice(0, 2).map((item, idx) => ({
+      id: `approval_${idx}`,
+      title: "推进审批",
+      detail: item,
+      href: "/agronomy/recommendations",
+    })),
+  ].slice(0, 6);
 
   return (
     <div className="productPage demoDashboardPage">
       <section className="card hero compactHero demoHero dashboardHeroV2">
         <div>
           <div className="eyebrow">GEOX / 经营监控台</div>
-          <h1 className="demoHeroTitle">今天该处理什么</h1>
-          <p className="demoHeroSubTitle">先看必须处理的风险，再看执行中的作业，最后查看已完成证据。</p>
+          <h1 className="demoHeroTitle">Dashboard 收口：今日经营闭环</h1>
+          <p className="demoHeroSubTitle">围绕地块状态、风险、审批、执行与验收，聚焦今天必须推动的关键动作。</p>
         </div>
         <div className="heroActions">
           <Link className="btn" to="/operations">查看作业</Link>
-          <Link className="btn ghost" to="/fields">查看田块</Link>
-          <Link className="btn ghost" to="/audit-export">查看证据</Link>
+          <Link className="btn ghost" to="/agronomy/recommendations">查看建议</Link>
+          <Link className="btn ghost" to="/audit-export">查看验收</Link>
         </div>
       </section>
 
-      <section className="summaryGrid4 demoSummaryGrid">
-        <MetricCard title="在线设备" value={d.overview.onlineDeviceCount} desc="当前可联动的现场设备" />
-        <MetricCard title="进行中作业" value={d.overview.inProgressCount} desc="需要持续跟踪的执行链" />
-        <MetricCard title="今日完成" value={d.overview.completedTodayCount} desc="已形成回执或终态的任务" />
-        <MetricCard title="待处理事项" value={d.overview.pendingCount} desc="建议优先进入处理队列" />
-      </section>
-
       <section className="dashboardDecisionBoard">
+        <article className="card decisionColumn success">
+          <div className="decisionHeader">
+            <div>
+              <div className="sectionTitle">地块状态</div>
+              <div className="sectionDesc">在线能力与今日完结情况，判断地块是否稳定可运营。</div>
+            </div>
+            <div className="decisionCount">{d.overview.onlineDeviceCount}</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">在线设备</div>
+              <div className="decisionItemMeta">{d.overview.onlineDeviceCount} 台设备可联动</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">今日完成</div>
+              <div className="decisionItemMeta">{d.overview.completedTodayCount} 项任务进入终态</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">执行中</div>
+              <div className="decisionItemMeta">{d.overview.inProgressCount} 项作业持续推进</div>
+            </div>
+          </div>
+        </article>
+
         <article className="card decisionColumn danger">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">必须处理</div>
-              <div className="sectionDesc">失败作业、阻塞事项和高优先级风险。</div>
+              <div className="sectionTitle">风险告警</div>
+              <div className="sectionDesc">失败作业与验收风险，优先消除阻断点。</div>
             </div>
-            <div className="decisionCount">{failedActions.length + d.risks.length}</div>
+            <div className="decisionCount">{failedActions.length + riskAlerts.length}</div>
           </div>
           <div className="decisionList">
             {failedActions.slice(0, 3).map((a) => (
@@ -79,55 +109,93 @@ export default function CommercialDashboardPage(): React.ReactElement {
                 <div className="decisionItemMeta">{mapFieldDisplayName(a.subjectName, a.subjectName)} · {mapOperationStatusLabel(a.statusLabel || a.finalStatus)}</div>
               </Link>
             ))}
-            {d.risks.slice(0, 3).map((risk, idx) => (
+            {riskAlerts.slice(0, 3).map((risk, idx) => (
               <div key={`risk_${idx}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">风险提示</div>
+                <div className="decisionItemTitle">验收风险</div>
                 <div className="decisionItemMeta">{risk}</div>
               </div>
             ))}
-            {failedActions.length + d.risks.length === 0 ? <EmptyBlock text="当前没有必须立即处理的问题" /> : null}
+            {failedActions.length + riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
           </div>
         </article>
 
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">建议处理</div>
-              <div className="sectionDesc">进行中作业和待回传证据，适合先排队推进。</div>
+              <div className="sectionTitle">待审批建议</div>
+              <div className="sectionDesc">需要人工确认/审批后才能继续执行的建议事项。</div>
             </div>
-            <div className="decisionCount">{pendingActions.length}</div>
+            <div className="decisionCount">{pendingApprovals.length || d.overview.pendingCount}</div>
           </div>
           <div className="decisionList">
-            {pendingActions.slice(0, 4).map((a) => (
+            {pendingApprovals.slice(0, 4).map((item, idx) => (
+              <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
+                <div className="decisionItemTitle">建议待审批</div>
+                <div className="decisionItemMeta">{item}</div>
+              </Link>
+            ))}
+            {pendingApprovals.length === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
+          </div>
+        </article>
+
+        <article className="card decisionColumn warning">
+          <div className="decisionHeader">
+            <div>
+              <div className="sectionTitle">执行中任务</div>
+              <div className="sectionDesc">持续跟进任务时序，避免执行链中断。</div>
+            </div>
+            <div className="decisionCount">{runningActions.length}</div>
+          </div>
+          <div className="decisionList">
+            {runningActions.slice(0, 4).map((a) => (
               <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
                 <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
                 <div className="decisionItemMeta">{buildOperationSummary(a.statusLabel || a.finalStatus, a.actionLabel)}</div>
                 <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
               </Link>
             ))}
-            {pendingActions.length === 0 ? <EmptyBlock text="当前没有建议优先推进的作业" /> : null}
+            {runningActions.length === 0 ? <EmptyBlock text="当前没有执行中的任务" /> : null}
           </div>
         </article>
 
-        <article className="card decisionColumn success">
+        <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">正常运行</div>
-              <div className="sectionDesc">已完成作业和最近证据，可用于复盘与对外交付。</div>
+              <div className="sectionTitle">待验收任务</div>
+              <div className="sectionDesc">已回传证据但仍需验收确认的任务。</div>
             </div>
-            <div className="decisionCount">{stableEvidences.length}</div>
+            <div className="decisionCount">{acceptanceTasks.length}</div>
           </div>
           <div className="decisionList">
-            {stableEvidences.map((e: any, i: number) => {
+            {acceptanceTasks.map((e: any, i: number) => {
               const card = e?.card || {};
               return (
                 <Link key={e?.id || i} to={e?.href || card?.href || "/audit-export"} className="decisionItemLink">
                   <div className="decisionItemTitle">{mapFieldDisplayName(e?.fieldName, e?.fieldName)}</div>
-                  <div className="decisionItemMeta">{card?.constraintCheckLabel || "已回传"} · {card?.waterLabel || "--"}</div>
+                  <div className="decisionItemMeta">{card?.constraintCheckLabel || "待验收"} · {card?.waterLabel || "--"}</div>
                 </Link>
               );
             })}
-            {stableEvidences.length === 0 ? <EmptyBlock text="当前还没有可复盘证据" /> : null}
+            {acceptanceTasks.length === 0 ? <EmptyBlock text="当前没有待验收任务" /> : null}
+          </div>
+        </article>
+
+        <article className="card decisionColumn">
+          <div className="decisionHeader">
+            <div>
+              <div className="sectionTitle">今日关键动作</div>
+              <div className="sectionDesc">按业务优先级整理的跨模块动作清单。</div>
+            </div>
+            <div className="decisionCount">{keyActions.length}</div>
+          </div>
+          <div className="decisionList">
+            {keyActions.map((item) => (
+              <Link key={item.id} to={item.href} className="decisionItemLink">
+                <div className="decisionItemTitle">{item.title}</div>
+                <div className="decisionItemMeta">{item.detail}</div>
+              </Link>
+            ))}
+            {keyActions.length === 0 ? <EmptyBlock text="当前没有关键动作，请关注后续新告警" /> : null}
           </div>
         </article>
       </section>

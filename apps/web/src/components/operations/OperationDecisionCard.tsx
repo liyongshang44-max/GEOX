@@ -19,13 +19,13 @@ export default function OperationDecisionCard({ model }: { model: OperationDetai
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("触发原因", "Why it was triggered")}</span>
-          <strong>{model.recommendation.reasonCodes.join(" / ") || text("暂无", "None")}</strong>
-          <p>{text("这些信号共同触发了作业建议。", "These signals together triggered the recommendation.")}</p>
+          <strong>{model.recommendation.reasonCodesLabel}</strong>
+          <p>{model.recommendation.triggerSummary}</p>
         </div>
         <div className="detailMeaningItem">
           <span className="detailMeaningLabel">{text("审批结论", "Approval decision")}</span>
           <strong>{model.approval.decisionLabel}</strong>
-          <p>{text("由", "By")} {model.approval.actorLabel} · {model.approval.decidedAtLabel}</p>
+          <p>{model.approval.decisionSummary}</p>
         </div>
       </div>
     </section>

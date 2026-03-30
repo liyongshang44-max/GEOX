@@ -19,7 +19,7 @@ test('builds timeline from transitions', () => {
   assert.deepEqual(out[0].timeline.map((x) => x.type), ['APPROVAL_REQUESTED', 'APPROVED', 'TASK_DISPATCHED', 'SUCCEEDED']);
 });
 
-test('final_status priority: transition > receipt > fallback', () => {
+test('final_status priority: transition > receipt > acceptance_pending > fallback', () => {
   const base = fact('operation_plan_v1', { operation_plan_id: 'op2', act_task_id: 't2' }, '2026-03-19T20:00:00.000Z', 'p');
   const withTransition = projectOperationStateFromFacts([
     base,
@@ -34,7 +34,13 @@ test('final_status priority: transition > receipt > fallback', () => {
   ]);
   assert.equal(withReceipt[0].final_status, 'SUCCESS');
 
-  const fallback = projectOperationStateFromFacts([base]);
+  const missingAcceptance = projectOperationStateFromFacts([base]);
+  assert.equal(missingAcceptance[0].final_status, 'PENDING_ACCEPTANCE');
+
+  const fallback = projectOperationStateFromFacts([
+    base,
+    fact('acceptance_result_v1', { operation_plan_id: 'op2', act_task_id: 't2', verdict: 'PASS' }, '2026-03-19T20:02:00.000Z', 'ac2')
+  ]);
   assert.equal(fallback[0].final_status, 'RUNNING');
 });
 

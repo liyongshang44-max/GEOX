@@ -34,6 +34,8 @@ export type OperationDetailPageVm = {
     title: string;
     summary: string;
     reasonCodes: string[];
+    reasonCodesLabel: string;
+    triggerSummary: string;
     createdAtLabel: string;
   };
   approval: {
@@ -41,6 +43,7 @@ export type OperationDetailPageVm = {
     decisionLabel: string;
     actorLabel: string;
     decidedAtLabel: string;
+    decisionSummary: string;
   };
   execution: {
     actionType: string;
@@ -54,6 +57,9 @@ export type OperationDetailPageVm = {
     ackStatusLabel: string;
     progressLabel: string;
     finalStatusLabel: string;
+    dispatchedChipLabel: string;
+    ackChipLabel: string;
+    finalChipLabel: string;
   };
   receiptEvidence?: ReceiptEvidenceVm;
   timeline: OperationStoryTimelineItemVm[];
@@ -61,12 +67,17 @@ export type OperationDetailPageVm = {
     exportableLabel: string;
     latestJobId: string;
     latestJobStatus: string;
+    bundleStatusLabel: string;
+    latestJobStatusLabel: string;
     latestExportedAtLabel: string;
     latestBundleName: string;
     hasExportableBundle: boolean;
     downloadUrl?: string;
     jumpUrl?: string;
     missingReason: string;
+    usageValueLabel: string;
+    usageHintLabel: string;
+    actionLabel: string;
   };
 };
 
@@ -138,6 +149,14 @@ function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): stri
     return `现场已回传执行结果，但存在复核提示：${receipt.violationSummary}`;
   }
   return "现场已回传执行结果，可继续查看资源消耗与完成时间";
+}
+
+function buildEvidenceBundleStatus(detail: any): string {
+  const hasBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
+  if (hasBundle) return "已生成，可下载与归档";
+  const latestJobStatus = String(detail?.evidence_export?.latest_job_status ?? "").toUpperCase();
+  if (latestJobStatus === "RUNNING") return "正在生成证据包";
+  return "当前暂不可导出";
 }
 
 const STORY_TIMELINE_ORDER = [
@@ -253,6 +272,24 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const receiptEndTs = toMs(detail?.receipt?.execution_finished_at);
   const windowStart = receiptStartTs ?? dispatchTs;
   const windowEnd = receiptEndTs ?? ackTs;
+  const reasonCodes = Array.isArray(detail?.recommendation?.reason_codes)
+    ? detail.recommendation.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
+    : [];
+  const reasonCodesLabel = reasonCodes.join(" / ") || "暂无";
+  const approvalActorLabel = toText(detail?.approval?.actor_label, "系统/未知");
+  const approvalDecidedAtLabel = toDateLabel(detail?.approval?.decided_at);
+  const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
+  const finalStatusLabel = mapStatusLabel(detail?.status_label ?? detail?.final_status);
+  const latestJobStatus = toText(detail?.evidence_export?.latest_job_status, "未开始");
+  const hasExportableBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
+  const downloadUrl = typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined;
+  const jumpUrl = typeof detail?.evidence_export?.jump_url === "string" ? detail.evidence_export.jump_url : undefined;
+  const evidenceBundleStatus = buildEvidenceBundleStatus(detail);
+  const evidenceActionLabel = hasExportableBundle && downloadUrl
+    ? "下载证据包"
+    : jumpUrl
+      ? "查看导出任务"
+      : "暂无可下载证据包";
 
   return {
     actionLabel: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type, "作业")),
@@ -275,16 +312,17 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       id: toText(detail?.recommendation?.recommendation_id),
       title: toText(detail?.recommendation?.title, "系统建议"),
       summary: toText(detail?.recommendation?.summary, "暂无建议摘要"),
-      reasonCodes: Array.isArray(detail?.recommendation?.reason_codes)
-        ? detail.recommendation.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
-        : [],
+      reasonCodes,
+      reasonCodesLabel,
+      triggerSummary: "这些信号共同触发了作业建议。",
       createdAtLabel: toDateLabel(detail?.recommendation?.created_at),
     },
     approval: {
       requestId: toText(detail?.approval?.approval_request_id),
       decisionLabel: toText(detail?.approval?.decision_label, toText(detail?.approval?.decision, "待审批")),
-      actorLabel: toText(detail?.approval?.actor_label, "系统/未知"),
-      decidedAtLabel: toDateLabel(detail?.approval?.decided_at),
+      actorLabel: approvalActorLabel,
+      decidedAtLabel: approvalDecidedAtLabel,
+      decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
     execution: {
       actionType: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type)),
@@ -297,22 +335,30 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
         : "-",
       dispatchedAtLabel: toDateLabel(detail?.dispatch?.dispatched_at),
       ackedAtLabel: toDateLabel(detail?.dispatch?.acked_at),
-      ackStatusLabel: ackTs != null ? "已确认" : "待确认",
+      ackStatusLabel,
       progressLabel: resolveExecutionProgress(detail),
-      finalStatusLabel: mapStatusLabel(detail?.status_label ?? detail?.final_status),
+      finalStatusLabel,
+      dispatchedChipLabel: `下发时间：${toDateLabel(detail?.dispatch?.dispatched_at)}`,
+      ackChipLabel: `确认状态：${ackStatusLabel}`,
+      finalChipLabel: `最终结果：${finalStatusLabel}`,
     },
     receiptEvidence: receipt,
     timeline,
     evidenceExport: {
-      exportableLabel: Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle) ? "可导出" : "暂不可导出",
+      exportableLabel: hasExportableBundle ? "可导出" : "暂不可导出",
       latestJobId: toText(detail?.evidence_export?.latest_job_id),
-      latestJobStatus: toText(detail?.evidence_export?.latest_job_status, "未开始"),
+      latestJobStatus,
+      bundleStatusLabel: evidenceBundleStatus,
+      latestJobStatusLabel: `最近任务：${latestJobStatus}`,
       latestExportedAtLabel: toDateLabel(detail?.evidence_export?.latest_exported_at),
       latestBundleName: toText(detail?.evidence_export?.latest_bundle_name, "暂无证据包"),
-      hasExportableBundle: Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle),
-      downloadUrl: typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined,
-      jumpUrl: typeof detail?.evidence_export?.jump_url === "string" ? detail.evidence_export.jump_url : undefined,
+      hasExportableBundle,
+      downloadUrl,
+      jumpUrl,
       missingReason: toText(detail?.evidence_export?.missing_reason, "无"),
+      usageValueLabel: "用于留痕、复验与交付",
+      usageHintLabel: `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
+      actionLabel: evidenceActionLabel,
     },
   };
 }

@@ -22,11 +22,14 @@ export type OperationTimelineItemV1 = {
 
 export type OperationStateV1 = {
   operation_id: string;
+  operation_plan_id: string;
   recommendation_id: string | null;
+  approval_id: string | null;
+  act_task_id: string | null;
+  receipt_id: string | null;
   program_id: string | null;
   approval_request_id: string | null;
   approval_decision_id: string | null;
-  operation_plan_id: string | null;
   task_id: string | null;
   device_id: string | null;
   field_id: string | null;
@@ -34,7 +37,7 @@ export type OperationStateV1 = {
   action_type: string | null;
   dispatch_status: string;
   receipt_status: string;
-  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING";
+  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE";
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
 };
@@ -68,7 +71,8 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
   const sql = `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts
     WHERE (record_json::jsonb->>'type') IN (
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
-      'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0'
+      'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
+      'acceptance_result_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
@@ -128,7 +132,18 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const decisionByReq = latestByKey(facts.filter((r) => r.record_json?.type === "approval_decision_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const taskById = latestByKey(facts.filter((r) => r.record_json?.type === "ao_act_task_v0"), (r) => String(r.record_json?.payload?.act_task_id ?? "").trim());
-  const receiptByTask = latestByKey(facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))), (r) => String(r.record_json?.payload?.act_task_id ?? "").trim());
+  const receiptByTask = latestByKey(
+    facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
+    (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
+  );
+  const acceptanceByPlan = latestByKey(
+    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
+    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim()
+  );
+  const acceptanceByTask = latestByKey(
+    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
+    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim()
+  );
 
   const transitionByPlan = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_transition_v1")) {
@@ -155,6 +170,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const decision = approval_request_id ? decisionByReq.get(approval_request_id) : undefined;
     const task = task_id ? taskById.get(task_id) : undefined;
     const receipt = task_id ? receiptByTask.get(task_id) : undefined;
+    const acceptance = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
 
     const timeline: OperationTimelineItemV1[] = [];
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
@@ -180,22 +196,36 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       if (r.includes("FAIL") || r.includes("NOT_EXEC")) timeline.push({ ts, type: "FAILED", label: timelineLabel("FAILED") });
       if (r.includes("SUCCESS") || r.includes("EXECUTED")) timeline.push({ ts, type: "SUCCEEDED", label: timelineLabel("SUCCEEDED") });
     }
-    timeline.sort((a, b) => a.ts - b.ts);
+    const dedupedTimeline = new Map<string, OperationTimelineItemV1>();
+    for (const item of timeline) {
+      dedupedTimeline.set(`${item.type}_${item.ts}`, item);
+    }
+    const fullTimeline = [...dedupedTimeline.values()].sort((a, b) => a.ts - b.ts);
 
     const latestTransition = transitions.length ? String(transitions[transitions.length - 1].record_json?.payload?.status ?? "") : "";
     const receiptStatus = String(receipt?.record_json?.payload?.status ?? "PENDING");
     const final_status =
       finalStatusFromTransition(latestTransition)
       ?? finalStatusFromReceipt(receiptStatus)
+      ?? (acceptance ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
+
+    const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
+    const approval_id = approval_decision_id ?? approval_request_id;
+    const receipt_id = receipt
+      ? String(receipt.record_json?.payload?.receipt_id ?? receipt.fact_id ?? "").trim() || null
+      : null;
 
     states.push({
       operation_id: operation_plan_id,
+      operation_plan_id,
       recommendation_id,
+      approval_id,
+      act_task_id: task_id,
+      receipt_id,
       program_id: String(payload.program_id ?? rec?.record_json?.payload?.program_id ?? "").trim() || null,
       approval_request_id,
-      approval_decision_id: decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null,
-      operation_plan_id,
+      approval_decision_id,
       task_id,
       device_id: String(payload.device_id ?? task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null,
       field_id: String(payload.field_id ?? payload?.target?.ref ?? rec?.record_json?.payload?.field_id ?? "").trim() || null,
@@ -204,8 +234,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       final_status,
-      last_event_ts: timeline.length ? timeline[timeline.length - 1].ts : toMs(row.occurred_at),
-      timeline
+      last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
+      timeline: fullTimeline
     });
   }
 
