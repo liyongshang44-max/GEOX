@@ -25,6 +25,8 @@ import AgronomyRecommendationsPage from "../views/AgronomyRecommendationsPage";
 import SettingsPage from "../views/SettingsPage";
 import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
+import HumanAssignmentsPage from "../views/HumanAssignmentsPage";
+import HumanAssignmentDetailPage from "../views/HumanAssignmentDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
 import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
@@ -44,6 +46,8 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/devices/")) return "设备详情";
   if (pathname.startsWith("/operations/")) return "作业详情";
   if (pathname.startsWith("/operations")) return "作业中心";
+  if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
+  if (pathname.startsWith("/human-assignments")) return "人工执行";
   if (pathname === "/programs") return "经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
@@ -64,6 +68,8 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
   if (pathname.startsWith("/operations/")) return "查看作业状态、执行时间线与最新执行证据。";
   if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
+  if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
+  if (pathname.startsWith("/human-assignments")) return "按状态处理人工任务，完成接单、执行与提交。";
   if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
   if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
@@ -84,6 +90,8 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/devices/")) return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备详情" }];
   if (pathname.startsWith("/operations/")) return [{ label: "总览", to: "/dashboard" }, { label: "作业中心", to: "/operations" }, { label: "作业详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "总览", to: "/dashboard" }, { label: "作业中心" }];
+  if (pathname.startsWith("/human-assignments/")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
+  if (pathname.startsWith("/human-assignments")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
@@ -136,6 +144,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/devices" label="设备中心" />
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
           <SidebarLink to="/operations" label="作业中心" />
+          <SidebarLink to="/human-assignments" label="人工执行" />
           <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
@@ -188,6 +197,8 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/devices/:deviceId" element={<DeviceDetailPage />} />
             <Route path="/operations" element={<OperationsPage />} />
             <Route path="/operations/:operationPlanId" element={<OperationDetailPage />} />
+            <Route path="/human-assignments" element={<HumanAssignmentsPage />} />
+            <Route path="/human-assignments/:assignmentId" element={<HumanAssignmentDetailPage />} />
             <Route path="/programs" element={<ProgramListPage />} />
             <Route path="/programs/:programId" element={<ProgramDetailPage />} />
             <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />

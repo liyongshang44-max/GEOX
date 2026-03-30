@@ -46,6 +46,8 @@ export type OperationDetailPageVm = {
     decisionSummary: string;
   };
   execution: {
+    executionModeLabel: string;
+    executorTypeLabel: string;
     actionType: string;
     planId: string;
     taskId: string;
@@ -165,10 +167,21 @@ const STORY_TIMELINE_ORDER = [
   "已批准执行",
   "已创建执行计划",
   "已生成执行任务",
+  "assignment created",
+  "assignment accepted",
+  "arrived",
   "已下发设备",
   "设备执行中",
+  "receipt submitted",
   "已记录执行回执",
 ];
+
+function mapExecutionModeLabel(raw: string): string {
+  const key = String(raw || "").toLowerCase();
+  if (key === "human") return "人工执行";
+  if (key === "hybrid") return "混合执行";
+  return "设备执行";
+}
 
 function buildStorySummary(label: string, sourceSummary: string, sourceActor: string, detail: any): string {
   if (sourceSummary !== "-" && sourceSummary !== "等待推进") return sourceSummary;
@@ -188,10 +201,18 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `${actor}已完成执行计划拆解，明确目标设备与执行窗口。`;
     case "已生成执行任务":
       return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
+    case "assignment created":
+      return `${actor}已创建人工执行单，等待现场人员接单。`;
+    case "assignment accepted":
+      return `${actor}已接单，准备前往作业点。`;
+    case "arrived":
+      return `${actor}已到场，开始人工执行。`;
     case "已下发设备":
       return `任务已发送至设备 ${deviceId}，等待设备确认与执行反馈。`;
     case "设备执行中":
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
+    case "receipt submitted":
+      return `${actor}已提交人工执行回执，等待系统归档。`;
     case "已记录执行回执":
       return `${actor}已回传执行完成回执，并记录资源消耗数据。`;
     case "作业已完成":
@@ -218,8 +239,31 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     actorLabel: toText(item?.actor_label),
     summary: toText(item?.summary),
   }));
+  const humanAuditSource = (Array.isArray(detail?.human_execution?.audit) ? detail.human_execution.audit : []).map((item: any, idx: number) => {
+    const status = String(item?.status ?? "").toUpperCase();
+    const label = status === "ASSIGNED"
+      ? "assignment created"
+      : status === "ACCEPTED"
+        ? "assignment accepted"
+        : status === "ARRIVED"
+          ? "arrived"
+          : status === "SUBMITTED"
+            ? "receipt submitted"
+            : "";
+    return {
+      id: toText(item?.audit_id, `human_audit_${idx}`),
+      kind: "HUMAN_ASSIGNMENT_AUDIT",
+      label: label || status,
+      status: status || "PENDING",
+      occurredAtLabel: toDateLabel(item?.occurred_at),
+      occurredAtMs: toMs(item?.occurred_at),
+      actorLabel: toText(item?.executor_id, "人工执行者"),
+      summary: toText(item?.note, label || status || "人工执行更新"),
+    };
+  }).filter((x: any) => x.label && x.label !== "-");
+  const mergedTimelineSource = [...timelineSource, ...humanAuditSource];
   const byLabel = new Map<string, (typeof timelineSource)[number]>();
-  timelineSource.forEach((item) => {
+  mergedTimelineSource.forEach((item) => {
     if (item.label !== "-" && !byLabel.has(item.label)) byLabel.set(item.label, item);
   });
 
@@ -244,7 +288,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     : ["FAILED", "ERROR"].includes(String(detail?.final_status ?? "").toUpperCase())
       ? "作业执行失败"
       : "作业状态更新中";
-  const terminalSource = timelineSource.find((x) => x.label === terminalLabel);
+  const terminalSource = mergedTimelineSource.find((x) => x.label === terminalLabel);
   timeline.push({
     id: terminalSource?.id ?? "story_terminal",
     kind: terminalSource?.kind ?? "TERMINAL",
@@ -261,7 +305,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     ),
   });
 
-  const latestTs = timelineSource
+  const latestTs = mergedTimelineSource
     .map((x) => x.occurredAtMs)
     .filter((x): x is number => Number.isFinite(x))
     .sort((a, b) => b - a)[0] ?? null;
@@ -280,6 +324,8 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
   const approvalDecidedAtLabel = toDateLabel(detail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
   const finalStatusLabel = mapStatusLabel(detail?.status_label ?? detail?.final_status);
+  const executionMode = String(detail?.human_execution?.mode ?? "").toLowerCase();
+  const assignmentExecutor = toText(detail?.human_execution?.assignment?.executor_id, "-");
   const latestJobStatus = toText(detail?.evidence_export?.latest_job_status, "未开始");
   const hasExportableBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
   const downloadUrl = typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined;
@@ -325,11 +371,17 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
     execution: {
+      executionModeLabel: mapExecutionModeLabel(executionMode),
+      executorTypeLabel: executionMode === "human" ? "human" : executionMode === "hybrid" ? "hybrid" : "device",
       actionType: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type)),
       planId: toText(detail?.operation_plan_id),
       taskId: toText(detail?.dispatch?.task_id, toText(detail?.task?.task_id)),
       deviceId: toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id)),
-      executorLabel: toText(detail?.dispatch?.executor_label, toText(detail?.task?.executor_label, "系统")),
+      executorLabel: executionMode === "human"
+        ? assignmentExecutor
+        : executionMode === "hybrid"
+          ? `${toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id, "设备"))} + ${assignmentExecutor}`
+          : toText(detail?.dispatch?.executor_label, toText(detail?.task?.executor_label, "系统")),
       executionWindowLabel: windowStart != null
         ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
         : "-",
