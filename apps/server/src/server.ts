@@ -1041,9 +1041,12 @@ app.post("/api/derive/overlays", async (req, reply) => {
   }
 });
 
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 // ---------------- Series API ----------------
 
 app.get("/api/series", async (req, reply) => {
+  reply.header("Deprecation", "true");
+  reply.header("Sunset", "legacy");
   const q = req.query as Record<string, unknown>; // query
 
   let startTs: number; // startTs
@@ -1261,7 +1264,10 @@ const payloadConfidence: OverlayConfidence | null =
 });
 
 // POST /api/marker
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 app.post("/api/marker", async (req, reply) => {
+  reply.header("Deprecation", "true");
+  reply.header("Sunset", "legacy");
   const body = req.body as any; // body
   try {
     const entity = (body?.entity ?? {}) as any; // entity（兼容客户端）

@@ -1,4 +1,4 @@
-// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 // GEOX/packages/contracts/src/schema/sensor_group_v1.ts
 
 export type SensorGroupSubjectRef = {

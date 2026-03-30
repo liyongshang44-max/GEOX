@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 # GEOX Weather Contract (v1)
 
 This document freezes the minimal weather facts in the Monitor layer.
@@ -7,7 +8,7 @@ This document freezes the minimal weather facts in the Monitor layer.
 Weather is recorded in the same **append-only facts** stream as other sensors:
 
 - Write: `POST /api/raw`
-- Read: `GET /api/series`
+- Read: `GET /api/series`（deprecated, legacy only）
 
 Treat the weather station as a sensor.
 
@@ -33,7 +34,7 @@ Optional metrics (allowed):
 
 Query rainfall and temperature:
 
-- `GET /api/series?sensorId=WX_1&metrics=rain_mm,air_temp_c&startTs=(no further steps in this file)&endTs=(no further steps in this file)&maxPoints=2000`
+- `GET /api/v1/telemetry/series?sensorId=WX_1&metrics=rain_mm,air_temp_c&startTs=(no further steps in this file)&endTs=(no further steps in this file)&maxPoints=2000`
 
 Notes:
 

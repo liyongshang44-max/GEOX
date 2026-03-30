@@ -1,3 +1,4 @@
+# ⚠️ DEPRECATED: legacy only, do not use in new flows
 # GEOX/apps/web/smoke_test.ps1
 # Smoke test: backend + web UI (PowerShell)
 $ErrorActionPreference = "Stop"

@@ -1,8 +1,6 @@
 // GEOX/apps/web/src/routes/App.tsx
 import React from "react";
 import { Routes, Route, NavLink, useLocation } from "react-router-dom";
-import GroupListPage from "../views/GroupListPage";
-import GroupTimelinePage from "../views/GroupTimelinePage";
 import JudgeRunPage from "../views/JudgeRunPage";
 import JudgeRecordsPage from "../views/JudgeRecordsPage";
 import JudgeConfigPage from "../views/JudgeConfigPage";
@@ -198,8 +196,6 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/dev" element={<DevToolsPage />} />
 
-            <Route path="/legacy/groups" element={<GroupListPage />} />
-            <Route path="/legacy/group/:groupId" element={<GroupTimelinePage />} />
             <Route path="/legacy/judge/run" element={<JudgeRunPage />} />
             <Route path="/legacy/judge/records" element={<JudgeRecordsPage />} />
             <Route path="/legacy/judge/config" element={<JudgeConfigPage />} />
@@ -209,7 +205,6 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/legacy/admin/acceptance" element={<AdminAcceptancePage />} />
             <Route path="/legacy/control/approvals" element={<ApprovalRequestsPage />} />
 
-            <Route path="/group/:groupId" element={<GroupTimelinePage />} />
             <Route path="/judge/run" element={<JudgeRunPage />} />
             <Route path="/judge/records" element={<JudgeRecordsPage />} />
             <Route path="/judge/config" element={<JudgeConfigPage />} />
