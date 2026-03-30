@@ -54,9 +54,9 @@ export function useDashboard(api: any): DashboardVm {
         });
 
         const mappedRisks = [
-          ...(riskItems || []).map((item: any) => `${item?.title || "验收风险"}${item?.level ? ` · ${item.level}` : ""}`),
-          ...(pendingItems || []).map((item: any) => `${item?.label || "待处理事项"}`),
-        ].filter(Boolean).slice(0, 6);
+          ...(riskItems || []).map((item: any) => `RISK|${item?.title || "验收风险"}${item?.level ? ` · ${item.level}` : ""}`),
+          ...(pendingItems || []).map((item: any) => `APPROVAL|${item?.label || "待审批建议"}`),
+        ].filter(Boolean).slice(0, 10);
 
         setData({
           overview: {
