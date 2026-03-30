@@ -31,7 +31,9 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
   const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
   const riskAlerts = d.risks.filter((item) => item.startsWith("RISK|")).map((item) => item.replace("RISK|", ""));
-  const acceptanceTasks = d.evidences.slice(0, 4);
+  const acceptanceTasks = d.evidences
+    .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
+    .slice(0, 4);
 
   const keyActions = [
     ...failedActions.slice(0, 2).map((item) => ({
