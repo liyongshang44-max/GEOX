@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestWithPolicy } from "./client";
+import { apiRequest, apiRequestOptional } from "./client";
 import type { ControlPlaneStatus } from "./programs";
 
 export type FieldListItem = any;
@@ -51,16 +51,6 @@ export type FieldControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
-async function safeNullable<T>(promise: Promise<T>): Promise<T | null> {
-  try {
-    return await promise;
-  } catch (e: any) {
-    if (e?.status === 404 || e?.response?.status === 404) return null;
-    if (e?.status === 500 || e?.response?.status === 500) return null;
-    return null;
-  }
-}
-
 export async function fetchFields(): Promise<FieldListItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: FieldListItem[]; fields?: FieldListItem[] }>("/api/v1/fields");
   if (Array.isArray(res.items)) return res.items;
@@ -68,25 +58,28 @@ export async function fetchFields(): Promise<FieldListItem[]> {
 }
 
 export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | null> {
-  return safeNullable(apiRequest<FieldDetail>(`/api/v1/fields/${encodeURIComponent(fieldId)}`));
+  return apiRequestOptional<FieldDetail>(`/api/v1/fields/${encodeURIComponent(fieldId)}`, undefined, {
+    allowedStatuses: [404],
+    dedupe: true,
+  });
 }
 
 export async function fetchFieldControlPlane(fieldId: string): Promise<FieldControlPlaneItem | null> {
-  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: FieldControlPlaneItem }>(
+  const res = await apiRequestOptional<{ ok?: boolean; item?: FieldControlPlaneItem }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`,
     undefined,
     { allowedStatuses: [404], dedupe: true },
   );
-  return res.ok ? (res.data?.item ?? null) : null;
+  return res?.item ?? null;
 }
 
 export async function fetchFieldGeometry(fieldId: string): Promise<any> {
-  const res = await apiRequestWithPolicy<any>(
+  const res = await apiRequestOptional<any>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`,
     undefined,
     { allowedStatuses: [404, 422], dedupe: true },
   );
-  return res.ok ? res.data : null;
+  return res;
 }
 
 export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array<{ season_id: string; count: number; programs: any[] }>> {
@@ -95,10 +88,10 @@ export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array
 }
 
 export async function fetchFieldCurrentProgram(fieldId: string): Promise<any | null> {
-  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: any }>(
+  const res = await apiRequestOptional<{ ok?: boolean; item?: any }>(
     `/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`,
     undefined,
     { allowedStatuses: [404], dedupe: true },
   );
-  return res.ok ? (res.data?.item ?? null) : null;
+  return res?.item ?? null;
 }

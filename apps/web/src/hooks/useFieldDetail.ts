@@ -1,5 +1,5 @@
 import React from "react";
-import { apiRequest } from "../api/client";
+import { apiRequestOptional } from "../api/client";
 import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, type FieldControlPlaneItem } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
@@ -314,10 +314,10 @@ export function useFieldDetail(params: {
         }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
-          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
+          apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
         ),
         Promise.resolve().then(() =>
-          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
+          apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
         ),
       ]);
 

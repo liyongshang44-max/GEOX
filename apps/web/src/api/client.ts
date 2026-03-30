@@ -1,12 +1,14 @@
 import { readSessionToken, readTenantContext } from "../auth/authStorage";
 
-const DEFAULT_BROWSER_API_BASE = "http://127.0.0.1:3001";
+const DEFAULT_API_BASE = "http://127.0.0.1:3001";
 
 export const API_BASE_URL = String(
   (import.meta as any)?.env?.VITE_API_BASE_URL ??
   (import.meta as any)?.env?.VITE_API_BASE ??
-  (typeof window !== "undefined" ? DEFAULT_BROWSER_API_BASE : "/api")
+  DEFAULT_API_BASE
 ).replace(/\/+$/, "");
+
+export const OPTIONAL_API_STATUSES = [404, 422] as const;
 
 export class ApiError extends Error {
   public status: number;
@@ -119,6 +121,19 @@ export async function apiRequestWithPolicy<T>(
   } finally {
     inflightRequests.delete(key);
   }
+}
+
+export async function apiRequestOptional<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { allowedStatuses?: number[]; dedupe?: boolean },
+): Promise<T | null> {
+  const allowedStatuses = options?.allowedStatuses ?? [...OPTIONAL_API_STATUSES];
+  const res = await apiRequestWithPolicy<T>(path, init, {
+    allowedStatuses,
+    dedupe: options?.dedupe,
+  });
+  return res.ok ? res.data : null;
 }
 
 export const requestJson = apiRequest;

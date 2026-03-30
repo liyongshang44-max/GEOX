@@ -1,4 +1,4 @@
-import { apiRequest, withQuery } from "./client";
+import { apiRequest, apiRequestOptional, withQuery } from "./client";
 
 export type OperationStateTimelineItemV1 = { type: string; label: string; ts: number };
 export type OperationStateItemV1 = {
@@ -77,20 +77,20 @@ export async function fetchOperationDetail(operationPlanId: string): Promise<Ope
 export async function fetchOperationEvidenceExport(operationPlanId: string): Promise<OperationEvidenceExportResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
-  const res = await apiRequest<{ ok?: boolean; item?: OperationEvidenceExportResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-export`);
+  const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceExportResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-export`);
   return res?.item ?? null;
 }
 
 export async function fetchEvidenceBundle(operationPlanId: string): Promise<OperationEvidenceBundleItem | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
-  const res = await apiRequest<{ ok?: boolean; item?: OperationEvidenceBundleItem }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-bundle`);
+  const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceBundleItem }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-bundle`);
   return res?.item ?? null;
 }
 
 export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null> {
-  const res = await apiRequest<{ ok?: boolean; trajectory?: any }>(`/api/v1/tasks/${encodeURIComponent(actTaskId)}/trajectory`);
-  return res.trajectory ?? null;
+  const res = await apiRequestOptional<{ ok?: boolean; trajectory?: any }>(`/api/v1/tasks/${encodeURIComponent(actTaskId)}/trajectory`);
+  return res?.trajectory ?? null;
 }
 
 export async function fetchApprovalRequests(params: {
