@@ -255,17 +255,23 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
   }
 }
 
-export function buildOperationDetailViewModel(detail: any): OperationDetailPageVm {
-  const bundleReceipt = detail?.evidence_bundle?.receipt;
-  const bundleAcceptance = detail?.evidence_bundle?.acceptance;
-  const receiptSource = bundleReceipt ?? detail?.receipt;
+export function buildOperationDetailViewModel(args?: {
+  detail?: any;
+  evidenceBundle?: any;
+}): OperationDetailPageVm {
+  const safeArgs = args ?? {};
+  const safeDetail = safeArgs.detail ?? {};
+  const evidenceBundle = safeArgs.evidenceBundle ?? safeDetail?.evidence_bundle ?? safeDetail?.evidence_export ?? {};
+  const bundleReceipt = evidenceBundle?.receipt;
+  const bundleAcceptance = evidenceBundle?.acceptance;
+  const receiptSource = bundleReceipt ?? safeDetail?.receipt;
   const receipt = receiptSource
     ? mapReceiptToVm({ ...receiptSource, status: receiptSource?.receipt_status ?? receiptSource?.status })
     : undefined;
 
-  const rawTimeline = Array.isArray(detail?.evidence_bundle?.timeline)
-    ? detail.evidence_bundle.timeline
-    : (Array.isArray(detail?.timeline) ? detail.timeline : []);
+  const rawTimeline = Array.isArray(evidenceBundle?.timeline)
+    ? evidenceBundle.timeline
+    : (Array.isArray(safeDetail?.timeline) ? safeDetail.timeline : []);
   const timelineSource = rawTimeline.map((item: any, idx: number) => {
     const rawType = String(item?.type ?? item?.kind ?? "").toUpperCase();
     const normalizedLabel = rawType === "ASSIGNMENT_CREATED"
@@ -308,13 +314,13 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       occurredAtLabel: hit?.occurredAtLabel ?? "-",
       actorLabel,
       summary,
-      storySummary: buildStorySummary(label, summary, actorLabel, detail),
+      storySummary: buildStorySummary(label, summary, actorLabel, safeDetail),
     };
   });
 
-  const terminalLabel = ["SUCCEEDED", "SUCCESS"].includes(String(detail?.final_status ?? "").toUpperCase())
+  const terminalLabel = ["SUCCEEDED", "SUCCESS"].includes(String(safeDetail?.final_status ?? "").toUpperCase())
     ? "作业已完成"
-    : ["FAILED", "ERROR"].includes(String(detail?.final_status ?? "").toUpperCase())
+    : ["FAILED", "ERROR"].includes(String(safeDetail?.final_status ?? "").toUpperCase())
       ? "作业执行失败"
       : "作业状态更新中";
   const terminalSource = mergedTimelineSource.find((x) => x.label === terminalLabel);
@@ -322,7 +328,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     id: terminalSource?.id ?? "story_terminal",
     kind: terminalSource?.kind ?? "TERMINAL",
     label: terminalLabel,
-    status: toText(detail?.final_status, "PENDING"),
+    status: toText(safeDetail?.final_status, "PENDING"),
     occurredAtLabel: terminalSource?.occurredAtLabel ?? "-",
     actorLabel: terminalSource?.actorLabel ?? "-",
     summary: terminalSource?.summary ?? (terminalLabel === "作业状态更新中" ? "尚未进入终态" : terminalLabel),
@@ -330,7 +336,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       terminalLabel,
       terminalSource?.summary ?? (terminalLabel === "作业状态更新中" ? "尚未进入终态" : terminalLabel),
       terminalSource?.actorLabel ?? "-",
-      detail,
+      safeDetail,
     ),
   });
 
@@ -339,64 +345,64 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     .filter((x): x is number => Number.isFinite(x))
     .sort((a, b) => b - a)[0] ?? null;
 
-  const ackTs = toMs(detail?.dispatch?.acked_at ?? detail?.task?.acked_at ?? detail?.plan?.acked_at);
-  const dispatchTs = toMs(detail?.dispatch?.dispatched_at ?? detail?.task?.dispatched_at ?? detail?.plan?.dispatched_at);
+  const ackTs = toMs(safeDetail?.dispatch?.acked_at ?? safeDetail?.task?.acked_at ?? safeDetail?.plan?.acked_at);
+  const dispatchTs = toMs(safeDetail?.dispatch?.dispatched_at ?? safeDetail?.task?.dispatched_at ?? safeDetail?.plan?.dispatched_at);
   const receiptStartTs = toMs(receiptSource?.execution_started_at);
   const receiptEndTs = toMs(receiptSource?.execution_finished_at);
   const windowStart = receiptStartTs ?? dispatchTs;
   const windowEnd = receiptEndTs ?? ackTs;
-  const reasonCodes = Array.isArray(detail?.recommendation?.reason_codes)
-    ? detail.recommendation.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
+  const reasonCodes = Array.isArray(safeDetail?.recommendation?.reason_codes)
+    ? safeDetail.recommendation.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
     : [];
   const reasonCodesLabel = reasonCodes.join(" / ") || "暂无";
-  const approvalActorLabel = toText(detail?.approval?.actor_label, "系统/未知");
-  const approvalDecidedAtLabel = toDateLabel(detail?.approval?.decided_at);
+  const approvalActorLabel = toText(safeDetail?.approval?.actor_label, "系统/未知");
+  const approvalDecidedAtLabel = toDateLabel(safeDetail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
-  const finalStatusLabel = mapStatusLabel(detail?.status_label ?? detail?.final_status);
-  const executorKind = String(detail?.evidence_bundle?.executor?.kind ?? "").toLowerCase();
+  const finalStatusLabel = mapStatusLabel(safeDetail?.status_label ?? safeDetail?.final_status);
+  const executorKind = String(evidenceBundle?.executor?.kind ?? "").toLowerCase();
   const executionMode = executorKind === "human" ? "human" : executorKind ? "hybrid" : "";
-  const assignmentExecutor = toText(detail?.evidence_bundle?.executor?.id, "-");
-  const latestJobStatus = toText(detail?.evidence_export?.latest_job_status, "未开始");
-  const hasExportableBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
-  const downloadUrl = typeof detail?.evidence_export?.download_url === "string" ? detail.evidence_export.download_url : undefined;
-  const jumpUrl = typeof detail?.evidence_export?.jump_url === "string" ? detail.evidence_export.jump_url : undefined;
-  const evidenceBundleStatus = buildEvidenceBundleStatus(detail);
+  const assignmentExecutor = toText(evidenceBundle?.executor?.id, "未分配");
+  const latestJobStatus = toText(safeDetail?.evidence_export?.latest_job_status, "未开始");
+  const hasExportableBundle = Boolean(safeDetail?.evidence_export?.has_bundle ?? safeDetail?.evidence_export?.has_exportable_bundle);
+  const downloadUrl = typeof safeDetail?.evidence_export?.download_url === "string" ? safeDetail.evidence_export.download_url : undefined;
+  const jumpUrl = typeof safeDetail?.evidence_export?.jump_url === "string" ? safeDetail.evidence_export.jump_url : undefined;
+  const evidenceBundleStatus = buildEvidenceBundleStatus(safeDetail?.evidence_export ?? evidenceBundle);
   const evidenceActionLabel = hasExportableBundle && downloadUrl
     ? "下载证据包"
     : jumpUrl
       ? "查看导出任务"
       : "暂无可下载证据包";
-  const acceptanceStatus = resolveAcceptanceStatus(detail, receipt);
+  const acceptanceStatus = resolveAcceptanceStatus(safeDetail, receipt);
 
   return {
-    actionLabel: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type, "作业")),
-    deviceLabel: toText(detail?.dispatch?.device_name, toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id, "未指定设备"))),
+    actionLabel: toText(safeDetail?.dispatch?.action_type, toText(safeDetail?.plan?.action_type, "作业")),
+    deviceLabel: toText(safeDetail?.dispatch?.device_name, toText(safeDetail?.dispatch?.device_id, toText(safeDetail?.task?.device_id, "未指定设备"))),
     technicalRefs: {
-      recommendationId: toText(detail?.recommendation?.recommendation_id),
-      approvalRequestId: toText(detail?.approval?.approval_request_id),
-      operationPlanId: toText(detail?.operation_plan_id),
-      actTaskId: toText(detail?.dispatch?.task_id, toText(detail?.task?.task_id)),
+      recommendationId: toText(safeDetail?.recommendation?.recommendation_id),
+      approvalRequestId: toText(safeDetail?.approval?.approval_request_id),
+      operationPlanId: toText(safeDetail?.operation_plan_id),
+      actTaskId: toText(safeDetail?.dispatch?.task_id, toText(safeDetail?.task?.task_id)),
     },
-    operationPlanId: toText(detail?.operation_plan_id),
-    fieldLabel: toText(detail?.field_name, toText(detail?.field_id)),
-    programLabel: toText(detail?.program_name, toText(detail?.program_id)),
-    statusLabel: mapStatusLabel(detail?.status_label ?? detail?.final_status),
-    finalStatus: toText(detail?.final_status),
+    operationPlanId: toText(safeDetail?.operation_plan_id),
+    fieldLabel: toText(safeDetail?.field_name, toText(safeDetail?.field_id)),
+    programLabel: toText(safeDetail?.program_name, toText(safeDetail?.program_id)),
+    statusLabel: mapStatusLabel(safeDetail?.status_label ?? safeDetail?.final_status),
+    finalStatus: toText(safeDetail?.final_status),
     latestUpdatedAtLabel: latestTs != null ? new Date(latestTs).toLocaleString() : "-",
-    expectedOutcomeLabel: buildExpectedOutcomeLabel(detail),
-    actualOutcomeLabel: buildActualOutcomeLabel(detail, receipt),
+    expectedOutcomeLabel: buildExpectedOutcomeLabel(safeDetail),
+    actualOutcomeLabel: buildActualOutcomeLabel(safeDetail, receipt),
     recommendation: {
-      id: toText(detail?.recommendation?.recommendation_id),
-      title: toText(detail?.recommendation?.title, "系统建议"),
-      summary: toText(detail?.recommendation?.summary, "暂无建议摘要"),
+      id: toText(safeDetail?.recommendation?.recommendation_id),
+      title: toText(safeDetail?.recommendation?.title, "系统建议"),
+      summary: toText(safeDetail?.recommendation?.summary, "暂无建议摘要"),
       reasonCodes,
       reasonCodesLabel,
       triggerSummary: "这些信号共同触发了作业建议。",
-      createdAtLabel: toDateLabel(detail?.recommendation?.created_at),
+      createdAtLabel: toDateLabel(safeDetail?.recommendation?.created_at),
     },
     approval: {
-      requestId: toText(detail?.approval?.approval_request_id),
-      decisionLabel: toText(detail?.approval?.decision_label, toText(detail?.approval?.decision, "待审批")),
+      requestId: toText(safeDetail?.approval?.approval_request_id),
+      decisionLabel: toText(safeDetail?.approval?.decision_label, toText(safeDetail?.approval?.decision, "待审批")),
       actorLabel: approvalActorLabel,
       decidedAtLabel: approvalDecidedAtLabel,
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
@@ -404,24 +410,24 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     execution: {
       executionModeLabel: mapExecutionModeLabel(executionMode),
       executorTypeLabel: executionMode === "human" ? "human" : executionMode === "hybrid" ? "hybrid" : "device",
-      actionType: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type)),
-      planId: toText(detail?.operation_plan_id),
-      taskId: toText(detail?.dispatch?.task_id, toText(detail?.task?.task_id)),
-      deviceId: toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id)),
+      actionType: toText(safeDetail?.dispatch?.action_type, toText(safeDetail?.plan?.action_type)),
+      planId: toText(safeDetail?.operation_plan_id),
+      taskId: toText(safeDetail?.dispatch?.task_id, toText(safeDetail?.task?.task_id)),
+      deviceId: toText(safeDetail?.dispatch?.device_id, toText(safeDetail?.task?.device_id)),
       executorLabel: executionMode === "human"
         ? assignmentExecutor
         : executionMode === "hybrid"
-          ? `${toText(detail?.dispatch?.device_id, toText(detail?.task?.device_id, "设备"))} + ${assignmentExecutor}`
-          : toText(detail?.dispatch?.executor_label, toText(detail?.task?.executor_label, "系统")),
+          ? `${toText(safeDetail?.dispatch?.device_id, toText(safeDetail?.task?.device_id, "设备"))} + ${assignmentExecutor}`
+          : toText(safeDetail?.dispatch?.executor_label, toText(safeDetail?.task?.executor_label, "系统")),
       executionWindowLabel: windowStart != null
         ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
         : "-",
-      dispatchedAtLabel: toDateLabel(detail?.dispatch?.dispatched_at),
-      ackedAtLabel: toDateLabel(detail?.dispatch?.acked_at),
+      dispatchedAtLabel: toDateLabel(safeDetail?.dispatch?.dispatched_at),
+      ackedAtLabel: toDateLabel(safeDetail?.dispatch?.acked_at),
       ackStatusLabel,
-      progressLabel: resolveExecutionProgress(detail),
+      progressLabel: resolveExecutionProgress(safeDetail),
       finalStatusLabel,
-      dispatchedChipLabel: `下发时间：${toDateLabel(detail?.dispatch?.dispatched_at)}`,
+      dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.dispatch?.dispatched_at)}`,
       ackChipLabel: `确认状态：${ackStatusLabel}`,
       finalChipLabel: `最终结果：${finalStatusLabel}`,
     },
@@ -442,21 +448,21 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       usageValueLabel: "用于留痕、复验与交付",
       usageHintLabel: bundleAcceptance?.verdict
         ? `验收结论：${toText(bundleAcceptance?.verdict)}`
-        : `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
+        : `缺失原因：${toText(safeDetail?.evidence_export?.missing_reason, "无")}`,
       actionLabel: evidenceActionLabel,
     },
     acceptance: {
       status: acceptanceStatus,
       statusLabel: acceptanceStatus,
       missingEvidenceLabel: toText(
-        detail?.acceptance?.missing_evidence
-        ?? detail?.acceptance_result?.missing_evidence
-        ?? detail?.receipt?.missing_evidence,
+        safeDetail?.acceptance?.missing_evidence
+        ?? safeDetail?.acceptance_result?.missing_evidence
+        ?? safeDetail?.receipt?.missing_evidence,
         "无",
       ),
       summary: toText(
-        detail?.acceptance?.summary
-        ?? detail?.acceptance_result?.summary,
+        safeDetail?.acceptance?.summary
+        ?? safeDetail?.acceptance_result?.summary,
         receipt?.violationSummary && receipt.violationSummary !== "-"
           ? receipt.violationSummary
           : receipt
