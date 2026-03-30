@@ -18,9 +18,9 @@ export default function OperationExecutionCard({ model }: { model: OperationDeta
         <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">{text("链路状态", "Pipeline state")}</span><strong>{model.execution.progressLabel}</strong></div>
       </div>
       <div className="traceChipRow" style={{ marginTop: 12 }}>
-        <span className="traceChip">{text("下发时间", "Dispatched")}：{model.execution.dispatchedAtLabel}</span>
-        <span className="traceChip">{text("确认状态", "Ack")}：{model.execution.ackStatusLabel}</span>
-        <span className="traceChip">{text("最终结果", "Final result")}：{model.execution.finalStatusLabel}</span>
+        <span className="traceChip">{model.execution.dispatchedChipLabel}</span>
+        <span className="traceChip">{model.execution.ackChipLabel}</span>
+        <span className="traceChip">{model.execution.finalChipLabel}</span>
       </div>
     </section>
   );

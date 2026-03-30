@@ -1,5 +1,12 @@
 import React from "react";
-import { fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
+import { apiRequest } from "../api/client";
+import type { OperationDetailResponse } from "../api/operations";
+
+type OperationDetailEnvelope = { ok?: boolean; item?: OperationDetailResponse };
+
+function isOperationDetailEnvelope(v: unknown): v is OperationDetailEnvelope {
+  return typeof v === "object" && v !== null && "item" in v;
+}
 
 export function useOperationDetail(operationPlanId: string): {
   loading: boolean;
