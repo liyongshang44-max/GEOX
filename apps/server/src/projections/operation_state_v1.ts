@@ -142,10 +142,6 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
   return null;
 }
 
-function receiptHasEvidenceArtifacts(receipt: FactRow | undefined): boolean {
-  return extractReceiptArtifacts(receipt).length > 0;
-}
-
 function extractReceiptArtifacts(receipt: FactRow | undefined): string[] {
   if (!receipt) return [];
   const payload = receipt.record_json?.payload ?? {};
@@ -162,6 +158,15 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
   const receiptByTask = latestByKey(
     facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
     (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
+  );
+  const acceptanceFacts = facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1");
+  const acceptanceByPlan = latestByKey(
+    acceptanceFacts,
+    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim(),
+  );
+  const acceptanceByTask = latestByKey(
+    acceptanceFacts,
+    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim(),
   );
 
   const transitionByPlan = new Map<string, FactRow[]>();
@@ -248,12 +253,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ?? finalStatusFromReceipt(receiptStatus)
       ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
-    const acceptanceCompleted = acceptance.verdict === "PASS";
-    const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
-    const final_status =
-      (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
-        ? "PENDING_ACCEPTANCE"
-        : baseFinalStatus;
+    const pendingAcceptance =
+      Boolean(receipt)
+      && String(acceptance.verdict ?? "").toUpperCase() !== "PASS";
+    const final_status = pendingAcceptance ? "PENDING_ACCEPTANCE" : baseFinalStatus;
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
     const approval_id = approval_decision_id ?? approval_request_id;
