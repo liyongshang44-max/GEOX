@@ -5,6 +5,7 @@ import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
 import OperationDecisionCard from "../components/operations/OperationDecisionCard";
+import OperationAcceptanceCard from "../components/operations/OperationAcceptanceCard";
 import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
@@ -16,9 +17,8 @@ const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
   backToList: "返回作业列表",
-  evidenceBundle: "证据包",
+  evidenceBundle: "证据层",
   executionEvidence: "执行证据",
-  acceptanceResult: "验收结果",
   timeline: "全链路时间线",
 };
 
@@ -102,17 +102,7 @@ export default function OperationDetailPage(): React.ReactElement {
         </section>
       </section>
 
-      <section className="card detailHeroCard">
-        <div className="demoSectionHeader">
-          <div className="sectionTitle">{COPY.acceptanceResult}</div>
-          <div className="detailSectionLead">把最终结果、约束校验和最低验收标准放在同一块，方便快速判断是否需要人工复核。</div>
-        </div>
-        <div className="decisionList">
-          <div className="decisionItemStatic"><div className="decisionItemTitle">最终结果</div><div className="decisionItemMeta">{model.execution.finalStatusLabel}</div></div>
-          <div className="decisionItemStatic"><div className="decisionItemTitle">约束校验</div><div className="decisionItemMeta">{model.receiptEvidence?.constraintCheckLabel ?? "待回传证据后判断"}</div></div>
-          {model.receiptEvidence?.violationSummary ? <div className="decisionItemStatic"><div className="decisionItemTitle">风险提示</div><div className="decisionItemMeta">{model.receiptEvidence.violationSummary}</div></div> : null}
-        </div>
-      </section>
+      <OperationAcceptanceCard model={model} />
 
       <section className="card detailHeroCard">
         <div className="demoSectionHeader">

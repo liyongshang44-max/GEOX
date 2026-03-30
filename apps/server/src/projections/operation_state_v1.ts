@@ -163,13 +163,14 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
     (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
   );
+  const acceptanceFacts = facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1");
   const acceptanceByPlan = latestByKey(
-    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
-    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim()
+    acceptanceFacts,
+    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim(),
   );
   const acceptanceByTask = latestByKey(
-    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
-    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim()
+    acceptanceFacts,
+    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim(),
   );
 
   const transitionByPlan = new Map<string, FactRow[]>();

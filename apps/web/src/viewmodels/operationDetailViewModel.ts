@@ -81,6 +81,12 @@ export type OperationDetailPageVm = {
     usageHintLabel: string;
     actionLabel: string;
   };
+  acceptance: {
+    status: "PASS" | "FAIL" | "PENDING";
+    statusLabel: string;
+    missingEvidenceLabel: string;
+    summary: string;
+  };
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -153,12 +159,34 @@ function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): stri
   return "现场已回传执行结果，可继续查看资源消耗与完成时间";
 }
 
-function buildEvidenceBundleStatus(detail: any): string {
-  const hasBundle = Boolean(detail?.evidence_export?.has_bundle ?? detail?.evidence_export?.has_exportable_bundle);
+function buildEvidenceBundleStatus(evidenceBundle: any): string {
+  const hasBundle = Boolean(evidenceBundle?.has_bundle ?? evidenceBundle?.has_exportable_bundle);
   if (hasBundle) return "已生成，可下载与归档";
-  const latestJobStatus = String(detail?.evidence_export?.latest_job_status ?? "").toUpperCase();
+  const latestJobStatus = String(evidenceBundle?.latest_job_status ?? "").toUpperCase();
   if (latestJobStatus === "RUNNING") return "正在生成证据包";
   return "当前暂不可导出";
+}
+
+function resolveAcceptanceStatus(detail: any, receipt?: ReceiptEvidenceVm): "PASS" | "FAIL" | "PENDING" {
+  const raw = String(
+    detail?.acceptance?.verdict
+    ?? detail?.acceptance_result?.verdict
+    ?? detail?.receipt?.acceptance_verdict
+    ?? "",
+  ).toUpperCase();
+  if (raw.includes("PASS")) return "PASS";
+  if (raw.includes("FAIL")) return "FAIL";
+  if (receipt?.constraintCheckLabel === "符合约束") return "PASS";
+  if (receipt?.constraintCheckLabel === "存在违规") return "FAIL";
+  return "PENDING";
+}
+
+function normalizeTimelineLabel(raw: unknown): string {
+  const label = toText(raw, "");
+  if (!label) return "";
+  if (label === "assignment accepted") return "accepted";
+  if (label === "receipt submitted") return "submitted";
+  return label;
 }
 
 const STORY_TIMELINE_ORDER = [
@@ -168,11 +196,11 @@ const STORY_TIMELINE_ORDER = [
   "已创建执行计划",
   "已生成执行任务",
   "assignment created",
-  "assignment accepted",
+  "accepted",
   "arrived",
   "已下发设备",
   "设备执行中",
-  "receipt submitted",
+  "submitted",
   "已记录执行回执",
   "acceptance generated",
 ];
@@ -204,7 +232,7 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `${actor}已生成设备任务指令，等待下发至现场执行器。`;
     case "assignment created":
       return `${actor}已创建人工执行单，等待现场人员接单。`;
-    case "assignment accepted":
+    case "accepted":
       return `${actor}已接单，准备前往作业点。`;
     case "arrived":
       return `${actor}已到场，开始人工执行。`;
@@ -212,7 +240,7 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return `任务已发送至设备 ${deviceId}，等待设备确认与执行反馈。`;
     case "设备执行中":
       return `${actor}正在执行作业任务，系统持续采集进度与资源消耗。`;
-    case "receipt submitted":
+    case "submitted":
       return `${actor}已提交人工执行回执，等待系统归档。`;
     case "acceptance generated":
       return `${actor}已生成验收结论，可据此判断是否闭环。`;
@@ -338,6 +366,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     : jumpUrl
       ? "查看导出任务"
       : "暂无可下载证据包";
+  const acceptanceStatus = resolveAcceptanceStatus(detail, receipt);
 
   return {
     actionLabel: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type, "作业")),
@@ -400,21 +429,40 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     timeline,
     evidenceExport: {
       exportableLabel: hasExportableBundle ? "可导出" : "暂不可导出",
-      latestJobId: toText(detail?.evidence_export?.latest_job_id),
+      latestJobId: toText(evidenceBundle?.latest_job_id),
       latestJobStatus,
       bundleStatusLabel: evidenceBundleStatus,
       latestJobStatusLabel: `最近任务：${latestJobStatus}`,
-      latestExportedAtLabel: toDateLabel(detail?.evidence_export?.latest_exported_at),
-      latestBundleName: toText(detail?.evidence_export?.latest_bundle_name, "暂无证据包"),
+      latestExportedAtLabel: toDateLabel(evidenceBundle?.latest_exported_at),
+      latestBundleName: toText(evidenceBundle?.latest_bundle_name, "暂无证据包"),
       hasExportableBundle,
       downloadUrl,
       jumpUrl,
-      missingReason: toText(detail?.evidence_export?.missing_reason, "无"),
+      missingReason: toText(evidenceBundle?.missing_reason, "无"),
       usageValueLabel: "用于留痕、复验与交付",
       usageHintLabel: bundleAcceptance?.verdict
         ? `验收结论：${toText(bundleAcceptance?.verdict)}`
         : `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
       actionLabel: evidenceActionLabel,
+    },
+    acceptance: {
+      status: acceptanceStatus,
+      statusLabel: acceptanceStatus,
+      missingEvidenceLabel: toText(
+        detail?.acceptance?.missing_evidence
+        ?? detail?.acceptance_result?.missing_evidence
+        ?? detail?.receipt?.missing_evidence,
+        "无",
+      ),
+      summary: toText(
+        detail?.acceptance?.summary
+        ?? detail?.acceptance_result?.summary,
+        receipt?.violationSummary && receipt.violationSummary !== "-"
+          ? receipt.violationSummary
+          : receipt
+            ? "已回传执行证据，等待最终验收结论。"
+            : "尚未回传执行证据。",
+      ),
     },
   };
 }
