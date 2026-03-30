@@ -84,7 +84,11 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="sectionTitle">{COPY.executionEvidence}</div>
             <div className="detailSectionLead">以回执证据说明本次作业具体做了什么，并补充业务影响表达。</div>
           </div>
-          <ReceiptEvidenceCard data={model.receiptEvidence} />
+          <ReceiptEvidenceCard
+            data={model.receiptEvidence}
+            actionLabel={actionLabel}
+            executorTypeLabel={model.execution.executorTypeLabel}
+          />
         </section>
         <OperationImpactCard model={model} />
       </section>
