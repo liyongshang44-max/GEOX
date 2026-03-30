@@ -232,6 +232,7 @@ async function enqueueReadyDispatchForTask(
   const act_task_id = String(taskPayload.act_task_id ?? "").trim();
   const command_id = String(taskPayload.command_id ?? act_task_id).trim() || act_task_id;
   if (!act_task_id) throw new Error("MISSING_ACT_TASK_ID_FOR_QUEUE_READY");
+  if (command_id !== act_task_id) throw new Error("COMMAND_ID_MUST_MATCH_ACT_TASK_ID");
 
   const device_id =
     typeof taskPayload?.meta?.device_id === "string" && taskPayload.meta.device_id.trim()
@@ -2299,7 +2300,18 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const publishedPayload = publishedFact.record_json?.payload ?? {};
     const expectedDeviceId = String(publishedPayload.device_id ?? "").trim();
     if (expectedDeviceId && expectedDeviceId !== device_id) return badRequest(reply, "DEVICE_ID_MISMATCH");
-    const idempotencyKey = String(body?.meta?.idempotency_key ?? `${act_task_id}:1:${String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED")}`).trim();
+    const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
+    if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
+    const task_act_task_id = String(taskFact.record_json?.payload?.act_task_id ?? "").trim();
+    const task_command_id = String(taskFact.record_json?.payload?.command_id ?? task_act_task_id).trim() || task_act_task_id;
+    if (!task_act_task_id || task_command_id !== task_act_task_id) return badRequest(reply, "TASK_COMMAND_ACT_TASK_ID_MISMATCH");
+    if (task_act_task_id !== act_task_id) return badRequest(reply, "TASK_ID_MISMATCH");
+    const bodyOperationPlanId = String(body.operation_plan_id ?? "").trim();
+    if (bodyOperationPlanId && bodyOperationPlanId !== operation_plan_id) return badRequest(reply, "OPERATION_PLAN_ID_MISMATCH");
+    const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
+    if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+    const planActTaskId = String(operationPlan.record_json?.payload?.act_task_id ?? "").trim();
+    if (planActTaskId && planActTaskId !== act_task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
     const existingReceipt = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey)
       ?? await loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v0", "payload,act_task_id", act_task_id, tenant);
     if (existingReceipt) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
@@ -2355,6 +2367,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       observed_parameters: body.observed_parameters ?? {},
       meta: {
         ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+        idempotency_key: idempotencyKey,
         command_id,
         receipt_message_id: body.receipt_message_id ?? null,
         device_id,
@@ -2592,15 +2605,24 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!task_id) return badRequest(reply, "MISSING_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (command_id !== task_id) return badRequest(reply, "COMMAND_TASK_ID_MISMATCH");
-    const idempotencyKey = String(body?.meta?.idempotency_key ?? `${task_id}:1:${String(body?.meta?.receipt_code ?? body?.status ?? "SUCCEEDED")}`).trim();
+    const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
+    if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
     const receiptV1Dup = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey);
     if (receiptV1Dup) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const task_act_task_id = String(taskFact.record_json?.payload?.act_task_id ?? "").trim();
+    const task_command_id = String(taskFact.record_json?.payload?.command_id ?? task_act_task_id).trim() || task_act_task_id;
+    if (!task_act_task_id || task_command_id !== task_act_task_id) return badRequest(reply, "TASK_COMMAND_ACT_TASK_ID_MISMATCH");
+    if (task_act_task_id !== task_id) return badRequest(reply, "TASK_ID_MISMATCH");
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    const bodyOperationPlanId = String(body.operation_plan_id ?? "").trim();
+    if (bodyOperationPlanId && bodyOperationPlanId !== operation_plan_id) return badRequest(reply, "OPERATION_PLAN_ID_MISMATCH");
     const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
+    const planActTaskId = String(operationPlan.record_json?.payload?.act_task_id ?? "").trim();
+    if (planActTaskId && planActTaskId !== task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
       act_task_id: task_id,
