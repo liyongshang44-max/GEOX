@@ -117,6 +117,7 @@ function mapStatusLabel(raw: unknown): string {
   if (key === "ACKED") return "已确认执行";
   if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
   if (key === "FAILED" || key === "ERROR") return "执行失败";
+  if (key === "INVALID_EXECUTION") return "执行无效";
   if (key === "NOT_EXECUTED") return "未执行";
   return toText(raw, "待推进");
 }
@@ -147,8 +148,9 @@ function buildExpectedOutcomeLabel(detail: any): string {
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
   const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：未提供证据，无法完成验收";
   if (!receipt) {
-    return finalStatus ? `当前处于${mapStatusLabel(finalStatus)}阶段，仍在等待设备回传最终证据` : "尚未回传执行证据";
+    return "⚠️ 执行无效：未提供证据，无法完成验收";
   }
   if (receipt.constraintCheckLabel === "符合约束") {
     return "现场已回传执行结果，系统判断本次执行符合约束";
@@ -205,9 +207,9 @@ const STORY_TIMELINE_ORDER = [
 
 function mapExecutionModeLabel(raw: string): string {
   const key = String(raw || "").toLowerCase();
-  if (key === "human") return "人工执行";
-  if (key === "hybrid") return "混合执行";
-  return "设备执行";
+  if (key === "human") return "人名";
+  if (key === "hybrid") return "服务队";
+  return "设备名称";
 }
 
 function buildStorySummary(label: string, sourceSummary: string, sourceActor: string, detail: any): string {
@@ -395,7 +397,7 @@ export function buildOperationDetailViewModel(args?: {
     },
     execution: {
       executionModeLabel: mapExecutionModeLabel(executionMode),
-      executorTypeLabel: executionMode === "human" ? "human" : executionMode === "hybrid" ? "hybrid" : "device",
+      executorTypeLabel: executionMode === "human" ? "人名" : executionMode === "hybrid" ? "服务队" : "设备名称",
       actionType: toText(safeDetail?.task?.action_type),
       planId: toText(safeDetail?.operation_plan_id),
       taskId: toText(safeDetail?.task?.task_id),
@@ -404,7 +406,7 @@ export function buildOperationDetailViewModel(args?: {
         ? assignmentExecutor
         : executionMode === "hybrid"
           ? `${toText(safeDetail?.task?.device_id, "设备")} + ${assignmentExecutor}`
-          : toText(safeDetail?.task?.executor_label, "系统"),
+          : toText(safeDetail?.task?.executor_label, toText(safeDetail?.task?.device_id, "设备名称待配置")),
       executionWindowLabel: windowStart != null
         ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
         : "-",
@@ -446,7 +448,7 @@ export function buildOperationDetailViewModel(args?: {
           ? receipt.violationSummary
           : receipt
             ? "已回传执行证据，等待最终验收结论。"
-            : "尚未回传执行证据。",
+            : "⚠️ 执行无效：未提供证据，无法完成验收。",
       ),
     },
   };

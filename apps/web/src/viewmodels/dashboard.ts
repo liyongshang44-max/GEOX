@@ -13,7 +13,7 @@ export type DashboardActionVm = {
   actionLabel: string;
   occurredAtLabel: string;
   statusLabel: string;
-  finalStatus: "pending" | "running" | "succeeded" | "failed";
+  finalStatus: "pending" | "running" | "succeeded" | "failed" | "invalid";
   hasEvidence: boolean;
   href?: string;
 };

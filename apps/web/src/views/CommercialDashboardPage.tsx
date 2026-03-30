@@ -32,6 +32,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const d = useDashboard(api);
 
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
+  const invalidExecutionTasks = d.actions.filter((x) => x.finalStatus === "invalid");
   const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
   const riskAlerts = d.riskItems;
   const acceptanceTasks = d.evidences
@@ -58,10 +59,37 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
   const keyActions = [
-    ...riskAlerts.slice(0, 2).map((risk) => `优先处理风险：${risk.title}（${risk.level}）`),
-    ...(pendingApprovals.slice(0, 2).map((x) => `审批建议：${x}`)),
-    ...(acceptanceTasks.slice(0, 2).map((x: any) => `补齐验收：${mapFieldDisplayName(x?.fieldName, x?.fieldName)} 作业已回执`)),
-  ].slice(0, 5);
+    ...riskAlerts.slice(0, 2).map((risk, idx) => ({
+      id: `risk_${risk.id}_${idx}`,
+      title: `处理风险：${risk.title}`,
+      detail: `${risk.source} · ${risk.level} · 影响地块 ${risk.fieldId || "-"}`,
+      status: "待处理",
+      href: "/alerts",
+    })),
+    ...pendingApprovals.slice(0, 2).map((x, idx) => ({
+      id: `approval_${idx}`,
+      title: "完成建议审批",
+      detail: x,
+      status: "待审批",
+      href: "/agronomy/recommendations",
+    })),
+    ...acceptanceTasks.slice(0, 2).map((x: any, idx) => ({
+      id: `acceptance_${x?.id || idx}`,
+      title: `补齐验收：${mapFieldDisplayName(x?.fieldName, x?.fieldName)}`,
+      detail: "作业已回执，需完成 PASS/FAIL 判定",
+      status: "待验收",
+      href: x?.href || "/operations?status=done_unaccepted",
+    })),
+    ...invalidExecutionTasks.slice(0, 2).map((x, idx) => ({
+      id: `invalid_${x.id}_${idx}`,
+      title: `执行无效：${x.actionLabel}`,
+      detail: "缺少有效证据，无法进入验收",
+      status: "需补证据",
+      href: x.href || "/operations",
+    })),
+  ].slice(0, 6);
+  const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
+  const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const jumpTargets = {
     decisions: "/operations?status=pending",
     execution: "/operations?status=running",
@@ -149,12 +177,12 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="decisionItemMeta">建议 {d.decisions.pendingRecommendationCount} 条 · 审批 {d.decisions.pendingApprovalCount} 条</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">高置信建议</div>
-              <div className="decisionItemMeta">{d.decisions.potentialBenefitEstimate}</div>
+              <div className="decisionItemTitle">指标变化</div>
+              <div className="decisionItemMeta">{indicatorChangeLabel}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">执行缺失风险</div>
-              <div className="decisionItemMeta">{d.decisions.nonExecutionRiskEstimate}</div>
+              <div className="decisionItemTitle">风险变化</div>
+              <div className="decisionItemMeta">{riskChangeLabel}</div>
             </div>
             {pendingApprovals.slice(0, 4).map((item, idx) => (
               <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
@@ -220,20 +248,40 @@ export default function CommercialDashboardPage(): React.ReactElement {
           </div>
         </article>
 
+        <article className="card decisionColumn danger">
+          <div className="decisionHeader">
+            <div>
+              <div className="sectionTitle">⑥ 无效执行任务</div>
+              <div className="sectionDesc">已执行但证据无效，禁止进入验收。</div>
+            </div>
+            <div className="decisionCount">{invalidExecutionTasks.length}</div>
+          </div>
+          <div className="decisionList">
+            {invalidExecutionTasks.slice(0, 4).map((item) => (
+              <Link key={item.id} to={item.href || "/operations"} className="decisionItemLink">
+                <div className="decisionItemTitle">{mapOperationActionLabel(item.actionLabel)}</div>
+                <div className="decisionItemMeta">⚠️ 执行无效：未提供证据，无法完成验收</div>
+              </Link>
+            ))}
+            {invalidExecutionTasks.length === 0 ? <EmptyBlock text="当前没有无效执行任务" /> : null}
+          </div>
+        </article>
+
         <article className="card decisionColumn">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">⑥ 今日关键动作</div>
-              <div className="sectionDesc">今天最该处理的 3-5 件事。</div>
+              <div className="sectionTitle">⑦ 今日关键动作</div>
+              <div className="sectionDesc">按任务清单推进，不再只给提示。</div>
             </div>
             <div className="decisionCount">{keyActions.length}</div>
           </div>
           <div className="decisionList">
-            {keyActions.map((text, idx) => (
-              <div key={`action_${idx}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">动作 {idx + 1}</div>
-                <div className="decisionItemMeta">{text}</div>
-              </div>
+            {keyActions.map((item, idx) => (
+              <Link key={item.id} to={item.href} className="decisionItemLink">
+                <div className="decisionItemTitle">任务 {idx + 1} · {item.title}</div>
+                <div className="decisionItemMeta">{item.detail}</div>
+                <div className="muted" style={{ fontSize: 12 }}>状态：{item.status}</div>
+              </Link>
             ))}
             {!keyActions.length ? <EmptyBlock text="当前没有需要立即处理的动作" /> : null}
           </div>

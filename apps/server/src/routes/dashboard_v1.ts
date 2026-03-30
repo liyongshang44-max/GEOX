@@ -359,22 +359,18 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const tenant_id = String(auth.tenant_id ?? "");
     const project_id = String(auth.project_id ?? "");
     const group_id = String(auth.group_id ?? "");
-    const rowsQ = await pool.query(
-      `SELECT operation_plan_id, field_id, status, updated_ts_ms
-         FROM operation_plan_index_v1
-        WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3
-        ORDER BY updated_ts_ms DESC
-        LIMIT $4`,
-      [tenant_id, project_id, group_id, limit]
-    ).catch(() => ({ rows: [] }));
-    const items: DashboardRecentExecutionItem[] = (rowsQ.rows ?? []).map((row: any) => ({
-      id: String(row.operation_plan_id ?? ""),
-      operation_plan_id: String(row.operation_plan_id ?? ""),
-      field_id: typeof row.field_id === "string" ? row.field_id : null,
-      status: String(row.status ?? ""),
-      updated_ts_ms: Number(row.updated_ts_ms ?? Date.now()),
-      href: `/operations?operation_plan_id=${encodeURIComponent(String(row.operation_plan_id ?? ""))}`
-    }));
+    const operationStates = await projectOperationStateV1(pool, { tenant_id, project_id, group_id }).catch(() => []);
+    const items: DashboardRecentExecutionItem[] = operationStates
+      .sort((a: any, b: any) => Number(b?.last_event_ts ?? 0) - Number(a?.last_event_ts ?? 0))
+      .slice(0, limit)
+      .map((row: any) => ({
+        id: String(row.operation_plan_id ?? row.operation_id ?? ""),
+        operation_plan_id: String(row.operation_plan_id ?? row.operation_id ?? ""),
+        field_id: typeof row.field_id === "string" ? row.field_id : null,
+        status: String(row.final_status ?? row.dispatch_status ?? ""),
+        updated_ts_ms: Number(row.last_event_ts ?? Date.now()),
+        href: `/operations?operation_plan_id=${encodeURIComponent(String(row.operation_plan_id ?? ""))}`
+      }));
     return reply.send({ ok: true, items });
   });
 

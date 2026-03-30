@@ -82,9 +82,11 @@ export function useDashboard(api: any): DashboardVm {
             ? "succeeded"
             : status === "FAILED"
               ? "failed"
-              : status === "PENDING"
-                ? "pending"
-                : "running";
+              : status === "INVALID_EXECUTION"
+                ? "invalid"
+                : status === "PENDING"
+                  ? "pending"
+                  : "running";
           return {
             id: String(o?.operation_id || o?.operation_plan_id || o?.task_id || Math.random()),
             title: "作业执行",

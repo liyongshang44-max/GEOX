@@ -45,7 +45,7 @@ export type OperationStateV1 = {
     status: "PASS" | "FAIL" | "PENDING";
     missing: string[];
   };
-  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE";
+  final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE" | "INVALID_EXECUTION";
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
 };
@@ -148,6 +148,29 @@ function extractReceiptArtifacts(receipt: FactRow | undefined): string[] {
   return [...evidenceRefs, ...evidenceArtifactIds].filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0);
 }
 
+function hasFiniteMetric(resourceUsage: any): boolean {
+  if (!resourceUsage || typeof resourceUsage !== "object") return false;
+  const values = Object.values(resourceUsage);
+  return values.some((x) => Number.isFinite(typeof x === "number" ? x : Number(x)));
+}
+
+function evaluateReceiptEvidencePolicy(receipt: FactRow | undefined): { executorType: "device" | "human"; valid: boolean } {
+  const payload = receipt?.record_json?.payload ?? {};
+  const executorTypeRaw = String(payload?.executor_id?.kind ?? payload?.executor_type ?? "device").toLowerCase();
+  const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
+  const logsRefs = Array.isArray(payload?.logs_refs) ? payload.logs_refs : [];
+  const photos = [
+    ...(Array.isArray(payload?.photos) ? payload.photos : []),
+    ...(Array.isArray(payload?.photo_refs) ? payload.photo_refs : []),
+    ...logsRefs.filter((x: any) => String(x?.kind ?? "").toLowerCase().includes("photo") || String(x?.kind ?? "").toLowerCase().includes("image")),
+  ];
+  const hasLogs = logsRefs.length > 0;
+  const hasMetrics = hasFiniteMetric(payload?.resource_usage);
+  const hasArtifacts = extractReceiptArtifacts(receipt).length > 0;
+  if (executorType === "human") return { executorType, valid: photos.length > 0 || hasArtifacts };
+  return { executorType, valid: hasMetrics || hasLogs || hasArtifacts };
+}
+
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
@@ -198,6 +221,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       hasReceipt: !!receipt,
       evidenceCount: artifacts.length
     });
+    const evidencePolicy = evaluateReceiptEvidencePolicy(receipt);
 
     const timeline: OperationTimelineItemV1[] = [];
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
@@ -248,12 +272,20 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
     const acceptanceCompleted = acceptance.verdict === "PASS";
+    const hasReceipt = Boolean(receipt);
     const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
+    const invalidExecution = hasReceipt && !evidencePolicy.valid;
     const final_status =
-      (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
+      invalidExecution
+        ? "INVALID_EXECUTION"
+        : (baseFinalStatus === "SUCCESS" && (!hasReceipt || !evidenceComplete || !acceptanceCompleted))
         ? "PENDING_ACCEPTANCE"
         : baseFinalStatus;
-    const finalStatusNormalized: OperationStateV1["final_status"] = receipt && !acceptanceFact ? "PENDING_ACCEPTANCE" : final_status;
+    const finalStatusNormalized: OperationStateV1["final_status"] = invalidExecution
+      ? "INVALID_EXECUTION"
+      : receipt && !acceptanceFact
+        ? "PENDING_ACCEPTANCE"
+        : final_status;
 
     const approval_decision_id = decision ? String(decision.record_json?.payload?.decision_id ?? "").trim() || null : null;
     const approval_id = approval_decision_id ?? approval_request_id;
@@ -279,8 +311,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
-        status: acceptance.verdict,
-        missing: acceptance.missing_evidence ?? []
+        status: invalidExecution ? "PENDING" : acceptance.verdict,
+        missing: invalidExecution ? ["evidence_missing_or_invalid"] : (acceptance.missing_evidence ?? [])
       },
       final_status: finalStatusNormalized,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
