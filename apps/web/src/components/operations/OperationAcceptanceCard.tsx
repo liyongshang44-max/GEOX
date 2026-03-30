@@ -7,9 +7,9 @@ export default function OperationAcceptanceCard({ model }: { model: OperationDet
 
   return (
     <section className="card sectionBlock geoxSectionCard">
-      <div className="sectionTitle">{text("验收层", "Acceptance layer")}</div>
+      <div className="sectionTitle">{text("验收（是否达标）", "Acceptance (whether passed)")}</div>
       <div className="muted detailSectionLead">
-        {text("集中展示验收结论、缺失项与总结，便于快速判断是否需要补证或复核。", "Shows verdict, missing evidence, and summary for quick accept/rework decisions.")}
+        {text("直接回答是否达标，并提示是否需要补证或复核。", "Directly answers if this operation meets the target and whether rework is needed.")}
       </div>
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">
