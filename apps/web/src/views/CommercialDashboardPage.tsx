@@ -239,12 +239,22 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="decisionItemTitle">验收通过 / 待验收</div>
               <div className="decisionItemMeta">{passCount} / {pendingEvidenceCount}</div>
             </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最近作业证据</div>
+              <div className="decisionItemMeta">展示作业类型、时间、执行者、状态与资源使用</div>
+            </div>
             {d.evidences.slice(0, 4).map((item) => (
               <Link key={item.id} to={item.href || "/audit-export"} className="decisionItemLink">
                 <div className="decisionItemTitle">{mapFieldDisplayName(item.fieldName, item.fieldName)}</div>
-                <div className="decisionItemMeta">
-                  {item.operationName || "作业"} · {item.acceptanceVerdict === "PASS" ? "验收通过" : item.isPendingAcceptance ? "待验收" : "待回执"}
-                </div>
+                <div className="decisionItemMeta">作业类型：{item.operationName || "未知作业"}</div>
+                <div className="decisionItemMeta">时间：{item.card?.finishedAtLabel || "-"}</div>
+                <div className="decisionItemMeta">执行者：{item.card?.executorLabel || "-"}</div>
+                <div className="decisionItemMeta">状态：{item.card?.statusLabel || (item.acceptanceVerdict === "PASS" ? "验收通过" : item.isPendingAcceptance ? "待验收" : "待回执")}</div>
+                {item.card?.waterLabel || item.card?.powerLabel || item.card?.chemicalLabel ? (
+                  <div className="decisionItemMeta">
+                    资源使用：{[item.card?.waterLabel, item.card?.powerLabel, item.card?.chemicalLabel].filter(Boolean).join(" / ")}
+                  </div>
+                ) : null}
               </Link>
             ))}
             {d.evidences.length === 0 ? <EmptyBlock text="当前没有可展示的作业证据" /> : null}
