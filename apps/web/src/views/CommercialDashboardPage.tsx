@@ -11,7 +11,7 @@ import {
   getRecentEvidence,
 } from "../api/dashboard";
 import { useDashboard } from "../hooks/useDashboard";
-import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel, mapOperationStatusLabel } from "../lib/operationLabels";
+import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 
 function EmptyBlock({ text }: { text: string }): React.ReactElement {
   return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
@@ -60,26 +60,9 @@ export default function CommercialDashboardPage(): React.ReactElement {
   );
   const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
-  const keyActions = [
-    ...failedActions.slice(0, 2).map((item) => ({
-      id: `failed_${item.id}`,
-      title: `立即处置：${mapOperationActionLabel(item.actionLabel)}`,
-      detail: `${mapFieldDisplayName(item.subjectName, item.subjectName)} · ${mapOperationStatusLabel(item.statusLabel || item.finalStatus)}`,
-      href: item.href || "/operations",
-    })),
-    ...runningActions.slice(0, 2).map((item) => ({
-      id: `running_${item.id}`,
-      title: `跟进执行：${mapOperationActionLabel(item.actionLabel)}`,
-      detail: `${buildOperationSummary(item.statusLabel || item.finalStatus, item.actionLabel)} · 更新于 ${item.occurredAtLabel}`,
-      href: item.href || "/operations",
-    })),
-    ...pendingApprovals.slice(0, 2).map((item, idx) => ({
-      id: `approval_${idx}`,
-      title: "推进审批",
-      detail: item,
-      href: "/agronomy/recommendations",
-    })),
-  ].slice(0, 6);
+  const receiptCount = d.evidences.filter((x) => x.hasReceipt).length;
+  const passCount = d.evidences.filter((x) => x.acceptanceVerdict === "PASS").length;
+  const pendingEvidenceCount = d.evidences.filter((x) => x.isPendingAcceptance).length;
 
   return (
     <div className="productPage demoDashboardPage">
@@ -231,19 +214,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">⑥ 本周期表现（Performance）</div>
-              <div className="sectionDesc">按业务优先级整理的跨模块动作清单。</div>
+              <div className="sectionTitle">⑥ 作业证据（Evidence）</div>
+              <div className="sectionDesc">已执行作业的回执与证据清单，可直接用于客户演示/售前。</div>
             </div>
-            <div className="decisionCount">{keyActions.length}</div>
+            <div className="decisionCount">{d.evidences.length}</div>
           </div>
           <div className="decisionList">
-            {keyActions.map((item) => (
-              <Link key={item.id} to={item.href} className="decisionItemLink">
-                <div className="decisionItemTitle">{item.title}</div>
-                <div className="decisionItemMeta">{item.detail}</div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">回执覆盖数</div>
+              <div className="decisionItemMeta">{receiptCount} / {d.evidences.length}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">验收通过 / 待验收</div>
+              <div className="decisionItemMeta">{passCount} / {pendingEvidenceCount}</div>
+            </div>
+            {d.evidences.slice(0, 4).map((item) => (
+              <Link key={item.id} to={item.href || "/audit-export"} className="decisionItemLink">
+                <div className="decisionItemTitle">{mapFieldDisplayName(item.fieldName, item.fieldName)}</div>
+                <div className="decisionItemMeta">
+                  {item.operationName || "作业"} · {item.acceptanceVerdict === "PASS" ? "验收通过" : item.isPendingAcceptance ? "待验收" : "待回执"}
+                </div>
               </Link>
             ))}
-            {keyActions.length === 0 ? <EmptyBlock text="当前没有关键动作，请关注后续新告警" /> : null}
+            {d.evidences.length === 0 ? <EmptyBlock text="当前没有可展示的作业证据" /> : null}
           </div>
         </article>
       </section>
