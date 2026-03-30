@@ -256,6 +256,27 @@
   font-size: 13px;
   line-height: 1.6;
 }
+.operationBusinessCard {
+  padding: 28px;
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  background: #fff;
+}
+.operationBusinessCard .sectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.operationBusinessCard .detailSectionLead {
+  margin-bottom: 18px;
+  font-size: 14px;
+  color: #64748b;
+}
+.operationBusinessCard .operationsSummaryMetric,
+.operationBusinessCard .detailMeaningItem {
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  background: #fff;
+}
 .gisEmptyState,
 .traceChipRow {
   display: flex;

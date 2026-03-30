@@ -4,11 +4,11 @@ import { Link, useParams } from "react-router-dom";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
-import OperationDecisionCard from "../components/operations/OperationDecisionCard";
 import OperationAcceptanceCard from "../components/operations/OperationAcceptanceCard";
 import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
 import OperationExecutionCard from "../components/operations/OperationExecutionCard";
-import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
+import OperationImpactCard from "../components/operations/OperationImpactCard";
+import OperationRiskCard from "../components/operations/OperationRiskCard";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
@@ -17,9 +17,8 @@ const COPY = {
   detailUnavailable: "作业详情暂不可用",
   operationNotFound: "未找到对应作业",
   backToList: "返回作业列表",
-  evidenceBundle: "证据层",
-  executionEvidence: "执行证据",
-  timeline: "全链路时间线",
+  evidenceBundle: "证据包下载",
+  executionEvidence: "证据（做了什么）",
 };
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
@@ -75,19 +74,10 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最新更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
 
-        <details className="traceDetails">
-          <summary>技术追踪信息</summary>
-          <div className="traceGrid">
-            <span>建议编号：{model.technicalRefs.recommendationId}</span>
-            <span>审批编号：{model.technicalRefs.approvalRequestId}</span>
-            <span>作业计划编号：{model.technicalRefs.operationPlanId}</span>
-            <span>执行任务编号：{model.technicalRefs.actTaskId}</span>
-          </div>
-        </details>
       </section>
 
       <section className="demoContentGrid">
-        <OperationDecisionCard model={model} />
+        <OperationImpactCard model={model} />
         <OperationExecutionCard model={model} />
       </section>
 
@@ -96,20 +86,15 @@ export default function OperationDetailPage(): React.ReactElement {
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">{COPY.executionEvidence}</div>
-            <div className="detailSectionLead">先看最近一次回执、资源消耗和约束校验，再决定是否需要人工复核或补执行。</div>
+            <div className="detailSectionLead">展示本次作业做了什么、消耗了什么、是否存在约束异常。</div>
           </div>
           <ReceiptEvidenceCard data={model.receiptEvidence} />
         </section>
       </section>
 
-      <OperationAcceptanceCard model={model} />
-
-      <section className="card detailHeroCard">
-        <div className="demoSectionHeader">
-          <div className="sectionTitle">{COPY.timeline}</div>
-          <div className="detailSectionLead">从建议、审批到执行与回执，按顺序复盘整条链路。</div>
-        </div>
-        <OperationStoryTimeline items={model.timeline} title="" />
+      <section className="demoContentGrid">
+        <OperationAcceptanceCard model={model} />
+        <OperationRiskCard detail={detail} />
       </section>
     </div>
   );
