@@ -22,6 +22,12 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     potentialBenefitEstimate: "0%",
     nonExecutionRiskEstimate: "0%",
   },
+  execution: {
+    runningTaskCount: 0,
+    humanExecutionCount: 0,
+    deviceExecutionCount: 0,
+    delayedTaskCount: 0,
+  },
 };
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
@@ -44,6 +50,8 @@ export function useDashboard(api: any): DashboardVm {
         const riskItems = await api.getAcceptanceRisks?.({ limit: 6 }) || [];
         const pendingItems = await api.getPendingActions?.({ limit: 6 }) || [];
         const recommendationItems = await api.getRecommendations?.({ limit: 50 }) || [];
+        const operationStates = await api.getOperationStates?.({ limit: 100 }) || [];
+        const assignments = await api.getAssignments?.({ limit: 100 }) || [];
 
         let evidences: any[] = [];
         try {
@@ -97,6 +105,24 @@ export function useDashboard(api: any): DashboardVm {
         const potentialBenefitScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 6 + avgConfidence * 20)));
         const nonExecutionRiskScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 8 + mappedRiskItems.length * 5)));
 
+        const isRunningOperation = (item: any): boolean => {
+          const finalStatus = String(item?.final_status ?? "").toUpperCase();
+          if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(finalStatus)) return false;
+          return true;
+        };
+        const runningOperationItems = (operationStates || []).filter((item: any) => isRunningOperation(item));
+        const activeAssignmentStatuses = new Set(["ASSIGNED", "ACCEPTED", "ARRIVED"]);
+        const activeAssignments = (assignments || []).filter((item: any) => activeAssignmentStatuses.has(String(item?.status || "").toUpperCase()));
+        const humanTaskIds = new Set(activeAssignments.map((item: any) => String(item?.act_task_id || "")).filter(Boolean));
+        const humanExecutionCount = runningOperationItems.filter((item: any) => humanTaskIds.has(String(item?.task_id || ""))).length;
+        const runningTaskCount = runningOperationItems.length;
+        const deviceExecutionCount = Math.max(0, runningTaskCount - humanExecutionCount);
+        const nowMs = Date.now();
+        const delayedTaskCount = runningOperationItems.filter((item: any) => {
+          const lastEventTs = Number(item?.last_event_ts ?? 0);
+          return Number.isFinite(lastEventTs) && lastEventTs > 0 && nowMs - lastEventTs > 2 * 60 * 60 * 1000;
+        }).length;
+
         setData({
           overview: {
             fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
@@ -126,6 +152,12 @@ export function useDashboard(api: any): DashboardVm {
             pendingRecommendationCount,
             potentialBenefitEstimate: `${potentialBenefitScore}%`,
             nonExecutionRiskEstimate: `${nonExecutionRiskScore}%`,
+          },
+          execution: {
+            runningTaskCount,
+            humanExecutionCount,
+            deviceExecutionCount,
+            delayedTaskCount,
           },
         });
       } catch {

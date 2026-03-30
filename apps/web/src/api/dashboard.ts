@@ -40,6 +40,20 @@ export type DashboardRecommendationItem = {
   confidence?: number | null;
   linked_refs?: { approval_request_id?: string | null; receipt_fact_id?: string | null };
 };
+export type DashboardOperationStateItem = {
+  operation_id: string;
+  task_id?: string | null;
+  device_id?: string | null;
+  dispatch_status?: string;
+  final_status?: string;
+  last_event_ts?: number;
+};
+export type DashboardAssignmentItem = {
+  assignment_id: string;
+  act_task_id: string;
+  status: "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED";
+  assigned_at: string;
+};
 
 export type DashboardOverview = {
   window: { from_ts_ms: number; to_ts_ms: number };
@@ -136,6 +150,22 @@ export async function fetchDashboardRecommendations(limit = 50): Promise<Dashboa
   const res = await safe(
     apiRequest<{ ok?: boolean; items?: DashboardRecommendationItem[] }>(withQuery("/api/v1/agronomy/recommendations/control-plane", { limit })),
     { items: [] as DashboardRecommendationItem[] },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchDashboardOperationStates(limit = 100): Promise<DashboardOperationStateItem[]> {
+  const res = await safe(
+    apiRequest<{ ok?: boolean; items?: DashboardOperationStateItem[] }>(withQuery("/api/v1/operations", { limit })),
+    { items: [] as DashboardOperationStateItem[] },
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchDashboardAssignments(limit = 100): Promise<DashboardAssignmentItem[]> {
+  const res = await safe(
+    apiRequest<{ ok?: boolean; items?: DashboardAssignmentItem[] }>(withQuery("/api/v1/work-assignments", { limit })),
+    { items: [] as DashboardAssignmentItem[] },
   );
   return Array.isArray(res.items) ? res.items : [];
 }

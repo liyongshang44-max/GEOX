@@ -5,6 +5,8 @@ import {
   fetchDashboardPendingActions,
   fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
+  fetchDashboardOperationStates,
+  fetchDashboardAssignments,
   getOverview,
   getRecentEvidence,
 } from "../api/dashboard";
@@ -24,6 +26,8 @@ export default function CommercialDashboardPage(): React.ReactElement {
       getAcceptanceRisks: async (params?: { limit?: number }) => fetchDashboardAcceptanceRisks(params?.limit ?? 6),
       getPendingActions: async (params?: { limit?: number }) => fetchDashboardPendingActions(params?.limit ?? 6),
       getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),
+      getOperationStates: async (params?: { limit?: number }) => fetchDashboardOperationStates(params?.limit ?? 100),
+      getAssignments: async (params?: { limit?: number }) => fetchDashboardAssignments(params?.limit ?? 100),
     }),
     [],
   );
@@ -174,11 +178,23 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">④ 执行中（Execution）</div>
-              <div className="sectionDesc">持续跟进任务时序，避免执行链中断。</div>
+              <div className="sectionDesc">来自 operation + assignment 的任务网络视图。</div>
             </div>
-            <div className="decisionCount">{runningActions.length}</div>
+            <div className="decisionCount">{d.execution.runningTaskCount}</div>
           </div>
           <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">执行中任务数</div>
+              <div className="decisionItemMeta">{d.execution.runningTaskCount} 项</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">人工执行 vs 设备执行</div>
+              <div className="decisionItemMeta">{d.execution.humanExecutionCount} / {d.execution.deviceExecutionCount}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">延迟任务</div>
+              <div className="decisionItemMeta">{d.execution.delayedTaskCount} 项</div>
+            </div>
             {runningActions.slice(0, 4).map((a) => (
               <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
                 <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
@@ -194,7 +210,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">⑤ 待验收（Acceptance）</div>
-              <div className="sectionDesc">已回传证据但仍需验收确认的任务。</div>
+              <div className="sectionDesc">核心商业点：receipt 存在且 acceptance != PASS。</div>
             </div>
             <div className="decisionCount">{overviewPendingAcceptanceCount}</div>
           </div>

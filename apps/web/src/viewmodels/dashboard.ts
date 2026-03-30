@@ -44,6 +44,13 @@ export type DashboardDecisionVm = {
   nonExecutionRiskEstimate: string;
 };
 
+export type DashboardExecutionVm = {
+  runningTaskCount: number;
+  humanExecutionCount: number;
+  deviceExecutionCount: number;
+  delayedTaskCount: number;
+};
+
 export type DashboardVm = {
   overview: DashboardOverviewVm;
   actions: DashboardActionVm[];
@@ -51,4 +58,5 @@ export type DashboardVm = {
   risks: string[];
   riskItems: DashboardRiskVm[];
   decisions: DashboardDecisionVm;
+  execution: DashboardExecutionVm;
 };
