@@ -1,8 +1,6 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  fetchDashboardAcceptanceRisks,
-  fetchDashboardPendingActions,
   fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
   fetchDashboardOperationStates,
@@ -40,8 +38,6 @@ export default function CommercialDashboardPage(): React.ReactElement {
       getOverview,
       getRecentExecutions: async (params?: { limit?: number }) => fetchDashboardRecentExecutions(params?.limit ?? 8),
       getRecentEvidence,
-      getAcceptanceRisks: async (params?: { limit?: number }) => fetchDashboardAcceptanceRisks(params?.limit ?? 6),
-      getPendingActions: async (params?: { limit?: number }) => fetchDashboardPendingActions(params?.limit ?? 6),
       getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),
       getOperationStates: async (params?: { limit?: number }) => fetchDashboardOperationStates(params?.limit ?? 100),
       getAssignments: async (params?: { limit?: number }) => fetchDashboardAssignments(params?.limit ?? 100),
