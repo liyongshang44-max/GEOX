@@ -218,9 +218,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ?? finalStatusFromReceipt(receiptStatus)
       ?? (acceptance ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
+    const acceptanceCompleted = Boolean(acceptance);
     const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
     const final_status =
-      (baseFinalStatus === "SUCCESS" && !evidenceComplete)
+      (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
         ? "PENDING_ACCEPTANCE"
         : baseFinalStatus;
 

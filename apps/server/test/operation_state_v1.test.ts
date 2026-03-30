@@ -19,7 +19,7 @@ test('builds timeline from transitions', () => {
   assert.deepEqual(out[0].timeline.map((x) => x.type), ['APPROVAL_REQUESTED', 'APPROVED', 'TASK_DISPATCHED', 'SUCCEEDED']);
 });
 
-test('final_status priority: transition > receipt > acceptance_pending > fallback', () => {
+test('final_status priority: transition > receipt > acceptance gate > fallback', () => {
   const base = fact('operation_plan_v1', { operation_plan_id: 'op2', act_task_id: 't2' }, '2026-03-19T20:00:00.000Z', 'p');
   const withTransition = projectOperationStateFromFacts([
     base,
@@ -32,7 +32,7 @@ test('final_status priority: transition > receipt > acceptance_pending > fallbac
     base,
     fact('ao_act_receipt_v1', { act_task_id: 't2', status: 'executed', evidence_artifact_ids: ['ea_x'] }, '2026-03-19T20:02:00.000Z', 'rc2'),
   ]);
-  assert.equal(withReceipt[0].final_status, 'SUCCESS');
+  assert.equal(withReceipt[0].final_status, 'PENDING_ACCEPTANCE');
 
   const missingAcceptance = projectOperationStateFromFacts([base]);
   assert.equal(missingAcceptance[0].final_status, 'PENDING_ACCEPTANCE');
@@ -62,7 +62,7 @@ test('reads human receipt v1 minimal shape on the shared chain', () => {
   assert.ok(out[0].timeline.some((x) => x.type === 'SUCCEEDED'));
 });
 
-test('receipt evidence marks execution as complete success', () => {
+test('receipt evidence cannot bypass acceptance gate', () => {
   const out = projectOperationStateFromFacts([
     fact('operation_plan_v1', { operation_plan_id: 'op3b', act_task_id: 't3b' }, '2026-03-19T20:00:00.000Z', 'p3b'),
     fact('ao_act_receipt_v1', {
@@ -72,6 +72,24 @@ test('receipt evidence marks execution as complete success', () => {
       execution_time: { start_ts: 1000, end_ts: 1200 },
       evidence_artifact_ids: ['ea_001']
     }, '2026-03-19T20:02:00.000Z', 'rc3b'),
+  ]);
+  assert.equal(out[0].final_status, 'PENDING_ACCEPTANCE');
+});
+
+test('acceptance result unlocks success after receipt evidence', () => {
+  const out = projectOperationStateFromFacts([
+    fact('operation_plan_v1', { operation_plan_id: 'op3c', act_task_id: 't3c' }, '2026-03-19T20:00:00.000Z', 'p3c'),
+    fact('ao_act_receipt_v1', {
+      act_task_id: 't3c',
+      executor_id: { kind: 'human', id: 'worker_03' },
+      status: 'executed',
+      evidence_artifact_ids: ['ea_002']
+    }, '2026-03-19T20:02:00.000Z', 'rc3c'),
+    fact('acceptance_result_v1', {
+      operation_plan_id: 'op3c',
+      act_task_id: 't3c',
+      verdict: 'PASS'
+    }, '2026-03-19T20:03:00.000Z', 'ac3c'),
   ]);
   assert.equal(out[0].final_status, 'SUCCESS');
 });
