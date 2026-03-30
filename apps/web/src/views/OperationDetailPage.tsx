@@ -94,7 +94,7 @@ export default function OperationDetailPage(): React.ReactElement {
 
       <section className="demoContentGrid">
         <OperationAcceptanceCard model={model} />
-        <OperationRiskCard model={model} />
+        <OperationRiskCard detail={detail} />
       </section>
     </div>
   );
