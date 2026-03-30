@@ -8,6 +8,13 @@ import { mapReceiptToVm, type ReceiptEvidenceVm } from "../viewmodels/evidence";
 import type { FieldLang } from "../lib/fieldViewModel";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 
+const unsupportedFieldControlPlaneIds = new Set<string>();
+const unsupportedFieldCurrentProgramIds = new Set<string>();
+
+function is404Error(error: any): boolean {
+  return error?.status === 404 || error?.response?.status === 404;
+}
+
 function mapControlPlaneToLegacyDetail(fieldId: string, cp: FieldControlPlaneItem): any {
   const operations = Array.isArray(cp.operations) ? cp.operations : [];
   const alerts = Array.isArray(cp.alerts) ? cp.alerts : [];
@@ -247,9 +254,13 @@ export function useFieldDetail(params: {
       }
 
       let cp: any = null;
-      try {
-        cp = await fetchFieldControlPlane(fieldId);
-      } catch {}
+      if (!unsupportedFieldControlPlaneIds.has(fieldId)) {
+        try {
+          cp = await fetchFieldControlPlane(fieldId);
+        } catch (e: any) {
+          if (is404Error(e)) unsupportedFieldControlPlaneIds.add(fieldId);
+        }
+      }
 
       let detail: any = null;
       try {
@@ -259,7 +270,18 @@ export function useFieldDetail(params: {
       const [opsRes, recsRes, currentRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
-        Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
+        Promise.resolve().then(async () => {
+          if (unsupportedFieldCurrentProgramIds.has(fieldId)) return null;
+          try {
+            return await fetchFieldCurrentProgram(fieldId);
+          } catch (e: any) {
+            if (is404Error(e)) {
+              unsupportedFieldCurrentProgramIds.add(fieldId);
+              return null;
+            }
+            throw e;
+          }
+        }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
           apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)

@@ -15,6 +15,8 @@ type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
 
 export type ProgramConsoleViewModel = {
   title: string;
+  fieldId?: string;
+  currentOperationPlanId?: string;
   status: ProgramConsoleStatus;
   statusLabel: string;
   stageLabel: string;
@@ -177,6 +179,8 @@ export function buildProgramDetailViewModel(args: {
 
   return {
     title: `${displayTitle}` ,
+    fieldId: toText(program?.field_id || detail?.field_id, "") || undefined,
+    currentOperationPlanId: toText(latestOperation?.operation_plan_id, "") || undefined,
     status: top.status,
     statusLabel: top.label,
     stageLabel: mapProgramStage({ ops, controlPlane, detail }),
