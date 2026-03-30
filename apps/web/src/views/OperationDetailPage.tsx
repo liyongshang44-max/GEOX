@@ -42,7 +42,13 @@ export default function OperationDetailPage(): React.ReactElement {
     return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   }
 
-  const model = buildOperationDetailViewModel(detail);
+  const model = React.useMemo(() => {
+    try {
+      return buildOperationDetailViewModel(detail);
+    } catch {
+      return buildOperationDetailViewModel({});
+    }
+  }, [detail]);
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
   const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);

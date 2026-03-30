@@ -78,7 +78,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const currentPlanText = hasCurrentPlan ? rawCurrentPlanText : "暂无当前经营方案";
   const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${currentPlanText}`;
   const mockMap = buildMockMapLayers(model);
-  const showMockMap = !model?.map.hasTrajectory;
+  const showMockMap = !(model?.map?.hasTrajectory);
   const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
   const programHref = "/programs";
@@ -100,10 +100,10 @@ export default function FieldDetailPage(): React.ReactElement {
           </div>
         </div>
         <div className="operationsSummaryGrid" style={{ marginTop: 16 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">土壤湿度</span><strong>{model?.currentStatus.soilMoisture || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">温度</span><strong>{model?.currentStatus.temperature || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备状态</span><strong>{model?.currentStatus.deviceOnline || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus.recentHeartbeat || "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">土壤湿度</span><strong>{model?.currentStatus?.soilMoisture || "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">温度</span><strong>{model?.currentStatus?.temperature || "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备状态</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
         </div>
         <div className="operationsSummaryActions">
           {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <span className="traceChip">暂无当前经营方案</span>}
@@ -147,11 +147,11 @@ export default function FieldDetailPage(): React.ReactElement {
           {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
         </div>
         <FieldGisMap
-          polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map.polygonGeoJson}
-          heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map.heatGeoJson}
-          markers={showMockMap ? mockMap.markers : model?.map.markers}
-          trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map.trajectorySegments}
-          acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map.acceptancePoints}
+          polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map?.polygonGeoJson}
+          heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map?.heatGeoJson}
+          markers={showMockMap ? mockMap.markers : model?.map?.markers}
+          trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map?.trajectorySegments}
+          acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map?.acceptancePoints}
           activeSegmentId={activeTrackId}
           labels={labels}
           onSelectObject={setSelectedMapObject}

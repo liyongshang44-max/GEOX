@@ -9,6 +9,9 @@ import {
   type ProgramConsoleViewModel,
 } from "../viewmodels/programDetailViewModel";
 
+const unsupportedProgramDetailIds = new Set<string>();
+const unsupportedProgramControlPlaneIds = new Set<string>();
+
 export function useProgramDetail(programId: string): {
   loading: boolean;
   error: string | null;
@@ -35,8 +38,18 @@ export function useProgramDetail(programId: string): {
 
     try {
       const [detailData, controlPlaneData, opStates] = await Promise.all([
-        fetchProgramDetail(id).catch(() => null),
-        fetchProgramControlPlane(id).catch(() => null),
+        unsupportedProgramDetailIds.has(id)
+          ? Promise.resolve(null)
+          : fetchProgramDetail(id).catch(() => {
+            unsupportedProgramDetailIds.add(id);
+            return null;
+          }),
+        unsupportedProgramControlPlaneIds.has(id)
+          ? Promise.resolve(null)
+          : fetchProgramControlPlane(id).catch(() => {
+            unsupportedProgramControlPlaneIds.add(id);
+            return null;
+          }),
         fetchOperationStates({ limit: 100 }).catch(() => ({ items: [] } as any)),
       ]);
 
@@ -45,9 +58,7 @@ export function useProgramDetail(programId: string): {
       setControlPlane(controlPlaneData);
       setOps(programOps);
 
-      if (!detailData && !controlPlaneData) {
-        setError("当前暂无经营方案详情数据");
-      }
+      setError(null);
     } catch {
       setDetail(null);
       setControlPlane(null);
@@ -63,11 +74,10 @@ export function useProgramDetail(programId: string): {
   }, [load]);
 
   const viewModel = React.useMemo(() => {
-    if (!detail && !controlPlane) return null;
     return buildProgramDetailViewModel({
       programId,
-      detail,
-      controlPlane,
+      detail: detail ?? {},
+      controlPlane: controlPlane ?? {},
       ops,
     });
   }, [programId, detail, controlPlane, ops]);
