@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
 // GEOX/apps/web/src/components/AddMarkerModal.tsx
 import React, { useMemo, useState } from "react";
 import { isMarkerKind, MARKER_KIND_ALLOWLIST } from "../lib/contracts";

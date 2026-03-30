@@ -1,4 +1,5 @@
-﻿// GEOX/apps/web/src/lib/api.ts
+// ⚠️ DEPRECATED: do not use in new flows (replaced by operation_state_v1)
+// GEOX/apps/web/src/lib/api.ts
 import type { SensorGroupV1, SeriesResponseV1, OverlaySegment, ExplainOverlayV1, MarkerKind } from "./contracts";
 import { requestJson as requestJsonClient } from "../api/client";
 
