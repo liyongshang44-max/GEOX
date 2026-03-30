@@ -45,6 +45,8 @@ export type ProgramControlPlaneItem = {
   technical_details?: Record<string, unknown>;
 };
 
+let programControlPlaneUnsupported = false;
+
 async function safeNullable<T>(promise: Promise<T>): Promise<T | null> {
   try {
     return await promise;
@@ -74,11 +76,16 @@ export async function fetchProgramDetail(programId: string): Promise<ProgramStat
 }
 
 export async function fetchProgramControlPlane(programId: string): Promise<ProgramControlPlaneItem | null> {
+  if (programControlPlaneUnsupported) return null;
   const res = await apiRequestWithPolicy<{ ok?: boolean; item?: ProgramControlPlaneItem }>(
     `/api/v1/programs/${encodeURIComponent(programId)}/control-plane`,
     undefined,
     { allowedStatuses: [404], dedupe: true },
   );
+  if (!res.ok && res.status === 404) {
+    programControlPlaneUnsupported = true;
+    return null;
+  }
   return res.ok ? (res.data?.item ?? null) : null;
 }
 

@@ -19,7 +19,7 @@ export default function ProgramDetailPage(): React.ReactElement {
   const { programId = "" } = useParams();
   const { loading, error, viewModel, reload } = useProgramDetail(programId);
 
-  if (loading) return <SectionSkeleton kind="detail" />;
+  if (loading && !viewModel) return <SectionSkeleton kind="detail" />;
   if (error || !viewModel) {
     return (
       <ErrorState
