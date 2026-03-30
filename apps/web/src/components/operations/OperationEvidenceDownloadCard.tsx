@@ -3,7 +3,7 @@ import React from "react";
 import { useLocale } from "../../lib/locale";
 import type { OperationDetailPageVm } from "../../viewmodels/operationDetailViewModel";
 
-const EVIDENCE_BUNDLE_TITLE = "证据包";
+const EVIDENCE_BUNDLE_TITLE = "证据层";
 
 type Props = {
   model: OperationDetailPageVm;
@@ -17,7 +17,7 @@ export default function OperationEvidenceDownloadCard({ model, title = EVIDENCE_
     <section className="card sectionBlock geoxSectionCard evidenceBundleCardV2">
       <div className="sectionTitle">{title}</div>
       <div className="muted detailSectionLead">
-        {text("证据包用于复盘、审计和对外交付，不影响现场执行。", "The bundle is for review, audit, and customer delivery. It does not affect field execution.")}
+        {text("证据包用于复盘、审计和对外交付，属于执行后的证据沉淀层。", "Evidence bundles support audit/review and belong to the post-execution evidence layer.")}
       </div>
       <div className="detailMeaningGrid">
         <div className="detailMeaningItem">

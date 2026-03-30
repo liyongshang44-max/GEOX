@@ -81,6 +81,12 @@ export type OperationDetailPageVm = {
     usageHintLabel: string;
     actionLabel: string;
   };
+  acceptance: {
+    status: "PASS" | "FAIL" | "PENDING";
+    statusLabel: string;
+    missingEvidenceLabel: string;
+    summary: string;
+  };
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -159,6 +165,20 @@ function buildEvidenceBundleStatus(detail: any): string {
   const latestJobStatus = String(detail?.evidence_export?.latest_job_status ?? "").toUpperCase();
   if (latestJobStatus === "RUNNING") return "正在生成证据包";
   return "当前暂不可导出";
+}
+
+function resolveAcceptanceStatus(detail: any, receipt?: ReceiptEvidenceVm): "PASS" | "FAIL" | "PENDING" {
+  const raw = String(
+    detail?.acceptance?.verdict
+    ?? detail?.acceptance_result?.verdict
+    ?? detail?.receipt?.acceptance_verdict
+    ?? "",
+  ).toUpperCase();
+  if (raw.includes("PASS")) return "PASS";
+  if (raw.includes("FAIL")) return "FAIL";
+  if (receipt?.constraintCheckLabel === "符合约束") return "PASS";
+  if (receipt?.constraintCheckLabel === "存在违规") return "FAIL";
+  return "PENDING";
 }
 
 const STORY_TIMELINE_ORDER = [
@@ -336,6 +356,7 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
     : jumpUrl
       ? "查看导出任务"
       : "暂无可下载证据包";
+  const acceptanceStatus = resolveAcceptanceStatus(detail, receipt);
 
   return {
     actionLabel: toText(detail?.dispatch?.action_type, toText(detail?.plan?.action_type, "作业")),
@@ -411,6 +432,25 @@ export function buildOperationDetailViewModel(detail: any): OperationDetailPageV
       usageValueLabel: "用于留痕、复验与交付",
       usageHintLabel: `缺失原因：${toText(detail?.evidence_export?.missing_reason, "无")}`,
       actionLabel: evidenceActionLabel,
+    },
+    acceptance: {
+      status: acceptanceStatus,
+      statusLabel: acceptanceStatus,
+      missingEvidenceLabel: toText(
+        detail?.acceptance?.missing_evidence
+        ?? detail?.acceptance_result?.missing_evidence
+        ?? detail?.receipt?.missing_evidence,
+        "无",
+      ),
+      summary: toText(
+        detail?.acceptance?.summary
+        ?? detail?.acceptance_result?.summary,
+        receipt?.violationSummary && receipt.violationSummary !== "-"
+          ? receipt.violationSummary
+          : receipt
+            ? "已回传执行证据，等待最终验收结论。"
+            : "尚未回传执行证据。",
+      ),
     },
   };
 }
