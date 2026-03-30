@@ -34,6 +34,12 @@ export type DashboardEvidenceItem = {
 export type DashboardRecentExecutionItem = { id: string; operation_plan_id: string; field_id: string | null; status: string; updated_ts_ms: number; href: string };
 export type DashboardAcceptanceRiskItem = { id: string; field_id?: string | null; title: string; level: string; occurred_at?: string | null };
 export type DashboardPendingActionItem = { id: string; key: string; label: string; status?: string | null; to?: string | null };
+export type DashboardRecommendationItem = {
+  recommendation_id: string;
+  pending?: boolean;
+  confidence?: number | null;
+  linked_refs?: { approval_request_id?: string | null; receipt_fact_id?: string | null };
+};
 
 export type DashboardOverview = {
   window: { from_ts_ms: number; to_ts_ms: number };
@@ -124,6 +130,14 @@ export async function fetchDashboardPendingActions(limit = 6): Promise<Dashboard
   );
   if (Array.isArray(res.items)) return res.items;
   return Array.isArray(res.actions) ? res.actions : [];
+}
+
+export async function fetchDashboardRecommendations(limit = 50): Promise<DashboardRecommendationItem[]> {
+  const res = await safe(
+    apiRequest<{ ok?: boolean; items?: DashboardRecommendationItem[] }>(withQuery("/api/v1/agronomy/recommendations/control-plane", { limit })),
+    { items: [] as DashboardRecommendationItem[] },
+  );
+  return Array.isArray(res.items) ? res.items : [];
 }
 
 export async function getOverview(): Promise<{

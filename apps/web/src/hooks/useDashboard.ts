@@ -16,6 +16,12 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   evidences: [],
   risks: [],
   riskItems: [],
+  decisions: {
+    pendingApprovalCount: 0,
+    pendingRecommendationCount: 0,
+    potentialBenefitEstimate: "0%",
+    nonExecutionRiskEstimate: "0%",
+  },
 };
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
@@ -37,6 +43,7 @@ export function useDashboard(api: any): DashboardVm {
         const executions = await api.getRecentExecutions?.({ limit: 8 }) || [];
         const riskItems = await api.getAcceptanceRisks?.({ limit: 6 }) || [];
         const pendingItems = await api.getPendingActions?.({ limit: 6 }) || [];
+        const recommendationItems = await api.getRecommendations?.({ limit: 50 }) || [];
 
         let evidences: any[] = [];
         try {
@@ -80,6 +87,16 @@ export function useDashboard(api: any): DashboardVm {
           };
         });
 
+        const pendingRecommendationCount = (recommendationItems || []).filter((item: any) => {
+          if (item?.pending != null) return Boolean(item.pending);
+          return !item?.linked_refs?.receipt_fact_id;
+        }).length;
+        const pendingApprovalCount = (pendingItems || []).length;
+        const confidenceItems = (recommendationItems || []).map((item: any) => Number(item?.confidence)).filter((x: number) => Number.isFinite(x) && x >= 0);
+        const avgConfidence = confidenceItems.length ? confidenceItems.reduce((a: number, b: number) => a + b, 0) / confidenceItems.length : 0;
+        const potentialBenefitScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 6 + avgConfidence * 20)));
+        const nonExecutionRiskScore = Math.max(0, Math.min(95, Math.round(pendingRecommendationCount * 8 + mappedRiskItems.length * 5)));
+
         setData({
           overview: {
             fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
@@ -104,6 +121,12 @@ export function useDashboard(api: any): DashboardVm {
           })),
           risks: mappedRisks,
           riskItems: mappedRiskItems,
+          decisions: {
+            pendingApprovalCount,
+            pendingRecommendationCount,
+            potentialBenefitEstimate: `${potentialBenefitScore}%`,
+            nonExecutionRiskEstimate: `${nonExecutionRiskScore}%`,
+          },
         });
       } catch {
         setData((d) => ({ ...d }));

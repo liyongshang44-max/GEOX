@@ -37,10 +37,18 @@ export type DashboardRiskVm = {
   fieldId?: string;
 };
 
+export type DashboardDecisionVm = {
+  pendingApprovalCount: number;
+  pendingRecommendationCount: number;
+  potentialBenefitEstimate: string;
+  nonExecutionRiskEstimate: string;
+};
+
 export type DashboardVm = {
   overview: DashboardOverviewVm;
   actions: DashboardActionVm[];
   evidences: DashboardEvidenceVm[];
   risks: string[];
   riskItems: DashboardRiskVm[];
+  decisions: DashboardDecisionVm;
 };

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   fetchDashboardAcceptanceRisks,
   fetchDashboardPendingActions,
+  fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
   getOverview,
   getRecentEvidence,
@@ -22,6 +23,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
       getRecentEvidence,
       getAcceptanceRisks: async (params?: { limit?: number }) => fetchDashboardAcceptanceRisks(params?.limit ?? 6),
       getPendingActions: async (params?: { limit?: number }) => fetchDashboardPendingActions(params?.limit ?? 6),
+      getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),
     }),
     [],
   );
@@ -141,18 +143,30 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">③ 待决策（Decisions）</div>
-              <div className="sectionDesc">需要人工确认/审批后才能继续执行的建议事项。</div>
+              <div className="sectionDesc">来自 recommendation + approval 的决策入口。</div>
             </div>
-            <div className="decisionCount">{pendingApprovals.length}</div>
+            <div className="decisionCount">{d.decisions.pendingRecommendationCount + d.decisions.pendingApprovalCount}</div>
           </div>
           <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">待审批建议</div>
+              <div className="decisionItemMeta">建议 {d.decisions.pendingRecommendationCount} 条 · 审批 {d.decisions.pendingApprovalCount} 条</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">潜在收益（估算）</div>
+              <div className="decisionItemMeta">{d.decisions.potentialBenefitEstimate} 的产出改善空间</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">不执行风险（估算）</div>
+              <div className="decisionItemMeta">{d.decisions.nonExecutionRiskEstimate} 的风险暴露概率</div>
+            </div>
             {pendingApprovals.slice(0, 4).map((item, idx) => (
               <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
                 <div className="decisionItemTitle">建议待审批</div>
                 <div className="decisionItemMeta">{item}</div>
               </Link>
             ))}
-            {pendingApprovals.length === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
+            {pendingApprovals.length === 0 && d.decisions.pendingRecommendationCount === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
           </div>
         </article>
 
