@@ -1,4 +1,5 @@
-// ⚠️ DEPRECATED: legacy only, do not use in new flows
+// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// DO NOT use in new flows
 // apps/server/src/routes/series.ts
 
 import type { FastifyInstance } from "fastify"; // Fastify 实例类型：用于注册路由。
@@ -88,6 +89,9 @@ function parseRecordJson(x: unknown): any | null { // 解析 facts.record_json�
 export function buildSeriesRoutes(pool: Pool) { // 构造 /api/series 路由插件。
   return async function seriesRoutes(app: FastifyInstance) { // Fastify plugin 入口。
     app.get("/api/series", async (req, reply) => { // GET /api/series：从 facts 聚合出前端需要的时序数据。
+      if ((req.query as any)?.__internal__ !== "true") {
+        return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+      }
       const q = req.query as Record<string, unknown>; // 读取 query 参数。
 
       let startTs: number; // 查询开始时间。

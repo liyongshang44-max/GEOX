@@ -16,3 +16,8 @@ export function buildAcceptanceResult(input: {
     generated_at: new Date().toISOString()
   };
 }
+
+export function deriveOperationStatus(input: { receipt: unknown; acceptance: unknown }): string {
+  if (input.receipt && !input.acceptance) return "PENDING_ACCEPTANCE";
+  return "READY";
+}

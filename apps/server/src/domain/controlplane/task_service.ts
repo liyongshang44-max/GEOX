@@ -1221,6 +1221,39 @@ async function loadReceiptV1ByIdempotencyKey(
   return loadLatestFactByTypeAndKey(pool, "ao_act_receipt_v1", "payload,idempotency_key", idempotencyKey, tenant);
 }
 
+function enforceReceiptWriteRules(payload: { idempotency_key?: string | null; operation_plan_id?: string | null }): void {
+  if (!payload.idempotency_key) throw new Error("IDEMPOTENCY_KEY_REQUIRED");
+  if (!payload.operation_plan_id) throw new Error("INVALID_RECEIPT_NO_PLAN");
+}
+
+async function createAcceptance(input: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operation_plan_id: string;
+  receipt_id: string;
+}): Promise<string | null> {
+  const existing = await loadLatestFactByTypeAndKey(input.pool, "acceptance_result_v1", "payload,operation_plan_id", input.operation_plan_id, input.tenant);
+  if (existing) return String(existing.fact_id);
+  const acceptance_id = randomUUID();
+  await input.pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [acceptance_id, "api/v1/ao-act/receipts", {
+      type: "acceptance_result_v1",
+      payload: {
+        tenant_id: input.tenant.tenant_id,
+        project_id: input.tenant.project_id,
+        group_id: input.tenant.group_id,
+        acceptance_id,
+        operation_plan_id: input.operation_plan_id,
+        receipt_id: input.receipt_id,
+        verdict: "PENDING_ACCEPTANCE",
+        evaluated_at: new Date().toISOString(),
+      }
+    }]
+  );
+  return acceptance_id;
+}
+
 async function loadFactById(pool: Pool, factId: string, tenant: TenantTriple): Promise<ParsedFactRow | null> {
   const sql = `
     SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
@@ -2323,6 +2356,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (expectedDeviceId && expectedDeviceId !== device_id) return badRequest(reply, "DEVICE_ID_MISMATCH");
     const idempotencyKey = String(body?.meta?.idempotency_key ?? "").trim();
     if (!idempotencyKey) return badRequest(reply, "MISSING_IDEMPOTENCY_KEY");
+    try {
+      enforceReceiptWriteRules({ idempotency_key: idempotencyKey, operation_plan_id });
+    } catch (e: any) {
+      return badRequest(reply, String(e?.message ?? e));
+    }
     const task_act_task_id = String(taskFact.record_json?.payload?.act_task_id ?? "").trim();
     const task_command_id = String(taskFact.record_json?.payload?.command_id ?? task_act_task_id).trim() || task_act_task_id;
     if (!task_act_task_id || task_command_id !== task_act_task_id) return badRequest(reply, "TASK_COMMAND_ACT_TASK_ID_MISMATCH");
@@ -2415,6 +2453,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         raw_receipt_ref: body?.meta?.raw_receipt_ref ?? null,
         received_ts: Number(body?.meta?.received_ts ?? Date.now())
       }
+    });
+    await createAcceptance({
+      pool,
+      tenant,
+      operation_plan_id,
+      receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
     });
 
     const receiptStatus = String(body.status ?? "executed").trim().toLowerCase();
@@ -2742,6 +2786,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (task_act_task_id !== task_id) return badRequest(reply, "TASK_ID_MISMATCH");
     const operation_plan_id = String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim();
     if (!operation_plan_id) return badRequest(reply, "MISSING_OPERATION_PLAN_ID");
+    try {
+      enforceReceiptWriteRules({ idempotency_key: idempotencyKey, operation_plan_id });
+    } catch (e: any) {
+      return badRequest(reply, String(e?.message ?? e));
+    }
     const bodyOperationPlanId = String(body.operation_plan_id ?? "").trim();
     if (bodyOperationPlanId && bodyOperationPlanId !== operation_plan_id) return badRequest(reply, "OPERATION_PLAN_ID_MISMATCH");
     const operationPlan = await loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,operation_plan_id", operation_plan_id, tenant);
@@ -2776,6 +2825,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         received_ts: Number(body?.meta?.received_ts ?? Date.now()),
         evidence_artifact_ids: evidenceArtifactIds
       }
+    });
+    await createAcceptance({
+      pool,
+      tenant,
+      operation_plan_id,
+      receipt_id: String(delegated.json.fact_id ?? receipt_v1_fact_id)
     });
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/receipts", {
       type: "ao_act_receipt_recorded_v1",
