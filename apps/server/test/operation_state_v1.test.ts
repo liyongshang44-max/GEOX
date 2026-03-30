@@ -36,12 +36,14 @@ test('final_status priority: transition > receipt > acceptance gate > fallback',
 
   const missingAcceptance = projectOperationStateFromFacts([base]);
   assert.equal(missingAcceptance[0].final_status, 'PENDING_ACCEPTANCE');
+  assert.equal(missingAcceptance[0].acceptance.status, 'FAIL');
+  assert.deepEqual(missingAcceptance[0].acceptance.missing, ['receipt_missing', 'evidence_missing']);
 
   const fallback = projectOperationStateFromFacts([
     base,
     fact('acceptance_result_v1', { operation_plan_id: 'op2', act_task_id: 't2', verdict: 'PASS' }, '2026-03-19T20:02:00.000Z', 'ac2')
   ]);
-  assert.equal(fallback[0].final_status, 'RUNNING');
+  assert.equal(fallback[0].final_status, 'PENDING_ACCEPTANCE');
 });
 
 
@@ -92,6 +94,7 @@ test('acceptance result unlocks success after receipt evidence', () => {
     }, '2026-03-19T20:03:00.000Z', 'ac3c'),
   ]);
   assert.equal(out[0].final_status, 'SUCCESS');
+  assert.equal(out[0].acceptance.status, 'PASS');
 });
 
 test('filters by field/device/final_status', () => {
