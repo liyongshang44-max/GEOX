@@ -21,6 +21,10 @@ export class ApiError extends Error {
   }
 }
 
+export type ApiRequestResult<T> =
+  | { ok: true; status: number; data: T }
+  | { ok: false; status: number; data: null; bodyText: string; url: string };
+
 export function withQuery(path: string, params?: Record<string, unknown>): string {
   const query = new URLSearchParams();
   const tenant = readTenantContext();
@@ -48,9 +52,35 @@ function resolveUrl(path: string): string {
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await apiRequestWithPolicy<T>(path, init);
+  if (!res.ok) {
+    throw new ApiError(res.status, res.bodyText, res.url);
+  }
+  return res.data;
+}
+
+function buildRequestKey(url: string, init?: RequestInit): string {
+  const method = (init?.method || "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? init.body : init?.body ? "[binary-body]" : "";
+  return `${method}:${url}:${body}`;
+}
+
+const inflightRequests = new Map<string, Promise<ApiRequestResult<any>>>();
+
+export async function apiRequestWithPolicy<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { allowedStatuses?: number[]; dedupe?: boolean },
+): Promise<ApiRequestResult<T>> {
   const token = readSessionToken();
   const tenant = readTenantContext();
   const finalUrl = resolveUrl(path);
+  const key = buildRequestKey(finalUrl, init);
+  if (options?.dedupe && inflightRequests.has(key)) {
+    return inflightRequests.get(key)! as Promise<ApiRequestResult<T>>;
+  }
+
+  const runner = (async () => {
   const baseHeaders = init?.body instanceof FormData
     ? { ...(init?.headers ?? {}) }
     : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
@@ -68,13 +98,26 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   const text = await response.text();
   if (!response.ok) {
+    if (Array.isArray(options?.allowedStatuses) && options!.allowedStatuses!.includes(response.status)) {
+      return { ok: false as const, status: response.status, data: null, bodyText: text, url: finalUrl };
+    }
     throw new ApiError(response.status, text, finalUrl);
   }
 
   try {
-    return text ? (JSON.parse(text) as T) : ({} as T);
+    return { ok: true as const, status: response.status, data: text ? (JSON.parse(text) as T) : ({} as T) };
   } catch {
     throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 300)}`, finalUrl);
+  }
+  })();
+
+  if (!options?.dedupe) return runner;
+
+  inflightRequests.set(key, runner as Promise<ApiRequestResult<any>>);
+  try {
+    return await runner;
+  } finally {
+    inflightRequests.delete(key);
   }
 }
 

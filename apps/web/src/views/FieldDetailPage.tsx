@@ -66,7 +66,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [lang] = React.useState<FieldLang>(() => (getUiLocale() === "en" ? "en" : "zh"));
   const labels = FIELD_TEXT[lang];
   const [selectedMapObject, setSelectedMapObject] = React.useState<any | null>(null);
-  const { model, busy, error, technical, refresh } = useFieldDetail({ fieldId, lang });
+  const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, refresh } = useFieldDetail({ fieldId, lang });
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
   if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
@@ -74,7 +74,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
   const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
   const rawCurrentPlanText = model?.currentPlanText || "--";
-  const hasCurrentPlan = rawCurrentPlanText !== "--";
+  const hasCurrentPlan = rawCurrentPlanText !== "--" && hasCurrentProgram;
   const currentPlanText = hasCurrentPlan ? rawCurrentPlanText : "暂无当前经营方案";
   const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${currentPlanText}`;
   const mockMap = buildMockMapLayers(model);
@@ -110,6 +110,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
+        {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制面板数据</div> : null}
       </section>
 
       {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
@@ -146,19 +147,25 @@ export default function FieldDetailPage(): React.ReactElement {
           </div>
           {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
         </div>
-        <FieldGisMap
-          polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map?.polygonGeoJson}
-          heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map?.heatGeoJson}
-          markers={showMockMap ? mockMap.markers : model?.map?.markers}
-          trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map?.trajectorySegments}
-          acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map?.acceptancePoints}
-          activeSegmentId={activeTrackId}
-          labels={labels}
-          onSelectObject={setSelectedMapObject}
-        />
-        <div className="traceChipRow" style={{ marginTop: 12 }}>
-          {showMockMap ? (<><span className="traceChip">演示设备路径</span><span className="traceChip">演示作业定位点</span><span className="traceChip">演示热区</span></>) : (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>)}
-        </div>
+        {!hasGeometry ? (
+          <div className="decisionItemStatic">该地块暂无可用边界数据</div>
+        ) : (
+          <>
+            <FieldGisMap
+              polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map?.polygonGeoJson}
+              heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map?.heatGeoJson}
+              markers={showMockMap ? mockMap.markers : model?.map?.markers}
+              trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map?.trajectorySegments}
+              acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map?.acceptancePoints}
+              activeSegmentId={activeTrackId}
+              labels={labels}
+              onSelectObject={setSelectedMapObject}
+            />
+            <div className="traceChipRow" style={{ marginTop: 12 }}>
+              {showMockMap ? (<><span className="traceChip">演示设备路径</span><span className="traceChip">演示作业定位点</span><span className="traceChip">演示热区</span></>) : (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>)}
+            </div>
+          </>
+        )}
       </section>
 
       <section className="demoContentGrid">

@@ -1,4 +1,4 @@
-import { apiRequest, withQuery } from "./client";
+import { apiRequest, apiRequestWithPolicy, withQuery } from "./client";
 
 export type ProgramStateItemV1 = any;
 export type ProgramPortfolioItemV1 = any;
@@ -65,13 +65,21 @@ export async function fetchProgramPortfolio(params?: Record<string, unknown>): P
 }
 
 export async function fetchProgramDetail(programId: string): Promise<ProgramStateItemV1 | null> {
-  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: ProgramStateItemV1 }>(`/api/v1/programs/${encodeURIComponent(programId)}`));
-  return res?.item ?? null;
+  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: ProgramStateItemV1 }>(
+    `/api/v1/programs/${encodeURIComponent(programId)}`,
+    undefined,
+    { allowedStatuses: [404], dedupe: true },
+  );
+  return res.ok ? (res.data?.item ?? null) : null;
 }
 
 export async function fetchProgramControlPlane(programId: string): Promise<ProgramControlPlaneItem | null> {
-  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: ProgramControlPlaneItem }>(`/api/v1/programs/${encodeURIComponent(programId)}/control-plane`));
-  return res?.item ?? null;
+  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: ProgramControlPlaneItem }>(
+    `/api/v1/programs/${encodeURIComponent(programId)}/control-plane`,
+    undefined,
+    { allowedStatuses: [404], dedupe: true },
+  );
+  return res.ok ? (res.data?.item ?? null) : null;
 }
 
 export async function fetchProgramTrajectories(programId: string): Promise<any[]> {
