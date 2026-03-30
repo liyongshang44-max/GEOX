@@ -6,10 +6,11 @@ import { toOperationDetailPath } from "../lib/operationLink";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
-    onlineDeviceCount: 0,
-    inProgressCount: 0,
-    completedTodayCount: 0,
-    pendingCount: 0,
+    fieldCount: 0,
+    normalFieldCount: 0,
+    riskFieldCount: 0,
+    todayExecutionCount: 0,
+    pendingAcceptanceCount: 0,
   },
   actions: [],
   evidences: [],
@@ -60,10 +61,11 @@ export function useDashboard(api: any): DashboardVm {
 
         setData({
           overview: {
-            onlineDeviceCount: overview?.online_device_count ?? overview?.onlineDeviceCount ?? 0,
-            inProgressCount: overview?.in_progress ?? overview?.inProgressCount ?? 0,
-            completedTodayCount: overview?.completed_today ?? overview?.completedTodayCount ?? 0,
-            pendingCount: overview?.pending ?? overview?.pendingCount ?? 0,
+            fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
+            normalFieldCount: overview?.normal_field_count ?? overview?.normalFieldCount ?? 0,
+            riskFieldCount: overview?.risk_field_count ?? overview?.riskFieldCount ?? 0,
+            todayExecutionCount: overview?.today_execution_count ?? overview?.todayExecutionCount ?? 0,
+            pendingAcceptanceCount: overview?.pending_acceptance_count ?? overview?.pendingAcceptanceCount ?? 0,
           },
           actions: mappedActions,
           evidences: (evidences || []).map((item: any, i: number) => ({

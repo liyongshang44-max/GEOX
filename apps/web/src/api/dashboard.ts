@@ -126,14 +126,25 @@ export async function fetchDashboardPendingActions(limit = 6): Promise<Dashboard
   return Array.isArray(res.actions) ? res.actions : [];
 }
 
-export async function getOverview(): Promise<{ online_device_count: number; in_progress: number; completed_today: number; pending: number }> {
+export async function getOverview(): Promise<{
+  field_count: number;
+  normal_field_count: number;
+  risk_field_count: number;
+  today_execution_count: number;
+  pending_acceptance_count: number;
+}> {
   const now = Date.now();
   const res = await fetchDashboardOverview({ from_ts_ms: now - 24 * 60 * 60 * 1000, to_ts_ms: now });
+  const fieldCount = Number(res?.summary?.field_count ?? 0);
+  const riskFieldCount = Number(res?.summary?.open_alert_count ?? 0);
+  const runningTaskCount = Number(res?.summary?.running_task_count ?? 0);
+  const pendingAcceptanceCount = (res?.latest_receipts ?? []).filter((item) => String(item?.status ?? "").toUpperCase() !== "PASS").length;
   return {
-    online_device_count: Number(res?.summary?.online_device_count ?? 0),
-    in_progress: Number(res?.summary?.running_task_count ?? 0),
-    completed_today: 0,
-    pending: Number(res?.summary?.open_alert_count ?? 0),
+    field_count: fieldCount,
+    normal_field_count: Math.max(0, fieldCount - riskFieldCount),
+    risk_field_count: riskFieldCount,
+    today_execution_count: runningTaskCount,
+    pending_acceptance_count: pendingAcceptanceCount,
   };
 }
 

@@ -35,6 +35,8 @@ export default function CommercialDashboardPage(): React.ReactElement {
     .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
     .slice(0, 4);
 
+  const overviewPendingAcceptanceCount = Math.max(d.overview.pendingAcceptanceCount, acceptanceTasks.length);
+
   const keyActions = [
     ...failedActions.slice(0, 2).map((item) => ({
       id: `failed_${item.id}`,
@@ -58,40 +60,31 @@ export default function CommercialDashboardPage(): React.ReactElement {
 
   return (
     <div className="productPage demoDashboardPage">
-      <section className="card hero compactHero demoHero dashboardHeroV2">
-        <div>
-          <div className="eyebrow">GEOX / 经营监控台</div>
-          <h1 className="demoHeroTitle">Dashboard 收口：今日经营闭环</h1>
-          <p className="demoHeroSubTitle">围绕地块状态、风险、审批、执行与验收，聚焦今天必须推动的关键动作。</p>
-        </div>
-        <div className="heroActions">
-          <Link className="btn" to="/operations">查看作业</Link>
-          <Link className="btn ghost" to="/agronomy/recommendations">查看建议</Link>
-          <Link className="btn ghost" to="/audit-export">查看验收</Link>
-        </div>
-      </section>
-
       <section className="dashboardDecisionBoard">
         <article className="card decisionColumn success">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">地块状态</div>
-              <div className="sectionDesc">在线能力与今日完结情况，判断地块是否稳定可运营。</div>
+              <div className="sectionTitle">① 今日状态（Overview）</div>
+              <div className="sectionDesc">地块与任务核心状态总览（来源：/api/v1/dashboard/overview）。</div>
             </div>
-            <div className="decisionCount">{d.overview.onlineDeviceCount}</div>
+            <div className="decisionCount">{d.overview.fieldCount}</div>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">在线设备</div>
-              <div className="decisionItemMeta">{d.overview.onlineDeviceCount} 台设备可联动</div>
+              <div className="decisionItemTitle">地块数</div>
+              <div className="decisionItemMeta">{d.overview.fieldCount} 个地块</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">今日完成</div>
-              <div className="decisionItemMeta">{d.overview.completedTodayCount} 项任务进入终态</div>
+              <div className="decisionItemTitle">正常 / 风险地块</div>
+              <div className="decisionItemMeta">{d.overview.normalFieldCount} / {d.overview.riskFieldCount}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">执行中</div>
-              <div className="decisionItemMeta">{d.overview.inProgressCount} 项作业持续推进</div>
+              <div className="decisionItemTitle">今日执行任务数</div>
+              <div className="decisionItemMeta">{d.overview.todayExecutionCount} 项</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">待验收数量</div>
+              <div className="decisionItemMeta">{overviewPendingAcceptanceCount} 项</div>
             </div>
           </div>
         </article>
@@ -99,7 +92,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn danger">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">风险告警</div>
+              <div className="sectionTitle">② 风险与告警（Risk）</div>
               <div className="sectionDesc">失败作业与验收风险，优先消除阻断点。</div>
             </div>
             <div className="decisionCount">{failedActions.length + riskAlerts.length}</div>
@@ -124,10 +117,10 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">待审批建议</div>
+              <div className="sectionTitle">③ 待决策（Decisions）</div>
               <div className="sectionDesc">需要人工确认/审批后才能继续执行的建议事项。</div>
             </div>
-            <div className="decisionCount">{pendingApprovals.length || d.overview.pendingCount}</div>
+            <div className="decisionCount">{pendingApprovals.length}</div>
           </div>
           <div className="decisionList">
             {pendingApprovals.slice(0, 4).map((item, idx) => (
@@ -143,7 +136,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">执行中任务</div>
+              <div className="sectionTitle">④ 执行中（Execution）</div>
               <div className="sectionDesc">持续跟进任务时序，避免执行链中断。</div>
             </div>
             <div className="decisionCount">{runningActions.length}</div>
@@ -163,10 +156,10 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn warning">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">待验收任务</div>
+              <div className="sectionTitle">⑤ 待验收（Acceptance）</div>
               <div className="sectionDesc">已回传证据但仍需验收确认的任务。</div>
             </div>
-            <div className="decisionCount">{acceptanceTasks.length}</div>
+            <div className="decisionCount">{overviewPendingAcceptanceCount}</div>
           </div>
           <div className="decisionList">
             {acceptanceTasks.map((e: any, i: number) => {
@@ -185,7 +178,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <article className="card decisionColumn">
           <div className="decisionHeader">
             <div>
-              <div className="sectionTitle">今日关键动作</div>
+              <div className="sectionTitle">⑥ 本周期表现（Performance）</div>
               <div className="sectionDesc">按业务优先级整理的跨模块动作清单。</div>
             </div>
             <div className="decisionCount">{keyActions.length}</div>
