@@ -107,3 +107,20 @@ test('filters by field/device/final_status', () => {
   assert.equal(out.filter((x) => x.device_id === 'dev_2').length, 1);
   assert.equal(out.filter((x) => x.final_status === 'FAILED').length, 1);
 });
+
+test('timeline includes human assignment + receipt + acceptance nodes', () => {
+  const out = projectOperationStateFromFacts([
+    fact('operation_plan_v1', { operation_plan_id: 'op_h1', act_task_id: 'task_h1' }, '2026-03-19T20:00:00.000Z', 'p_h1'),
+    fact('work_assignment_upserted_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ASSIGNED', assigned_at: '2026-03-19T20:01:00.000Z' }, '2026-03-19T20:01:00.000Z', 'wa1'),
+    fact('work_assignment_status_changed_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ACCEPTED', changed_at: '2026-03-19T20:02:00.000Z' }, '2026-03-19T20:02:00.000Z', 'wa2'),
+    fact('work_assignment_status_changed_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ARRIVED', changed_at: '2026-03-19T20:03:00.000Z' }, '2026-03-19T20:03:00.000Z', 'wa3'),
+    fact('ao_act_receipt_v1', { act_task_id: 'task_h1', status: 'executed', evidence_artifact_ids: ['ea_h1'] }, '2026-03-19T20:04:00.000Z', 'rc_h1'),
+    fact('acceptance_result_v1', { operation_plan_id: 'op_h1', act_task_id: 'task_h1', verdict: 'PASS' }, '2026-03-19T20:05:00.000Z', 'ac_h1'),
+  ]);
+  const types = out[0].timeline.map((x) => x.type);
+  assert.ok(types.includes('ASSIGNMENT_CREATED'));
+  assert.ok(types.includes('ASSIGNMENT_ACCEPTED'));
+  assert.ok(types.includes('ASSIGNMENT_ARRIVED'));
+  assert.ok(types.includes('RECEIPT_SUBMITTED'));
+  assert.ok(types.includes('ACCEPTANCE_GENERATED'));
+});

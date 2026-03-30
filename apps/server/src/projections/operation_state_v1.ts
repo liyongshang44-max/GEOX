@@ -5,6 +5,11 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
 
 type TimelineType =
+  | "ASSIGNMENT_CREATED"
+  | "ASSIGNMENT_ACCEPTED"
+  | "ASSIGNMENT_ARRIVED"
+  | "RECEIPT_SUBMITTED"
+  | "ACCEPTANCE_GENERATED"
   | "RECOMMENDATION_CREATED"
   | "APPROVAL_REQUESTED"
   | "APPROVED"
@@ -77,7 +82,7 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
     WHERE (record_json::jsonb->>'type') IN (
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
       'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
-      'acceptance_result_v1'
+      'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
@@ -105,6 +110,11 @@ function transitionToTimelineType(statusRaw: string): TimelineType | null {
 }
 
 function timelineLabel(type: TimelineType): string {
+  if (type === "ASSIGNMENT_CREATED") return "assignment created";
+  if (type === "ASSIGNMENT_ACCEPTED") return "assignment accepted";
+  if (type === "ASSIGNMENT_ARRIVED") return "assignment arrived";
+  if (type === "RECEIPT_SUBMITTED") return "receipt submitted";
+  if (type === "ACCEPTANCE_GENERATED") return "acceptance generated";
   if (type === "RECOMMENDATION_CREATED") return "recommendation created";
   if (type === "APPROVAL_REQUESTED") return "approval requested";
   if (type === "APPROVED") return "approved";
@@ -203,13 +213,28 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       if (dec === "REJECT" && !timeline.some((x) => x.type === "REJECTED")) timeline.push({ ts: toMs(decision.occurred_at), type: "REJECTED", label: timelineLabel("REJECTED") });
     }
     if (task && !timeline.some((x) => x.type === "TASK_DISPATCHED")) timeline.push({ ts: toMs(task.occurred_at), type: "TASK_DISPATCHED", label: timelineLabel("TASK_DISPATCHED") });
+    const assignmentFacts = facts.filter((f) => {
+      const t = String(f.record_json?.type ?? "");
+      if (!["work_assignment_upserted_v1", "work_assignment_status_changed_v1", "work_assignment_submitted_v1"].includes(t)) return false;
+      return String(f.record_json?.payload?.act_task_id ?? "").trim() === String(task_id ?? "").trim();
+    });
+    for (const af of assignmentFacts) {
+      const status = String(af.record_json?.payload?.status ?? "").trim().toUpperCase();
+      const ts = toMs(af.record_json?.payload?.assigned_at ?? af.record_json?.payload?.changed_at ?? af.occurred_at);
+      if (status === "ASSIGNED") timeline.push({ ts, type: "ASSIGNMENT_CREATED", label: timelineLabel("ASSIGNMENT_CREATED") });
+      if (status === "ACCEPTED") timeline.push({ ts, type: "ASSIGNMENT_ACCEPTED", label: timelineLabel("ASSIGNMENT_ACCEPTED") });
+      if (status === "ARRIVED") timeline.push({ ts, type: "ASSIGNMENT_ARRIVED", label: timelineLabel("ASSIGNMENT_ARRIVED") });
+    }
     if (receipt) {
       const ts = toMs(receipt.occurred_at);
+      timeline.push({ ts, type: "RECEIPT_SUBMITTED", label: timelineLabel("RECEIPT_SUBMITTED") });
       timeline.push({ ts, type: "DEVICE_ACK", label: timelineLabel("DEVICE_ACK") });
       const r = String(receipt.record_json?.payload?.status ?? "").toUpperCase();
       if (r.includes("FAIL") || r.includes("NOT_EXEC")) timeline.push({ ts, type: "FAILED", label: timelineLabel("FAILED") });
       if (r.includes("SUCCESS") || r.includes("EXECUTED")) timeline.push({ ts, type: "SUCCEEDED", label: timelineLabel("SUCCEEDED") });
     }
+    const acceptanceFact = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
+    if (acceptanceFact) timeline.push({ ts: toMs(acceptanceFact.occurred_at), type: "ACCEPTANCE_GENERATED", label: timelineLabel("ACCEPTANCE_GENERATED") });
     const dedupedTimeline = new Map<string, OperationTimelineItemV1>();
     for (const item of timeline) {
       dedupedTimeline.set(`${item.type}_${item.ts}`, item);
