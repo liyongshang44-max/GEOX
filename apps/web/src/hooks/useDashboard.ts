@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { DashboardVm } from "../viewmodels/dashboard";
+import type { DashboardRiskVm, DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
@@ -15,7 +15,15 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   actions: [],
   evidences: [],
   risks: [],
+  riskItems: [],
 };
+
+function mapRiskSource(title: string): DashboardRiskVm["source"] {
+  const t = title.toLowerCase();
+  if (t.includes("旱") || t.includes("dry") || t.includes("moisture")) return "干旱";
+  if (t.includes("病") || t.includes("pest") || t.includes("disease")) return "病害";
+  return "执行缺失";
+}
 
 export function useDashboard(api: any): DashboardVm {
   const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
@@ -59,6 +67,19 @@ export function useDashboard(api: any): DashboardVm {
           ...(pendingItems || []).map((item: any) => `APPROVAL|${item?.label || "待审批建议"}`),
         ].filter(Boolean).slice(0, 10);
 
+        const mappedRiskItems: DashboardRiskVm[] = (riskItems || []).map((item: any, idx: number) => {
+          const rawLevel = String(item?.level || "").toUpperCase();
+          const level: DashboardRiskVm["level"] = rawLevel === "HIGH" ? "HIGH" : rawLevel === "LOW" ? "LOW" : "MEDIUM";
+          const title = String(item?.title || "验收风险");
+          return {
+            id: String(item?.id || idx),
+            title,
+            level,
+            source: mapRiskSource(title),
+            fieldId: typeof item?.field_id === "string" && item.field_id ? item.field_id : undefined,
+          };
+        });
+
         setData({
           overview: {
             fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
@@ -82,6 +103,7 @@ export function useDashboard(api: any): DashboardVm {
             }),
           })),
           risks: mappedRisks,
+          riskItems: mappedRiskItems,
         });
       } catch {
         setData((d) => ({ ...d }));

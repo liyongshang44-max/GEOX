@@ -30,12 +30,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const failedActions = d.actions.filter((x) => x.finalStatus === "failed");
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
   const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
-  const riskAlerts = d.risks.filter((item) => item.startsWith("RISK|")).map((item) => item.replace("RISK|", ""));
+  const riskAlerts = d.riskItems;
   const acceptanceTasks = d.evidences
     .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
     .slice(0, 4);
 
   const overviewPendingAcceptanceCount = Math.max(d.overview.pendingAcceptanceCount, acceptanceTasks.length);
+  const riskLevelCount = riskAlerts.reduce(
+    (acc, item) => {
+      if (item.level === "HIGH") acc.high += 1;
+      else if (item.level === "LOW") acc.low += 1;
+      else acc.medium += 1;
+      return acc;
+    },
+    { high: 0, medium: 0, low: 0 },
+  );
+  const riskSourceCount = riskAlerts.reduce(
+    (acc, item) => {
+      acc[item.source] += 1;
+      return acc;
+    },
+    { 干旱: 0, 病害: 0, 执行缺失: 0 },
+  );
+  const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
   const keyActions = [
     ...failedActions.slice(0, 2).map((item) => ({
@@ -95,22 +112,28 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="sectionTitle">② 风险与告警（Risk）</div>
               <div className="sectionDesc">失败作业与验收风险，优先消除阻断点。</div>
             </div>
-            <div className="decisionCount">{failedActions.length + riskAlerts.length}</div>
+            <div className="decisionCount">{riskAlerts.length}</div>
           </div>
           <div className="decisionList">
-            {failedActions.slice(0, 3).map((a) => (
-              <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
-                <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
-                <div className="decisionItemMeta">{mapFieldDisplayName(a.subjectName, a.subjectName)} · {mapOperationStatusLabel(a.statusLabel || a.finalStatus)}</div>
-              </Link>
-            ))}
-            {riskAlerts.slice(0, 3).map((risk, idx) => (
-              <div key={`risk_${idx}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">验收风险</div>
-                <div className="decisionItemMeta">{risk}</div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">风险等级（高 / 中 / 低）</div>
+              <div className="decisionItemMeta">{riskLevelCount.high} / {riskLevelCount.medium} / {riskLevelCount.low}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">风险来源（干旱 / 病害 / 执行缺失）</div>
+              <div className="decisionItemMeta">{riskSourceCount.干旱} / {riskSourceCount.病害} / {riskSourceCount.执行缺失}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">影响范围</div>
+              <div className="decisionItemMeta">影响 {impactFieldCount} 个地块</div>
+            </div>
+            {riskAlerts.slice(0, 2).map((risk) => (
+              <div key={risk.id} className="decisionItemStatic">
+                <div className="decisionItemTitle">{risk.title}</div>
+                <div className="decisionItemMeta">{risk.source} · {risk.level}</div>
               </div>
             ))}
-            {failedActions.length + riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
+            {riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
           </div>
         </article>
 

@@ -29,9 +29,18 @@ export type DashboardEvidenceVm = {
   card: any;
 };
 
+export type DashboardRiskVm = {
+  id: string;
+  title: string;
+  level: "HIGH" | "MEDIUM" | "LOW";
+  source: "干旱" | "病害" | "执行缺失";
+  fieldId?: string;
+};
+
 export type DashboardVm = {
   overview: DashboardOverviewVm;
   actions: DashboardActionVm[];
   evidences: DashboardEvidenceVm[];
   risks: string[];
+  riskItems: DashboardRiskVm[];
 };
