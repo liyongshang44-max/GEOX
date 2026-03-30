@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -37,6 +38,10 @@ export type OperationStateV1 = {
   action_type: string | null;
   dispatch_status: string;
   receipt_status: string;
+  acceptance: {
+    status: "PASS" | "FAIL" | "PENDING";
+    missing: string[];
+  };
   final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE";
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
@@ -128,12 +133,15 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
 }
 
 function receiptHasEvidenceArtifacts(receipt: FactRow | undefined): boolean {
-  if (!receipt) return false;
+  return extractReceiptArtifacts(receipt).length > 0;
+}
+
+function extractReceiptArtifacts(receipt: FactRow | undefined): string[] {
+  if (!receipt) return [];
   const payload = receipt.record_json?.payload ?? {};
   const evidenceRefs = Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [];
   const evidenceArtifactIds = Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : [];
-  return evidenceRefs.some((x: unknown) => typeof x === "string" && x.trim().length > 0)
-    || evidenceArtifactIds.some((x: unknown) => typeof x === "string" && x.trim().length > 0);
+  return [...evidenceRefs, ...evidenceArtifactIds].filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0);
 }
 
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
@@ -144,14 +152,6 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
   const receiptByTask = latestByKey(
     facts.filter((r) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(r.record_json?.type ?? ""))),
     (r) => String(r.record_json?.payload?.act_task_id ?? r.record_json?.payload?.task_id ?? "").trim()
-  );
-  const acceptanceByPlan = latestByKey(
-    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
-    (r) => String(r.record_json?.payload?.operation_plan_id ?? "").trim()
-  );
-  const acceptanceByTask = latestByKey(
-    facts.filter((r) => String(r.record_json?.type ?? "") === "acceptance_result_v1"),
-    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim()
   );
 
   const transitionByPlan = new Map<string, FactRow[]>();
@@ -179,7 +179,12 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const decision = approval_request_id ? decisionByReq.get(approval_request_id) : undefined;
     const task = task_id ? taskById.get(task_id) : undefined;
     const receipt = task_id ? receiptByTask.get(task_id) : undefined;
-    const acceptance = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
+    const artifacts = extractReceiptArtifacts(receipt);
+    const acceptance = buildAcceptanceResult({
+      operation_plan_id,
+      hasReceipt: !!receipt,
+      evidenceCount: artifacts.length
+    });
 
     const timeline: OperationTimelineItemV1[] = [];
     const transitions = transitionByPlan.get(operation_plan_id) ?? [];
@@ -216,9 +221,9 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const baseFinalStatus =
       finalStatusFromTransition(latestTransition)
       ?? finalStatusFromReceipt(receiptStatus)
-      ?? (acceptance ? null : "PENDING_ACCEPTANCE")
+      ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
-    const acceptanceCompleted = Boolean(acceptance);
+    const acceptanceCompleted = acceptance.verdict === "PASS";
     const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
     const final_status =
       (baseFinalStatus === "SUCCESS" && (!evidenceComplete || !acceptanceCompleted))
@@ -248,6 +253,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       action_type: String(payload.action_type ?? task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
+      acceptance: {
+        status: acceptance.verdict,
+        missing: acceptance.missing_evidence ?? []
+      },
       final_status,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
       timeline: fullTimeline
