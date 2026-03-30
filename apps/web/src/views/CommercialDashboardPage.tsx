@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   fetchDashboardAcceptanceRisks,
   fetchDashboardPendingActions,
@@ -18,6 +18,7 @@ function EmptyBlock({ text }: { text: string }): React.ReactElement {
 }
 
 export default function CommercialDashboardPage(): React.ReactElement {
+  const navigate = useNavigate();
   const api = React.useMemo(
     () => ({
       getOverview,
@@ -63,6 +64,16 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const receiptCount = d.evidences.filter((x) => x.hasReceipt).length;
   const passCount = d.evidences.filter((x) => x.acceptanceVerdict === "PASS").length;
   const pendingEvidenceCount = d.evidences.filter((x) => x.isPendingAcceptance).length;
+  const jumpTargets = {
+    decisions: "/operations?status=pending",
+    execution: "/operations?status=running",
+    acceptance: "/operations?status=done_unaccepted",
+  } as const;
+  const onCardClick = (to: string) => (evt: React.MouseEvent<HTMLElement>) => {
+    const target = evt.target as HTMLElement | null;
+    if (target?.closest("a")) return;
+    navigate(to);
+  };
 
   return (
     <div className="productPage demoDashboardPage">
@@ -126,13 +137,13 @@ export default function CommercialDashboardPage(): React.ReactElement {
           </div>
         </article>
 
-        <article className="card decisionColumn warning">
+        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.decisions)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.decisions); }}>
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">③ 待决策（Decisions）</div>
               <div className="sectionDesc">来自 recommendation + approval 的决策入口。</div>
             </div>
-            <div className="decisionCount">{d.decisions.pendingRecommendationCount + d.decisions.pendingApprovalCount}</div>
+            <Link to={jumpTargets.decisions} className="decisionCount">{d.decisions.pendingRecommendationCount + d.decisions.pendingApprovalCount}</Link>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
@@ -157,13 +168,13 @@ export default function CommercialDashboardPage(): React.ReactElement {
           </div>
         </article>
 
-        <article className="card decisionColumn warning">
+        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.execution)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.execution); }}>
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">④ 执行中（Execution）</div>
               <div className="sectionDesc">来自 operation + assignment 的任务网络视图。</div>
             </div>
-            <div className="decisionCount">{d.execution.runningTaskCount}</div>
+            <Link to={jumpTargets.execution} className="decisionCount">{d.execution.runningTaskCount}</Link>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
@@ -189,13 +200,13 @@ export default function CommercialDashboardPage(): React.ReactElement {
           </div>
         </article>
 
-        <article className="card decisionColumn warning">
+        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.acceptance)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.acceptance); }}>
           <div className="decisionHeader">
             <div>
               <div className="sectionTitle">⑤ 待验收（Acceptance）</div>
               <div className="sectionDesc">核心商业点：receipt 存在且 acceptance != PASS。</div>
             </div>
-            <div className="decisionCount">{overviewPendingAcceptanceCount}</div>
+            <Link to={jumpTargets.acceptance} className="decisionCount">{overviewPendingAcceptanceCount}</Link>
           </div>
           <div className="decisionList">
             {acceptanceTasks.map((e: any, i: number) => {
