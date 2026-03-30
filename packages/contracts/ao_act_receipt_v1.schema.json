@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ao_act_receipt_v1_record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["type", "payload"],
+  "properties": {
+    "type": { "const": "ao_act_receipt_v1" },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["act_task_id", "executor_id", "status", "execution_time"],
+      "properties": {
+        "act_task_id": { "type": "string", "minLength": 1 },
+        "executor_id": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "const": "human" },
+            "id": { "type": "string", "minLength": 1 }
+          }
+        },
+        "status": { "enum": ["executed", "not_executed"] },
+        "execution_time": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start_ts": { "type": "number" },
+            "end_ts": { "type": "number" }
+          }
+        },
+        "execution_coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "enum": ["field", "point", "manual"] }
+          }
+        },
+        "resource_usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "water_l": { "type": "number" },
+            "electric_kwh": { "type": "number" },
+            "chemical_ml": { "type": "number" }
+          }
+        },
+        "logs_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "constraint_check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["violated"],
+          "properties": {
+            "violated": { "type": "boolean" },
+            "summary": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}
