@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiRequestWithPolicy } from "./client";
 import type { ControlPlaneStatus } from "./programs";
 
 export type FieldListItem = any;
@@ -72,12 +72,21 @@ export async function fetchFieldDetail(fieldId: string): Promise<FieldDetail | n
 }
 
 export async function fetchFieldControlPlane(fieldId: string): Promise<FieldControlPlaneItem | null> {
-  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: FieldControlPlaneItem }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`));
-  return res?.item ?? null;
+  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: FieldControlPlaneItem }>(
+    `/api/v1/fields/${encodeURIComponent(fieldId)}/control-plane`,
+    undefined,
+    { allowedStatuses: [404], dedupe: true },
+  );
+  return res.ok ? (res.data?.item ?? null) : null;
 }
 
 export async function fetchFieldGeometry(fieldId: string): Promise<any> {
-  return safeNullable(apiRequest<any>(`/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`));
+  const res = await apiRequestWithPolicy<any>(
+    `/api/v1/fields/${encodeURIComponent(fieldId)}/geometry`,
+    undefined,
+    { allowedStatuses: [404, 422], dedupe: true },
+  );
+  return res.ok ? res.data : null;
 }
 
 export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array<{ season_id: string; count: number; programs: any[] }>> {
@@ -86,6 +95,10 @@ export async function fetchFieldProgramsBySeason(fieldId: string): Promise<Array
 }
 
 export async function fetchFieldCurrentProgram(fieldId: string): Promise<any | null> {
-  const res = await safeNullable(apiRequest<{ ok?: boolean; item?: any }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`));
-  return res?.item ?? null;
+  const res = await apiRequestWithPolicy<{ ok?: boolean; item?: any }>(
+    `/api/v1/fields/${encodeURIComponent(fieldId)}/current-program`,
+    undefined,
+    { allowedStatuses: [404], dedupe: true },
+  );
+  return res.ok ? (res.data?.item ?? null) : null;
 }

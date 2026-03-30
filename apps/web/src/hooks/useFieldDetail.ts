@@ -58,6 +58,9 @@ type FieldDetailState = {
   allOperations: any[];
   recentRecommendations: any[];
   currentProgram: any;
+  hasControlPlane: boolean;
+  hasCurrentProgram: boolean;
+  hasGeometry: boolean;
   latestEvidenceVm?: ReceiptEvidenceVm;
 } | null;
 
@@ -217,6 +220,9 @@ export function useFieldDetail(params: {
   error: string | null;
   technical: string | null;
   model: FieldViewModel | null;
+  hasControlPlane: boolean;
+  hasCurrentProgram: boolean;
+  hasGeometry: boolean;
   refresh: () => Promise<void>;
 } {
   const { fieldId, lang } = params;
@@ -246,10 +252,7 @@ export function useFieldDetail(params: {
         return;
       }
 
-      let cp: any = null;
-      try {
-        cp = await fetchFieldControlPlane(fieldId);
-      } catch {}
+      const cp = await fetchFieldControlPlane(fieldId);
 
       let detail: any = null;
       try {
@@ -300,6 +303,9 @@ export function useFieldDetail(params: {
       setState({
         detail: overview.detail,
         currentProgram,
+        hasControlPlane: Boolean(cp),
+        hasCurrentProgram: Boolean(currentProgram),
+        hasGeometry: Boolean(geometry),
         activeOperations,
         allOperations,
         recentRecommendations: recommendations,
@@ -335,5 +341,15 @@ export function useFieldDetail(params: {
     return { ...vm, latestEvidence: state.latestEvidenceVm ?? vm.latestEvidence };
   }, [state, fieldId, lang]);
 
-  return { busy, status, error, technical, model, refresh };
+  return {
+    busy,
+    status,
+    error,
+    technical,
+    model,
+    hasControlPlane: Boolean(state?.hasControlPlane),
+    hasCurrentProgram: Boolean(state?.hasCurrentProgram),
+    hasGeometry: Boolean(state?.hasGeometry),
+    refresh,
+  };
 }
