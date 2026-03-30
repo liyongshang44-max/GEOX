@@ -9,6 +9,7 @@ import {
 } from "../viewmodels/programDetailViewModel";
 
 const unsupportedProgramDetailIds = new Set<string>();
+const ENABLE_OPTIONAL_PROGRAM_CONTROL_PLANE = String((import.meta as any)?.env?.VITE_ENABLE_OPTIONAL_PROGRAM_CONTROL_PLANE ?? "").toLowerCase() === "true";
 
 export function useProgramDetail(programId: string): {
   loading: boolean;
