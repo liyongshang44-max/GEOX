@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 # WEB_UI_SPEC_v1
 
 Web v1 provides a replay UI for time series samples with overlay display.
@@ -5,7 +6,7 @@ Web v1 provides a replay UI for time series samples with overlay display.
 ## Scope (fixed)
 
 - Fetch and display groups via `GET /api/groups?projectId=(no further steps in this file)` or `?sensorId=(no further steps in this file)`
-- Fetch and display series via `GET /api/series`
+- Fetch and display series via `GET /api/series`（deprecated, legacy only）
 - Display `samples` as lines
 - Display `overlays` (marker + candidate) with shape rules:
   - `device_fault`, `local_anomaly`: point overlay (vertical line + dot)
@@ -40,6 +41,6 @@ Web v1 provides a replay UI for time series samples with overlay display.
 
 ## Add Marker modal
 
-- POSTs to `/api/marker`
+- POSTs to `/api/v1/operation-state/events`
 - Fields: `sensorId`, `type`, `note`, `ts`
 - On success, refreshes series

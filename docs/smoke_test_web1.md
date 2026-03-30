@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 # GEOX Smoke Test (Web1 + Canopy)
 
 All commands below are designed to be copy/paste runnable on Windows PowerShell.
@@ -75,7 +76,7 @@ function Post-Json($url, $obj) {
   Invoke-RestMethod -Method Post -Uri $url -ContentType "application/json" -Body ($obj | ConvertTo-Json -Compress)
 }
 
-Post-Json "$base/api/marker" @{ ts=$ts; sensorId="S1"; type="device_fault"; note="signal intermittent"; source="gateway" } | ConvertTo-Json -Depth 5
+Post-Json "$base/api/v1/operation-state/events" @{ ts=$ts; sensorId="S1"; type="device_fault"; note="signal intermittent"; source="gateway" } | ConvertTo-Json -Depth 5
 ```
 
 ---
@@ -111,7 +112,7 @@ $base="http://localhost:3001"
 $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $start = $now - 24*60*60*1000
 
-$seriesUrl = "$base/api/series?groupId=G_DEFAULT&metrics=moisture&startTs=$start&endTs=$now&maxPoints=2000"
+$seriesUrl = "$base/api/v1/telemetry/series?groupId=G_DEFAULT&metrics=moisture&startTs=$start&endTs=$now&maxPoints=2000"
 $res = Invoke-RestMethod $seriesUrl
 "samples=$($res.samples.Count) overlays=$($res.overlays.Count) gaps=$($res.gaps.Count)"
 

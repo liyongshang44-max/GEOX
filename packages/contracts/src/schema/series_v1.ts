@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 import { z } from "zod";
 import { RawSampleV1Schema } from "./raw_sample_v1";
 import { GapV1Schema } from "./gaps_v1";

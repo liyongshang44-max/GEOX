@@ -1,3 +1,4 @@
+// ⚠️ DEPRECATED: legacy only, do not use in new flows
 # SMOKE_TEST_v1
 
 This smoke test validates Web v1 against the Phase 1–5 backend.
@@ -33,5 +34,5 @@ Open:
 ## API trace
 
 - `/` triggers `GET /api/groups?(no further steps in this file)`
-- `/group/:id` triggers `GET /api/series?(no further steps in this file)`
-- Add Marker triggers `POST /api/marker` and then refreshes series
+- `/group/:id` triggers `GET /api/v1/telemetry/series?(no further steps in this file)`
+- Add Marker triggers `POST /api/v1/operation-state/events`（deprecated, legacy only） and then refreshes series

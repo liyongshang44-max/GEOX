@@ -1,3 +1,4 @@
+# ⚠️ DEPRECATED: legacy only, do not use in new flows
  # GEOX/scripts/ACCEPTANCE_WEB2_BACKEND.ps1
 # GEOX Backend Web2 (Apple I aligned) acceptance script
 #
