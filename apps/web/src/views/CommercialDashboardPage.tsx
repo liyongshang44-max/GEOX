@@ -140,12 +140,12 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="decisionItemMeta">建议 {d.decisions.pendingRecommendationCount} 条 · 审批 {d.decisions.pendingApprovalCount} 条</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">潜在收益（估算）</div>
-              <div className="decisionItemMeta">{d.decisions.potentialBenefitEstimate} 的产出改善空间</div>
+              <div className="decisionItemTitle">高置信建议</div>
+              <div className="decisionItemMeta">{d.decisions.potentialBenefitEstimate}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">不执行风险（估算）</div>
-              <div className="decisionItemMeta">{d.decisions.nonExecutionRiskEstimate} 的风险暴露概率</div>
+              <div className="decisionItemTitle">执行缺失风险</div>
+              <div className="decisionItemMeta">{d.decisions.nonExecutionRiskEstimate}</div>
             </div>
             {pendingApprovals.slice(0, 4).map((item, idx) => (
               <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
