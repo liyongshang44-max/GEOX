@@ -233,7 +233,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
             {acceptanceTasks.map((e: any, i: number) => {
               const card = e?.card || {};
               return (
-                <Link key={e?.id || i} to={e?.href || card?.href || "/audit-export"} className="decisionItemLink">
+                <Link key={e?.id || i} to={e?.href || card?.href || "/delivery/export-jobs"} className="decisionItemLink">
                   <div className="decisionItemTitle">{mapFieldDisplayName(e?.fieldName, e?.fieldName)}</div>
                   <div className="decisionItemMeta">{card?.constraintCheckLabel || "待验收"} · {card?.waterLabel || "--"}</div>
                 </Link>
@@ -265,7 +265,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="decisionItemMeta">展示作业类型、时间、执行者、状态与资源使用</div>
             </div>
             {d.evidences.slice(0, 4).map((item) => (
-              <Link key={item.id} to={item.href || "/audit-export"} className="decisionItemLink">
+              <Link key={item.id} to={item.href || "/delivery/export-jobs"} className="decisionItemLink">
                 <div className="decisionItemTitle">{mapFieldDisplayName(item.fieldName, item.fieldName)}</div>
                 <div className="decisionItemMeta">作业类型：{item.operationName || "未知作业"}</div>
                 <div className="decisionItemMeta">时间：{item.card?.finishedAtLabel || "-"}</div>

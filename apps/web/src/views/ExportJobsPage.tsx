@@ -1,3 +1,3 @@
-import AuditExportPage from "./AuditExportPage";
+import EvidenceCenterPage from "./EvidenceCenterPage";
 
-export default AuditExportPage;
+export default EvidenceCenterPage;

@@ -148,7 +148,6 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
           <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/audit-export" label="证据页" />
           <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>

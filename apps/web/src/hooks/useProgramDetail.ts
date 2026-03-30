@@ -10,7 +10,6 @@ import {
 } from "../viewmodels/programDetailViewModel";
 
 const unsupportedProgramDetailIds = new Set<string>();
-const unsupportedProgramControlPlaneIds = new Set<string>();
 
 export function useProgramDetail(programId: string): {
   loading: boolean;
@@ -37,25 +36,34 @@ export function useProgramDetail(programId: string): {
     setError(null);
 
     try {
-      const [detailData, controlPlaneData, opStates] = await Promise.all([
-        unsupportedProgramDetailIds.has(id)
-          ? Promise.resolve(null)
-          : fetchProgramDetail(id).catch(() => {
-            unsupportedProgramDetailIds.add(id);
-            return null;
-          }),
-        unsupportedProgramControlPlaneIds.has(id)
-          ? Promise.resolve(null)
-          : fetchProgramControlPlane(id).catch(() => {
-            unsupportedProgramControlPlaneIds.add(id);
-            return null;
-          }),
-        fetchOperationStates({ limit: 100 }).catch(() => ({ items: [] } as any)),
+      const detailData = unsupportedProgramDetailIds.has(id)
+        ? null
+        : await fetchProgramDetail(id).catch(() => {
+          unsupportedProgramDetailIds.add(id);
+          return null;
+        });
+      if (!detailData) {
+        setDetail(null);
+        setControlPlane(null);
+        setOps([]);
+        setError("经营方案详情加载失败，请稍后重试");
+        return;
+      }
+
+      setDetail(detailData);
+      setControlPlane(null);
+      setOps([]);
+
+      const [controlPlaneRes, opStatesRes] = await Promise.allSettled([
+        fetchProgramControlPlane(id),
+        fetchOperationStates({ limit: 100 }),
       ]);
 
+      const controlPlaneData = controlPlaneRes.status === "fulfilled" ? controlPlaneRes.value : null;
+      const opStates = opStatesRes.status === "fulfilled" ? opStatesRes.value : { items: [] as any[] };
       const programOps = (opStates?.items || []).filter((item: any) => String(item?.program_id || "") === id);
-      setDetail(detailData);
-      setControlPlane(controlPlaneData);
+
+      setControlPlane(controlPlaneData ?? null);
       setOps(programOps);
 
       setError(null);

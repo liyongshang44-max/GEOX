@@ -1,5 +1,5 @@
 import React from "react";
-import { apiRequest } from "../api/client";
+import { apiRequestOptional } from "../api/client";
 import { fetchFieldControlPlane, fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry, type FieldControlPlaneItem } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
@@ -259,14 +259,45 @@ export function useFieldDetail(params: {
         return;
       }
 
-      const cp = await fetchFieldControlPlane(fieldId);
+      const cpPromise = Promise.resolve()
+        .then(() => fetchFieldControlPlane(fieldId))
+        .catch(() => null);
 
-      let detail: any = null;
-      try {
-        detail = await fetchFieldDetail(fieldId);
-      } catch {}
+      const detail = await fetchFieldDetail(fieldId);
+      if (!detail) {
+        setState(null);
+        setStatus(lang === "zh" ? "暂无田块详情" : "No field detail");
+        return;
+      }
 
-      const [opsRes, recsRes, currentRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
+      const baseOverview = buildFieldOverviewVm({
+        fieldId,
+        controlPlane: null,
+        legacyDetail: detail,
+        geometry: null,
+        livePositions: [],
+        liveTrajectories: [],
+      });
+
+      setState({
+        detail: baseOverview.detail,
+        currentProgram: null,
+        hasControlPlane: false,
+        hasCurrentProgram: false,
+        hasGeometry: Boolean(baseOverview.detail?.geometry),
+        activeOperations: [],
+        allOperations: [],
+        recentRecommendations: [],
+        latestEvidenceVm: buildLatestEvidenceVm({
+          detail: baseOverview.detail,
+          allOperations: [],
+          controlPlane: null,
+        }),
+      });
+      setStatus(lang === "zh" ? "基础详情已加载" : "Base field detail loaded");
+
+      const [cpRes, opsRes, recsRes, currentRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
+        cpPromise,
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
         Promise.resolve().then(async () => {
@@ -283,10 +314,10 @@ export function useFieldDetail(params: {
         }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
-          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
+          apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
         ),
         Promise.resolve().then(() =>
-          apiRequest<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
+          apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
         ),
       ]);
 
@@ -302,6 +333,7 @@ export function useFieldDetail(params: {
       const currentProgram = currentRes.status === "fulfilled" ? currentRes.value ?? null : null;
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
+      const cp = cpRes.status === "fulfilled" ? cpRes.value : null;
 
       const overview = buildFieldOverviewVm({
         fieldId,
@@ -330,7 +362,7 @@ export function useFieldDetail(params: {
         latestEvidenceVm,
       });
 
-      setStatus(overview.controlPlaneHit ? "已加载田块控制台" : lang === "zh" ? "已加载田块控制台" : "Field console loaded");
+      setStatus(overview.controlPlaneHit ? "已加载田块控制台" : lang === "zh" ? "田块详情已加载" : "Field detail loaded");
     } catch (e: any) {
       setState(null);
       setError(lang === "zh" ? "田块详情加载失败" : "Failed to load field detail");

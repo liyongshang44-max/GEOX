@@ -1,4 +1,4 @@
-import { apiRequest, withQuery } from "./client";
+import { apiRequest, apiRequestOptional, withQuery } from "./client";
 
 export type EvidenceJob = {
   job_id: string;
@@ -22,12 +22,13 @@ export async function fetchRecentEvidenceControlPlane(limit = 30): Promise<any[]
 }
 
 export async function fetchEvidenceControlPlane(params?: { limit?: number; program_id?: string; operation_plan_id?: string }): Promise<{ ok: boolean; item: any }> {
-  return apiRequest<{ ok: boolean; item: any }>(withQuery("/api/v1/evidence/control-plane", params));
+  const res = await apiRequestOptional<{ ok: boolean; item: any }>(withQuery("/api/v1/evidence/control-plane", params));
+  return res ?? { ok: true, item: null };
 }
 
 export async function fetchEvidenceBundle(id: string): Promise<any | null> {
   const operationId = String(id ?? "").trim();
   if (!operationId) return null;
-  const res = await apiRequest<{ ok?: boolean; item?: any }>(`/api/v1/operations/${encodeURIComponent(operationId)}/evidence-bundle`);
+  const res = await apiRequestOptional<{ ok?: boolean; item?: any }>(`/api/v1/operations/${encodeURIComponent(operationId)}/evidence-bundle`);
   return res?.item ?? null;
 }
