@@ -1,4 +1,6 @@
-﻿// GEOX/apps/server/src/server.ts
+﻿// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// DO NOT use in new flows
+// GEOX/apps/server/src/server.ts
 
 import { fileURLToPath } from "node:url"; // 把 ESM 的 import.meta.url 转成文件路径
 import path from "node:path"; // 路径拼接/解析
@@ -260,8 +262,8 @@ if (!GEOX_DISABLE_APPLE_II) { // 允许在非商用 profile 下显式启用 Appl
   console.warn("[WARN] Apple II disabled (GEOX_DISABLE_APPLE_II=1). Judge routes/runtime not initialized."); // 明确：不会触发 SQLite bindings
 }
 registerSimConfigRoutes(app); // 注册 sim config 路由
-registerRawRoutes(app, pool); // 注册 raw 写入路由（/api/raw 等）
-registerTelemetryV1Routes(app, pool); // Sprint A1: 注册 Telemetry v1 查询路由（只读投影）。
+registerRawRoutes(app, pool); // ⚠️ DEPRECATED: legacy route registration, internal debug only.
+registerTelemetryV1Routes(app, pool); // ⚠️ DEPRECATED: legacy telemetry routes, internal debug only.
 registerDevicesV1Routes(app, pool); // Sprint A2: 注册设备注册/凭据路由（设备身份 P0）。
 registerHumanExecutorV1Routes(app, pool); // Human executor: register human/domain routes without altering device executor paths.
 registerFieldsV1Routes(app, pool); // Sprint C1: 注册 Field/GIS + Device Binding（地块化基座）。
@@ -287,7 +289,7 @@ registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总�
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
 registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
-registerAgronomyV0Routes(app, pool); // 注册 agronomy 路由
+registerAgronomyV0Routes(app, pool); // ⚠️ DEPRECATED: legacy agronomy routes, internal debug only.
 registerAgronomyInterpretationV1Routes(app); // 注册 agronomy interpretation v1 路由
 
 registerAgronomyMediaV1Routes(app, pool, MEDIA_DIR); // Stage-1: agronomy media ingest + normalized observations.
@@ -1049,6 +1051,9 @@ app.post("/api/derive/overlays", async (req, reply) => {
 // ---------------- Series API ----------------
 
 app.get("/api/series", async (req, reply) => {
+  if ((req.query as any)?.__internal__ !== "true") {
+    return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+  }
   reply.header("Deprecation", "true");
   reply.header("Sunset", "legacy");
   const q = req.query as Record<string, unknown>; // query
@@ -1270,6 +1275,9 @@ const payloadConfidence: OverlayConfidence | null =
 // POST /api/marker
 // ⚠️ DEPRECATED: legacy only, do not use in new flows
 app.post("/api/marker", async (req, reply) => {
+  if ((req.query as any)?.__internal__ !== "true") {
+    return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+  }
   reply.header("Deprecation", "true");
   reply.header("Sunset", "legacy");
   const body = req.body as any; // body

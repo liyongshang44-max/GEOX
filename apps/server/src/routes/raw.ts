@@ -1,3 +1,5 @@
+// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// DO NOT use in new flows
 import { FastifyInstance } from "fastify"; // Fastify app instance for route registration
 import { Pool } from "pg"; // Postgres connection pool (Ledger write)
 import { randomUUID } from "crypto"; // Generate fact_id when caller does not provide one
@@ -42,6 +44,9 @@ export function registerRawRoutes(app: FastifyInstance, pool: Pool) {
   // POST /api/raw
   // Body: { fact_id?, occurred_at_iso?, source, record_json }
   app.post("/api/raw", async (req, reply) => {
+    if ((req.query as any)?.__internal__ !== "true") {
+      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+    }
     const body: any = req.body;
 
     const extraErr = checkNoExtraKeys(body, ["fact_id", "occurred_at_iso", "source", "record_json"]);
