@@ -22,6 +22,9 @@ export type DashboardEvidenceVm = {
   href?: string;
   fieldName?: string;
   operationName?: string;
+  hasReceipt: boolean;
+  acceptanceVerdict: string;
+  isPendingAcceptance: boolean;
   card: any;
 };
 

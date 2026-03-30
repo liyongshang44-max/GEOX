@@ -26,6 +26,8 @@ export type DashboardEvidenceItem = {
   executor_label: string | null;
   receipt_fact_id: string | null;
   receipt_type: string | null;
+  acceptance_verdict?: string | null;
+  is_pending_acceptance?: boolean;
   href: string;
   summary?: any;
 };

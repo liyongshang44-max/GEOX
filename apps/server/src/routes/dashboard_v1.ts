@@ -21,6 +21,8 @@ type DashboardRecentEvidenceItem = {
   executor_label: string | null;
   receipt_fact_id: string | null;
   receipt_type: string | null;
+  acceptance_verdict: string | null;
+  is_pending_acceptance: boolean;
   href: string;
   summary: ReturnType<typeof normalizeReceiptEvidence>;
 }; // Dashboard recent evidence view model used by ReceiptEvidenceCard.
@@ -261,6 +263,27 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       return normalizeReceiptEvidence({ fact_id: row.fact_id, occurred_at: row.occurred_at, record_json: recordJson }, String(recordJson?.type ?? ""));
     });
     const operationPlanIds = Array.from(new Set(normalizedRows.map((x: any) => x.operation_plan_id).filter((x: any) => typeof x === "string" && x.trim())));
+    const acceptanceQ = operationPlanIds.length > 0
+      ? await pool.query(
+        `SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,operation_plan_id}'))
+            (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id,
+            (record_json::jsonb#>>'{payload,verdict}') AS verdict
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'acceptance_result_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3
+            AND (record_json::jsonb#>>'{payload,operation_plan_id}') = ANY($4::text[])
+          ORDER BY (record_json::jsonb#>>'{payload,operation_plan_id}') ASC, occurred_at DESC, fact_id DESC`,
+        [tenant_id, project_id, group_id, operationPlanIds]
+      ).catch(() => ({ rows: [] }))
+      : { rows: [] as any[] };
+    const acceptanceMap = new Map<string, string>();
+    for (const row of acceptanceQ.rows ?? []) {
+      const key = String(row.operation_plan_id ?? "").trim();
+      const verdict = String(row.verdict ?? "").trim().toUpperCase();
+      if (key) acceptanceMap.set(key, verdict || "PENDING");
+    }
     const operationPlanQ = operationPlanIds.length > 0
       ? await pool.query(
         `SELECT operation_plan_id, field_id
@@ -286,6 +309,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       const bridge = summary.operation_plan_id ? operationPlanMap.get(summary.operation_plan_id) : null;
       const fieldId = (typeof recordJson?.payload?.field_id === "string" ? recordJson.payload.field_id : null) ?? bridge?.field_id ?? null;
       const programName = typeof recordJson?.payload?.program_name === "string" ? recordJson.payload.program_name : null;
+      const acceptanceVerdict = summary.operation_plan_id ? (acceptanceMap.get(summary.operation_plan_id) ?? "PENDING") : "PENDING";
+      const hasReceipt = Boolean(summary.receipt_fact_id);
       return {
         operation_plan_id: summary.operation_plan_id,
         field_id: fieldId,
@@ -300,6 +325,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         executor_label: summary.executor_label,
         receipt_fact_id: summary.receipt_fact_id,
         receipt_type: summary.receipt_type,
+        acceptance_verdict: acceptanceVerdict,
+        is_pending_acceptance: hasReceipt && acceptanceVerdict !== "PASS",
         href: summary.operation_plan_id
           ? `/operations/${encodeURIComponent(summary.operation_plan_id)}`
           : fieldId
