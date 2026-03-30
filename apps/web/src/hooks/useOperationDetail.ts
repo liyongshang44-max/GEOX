@@ -30,10 +30,7 @@ export function useOperationDetail(operationPlanId: string): {
     setLoading(true);
     setError(null);
     try {
-      const res = await apiRequest<OperationDetailEnvelope | OperationDetailResponse>(`/api/v1/operations/${encodeURIComponent(id)}`).catch(
-        () => null,
-      );
-      const item = res ? (isOperationDetailEnvelope(res) ? (res.item ?? null) : res) : null;
+      const item = await fetchOperationDetail(id);
       setDetail(item);
       if (!item) setError("未找到该作业详情");
     } catch {
