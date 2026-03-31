@@ -114,8 +114,9 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
+  const crop_code = String(body.crop_code ?? "").trim();
   const program_id = String(body.program_id ?? "").trim() || null;
-  if (!field_id || !season_id || !device_id) return [];
+  if (!field_id || !season_id || !device_id || !crop_code) return [];
 
   const telemetry = (telemetryInput && typeof telemetryInput === "object") ? telemetryInput : {};
   const image = (body.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
@@ -154,14 +155,15 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
       reason_codes: [irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress"],
       evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
       rule_hit: [
-        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < 35 : false, threshold: 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
+        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < (irrigationDecision.moisture_threshold ?? 35) : false, threshold: irrigationDecision.moisture_threshold ?? 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
         { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
       ],
       confidence,
       suggested_action: {
         action_type: "irrigation.start",
-        summary: `土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
+        summary: `${irrigationDecision.crop_name ?? crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
         parameters: {
+          crop_code,
           duration_min: durationMin,
           water_l_per_min: 18,
           trigger: {
