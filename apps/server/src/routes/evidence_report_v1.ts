@@ -6,7 +6,7 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
+import { evaluateEvidence, inferEvidenceLevel } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -156,8 +156,9 @@ function renderReportHtml(report: any): string {
 <table><tr><th>执行人</th><th>执行时间</th><th>最终状态</th><th>无效原因</th></tr>
 <tr><td>${escapeHtml(report.execution.executor_label)}</td><td>${escapeHtml(report.execution.executed_at)}</td><td>${escapeHtml(report.execution.final_status)}</td><td>${escapeHtml(report.execution.invalid_reason ?? "-")}</td></tr></table>
 <h2>证据摘要</h2>
+<p>证据等级：${escapeHtml(report.evidence.evidence_level)}（STRONG:${report.evidence.level_counts.STRONG} / FORMAL:${report.evidence.level_counts.FORMAL} / DEBUG:${report.evidence.level_counts.DEBUG}）</p>
 <p>正式证据：${report.evidence.formal_count}，调试证据：${report.evidence.debug_count}</p>
-<ul>${report.evidence.items.map((x: any) => `<li>${escapeHtml(x.type)} / ${escapeHtml(x.kind)} / ${escapeHtml(x.ref ?? "-")}</li>`).join("")}</ul>
+<ul>${report.evidence.items.map((x: any) => `<li>${escapeHtml(x.type)} / ${escapeHtml(x.kind)} / ${escapeHtml(x.level)} / ${escapeHtml(x.ref ?? "-")}</li>`).join("")}</ul>
 <h2>业务影响表达</h2>
 <p><b>预计效果：</b>${escapeHtml(report.business_effect.expected_impact)}</p>
 <p><b>不执行风险：</b>${escapeHtml(report.business_effect.risk_if_not_execute)}</p>
@@ -208,10 +209,12 @@ async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
     evidence: {
       formal_count: photos.length + metrics.length + (evidenceEvaluation.has_only_sim_trace ? 0 : logs.length),
       debug_count: evidenceEvaluation.has_only_sim_trace ? logs.length : 0,
+      evidence_level: evidenceEvaluation.evidence_level,
+      level_counts: evidenceEvaluation.level_counts,
       items: [
-        ...photos.map((x: any) => ({ type: "photo", kind: "photo_ref", ref: toText(x) ?? undefined })),
-        ...metrics.map((x: any) => ({ type: "metric", kind: toText(x?.name) ?? "metric", ref: undefined })),
-        ...logs.map((x: any) => ({ type: "log", kind: toText(x?.kind) ?? "log_ref", ref: toText(x?.ref ?? x) ?? undefined })),
+        ...photos.map((x: any) => ({ type: "photo", kind: "photo_ref", level: inferEvidenceLevel("photo"), ref: toText(x) ?? undefined })),
+        ...metrics.map((x: any) => ({ type: "metric", kind: toText(x?.name) ?? "metric", level: inferEvidenceLevel("metric"), ref: undefined })),
+        ...logs.map((x: any) => ({ type: "log", kind: toText(x?.kind) ?? "log_ref", level: inferEvidenceLevel(x?.kind ?? x), ref: toText(x?.ref ?? x) ?? undefined })),
       ],
     },
     business_effect: {
