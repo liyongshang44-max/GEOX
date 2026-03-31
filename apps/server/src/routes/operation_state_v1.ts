@@ -7,6 +7,7 @@ import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
+import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -392,6 +393,22 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       action_type: task?.record_json?.payload?.action_type ?? state.action_type,
       final_status: finalStatus,
     });
+    const costBreakdown = computeCostBreakdown({
+      water_l: normalizedReceipt?.water_l,
+      electric_kwh: normalizedReceipt?.electric_kwh,
+      chemical_ml: normalizedReceipt?.chemical_ml,
+    });
+    const customerView = invalidExecution
+      ? {
+        summary: "本次作业未被系统认定为有效执行",
+        today_action: "需重新执行或补充证据",
+        risk_level: "high" as const,
+      }
+      : {
+        summary: "作业已完成，预计改善作物状态",
+        today_action: "继续观察或进入验收",
+        risk_level: "low" as const,
+      };
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -451,7 +468,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           media,
           metrics
         },
-        business_effect: businessEffect
+        business_effect: businessEffect,
+        cost: {
+          total: costBreakdown.total_cost,
+          water: costBreakdown.water_cost,
+          electric: costBreakdown.electric_cost,
+          chemical: costBreakdown.chemical_cost
+        },
+        customer_view: customerView
       }
     });
   });
