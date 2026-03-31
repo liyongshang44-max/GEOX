@@ -7,6 +7,7 @@ import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
+import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -72,6 +73,24 @@ function statusLabel(s: string | null): string {
   if (["RUNNING", "DISPATCHED", "ACKED", "APPROVED", "READY", "IN_PROGRESS"].includes(code)) return "执行中";
   if (["PENDING", "CREATED", "PROPOSED", "PENDING_APPROVAL"].includes(code)) return "待审批";
   return code;
+}
+
+
+function buildInvalidExecutionReport(op: any) {
+  return {
+    type: "invalid_execution_report_v1",
+    summary: "作业未按预期执行",
+    root_cause: toText(op?.failure_reason ?? op?.invalid_reason) ?? "未知原因",
+    risk: "可能导致产量下降或资源浪费",
+    recommendation: "建议重新执行作业并检查设备状态",
+    evidence_refs: Array.isArray(op?.evidence_refs) ? op.evidence_refs : []
+  };
+}
+
+function isInvalidExecutionOperation(op: any): boolean {
+  const finalStatus = String(op?.final_status ?? "").trim().toUpperCase();
+  const statusLabel = String(op?.status_label ?? "").trim();
+  return finalStatus === "INVALID_EXECUTION" || finalStatus.includes("INVALID") || statusLabel.includes("执行无效");
 }
 
 function mapExportJobStatusLabel(s: string | null): string {
@@ -276,7 +295,32 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     if (q.device_id) items = items.filter((x) => x.device_id === String(q.device_id));
     if (q.final_status) items = items.filter((x) => x.final_status === String(q.final_status));
-    items = items.slice(0, limit);
+    const mappedItems = items.slice(0, limit).map((op: any) => {
+      if (isInvalidExecutionOperation(op)) {
+        const reportJson = buildInvalidExecutionReport(op);
+        return {
+          ...op,
+          report_json: reportJson
+        };
+      }
+      return op;
+    });
+
+    items = mappedItems.map((op: any) => {
+      if (!isInvalidExecutionOperation(op)) return op;
+      const reportJson = op?.report_json ?? buildInvalidExecutionReport(op);
+      return {
+        ...op,
+        report_json: {
+          type: String(reportJson?.type ?? "invalid_execution_report_v1"),
+          summary: String(reportJson?.summary ?? "作业未按预期执行") || "作业未按预期执行",
+          root_cause: String(reportJson?.root_cause ?? "未知原因") || "未知原因",
+          risk: String(reportJson?.risk ?? "可能导致产量下降或资源浪费") || "可能导致产量下降或资源浪费",
+          recommendation: String(reportJson?.recommendation ?? "建议重新执行作业并检查设备状态") || "建议重新执行作业并检查设备状态",
+          evidence_refs: Array.isArray(reportJson?.evidence_refs) ? reportJson.evidence_refs : []
+        }
+      };
+    });
 
     return reply.send({
       ok: true,
@@ -392,6 +436,22 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       action_type: task?.record_json?.payload?.action_type ?? state.action_type,
       final_status: finalStatus,
     });
+    const costBreakdown = computeCostBreakdown({
+      water_l: normalizedReceipt?.water_l,
+      electric_kwh: normalizedReceipt?.electric_kwh,
+      chemical_ml: normalizedReceipt?.chemical_ml,
+    });
+    const customerView = invalidExecution
+      ? {
+        summary: "本次作业未被系统认定为有效执行",
+        today_action: "需重新执行或补充证据",
+        risk_level: "high" as const,
+      }
+      : {
+        summary: "作业已完成，预计改善作物状态",
+        today_action: "继续观察或进入验收",
+        risk_level: "low" as const,
+      };
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -451,7 +511,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           media,
           metrics
         },
-        business_effect: businessEffect
+        business_effect: businessEffect,
+        cost: {
+          total: costBreakdown.total_cost,
+          water: costBreakdown.water_cost,
+          electric: costBreakdown.electric_cost,
+          chemical: costBreakdown.chemical_cost
+        },
+        customer_view: customerView
       }
     });
   });
