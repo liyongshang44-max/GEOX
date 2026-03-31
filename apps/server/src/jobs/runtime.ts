@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { Pool } from "pg";
 import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1";
+import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1";
 
 const DEFAULT_INTERVAL_MS = 5000;
 
@@ -24,8 +25,6 @@ async function runOnce(pool: Pool): Promise<void> {
   console.log(`JOBS_TRACE tick_ts=${tickTs}`);
 
   const jobs = fetchPendingJobs();
-  if (jobs.length < 1) return;
-
   for (const job of jobs) {
     try {
       console.log(`RUN_JOB job_id=${job.job_id}`);
@@ -33,6 +32,17 @@ async function runOnce(pool: Pool): Promise<void> {
     } catch (error: any) {
       markJobFailed(job, error);
       console.error(`RUN_JOB_FAILED job_id=${job.job_id} error=${String(error?.message ?? error)}`);
+    }
+  }
+
+  const reportJobs = fetchPendingEvidenceReportJobs();
+  for (const job of reportJobs) {
+    try {
+      console.log(`RUN_EVIDENCE_REPORT_JOB job_id=${job.job_id}`);
+      await runQueuedEvidenceReportJob(pool, job);
+    } catch (error: any) {
+      markEvidenceReportJobFailed(job, error);
+      console.error(`RUN_EVIDENCE_REPORT_JOB_FAILED job_id=${job.job_id} error=${String(error?.message ?? error)}`);
     }
   }
 }
