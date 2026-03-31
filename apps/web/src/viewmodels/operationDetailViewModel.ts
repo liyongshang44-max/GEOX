@@ -100,6 +100,12 @@ export type OperationDetailPageVm = {
     summary: string;
   };
   invalidReason: string;
+  cost: {
+    waterCostLabel: string;
+    electricCostLabel: string;
+    chemicalCostLabel: string;
+    totalCostLabel: string;
+  };
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -124,6 +130,12 @@ function toMs(v: unknown): number | null {
 
 function countEvidenceItems(value: unknown): number {
   return Array.isArray(value) ? value.length : 0;
+}
+
+function toMoneyLabel(v: unknown): string {
+  const n = Number(v ?? 0);
+  const safe = Number.isFinite(n) ? Math.max(0, n) : 0;
+  return `¥${safe.toFixed(2)}`;
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -462,6 +474,7 @@ export function buildOperationDetailViewModel(args?: {
   const debugEvidenceCount = simTraceCount;
   const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
   const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
+  const cost = safeDetail?.cost ?? {};
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -559,5 +572,11 @@ export function buildOperationDetailViewModel(args?: {
       ),
     },
     invalidReason: toText(safeDetail?.invalid_reason, ""),
+    cost: {
+      waterCostLabel: toMoneyLabel(cost?.water),
+      electricCostLabel: toMoneyLabel(cost?.electric),
+      chemicalCostLabel: toMoneyLabel(cost?.chemical),
+      totalCostLabel: toMoneyLabel(cost?.total),
+    },
   };
 }

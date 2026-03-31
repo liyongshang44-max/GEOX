@@ -40,6 +40,7 @@ import { registerControlPlaneV1Routes } from "./routes/controlplane_v1"; // Cont
 import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprint W1: unified audit/export overview.
 import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
 import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
+import { registerSlaV1Routes } from "./routes/sla_v1"; // SLA summary routes.
 import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
 import { registerAgronomyMediaV1Routes } from "./routes/agronomy_media_v1"; // Agronomy media ingest + normalized observation routes.
 import { registerAgronomyInferenceV1Routes } from "./routes/agronomy_inference_v1"; // Agronomy inference + aggregated inputs routes.
@@ -291,6 +292,7 @@ registerEvidenceReportV1Routes(app, pool); // Stage 5: async commercial evidence
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
+registerSlaV1Routes(app, pool); // SLA: 注册服务质量汇总路由。
 registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
 registerAgronomyV0Routes(app, pool); // ⚠️ LEGACY ROUTE: compatibility only, DO NOT connect from new pages.
 registerAgronomyInterpretationV1Routes(app); // 注册 agronomy interpretation v1 路由
