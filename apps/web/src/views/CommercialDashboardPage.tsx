@@ -58,36 +58,30 @@ export default function CommercialDashboardPage(): React.ReactElement {
   );
   const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
+  const invalidCountForAction = Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length);
   const keyActions = [
-    ...riskAlerts.slice(0, 2).map((risk, idx) => ({
-      id: `risk_${risk.id}_${idx}`,
-      title: `处理风险：${risk.title}`,
-      detail: `${risk.source} · ${risk.level} · 影响地块 ${risk.fieldId || "-"}`,
-      status: "待处理",
-      href: "/alerts",
-    })),
-    ...pendingApprovals.slice(0, 2).map((x, idx) => ({
-      id: `approval_${idx}`,
-      title: "完成建议审批",
-      detail: x,
-      status: "待审批",
+    {
+      id: "key_fix_invalid_execution",
+      title: `修复无效执行（${invalidCountForAction}项）`,
+      detail: "优先补齐证据，避免执行无效持续累积",
+      status: invalidCountForAction > 0 ? "需立即处理" : "已清零",
+      href: "/operations?status=invalid_execution",
+    },
+    {
+      id: "key_complete_acceptance",
+      title: `补充验收（${overviewPendingAcceptanceCount}项）`,
+      detail: "完成 PASS/FAIL 判定，推动作业闭环",
+      status: overviewPendingAcceptanceCount > 0 ? "待验收" : "已完成",
+      href: "/operations?status=done_unaccepted",
+    },
+    {
+      id: "key_approve_recommendations",
+      title: `审批建议（${d.decisions.pendingRecommendationCount}项）`,
+      detail: "处理高优先级建议，减少后续执行阻塞",
+      status: d.decisions.pendingRecommendationCount > 0 ? "待审批" : "已完成",
       href: "/agronomy/recommendations",
-    })),
-    ...acceptanceTasks.slice(0, 2).map((x: any, idx) => ({
-      id: `acceptance_${x?.id || idx}`,
-      title: `补齐验收：${mapFieldDisplayName(x?.fieldName, x?.fieldName)}`,
-      detail: "作业已回执，需完成 PASS/FAIL 判定",
-      status: "待验收",
-      href: x?.href || "/operations?status=done_unaccepted",
-    })),
-    ...invalidExecutionTasks.slice(0, 2).map((x, idx) => ({
-      id: `invalid_${x.id}_${idx}`,
-      title: `执行无效：${x.actionLabel}`,
-      detail: "缺少有效证据，无法进入验收",
-      status: "需补证据",
-      href: x.href || "/operations",
-    })),
-  ].slice(0, 6);
+    },
+  ];
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const jumpTargets = {
@@ -254,7 +248,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="sectionTitle">⑥ 无效执行任务</div>
               <div className="sectionDesc">已执行但证据无效，禁止进入验收。</div>
             </div>
-            <div className="decisionCount">{invalidExecutionTasks.length}</div>
+            <div className="decisionCount">{Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length)}</div>
           </div>
           <div className="decisionList">
             {invalidExecutionTasks.slice(0, 4).map((item) => (
@@ -278,7 +272,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <div className="decisionList">
             {keyActions.map((item, idx) => (
               <Link key={item.id} to={item.href} className="decisionItemLink">
-                <div className="decisionItemTitle">任务 {idx + 1} · {item.title}</div>
+                <div className="decisionItemTitle">动作{idx + 1}：{item.title}</div>
                 <div className="decisionItemMeta">{item.detail}</div>
                 <div className="muted" style={{ fontSize: 12 }}>状态：{item.status}</div>
               </Link>

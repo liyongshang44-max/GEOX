@@ -54,10 +54,59 @@ function toMs(v: unknown): number | null {
   return null;
 }
 
+function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
+  const status = String(statusRaw ?? "").trim().toUpperCase();
+  if (!status) return false;
+  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
+}
+
+function hasFiniteMetric(resourceUsage: any): boolean {
+  if (!resourceUsage || typeof resourceUsage !== "object") return false;
+  return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
+}
+
+function isRecognizedDeviceLogEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
+}
+
+function isRecognizedHumanEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite"].some((token) => kind.includes(token));
+}
+
+function isEvidenceInvalidOrMissing(receiptFact: FactRow | null): boolean {
+  if (!receiptFact) return false;
+  const payload = receiptFact.record_json?.payload ?? {};
+  if (!hasExecutedReceiptStatus(payload?.status ?? payload?.receipt_status)) return false;
+  const executorTypeRaw = String(payload?.executor_id?.kind ?? payload?.executor_type ?? "device").toLowerCase();
+  const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
+  const logsRefs = Array.isArray(payload?.logs_refs) ? payload.logs_refs : [];
+  const photos = [
+    ...(Array.isArray(payload?.photos) ? payload.photos : []),
+    ...(Array.isArray(payload?.photo_refs) ? payload.photo_refs : []),
+    ...logsRefs.filter((x: any) => String(x?.kind ?? "").toLowerCase().includes("photo") || String(x?.kind ?? "").toLowerCase().includes("image"))
+  ];
+  const evidenceRefs = [
+    ...(Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : []),
+    ...(Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [])
+  ];
+  const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
+  const hasQualifiedMetrics = hasFiniteMetric(payload?.resource_usage) || metrics.some((m: unknown) => Number.isFinite(Number((m as any)?.value ?? m)));
+  const hasRecognizedDeviceLogs = logsRefs.some((x: any) => isRecognizedDeviceLogEvidence(x));
+  const hasRecognizedHumanEvidence = logsRefs.some((x: any) => isRecognizedHumanEvidence(x));
+  if (executorType === "human") return !(photos.length > 0 || hasRecognizedHumanEvidence || evidenceRefs.some((x: any) => isRecognizedHumanEvidence(x)));
+  return !(hasQualifiedMetrics || hasRecognizedDeviceLogs);
+}
+
 function statusLabel(s: string | null): string {
   const code = String(s ?? "").trim().toUpperCase();
   if (!code) return "待推进";
   if (code === "PENDING_ACCEPTANCE") return "待验收";
+  if (code === "INVALID_EXECUTION") return "执行无效";
   if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(code)) return "执行成功";
   if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED"].includes(code)) return "执行失败";
   if (["RUNNING", "DISPATCHED", "ACKED", "APPROVED", "READY", "IN_PROGRESS"].includes(code)) return "执行中";
@@ -364,7 +413,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
-    const finalStatus = normalizedReceipt && !acceptance ? "PENDING_ACCEPTANCE" : state.final_status;
+    const evidenceInvalidOrMissing = isEvidenceInvalidOrMissing(receiptFact);
+    const finalStatus = evidenceInvalidOrMissing
+      ? "INVALID_EXECUTION"
+      : normalizedReceipt && !acceptance
+        ? "PENDING_ACCEPTANCE"
+        : state.final_status;
+    const acceptanceForResponse = evidenceInvalidOrMissing ? null : acceptance;
     return reply.send({
       ok: true,
       operation: {
@@ -410,10 +465,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           constraint_violated: normalizedReceipt.constraint_violated,
           executor_label: normalizedReceipt.executor_label
         } : null,
-        acceptance: acceptance ? {
-          verdict: toText(acceptance.record_json?.payload?.verdict),
-          missing_evidence: Array.isArray(acceptance.record_json?.payload?.missing_evidence) ? acceptance.record_json.payload.missing_evidence : [],
-          generated_at: toText(acceptance.record_json?.payload?.generated_at ?? acceptance.record_json?.payload?.evaluated_at ?? acceptance.occurred_at)
+        acceptance: acceptanceForResponse ? {
+          verdict: toText(acceptanceForResponse.record_json?.payload?.verdict),
+          missing_evidence: Array.isArray(acceptanceForResponse.record_json?.payload?.missing_evidence) ? acceptanceForResponse.record_json.payload.missing_evidence : [],
+          generated_at: toText(acceptanceForResponse.record_json?.payload?.generated_at ?? acceptanceForResponse.record_json?.payload?.evaluated_at ?? acceptanceForResponse.occurred_at)
         } : null,
         timeline,
         evidence_bundle: {

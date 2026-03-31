@@ -691,14 +691,26 @@ async function createOperationPlanForApproval(
   return { operation_plan_id, operation_plan_fact_id, transition_fact_id };
 }
 
-type OperationPlanStatusV1 = "CREATED" | "APPROVED" | "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
+type OperationPlanStatusV1 =
+  | "CREATED"
+  | "APPROVED"
+  | "READY"
+  | "DISPATCHED"
+  | "ACKED"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "INVALID_EXECUTION"
+  | "PENDING_ACCEPTANCE";
 
-const OPERATION_PLAN_NEXT_STATUS_V1: Record<Exclude<OperationPlanStatusV1, "SUCCEEDED" | "FAILED">, OperationPlanStatusV1> = {
+const OPERATION_PLAN_NEXT_STATUS_V1: Record<
+  Exclude<OperationPlanStatusV1, "SUCCEEDED" | "FAILED" | "INVALID_EXECUTION" | "PENDING_ACCEPTANCE">,
+  OperationPlanStatusV1
+> = {
   CREATED: "APPROVED",
   APPROVED: "READY",
   READY: "DISPATCHED",
   DISPATCHED: "ACKED",
-  ACKED: "SUCCEEDED"
+  ACKED: "PENDING_ACCEPTANCE"
 };
 
 async function transitionOperationPlanStateV1(
@@ -725,7 +737,7 @@ const currentStatusRaw = String(payload.status ?? "").trim().toUpperCase();
 const current_status: OperationPlanStatusV1 = (currentStatusRaw || "CREATED") as OperationPlanStatusV1;
 const next_status = transition.next_status;
 
-if (current_status === "SUCCEEDED" || current_status === "FAILED") {
+if (current_status === "SUCCEEDED" || current_status === "FAILED" || current_status === "INVALID_EXECUTION" || current_status === "PENDING_ACCEPTANCE") {
   throw new Error("OPERATION_PLAN_TERMINAL");
 }
 
@@ -733,10 +745,12 @@ const allowedNextStatuses: Record<OperationPlanStatusV1, OperationPlanStatusV1[]
   CREATED: ["APPROVED"],
   APPROVED: ["READY"],
   READY: ["DISPATCHED"],
-  DISPATCHED: ["ACKED", "FAILED"],
-  ACKED: ["SUCCEEDED", "FAILED"],
+  DISPATCHED: ["ACKED", "FAILED", "INVALID_EXECUTION"],
+  ACKED: ["SUCCEEDED", "FAILED", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"],
   SUCCEEDED: [],
-  FAILED: []
+  FAILED: [],
+  INVALID_EXECUTION: [],
+  PENDING_ACCEPTANCE: []
 };
 
 const allowed = allowedNextStatuses[current_status] ?? [];
@@ -1236,23 +1250,59 @@ function hasFiniteMetricEvidence(resourceUsage: any): boolean {
   return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
 }
 
+function isRecognizedDeviceLogEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
+}
+
+function isRecognizedHumanEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite", "service_team"].some((token) => kind.includes(token));
+}
+
+function validateEvidence(executorType: unknown, evidence: any): boolean {
+  if (executorType === "human") {
+    const hasPhotos = Array.isArray(evidence?.photos) && evidence.photos.length > 0;
+    const hasHumanEvidence = Array.isArray(evidence?.humanEvidence)
+      && evidence.humanEvidence.some((x: any) => isRecognizedHumanEvidence(x));
+    return hasPhotos || hasHumanEvidence;
+  }
+
+  if (executorType === "device") {
+    return (
+      (Array.isArray(evidence?.metrics) && evidence.metrics.length > 0) ||
+      (Array.isArray(evidence?.logs) && evidence.logs.some((x: any) => isRecognizedDeviceLogEvidence(x)) )
+    );
+  }
+
+  return false;
+}
+
 function evaluateReceiptEvidenceValidity(body: any): { valid: boolean; executorType: "device" | "human" } {
   const executorTypeRaw = String(body?.executor_id?.kind ?? body?.executor_type ?? "device").toLowerCase();
   const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
-  const evidenceIds = [
+  const evidenceRefs = [
     ...(Array.isArray(body?.evidence_artifact_ids) ? body.evidence_artifact_ids : []),
     ...(Array.isArray(body?.evidence_refs) ? body.evidence_refs : []),
-  ].filter((x: unknown) => typeof x === "string" && x.trim().length > 0);
+  ];
   const logsRefs = Array.isArray(body?.logs_refs) ? body.logs_refs : [];
   const photoRefs = [
     ...(Array.isArray(body?.photos) ? body.photos : []),
     ...(Array.isArray(body?.photo_refs) ? body.photo_refs : []),
     ...logsRefs.filter((x: any) => ["photo", "image"].some((k) => String(x?.kind ?? "").toLowerCase().includes(k))),
   ];
-  const hasMetrics = hasFiniteMetricEvidence(body?.resource_usage);
-  const hasLogs = logsRefs.length > 0;
-  if (executorType === "human") return { executorType, valid: photoRefs.length > 0 || evidenceIds.length > 0 };
-  return { executorType, valid: hasMetrics || hasLogs || evidenceIds.length > 0 };
+  const metrics = hasFiniteMetricEvidence(body?.resource_usage) ? [body?.resource_usage] : [];
+  const valid = validateEvidence(executorType, {
+    photos: photoRefs,
+    metrics,
+    logs: logsRefs,
+    humanEvidence: [...logsRefs, ...evidenceRefs]
+  });
+  return { executorType, valid };
 }
 
 async function createAcceptance(input: {
@@ -2469,9 +2519,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       executor_id: body.executor_id ?? { kind: "device", id: device_id, namespace: "mqtt_device_v1" },
       logs_refs: body.logs_refs ?? [{ kind: "mqtt", ref: deriveReceiptTopic(tenant, device_id, body) }],
     });
-    if (isDoneLikeStatus(body?.status ?? body?.meta?.receipt_status) && !uplinkEvidenceValidity.valid) {
-      return badRequest(reply, "EVIDENCE_REQUIRED");
-    }
     const receipt_v1_fact_id = await insertFact(pool, "api/v1/ao-act/receipts/uplink", {
       type: "ao_act_receipt_v1",
       payload: {
@@ -2500,10 +2547,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       });
     }
 
-    const receiptStatus = String(body.status ?? "executed").trim().toLowerCase();
-    const terminalState = !uplinkEvidenceValidity.valid ? "FAILED" : (receiptStatus === "executed" ? "SUCCEEDED" : "FAILED");
+    const terminalState: OperationPlanStatusV1 = uplinkEvidenceValidity.valid ? "PENDING_ACCEPTANCE" : "INVALID_EXECUTION";
     await updateDispatchQueueStateByActTask(pool, tenant, act_task_id, {
-      state: terminalState,
+      state: terminalState === "PENDING_ACCEPTANCE" ? "SUCCEEDED" : "FAILED",
       receipt_fact_id: delegated.json.fact_id
     });
 
@@ -2530,7 +2576,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         trigger: "receipt",
         act_task_id,
         receipt_fact_id: delegated.json.fact_id,
-        terminal_reason: terminalState === "FAILED" ? "receipt_status_failed" : "receipt_status_executed"
+        terminal_reason: terminalState === "INVALID_EXECUTION" ? "evidence_missing_or_invalid" : "pending_acceptance"
       }, "api/v1/ao-act/receipts/uplink");
     }
 
@@ -2816,9 +2862,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       ? body.evidence_artifact_ids.filter((x: unknown) => typeof x === "string" && x.trim()).map((x: string) => x.trim())
       : [];
     const evidenceValidity = evaluateReceiptEvidenceValidity({ ...body, evidence_artifact_ids: evidenceArtifactIds });
-    if (isDoneLikeStatus(body?.status ?? body?.meta?.receipt_status) && !evidenceValidity.valid) {
-      return badRequest(reply, "EVIDENCE_REQUIRED");
-    }
     const receiptV1Dup = await loadReceiptV1ByIdempotencyKey(pool, tenant, idempotencyKey);
     if (receiptV1Dup) return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT" });
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", task_id, tenant);
@@ -2890,9 +2933,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         created_at_ts: Date.now()
       }
     });
-    const receiptStatus = String(body.status ?? "").trim().toLowerCase();
-    const terminalState = !evidenceValidity.valid ? "FAILED" : (receiptStatus === "executed" ? "SUCCEEDED" : "FAILED");
-    await updateDispatchQueueStateByActTask(pool, tenant, task_id, { state: terminalState, receipt_fact_id: delegated.json.fact_id });
+    const terminalState: OperationPlanStatusV1 = evidenceValidity.valid ? "PENDING_ACCEPTANCE" : "INVALID_EXECUTION";
+    await updateDispatchQueueStateByActTask(pool, tenant, task_id, {
+      state: terminalState === "PENDING_ACCEPTANCE" ? "SUCCEEDED" : "FAILED",
+      receipt_fact_id: delegated.json.fact_id
+    });
 
     // Reload the latest plan before terminal transition because a receipt may arrive via
     // the uplink path immediately after dispatch, and the ACKED transition can be written
@@ -2942,7 +2987,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       trigger: "receipt",
       act_task_id: task_id,
       receipt_fact_id: delegated.json.fact_id,
-      terminal_reason: terminalState === "FAILED" ? "receipt_status_failed" : "receipt_status_executed"
+      terminal_reason: terminalState === "INVALID_EXECUTION" ? "evidence_missing_or_invalid" : "pending_acceptance"
     }, "api/v1/ao-act/receipts");
     return reply.send({
       ok: true,
