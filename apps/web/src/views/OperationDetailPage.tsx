@@ -13,6 +13,7 @@ import OperationEvidenceDownloadCard from "../components/operations/OperationEvi
 import OperationDecisionCard from "../components/operations/OperationDecisionCard";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
+import { fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
 
 const COPY = {
@@ -46,6 +47,18 @@ export default function OperationDetailPage(): React.ReactElement {
       return buildOperationDetailViewModel({});
     }
   }, [detail]);
+  const [billing, setBilling] = React.useState<OperationBillingResponse | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const id = model.operationPlanId || operationPlanId;
+    void fetchOperationBilling(id).then((res) => {
+      if (mounted) setBilling(res);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [model.operationPlanId, operationPlanId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !detail) {
@@ -56,6 +69,12 @@ export default function OperationDetailPage(): React.ReactElement {
   const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(model.execution.deviceId || model.deviceLabel, model.deviceLabel);
   const resultSummary = buildResultSummary(model);
+
+  const billingLabel = billing
+    ? billing.billable
+      ? `本次作业费用：¥${Number(billing.charge ?? 0).toFixed(2)}`
+      : "本次作业费用：¥0（无效执行不计费）"
+    : "本次作业费用：--";
 
   return (
     <div className="demoDashboardPage">
@@ -89,6 +108,7 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结论</span><strong>{model.customerView.summary}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议</span><strong>{model.customerView.todayAction}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险等级</span><strong>{model.customerView.riskLevelLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">费用</span><strong>{billingLabel}</strong></div>
         </div>
       </section>
       <section className="demoContentGrid">
