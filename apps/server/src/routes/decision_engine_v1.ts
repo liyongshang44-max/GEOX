@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
+import { evaluateIrrigationDecisionV1 } from "../domain/decision_engine_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -113,8 +114,9 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
+  const crop_code = String(body.crop_code ?? "").trim();
   const program_id = String(body.program_id ?? "").trim() || null;
-  if (!field_id || !season_id || !device_id) return [];
+  if (!field_id || !season_id || !device_id || !crop_code) return [];
 
   const telemetry = (telemetryInput && typeof telemetryInput === "object") ? telemetryInput : {};
   const image = (body.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
@@ -129,9 +131,15 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
 
   const out: RecommendationV1[] = [];
 
-  const irrigationNeed = (Number.isFinite(soilMoisture) && soilMoisture < 35) || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
-  if (irrigationNeed) {
-    const moistureTerm = Number.isFinite(soilMoisture) ? clamp01((45 - soilMoisture) / 45) : 0.2;
+  const irrigationDecision = evaluateIrrigationDecisionV1({
+    crop_code,
+    soil_moisture: soilMoisture,
+    canopy_temp: canopyTemp,
+    stress_score: stressScore
+  });
+  if (irrigationDecision.should_irrigate) {
+    const moistureBase = irrigationDecision.moisture_threshold ?? 45;
+    const moistureTerm = Number.isFinite(soilMoisture) ? clamp01((moistureBase - soilMoisture) / moistureBase) : 0.2;
     const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
     const confidence = Number((0.45 + 0.3 * moistureTerm + 0.15 * heatTerm + 0.1 * imageConfidence).toFixed(3));
     const durationMin = Number.isFinite(soilMoisture) && soilMoisture < 25 ? 35 : 20;
@@ -143,17 +151,18 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
       program_id,
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
-      reason_codes: ["soil_moisture_low_or_heat_stress"],
+      reason_codes: irrigationDecision.reason_codes,
       evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
       rule_hit: [
-        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < 35 : false, threshold: 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
+        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < (irrigationDecision.moisture_threshold ?? 35) : false, threshold: irrigationDecision.moisture_threshold ?? 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
         { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
       ],
       confidence,
       suggested_action: {
         action_type: "irrigation.start",
-        summary: `土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
+        summary: `${irrigationDecision.crop_name ?? crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
         parameters: {
+          crop_code,
           duration_min: durationMin,
           water_l_per_min: 18,
           trigger: {
