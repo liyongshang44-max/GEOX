@@ -17,7 +17,12 @@ function Alert({ type, children }: { type: "error"; children: React.ReactNode })
 
 export default function OperationExecutionCard({ task, acceptance, invalidReason }: ExecutionCardProps): React.ReactElement {
   const status = String(task.finalStatus ?? "").toUpperCase();
-  const executionValidity = status === "INVALID_EXECUTION" ? "执行无效" : "有效执行";
+  const executionValidity =
+    status === "INVALID_EXECUTION"
+      ? "执行无效"
+      : status === "PENDING_ACCEPTANCE" || status === "SUCCESS"
+        ? "有效执行"
+        : "待确认";
   const invalidDetail = invalidReason === "evidence_invalid"
     ? "仅有调试证据，不构成正式执行证明"
     : invalidReason === "evidence_missing"

@@ -177,7 +177,7 @@ function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): stri
   const finalStatus = normalizeFinalStatusCode(detail);
   if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
   if (!receipt) {
-    return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
+    return "等待设备回传执行证据";
   }
   if (receipt.constraintCheckLabel === "符合约束") {
     return "现场已回传执行结果，系统判断本次执行符合约束";
@@ -511,7 +511,7 @@ export function buildOperationDetailViewModel(args?: {
           ? receipt.violationSummary
           : receipt
             ? "已回传执行证据，等待最终验收结论。"
-            : "⚠️ 执行无效：未提供证据，无法完成验收。",
+            : "等待设备回传执行证据。",
       ),
     },
     invalidReason: toText(safeDetail?.invalid_reason, ""),

@@ -5,6 +5,7 @@ type Props = {
   data?: ReceiptEvidenceVm;
   actionLabel?: string;
   executorTypeLabel?: string;
+  finalStatus?: string;
 };
 
 function toDisplayText(v: unknown): string {
@@ -28,11 +29,15 @@ function buildReadableResultLabel(actionLabel: string | undefined, statusTone: R
   return `${normalizedAction}进行中`;
 }
 
-export default function ReceiptEvidenceCard({ data, actionLabel, executorTypeLabel }: Props): React.ReactElement {
+export default function ReceiptEvidenceCard({ data, actionLabel, executorTypeLabel, finalStatus }: Props): React.ReactElement {
+  const normalizedFinalStatus = String(finalStatus ?? "").toUpperCase();
   if (!data) {
+    const waitingReceipt = normalizedFinalStatus !== "INVALID_EXECUTION";
     return (
       <div className="p-4 border rounded-xl text-sm text-gray-500">
-        ⚠️ 执行无效：未提供证据，无法完成验收
+        {waitingReceipt
+          ? "⏳ 等待设备回传执行证据"
+          : "⚠️ 执行无效：未提供证据，无法完成验收"}
       </div>
     );
   }

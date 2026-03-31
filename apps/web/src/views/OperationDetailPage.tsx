@@ -94,6 +94,7 @@ export default function OperationDetailPage(): React.ReactElement {
             data={model.receiptEvidence}
             actionLabel={actionLabel}
             executorTypeLabel={model.execution.executorTypeLabel}
+            finalStatus={model.finalStatus}
           />
         </section>
         <OperationImpactCard model={model} />
