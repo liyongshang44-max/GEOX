@@ -76,14 +76,28 @@ function statusLabel(s: string | null): string {
 }
 
 
+function cleanJsonText(v: unknown, fallback: string): string {
+  const raw = toText(v) ?? fallback;
+  const cleaned = raw.replace(/[\u0000-\u001F\u007F-\u009F]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned || fallback;
+}
+
+function toEvidenceRefs(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => cleanJsonText(item, ""))
+    .filter((item) => item.length > 0)
+    .slice(0, 50);
+}
+
 function buildInvalidExecutionReport(op: any) {
   return {
     type: "invalid_execution_report_v1",
-    summary: "作业未按预期执行",
-    root_cause: toText(op?.failure_reason ?? op?.invalid_reason) ?? "未知原因",
-    risk: "可能导致产量下降或资源浪费",
-    recommendation: "建议重新执行作业并检查设备状态",
-    evidence_refs: Array.isArray(op?.evidence_refs) ? op.evidence_refs : []
+    summary: cleanJsonText("作业未按预期执行", "作业未按预期执行"),
+    root_cause: cleanJsonText(op?.failure_reason ?? op?.invalid_reason, "未知原因"),
+    risk: cleanJsonText("可能导致产量下降或资源浪费", "可能导致产量下降或资源浪费"),
+    recommendation: cleanJsonText("建议重新执行作业并检查设备状态", "建议重新执行作业并检查设备状态"),
+    evidence_refs: toEvidenceRefs(op?.evidence_refs)
   };
 }
 
@@ -312,12 +326,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       return {
         ...op,
         report_json: {
-          type: String(reportJson?.type ?? "invalid_execution_report_v1"),
-          summary: String(reportJson?.summary ?? "作业未按预期执行") || "作业未按预期执行",
-          root_cause: String(reportJson?.root_cause ?? "未知原因") || "未知原因",
-          risk: String(reportJson?.risk ?? "可能导致产量下降或资源浪费") || "可能导致产量下降或资源浪费",
-          recommendation: String(reportJson?.recommendation ?? "建议重新执行作业并检查设备状态") || "建议重新执行作业并检查设备状态",
-          evidence_refs: Array.isArray(reportJson?.evidence_refs) ? reportJson.evidence_refs : []
+          type: "invalid_execution_report_v1",
+          summary: cleanJsonText(reportJson?.summary, "作业未按预期执行"),
+          root_cause: cleanJsonText(reportJson?.root_cause, "未知原因"),
+          risk: cleanJsonText(reportJson?.risk, "可能导致产量下降或资源浪费"),
+          recommendation: cleanJsonText(reportJson?.recommendation, "建议重新执行作业并检查设备状态"),
+          evidence_refs: toEvidenceRefs(reportJson?.evidence_refs)
         }
       };
     });
