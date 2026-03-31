@@ -1,0 +1,13 @@
+{
+  "operation_id": "opl_success_sample",
+  "customer_view": {
+    "summary": "作业已完成，预计改善作物状态",
+    "today_action": "继续观察或进入验收",
+    "risk_level": "low"
+  },
+  "cost": {
+    "total": 0.92,
+    "water": 0.72,
+    "electric": 0.20
+  }
+}
