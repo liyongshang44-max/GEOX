@@ -38,18 +38,23 @@ export default function OperationEvidenceDownloadCard({ evidenceBundle, title = 
       </div>
       <div className="detailMeaningGrid" style={{ marginTop: 10 }}>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">照片</span>
-          <strong>{evidenceBundle.photoCount} 张</strong>
+          <span className="detailMeaningLabel">正式证据</span>
+          <strong>{evidenceBundle.formalEvidenceCount} 条</strong>
         </div>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">指标</span>
-          <strong>{evidenceBundle.metricCount} 条</strong>
+          <span className="detailMeaningLabel">调试日志</span>
+          <strong>{evidenceBundle.debugEvidenceCount} 条</strong>
         </div>
         <div className="detailMeaningItem">
-          <span className="detailMeaningLabel">日志</span>
-          <strong>{evidenceBundle.logCount} 条</strong>
+          <span className="detailMeaningLabel">证据总量</span>
+          <strong>{evidenceBundle.photoCount + evidenceBundle.metricCount + evidenceBundle.logCount} 条</strong>
         </div>
       </div>
+      {evidenceBundle.onlySimTrace ? (
+        <div style={{ marginTop: 10, color: "#991b1b", fontWeight: 600 }}>
+          ⚠️ 当前仅有调试证据，不可用于正式验收
+        </div>
+      ) : null}
       {evidenceBundle.photoCount + evidenceBundle.metricCount + evidenceBundle.logCount === 0 ? (
         <div style={{ marginTop: 10, color: "#991b1b", fontWeight: 600 }}>
           ❌ 无证据（执行无效）
