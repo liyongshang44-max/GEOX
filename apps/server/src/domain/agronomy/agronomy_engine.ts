@@ -20,7 +20,7 @@ export function evaluateAgronomy(input: Input): Output {
     };
   }
 
-  const stage = crop.stages[0];
+  const stage = crop.stages[0]; // 先固定第一阶段
 
   if (input.soil_moisture < stage.soil_moisture_min) {
     return {
