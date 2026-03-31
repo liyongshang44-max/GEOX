@@ -1,0 +1,13 @@
+{
+  "operation_id": "opl_invalid_sample",
+  "customer_view": {
+    "summary": "本次作业未被系统认定为有效执行",
+    "today_action": "需重新执行或补充证据",
+    "risk_level": "high"
+  },
+  "cost": {
+    "total": 0,
+    "water": 0,
+    "electric": 0
+  }
+}

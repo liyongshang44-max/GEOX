@@ -8,8 +8,8 @@
  *   TENANT_ID/PROJECT_ID/GROUP_ID optional query params
  *   SUCCESS_OPERATION_ID      case-2 operation id (optional, can auto-discover)
  *   GEOX_FIXED_OPERATION_PLAN_ID optional fixed baseline id for case-1 invalid op
- *   REPORT_JSON_INVALID_PATH  local json path for case-1 report
- *   REPORT_JSON_SUCCESS_PATH  local json path for case-2 report
+ *   REPORT_JSON_INVALID_PATH  local json path for case-1 report (default: scripts/acceptance/data/report_invalid.json)
+ *   REPORT_JSON_SUCCESS_PATH  local json path for case-2 report (default: scripts/acceptance/data/report_success.json)
  */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -50,8 +50,8 @@ function readReportJson(filePath) {
 
     const fixedId = String(process.env.GEOX_FIXED_OPERATION_PLAN_ID || '').trim();
     const successOperationIdFromEnv = String(process.env.SUCCESS_OPERATION_ID || '').trim();
-    const invalidReportPath = String(process.env.REPORT_JSON_INVALID_PATH || '').trim();
-    const successReportPath = String(process.env.REPORT_JSON_SUCCESS_PATH || '').trim();
+    const invalidReportPath = String(process.env.REPORT_JSON_INVALID_PATH || 'scripts/acceptance/data/report_invalid.json').trim();
+    const successReportPath = String(process.env.REPORT_JSON_SUCCESS_PATH || 'scripts/acceptance/data/report_success.json').trim();
 
     assert(invalidReportPath, 'MISSING_REPORT_JSON_INVALID_PATH');
     assert(successReportPath, 'MISSING_REPORT_JSON_SUCCESS_PATH');
