@@ -21,7 +21,7 @@ const COPY = {
 };
 
 function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewModel>): string {
-  const finalStatus = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
+  const finalStatus = mapOperationStatusLabel(model.finalStatus);
   if (model.receiptEvidence?.constraintCheckLabel === "符合约束") {
     return `已回传执行结果，当前状态为${finalStatus}，约束校验通过。`;
   }
@@ -49,7 +49,7 @@ export default function OperationDetailPage(): React.ReactElement {
   if (error || !detail) {
     return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   }
-  const topStatusLabel = mapOperationStatusLabel(model.finalStatus || model.statusLabel);
+  const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
   const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(model.execution.deviceId || model.deviceLabel, model.deviceLabel);
@@ -81,7 +81,7 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="demoContentGrid">
-        <OperationExecutionCard task={model.execution} receipt={model.receiptEvidence} acceptance={model.acceptance} />
+        <OperationExecutionCard task={model.execution} acceptance={model.acceptance} invalidReason={model.invalidReason} />
       </section>
 
       <section className="demoContentGrid">
@@ -94,6 +94,7 @@ export default function OperationDetailPage(): React.ReactElement {
             data={model.receiptEvidence}
             actionLabel={actionLabel}
             executorTypeLabel={model.execution.executorTypeLabel}
+            finalStatus={model.finalStatus}
           />
         </section>
         <OperationImpactCard model={model} />

@@ -84,6 +84,9 @@ export type OperationDetailPageVm = {
     photoCount: number;
     metricCount: number;
     logCount: number;
+    formalEvidenceCount: number;
+    debugEvidenceCount: number;
+    onlySimTrace: boolean;
   };
   acceptance: {
     status: "PASS" | "FAIL" | "PENDING";
@@ -91,6 +94,7 @@ export type OperationDetailPageVm = {
     missingEvidenceLabel: string;
     summary: string;
   };
+  invalidReason: string;
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -126,12 +130,27 @@ function mapStatusLabel(raw: unknown): string {
   if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
   if (key === "FAILED" || key === "ERROR") return "执行失败";
   if (key === "INVALID_EXECUTION") return "执行无效";
+  if (key === "PENDING_ACCEPTANCE") return "待验收";
   if (key === "NOT_EXECUTED") return "未执行";
   return toText(raw, "待推进");
 }
 
+function normalizeFinalStatusCode(detail: any): string {
+  const rawCode = String(detail?.final_status ?? "").trim().toUpperCase();
+  if (rawCode) return rawCode;
+  const statusLabel = String(detail?.status_label ?? "").trim();
+  if (statusLabel.includes("执行无效")) return "INVALID_EXECUTION";
+  if (statusLabel.includes("待验收")) return "PENDING_ACCEPTANCE";
+  if (statusLabel.includes("执行失败")) return "FAILED";
+  if (statusLabel.includes("执行中")) return "RUNNING";
+  if (statusLabel.includes("待审批") || statusLabel.includes("待推进")) return "PENDING";
+  if (statusLabel.includes("执行成功") || statusLabel.includes("已完成")) return "SUCCESS";
+  if (String(detail?.invalid_reason ?? "").trim()) return "INVALID_EXECUTION";
+  return "";
+}
+
 function resolveExecutionProgress(detail: any): string {
-  const finalStatus = String(detail?.final_status ?? "").toUpperCase();
+  const finalStatus = normalizeFinalStatusCode(detail);
   if (["SUCCEEDED", "SUCCESS", "EXECUTED"].includes(finalStatus)) return "已完成并回传结果";
   if (["FAILED", "ERROR", "NOT_EXECUTED"].includes(finalStatus)) return "执行结束（异常）";
 
@@ -155,10 +174,10 @@ function buildExpectedOutcomeLabel(detail: any): string {
 }
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
-  const finalStatus = String(detail?.final_status ?? "").toUpperCase();
-  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：未提供证据，无法完成验收";
+  const finalStatus = normalizeFinalStatusCode(detail);
+  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
   if (!receipt) {
-    return "⚠️ 执行无效：未提供证据，无法完成验收";
+    return "等待设备回传执行证据";
   }
   if (receipt.constraintCheckLabel === "符合约束") {
     return "现场已回传执行结果，系统判断本次执行符合约束";
@@ -366,7 +385,8 @@ export function buildOperationDetailViewModel(args?: {
   const approvalActorLabel = toText(safeDetail?.approval?.actor_label, "系统/未知");
   const approvalDecidedAtLabel = toDateLabel(safeDetail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
-  const finalStatusLabel = mapStatusLabel(safeDetail?.status_label ?? safeDetail?.final_status);
+  const finalStatusCode = normalizeFinalStatusCode(safeDetail);
+  const finalStatusLabel = mapStatusLabel(finalStatusCode || (safeDetail?.status_label ?? safeDetail?.final_status));
   const executorKind = String(evidenceBundle?.executor?.kind ?? "").toLowerCase();
   const executionMode = executorKind === "human" ? "human" : executorKind === "hybrid" ? "hybrid" : "device";
   const assignmentExecutor = toText(evidenceBundle?.executor?.id, "未分配");
@@ -394,6 +414,11 @@ export function buildOperationDetailViewModel(args?: {
     ?? evidenceBundle?.logs
     ?? evidenceBundle?.logs_refs
   );
+  const evidenceLogs = Array.isArray(evidenceBundle?.logs) ? evidenceBundle.logs : [];
+  const simTraceCount = evidenceLogs.filter((x: any) => String(x?.kind ?? "").toLowerCase() === "sim_trace").length;
+  const debugEvidenceCount = simTraceCount;
+  const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
+  const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -407,8 +432,8 @@ export function buildOperationDetailViewModel(args?: {
     operationPlanId: toText(safeDetail?.operation_plan_id),
     fieldLabel: toText(safeDetail?.field_name, toText(safeDetail?.field_id)),
     programLabel: toText(safeDetail?.program_name, toText(safeDetail?.program_id)),
-    statusLabel: mapStatusLabel(safeDetail?.status_label ?? safeDetail?.final_status),
-    finalStatus: toText(safeDetail?.final_status),
+    statusLabel: mapStatusLabel(finalStatusCode || (safeDetail?.status_label ?? safeDetail?.final_status)),
+    finalStatus: toText(finalStatusCode || safeDetail?.final_status),
     latestUpdatedAtLabel: latestTs != null ? new Date(latestTs).toLocaleString() : "-",
     expectedOutcomeLabel: buildExpectedOutcomeLabel(safeDetail),
     actualOutcomeLabel: buildActualOutcomeLabel(safeDetail, receipt),
@@ -445,7 +470,7 @@ export function buildOperationDetailViewModel(args?: {
       ackedAtLabel: toDateLabel(safeDetail?.task?.acked_at),
       ackStatusLabel,
       progressLabel: resolveExecutionProgress(safeDetail),
-      finalStatus: String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
+      finalStatus: finalStatusCode || String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
       finalStatusLabel,
       dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
       ackChipLabel: `确认状态：${ackStatusLabel}`,
@@ -469,6 +494,9 @@ export function buildOperationDetailViewModel(args?: {
       photoCount,
       metricCount,
       logCount,
+      formalEvidenceCount,
+      debugEvidenceCount,
+      onlySimTrace,
     },
     acceptance: {
       status: acceptanceStatus,
@@ -483,8 +511,9 @@ export function buildOperationDetailViewModel(args?: {
           ? receipt.violationSummary
           : receipt
             ? "已回传执行证据，等待最终验收结论。"
-            : "⚠️ 执行无效：未提供证据，无法完成验收。",
+            : "等待设备回传执行证据。",
       ),
     },
+    invalidReason: toText(safeDetail?.invalid_reason, ""),
   };
 }
