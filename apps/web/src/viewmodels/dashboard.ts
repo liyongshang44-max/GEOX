@@ -60,4 +60,8 @@ export type DashboardVm = {
   riskItems: DashboardRiskVm[];
   decisions: DashboardDecisionVm;
   execution: DashboardExecutionVm;
+  todayActions: Array<{
+    type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED";
+    count: number;
+  }>;
 };

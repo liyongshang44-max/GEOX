@@ -51,6 +51,7 @@ import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program mana
 import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
 import { registerEvidenceBundleV1Routes } from "./routes/evidence_bundle_v1"; // Stage 3: operation evidence bundle API.
 import { registerSchedulingConflictV1Routes } from "./routes/scheduling_conflicts_v1"; // Scheduling conflict detector API routes.
+import { registerEvidenceReportV1Routes } from "./routes/evidence_report_v1"; // Stage 5: Commercial evidence report jobs.
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -286,6 +287,7 @@ registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program 
 registerProgramsV1Routes(app, pool); // Program management + field/season scoped program APIs.
 registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerEvidenceBundleV1Routes(app, pool); // Stage 3: aggregate operation evidence bundle for frontend consumption.
+registerEvidenceReportV1Routes(app, pool); // Stage 5: async commercial evidence report generation.
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
