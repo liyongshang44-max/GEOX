@@ -62,7 +62,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const keyActions = [
     {
       id: "key_fix_invalid_execution",
-      title: `修复无效执行（${invalidCountForAction}项）`,
+      title: `处理无效执行（${invalidCountForAction}项）`,
       detail: "优先补齐证据，避免执行无效持续累积",
       status: invalidCountForAction > 0 ? "需立即处理" : "已清零",
       href: "/operations?status=invalid_execution",
