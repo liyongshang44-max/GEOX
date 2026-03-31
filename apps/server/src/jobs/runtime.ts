@@ -35,13 +35,13 @@ async function runOnce(pool: Pool): Promise<void> {
     }
   }
 
-  const reportJobs = fetchPendingEvidenceReportJobs();
+  const reportJobs = await fetchPendingEvidenceReportJobs(pool);
   for (const job of reportJobs) {
     try {
       console.log(`RUN_EVIDENCE_REPORT_JOB job_id=${job.job_id}`);
       await runQueuedEvidenceReportJob(pool, job);
     } catch (error: any) {
-      markEvidenceReportJobFailed(job, error);
+      await markEvidenceReportJobFailed(pool, job, error);
       console.error(`RUN_EVIDENCE_REPORT_JOB_FAILED job_id=${job.job_id} error=${String(error?.message ?? error)}`);
     }
   }

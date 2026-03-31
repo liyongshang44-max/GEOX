@@ -12,19 +12,12 @@ import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type ReportJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
-
-type ReportJob = {
+type DbJob = {
   job_id: string;
-  operation_plan_id: string;
-  tenant: TenantTriple;
   status: ReportJobStatus;
-  created_at_ms: number;
-  updated_at_ms: number;
-  artifact_path: string | null;
-  error: string | null;
+  payload: any;
+  result: any;
 };
-
-const reportJobs = new Map<string, ReportJob>();
 
 function toText(v: unknown): string | null {
   if (typeof v === "string") {
@@ -69,6 +62,22 @@ function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply
 
 function escapeHtml(v: string): string {
   return v.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("\"", "&quot;");
+}
+
+async function ensureJobsTable(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS jobs (
+      job_id      TEXT PRIMARY KEY,
+      job_type    TEXT NOT NULL,
+      payload     JSONB NOT NULL,
+      status      TEXT NOT NULL,
+      result      JSONB,
+      error       TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_jobs_type_status ON jobs(job_type, status, created_at);`);
 }
 
 async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
@@ -168,18 +177,18 @@ function renderReportHtml(report: any): string {
 </body></html>`;
 }
 
-async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
-  job.status = "RUNNING";
-  job.updated_at_ms = Date.now();
-  const states = await projectOperationStateV1(pool, job.tenant);
-  const state = states.find((x) => x.operation_id === job.operation_plan_id || x.operation_plan_id === job.operation_plan_id);
+async function runEvidenceReportJob(pool: Pool, args: { job_id: string; operation_plan_id: string; tenant: TenantTriple }): Promise<{ artifact_path: string }> {
+  const states = await projectOperationStateV1(pool, args.tenant);
+  const state = states.find((x) => x.operation_id === args.operation_plan_id || x.operation_plan_id === args.operation_plan_id);
   if (!state) throw new Error("OPERATION_NOT_FOUND");
-  const facts = await queryFactsForOperation(pool, job.tenant, job.operation_plan_id);
+
+  const facts = await queryFactsForOperation(pool, args.tenant, args.operation_plan_id);
   const latestByType = (type: string) => [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === type) ?? null;
   const rec = latestByType("decision_recommendation_v1");
   const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
   const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
   const acceptance = [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === "acceptance_result_v1") ?? null;
+
   const receiptPayload = receiptFact?.record_json?.payload ?? {};
   const logs = Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs : [];
   const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
@@ -196,8 +205,9 @@ async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
     action_type: state.action_type,
     final_status: finalStatus,
   });
+
   const report = {
-    operation_id: job.operation_plan_id,
+    operation_id: args.operation_plan_id,
     field_id: toText(state.field_id) ?? "-",
     device_id: toText(state.device_id) ?? undefined,
     execution: {
@@ -237,75 +247,133 @@ async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
   const json = JSON.stringify(report, null, 2);
   const html = renderReportHtml(report);
   const digest = crypto.createHash("sha256").update(json, "utf8").digest("hex").slice(0, 12);
-  const artifactPath = path.join(outDir, `${job.job_id}_${digest}.html`);
-  fs.writeFileSync(artifactPath, html, "utf8");
-  job.artifact_path = artifactPath;
-  job.status = "DONE";
-  job.updated_at_ms = Date.now();
+  const artifact_path = path.join(outDir, `${args.job_id}_${digest}.html`);
+  fs.writeFileSync(artifact_path, html, "utf8");
+  return { artifact_path };
 }
 
-export function fetchPendingEvidenceReportJobs(): ReportJob[] {
-  return [...reportJobs.values()].filter((x) => x.status === "PENDING");
+function mapDbJob(row: any): DbJob {
+  return {
+    job_id: String(row.job_id ?? ""),
+    status: String(row.status ?? "PENDING").toUpperCase() as ReportJobStatus,
+    payload: parseRecordJson(row.payload) ?? row.payload ?? {},
+    result: parseRecordJson(row.result) ?? row.result ?? null,
+  };
 }
 
-export function markEvidenceReportJobFailed(job: ReportJob, error: unknown): void {
-  job.status = "FAILED";
-  job.error = String((error as any)?.message ?? error);
-  job.updated_at_ms = Date.now();
+export async function fetchPendingEvidenceReportJobs(pool: Pool): Promise<DbJob[]> {
+  await ensureJobsTable(pool);
+  const q = await pool.query(
+    `SELECT job_id, payload::jsonb AS payload, status, result::jsonb AS result
+       FROM jobs
+      WHERE job_type = 'evidence_report_v1'
+        AND status = 'PENDING'
+      ORDER BY created_at ASC
+      LIMIT 10`
+  );
+  return (q.rows ?? []).map(mapDbJob);
 }
 
-export async function runQueuedEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
-  await runEvidenceReportJob(pool, job);
+export async function markEvidenceReportJobFailed(pool: Pool, job: DbJob, error: unknown): Promise<void> {
+  await ensureJobsTable(pool);
+  await pool.query(
+    `UPDATE jobs
+        SET status = 'FAILED',
+            error = $2,
+            updated_at = NOW()
+      WHERE job_id = $1`,
+    [job.job_id, String((error as any)?.message ?? error)]
+  );
+}
+
+export async function runQueuedEvidenceReportJob(pool: Pool, job: DbJob): Promise<void> {
+  const payload = job.payload ?? {};
+  const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
+  const tenant = payload.tenant as TenantTriple | undefined;
+  if (!operation_plan_id || !tenant?.tenant_id || !tenant?.project_id || !tenant?.group_id) {
+    throw new Error("INVALID_JOB_PAYLOAD");
+  }
+
+  await pool.query(`UPDATE jobs SET status='RUNNING', updated_at=NOW() WHERE job_id=$1`, [job.job_id]);
+  const result = await runEvidenceReportJob(pool, { job_id: job.job_id, operation_plan_id, tenant });
+  await pool.query(
+    `UPDATE jobs
+        SET status = 'DONE',
+            result = $2::jsonb,
+            updated_at = NOW()
+      WHERE job_id = $1`,
+    [job.job_id, JSON.stringify(result)]
+  );
 }
 
 export function registerEvidenceReportV1Routes(app: FastifyInstance, pool: Pool): void {
+  void ensureJobsTable(pool);
+
   app.post("/api/v1/evidence-reports", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
     const operationPlanId = String((req.body as any)?.operation_plan_id ?? "").trim();
     if (!operationPlanId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+
     const job_id = `evidence_report_${crypto.randomUUID().replaceAll("-", "")}`;
-    reportJobs.set(job_id, {
-      job_id,
-      operation_plan_id: operationPlanId,
-      tenant,
-      status: "PENDING",
-      created_at_ms: Date.now(),
-      updated_at_ms: Date.now(),
-      artifact_path: null,
-      error: null,
-    });
+    const payload = { operation_plan_id: operationPlanId, tenant };
+    await ensureJobsTable(pool);
+    await pool.query(
+      `INSERT INTO jobs (job_id, job_type, payload, status, created_at, updated_at)
+       VALUES ($1, 'evidence_report_v1', $2::jsonb, 'PENDING', NOW(), NOW())`,
+      [job_id, JSON.stringify(payload)]
+    );
+
     return reply.send({ ok: true, job_id });
   });
 
   app.get("/api/v1/evidence-reports/:job_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
+
     const job_id = String((req.params as any)?.job_id ?? "").trim();
-    const job = reportJobs.get(job_id);
-    if (!job) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    await ensureJobsTable(pool);
+    const q = await pool.query(`SELECT status, result::jsonb AS result, error FROM jobs WHERE job_id = $1 LIMIT 1`, [job_id]);
+    const row = q.rows?.[0];
+    if (!row) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const statusRaw = String(row.status ?? "PENDING").toUpperCase();
+    const status = statusRaw === "RUNNING" ? "PENDING" : statusRaw;
     return reply.send({
       ok: true,
-      status: job.status === "RUNNING" ? "PENDING" : job.status,
-      download_url: job.status === "DONE" ? `/api/v1/evidence-reports/${encodeURIComponent(job_id)}/download` : null,
-      error: job.error,
+      status,
+      download_url: status === "DONE" ? `/api/v1/evidence-reports/${encodeURIComponent(job_id)}/download` : null,
+      error: toText(row.error),
     });
   });
 
   app.get("/api/v1/evidence-reports/:job_id/download", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
+
     const job_id = String((req.params as any)?.job_id ?? "").trim();
-    const job = reportJobs.get(job_id);
-    if (!job) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!requireTenantMatchOr404(auth, job.tenant, reply)) return;
-    if (job.status !== "DONE" || !job.artifact_path || !fs.existsSync(job.artifact_path)) {
+    await ensureJobsTable(pool);
+    const q = await pool.query(`SELECT payload::jsonb AS payload, status, result::jsonb AS result FROM jobs WHERE job_id = $1 LIMIT 1`, [job_id]);
+    const row = q.rows?.[0];
+    if (!row) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const payload = parseRecordJson(row.payload) ?? row.payload ?? {};
+    const tenant = payload?.tenant as TenantTriple | undefined;
+    if (!tenant || !requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    const status = String(row.status ?? "").toUpperCase();
+    const result = parseRecordJson(row.result) ?? row.result ?? {};
+    const artifact_path = toText(result?.artifact_path);
+    const operation_plan_id = toText(payload?.operation_plan_id) ?? "operation";
+    if (status !== "DONE" || !artifact_path || !fs.existsSync(artifact_path)) {
       return reply.status(400).send({ ok: false, error: "REPORT_NOT_READY" });
     }
+
     reply.header("content-type", "text/html; charset=utf-8");
-    reply.header("content-disposition", `attachment; filename="${job.operation_plan_id}_evidence_report.html"`);
-    return reply.send(fs.createReadStream(job.artifact_path));
+    reply.header("content-disposition", `attachment; filename="${operation_plan_id}_evidence_report.html"`);
+    return reply.send(fs.createReadStream(artifact_path));
   });
 }
