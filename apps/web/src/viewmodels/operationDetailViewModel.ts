@@ -100,6 +100,18 @@ export type OperationDetailPageVm = {
     summary: string;
   };
   invalidReason: string;
+  customerView: {
+    summary: string;
+    todayAction: string;
+    riskLevel: "low" | "medium" | "high";
+    riskLevelLabel: string;
+  };
+  cost: {
+    waterCostLabel: string;
+    electricCostLabel: string;
+    chemicalCostLabel: string;
+    totalCostLabel: string;
+  };
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -124,6 +136,19 @@ function toMs(v: unknown): number | null {
 
 function countEvidenceItems(value: unknown): number {
   return Array.isArray(value) ? value.length : 0;
+}
+
+function toMoneyLabel(v: unknown): string {
+  const n = Number(v ?? 0);
+  const safe = Number.isFinite(n) ? Math.max(0, n) : 0;
+  return `¥${safe.toFixed(2)}`;
+}
+
+function mapRiskLevelLabel(level: string): string {
+  const key = String(level || "").toLowerCase();
+  if (key === "high") return "高";
+  if (key === "medium") return "中";
+  return "低";
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -462,6 +487,10 @@ export function buildOperationDetailViewModel(args?: {
   const debugEvidenceCount = simTraceCount;
   const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
   const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
+  const cost = safeDetail?.cost ?? {};
+  const finalStatusUpper = String(finalStatusCode || safeDetail?.final_status || "").toUpperCase();
+  const customerRiskLevel = String(safeDetail?.customer_view?.risk_level ?? (finalStatusUpper === "INVALID_EXECUTION" ? "high" : "low")).toLowerCase();
+  const normalizedCustomerRiskLevel: "low" | "medium" | "high" = customerRiskLevel === "high" ? "high" : customerRiskLevel === "medium" ? "medium" : "low";
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -559,5 +588,23 @@ export function buildOperationDetailViewModel(args?: {
       ),
     },
     invalidReason: toText(safeDetail?.invalid_reason, ""),
+    customerView: {
+      summary: toText(
+        safeDetail?.customer_view?.summary,
+        finalStatusUpper === "INVALID_EXECUTION" ? "本次作业未被系统认定为有效执行" : "作业已完成，预计改善作物状态",
+      ),
+      todayAction: toText(
+        safeDetail?.customer_view?.today_action,
+        finalStatusUpper === "INVALID_EXECUTION" ? "需重新执行或补充证据" : "继续观察或进入验收",
+      ),
+      riskLevel: normalizedCustomerRiskLevel,
+      riskLevelLabel: mapRiskLevelLabel(normalizedCustomerRiskLevel),
+    },
+    cost: {
+      waterCostLabel: toMoneyLabel(cost?.water),
+      electricCostLabel: toMoneyLabel(cost?.electric),
+      chemicalCostLabel: toMoneyLabel(cost?.chemical),
+      totalCostLabel: toMoneyLabel(cost?.total),
+    },
   };
 }
