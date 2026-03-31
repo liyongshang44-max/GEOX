@@ -105,9 +105,27 @@ async function seedSuccessOperation(baseUrl, tenantQuery) {
         water_l: 360,
         electric_kwh: 0.25,
         chemical_ml: 0,
+        metrics: [{ name: 'water_volume', kind: 'metric', value: 360 }],
       },
     },
     occurred_at_iso: finishedAt,
+  });
+
+  await postRawFact(baseUrl, {
+    source: 'system',
+    record_json: {
+      type: 'acceptance_result_v1',
+      payload: {
+        tenant_id: tenantQuery.tenant_id || 'tenantA',
+        project_id: tenantQuery.project_id || 'projectA',
+        group_id: tenantQuery.group_id || 'groupA',
+        operation_plan_id,
+        act_task_id,
+        verdict: 'PASS',
+        generated_at: new Date(now + 6 * 60 * 1000).toISOString(),
+      },
+    },
+    occurred_at_iso: new Date(now + 6 * 60 * 1000).toISOString(),
   });
 
   return operation_plan_id;
