@@ -2,6 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { Pool } from "pg";
 import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1";
 import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1";
+import { runAgronomyAgentOnce } from "./agronomy_agent";
 
 const DEFAULT_INTERVAL_MS = 5000;
 
@@ -33,6 +34,10 @@ async function runOnce(pool: Pool): Promise<void> {
       markJobFailed(job, error);
       console.error(`RUN_JOB_FAILED job_id=${job.job_id} error=${String(error?.message ?? error)}`);
     }
+  }
+
+  if (process.env.AGRONOMY_AGENT_ENABLED === "1") {
+    await runAgronomyAgentOnce(pool);
   }
 
   const reportJobs = await fetchPendingEvidenceReportJobs(pool);
