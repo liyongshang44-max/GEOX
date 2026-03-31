@@ -5,6 +5,7 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
+import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -58,48 +59,6 @@ function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   const status = String(statusRaw ?? "").trim().toUpperCase();
   if (!status) return false;
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
-}
-
-function hasFiniteMetric(resourceUsage: any): boolean {
-  if (!resourceUsage || typeof resourceUsage !== "object") return false;
-  return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
-}
-
-function isRecognizedDeviceLogEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
-  if (!kind) return false;
-  if (kind.includes("simulator") || kind.includes("trace")) return false;
-  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
-}
-
-function isRecognizedHumanEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
-  if (!kind) return false;
-  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite"].some((token) => kind.includes(token));
-}
-
-function isEvidenceInvalidOrMissing(receiptFact: FactRow | null): boolean {
-  if (!receiptFact) return false;
-  const payload = receiptFact.record_json?.payload ?? {};
-  if (!hasExecutedReceiptStatus(payload?.status ?? payload?.receipt_status)) return false;
-  const executorTypeRaw = String(payload?.executor_id?.kind ?? payload?.executor_type ?? "device").toLowerCase();
-  const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
-  const logsRefs = Array.isArray(payload?.logs_refs) ? payload.logs_refs : [];
-  const photos = [
-    ...(Array.isArray(payload?.photos) ? payload.photos : []),
-    ...(Array.isArray(payload?.photo_refs) ? payload.photo_refs : []),
-    ...logsRefs.filter((x: any) => String(x?.kind ?? "").toLowerCase().includes("photo") || String(x?.kind ?? "").toLowerCase().includes("image"))
-  ];
-  const evidenceRefs = [
-    ...(Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : []),
-    ...(Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [])
-  ];
-  const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
-  const hasQualifiedMetrics = hasFiniteMetric(payload?.resource_usage) || metrics.some((m: unknown) => Number.isFinite(Number((m as any)?.value ?? m)));
-  const hasRecognizedDeviceLogs = logsRefs.some((x: any) => isRecognizedDeviceLogEvidence(x));
-  const hasRecognizedHumanEvidence = logsRefs.some((x: any) => isRecognizedHumanEvidence(x));
-  if (executorType === "human") return !(photos.length > 0 || hasRecognizedHumanEvidence || evidenceRefs.some((x: any) => isRecognizedHumanEvidence(x)));
-  return !(hasQualifiedMetrics || hasRecognizedDeviceLogs);
 }
 
 function statusLabel(s: string | null): string {
@@ -382,7 +341,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       source: String(row.source ?? ""),
       payload: parseRecordJson(row.record_json)?.payload ?? {}
     }));
-    const receiptLogs = receiptFact?.record_json?.payload?.logs_refs;
+    const receiptPayload = receiptFact?.record_json?.payload ?? {};
+    const receiptLogs = receiptPayload?.logs_refs;
     const logs = Array.isArray(receiptLogs) ? receiptLogs : [];
     const media = artifacts
       .filter((x: any) => {
@@ -390,6 +350,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         return kind.includes("image") || kind.includes("video") || kind.includes("media");
       })
       .map((x: any) => x.payload);
+    const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
+    const evidenceEvaluation = evaluateEvidence({
+      artifacts: artifacts.map((x: any) => ({ kind: x?.payload?.kind ?? "artifact" })),
+      logs,
+      media,
+      metrics,
+    });
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -413,13 +380,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
-    const evidenceInvalidOrMissing = isEvidenceInvalidOrMissing(receiptFact);
-    const finalStatus = evidenceInvalidOrMissing
-      ? "INVALID_EXECUTION"
-      : normalizedReceipt && !acceptance
-        ? "PENDING_ACCEPTANCE"
-        : state.final_status;
-    const acceptanceForResponse = evidenceInvalidOrMissing ? null : acceptance;
+    const executedReceipt = hasExecutedReceiptStatus(receiptPayload?.status ?? receiptPayload?.receipt_status ?? normalizedReceipt?.receipt_status);
+    const invalidExecution = Boolean(receiptFact) && executedReceipt && !evidenceEvaluation.has_formal_evidence;
+    const finalStatus = invalidExecution ? "INVALID_EXECUTION" : state.final_status;
+    const invalidReason = invalidExecution
+      ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
+      : null;
+    const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
       operation: {
@@ -430,6 +397,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
         final_status: finalStatus,
         status_label: statusLabel(finalStatus),
+        invalid_reason: invalidReason,
         recommendation: rec ? {
           recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
           title: toText(rec?.record_json?.payload?.title) ?? "系统建议",
@@ -474,7 +442,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         evidence_bundle: {
           artifacts,
           logs,
-          media
+          media,
+          metrics
         }
       }
     });
