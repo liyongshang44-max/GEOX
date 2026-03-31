@@ -215,9 +215,14 @@ const STORY_TIMELINE_ORDER = [
 
 function mapExecutionModeLabel(raw: string): string {
   const key = String(raw || "").toLowerCase();
-  if (key === "human") return "人名";
-  if (key === "hybrid") return "服务队";
-  return "设备名称";
+  if (key === "human" || key === "hybrid") return "人工执行";
+  return "设备自动执行";
+}
+
+function normalizeAcceptanceMissingEvidence(raw: unknown): string {
+  const text = toText(raw, "无");
+  if (text.includes("尚未回传执行证据")) return "执行无效：未提供证据，无法完成验收";
+  return text;
 }
 
 function buildStorySummary(label: string, sourceSummary: string, sourceActor: string, detail: any): string {
@@ -365,6 +370,8 @@ export function buildOperationDetailViewModel(args?: {
   const executorKind = String(evidenceBundle?.executor?.kind ?? "").toLowerCase();
   const executionMode = executorKind === "human" ? "human" : executorKind === "hybrid" ? "hybrid" : "device";
   const assignmentExecutor = toText(evidenceBundle?.executor?.id, "未分配");
+  const deviceExecutorName = toText(safeDetail?.task?.executor_label, toText(safeDetail?.task?.device_id, "dev_unknown"));
+  const humanExecutorName = assignmentExecutor === "未分配" ? "服务队A" : assignmentExecutor;
   const latestJobStatus = Array.isArray(evidenceBundle?.artifacts) && evidenceBundle.artifacts.length > 0 ? "已聚合" : "暂无";
   const hasExportableBundle = Array.isArray(evidenceBundle?.artifacts) && evidenceBundle.artifacts.length > 0;
   const evidenceBundleStatus = buildEvidenceBundleStatus({ has_bundle: hasExportableBundle });
@@ -422,17 +429,15 @@ export function buildOperationDetailViewModel(args?: {
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
     execution: {
-      executionModeLabel: mapExecutionModeLabel(executionMode),
-      executorTypeLabel: executionMode === "human" ? "人名" : executionMode === "hybrid" ? "服务队" : "设备名称",
+      executionModeLabel: executionMode === "device" ? "设备自动执行（灌溉设备）" : `人工执行（${humanExecutorName}）`,
+      executorTypeLabel: mapExecutionModeLabel(executionMode),
       actionType: toText(safeDetail?.task?.action_type),
       planId: toText(safeDetail?.operation_plan_id),
       taskId: toText(safeDetail?.task?.task_id),
       deviceId: toText(safeDetail?.task?.device_id),
-      executorLabel: executionMode === "human"
-        ? assignmentExecutor
-        : executionMode === "hybrid"
-          ? `${toText(safeDetail?.task?.device_id, "设备")} + ${assignmentExecutor}`
-          : toText(safeDetail?.task?.executor_label, toText(safeDetail?.task?.device_id, "设备名称待配置")),
+      executorLabel: executionMode === "device"
+        ? `设备 ${deviceExecutorName}`
+        : `人工执行（${humanExecutorName}）`,
       executionWindowLabel: windowStart != null
         ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
         : "-",
@@ -469,8 +474,8 @@ export function buildOperationDetailViewModel(args?: {
       status: acceptanceStatus,
       statusLabel: acceptanceStatus,
       missingEvidenceLabel: toText(
-        safeDetail?.acceptance?.missing_evidence,
-        "无",
+        normalizeAcceptanceMissingEvidence(safeDetail?.acceptance?.missing_evidence),
+        "无"
       ),
       summary: toText(
         safeDetail?.acceptance?.summary,
