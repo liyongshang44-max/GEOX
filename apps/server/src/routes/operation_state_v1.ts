@@ -93,10 +93,10 @@ function toEvidenceRefs(value: unknown): string[] {
 function buildInvalidExecutionReport(op: any) {
   return {
     type: "invalid_execution_report_v1",
-    summary: cleanJsonText("作业未按预期执行", "作业未按预期执行"),
-    root_cause: cleanJsonText(op?.failure_reason ?? op?.invalid_reason, "未知原因"),
-    risk: cleanJsonText("可能导致产量下降或资源浪费", "可能导致产量下降或资源浪费"),
-    recommendation: cleanJsonText("建议重新执行作业并检查设备状态", "建议重新执行作业并检查设备状态"),
+    summary: cleanJsonText("operation execution was invalid", "operation execution was invalid"),
+    root_cause: cleanJsonText(op?.failure_reason ?? op?.invalid_reason, "unknown reason"),
+    risk: cleanJsonText("possible yield loss or resource waste", "possible yield loss or resource waste"),
+    recommendation: cleanJsonText("rerun operation and inspect device state", "rerun operation and inspect device state"),
     evidence_refs: toEvidenceRefs(op?.evidence_refs)
   };
 }
@@ -327,10 +327,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         ...op,
         report_json: {
           type: "invalid_execution_report_v1",
-          summary: cleanJsonText(reportJson?.summary, "作业未按预期执行"),
-          root_cause: cleanJsonText(reportJson?.root_cause, "未知原因"),
-          risk: cleanJsonText(reportJson?.risk, "可能导致产量下降或资源浪费"),
-          recommendation: cleanJsonText(reportJson?.recommendation, "建议重新执行作业并检查设备状态"),
+          summary: cleanJsonText(reportJson?.summary, "operation execution was invalid"),
+          root_cause: cleanJsonText(reportJson?.root_cause, "unknown reason"),
+          risk: cleanJsonText(reportJson?.risk, "possible yield loss or resource waste"),
+          recommendation: cleanJsonText(reportJson?.recommendation, "rerun operation and inspect device state"),
           evidence_refs: toEvidenceRefs(reportJson?.evidence_refs)
         }
       };
