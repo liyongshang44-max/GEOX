@@ -82,7 +82,8 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
     WHERE (record_json::jsonb->>'type') IN (
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
       'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
-      'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1'
+      'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1',
+      'evidence_artifact_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
@@ -139,13 +140,6 @@ function finalStatusFromReceipt(receiptStatusRaw: string): OperationStateV1["fin
   return null;
 }
 
-function extractReceiptArtifacts(receipt: FactRow | undefined): string[] {
-  if (!receipt) return [];
-  const payload = receipt.record_json?.payload ?? {};
-  const evidenceRefs = Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [];
-  const evidenceArtifactIds = Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : [];
-  return [...evidenceRefs, ...evidenceArtifactIds].filter((x: unknown): x is string => typeof x === "string" && x.trim().length > 0);
-}
 function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   const status = String(statusRaw ?? "").trim().toUpperCase();
   if (!status) return false;
@@ -196,20 +190,31 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const decision = approval_request_id ? decisionByReq.get(approval_request_id) : undefined;
     const task = task_id ? taskById.get(task_id) : undefined;
     const receipt = task_id ? receiptByTask.get(task_id) : undefined;
-    const artifacts = extractReceiptArtifacts(receipt);
+    const artifactPayloads = facts
+      .filter((f) => String(f.record_json?.type ?? "") === "evidence_artifact_v1")
+      .map((f) => f.record_json?.payload ?? {})
+      .filter((artifactPayload) => {
+        const byPlan = String(artifactPayload?.operation_plan_id ?? "").trim() === operation_plan_id;
+        const byTask = task_id ? String(artifactPayload?.act_task_id ?? "").trim() === task_id : false;
+        return byPlan || byTask;
+      });
+    const artifactEvidence = artifactPayloads.map((artifactPayload) => ({ kind: String(artifactPayload?.kind ?? "artifact") }));
     const acceptance = buildAcceptanceResult({
       operation_plan_id,
       hasReceipt: !!receipt,
-      evidenceCount: artifacts.length
+      evidenceCount: artifactEvidence.length
     });
     const receiptPayload = receipt?.record_json?.payload ?? {};
+    const mediaEvidence = artifactPayloads
+      .filter((artifactPayload) => {
+        const kind = String(artifactPayload?.kind ?? "").toLowerCase();
+        return kind.includes("image") || kind.includes("video") || kind.includes("media") || kind.includes("photo") || kind.includes("trajectory");
+      })
+      .map((artifactPayload) => ({ kind: String(artifactPayload?.kind ?? "media") }));
     const evidenceEvaluation = evaluateEvidence({
-      artifacts: artifacts.map((kind) => ({ kind })),
+      artifacts: artifactEvidence,
       logs: Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs : [],
-      media: [
-        ...(Array.isArray(receiptPayload?.photos) ? receiptPayload.photos.map(() => ({ kind: "photo" })) : []),
-        ...(Array.isArray(receiptPayload?.photo_refs) ? receiptPayload.photo_refs.map(() => ({ kind: "photo" })) : []),
-      ],
+      media: mediaEvidence,
       metrics: Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [],
     });
 

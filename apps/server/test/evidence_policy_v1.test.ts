@@ -20,7 +20,12 @@ test("evaluateEvidence: Case A only sim_trace", () => {
 
   const out = projectOperationStateFromFacts([
     fact("operation_plan_v1", { operation_plan_id: "op_a", act_task_id: "task_a" }, "2026-03-31T01:00:00.000Z", "f1"),
-    fact("ao_act_receipt_v1", { act_task_id: "task_a", status: "executed", logs_refs: [{ kind: "sim_trace" }] }, "2026-03-31T01:01:00.000Z", "f2"),
+    fact("ao_act_receipt_v1", {
+      act_task_id: "task_a",
+      status: "executed",
+      logs_refs: [{ kind: "sim_trace" }],
+      evidence_artifact_ids: ["artifact_id_only_should_not_count"],
+    }, "2026-03-31T01:01:00.000Z", "f2"),
   ]);
   assert.equal(out[0].final_status, "INVALID_EXECUTION");
   assert.deepEqual(out[0].acceptance.missing, ["evidence_invalid"]);
@@ -56,6 +61,7 @@ test("evaluateEvidence: Case C human formal evidence with media/artifacts", () =
   const out = projectOperationStateFromFacts([
     fact("operation_plan_v1", { operation_plan_id: "op_c", act_task_id: "task_c" }, "2026-03-31T01:00:00.000Z", "f5"),
     fact("ao_act_receipt_v1", { act_task_id: "task_c", status: "executed", evidence_artifact_ids: ["artifact_1"] }, "2026-03-31T01:01:00.000Z", "f6"),
+    fact("evidence_artifact_v1", { operation_plan_id: "op_c", act_task_id: "task_c", kind: "photo" }, "2026-03-31T01:01:30.000Z", "f7"),
   ]);
   assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
 });
