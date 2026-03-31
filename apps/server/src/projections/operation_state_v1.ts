@@ -163,6 +163,14 @@ function normalizeAcceptanceVerdict(verdictRaw: unknown): "PASS" | "FAIL" | "PEN
 }
 
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
+  const planFactsByOperationId = new Map<string, FactRow[]>();
+  for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_v1")) {
+    const operationPlanId = String(row.record_json?.payload?.operation_plan_id ?? "").trim();
+    if (!operationPlanId) continue;
+    const rows = planFactsByOperationId.get(operationPlanId) ?? [];
+    rows.push(row);
+    planFactsByOperationId.set(operationPlanId, rows);
+  }
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
   const decisionByReq = latestByKey(facts.filter((r) => r.record_json?.type === "approval_decision_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
@@ -196,10 +204,11 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
     if (!operation_plan_id) continue;
     if (states.some((s) => s.operation_id === operation_plan_id)) continue;
+    const allPlanFacts = planFactsByOperationId.get(operation_plan_id) ?? [row];
 
-    const recommendation_id = String(payload.recommendation_id ?? "").trim() || null;
-    const approval_request_id = String(payload.approval_request_id ?? "").trim() || null;
-    const task_id = String(payload.act_task_id ?? "").trim() || null;
+    const recommendation_id = latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.recommendation_id ?? "").trim()) ?? null;
+    const approval_request_id = latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.approval_request_id ?? "").trim()) ?? null;
+    const task_id = latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.act_task_id ?? "").trim()) ?? null;
 
     const rec = recommendation_id ? recById.get(recommendation_id) : undefined;
     const req = approval_request_id ? requestById.get(approval_request_id) : undefined;
@@ -334,10 +343,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       approval_request_id,
       approval_decision_id,
       task_id,
-      device_id: String(payload.device_id ?? task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null,
-      field_id: String(payload.field_id ?? payload?.target?.ref ?? rec?.record_json?.payload?.field_id ?? "").trim() || null,
+      device_id: latestNonEmpty(
+        allPlanFacts,
+        (planFact) => String(planFact.record_json?.payload?.device_id ?? "").trim()
+      ) ?? (String(task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null),
+      field_id: latestNonEmpty(
+        allPlanFacts,
+        (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
+      ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null),
       season_id: String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null,
-      action_type: String(payload.action_type ?? task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null,
+      action_type: latestNonEmpty(
+        allPlanFacts,
+        (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()
+      ) ?? (String(task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null),
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
@@ -351,6 +369,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
   }
 
   return states.sort((a, b) => b.last_event_ts - a.last_event_ts);
+}
+
+function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | undefined): T | null {
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const value = pick(rows[i]);
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed as T;
+      continue;
+    }
+    if (value !== null && value !== undefined) return value;
+  }
+  return null;
 }
 
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
