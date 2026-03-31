@@ -87,6 +87,12 @@ function buildInvalidExecutionReport(op: any) {
   };
 }
 
+function isInvalidExecutionOperation(op: any): boolean {
+  const finalStatus = String(op?.final_status ?? "").trim().toUpperCase();
+  const statusLabel = String(op?.status_label ?? "").trim();
+  return finalStatus === "INVALID_EXECUTION" || finalStatus.includes("INVALID") || statusLabel.includes("执行无效");
+}
+
 function mapExportJobStatusLabel(s: string | null): string {
   const code = String(s ?? "").trim().toUpperCase();
   if (!code) return "未开始";
@@ -289,17 +295,31 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     if (q.device_id) items = items.filter((x) => x.device_id === String(q.device_id));
     if (q.final_status) items = items.filter((x) => x.final_status === String(q.final_status));
-    items = items.slice(0, limit).map((op: any) => {
-      const finalStatus = String(op?.final_status ?? "").trim().toUpperCase();
-      const statusLabel = String(op?.status_label ?? "").trim();
-      const isInvalidExecution = finalStatus === "INVALID_EXECUTION" || statusLabel.includes("执行无效");
-      if (isInvalidExecution) {
+    const mappedItems = items.slice(0, limit).map((op: any) => {
+      if (isInvalidExecutionOperation(op)) {
+        const reportJson = buildInvalidExecutionReport(op);
         return {
           ...op,
-          report_json: buildInvalidExecutionReport(op)
+          report_json: reportJson
         };
       }
       return op;
+    });
+
+    items = mappedItems.map((op: any) => {
+      if (!isInvalidExecutionOperation(op)) return op;
+      const reportJson = op?.report_json ?? buildInvalidExecutionReport(op);
+      return {
+        ...op,
+        report_json: {
+          type: String(reportJson?.type ?? "invalid_execution_report_v1"),
+          summary: String(reportJson?.summary ?? "作业未按预期执行") || "作业未按预期执行",
+          root_cause: String(reportJson?.root_cause ?? "未知原因") || "未知原因",
+          risk: String(reportJson?.risk ?? "可能导致产量下降或资源浪费") || "可能导致产量下降或资源浪费",
+          recommendation: String(reportJson?.recommendation ?? "建议重新执行作业并检查设备状态") || "建议重新执行作业并检查设备状态",
+          evidence_refs: Array.isArray(reportJson?.evidence_refs) ? reportJson.evidence_refs : []
+        }
+      };
     });
 
     return reply.send({
