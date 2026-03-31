@@ -86,8 +86,14 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
       'evidence_artifact_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-      AND (record_json::jsonb#>>'{payload,project_id}') = $2
-      AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      AND (
+        (record_json::jsonb#>>'{payload,project_id}') = $2
+        OR COALESCE((record_json::jsonb#>>'{payload,project_id}'),'') = ''
+      )
+      AND (
+        (record_json::jsonb#>>'{payload,group_id}') = $3
+        OR COALESCE((record_json::jsonb#>>'{payload,group_id}'),'') = ''
+      )
     ORDER BY occurred_at ASC, fact_id ASC`;
   const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id]);
   return (res.rows ?? []).map((row: any) => ({
