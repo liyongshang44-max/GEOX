@@ -27,6 +27,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     humanExecutionCount: 0,
     deviceExecutionCount: 0,
     delayedTaskCount: 0,
+    invalidExecutionCount: 0,
   },
 };
 
@@ -147,6 +148,7 @@ export function useDashboard(api: any): DashboardVm {
           const lastEventTs = Number(item?.last_event_ts ?? 0);
           return Number.isFinite(lastEventTs) && lastEventTs > 0 && nowMs - lastEventTs > 2 * 60 * 60 * 1000;
         }).length;
+        const invalidExecutionCount = (operationStates ?? []).filter((o: any) => String(o?.status ?? o?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION").length;
 
         setData({
           overview: {
@@ -183,6 +185,7 @@ export function useDashboard(api: any): DashboardVm {
             humanExecutionCount,
             deviceExecutionCount,
             delayedTaskCount,
+            invalidExecutionCount,
           },
         });
       } catch {

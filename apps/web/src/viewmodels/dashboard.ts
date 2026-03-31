@@ -49,6 +49,7 @@ export type DashboardExecutionVm = {
   humanExecutionCount: number;
   deviceExecutionCount: number;
   delayedTaskCount: number;
+  invalidExecutionCount: number;
 };
 
 export type DashboardVm = {
