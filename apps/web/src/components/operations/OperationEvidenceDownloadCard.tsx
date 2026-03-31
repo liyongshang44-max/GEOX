@@ -36,6 +36,25 @@ export default function OperationEvidenceDownloadCard({ evidenceBundle, title = 
           <p>{evidenceBundle.usageHintLabel}</p>
         </div>
       </div>
+      <div className="detailMeaningGrid" style={{ marginTop: 10 }}>
+        <div className="detailMeaningItem">
+          <span className="detailMeaningLabel">照片</span>
+          <strong>{evidenceBundle.photoCount} 张</strong>
+        </div>
+        <div className="detailMeaningItem">
+          <span className="detailMeaningLabel">指标</span>
+          <strong>{evidenceBundle.metricCount} 条</strong>
+        </div>
+        <div className="detailMeaningItem">
+          <span className="detailMeaningLabel">日志</span>
+          <strong>{evidenceBundle.logCount} 条</strong>
+        </div>
+      </div>
+      {evidenceBundle.photoCount + evidenceBundle.metricCount + evidenceBundle.logCount === 0 ? (
+        <div style={{ marginTop: 10, color: "#991b1b", fontWeight: 600 }}>
+          ❌ 无证据（执行无效）
+        </div>
+      ) : null}
       <div className="operationsSummaryActions" style={{ marginTop: 14 }}>
         {evidenceBundle.hasExportableBundle && evidenceBundle.downloadUrl ? (
           <a className="btn" href={evidenceBundle.downloadUrl}>{evidenceBundle.actionLabel}</a>
