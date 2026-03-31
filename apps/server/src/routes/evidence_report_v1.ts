@@ -286,7 +286,6 @@ export function registerEvidenceReportV1Routes(app: FastifyInstance, pool: Pool)
     const job_id = String((req.params as any)?.job_id ?? "").trim();
     const job = reportJobs.get(job_id);
     if (!job) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!requireTenantMatchOr404(auth, job.tenant, reply)) return;
     return reply.send({
       ok: true,
       status: job.status === "RUNNING" ? "PENDING" : job.status,
