@@ -66,14 +66,14 @@ function hasFiniteMetric(resourceUsage: any): boolean {
 }
 
 function isRecognizedDeviceLogEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? "").trim().toLowerCase();
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
   if (!kind) return false;
   if (kind.includes("simulator") || kind.includes("trace")) return false;
   return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
 }
 
 function isRecognizedHumanEvidence(log: any): boolean {
-  const kind = String(log?.kind ?? "").trim().toLowerCase();
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
   if (!kind) return false;
   return ["photo", "image", "human", "manual", "inspection", "operator", "onsite"].some((token) => kind.includes(token));
 }
@@ -93,12 +93,12 @@ function isEvidenceInvalidOrMissing(receiptFact: FactRow | null): boolean {
   const evidenceRefs = [
     ...(Array.isArray(payload?.evidence_artifact_ids) ? payload.evidence_artifact_ids : []),
     ...(Array.isArray(payload?.evidence_refs) ? payload.evidence_refs : [])
-  ].filter((x: unknown) => typeof x === "string" && x.trim().length > 0);
+  ];
   const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
   const hasQualifiedMetrics = hasFiniteMetric(payload?.resource_usage) || metrics.some((m: unknown) => Number.isFinite(Number((m as any)?.value ?? m)));
   const hasRecognizedDeviceLogs = logsRefs.some((x: any) => isRecognizedDeviceLogEvidence(x));
   const hasRecognizedHumanEvidence = logsRefs.some((x: any) => isRecognizedHumanEvidence(x));
-  if (executorType === "human") return !(photos.length > 0 || hasRecognizedHumanEvidence || evidenceRefs.length > 0);
+  if (executorType === "human") return !(photos.length > 0 || hasRecognizedHumanEvidence || evidenceRefs.some((x: any) => isRecognizedHumanEvidence(x)));
   return !(hasQualifiedMetrics || hasRecognizedDeviceLogs);
 }
 

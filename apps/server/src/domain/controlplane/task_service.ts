@@ -1250,15 +1250,32 @@ function hasFiniteMetricEvidence(resourceUsage: any): boolean {
   return Object.values(resourceUsage).some((v) => Number.isFinite(typeof v === "number" ? v : Number(v)));
 }
 
+function isRecognizedDeviceLogEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
+}
+
+function isRecognizedHumanEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? log ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite", "service_team"].some((token) => kind.includes(token));
+}
+
 function validateEvidence(executorType: unknown, evidence: any): boolean {
   if (executorType === "human") {
-    return Array.isArray(evidence?.photos) && evidence.photos.length > 0;
+    const hasPhotos = Array.isArray(evidence?.photos) && evidence.photos.length > 0;
+    const hasHumanEvidence = Array.isArray(evidence?.humanEvidence)
+      && evidence.humanEvidence.some((x: any) => isRecognizedHumanEvidence(x));
+    return hasPhotos || hasHumanEvidence;
   }
 
   if (executorType === "device") {
     return (
       (Array.isArray(evidence?.metrics) && evidence.metrics.length > 0) ||
-      (Array.isArray(evidence?.logs) && evidence.logs.length > 0)
+      (Array.isArray(evidence?.logs) && evidence.logs.some((x: any) => isRecognizedDeviceLogEvidence(x)) )
     );
   }
 
@@ -1268,10 +1285,10 @@ function validateEvidence(executorType: unknown, evidence: any): boolean {
 function evaluateReceiptEvidenceValidity(body: any): { valid: boolean; executorType: "device" | "human" } {
   const executorTypeRaw = String(body?.executor_id?.kind ?? body?.executor_type ?? "device").toLowerCase();
   const executorType: "device" | "human" = executorTypeRaw === "human" ? "human" : "device";
-  const evidenceIds = [
+  const evidenceRefs = [
     ...(Array.isArray(body?.evidence_artifact_ids) ? body.evidence_artifact_ids : []),
     ...(Array.isArray(body?.evidence_refs) ? body.evidence_refs : []),
-  ].filter((x: unknown) => typeof x === "string" && x.trim().length > 0);
+  ];
   const logsRefs = Array.isArray(body?.logs_refs) ? body.logs_refs : [];
   const photoRefs = [
     ...(Array.isArray(body?.photos) ? body.photos : []),
@@ -1280,9 +1297,10 @@ function evaluateReceiptEvidenceValidity(body: any): { valid: boolean; executorT
   ];
   const metrics = hasFiniteMetricEvidence(body?.resource_usage) ? [body?.resource_usage] : [];
   const valid = validateEvidence(executorType, {
-    photos: [...photoRefs, ...evidenceIds],
-    metrics: [...metrics, ...evidenceIds],
-    logs: [...logsRefs, ...evidenceIds]
+    photos: photoRefs,
+    metrics,
+    logs: logsRefs,
+    humanEvidence: [...logsRefs, ...evidenceRefs]
   });
   return { executorType, valid };
 }
