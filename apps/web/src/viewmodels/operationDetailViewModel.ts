@@ -84,6 +84,9 @@ export type OperationDetailPageVm = {
     photoCount: number;
     metricCount: number;
     logCount: number;
+    formalEvidenceCount: number;
+    debugEvidenceCount: number;
+    onlySimTrace: boolean;
   };
   acceptance: {
     status: "PASS" | "FAIL" | "PENDING";
@@ -91,6 +94,7 @@ export type OperationDetailPageVm = {
     missingEvidenceLabel: string;
     summary: string;
   };
+  invalidReason: string;
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -126,6 +130,7 @@ function mapStatusLabel(raw: unknown): string {
   if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
   if (key === "FAILED" || key === "ERROR") return "执行失败";
   if (key === "INVALID_EXECUTION") return "执行无效";
+  if (key === "PENDING_ACCEPTANCE") return "待验收";
   if (key === "NOT_EXECUTED") return "未执行";
   return toText(raw, "待推进");
 }
@@ -156,9 +161,9 @@ function buildExpectedOutcomeLabel(detail: any): string {
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
   const finalStatus = String(detail?.final_status ?? "").toUpperCase();
-  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：未提供证据，无法完成验收";
+  if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
   if (!receipt) {
-    return "⚠️ 执行无效：未提供证据，无法完成验收";
+    return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
   }
   if (receipt.constraintCheckLabel === "符合约束") {
     return "现场已回传执行结果，系统判断本次执行符合约束";
@@ -394,6 +399,11 @@ export function buildOperationDetailViewModel(args?: {
     ?? evidenceBundle?.logs
     ?? evidenceBundle?.logs_refs
   );
+  const evidenceLogs = Array.isArray(evidenceBundle?.logs) ? evidenceBundle.logs : [];
+  const simTraceCount = evidenceLogs.filter((x: any) => String(x?.kind ?? "").toLowerCase() === "sim_trace").length;
+  const debugEvidenceCount = simTraceCount;
+  const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
+  const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -469,6 +479,9 @@ export function buildOperationDetailViewModel(args?: {
       photoCount,
       metricCount,
       logCount,
+      formalEvidenceCount,
+      debugEvidenceCount,
+      onlySimTrace,
     },
     acceptance: {
       status: acceptanceStatus,
@@ -486,5 +499,6 @@ export function buildOperationDetailViewModel(args?: {
             : "⚠️ 执行无效：未提供证据，无法完成验收。",
       ),
     },
+    invalidReason: toText(safeDetail?.invalid_reason, ""),
   };
 }
