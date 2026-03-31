@@ -55,6 +55,8 @@ export function localizeOperationStatus(
     FAILED: "异常",
     ERROR: "异常",
     PENDING: "待处理",
+    PENDING_ACCEPTANCE: "待验收",
+    INVALID_EXECUTION: "执行无效",
   };
 
   const enMap: Record<string, string> = {
@@ -66,6 +68,8 @@ export function localizeOperationStatus(
     FAILED: "Failed",
     ERROR: "Failed",
     PENDING: "Pending",
+    PENDING_ACCEPTANCE: "Pending Acceptance",
+    INVALID_EXECUTION: "Invalid Execution",
   };
 
   if (!raw) return locale === "en" ? "Unknown" : "未知";
