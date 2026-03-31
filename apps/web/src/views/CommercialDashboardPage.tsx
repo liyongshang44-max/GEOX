@@ -10,6 +10,8 @@ import {
   fetchSlaSummary,
   type SlaSummary,
 } from "../api/dashboard";
+import { fetchOperationStates } from "../api";
+import { fetchOperationBilling } from "../api/operations";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 
@@ -39,12 +41,38 @@ export default function CommercialDashboardPage(): React.ReactElement {
     avg_execution_time_ms: 0,
     avg_acceptance_time_ms: 0,
   });
+  const [totalRevenue, setTotalRevenue] = React.useState(0);
 
   React.useEffect(() => {
     let mounted = true;
     void fetchSlaSummary().then((summary) => {
       if (mounted) setSla(summary);
     });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    void (async () => {
+      try {
+        const ops = await fetchOperationStates({ limit: 100 });
+        const successOps = (ops.items ?? [])
+          .filter((item: any) => ["SUCCESS", "SUCCEEDED"].includes(String(item?.final_status ?? "").toUpperCase()))
+          .slice(0, 50);
+        let total = 0;
+        for (const item of successOps) {
+          const id = String(item.operation_id ?? "").trim();
+          if (!id) continue;
+          const billing = await fetchOperationBilling(id).catch(() => null);
+          if (billing?.billable) total += Number(billing.charge ?? 0);
+        }
+        if (mounted) setTotalRevenue(total);
+      } catch {
+        if (mounted) setTotalRevenue(0);
+      }
+    })();
     return () => {
       mounted = false;
     };
@@ -114,6 +142,20 @@ export default function CommercialDashboardPage(): React.ReactElement {
 
   return (
     <div className="productPage demoDashboardPage">
+      <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
+        <article className="operationsSummaryMetric card">
+          <span className="operationsSummaryLabel">成功率</span>
+          <strong>{Math.round((sla.success_rate || 0) * 100)}%</strong>
+        </article>
+        <article className="operationsSummaryMetric card">
+          <span className="operationsSummaryLabel">执行无效率</span>
+          <strong>{Math.round((sla.invalid_execution_rate || 0) * 100)}%</strong>
+        </article>
+        <article className="operationsSummaryMetric card">
+          <span className="operationsSummaryLabel">累计作业费用</span>
+          <strong>¥{totalRevenue.toFixed(2)}</strong>
+        </article>
+      </section>
       <section className="dashboardDecisionBoard">
         <article className="card decisionColumn success">
           <div className="decisionHeader">

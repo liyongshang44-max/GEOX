@@ -66,8 +66,10 @@ export default function OperationDetailPage(): React.ReactElement {
   }
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
-  const fieldLabel = mapFieldDisplayName(model.fieldLabel, model.fieldLabel);
-  const deviceLabel = mapDeviceDisplayName(model.execution.deviceId || model.deviceLabel, model.deviceLabel);
+  const fieldSource = (detail as any)?.field_id || (detail as any)?.field_name || model.fieldLabel;
+  const deviceSource = (detail as any)?.task?.device_id || (detail as any)?.device_id || model.execution.deviceId || model.deviceLabel;
+  const fieldLabel = mapFieldDisplayName(fieldSource, model.fieldLabel);
+  const deviceLabel = mapDeviceDisplayName(deviceSource, model.deviceLabel);
   const resultSummary = buildResultSummary(model);
 
   const billingLabel = billing

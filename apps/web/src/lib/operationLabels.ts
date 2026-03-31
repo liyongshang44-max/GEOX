@@ -54,7 +54,7 @@ export function localizeOperationStatus(
     SUCCESS: "已完成",
     FAILED: "异常",
     ERROR: "异常",
-    PENDING: "待处理",
+    PENDING: "待执行",
     PENDING_ACCEPTANCE: "待验收",
     INVALID_EXECUTION: "执行无效",
   };
