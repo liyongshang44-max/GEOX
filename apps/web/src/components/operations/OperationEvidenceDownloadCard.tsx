@@ -2,16 +2,49 @@
 import React from "react";
 import { useLocale } from "../../lib/locale";
 import type { OperationDetailPageVm } from "../../viewmodels/operationDetailViewModel";
+import { createEvidenceReport, fetchEvidenceReportStatus } from "../../api/operations";
 
 const EVIDENCE_BUNDLE_TITLE = "证据层";
 
 type Props = {
   evidenceBundle: OperationDetailPageVm["evidenceExport"];
+  operationPlanId: string;
   title?: string;
 };
 
-export default function OperationEvidenceDownloadCard({ evidenceBundle, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
+export default function OperationEvidenceDownloadCard({ evidenceBundle, operationPlanId, title = EVIDENCE_BUNDLE_TITLE }: Props): React.ReactElement {
   const { text } = useLocale();
+  const [reportBusy, setReportBusy] = React.useState(false);
+  const [reportHint, setReportHint] = React.useState<string>("");
+
+  const onGenerateReport = React.useCallback(async () => {
+    if (reportBusy) return;
+    setReportBusy(true);
+    setReportHint("正在创建报告任务…");
+    try {
+      const created = await createEvidenceReport(operationPlanId);
+      const jobId = String(created?.job_id ?? "").trim();
+      if (!jobId) throw new Error("创建失败");
+      for (let i = 0; i < 30; i += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        const status = await fetchEvidenceReportStatus(jobId);
+        if (status?.status === "DONE" && status.download_url) {
+          setReportHint("报告已生成，正在下载…");
+          window.location.href = status.download_url;
+          setReportBusy(false);
+          return;
+        }
+        if (status?.status === "FAILED") {
+          throw new Error(status?.error || "生成失败");
+        }
+        setReportHint(`报告生成中…（${i + 1}s）`);
+      }
+      throw new Error("生成超时，请稍后重试");
+    } catch (error: any) {
+      setReportHint(`报告生成失败：${String(error?.message ?? error)}`);
+      setReportBusy(false);
+    }
+  }, [operationPlanId, reportBusy]);
 
   return (
     <section className="card sectionBlock geoxSectionCard evidenceBundleCardV2">
@@ -68,7 +101,11 @@ export default function OperationEvidenceDownloadCard({ evidenceBundle, title = 
         ) : (
           <button className="btn" type="button" disabled>{evidenceBundle.actionLabel}</button>
         )}
+        <button className="btn" type="button" onClick={() => void onGenerateReport()} disabled={reportBusy} style={{ marginLeft: 8 }}>
+          {reportBusy ? "生成中…" : "下载作业报告（PDF）"}
+        </button>
       </div>
+      {reportHint ? <div className="muted" style={{ marginTop: 8 }}>{reportHint}</div> : null}
     </section>
   );
 }

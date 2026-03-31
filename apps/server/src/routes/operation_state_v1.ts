@@ -6,6 +6,7 @@ import { projectRecommendationStateV1 } from "../projections/recommendation_stat
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
+import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -386,6 +387,11 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const invalidReason = invalidExecution
       ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
       : null;
+    const businessEffect = deriveBusinessEffect({
+      reason_codes: Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [],
+      action_type: task?.record_json?.payload?.action_type ?? state.action_type,
+      final_status: finalStatus,
+    });
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -444,7 +450,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           logs,
           media,
           metrics
-        }
+        },
+        business_effect: businessEffect
       }
     });
   });
