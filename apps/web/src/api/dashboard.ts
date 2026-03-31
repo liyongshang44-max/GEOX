@@ -66,6 +66,14 @@ export type DashboardOverview = {
 
 export type DashboardControlPlaneItem = any;
 
+export type SlaSummary = {
+  total_operations: number;
+  success_rate: number;
+  invalid_execution_rate: number;
+  avg_execution_time_ms: number;
+  avg_acceptance_time_ms: number;
+};
+
 async function firstOk<T>(paths: string[]): Promise<T> {
   let lastErr: unknown = null;
   for (const path of paths) {
@@ -202,4 +210,18 @@ export async function getOverview(): Promise<{
 
 export async function getRecentEvidence(params?: { limit?: number }): Promise<DashboardEvidenceItem[]> {
   return fetchDashboardEvidenceSummary(params?.limit ?? 5);
+}
+
+
+export async function fetchSlaSummary(params?: { tenant_id?: string; project_id?: string; group_id?: string }): Promise<SlaSummary> {
+  return safe(
+    apiRequest<SlaSummary>(withQuery("/api/v1/sla/summary", params)),
+    {
+      total_operations: 0,
+      success_rate: 0,
+      invalid_execution_rate: 0,
+      avg_execution_time_ms: 0,
+      avg_acceptance_time_ms: 0,
+    },
+  );
 }

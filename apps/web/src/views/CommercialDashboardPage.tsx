@@ -7,6 +7,8 @@ import {
   fetchDashboardAssignments,
   getOverview,
   getRecentEvidence,
+  fetchSlaSummary,
+  type SlaSummary,
 } from "../api/dashboard";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
@@ -30,6 +32,24 @@ export default function CommercialDashboardPage(): React.ReactElement {
     [],
   );
   const d = useDashboard(api);
+  const [sla, setSla] = React.useState<SlaSummary>({
+    total_operations: 0,
+    success_rate: 0,
+    invalid_execution_rate: 0,
+    avg_execution_time_ms: 0,
+    avg_acceptance_time_ms: 0,
+  });
+
+  React.useEffect(() => {
+    let mounted = true;
+    void fetchSlaSummary().then((summary) => {
+      if (mounted) setSla(summary);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
 
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
   const invalidExecutionTasks = d.actions.filter((x) => x.finalStatus === "invalid");
@@ -81,6 +101,11 @@ export default function CommercialDashboardPage(): React.ReactElement {
     execution: "/operations?status=running",
     acceptance: "/operations?status=done_unaccepted",
   } as const;
+  const toMinuteLabel = (ms: number): string => {
+    const mins = Math.round(Math.max(0, ms) / 60000);
+    return `${mins}分钟`;
+  };
+
   const onCardClick = (to: string) => (evt: React.MouseEvent<HTMLElement>) => {
     const target = evt.target as HTMLElement | null;
     if (target?.closest("a")) return;
@@ -273,6 +298,27 @@ export default function CommercialDashboardPage(): React.ReactElement {
             {!todayActions.length ? <EmptyBlock text="当前没有需要立即处理的动作" /> : null}
           </div>
         </article>
+      </section>
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">本周服务质量</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">作业成功率</div>
+            <div className="decisionItemMeta">{Math.round((sla.success_rate || 0) * 100)}%</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">无效执行率</div>
+            <div className="decisionItemMeta">{Math.round((sla.invalid_execution_rate || 0) * 100)}%</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">平均执行时长</div>
+            <div className="decisionItemMeta">{toMinuteLabel(sla.avg_execution_time_ms)}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">平均验收时长</div>
+            <div className="decisionItemMeta">{toMinuteLabel(sla.avg_acceptance_time_ms)}</div>
+          </div>
+        </div>
       </section>
     </div>
   );

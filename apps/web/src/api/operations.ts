@@ -76,6 +76,14 @@ export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null
   return res?.trajectory ?? null;
 }
 
+export async function fetchOperationBilling(operationId: string): Promise<OperationBillingResponse | null> {
+  const id = String(operationId ?? "").trim();
+  if (!id) return null;
+  return apiRequestOptional<OperationBillingResponse>(`/api/v1/billing/operation/${encodeURIComponent(id)}`);
+}
+
+export type OperationBillingResponse = { billable: boolean; charge: number };
+
 export type EvidenceReportCreateResponse = { ok?: boolean; job_id?: string };
 export type EvidenceReportStatusResponse = { ok?: boolean; status?: "PENDING" | "DONE" | "FAILED"; download_url?: string | null; error?: string | null };
 
