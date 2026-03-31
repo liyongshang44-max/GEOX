@@ -80,7 +80,7 @@ function buildInvalidExecutionReport(op: any) {
   return {
     type: "invalid_execution_report_v1",
     summary: "作业未按预期执行",
-    root_cause: toText(op?.failure_reason) ?? "未知原因",
+    root_cause: toText(op?.failure_reason ?? op?.invalid_reason) ?? "未知原因",
     risk: "可能导致产量下降或资源浪费",
     recommendation: "建议重新执行作业并检查设备状态",
     evidence_refs: Array.isArray(op?.evidence_refs) ? op.evidence_refs : []
@@ -290,7 +290,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     if (q.device_id) items = items.filter((x) => x.device_id === String(q.device_id));
     if (q.final_status) items = items.filter((x) => x.final_status === String(q.final_status));
     items = items.slice(0, limit).map((op: any) => {
-      if (String(op?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION") {
+      const finalStatus = String(op?.final_status ?? "").trim().toUpperCase();
+      const statusLabel = String(op?.status_label ?? "").trim();
+      const isInvalidExecution = finalStatus === "INVALID_EXECUTION" || statusLabel.includes("执行无效");
+      if (isInvalidExecution) {
         return {
           ...op,
           report_json: buildInvalidExecutionReport(op)
