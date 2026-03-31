@@ -45,6 +45,11 @@ export type OperationDetailPageVm = {
     decidedAtLabel: string;
     decisionSummary: string;
   };
+  businessEffect: {
+    expectedImpact: string;
+    riskIfNotExecute: string;
+    estimatedGain: string;
+  };
   execution: {
     executionModeLabel: string;
     executorTypeLabel: string;
@@ -186,6 +191,43 @@ function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): stri
     return `现场已回传执行结果，但存在复核提示：${receipt.violationSummary}`;
   }
   return "现场已回传执行结果，可继续查看资源消耗与完成时间";
+}
+
+function buildBusinessEffect(detail: any, finalStatusCode: string): { expectedImpact: string; riskIfNotExecute: string; estimatedGain: string } {
+  if (finalStatusCode === "INVALID_EXECUTION") {
+    return {
+      expectedImpact: "未产生有效业务效果",
+      riskIfNotExecute: "该次作业未形成有效闭环，需尽快补做以避免窗口期损失",
+      estimatedGain: "-",
+    };
+  }
+  const serverExpected = toText(detail?.business_effect?.expected_impact, "");
+  const serverRisk = toText(detail?.business_effect?.risk_if_not_execute, "");
+  const serverGain = toText(detail?.business_effect?.estimated_gain, "-");
+  if (serverExpected && serverRisk) {
+    return { expectedImpact: serverExpected, riskIfNotExecute: serverRisk, estimatedGain: serverGain || "-" };
+  }
+
+  const action = String(detail?.task?.action_type ?? "").toUpperCase();
+  if (action.includes("IRRIGATE") || action.includes("IRRIGATION")) {
+    return {
+      expectedImpact: "预计24-72小时内缓解水分胁迫，稳定作物长势",
+      riskIfNotExecute: "土壤含水持续下降，可能导致生长停滞或减产",
+      estimatedGain: "减少潜在减产损失",
+    };
+  }
+  if (action.includes("SPRAY")) {
+    return {
+      expectedImpact: "预计降低病害扩散风险",
+      riskIfNotExecute: "病害可能扩散，影响产量与品质",
+      estimatedGain: "减少病害扩散导致的品质损失",
+    };
+  }
+  return {
+    expectedImpact: "预计改善田间风险暴露并提升作业闭环质量",
+    riskIfNotExecute: "风险可能持续累积并带来额外成本损失",
+    estimatedGain: "-",
+  };
 }
 
 function buildEvidenceBundleStatus(evidenceBundle: any): string {
@@ -387,6 +429,7 @@ export function buildOperationDetailViewModel(args?: {
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
   const finalStatusCode = normalizeFinalStatusCode(safeDetail);
   const finalStatusLabel = mapStatusLabel(finalStatusCode || (safeDetail?.status_label ?? safeDetail?.final_status));
+  const businessEffect = buildBusinessEffect(safeDetail, finalStatusCode);
   const executorKind = String(evidenceBundle?.executor?.kind ?? "").toLowerCase();
   const executionMode = executorKind === "human" ? "human" : executorKind === "hybrid" ? "hybrid" : "device";
   const assignmentExecutor = toText(evidenceBundle?.executor?.id, "未分配");
@@ -453,6 +496,7 @@ export function buildOperationDetailViewModel(args?: {
       decidedAtLabel: approvalDecidedAtLabel,
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
+    businessEffect,
     execution: {
       executionModeLabel: executionMode === "device" ? "设备自动执行（灌溉设备）" : `人工执行（${humanExecutorName}）`,
       executorTypeLabel: mapExecutionModeLabel(executionMode),

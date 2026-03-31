@@ -58,30 +58,22 @@ export default function CommercialDashboardPage(): React.ReactElement {
   );
   const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
 
-  const invalidCountForAction = Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length);
-  const keyActions = [
-    {
-      id: "key_fix_invalid_execution",
-      title: `处理无效执行（${invalidCountForAction}项）`,
-      detail: "优先补齐证据，避免执行无效持续累积",
-      status: invalidCountForAction > 0 ? "需立即处理" : "已清零",
-      href: "/operations?status=invalid_execution",
-    },
-    {
-      id: "key_complete_acceptance",
-      title: `补充验收（${overviewPendingAcceptanceCount}项）`,
-      detail: "完成 PASS/FAIL 判定，推动作业闭环",
-      status: overviewPendingAcceptanceCount > 0 ? "待验收" : "已完成",
-      href: "/operations?status=done_unaccepted",
-    },
-    {
-      id: "key_approve_recommendations",
-      title: `审批建议（${d.decisions.pendingRecommendationCount}项）`,
-      detail: "处理高优先级建议，减少后续执行阻塞",
-      status: d.decisions.pendingRecommendationCount > 0 ? "待审批" : "已完成",
-      href: "/agronomy/recommendations",
-    },
-  ];
+  const priorityOrder: Record<string, number> = {
+    INVALID_EXECUTION: 0,
+    PENDING_ACCEPTANCE: 1,
+    APPROVAL_REQUIRED: 2,
+  };
+  const todayActions = [...(d.todayActions ?? [])].sort((a, b) => (priorityOrder[a.type] ?? 99) - (priorityOrder[b.type] ?? 99));
+  const todayActionLabel = (type: string, count: number): string => {
+    if (type === "INVALID_EXECUTION") return `修复无效执行（${count}项）`;
+    if (type === "PENDING_ACCEPTANCE") return `完成验收（${count}项）`;
+    return `审批建议（${count}项）`;
+  };
+  const todayActionHref = (type: string): string => {
+    if (type === "INVALID_EXECUTION") return "/operations?status=invalid_execution";
+    if (type === "PENDING_ACCEPTANCE") return "/operations?status=done_unaccepted";
+    return "/agronomy/recommendations";
+  };
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const jumpTargets = {
@@ -267,17 +259,18 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="sectionTitle">⑦ 今日关键动作</div>
               <div className="sectionDesc">按任务清单推进，不再只给提示。</div>
             </div>
-            <div className="decisionCount">{keyActions.length}</div>
+            <div className="decisionCount">{todayActions.length}</div>
           </div>
           <div className="decisionList">
-            {keyActions.map((item, idx) => (
-              <Link key={item.id} to={item.href} className="decisionItemLink">
-                <div className="decisionItemTitle">动作{idx + 1}：{item.title}</div>
-                <div className="decisionItemMeta">{item.detail}</div>
-                <div className="muted" style={{ fontSize: 12 }}>状态：{item.status}</div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">今日必须处理：</div>
+            </div>
+            {todayActions.map((item, idx) => (
+              <Link key={`${item.type}_${idx}`} to={todayActionHref(item.type)} className="decisionItemLink">
+                <div className="decisionItemTitle">{idx + 1}. {todayActionLabel(item.type, item.count)}</div>
               </Link>
             ))}
-            {!keyActions.length ? <EmptyBlock text="当前没有需要立即处理的动作" /> : null}
+            {!todayActions.length ? <EmptyBlock text="当前没有需要立即处理的动作" /> : null}
           </div>
         </article>
       </section>
