@@ -24,7 +24,7 @@ const ProgramCreateBodySchema = z.object({
   program_id: z.string().min(1).optional(),
   field_id: z.string().min(1),
   season_id: z.string().min(1),
-  crop_code: z.string().min(1),
+  crop_code: z.string(),
   variety_code: z.string().min(1).nullable().optional(),
   goal_profile: z.object({
     yield_priority: ProgramPrioritySchema,
@@ -117,7 +117,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const program_id = String(body.program_id ?? `prg_${randomUUID().replace(/-/g, "")}`).trim();
     const field_id = String(body.field_id ?? "").trim();
     const season_id = String(body.season_id ?? "").trim();
-    const crop_code = String(body.crop_code ?? "").trim();
+    const crop_code = String(body.crop_code || "corn").trim();
     const status = String(body.status ?? "DRAFT").trim().toUpperCase();
     if (!program_id || !field_id || !season_id || !crop_code) return reply.status(400).send({ ok: false, error: "MISSING_REQUIRED_FIELDS" });
     if (!PROGRAM_STATUSES.has(status)) return reply.status(400).send({ ok: false, error: "INVALID_STATUS" });

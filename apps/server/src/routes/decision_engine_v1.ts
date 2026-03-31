@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
+import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -128,8 +129,15 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
   const imageConfidence = clamp01(Number(image.confidence ?? 0.8));
 
   const out: RecommendationV1[] = [];
+  const program = (body.program && typeof body.program === "object") ? body.program : {};
+  const irrigationEval = Number.isFinite(soilMoisture)
+    ? evaluateAgronomy({
+      crop_code: String(program.crop_code || body.crop_code || "corn"),
+      soil_moisture: soilMoisture
+    })
+    : { should_irrigate: false, reason: "soil_moisture_missing" };
 
-  const irrigationNeed = (Number.isFinite(soilMoisture) && soilMoisture < 35) || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
+  const irrigationNeed = irrigationEval.should_irrigate || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
   if (irrigationNeed) {
     const moistureTerm = Number.isFinite(soilMoisture) ? clamp01((45 - soilMoisture) / 45) : 0.2;
     const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
@@ -143,7 +151,7 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
       program_id,
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
-      reason_codes: ["soil_moisture_low_or_heat_stress"],
+      reason_codes: [irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress"],
       evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
       rule_hit: [
         { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < 35 : false, threshold: 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
