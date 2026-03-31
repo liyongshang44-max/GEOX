@@ -17,14 +17,21 @@ function Alert({ type, children }: { type: "error"; children: React.ReactNode })
 
 export default function OperationExecutionCard({ task, acceptance, invalidReason }: ExecutionCardProps): React.ReactElement {
   const status = String(task.finalStatus ?? "").toUpperCase();
-  const executionValidity = status === "INVALID_EXECUTION" ? "无效执行" : "有效执行";
+  const executionValidity = status === "INVALID_EXECUTION" ? "执行无效" : "有效执行";
   const invalidDetail = invalidReason === "evidence_invalid"
     ? "仅有调试证据，不构成正式执行证明"
     : invalidReason === "evidence_missing"
       ? "未上传执行证据"
       : "仅有调试证据，不构成正式执行证明";
-  const handlingHint = status === "INVALID_EXECUTION" ? "需要补充正式证据后重提验收" : acceptance.statusLabel === "PENDING" ? "等待验收判定" : "当前无需处理";
-  const hasReceipt = status !== "PENDING";
+  const handlingHint =
+    status === "INVALID_EXECUTION"
+      ? "需重新执行或补充证据"
+      : status === "PENDING_ACCEPTANCE"
+        ? "等待验收判定"
+        : acceptance.statusLabel === "PENDING"
+          ? "等待验收判定"
+          : "当前无需处理";
+  const hasReceipt = status === "INVALID_EXECUTION" || status === "PENDING_ACCEPTANCE" || status === "SUCCESS";
   return (
     <section className="card sectionBlock geoxSectionCard operationBusinessCard">
       <div className="sectionTitle">执行结果（谁干的）</div>
