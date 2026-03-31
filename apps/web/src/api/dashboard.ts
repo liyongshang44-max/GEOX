@@ -36,8 +36,12 @@ export type DashboardAcceptanceRiskItem = { id: string; field_id?: string | null
 export type DashboardPendingActionItem = { id: string; key: string; label: string; status?: string | null; to?: string | null };
 export type DashboardRecommendationItem = {
   recommendation_id: string;
+  title?: string;
   pending?: boolean;
   confidence?: number | null;
+  reason_summary?: string;
+  updated_ts_ms?: number;
+  field?: { field_id?: string | null; field_name?: string | null };
   linked_refs?: { approval_request_id?: string | null; receipt_fact_id?: string | null };
 };
 export type DashboardOperationStateItem = {
