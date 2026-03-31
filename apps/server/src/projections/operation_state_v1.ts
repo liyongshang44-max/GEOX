@@ -152,6 +152,16 @@ function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
 }
 
+function normalizeAcceptanceVerdict(verdictRaw: unknown): "PASS" | "FAIL" | "PENDING" | null {
+  const verdict = String(verdictRaw ?? "").trim().toUpperCase();
+  if (!verdict) return null;
+  if (verdict === "PASS") return "PASS";
+  if (verdict === "FAIL") return "FAIL";
+  if (verdict === "PARTIAL") return "PENDING";
+  if (verdict === "PENDING") return "PENDING";
+  return null;
+}
+
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
   const recById = latestByKey(facts.filter((r) => r.record_json?.type === "decision_recommendation_v1"), (r) => String(r.record_json?.payload?.recommendation_id ?? "").trim());
   const requestById = latestByKey(facts.filter((r) => r.record_json?.type === "approval_request_v1"), (r) => String(r.record_json?.payload?.request_id ?? "").trim());
@@ -205,7 +215,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         return byPlan || byTask;
       });
     const artifactEvidence = artifactPayloads.map((artifactPayload) => ({ kind: String(artifactPayload?.kind ?? "artifact") }));
-    const acceptance = buildAcceptanceResult({
+    const acceptanceByEvidence = buildAcceptanceResult({
       operation_plan_id,
       hasReceipt: !!receipt,
       evidenceCount: artifactEvidence.length
@@ -258,6 +268,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       if (r.includes("SUCCESS") || r.includes("EXECUTED")) timeline.push({ ts, type: "SUCCEEDED", label: timelineLabel("SUCCEEDED") });
     }
     const acceptanceFact = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
+    const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};
+    const acceptanceStatusFromFact = normalizeAcceptanceVerdict(acceptanceFactPayload?.verdict);
+    const acceptance = acceptanceStatusFromFact
+      ? {
+        status: acceptanceStatusFromFact,
+        missing: Array.isArray(acceptanceFactPayload?.missing_evidence)
+          ? acceptanceFactPayload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean)
+          : []
+      }
+      : {
+        status: acceptanceByEvidence.verdict,
+        missing: acceptanceByEvidence.missing_evidence ?? []
+      };
     if (acceptanceFact) timeline.push({ ts: toMs(acceptanceFact.occurred_at), type: "ACCEPTANCE_GENERATED", label: timelineLabel("ACCEPTANCE_GENERATED") });
     const dedupedTimeline = new Map<string, OperationTimelineItemV1>();
     for (const item of timeline) {
@@ -270,9 +293,9 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const baseFinalStatus =
       finalStatusFromTransition(latestTransition)
       ?? finalStatusFromReceipt(receiptStatus)
-      ?? (acceptance.verdict === "PASS" ? null : "PENDING_ACCEPTANCE")
+      ?? (acceptance.status === "PASS" ? null : "PENDING_ACCEPTANCE")
       ?? (task_id ? "RUNNING" : "PENDING");
-    const acceptanceCompleted = acceptance.verdict === "PASS";
+    const acceptanceCompleted = acceptance.status === "PASS";
     const hasReceipt = Boolean(receipt);
     const executedReceipt = hasExecutedReceiptStatus(receiptStatus);
     const invalidExecution = hasReceipt && executedReceipt && !evidenceEvaluation.has_formal_evidence;
@@ -318,8 +341,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
-        status: invalidExecution ? "PENDING" : acceptance.verdict,
-        missing: invalidExecution ? [evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing"] : (acceptance.missing_evidence ?? [])
+        status: invalidExecution ? "PENDING" : acceptance.status,
+        missing: invalidExecution ? [evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing"] : acceptance.missing
       },
       final_status: finalStatusNormalized,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),

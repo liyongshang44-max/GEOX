@@ -57,17 +57,22 @@ async function seedSuccessOperation(baseUrl, tenantQuery) {
   const now = Date.now();
   const operation_plan_id = `opl_success_seed_${now.toString(16)}`;
   const act_task_id = `task_success_seed_${now.toString(16)}`;
+  const evidence_artifact_id = `evi_success_seed_${now.toString(16)}`;
   const occurredAt = new Date(now).toISOString();
   const finishedAt = new Date(now + 5 * 60 * 1000).toISOString();
+  const acceptanceAt = new Date(now + 6 * 60 * 1000).toISOString();
+  const tenant_id = tenantQuery.tenant_id || 'tenantA';
+  const project_id = tenantQuery.project_id || 'projectA';
+  const group_id = tenantQuery.group_id || 'groupA';
 
   await postRawFact(baseUrl, {
     source: 'system',
     record_json: {
       type: 'operation_plan_v1',
       payload: {
-        tenant_id: tenantQuery.tenant_id || 'tenantA',
-        project_id: tenantQuery.project_id || 'projectA',
-        group_id: tenantQuery.group_id || 'groupA',
+        tenant_id,
+        project_id,
+        group_id,
         operation_plan_id,
         act_task_id,
       },
@@ -80,9 +85,9 @@ async function seedSuccessOperation(baseUrl, tenantQuery) {
     record_json: {
       type: 'operation_plan_transition_v1',
       payload: {
-        tenant_id: tenantQuery.tenant_id || 'tenantA',
-        project_id: tenantQuery.project_id || 'projectA',
-        group_id: tenantQuery.group_id || 'groupA',
+        tenant_id,
+        project_id,
+        group_id,
         operation_plan_id,
         status: 'SUCCEEDED',
       },
@@ -91,20 +96,50 @@ async function seedSuccessOperation(baseUrl, tenantQuery) {
   });
 
   await postRawFact(baseUrl, {
+    source: 'human',
+    record_json: {
+      type: 'evidence_artifact_v1',
+      payload: {
+        tenant_id,
+        project_id,
+        group_id,
+        operation_plan_id,
+        act_task_id,
+        artifact_id: evidence_artifact_id,
+        kind: 'photo',
+        uri: `evidence://acceptance/${evidence_artifact_id}.jpg`,
+        captured_at: finishedAt,
+      },
+    },
+    occurred_at_iso: new Date(now + 90 * 1000).toISOString(),
+  });
+
+  await postRawFact(baseUrl, {
     source: 'device',
     record_json: {
       type: 'ao_act_receipt_v1',
       payload: {
-        tenant_id: tenantQuery.tenant_id || 'tenantA',
-        project_id: tenantQuery.project_id || 'projectA',
-        group_id: tenantQuery.group_id || 'groupA',
+        tenant_id,
+        project_id,
+        group_id,
         operation_plan_id,
         act_task_id,
         status: 'SUCCEEDED',
+        executor_id: { kind: 'human', id: 'executor_seed_success' },
+        execution_time: {
+          start_ts: occurredAt,
+          end_ts: finishedAt,
+        },
+        execution_coverage: { kind: 'field' },
         execution_finished_at: finishedAt,
-        water_l: 360,
-        electric_kwh: 0.25,
-        chemical_ml: 0,
+        resource_usage: {
+          water_l: 360,
+          electric_kwh: 0.25,
+          chemical_ml: 0,
+        },
+        evidence_refs: [`artifact:${evidence_artifact_id}`],
+        evidence_artifact_ids: [evidence_artifact_id],
+        logs_refs: [{ kind: 'telemetry_runtime' }],
         metrics: [{ name: 'water_volume', kind: 'metric', value: 360 }],
       },
     },
@@ -116,16 +151,25 @@ async function seedSuccessOperation(baseUrl, tenantQuery) {
     record_json: {
       type: 'acceptance_result_v1',
       payload: {
-        tenant_id: tenantQuery.tenant_id || 'tenantA',
-        project_id: tenantQuery.project_id || 'projectA',
-        group_id: tenantQuery.group_id || 'groupA',
+        acceptance_id: `acc_success_seed_${now.toString(16)}`,
+        tenant_id,
+        project_id,
+        group_id,
         operation_plan_id,
         act_task_id,
+        field_id: 'field_success_seed',
         verdict: 'PASS',
-        generated_at: new Date(now + 6 * 60 * 1000).toISOString(),
+        metrics: {
+          coverage_ratio: 1,
+          in_field_ratio: 1,
+          telemetry_delta: 0,
+        },
+        evidence_refs: [`artifact:${evidence_artifact_id}`],
+        evaluated_at: acceptanceAt,
+        generated_at: acceptanceAt,
       },
     },
-    occurred_at_iso: new Date(now + 6 * 60 * 1000).toISOString(),
+    occurred_at_iso: acceptanceAt,
   });
 
   return operation_plan_id;
@@ -178,7 +222,8 @@ function readReportJson(filePath) {
       )
       : items.find((x) => {
         const status = String(x?.final_status || '').toUpperCase();
-        return status === 'SUCCESS' || status === 'SUCCEEDED';
+        return (status === 'SUCCESS' || status === 'SUCCEEDED')
+          && String(x?.acceptance?.status || '').toUpperCase() === 'PASS';
       });
 
     if (!successOp) {
@@ -209,16 +254,6 @@ function readReportJson(filePath) {
       cost: { total: 0, water: 0, electric: 0 },
     });
 
-    writeJson(successReportPath, {
-      operation_id: successOperationId,
-      customer_view: {
-        summary: '作业已完成，预计改善作物状态',
-        today_action: '继续观察或进入验收',
-        risk_level: 'low',
-      },
-      cost: { total: 0.92, water: 0.72, electric: 0.2 },
-    });
-
     // Case 1: INVALID_EXECUTION
     assert(Number(sla.invalid_execution_rate || 0) > 0, 'CASE1_SLA_INVALID_EXECUTION_RATE_NOT_POSITIVE');
     const billingInvalid = await getJson(baseUrl, `/api/v1/billing/operation/${encodeURIComponent(invalidOperationId)}`, token, tenantQuery);
@@ -230,8 +265,21 @@ function readReportJson(filePath) {
     assert(Number(sla.success_rate || 0) > 0, 'CASE2_SLA_SUCCESS_RATE_NOT_POSITIVE');
     const billingSuccess = await getJson(baseUrl, `/api/v1/billing/operation/${encodeURIComponent(successOperationId)}`, token, tenantQuery);
     assert(Number(billingSuccess.charge || 0) > 0, 'CASE2_BILLING_CHARGE_NOT_POSITIVE');
+    writeJson(successReportPath, {
+      operation_id: successOperationId,
+      final_status: String(successOp?.final_status || '').toUpperCase() || 'SUCCESS',
+      acceptance_status: String(successOp?.acceptance?.status || '').toUpperCase() || 'PASS',
+      customer_view: {
+        summary: '作业已完成，预计改善作物状态',
+        today_action: '继续观察或进入验收',
+        risk_level: 'low',
+      },
+      cost: { total: Number(billingSuccess.charge || 0), water: 0.72, electric: 0.2 },
+    });
     const reportSuccess = readReportJson(successReportPath);
     assert(String(reportSuccess?.customer_view?.summary || '').includes('完成'), 'CASE2_REPORT_SUMMARY_NOT_COMPLETED');
+    assert(String(reportSuccess?.operation_id || '') === successOperationId, 'CASE2_REPORT_OPERATION_ID_MISMATCH');
+    assert(Number(reportSuccess?.cost?.total || 0) === Number(billingSuccess.charge || 0), 'CASE2_REPORT_COST_NOT_MATCH_BILLING');
 
     console.log('PASS ACCEPTANCE_COMMERCIAL_V1', {
       case1: {
