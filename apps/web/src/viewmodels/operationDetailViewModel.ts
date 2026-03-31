@@ -58,6 +58,7 @@ export type OperationDetailPageVm = {
     ackedAtLabel: string;
     ackStatusLabel: string;
     progressLabel: string;
+    finalStatus: string;
     finalStatusLabel: string;
     dispatchedChipLabel: string;
     ackChipLabel: string;
@@ -80,6 +81,9 @@ export type OperationDetailPageVm = {
     usageValueLabel: string;
     usageHintLabel: string;
     actionLabel: string;
+    photoCount: number;
+    metricCount: number;
+    logCount: number;
   };
   acceptance: {
     status: "PASS" | "FAIL" | "PENDING";
@@ -107,6 +111,10 @@ function toDateLabel(v: unknown): string {
 function toMs(v: unknown): number | null {
   const raw = typeof v === "number" ? v : Date.parse(String(v ?? ""));
   return Number.isFinite(raw) ? raw : null;
+}
+
+function countEvidenceItems(value: unknown): number {
+  return Array.isArray(value) ? value.length : 0;
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -361,6 +369,24 @@ export function buildOperationDetailViewModel(args?: {
   const hasExportableBundle = Array.isArray(evidenceBundle?.artifacts) && evidenceBundle.artifacts.length > 0;
   const evidenceBundleStatus = buildEvidenceBundleStatus({ has_bundle: hasExportableBundle });
   const acceptanceStatus = resolveAcceptanceStatus(safeDetail, receipt);
+  const photoCount = countEvidenceItems(
+    safeDetail?.receipt?.photos
+    ?? safeDetail?.receipt?.photo_refs
+    ?? evidenceBundle?.photos
+    ?? evidenceBundle?.photo_refs
+  );
+  const metricCount = countEvidenceItems(
+    safeDetail?.receipt?.metrics
+    ?? safeDetail?.receipt?.metric_refs
+    ?? evidenceBundle?.metrics
+    ?? evidenceBundle?.metric_refs
+  );
+  const logCount = countEvidenceItems(
+    safeDetail?.receipt?.logs
+    ?? safeDetail?.receipt?.logs_refs
+    ?? evidenceBundle?.logs
+    ?? evidenceBundle?.logs_refs
+  );
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -414,6 +440,7 @@ export function buildOperationDetailViewModel(args?: {
       ackedAtLabel: toDateLabel(safeDetail?.task?.acked_at),
       ackStatusLabel,
       progressLabel: resolveExecutionProgress(safeDetail),
+      finalStatus: String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
       finalStatusLabel,
       dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
       ackChipLabel: `确认状态：${ackStatusLabel}`,
@@ -434,6 +461,9 @@ export function buildOperationDetailViewModel(args?: {
       usageValueLabel: "用于留痕、复验与交付",
       usageHintLabel: `证据件数：${Array.isArray(evidenceBundle?.artifacts) ? evidenceBundle.artifacts.length : 0}`,
       actionLabel: "证据由详情接口统一返回",
+      photoCount,
+      metricCount,
+      logCount,
     },
     acceptance: {
       status: acceptanceStatus,
