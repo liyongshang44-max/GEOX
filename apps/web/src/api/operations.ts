@@ -76,6 +76,20 @@ export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null
   return res?.trajectory ?? null;
 }
 
+export type EvidenceReportCreateResponse = { ok?: boolean; job_id?: string };
+export type EvidenceReportStatusResponse = { ok?: boolean; status?: "PENDING" | "DONE" | "FAILED"; download_url?: string | null; error?: string | null };
+
+export async function createEvidenceReport(operationPlanId: string): Promise<EvidenceReportCreateResponse> {
+  return apiRequest<EvidenceReportCreateResponse>("/api/v1/evidence-reports", {
+    method: "POST",
+    body: JSON.stringify({ operation_plan_id: operationPlanId }),
+  });
+}
+
+export async function fetchEvidenceReportStatus(jobId: string): Promise<EvidenceReportStatusResponse> {
+  return apiRequest<EvidenceReportStatusResponse>(`/api/v1/evidence-reports/${encodeURIComponent(jobId)}`);
+}
+
 export async function fetchApprovalRequests(params: {
   tenant_id: string;
   project_id: string;
