@@ -114,6 +114,7 @@ export default function ProgramListPage(): React.ReactElement {
         </p>
         <div className="operationsSummaryActions">
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新方案</button>
+          <Link className="btn" to="/programs/new">新建方案</Link>
           <Link className="btn" to="/agronomy">查看农业建议</Link>
         </div>
       </section>
