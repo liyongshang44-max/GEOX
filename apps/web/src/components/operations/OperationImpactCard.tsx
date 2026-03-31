@@ -37,6 +37,13 @@ export default function OperationImpactCard({ model }: { model: OperationDetailP
           <strong>{copy.riskIfSkipped}</strong>
         </div>
       </div>
+      <div className="detailMeaningGrid" style={{ marginTop: 12 }}>
+        <div className="detailMeaningItem">
+          <span className="detailMeaningLabel">本次作业成本</span>
+          <strong>水费：{model.cost.waterCostLabel} · 电费：{model.cost.electricCostLabel} · 药剂：{model.cost.chemicalCostLabel}</strong>
+          <div className="muted" style={{ marginTop: 6 }}>总成本：{model.cost.totalCostLabel}</div>
+        </div>
+      </div>
     </section>
   );
 }
