@@ -137,7 +137,6 @@ function readReportJson(filePath) {
     assert(invalidReportPath, 'MISSING_REPORT_JSON_INVALID_PATH');
     assert(successReportPath, 'MISSING_REPORT_JSON_SUCCESS_PATH');
 
-    const sla = await getJson(baseUrl, '/api/v1/sla/summary', token, tenantQuery);
     const list = await getJson(baseUrl, '/api/v1/operations', token, { ...tenantQuery, limit: 300 });
     const items = Array.isArray(list?.items) ? list.items : [];
 
@@ -179,6 +178,8 @@ function readReportJson(filePath) {
 
     const invalidOperationId = String(invalidOp.operation_plan_id || invalidOp.operation_id || '').trim();
     const successOperationId = String(successOp.operation_plan_id || successOp.operation_id || '').trim();
+
+    const sla = await getJson(baseUrl, '/api/v1/sla/summary', token, tenantQuery);
 
     writeJson(invalidReportPath, {
       operation_id: invalidOperationId,
