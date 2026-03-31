@@ -47,6 +47,56 @@ export type ProgramControlPlaneItem = {
 
 const unsupportedProgramControlPlaneIds = new Set<string>();
 
+
+export type ProgramCreateInput = {
+  program_name: string;
+  field_id: string;
+  season_id: string;
+  crop_code: "corn" | "tomato";
+  goal_quality: "low" | "medium" | "high";
+  goal_yield: "low" | "medium" | "high";
+};
+
+export async function createProgram(input: ProgramCreateInput): Promise<{ ok: boolean; program_id: string; fact_id: string }> {
+  const normalizedProgramName = String(input.program_name ?? "").trim();
+  const normalizedProgramId = normalizedProgramName
+    ? `prg_${normalizedProgramName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)}`
+    : undefined;
+  const body = {
+    program_id: normalizedProgramId,
+    field_id: input.field_id,
+    season_id: input.season_id,
+    crop_code: input.crop_code,
+    status: "DRAFT",
+    goal_profile: {
+      yield_priority: input.goal_yield,
+      quality_priority: input.goal_quality,
+      residue_priority: "high",
+      water_saving_priority: "medium",
+      cost_priority: "medium",
+    },
+    constraints: {
+      forbid_pesticide_classes: [],
+      forbid_fertilizer_types: [],
+      max_irrigation_mm_per_day: null,
+      manual_approval_required_for: [],
+      allow_night_irrigation: false,
+    },
+    budget: {
+      max_cost_total: null,
+      currency: "CNY",
+    },
+    execution_policy: {
+      mode: "approval_required",
+      auto_execute_allowed_task_types: [],
+    },
+  };
+  return apiRequest<{ ok: boolean; program_id: string; fact_id: string }>("/api/v1/programs", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export async function fetchPrograms(params?: Record<string, unknown>): Promise<ProgramStateItemV1[]> {
   const res = await apiRequest<{ ok?: boolean; items?: ProgramStateItemV1[] }>(withQuery("/api/v1/programs", params));
   return Array.isArray(res.items) ? res.items : [];
