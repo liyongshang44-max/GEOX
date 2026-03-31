@@ -8,6 +8,7 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence, inferEvidenceLevel } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
+import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type ReportJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
@@ -172,6 +173,8 @@ function renderReportHtml(report: any): string {
 <p><b>预计效果：</b>${escapeHtml(report.business_effect.expected_impact)}</p>
 <p><b>不执行风险：</b>${escapeHtml(report.business_effect.risk_if_not_execute)}</p>
 <p><b>置信度：</b>${escapeHtml(report.business_effect.confidence)}</p>
+<h2>作业成本</h2>
+<p><b>总成本：</b>¥${Number(report.cost?.total ?? 0).toFixed(2)} &nbsp; <b>水费：</b>¥${Number(report.cost?.water ?? 0).toFixed(2)} &nbsp; <b>电费：</b>¥${Number(report.cost?.electric ?? 0).toFixed(2)}</p>
 <h2>验收</h2>
 <p><b>状态：</b>${escapeHtml(report.acceptance.status)} &nbsp; <b>原因：</b>${escapeHtml(report.acceptance.reason ?? "-")}</p>
 </body></html>`;
@@ -204,6 +207,12 @@ async function runEvidenceReportJob(pool: Pool, args: { job_id: string; operatio
     reason_codes: reasonCodes,
     action_type: state.action_type,
     final_status: finalStatus,
+  });
+
+  const costBreakdown = computeCostBreakdown({
+    water_l: normalizedReceipt?.water_l,
+    electric_kwh: normalizedReceipt?.electric_kwh,
+    chemical_ml: normalizedReceipt?.chemical_ml,
   });
 
   const report = {
@@ -239,6 +248,12 @@ async function runEvidenceReportJob(pool: Pool, args: { job_id: string; operatio
       reason: finalStatus === "INVALID_EXECUTION"
         ? "执行无效，证据不满足正式验收要求"
         : toText(acceptance?.record_json?.payload?.summary ?? acceptance?.record_json?.payload?.missing_evidence),
+    },
+    cost: {
+      total: costBreakdown.total_cost,
+      water: costBreakdown.water_cost,
+      electric: costBreakdown.electric_cost,
+      chemical: costBreakdown.chemical_cost,
     },
   };
 
