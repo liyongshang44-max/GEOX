@@ -6,8 +6,8 @@
  *   BASE_URL                  default: http://127.0.0.1:3001
  *   AO_ACT_TOKEN              optional bearer token
  *   TENANT_ID/PROJECT_ID/GROUP_ID optional query params
- *   INVALID_OPERATION_ID      case-1 operation id
- *   SUCCESS_OPERATION_ID      case-2 operation id
+ *   SUCCESS_OPERATION_ID      case-2 operation id (optional, can auto-discover)
+ *   GEOX_FIXED_OPERATION_PLAN_ID optional fixed baseline id for case-1 invalid op
  *   REPORT_JSON_INVALID_PATH  local json path for case-1 report
  *   REPORT_JSON_SUCCESS_PATH  local json path for case-2 report
  */
@@ -48,17 +48,47 @@ function readReportJson(filePath) {
       group_id: process.env.GROUP_ID,
     };
 
-    const invalidOperationId = String(process.env.INVALID_OPERATION_ID || '').trim();
-    const successOperationId = String(process.env.SUCCESS_OPERATION_ID || '').trim();
+    const fixedId = String(process.env.GEOX_FIXED_OPERATION_PLAN_ID || '').trim();
+    const successOperationIdFromEnv = String(process.env.SUCCESS_OPERATION_ID || '').trim();
     const invalidReportPath = String(process.env.REPORT_JSON_INVALID_PATH || '').trim();
     const successReportPath = String(process.env.REPORT_JSON_SUCCESS_PATH || '').trim();
 
-    assert(invalidOperationId, 'MISSING_INVALID_OPERATION_ID');
-    assert(successOperationId, 'MISSING_SUCCESS_OPERATION_ID');
     assert(invalidReportPath, 'MISSING_REPORT_JSON_INVALID_PATH');
     assert(successReportPath, 'MISSING_REPORT_JSON_SUCCESS_PATH');
 
     const sla = await getJson(baseUrl, '/api/v1/sla/summary', token, tenantQuery);
+    const list = await getJson(baseUrl, '/api/v1/operations', token, { ...tenantQuery, limit: 300 });
+    const items = Array.isArray(list?.items) ? list.items : [];
+
+    const invalidOp = fixedId
+      ? items.find(
+        (x) =>
+          String(x?.operation_plan_id || '') === fixedId ||
+          String(x?.operation_id || '') === fixedId
+      )
+      : items.find((x) => String(x?.final_status || '').toUpperCase() === 'INVALID_EXECUTION');
+
+    if (!invalidOp) {
+      throw new Error('MISSING_INVALID_OPERATION_ID');
+    }
+
+    const successOp = successOperationIdFromEnv
+      ? items.find(
+        (x) =>
+          String(x?.operation_plan_id || '') === successOperationIdFromEnv ||
+          String(x?.operation_id || '') === successOperationIdFromEnv
+      )
+      : items.find((x) => {
+        const status = String(x?.final_status || '').toUpperCase();
+        return status === 'SUCCESS' || status === 'SUCCEEDED';
+      });
+
+    if (!successOp) {
+      throw new Error('MISSING_SUCCESS_OPERATION_ID');
+    }
+
+    const invalidOperationId = String(invalidOp.operation_plan_id || invalidOp.operation_id || '').trim();
+    const successOperationId = String(successOp.operation_plan_id || successOp.operation_id || '').trim();
 
     // Case 1: INVALID_EXECUTION
     assert(Number(sla.invalid_execution_rate || 0) > 0, 'CASE1_SLA_INVALID_EXECUTION_RATE_NOT_POSITIVE');
