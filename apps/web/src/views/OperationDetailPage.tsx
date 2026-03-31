@@ -10,6 +10,7 @@ import OperationImpactCard from "../components/operations/OperationImpactCard";
 import OperationRiskCard from "../components/operations/OperationRiskCard";
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import OperationEvidenceDownloadCard from "../components/operations/OperationEvidenceDownloadCard";
+import OperationDecisionCard from "../components/operations/OperationDecisionCard";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
@@ -83,6 +84,10 @@ export default function OperationDetailPage(): React.ReactElement {
 
       <section className="demoContentGrid">
         <OperationExecutionCard task={model.execution} acceptance={model.acceptance} invalidReason={model.invalidReason} />
+      </section>
+
+      <section className="demoContentGrid">
+        <OperationDecisionCard recommendation={model.recommendation} approval={model.approval} businessEffect={model.businessEffect} />
       </section>
 
       <section className="demoContentGrid">

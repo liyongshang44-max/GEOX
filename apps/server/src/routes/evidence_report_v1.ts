@@ -7,6 +7,7 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
+import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type ReportJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
@@ -145,37 +146,6 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   return all;
 }
 
-function buildBusinessEffect(finalStatus: string, reasonCodes: string[]): { expected_impact: string; risk_if_not_execute: string; confidence: "low" | "medium" | "high" } {
-  if (finalStatus === "INVALID_EXECUTION") {
-    return {
-      expected_impact: "本次执行未被系统认可，不产生业务效果",
-      risk_if_not_execute: "该次动作未形成可信闭环，需尽快重做以避免窗口期损失",
-      confidence: "low",
-    };
-  }
-  const hasDrought = reasonCodes.some((x) => String(x).toLowerCase().includes("drought") || String(x).includes("干旱"));
-  const hasPest = reasonCodes.some((x) => String(x).toLowerCase().includes("pest") || String(x).includes("病虫"));
-  if (hasDrought) {
-    return {
-      expected_impact: "预计提升土壤水分稳定性，降低旱情导致的产量波动风险",
-      risk_if_not_execute: "可能导致减产、补水成本上升与后续抢救性灌溉成本增加",
-      confidence: "high",
-    };
-  }
-  if (hasPest) {
-    return {
-      expected_impact: "预计降低病虫害扩散速度，保护当季产量质量",
-      risk_if_not_execute: "病害可能扩散并推高后续防治成本",
-      confidence: "medium",
-    };
-  }
-  return {
-    expected_impact: "预计改善田间风险暴露并提升作业闭环质量",
-    risk_if_not_execute: "可能造成产量、风险与成本三方面的综合劣化",
-    confidence: "medium",
-  };
-}
-
 function renderReportHtml(report: any): string {
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"/><title>作业报告 ${escapeHtml(report.operation_id)}</title>
 <style>body{font-family:Arial,sans-serif;padding:24px;line-height:1.5}h1{font-size:24px}h2{font-size:18px;margin-top:20px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8px;vertical-align:top}.mono{font-family:ui-monospace,monospace}</style></head><body>
@@ -220,6 +190,11 @@ async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
     : "SUCCEEDED";
 
   const reasonCodes = Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [];
+  const businessEffect = deriveBusinessEffect({
+    reason_codes: reasonCodes,
+    action_type: state.action_type,
+    final_status: finalStatus,
+  });
   const report = {
     operation_id: job.operation_plan_id,
     field_id: toText(state.field_id) ?? "-",
@@ -239,7 +214,11 @@ async function runEvidenceReportJob(pool: Pool, job: ReportJob): Promise<void> {
         ...logs.map((x: any) => ({ type: "log", kind: toText(x?.kind) ?? "log_ref", ref: toText(x?.ref ?? x) ?? undefined })),
       ],
     },
-    business_effect: buildBusinessEffect(finalStatus, reasonCodes),
+    business_effect: {
+      expected_impact: businessEffect.expected_impact,
+      risk_if_not_execute: businessEffect.risk_if_not_execute,
+      confidence: finalStatus === "INVALID_EXECUTION" ? "low" : "medium",
+    },
     acceptance: {
       status: finalStatus === "INVALID_EXECUTION"
         ? "FAIL"

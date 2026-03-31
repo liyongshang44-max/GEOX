@@ -6,9 +6,10 @@ import type { OperationDetailPageVm } from "../../viewmodels/operationDetailView
 type DecisionCardProps = {
   recommendation: OperationDetailPageVm["recommendation"];
   approval: OperationDetailPageVm["approval"];
+  businessEffect: OperationDetailPageVm["businessEffect"];
 };
 
-export default function OperationDecisionCard({ recommendation, approval }: DecisionCardProps): React.ReactElement {
+export default function OperationDecisionCard({ recommendation, approval, businessEffect }: DecisionCardProps): React.ReactElement {
   const { text } = useLocale();
   return (
     <section className="card sectionBlock geoxSectionCard operationDecisionCardV2">
@@ -32,6 +33,11 @@ export default function OperationDecisionCard({ recommendation, approval }: Deci
           <strong>{approval.decisionLabel}</strong>
           <p>{approval.decisionSummary}</p>
         </div>
+      </div>
+      <div className="detailSectionLead" style={{ marginTop: 12 }}>
+        <strong>执行该作业：</strong>
+        <div>→ 预计效果：{businessEffect.expectedImpact}</div>
+        <div>→ 不执行风险：{businessEffect.riskIfNotExecute}</div>
       </div>
     </section>
   );
