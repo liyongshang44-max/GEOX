@@ -154,6 +154,25 @@ function hasFiniteMetric(resourceUsage: any): boolean {
   return values.some((x) => Number.isFinite(typeof x === "number" ? x : Number(x)));
 }
 
+function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
+  const status = String(statusRaw ?? "").trim().toUpperCase();
+  if (!status) return false;
+  return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
+}
+
+function isRecognizedDeviceLogEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  if (kind.includes("simulator") || kind.includes("trace")) return false;
+  return ["mqtt", "device", "telemetry", "controller", "plc", "modbus", "can", "gateway", "sensor", "runtime"].some((token) => kind.includes(token));
+}
+
+function isRecognizedHumanEvidence(log: any): boolean {
+  const kind = String(log?.kind ?? "").trim().toLowerCase();
+  if (!kind) return false;
+  return ["photo", "image", "human", "manual", "inspection", "operator", "onsite"].some((token) => kind.includes(token));
+}
+
 function evaluateReceiptEvidencePolicy(receipt: FactRow | undefined): { executorType: "device" | "human"; valid: boolean } {
   const payload = receipt?.record_json?.payload ?? {};
   const executorTypeRaw = String(payload?.executor_id?.kind ?? payload?.executor_type ?? "device").toLowerCase();
@@ -164,11 +183,13 @@ function evaluateReceiptEvidencePolicy(receipt: FactRow | undefined): { executor
     ...(Array.isArray(payload?.photo_refs) ? payload.photo_refs : []),
     ...logsRefs.filter((x: any) => String(x?.kind ?? "").toLowerCase().includes("photo") || String(x?.kind ?? "").toLowerCase().includes("image")),
   ];
-  const hasLogs = logsRefs.length > 0;
-  const hasMetrics = hasFiniteMetric(payload?.resource_usage);
+  const metrics = Array.isArray(payload?.metrics) ? payload.metrics : [];
+  const hasQualifiedMetrics = hasFiniteMetric(payload?.resource_usage) || metrics.some((m: unknown) => Number.isFinite(Number((m as any)?.value ?? m)));
+  const hasRecognizedDeviceLogs = logsRefs.some((x: any) => isRecognizedDeviceLogEvidence(x));
+  const hasHumanEvidence = logsRefs.some((x: any) => isRecognizedHumanEvidence(x));
   const hasArtifacts = extractReceiptArtifacts(receipt).length > 0;
-  if (executorType === "human") return { executorType, valid: photos.length > 0 || hasArtifacts };
-  return { executorType, valid: hasMetrics || hasLogs || hasArtifacts };
+  if (executorType === "human") return { executorType, valid: photos.length > 0 || hasHumanEvidence || hasArtifacts };
+  return { executorType, valid: hasQualifiedMetrics || hasRecognizedDeviceLogs };
 }
 
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
@@ -274,7 +295,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const acceptanceCompleted = acceptance.verdict === "PASS";
     const hasReceipt = Boolean(receipt);
     const evidenceComplete = receiptHasEvidenceArtifacts(receipt);
-    const invalidExecution = hasReceipt && !evidencePolicy.valid;
+    const executedReceipt = hasExecutedReceiptStatus(receiptStatus);
+    const invalidExecution = hasReceipt && executedReceipt && !evidencePolicy.valid;
     const final_status =
       invalidExecution
         ? "INVALID_EXECUTION"
