@@ -177,6 +177,10 @@ function renderReportHtml(report: any): string {
 <p><b>总成本：</b>¥${Number(report.cost?.total ?? 0).toFixed(2)} &nbsp; <b>水费：</b>¥${Number(report.cost?.water ?? 0).toFixed(2)} &nbsp; <b>电费：</b>¥${Number(report.cost?.electric ?? 0).toFixed(2)}</p>
 <h2>验收</h2>
 <p><b>状态：</b>${escapeHtml(report.acceptance.status)} &nbsp; <b>原因：</b>${escapeHtml(report.acceptance.reason ?? "-")}</p>
+<h2>客户视角结论</h2>
+<p><b>结论：</b>${escapeHtml(report.customer_view?.summary ?? "-")}</p>
+<p><b>建议：</b>${escapeHtml(report.customer_view?.today_action ?? "-")}</p>
+<p><b>风险等级：</b>${escapeHtml(String(report.customer_view?.risk_level ?? "-").toUpperCase())}</p>
 </body></html>`;
 }
 
@@ -255,6 +259,17 @@ async function runEvidenceReportJob(pool: Pool, args: { job_id: string; operatio
       electric: costBreakdown.electric_cost,
       chemical: costBreakdown.chemical_cost,
     },
+    customer_view: finalStatus === "INVALID_EXECUTION"
+      ? {
+        summary: "本次作业未被系统认定为有效执行",
+        today_action: "需重新执行或补充证据",
+        risk_level: "high",
+      }
+      : {
+        summary: "作业已完成，预计改善作物状态",
+        today_action: "继续观察或进入验收",
+        risk_level: "low",
+      },
   };
 
   const outDir = path.resolve(process.cwd(), "runtime", "evidence_reports_v1");

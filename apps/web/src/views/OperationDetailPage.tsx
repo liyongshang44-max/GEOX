@@ -82,6 +82,15 @@ export default function OperationDetailPage(): React.ReactElement {
 
       </section>
 
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">作业结论（客户视角）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结论</span><strong>{model.customerView.summary}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议</span><strong>{model.customerView.todayAction}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险等级</span><strong>{model.customerView.riskLevelLabel}</strong></div>
+        </div>
+      </section>
       <section className="demoContentGrid">
         <OperationExecutionCard task={model.execution} acceptance={model.acceptance} invalidReason={model.invalidReason} />
       </section>

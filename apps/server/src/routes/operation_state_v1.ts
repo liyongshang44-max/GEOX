@@ -398,6 +398,17 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       electric_kwh: normalizedReceipt?.electric_kwh,
       chemical_ml: normalizedReceipt?.chemical_ml,
     });
+    const customerView = invalidExecution
+      ? {
+        summary: "本次作业未被系统认定为有效执行",
+        today_action: "需重新执行或补充证据",
+        risk_level: "high" as const,
+      }
+      : {
+        summary: "作业已完成，预计改善作物状态",
+        today_action: "继续观察或进入验收",
+        risk_level: "low" as const,
+      };
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -463,7 +474,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           water: costBreakdown.water_cost,
           electric: costBreakdown.electric_cost,
           chemical: costBreakdown.chemical_cost
-        }
+        },
+        customer_view: customerView
       }
     });
   });
