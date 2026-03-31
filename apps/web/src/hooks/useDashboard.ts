@@ -29,6 +29,11 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     delayedTaskCount: 0,
     invalidExecutionCount: 0,
   },
+  todayActions: [
+    { type: "INVALID_EXECUTION", count: 0 },
+    { type: "PENDING_ACCEPTANCE", count: 0 },
+    { type: "APPROVAL_REQUIRED", count: 0 },
+  ],
 };
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
@@ -149,6 +154,13 @@ export function useDashboard(api: any): DashboardVm {
           return Number.isFinite(lastEventTs) && lastEventTs > 0 && nowMs - lastEventTs > 2 * 60 * 60 * 1000;
         }).length;
         const invalidExecutionCount = (operationStates ?? []).filter((o: any) => String(o?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION").length;
+        const pendingAcceptanceCount = (operationStates ?? []).filter((o: any) => String(o?.final_status ?? "").toUpperCase() === "PENDING_ACCEPTANCE").length;
+        const approvalRequiredCount = pendingRecommendationCount + pendingApprovalCount;
+        const todayActions = [
+          { type: "INVALID_EXECUTION" as const, count: invalidExecutionCount },
+          { type: "PENDING_ACCEPTANCE" as const, count: pendingAcceptanceCount },
+          { type: "APPROVAL_REQUIRED" as const, count: approvalRequiredCount },
+        ];
 
         setData({
           overview: {
@@ -187,6 +199,7 @@ export function useDashboard(api: any): DashboardVm {
             delayedTaskCount,
             invalidExecutionCount,
           },
+          todayActions,
         });
       } catch {
         setData((d) => ({ ...d }));
