@@ -265,9 +265,11 @@ async function existsRecentRecommendation(
   field_id: string,
   action_type: string,
   reason_code: string,
-): Promise<boolean> {
+): Promise<{ matched: boolean; matched_program_id: string | null; matched_recommendation_id: string | null }> {
   const q = await pool.query(
-    `SELECT 1
+    `SELECT
+        (record_json::jsonb#>>'{payload,program_id}') AS matched_program_id,
+        (record_json::jsonb#>>'{payload,recommendation_id}') AS matched_recommendation_id
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'recommendation_v1'
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
@@ -285,12 +287,26 @@ async function existsRecentRecommendation(
       LIMIT 1`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id, field_id, action_type, reason_code, String(DEDUPE_WINDOW_MINUTES)],
   );
-  return (q.rowCount ?? 0) > 0;
+  const row = (q.rows ?? [])[0] as any;
+  const matchedProgramId = safeString(row?.matched_program_id) || null;
+  const matchedRecommendationId = safeString(row?.matched_recommendation_id) || null;
+  const matched = (q.rowCount ?? 0) > 0 && matchedProgramId === program_id;
+  return {
+    matched,
+    matched_program_id: matchedProgramId,
+    matched_recommendation_id: matchedRecommendationId,
+  };
 }
 
-async function existsPendingOperationPlan(pool: Pool, tenant: TenantTriple, program_id: string): Promise<boolean> {
+async function existsPendingOperationPlan(
+  pool: Pool,
+  tenant: TenantTriple,
+  program_id: string,
+): Promise<{ matched: boolean; matched_program_id: string | null; matched_operation_plan_id: string | null }> {
   const q = await pool.query(
-    `SELECT 1
+    `SELECT
+        (record_json::jsonb#>>'{payload,program_id}') AS matched_program_id,
+        (record_json::jsonb#>>'{payload,operation_plan_id}') AS matched_operation_plan_id
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
@@ -301,7 +317,15 @@ async function existsPendingOperationPlan(pool: Pool, tenant: TenantTriple, prog
       LIMIT 1`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id],
   );
-  return (q.rowCount ?? 0) > 0;
+  const row = (q.rows ?? [])[0] as any;
+  const matchedProgramId = safeString(row?.matched_program_id) || null;
+  const matchedOperationPlanId = safeString(row?.matched_operation_plan_id) || null;
+  const matched = (q.rowCount ?? 0) > 0 && matchedProgramId === program_id;
+  return {
+    matched,
+    matched_program_id: matchedProgramId,
+    matched_operation_plan_id: matchedOperationPlanId,
+  };
 }
 
 async function insertFact(pool: Pool, source: string, record_json: any): Promise<string> {
@@ -516,11 +540,17 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           continue;
         }
 
-        const hasPendingPlan = await existsPendingOperationPlan(pool, selectedProgramItem.tenant, selectedProgramItem.program_id);
-        if (hasPendingPlan) {
+        const pendingPlanDedup = await existsPendingOperationPlan(pool, selectedProgramItem.tenant, selectedProgramItem.program_id);
+        if (pendingPlanDedup.matched) {
           skipped += 1;
           skippedByReason.duplicate += 1;
-          console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgramItem.field_id, program_id: selectedProgramItem.program_id });
+          console.log("[agronomy-agent] skipped:duplicate", {
+            field_id: selectedProgramItem.field_id,
+            program_id: selectedProgramItem.program_id,
+            duplicate_source: "pending_plan",
+            matched_program_id: pendingPlanDedup.matched_program_id,
+            matched_operation_plan_id: pendingPlanDedup.matched_operation_plan_id,
+          });
           console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
           continue;
         }
@@ -565,11 +595,24 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
             break;
           }
         }
-        const duplicated = await existsRecentRecommendation(pool, selectedProgramItem.tenant, selectedProgramItem.program_id, selectedProgramItem.field_id, action_type, reason_code);
-        if (duplicated) {
+        const recentRecommendationDedup = await existsRecentRecommendation(
+          pool,
+          selectedProgramItem.tenant,
+          selectedProgramItem.program_id,
+          selectedProgramItem.field_id,
+          action_type,
+          reason_code,
+        );
+        if (recentRecommendationDedup.matched) {
           skipped += 1;
           skippedByReason.duplicate += 1;
-          console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgramItem.field_id, program_id: selectedProgramItem.program_id });
+          console.log("[agronomy-agent] skipped:duplicate", {
+            field_id: selectedProgramItem.field_id,
+            program_id: selectedProgramItem.program_id,
+            duplicate_source: "recent_recommendation",
+            matched_program_id: recentRecommendationDedup.matched_program_id,
+            matched_recommendation_id: recentRecommendationDedup.matched_recommendation_id,
+          });
           console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
           continue;
         }
