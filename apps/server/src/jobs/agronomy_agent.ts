@@ -201,6 +201,53 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id;
 }
 
+async function createOperationPlanFromRecommendation(
+  pool: Pool,
+  tenant: TenantTriple,
+  input: {
+    recommendation_id: string;
+    program_id: string;
+    field_id: string;
+    season_id: string | null;
+    action_type: string;
+    device_id: string | null;
+  },
+): Promise<string> {
+  const operation_plan_id = `opl_agent_${randomUUID().replace(/-/g, "")}`;
+  const now = Date.now();
+  await insertFact(pool, AGENT_SOURCE, {
+    type: "operation_plan_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      recommendation_id: input.recommendation_id,
+      program_id: input.program_id,
+      field_id: input.field_id,
+      season_id: input.season_id,
+      device_id: input.device_id,
+      action_type: input.action_type,
+      status: "CREATED",
+      created_ts: now,
+      updated_ts: now,
+    },
+  });
+  await insertFact(pool, AGENT_SOURCE, {
+    type: "operation_plan_transition_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      operation_plan_id,
+      status: "CREATED",
+      trigger: "agronomy_agent_auto_create",
+      created_ts: now,
+    },
+  });
+  return operation_plan_id;
+}
+
 export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> {
   console.log("[agronomy-agent] scan start");
   let created = 0;
@@ -219,6 +266,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       loadActivePrograms(pool),
       loadLatestSoilTelemetryByField(pool),
     ]);
+    console.log("[agronomy-agent] scan loaded", { programs: programs.length, telemetry_fields: telemetryRows.length });
     const telemetryByField = new Map(telemetryRows.map((row) => [`${row.tenant_id}::${row.field_id}`, row]));
     const targets = new Map<string, ScanTarget>();
     for (const program of programs) {
@@ -351,6 +399,14 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           created_ts: Date.now(),
           model_version: "agronomy_agent_v1",
         },
+      });
+      await createOperationPlanFromRecommendation(pool, program.tenant, {
+        recommendation_id,
+        program_id: program.program_id,
+        field_id: program.field_id,
+        season_id: program.season_id || null,
+        action_type,
+        device_id: telemetry?.device_id ?? null,
       });
 
       created += 1;
