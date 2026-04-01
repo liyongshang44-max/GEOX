@@ -44,12 +44,12 @@ export type OperationStateV1 = {
   crop_stage: string | null;
   action_type: string | null;
   before_metrics: {
-    soil_moisture?: number;
+    soil_moisture?: number | null;
     temperature?: number;
     humidity?: number;
   };
   after_metrics: {
-    soil_moisture?: number;
+    soil_moisture?: number | null;
     temperature?: number;
     humidity?: number;
   };
@@ -121,6 +121,45 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
     occurred_at: String(row.occurred_at),
     record_json: parseRecordJson(row.record_json) ?? row.record_json
   }));
+}
+
+async function loadBeforeMetrics(pool: Pool, field_id: string, ts: number): Promise<number | null> {
+  try {
+    const result = await pool.query(
+      `SELECT value
+       FROM telemetry
+       WHERE field_id = $1
+         AND metric = 'soil_moisture'
+         AND ts <= $2
+       ORDER BY ts DESC
+       LIMIT 1`,
+      [field_id, ts]
+    );
+    const value = Number(result.rows?.[0]?.value ?? NaN);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadAfterMetrics(pool: Pool, field_id: string, receipt_ts: number): Promise<number | null> {
+  try {
+    const result = await pool.query(
+      `SELECT value
+       FROM telemetry
+       WHERE field_id = $1
+         AND metric = 'soil_moisture'
+         AND ts >= $2
+         AND ts <= $3
+       ORDER BY ts ASC
+       LIMIT 1`,
+      [field_id, receipt_ts + 600000, receipt_ts + 1800000]
+    );
+    const value = Number(result.rows?.[0]?.value ?? NaN);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
@@ -489,5 +528,28 @@ function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | u
 
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
   const facts = await loadFacts(pool, tenant);
-  return projectOperationStateFromFacts(facts);
+  const states = projectOperationStateFromFacts(facts);
+  const enrichedStates = await Promise.all(
+    states.map(async (state) => {
+      if (!state.field_id) return state;
+      const beforeTs = state.timeline[0]?.ts ?? state.last_event_ts;
+      const beforeSoilMoisture = await loadBeforeMetrics(pool, state.field_id, beforeTs);
+      const receiptTs = state.timeline.find((item) => item.type === "RECEIPT_SUBMITTED")?.ts;
+      const afterSoilMoisture = receiptTs
+        ? await loadAfterMetrics(pool, state.field_id, receiptTs)
+        : null;
+      return {
+        ...state,
+        before_metrics: {
+          ...state.before_metrics,
+          soil_moisture: beforeSoilMoisture ?? null,
+        },
+        after_metrics: {
+          ...state.after_metrics,
+          soil_moisture: afterSoilMoisture ?? null,
+        },
+      };
+    })
+  );
+  return enrichedStates;
 }
