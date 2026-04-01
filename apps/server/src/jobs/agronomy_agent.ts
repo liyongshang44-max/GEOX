@@ -379,7 +379,11 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         candidates = programsByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`) ?? [];
       }
       if (!candidates.length) {
-        const fallbackProgram = latestProgramByField.get(`${target.tenant_id}::${target.field_id}`);
+        const fallbackByTenantField = latestProgramByField.get(`${target.tenant_id}::${target.field_id}`);
+        const fallbackByFieldOnly = fallbackByTenantField
+          ? null
+          : latestProgramsByField.find((item) => item.field_id === target.field_id) ?? null;
+        const fallbackProgram = fallbackByTenantField ?? fallbackByFieldOnly;
         candidates = fallbackProgram ? [fallbackProgram] : [];
       }
       const selectedProgram: ProgramBinding | null = candidates[0] ?? null;
@@ -398,6 +402,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         field_id: target.field_id,
         season_id: target.season_id || null,
         selected_program_id: selectedProgram?.program_id ?? null,
+        crop_code: selectedProgram?.crop_code ?? null,
         match_mode: matchMode,
       });
       if (target.field_id === DEBUG_FIELD_ID && (target.season_id || "") === DEBUG_SEASON_ID) {
