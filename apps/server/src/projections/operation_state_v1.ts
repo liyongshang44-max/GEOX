@@ -83,7 +83,7 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
       'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
       'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1',
-      'evidence_artifact_v1'
+      'evidence_artifact_v1','field_program_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (
@@ -197,6 +197,19 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     arr.push(row);
     transitionByPlan.set(operationPlanId, arr);
   }
+  const latestProgramByFieldSeason = latestByKey(
+    facts.filter((r) => r.record_json?.type === "field_program_v1"),
+    (r) => {
+      const fieldId = String(r.record_json?.payload?.field_id ?? "").trim();
+      const seasonId = String(r.record_json?.payload?.season_id ?? "").trim();
+      if (!fieldId) return "";
+      return `${fieldId}::${seasonId}`;
+    }
+  );
+  const latestProgramByField = latestByKey(
+    facts.filter((r) => r.record_json?.type === "field_program_v1"),
+    (r) => String(r.record_json?.payload?.field_id ?? "").trim()
+  );
 
   const states: OperationStateV1[] = [];
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_v1").reverse()) {
@@ -332,6 +345,23 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ? String(receipt.record_json?.payload?.receipt_id ?? receipt.fact_id ?? "").trim() || null
       : null;
 
+    const inferredFieldId = latestNonEmpty(
+      allPlanFacts,
+      (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
+    ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null);
+    const inferredSeasonId = String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null;
+    const inferredProgramFromProgramFact = (() => {
+      if (!inferredFieldId) return null;
+      const fieldSeasonKey = `${inferredFieldId}::${inferredSeasonId ?? ""}`;
+      const seasonMatched = latestProgramByFieldSeason.get(fieldSeasonKey);
+      const fieldMatched = latestProgramByField.get(inferredFieldId);
+      return String(
+        seasonMatched?.record_json?.payload?.program_id
+        ?? fieldMatched?.record_json?.payload?.program_id
+        ?? ""
+      ).trim() || null;
+    })();
+
     states.push({
       operation_id: operation_plan_id,
       operation_plan_id,
@@ -339,7 +369,15 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       approval_id,
       act_task_id: task_id,
       receipt_id,
-      program_id: String(payload.program_id ?? rec?.record_json?.payload?.program_id ?? "").trim() || null,
+      program_id: String(
+        payload.program_id
+        ?? rec?.record_json?.payload?.program_id
+        ?? req?.record_json?.payload?.program_id
+        ?? task?.record_json?.payload?.program_id
+        ?? task?.record_json?.payload?.meta?.program_id
+        ?? inferredProgramFromProgramFact
+        ?? ""
+      ).trim() || null,
       approval_request_id,
       approval_decision_id,
       task_id,
@@ -347,11 +385,8 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.device_id ?? "").trim()
       ) ?? (String(task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null),
-      field_id: latestNonEmpty(
-        allPlanFacts,
-        (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
-      ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null),
-      season_id: String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null,
+      field_id: inferredFieldId,
+      season_id: inferredSeasonId,
       action_type: latestNonEmpty(
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()

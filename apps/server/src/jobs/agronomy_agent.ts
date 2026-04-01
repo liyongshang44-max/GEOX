@@ -12,6 +12,12 @@ type AgentRunResult = {
   scanned: number;
   created: number;
   skipped: number;
+  skipped_by_reason: {
+    no_program: number;
+    no_crop_code: number;
+    no_telemetry: number;
+    duplicate: number;
+  };
 };
 
 type LatestDeviceTelemetry = {
@@ -100,7 +106,7 @@ async function loadProgramBindings(pool: Pool, item: LatestDeviceTelemetry): Pro
         crop_code: safeString(payload.crop_code),
       };
     })
-    .filter((x) => x.program_id && x.crop_code && !blockedStatus.has(x.status))
+    .filter((x) => x.program_id && !blockedStatus.has(x.status))
     .map(({ status: _status, ...rest }) => rest);
 }
 
@@ -145,102 +151,140 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
 
 export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> {
   console.log("[agronomy-agent] scan start");
-  const latestTelemetry = await loadLatestSoilTelemetry(pool);
-
+  let latestTelemetry: LatestDeviceTelemetry[] = [];
   let created = 0;
   let skipped = 0;
+  const skippedByReason: AgentRunResult["skipped_by_reason"] = {
+    no_program: 0,
+    no_crop_code: 0,
+    no_telemetry: 0,
+    duplicate: 0,
+  };
+  let runError: unknown = null;
 
-  for (const item of latestTelemetry) {
-    const bindings = await loadProgramBindings(pool, item);
-    if (!bindings.length) {
-      skipped += 1;
-      continue;
-    }
-    for (const binding of bindings) {
-      if (!binding.tenant.tenant_id || !binding.tenant.project_id || !binding.tenant.group_id) {
+  try {
+    latestTelemetry = await loadLatestSoilTelemetry(pool);
+    for (const item of latestTelemetry) {
+      if (!Number.isFinite(item.soil_moisture)) {
         skipped += 1;
+        skippedByReason.no_telemetry += 1;
+        console.log(`[agronomy-agent] skipped:no_telemetry field=${item.field_id} device=${item.device_id}`);
         continue;
       }
 
-      const agronomy = evaluateAgronomy({
-        crop_code: binding.crop_code,
-        soil_moisture: item.soil_moisture,
-      });
-
-      if (!agronomy.should_irrigate) {
+      const bindings = await loadProgramBindings(pool, item);
+      if (!bindings.length) {
         skipped += 1;
+        skippedByReason.no_program += 1;
+        console.log(`[agronomy-agent] skipped:no_program field=${item.field_id} device=${item.device_id}`);
         continue;
       }
+      for (const binding of bindings) {
+        if (!binding.tenant.tenant_id || !binding.tenant.project_id || !binding.tenant.group_id) {
+          skipped += 1;
+          skippedByReason.no_program += 1;
+          console.log(`[agronomy-agent] skipped:no_program field=${item.field_id} device=${item.device_id}`);
+          continue;
+        }
+        if (!binding.crop_code) {
+          skipped += 1;
+          skippedByReason.no_crop_code += 1;
+          console.log(`[agronomy-agent] skipped:no_crop_code field=${item.field_id} program=${binding.program_id}`);
+          continue;
+        }
 
-      const action_type = "IRRIGATE";
-      const reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-      const duplicated = await existsRecentRecommendation(pool, binding.tenant, binding.program_id, item.field_id, action_type, reason_code);
-      if (duplicated) {
-        skipped += 1;
-        console.log(`[agronomy-agent] skipped duplicate field=${item.field_id}`);
-        continue;
-      }
+        const agronomy = evaluateAgronomy({
+          crop_code: binding.crop_code,
+          soil_moisture: item.soil_moisture,
+        });
 
-      const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
-      const basePayload = {
-        tenant_id: binding.tenant.tenant_id,
-        project_id: binding.tenant.project_id,
-        group_id: binding.tenant.group_id,
-        program_id: binding.program_id,
-        field_id: item.field_id,
-        device_id: item.device_id,
-        season_id: binding.season_id || null,
-        action_type,
-        reason_codes: [reason_code],
-        title: "系统建议",
-        summary: `根据当前作物模型（${binding.crop_code}），建议进行灌溉处理`,
-      };
+        if (!agronomy.should_irrigate) {
+          skipped += 1;
+          continue;
+        }
 
-      await insertFact(pool, AGENT_SOURCE, {
-        type: "recommendation_v1",
-        payload: {
-          ...basePayload,
-          recommendation_id,
-          created_ts: Date.now(),
-        },
-      });
+        const action_type = "IRRIGATE";
+        const reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+        const duplicated = await existsRecentRecommendation(pool, binding.tenant, binding.program_id, item.field_id, action_type, reason_code);
+        if (duplicated) {
+          skipped += 1;
+          skippedByReason.duplicate += 1;
+          console.log(`[agronomy-agent] skipped:duplicate field=${item.field_id} program=${binding.program_id} action=${action_type}`);
+          continue;
+        }
 
-      await insertFact(pool, AGENT_SOURCE, {
-        type: "decision_recommendation_v1",
-        payload: {
-          ...basePayload,
-          recommendation_id,
-          recommendation_type: "irrigation_recommendation_v1",
-          status: "proposed",
-          evidence_refs: ["telemetry:soil_moisture"],
-          rule_hit: [
-            {
-              rule_id: "agronomy_agent_soil_moisture_v1",
-              matched: true,
-              actual: item.soil_moisture,
-            },
-          ],
-          confidence: 0.8,
-          suggested_action: {
-            action_type: "irrigation.start",
-            summary: basePayload.summary,
-            parameters: {
-              program_id: binding.program_id,
-              crop_code: binding.crop_code,
-              soil_moisture: item.soil_moisture,
-            },
+        const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
+        const basePayload = {
+          tenant_id: binding.tenant.tenant_id,
+          project_id: binding.tenant.project_id,
+          group_id: binding.tenant.group_id,
+          program_id: binding.program_id,
+          field_id: item.field_id,
+          device_id: item.device_id,
+          season_id: binding.season_id || null,
+          action_type,
+          reason_codes: [reason_code],
+          title: "系统建议",
+          summary: `根据当前作物模型（${binding.crop_code}），建议进行灌溉处理`,
+        };
+
+        await insertFact(pool, AGENT_SOURCE, {
+          type: "recommendation_v1",
+          payload: {
+            ...basePayload,
+            recommendation_id,
+            created_ts: Date.now(),
           },
-          created_ts: Date.now(),
-          model_version: "agronomy_agent_v1",
-        },
-      });
+        });
 
-      created += 1;
-      console.log(`[agronomy-agent] recommendation created field=${item.field_id} action=IRRIGATE`);
+        await insertFact(pool, AGENT_SOURCE, {
+          type: "decision_recommendation_v1",
+          payload: {
+            ...basePayload,
+            recommendation_id,
+            recommendation_type: "irrigation_recommendation_v1",
+            status: "proposed",
+            evidence_refs: ["telemetry:soil_moisture"],
+            rule_hit: [
+              {
+                rule_id: "agronomy_agent_soil_moisture_v1",
+                matched: true,
+                actual: item.soil_moisture,
+              },
+            ],
+            confidence: 0.8,
+            suggested_action: {
+              action_type: "irrigation.start",
+              summary: basePayload.summary,
+              parameters: {
+                program_id: binding.program_id,
+                crop_code: binding.crop_code,
+                soil_moisture: item.soil_moisture,
+              },
+            },
+            created_ts: Date.now(),
+            model_version: "agronomy_agent_v1",
+          },
+        });
+
+        created += 1;
+        console.log(`[agronomy-agent] recommendation created field=${item.field_id} program=${binding.program_id} action=${action_type}`);
+      }
     }
+  } catch (error: any) {
+    runError = error;
+    console.error(`[agronomy-agent] scan error message=${String(error?.message ?? error)}`);
+  } finally {
+    console.log(
+      `[agronomy-agent] scan done scanned=${latestTelemetry.length} created=${created} skipped=${skipped} ` +
+      `skipped:no_program=${skippedByReason.no_program} skipped:no_crop_code=${skippedByReason.no_crop_code} ` +
+      `skipped:no_telemetry=${skippedByReason.no_telemetry} skipped:duplicate=${skippedByReason.duplicate}`,
+    );
   }
-
-  return { scanned: latestTelemetry.length, created, skipped };
+  if (runError) {
+    // Keep runtime alive and report partial counters for observability.
+  }
+  return { scanned: latestTelemetry.length, created, skipped, skipped_by_reason: skippedByReason };
 }
 
 export type { AgentRunResult, TenantTriple };
