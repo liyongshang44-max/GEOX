@@ -43,10 +43,24 @@ function parseRecordJson(v: unknown): any {
 function toText(v: unknown): string | null {
   if (typeof v === "string") {
     const x = v.trim();
-    return x || null;
+    return x ? repairMojibakeText(x) : null;
   }
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return null;
+}
+
+function repairMojibakeText(input: string): string {
+  const text = String(input ?? "");
+  if (!text) return text;
+  const suspicious = /[ÃÂâ][\x80-\xBF]?|å|ç|æ|ï|ð/.test(text);
+  if (!suspicious) return text;
+  try {
+    const repaired = Buffer.from(text, "latin1").toString("utf8");
+    if (/[\u4e00-\u9fff]/.test(repaired)) return repaired;
+  } catch {
+    return text;
+  }
+  return text;
 }
 
 function toMs(v: unknown): number | null {
@@ -472,6 +486,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/operations/:operationPlanId/detail", async (req, reply) => {
+    reply.type("application/json; charset=utf-8");
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);

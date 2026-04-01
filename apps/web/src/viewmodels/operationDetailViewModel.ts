@@ -117,10 +117,25 @@ export type OperationDetailPageVm = {
 function toText(v: unknown, fallback = "-"): string {
   if (typeof v === "string") {
     const x = v.trim();
-    return x || fallback;
+    return x ? repairMojibakeText(x) : fallback;
   }
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return fallback;
+}
+
+function repairMojibakeText(input: string): string {
+  const text = String(input ?? "");
+  if (!text) return text;
+  const suspicious = /[ÃÂâ][\x80-\xBF]?|å|ç|æ|ï|ð/.test(text);
+  if (!suspicious) return text;
+  try {
+    const bytes = Uint8Array.from(text, (ch) => ch.charCodeAt(0) & 0xff);
+    const repaired = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    if (/[\u4e00-\u9fff]/.test(repaired)) return repaired;
+  } catch {
+    return text;
+  }
+  return text;
 }
 
 function toDateLabel(v: unknown): string {
