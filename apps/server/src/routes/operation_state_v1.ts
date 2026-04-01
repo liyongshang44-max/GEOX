@@ -514,6 +514,18 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       toExpectedEffect(recommendationPayload)
       ?? (resolvedActionType === "IRRIGATE" ? { type: "moisture_increase" as const, value: 10 } : null);
     const actualEffect = computeEffect(beforeMetrics, afterMetrics);
+    const beforeMetricsForResponse = {
+      ...beforeMetrics,
+      soil_moisture: Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN))
+        ? Number(beforeMetrics?.soil_moisture)
+        : null,
+    };
+    const afterMetricsForResponse = {
+      ...afterMetrics,
+      soil_moisture: Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN))
+        ? Number(afterMetrics?.soil_moisture)
+        : null,
+    };
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -629,8 +641,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         agronomy: {
           crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
           crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
-          before_metrics: beforeMetrics,
-          after_metrics: afterMetrics,
+          before_metrics: beforeMetricsForResponse,
+          after_metrics: afterMetricsForResponse,
           expected_effect: expectedEffect,
           actual_effect: actualEffect
         },
