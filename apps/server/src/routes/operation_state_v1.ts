@@ -58,6 +58,15 @@ function toMs(v: unknown): number | null {
   return null;
 }
 
+function normalizeDeviceId(v: unknown): string | null {
+  const raw = toText(v);
+  if (!raw) return null;
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "dev_unknown" || normalized === "unknown") return "unknown";
+  return raw;
+}
+
 type OperationMetricsSnapshot = {
   soil_moisture?: number;
   temperature?: number;
@@ -460,7 +469,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     });
     const operationPayload = plan?.record_json?.payload ?? {};
     const recommendationPayload = rec?.record_json?.payload ?? {};
-    const detailDeviceId = toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
+    const taskDeviceId = normalizeDeviceId(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
+    const receiptDeviceId = normalizeDeviceId(normalizedReceipt?.device_id);
+    const executorDeviceId = receiptDeviceId ?? taskDeviceId ?? "unknown";
+    const detailDeviceId = executorDeviceId === "unknown" ? null : executorDeviceId;
     const executionStartMs = toMs(normalizedReceipt?.execution_started_at ?? task?.occurred_at ?? receiptFact?.occurred_at);
     const receiptMs = toMs(receiptFact?.occurred_at ?? normalizedReceipt?.execution_finished_at ?? normalizedReceipt?.execution_started_at);
     const afterWindowMinutes = 20;
@@ -497,14 +509,23 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ).catch(() => ({ rows: [] as any[] }));
       afterMetrics = buildMetricsSnapshot(afterTelemetryQ.rows ?? []);
     }
-    const expectedEffect = toExpectedEffect(recommendationPayload);
-    const computedEffect = computeEffect(beforeMetrics, afterMetrics);
-    const actualEffect = computedEffect == null
-      ? null
-      : {
-        type: expectedEffect?.type ?? "moisture_increase",
-        value: computedEffect.moisture_delta
-      };
+    const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
+    const expectedEffect =
+      toExpectedEffect(recommendationPayload)
+      ?? (resolvedActionType === "IRRIGATE" ? { type: "moisture_increase" as const, value: 10 } : null);
+    const actualEffect = computeEffect(beforeMetrics, afterMetrics);
+    const beforeMetricsForResponse = {
+      ...beforeMetrics,
+      soil_moisture: Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN))
+        ? Number(beforeMetrics?.soil_moisture)
+        : null,
+    };
+    const afterMetricsForResponse = {
+      ...afterMetrics,
+      soil_moisture: Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN))
+        ? Number(afterMetrics?.soil_moisture)
+        : null,
+    };
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -569,6 +590,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         final_status: finalStatus,
         status_label: statusLabel(finalStatus),
         invalid_reason: invalidReason,
+        executor_device_id: executorDeviceId,
         recommendation: rec ? {
           recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
           title: toText(rec?.record_json?.payload?.title) ?? "系统建议",
@@ -586,7 +608,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         task: task ? {
           task_id: toText(task?.record_json?.payload?.act_task_id ?? state.task_id),
           action_type: toText(task?.record_json?.payload?.action_type ?? state.action_type),
-          device_id: toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id),
+          device_id: executorDeviceId,
           executor_label: toText(task?.record_json?.payload?.executor_label ?? task?.record_json?.payload?.executor_id?.label),
           dispatched_at: task?.occurred_at ?? null,
           acked_at: toText(task?.record_json?.payload?.acked_at ?? task?.record_json?.payload?.ack_ts)
@@ -619,8 +641,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         agronomy: {
           crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
           crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
-          before_metrics: beforeMetrics,
-          after_metrics: afterMetrics,
+          before_metrics: beforeMetricsForResponse,
+          after_metrics: afterMetricsForResponse,
           expected_effect: expectedEffect,
           actual_effect: actualEffect
         },
