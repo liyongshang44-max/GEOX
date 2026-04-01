@@ -36,6 +36,34 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   ],
 };
 
+function normalizePercentMetric(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 0 && n <= 1) return Number((n * 100).toFixed(2));
+  return Number(n.toFixed(2));
+}
+
+function normalizeTemperatureMetric(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Number(n.toFixed(2));
+}
+
+function normalizeModelMetrics(metrics: any): any {
+  if (!metrics || typeof metrics !== "object") return metrics;
+  return {
+    ...metrics,
+    soil_moisture: normalizePercentMetric(metrics.soil_moisture),
+    temperature: normalizeTemperatureMetric(metrics.temperature),
+    humidity: normalizePercentMetric(metrics.humidity),
+    units: {
+      soil_moisture: "%",
+      temperature: "°C",
+      humidity: "%",
+    },
+  };
+}
+
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
   const t = title.toLowerCase();
   if (t.includes("旱") || t.includes("dry") || t.includes("moisture")) return "干旱";
@@ -124,7 +152,10 @@ export function useDashboard(api: any): DashboardVm {
           };
         });
 
-        const recommendationList = recommendationItems ?? [];
+        const recommendationList = (recommendationItems ?? []).map((item: any) => ({
+          ...item,
+          normalized_metrics: normalizeModelMetrics(item?.metrics ?? item?.model_metrics),
+        }));
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -181,6 +212,12 @@ export function useDashboard(api: any): DashboardVm {
             isPendingAcceptance: Boolean(item?.is_pending_acceptance ?? (item?.receipt_fact_id && String(item?.acceptance_verdict ?? "PENDING").toUpperCase() !== "PASS")),
             card: mapDashboardEvidenceToVm({
               ...item,
+              normalized_metrics: normalizeModelMetrics(
+                item?.normalized_metrics
+                ?? item?.summary?.metrics
+                ?? item?.summary?.before_metrics
+                ?? item?.summary?.after_metrics,
+              ),
               href: toOperationDetailPath(item),
             }),
           })),
