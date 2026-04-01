@@ -56,6 +56,7 @@ export async function runJobsRuntime(): Promise<void> {
   const intervalMs = parseIntervalMs();
   const pool = createPool();
   console.log(`INFO: jobs runtime started interval_ms=${intervalMs}`);
+  console.log(`INFO: agronomy agent enabled=${process.env.AGRONOMY_AGENT_ENABLED === "1" ? "1" : "0"}`);
 
   while (true) {
     try {

@@ -22,6 +22,7 @@ type LatestDeviceTelemetry = {
 };
 
 type ProgramBinding = {
+  program_id: string;
   tenant: TenantTriple;
   season_id: string;
   crop_code: string;
@@ -71,37 +72,42 @@ async function loadLatestSoilTelemetry(pool: Pool): Promise<LatestDeviceTelemetr
   })).filter((row) => row.tenant_id && row.device_id && row.field_id && Number.isFinite(row.soil_moisture));
 }
 
-async function loadProgramBinding(pool: Pool, item: LatestDeviceTelemetry): Promise<ProgramBinding | null> {
+async function loadProgramBindings(pool: Pool, item: LatestDeviceTelemetry): Promise<ProgramBinding[]> {
   const q = await pool.query(
-    `SELECT record_json
+    `SELECT DISTINCT ON ((record_json::jsonb#>>'{payload,program_id}'))
+        record_json
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'field_program_v1'
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
         AND (record_json::jsonb#>>'{payload,field_id}') = $2
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 1`,
+      ORDER BY (record_json::jsonb#>>'{payload,program_id}'), occurred_at DESC, fact_id DESC`,
     [item.tenant_id, item.field_id],
   );
-  if (!q.rows?.length) return null;
-
-  const payload = q.rows[0]?.record_json?.payload ?? {};
-  const crop_code = safeString(payload.crop_code);
-  if (!crop_code) return null;
-
-  return {
-    tenant: {
-      tenant_id: safeString(payload.tenant_id) || item.tenant_id,
-      project_id: safeString(payload.project_id),
-      group_id: safeString(payload.group_id),
-    },
-    season_id: safeString(payload.season_id),
-    crop_code,
-  };
+  const blockedStatus = new Set(["CANCELLED", "COMPLETED", "ARCHIVED"]);
+  return (q.rows ?? [])
+    .map((row: any) => row?.record_json?.payload ?? {})
+    .map((payload: any) => {
+      const status = safeString(payload.status).toUpperCase();
+      return {
+        status,
+        program_id: safeString(payload.program_id),
+        tenant: {
+          tenant_id: safeString(payload.tenant_id) || item.tenant_id,
+          project_id: safeString(payload.project_id),
+          group_id: safeString(payload.group_id),
+        },
+        season_id: safeString(payload.season_id),
+        crop_code: safeString(payload.crop_code),
+      };
+    })
+    .filter((x) => x.program_id && x.crop_code && !blockedStatus.has(x.status))
+    .map(({ status: _status, ...rest }) => rest);
 }
 
 async function existsRecentRecommendation(
   pool: Pool,
   tenant: TenantTriple,
+  program_id: string,
   field_id: string,
   action_type: string,
   reason_code: string,
@@ -113,16 +119,17 @@ async function existsRecentRecommendation(
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
         AND (record_json::jsonb#>>'{payload,project_id}') = $2
         AND (record_json::jsonb#>>'{payload,group_id}') = $3
-        AND (record_json::jsonb#>>'{payload,field_id}') = $4
-        AND (record_json::jsonb#>>'{payload,action_type}') = $5
+        AND (record_json::jsonb#>>'{payload,program_id}') = $4
+        AND (record_json::jsonb#>>'{payload,field_id}') = $5
+        AND (record_json::jsonb#>>'{payload,action_type}') = $6
         AND EXISTS (
           SELECT 1
           FROM jsonb_array_elements_text(COALESCE(record_json::jsonb#>'{payload,reason_codes}', '[]'::jsonb)) AS r(code)
-          WHERE r.code = $6
+          WHERE r.code = $7
         )
-        AND occurred_at >= NOW() - ($7::text || ' minutes')::interval
+        AND occurred_at >= NOW() - ($8::text || ' minutes')::interval
       LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, field_id, action_type, reason_code, String(DEDUPE_WINDOW_MINUTES)],
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id, field_id, action_type, reason_code, String(DEDUPE_WINDOW_MINUTES)],
   );
   return (q.rowCount ?? 0) > 0;
 }
@@ -144,89 +151,93 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
   let skipped = 0;
 
   for (const item of latestTelemetry) {
-    const binding = await loadProgramBinding(pool, item);
-    if (!binding) {
+    const bindings = await loadProgramBindings(pool, item);
+    if (!bindings.length) {
       skipped += 1;
       continue;
     }
-    if (!binding.tenant.tenant_id || !binding.tenant.project_id || !binding.tenant.group_id) {
-      skipped += 1;
-      continue;
-    }
+    for (const binding of bindings) {
+      if (!binding.tenant.tenant_id || !binding.tenant.project_id || !binding.tenant.group_id) {
+        skipped += 1;
+        continue;
+      }
 
-    const agronomy = evaluateAgronomy({
-      crop_code: binding.crop_code,
-      soil_moisture: item.soil_moisture,
-    });
+      const agronomy = evaluateAgronomy({
+        crop_code: binding.crop_code,
+        soil_moisture: item.soil_moisture,
+      });
 
-    if (!agronomy.should_irrigate) {
-      skipped += 1;
-      continue;
-    }
+      if (!agronomy.should_irrigate) {
+        skipped += 1;
+        continue;
+      }
 
-    const action_type = "IRRIGATE";
-    const reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-    const duplicated = await existsRecentRecommendation(pool, binding.tenant, item.field_id, action_type, reason_code);
-    if (duplicated) {
-      skipped += 1;
-      console.log(`[agronomy-agent] skipped duplicate field=${item.field_id}`);
-      continue;
-    }
+      const action_type = "IRRIGATE";
+      const reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+      const duplicated = await existsRecentRecommendation(pool, binding.tenant, binding.program_id, item.field_id, action_type, reason_code);
+      if (duplicated) {
+        skipped += 1;
+        console.log(`[agronomy-agent] skipped duplicate field=${item.field_id}`);
+        continue;
+      }
 
-    const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
-    const basePayload = {
-      tenant_id: binding.tenant.tenant_id,
-      project_id: binding.tenant.project_id,
-      group_id: binding.tenant.group_id,
-      field_id: item.field_id,
-      device_id: item.device_id,
-      season_id: binding.season_id || null,
-      action_type,
-      reason_codes: [reason_code],
-      title: "系统建议",
-      summary: "根据当前作物模型，建议进行灌溉处理",
-    };
+      const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
+      const basePayload = {
+        tenant_id: binding.tenant.tenant_id,
+        project_id: binding.tenant.project_id,
+        group_id: binding.tenant.group_id,
+        program_id: binding.program_id,
+        field_id: item.field_id,
+        device_id: item.device_id,
+        season_id: binding.season_id || null,
+        action_type,
+        reason_codes: [reason_code],
+        title: "系统建议",
+        summary: `根据当前作物模型（${binding.crop_code}），建议进行灌溉处理`,
+      };
 
-    await insertFact(pool, AGENT_SOURCE, {
-      type: "recommendation_v1",
-      payload: {
-        ...basePayload,
-        recommendation_id,
-        created_ts: Date.now(),
-      },
-    });
-
-    await insertFact(pool, AGENT_SOURCE, {
-      type: "decision_recommendation_v1",
-      payload: {
-        ...basePayload,
-        recommendation_id,
-        recommendation_type: "irrigation_recommendation_v1",
-        status: "proposed",
-        evidence_refs: ["telemetry:soil_moisture"],
-        rule_hit: [
-          {
-            rule_id: "agronomy_agent_soil_moisture_v1",
-            matched: true,
-            actual: item.soil_moisture,
-          },
-        ],
-        confidence: 0.8,
-        suggested_action: {
-          action_type: "irrigation.start",
-          summary: basePayload.summary,
-          parameters: {
-            crop_code: binding.crop_code,
-            soil_moisture: item.soil_moisture,
-          },
+      await insertFact(pool, AGENT_SOURCE, {
+        type: "recommendation_v1",
+        payload: {
+          ...basePayload,
+          recommendation_id,
+          created_ts: Date.now(),
         },
-        created_ts: Date.now(),
-        model_version: "agronomy_agent_v1",
-      },
-    });
+      });
 
-    created += 1;
-    console.log(`[agronomy-agent] recommendation created field=${item.field_id} action=IRRIGATE`);
+      await insertFact(pool, AGENT_SOURCE, {
+        type: "decision_recommendation_v1",
+        payload: {
+          ...basePayload,
+          recommendation_id,
+          recommendation_type: "irrigation_recommendation_v1",
+          status: "proposed",
+          evidence_refs: ["telemetry:soil_moisture"],
+          rule_hit: [
+            {
+              rule_id: "agronomy_agent_soil_moisture_v1",
+              matched: true,
+              actual: item.soil_moisture,
+            },
+          ],
+          confidence: 0.8,
+          suggested_action: {
+            action_type: "irrigation.start",
+            summary: basePayload.summary,
+            parameters: {
+              program_id: binding.program_id,
+              crop_code: binding.crop_code,
+              soil_moisture: item.soil_moisture,
+            },
+          },
+          created_ts: Date.now(),
+          model_version: "agronomy_agent_v1",
+        },
+      });
+
+      created += 1;
+      console.log(`[agronomy-agent] recommendation created field=${item.field_id} action=IRRIGATE`);
+    }
   }
 
   return { scanned: latestTelemetry.length, created, skipped };
