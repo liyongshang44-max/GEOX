@@ -246,7 +246,7 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
 
     out.push({
       program_id: programId,
-      name: str(p.name) || null,
+      name: str(p.name) || str(p.program_name) || null,
       field_id: fieldId,
       season_id: seasonId,
       crop_code: str(p.crop_code),

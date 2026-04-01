@@ -22,6 +22,7 @@ const ProgramCreateBodySchema = z.object({
   project_id: z.string().min(1).optional(),
   group_id: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
+  program_name: z.string().min(1).optional(),
   program_id: z.string().min(1).optional(),
   field_id: z.string().min(1),
   season_id: z.string().min(1),
@@ -131,7 +132,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        name: body.name ?? null,
+        name: body.name ?? body.program_name ?? null,
         program_id,
         field_id,
         season_id,
@@ -164,7 +165,11 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
     if (q.status) items = items.filter((x) => x.status === String(q.status));
-    return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
+    const normalized = items.slice(0, limit).map((item: any) => ({
+      ...item,
+      name: String(item?.name ?? item?.program_name ?? "").trim() || null
+    }));
+    return reply.send({ ok: true, count: normalized.length, items: normalized });
   });
 
   get("/api/v1/program-portfolio", async (req: any, reply: any) => {
