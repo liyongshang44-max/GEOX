@@ -371,27 +371,39 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       arr.push(program);
       programsByTarget.set(key, arr);
     }
-    const latestProgramByField = new Map(latestProgramsByField.map((program) => [`${program.tenant.tenant_id}::${program.field_id}`, program]));
     for (const target of targets.values()) {
       scannedCount += 1;
       const hasSeasonId = safeString(target.season_id).length > 0;
-      const matchMode = hasSeasonId ? "field+season" : "field_fallback";
+      let matchMode = hasSeasonId ? "field+season" : "field_fallback";
       let rawCandidates: ProgramBinding[] = [];
       if (hasSeasonId) {
         rawCandidates = programsByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`) ?? [];
       }
       if (!rawCandidates.length) {
-        const fallbackByTenantField = latestProgramByField.get(`${target.tenant_id}::${target.field_id}`);
-        const fallbackByFieldOnly = fallbackByTenantField
-          ? null
-          : latestProgramsByField.find((item) => item.field_id === target.field_id) ?? null;
-        const fallbackProgram = fallbackByTenantField ?? fallbackByFieldOnly;
-        rawCandidates = fallbackProgram ? [fallbackProgram] : [];
+        const fallbackByTenantField = latestProgramsByField.filter(
+          (item) => item.tenant.tenant_id === target.tenant_id && item.field_id === target.field_id,
+        );
+        const fallbackByFieldOnly = fallbackByTenantField.length
+          ? []
+          : latestProgramsByField.filter((item) => item.field_id === target.field_id);
+        rawCandidates = fallbackByTenantField.length ? fallbackByTenantField : fallbackByFieldOnly;
+        matchMode = "field_fallback";
+      }
+      let candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
+      if (!candidates.length && hasSeasonId) {
+        const fallbackByTenantField = latestProgramsByField.filter(
+          (item) => item.tenant.tenant_id === target.tenant_id && item.field_id === target.field_id,
+        );
+        const fallbackByFieldOnly = fallbackByTenantField.length
+          ? []
+          : latestProgramsByField.filter((item) => item.field_id === target.field_id);
+        rawCandidates = fallbackByTenantField.length ? fallbackByTenantField : fallbackByFieldOnly;
+        candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
+        matchMode = "field_fallback";
       }
       const rejectedProgramStatuses = rawCandidates
         .filter((candidate) => !ALLOWED_PROGRAM_STATUSES.has(candidate.status))
         .map((candidate) => candidate.status || "UNKNOWN");
-      const candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
       const selectedProgram: ProgramBinding | null = candidates[0] ?? null;
       const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
       const programHit = candidates.length;
