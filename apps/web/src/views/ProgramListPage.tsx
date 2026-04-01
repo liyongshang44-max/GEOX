@@ -15,8 +15,10 @@ function toText(v: unknown, fallback = ""): string {
 }
 
 function planName(item: any): string {
-  const title = toText(item?.title || item?.display_name || item?.program_name, "");
-  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) return title;
+  const title = toText(item?.name || item?.title || item?.display_name || item?.program_name, "");
+  if (title) return title;
+  const programId = toText(item?.program_id, "");
+  if (programId) return programId;
   const crop = toText(item?.crop_name || item?.crop_code, "");
   return crop ? `${crop}经营方案` : "默认经营方案";
 }
@@ -114,6 +116,7 @@ export default function ProgramListPage(): React.ReactElement {
         </p>
         <div className="operationsSummaryActions">
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新方案</button>
+          <Link className="btn" to="/programs/new">新建方案</Link>
           <Link className="btn" to="/agronomy">查看农业建议</Link>
         </div>
       </section>

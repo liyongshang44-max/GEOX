@@ -2,6 +2,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { Pool } from "pg";
 import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1";
 import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1";
+import { runAgronomyAgentOnce } from "./agronomy_agent";
 
 const DEFAULT_INTERVAL_MS = 5000;
 
@@ -35,6 +36,10 @@ async function runOnce(pool: Pool): Promise<void> {
     }
   }
 
+  if (process.env.AGRONOMY_AGENT_ENABLED === "1") {
+    await runAgronomyAgentOnce(pool);
+  }
+
   const reportJobs = await fetchPendingEvidenceReportJobs(pool);
   for (const job of reportJobs) {
     try {
@@ -51,6 +56,7 @@ export async function runJobsRuntime(): Promise<void> {
   const intervalMs = parseIntervalMs();
   const pool = createPool();
   console.log(`INFO: jobs runtime started interval_ms=${intervalMs}`);
+  console.log(`INFO: agronomy agent enabled=${process.env.AGRONOMY_AGENT_ENABLED === "1" ? "1" : "0"}`);
 
   while (true) {
     try {

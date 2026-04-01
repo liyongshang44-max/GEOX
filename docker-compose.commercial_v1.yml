@@ -164,6 +164,7 @@ services:
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
       GEOX_MQTT_URL: mqtt://mqtt:1883
+      AGRONOMY_AGENT_ENABLED: "1"
     depends_on:
       postgres:
         condition: service_healthy
