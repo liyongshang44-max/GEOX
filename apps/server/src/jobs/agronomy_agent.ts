@@ -97,111 +97,142 @@ async function loadLatestSoilTelemetryByField(pool: Pool): Promise<LatestFieldTe
 
 async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
   const q = await pool.query(
-    `WITH ranked_programs AS (
-      SELECT
-        record_json,
-        ROW_NUMBER() OVER (
-          PARTITION BY
-            (record_json::jsonb#>>'{payload,tenant_id}'),
-            (record_json::jsonb#>>'{payload,field_id}'),
-            (record_json::jsonb#>>'{payload,season_id}')
-          ORDER BY
-            CASE WHEN (record_json::jsonb#>>'{payload,program_id}') LIKE 'prg_chain_%' THEN 1 ELSE 0 END ASC,
-            CASE
-              WHEN COALESCE((record_json::jsonb#>>'{payload,updated_ts}'), '') ~ '^[0-9]+$'
-              THEN (record_json::jsonb#>>'{payload,updated_ts}')::bigint
-              ELSE 0
-            END DESC,
-            CASE
-              WHEN COALESCE((record_json::jsonb#>>'{payload,created_ts}'), '') ~ '^[0-9]+$'
-              THEN (record_json::jsonb#>>'{payload,created_ts}')::bigint
-              ELSE 0
-            END DESC,
-            occurred_at DESC,
-            fact_id DESC
-        ) AS rn
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
-    )
-    SELECT record_json
-    FROM ranked_programs
-    WHERE rn = 1`,
+    `SELECT
+      (record_json::jsonb#>>'{payload,program_id}') AS program_id,
+      (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+      (record_json::jsonb#>>'{payload,season_id}') AS season_id,
+      (record_json::jsonb#>>'{payload,tenant_id}') AS tenant_id,
+      (record_json::jsonb#>>'{payload,project_id}') AS project_id,
+      (record_json::jsonb#>>'{payload,group_id}') AS group_id,
+      (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+      (record_json::jsonb#>>'{payload,status}') AS status,
+      (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
+      (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
+      occurred_at,
+      fact_id
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'field_program_v1'`,
   );
 
   const blockedStatus = new Set(["CANCELLED", "COMPLETED", "ARCHIVED"]);
-  return (q.rows ?? [])
-    .map((row: any) => row?.record_json?.payload ?? {})
-    .map((payload: any) => {
-      const status = safeString(payload.status).toUpperCase();
+  const parsed = (q.rows ?? [])
+    .map((row: any) => {
+      const updatedTs = safeString(row.updated_ts);
+      const createdTs = safeString(row.created_ts);
       return {
-        status,
-        program_id: safeString(payload.program_id),
-        field_id: safeString(payload.field_id),
-        season_id: safeString(payload.season_id),
+        status: safeString(row.status).toUpperCase(),
+        program_id: safeString(row.program_id),
+        field_id: safeString(row.field_id),
+        season_id: safeString(row.season_id),
         tenant: {
-          tenant_id: safeString(payload.tenant_id),
-          project_id: safeString(payload.project_id),
-          group_id: safeString(payload.group_id),
+          tenant_id: safeString(row.tenant_id),
+          project_id: safeString(row.project_id),
+          group_id: safeString(row.group_id),
         },
-        crop_code: safeString(payload.crop_code),
+        crop_code: safeString(row.crop_code),
+        updated_ts: /^[0-9]+$/.test(updatedTs) ? Number(updatedTs) : 0,
+        created_ts: /^[0-9]+$/.test(createdTs) ? Number(createdTs) : 0,
+        occurred_at_ms: row.occurred_at ? new Date(row.occurred_at).getTime() : 0,
+        fact_id: safeString(row.fact_id),
       };
     })
-    .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
-    .map((item) => ({ ...item, status: String(item.status ?? "").toUpperCase() }));
+    .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status));
+
+  parsed.sort((a, b) => {
+    const chainA = a.program_id.startsWith("prg_chain_") ? 1 : 0;
+    const chainB = b.program_id.startsWith("prg_chain_") ? 1 : 0;
+    if (chainA !== chainB) return chainA - chainB;
+    if (a.updated_ts !== b.updated_ts) return b.updated_ts - a.updated_ts;
+    if (a.created_ts !== b.created_ts) return b.created_ts - a.created_ts;
+    if (a.occurred_at_ms !== b.occurred_at_ms) return b.occurred_at_ms - a.occurred_at_ms;
+    return b.fact_id.localeCompare(a.fact_id);
+  });
+
+  const dedup = new Map<string, ProgramBinding>();
+  for (const item of parsed) {
+    const key = `${item.tenant.tenant_id}::${item.field_id}::${item.season_id}`;
+    if (!dedup.has(key)) {
+      dedup.set(key, {
+        program_id: item.program_id,
+        field_id: item.field_id,
+        season_id: item.season_id,
+        tenant: item.tenant,
+        crop_code: item.crop_code,
+        status: item.status,
+      });
+    }
+  }
+  return Array.from(dedup.values());
 }
 
 async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> {
   const q = await pool.query(
-    `WITH ranked_programs AS (
-      SELECT
-        record_json,
-        ROW_NUMBER() OVER (
-          PARTITION BY
-            (record_json::jsonb#>>'{payload,tenant_id}'),
-            (record_json::jsonb#>>'{payload,field_id}')
-          ORDER BY
-            CASE WHEN (record_json::jsonb#>>'{payload,program_id}') LIKE 'prg_chain_%' THEN 1 ELSE 0 END ASC,
-            CASE
-              WHEN COALESCE((record_json::jsonb#>>'{payload,updated_ts}'), '') ~ '^[0-9]+$'
-              THEN (record_json::jsonb#>>'{payload,updated_ts}')::bigint
-              ELSE 0
-            END DESC,
-            CASE
-              WHEN COALESCE((record_json::jsonb#>>'{payload,created_ts}'), '') ~ '^[0-9]+$'
-              THEN (record_json::jsonb#>>'{payload,created_ts}')::bigint
-              ELSE 0
-            END DESC,
-            occurred_at DESC,
-            fact_id DESC
-        ) AS rn
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
-    )
-    SELECT record_json
-    FROM ranked_programs
-    WHERE rn = 1`,
+    `SELECT
+      (record_json::jsonb#>>'{payload,program_id}') AS program_id,
+      (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+      (record_json::jsonb#>>'{payload,season_id}') AS season_id,
+      (record_json::jsonb#>>'{payload,tenant_id}') AS tenant_id,
+      (record_json::jsonb#>>'{payload,project_id}') AS project_id,
+      (record_json::jsonb#>>'{payload,group_id}') AS group_id,
+      (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+      (record_json::jsonb#>>'{payload,status}') AS status,
+      (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
+      (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
+      occurred_at,
+      fact_id
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'field_program_v1'`,
   );
 
   const blockedStatus = new Set(["CANCELLED", "COMPLETED", "ARCHIVED"]);
-  return (q.rows ?? [])
-    .map((row: any) => row?.record_json?.payload ?? {})
-    .map((payload: any) => {
-      const status = safeString(payload.status).toUpperCase();
+  const parsed = (q.rows ?? [])
+    .map((row: any) => {
+      const updatedTs = safeString(row.updated_ts);
+      const createdTs = safeString(row.created_ts);
       return {
-        status,
-        program_id: safeString(payload.program_id),
-        field_id: safeString(payload.field_id),
-        season_id: safeString(payload.season_id),
+        status: safeString(row.status).toUpperCase(),
+        program_id: safeString(row.program_id),
+        field_id: safeString(row.field_id),
+        season_id: safeString(row.season_id),
         tenant: {
-          tenant_id: safeString(payload.tenant_id),
-          project_id: safeString(payload.project_id),
-          group_id: safeString(payload.group_id),
+          tenant_id: safeString(row.tenant_id),
+          project_id: safeString(row.project_id),
+          group_id: safeString(row.group_id),
         },
-        crop_code: safeString(payload.crop_code),
+        crop_code: safeString(row.crop_code),
+        updated_ts: /^[0-9]+$/.test(updatedTs) ? Number(updatedTs) : 0,
+        created_ts: /^[0-9]+$/.test(createdTs) ? Number(createdTs) : 0,
+        occurred_at_ms: row.occurred_at ? new Date(row.occurred_at).getTime() : 0,
+        fact_id: safeString(row.fact_id),
       };
     })
-    .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
-    .map((item) => ({ ...item, status: String(item.status ?? "").toUpperCase() }));
+    .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status));
+
+  parsed.sort((a, b) => {
+    const chainA = a.program_id.startsWith("prg_chain_") ? 1 : 0;
+    const chainB = b.program_id.startsWith("prg_chain_") ? 1 : 0;
+    if (chainA !== chainB) return chainA - chainB;
+    if (a.updated_ts !== b.updated_ts) return b.updated_ts - a.updated_ts;
+    if (a.created_ts !== b.created_ts) return b.created_ts - a.created_ts;
+    if (a.occurred_at_ms !== b.occurred_at_ms) return b.occurred_at_ms - a.occurred_at_ms;
+    return b.fact_id.localeCompare(a.fact_id);
+  });
+
+  const dedup = new Map<string, ProgramBinding>();
+  for (const item of parsed) {
+    const key = `${item.tenant.tenant_id}::${item.field_id}`;
+    if (!dedup.has(key)) {
+      dedup.set(key, {
+        program_id: item.program_id,
+        field_id: item.field_id,
+        season_id: item.season_id,
+        tenant: item.tenant,
+        crop_code: item.crop_code,
+        status: item.status,
+      });
+    }
+  }
+  return Array.from(dedup.values());
 }
 
 async function loadDebugProgramCandidatesForField(pool: Pool): Promise<any[]> {
@@ -371,27 +402,39 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       arr.push(program);
       programsByTarget.set(key, arr);
     }
-    const latestProgramByField = new Map(latestProgramsByField.map((program) => [`${program.tenant.tenant_id}::${program.field_id}`, program]));
     for (const target of targets.values()) {
       scannedCount += 1;
       const hasSeasonId = safeString(target.season_id).length > 0;
-      const matchMode = hasSeasonId ? "field+season" : "field_fallback";
+      let matchMode = hasSeasonId ? "field+season" : "field_fallback";
       let rawCandidates: ProgramBinding[] = [];
       if (hasSeasonId) {
         rawCandidates = programsByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`) ?? [];
       }
       if (!rawCandidates.length) {
-        const fallbackByTenantField = latestProgramByField.get(`${target.tenant_id}::${target.field_id}`);
-        const fallbackByFieldOnly = fallbackByTenantField
-          ? null
-          : latestProgramsByField.find((item) => item.field_id === target.field_id) ?? null;
-        const fallbackProgram = fallbackByTenantField ?? fallbackByFieldOnly;
-        rawCandidates = fallbackProgram ? [fallbackProgram] : [];
+        const fallbackByTenantField = latestProgramsByField.filter(
+          (item) => item.tenant.tenant_id === target.tenant_id && item.field_id === target.field_id,
+        );
+        const fallbackByFieldOnly = fallbackByTenantField.length
+          ? []
+          : latestProgramsByField.filter((item) => item.field_id === target.field_id);
+        rawCandidates = fallbackByTenantField.length ? fallbackByTenantField : fallbackByFieldOnly;
+        matchMode = "field_fallback";
+      }
+      let candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
+      if (!candidates.length && hasSeasonId) {
+        const fallbackByTenantField = latestProgramsByField.filter(
+          (item) => item.tenant.tenant_id === target.tenant_id && item.field_id === target.field_id,
+        );
+        const fallbackByFieldOnly = fallbackByTenantField.length
+          ? []
+          : latestProgramsByField.filter((item) => item.field_id === target.field_id);
+        rawCandidates = fallbackByTenantField.length ? fallbackByTenantField : fallbackByFieldOnly;
+        candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
+        matchMode = "field_fallback";
       }
       const rejectedProgramStatuses = rawCandidates
         .filter((candidate) => !ALLOWED_PROGRAM_STATUSES.has(candidate.status))
         .map((candidate) => candidate.status || "UNKNOWN");
-      const candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
       const selectedProgram: ProgramBinding | null = candidates[0] ?? null;
       const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
       const programHit = candidates.length;
