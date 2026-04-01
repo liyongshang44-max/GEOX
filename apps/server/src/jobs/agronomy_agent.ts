@@ -12,6 +12,12 @@ type AgentRunResult = {
   scanned: number;
   created: number;
   skipped: number;
+  skipped_by_reason: {
+    no_program: number;
+    no_crop_code: number;
+    no_telemetry: number;
+    duplicate: number;
+  };
 };
 
 type LatestDeviceTelemetry = {
@@ -100,7 +106,7 @@ async function loadProgramBindings(pool: Pool, item: LatestDeviceTelemetry): Pro
         crop_code: safeString(payload.crop_code),
       };
     })
-    .filter((x) => x.program_id && x.crop_code && !blockedStatus.has(x.status))
+    .filter((x) => x.program_id && !blockedStatus.has(x.status))
     .map(({ status: _status, ...rest }) => rest);
 }
 
@@ -149,16 +155,39 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
 
   let created = 0;
   let skipped = 0;
+  const skippedByReason: AgentRunResult["skipped_by_reason"] = {
+    no_program: 0,
+    no_crop_code: 0,
+    no_telemetry: 0,
+    duplicate: 0,
+  };
 
   for (const item of latestTelemetry) {
+    if (!Number.isFinite(item.soil_moisture)) {
+      skipped += 1;
+      skippedByReason.no_telemetry += 1;
+      console.log(`[agronomy-agent] skipped:no_telemetry field=${item.field_id} device=${item.device_id}`);
+      continue;
+    }
+
     const bindings = await loadProgramBindings(pool, item);
     if (!bindings.length) {
       skipped += 1;
+      skippedByReason.no_program += 1;
+      console.log(`[agronomy-agent] skipped:no_program field=${item.field_id} device=${item.device_id}`);
       continue;
     }
     for (const binding of bindings) {
       if (!binding.tenant.tenant_id || !binding.tenant.project_id || !binding.tenant.group_id) {
         skipped += 1;
+        skippedByReason.no_program += 1;
+        console.log(`[agronomy-agent] skipped:no_program field=${item.field_id} device=${item.device_id}`);
+        continue;
+      }
+      if (!binding.crop_code) {
+        skipped += 1;
+        skippedByReason.no_crop_code += 1;
+        console.log(`[agronomy-agent] skipped:no_crop_code field=${item.field_id} program=${binding.program_id}`);
         continue;
       }
 
@@ -177,7 +206,8 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       const duplicated = await existsRecentRecommendation(pool, binding.tenant, binding.program_id, item.field_id, action_type, reason_code);
       if (duplicated) {
         skipped += 1;
-        console.log(`[agronomy-agent] skipped duplicate field=${item.field_id}`);
+        skippedByReason.duplicate += 1;
+        console.log(`[agronomy-agent] skipped:duplicate field=${item.field_id} program=${binding.program_id} action=${action_type}`);
         continue;
       }
 
@@ -236,11 +266,17 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       });
 
       created += 1;
-      console.log(`[agronomy-agent] recommendation created field=${item.field_id} action=IRRIGATE`);
+      console.log(`[agronomy-agent] created field=${item.field_id} program=${binding.program_id} action=${action_type}`);
     }
   }
 
-  return { scanned: latestTelemetry.length, created, skipped };
+  console.log(
+    `[agronomy-agent] scan done scanned=${latestTelemetry.length} created=${created} skipped=${skipped} ` +
+    `skipped:no_program=${skippedByReason.no_program} skipped:no_crop_code=${skippedByReason.no_crop_code} ` +
+    `skipped:no_telemetry=${skippedByReason.no_telemetry} skipped:duplicate=${skippedByReason.duplicate}`,
+  );
+
+  return { scanned: latestTelemetry.length, created, skipped, skipped_by_reason: skippedByReason };
 }
 
 export type { AgentRunResult, TenantTriple };

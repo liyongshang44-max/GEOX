@@ -233,6 +233,33 @@ async function loadRecommendationById(pool: Pool, recommendation_id: string, ten
   return { fact_id: String(row.fact_id), occurred_at: String(row.occurred_at), record_json: parseJsonMaybe(row.record_json) ?? row.record_json };
 }
 
+async function resolveProgramIdForRecommendation(pool: Pool, tenant: TenantTriple, rec: any): Promise<string | null> {
+  const explicitProgramId = String(rec?.program_id ?? "").trim();
+  if (explicitProgramId) return explicitProgramId;
+  const fieldId = String(rec?.field_id ?? "").trim();
+  if (!fieldId) return null;
+  const seasonId = String(rec?.season_id ?? "").trim();
+  const q = await pool.query(
+    `SELECT record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,field_id}') = $4
+        AND (
+          $5::text = ''
+          OR (record_json::jsonb#>>'{payload,season_id}') = $5
+        )
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, fieldId, seasonId]
+  );
+  const payload = q.rows?.[0]?.record_json?.payload ?? null;
+  const programId = String(payload?.program_id ?? "").trim();
+  return programId || null;
+}
+
 async function loadRecommendationChainById(pool: Pool, recommendation_id: string, tenant: TenantTriple): Promise<{ approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }> {
   const q = await pool.query(
     `WITH latest_link AS (
@@ -773,6 +800,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
 
     const rec = row.record_json?.payload ?? {};
+    const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
     const actionType = toAoActActionType(rec);
     const aoActTarget = toAoActTarget(rec);
     const aoActParameters = toPrimitiveParameters(rec?.suggested_action?.parameters ?? {});
@@ -787,7 +815,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
-      program_id: rec.program_id ?? null,
+      program_id: resolvedProgramId,
       field_id: rec.field_id ?? null,
       season_id: rec.season_id ?? null,
       issuer: { kind: "human", id: auth.actor_id, namespace: "decision_engine_v1" },
@@ -805,7 +833,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         season_id: rec.season_id ?? null,
         confidence: rec.confidence ?? null,
         device_id: rec.device_id ?? null,
-        program_id: rec.program_id ?? null,
+        program_id: resolvedProgramId,
         adapter_type
       }
     });
@@ -821,7 +849,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         recommendation_id,
-        program_id: rec.program_id ?? null,
+        program_id: resolvedProgramId,
         field_id: rec.field_id ?? null,
         season_id: rec.season_id ?? null,
         recommendation_fact_id: row.fact_id,
@@ -839,7 +867,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         group_id: tenant.group_id,
         operation_plan_id,
         recommendation_id,
-        program_id: rec.program_id ?? null,
+        program_id: resolvedProgramId,
         field_id: rec.field_id ?? null,
         season_id: rec.season_id ?? null,
         recommendation_fact_id: row.fact_id,
