@@ -126,6 +126,68 @@ function statusLabel(s: string | null): string {
   return code;
 }
 
+type CustomerViewStatus = "PENDING_APPROVAL" | "IN_PROGRESS" | "PENDING_RECEIPT" | "PENDING_ACCEPTANCE" | "COMPLETED" | "INVALID_EXECUTION";
+
+function resolveCustomerViewStatus(input: {
+  final_status: string | null;
+  has_approval: boolean;
+  has_task: boolean;
+  has_receipt: boolean;
+  has_acceptance: boolean;
+  invalid_execution: boolean;
+}): CustomerViewStatus {
+  if (input.invalid_execution) return "INVALID_EXECUTION";
+  const finalStatus = String(input.final_status ?? "").trim().toUpperCase();
+  if (!input.has_approval && !input.has_task) return "PENDING_APPROVAL";
+  if (["SUCCEEDED", "SUCCESS", "DONE", "EXECUTED"].includes(finalStatus) || input.has_acceptance) return "COMPLETED";
+  if (finalStatus === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
+  if (input.has_receipt) return "PENDING_ACCEPTANCE";
+  if (input.has_task && !input.has_receipt) return "PENDING_RECEIPT";
+  return "IN_PROGRESS";
+}
+
+function customerViewByStatus(status: CustomerViewStatus): { summary: string; today_action: string; risk_level: "low" | "medium" | "high" } {
+  switch (status) {
+    case "PENDING_APPROVAL":
+      return {
+        summary: "当前建议待审批，尚未进入执行阶段",
+        today_action: "下一步：等待审批",
+        risk_level: "medium",
+      };
+    case "IN_PROGRESS":
+      return {
+        summary: "作业执行中，系统正在持续采集进度",
+        today_action: "保持设备在线并关注执行状态",
+        risk_level: "medium",
+      };
+    case "PENDING_RECEIPT":
+      return {
+        summary: "作业已下发，等待回执数据",
+        today_action: "督促执行端回传回执与证据",
+        risk_level: "medium",
+      };
+    case "PENDING_ACCEPTANCE":
+      return {
+        summary: "已收到执行数据，待验收确认",
+        today_action: "下一步：进入验收",
+        risk_level: "low",
+      };
+    case "COMPLETED":
+      return {
+        summary: "作业已完成并形成闭环",
+        today_action: "继续观察效果并归档证据",
+        risk_level: "low",
+      };
+    case "INVALID_EXECUTION":
+    default:
+      return {
+        summary: "本次作业未被系统认定为有效执行",
+        today_action: "需重新执行或补充证据",
+        risk_level: "high",
+      };
+  }
+}
+
 
 function cleanJsonText(v: unknown, fallback: string): string {
   const raw = toText(v) ?? fallback;
@@ -470,6 +532,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const operationPayload = plan?.record_json?.payload ?? {};
     const recommendationPayload = rec?.record_json?.payload ?? {};
     const taskDeviceId = normalizeDeviceId(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
+    const recommendedDeviceId = taskDeviceId;
     const receiptDeviceId = normalizeDeviceId(normalizedReceipt?.device_id);
     const executorDeviceId = receiptDeviceId ?? taskDeviceId ?? "unknown";
     const detailDeviceId = executorDeviceId === "unknown" ? null : executorDeviceId;
@@ -565,32 +628,43 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       electric_kwh: normalizedReceipt?.electric_kwh,
       chemical_ml: normalizedReceipt?.chemical_ml,
     });
-    const customerView = invalidExecution
-      ? {
-        summary: "本次作业未被系统认定为有效执行",
-        today_action: "需重新执行或补充证据",
-        risk_level: "high" as const,
-      }
-      : {
-        summary: "作业已完成，预计改善作物状态",
-        today_action: "继续观察或进入验收",
-        risk_level: "low" as const,
-      };
+    const customerViewStatus = resolveCustomerViewStatus({
+      final_status: finalStatus,
+      has_approval: Boolean(approvalReq || approvalDecision),
+      has_task: Boolean(task),
+      has_receipt: Boolean(normalizedReceipt),
+      has_acceptance: Boolean(acceptance),
+      invalid_execution: invalidExecution,
+    });
+    const customerView = customerViewByStatus(customerViewStatus);
+    const agronomyCropCode = toText(
+      state.crop_code
+      ?? rec?.record_json?.payload?.crop_code
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_code
+      ?? plan?.record_json?.payload?.crop_code
+    );
+    const agronomyCropStage = toText(
+      state.crop_stage
+      ?? rec?.record_json?.payload?.crop_stage
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
+      ?? plan?.record_json?.payload?.crop_stage
+    );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
       operation: {
         operation_plan_id: operationPlanId,
         recommendation_id: toText(state.recommendation_id),
-        crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
-        crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
+        crop_code: agronomyCropCode,
+        crop_stage: agronomyCropStage,
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
         final_status: finalStatus,
         status_label: statusLabel(finalStatus),
         invalid_reason: invalidReason,
-        executor_device_id: executorDeviceId,
+        executor_device_id: task ? executorDeviceId : null,
+        recommended_device_id: recommendedDeviceId,
         recommendation: rec ? {
           recommendation_id: toText(state.recommendation_id ?? rec?.record_json?.payload?.recommendation_id),
           title: toText(rec?.record_json?.payload?.title) ?? "系统建议",
@@ -639,8 +713,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           metrics
         },
         agronomy: {
-          crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
-          crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
+          crop_code: agronomyCropCode,
+          crop_stage: agronomyCropStage,
           before_metrics: beforeMetricsForResponse,
           after_metrics: afterMetricsForResponse,
           expected_effect: expectedEffect,
