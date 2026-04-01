@@ -93,20 +93,35 @@ async function loadLatestSoilTelemetryByField(pool: Pool): Promise<LatestFieldTe
 
 async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
   const q = await pool.query(
-    `SELECT DISTINCT ON (
-        (record_json::jsonb#>>'{payload,tenant_id}'),
-        (record_json::jsonb#>>'{payload,field_id}'),
-        (record_json::jsonb#>>'{payload,season_id}')
-      )
-        record_json
-       FROM facts
+    `WITH ranked_programs AS (
+      SELECT
+        record_json,
+        ROW_NUMBER() OVER (
+          PARTITION BY
+            (record_json::jsonb#>>'{payload,tenant_id}'),
+            (record_json::jsonb#>>'{payload,field_id}'),
+            (record_json::jsonb#>>'{payload,season_id}')
+          ORDER BY
+            CASE WHEN (record_json::jsonb#>>'{payload,program_id}') LIKE 'prg_chain_%' THEN 1 ELSE 0 END ASC,
+            CASE
+              WHEN COALESCE((record_json::jsonb#>>'{payload,updated_ts}'), '') ~ '^[0-9]+$'
+              THEN (record_json::jsonb#>>'{payload,updated_ts}')::bigint
+              ELSE 0
+            END DESC,
+            CASE
+              WHEN COALESCE((record_json::jsonb#>>'{payload,created_ts}'), '') ~ '^[0-9]+$'
+              THEN (record_json::jsonb#>>'{payload,created_ts}')::bigint
+              ELSE 0
+            END DESC,
+            occurred_at DESC,
+            fact_id DESC
+        ) AS rn
+      FROM facts
       WHERE (record_json::jsonb->>'type') = 'field_program_v1'
-      ORDER BY
-        (record_json::jsonb#>>'{payload,tenant_id}'),
-        (record_json::jsonb#>>'{payload,field_id}'),
-        (record_json::jsonb#>>'{payload,season_id}'),
-        occurred_at DESC,
-        fact_id DESC`,
+    )
+    SELECT record_json
+    FROM ranked_programs
+    WHERE rn = 1`,
   );
 
   const blockedStatus = new Set(["CANCELLED", "COMPLETED", "ARCHIVED"]);
@@ -227,6 +242,11 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         console.log("[agronomy-agent] skipped:no_program", { field_id: target.field_id, season_id: target.season_id || null });
         continue;
       }
+      console.log("[agronomy-agent] selected_program", {
+        field_id: program.field_id,
+        season_id: program.season_id || null,
+        program_id: program.program_id,
+      });
       const telemetry = telemetryByField.get(`${program.tenant.tenant_id}::${program.field_id}`);
       const soilMoisture = telemetry?.soil_moisture;
       if (!Number.isFinite(soilMoisture ?? Number.NaN)) {
@@ -336,6 +356,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       created += 1;
       console.log("[agronomy-agent] recommendation created", {
         field_id: program.field_id,
+        season_id: program.season_id || null,
         program_id: program.program_id,
         crop_code: program.crop_code,
         action_type,
