@@ -129,7 +129,8 @@ export function buildProgramDetailViewModel(args: {
   const summary = controlPlane?.summary || {};
 
   const displayTitle = toText(program?.title || detail?.program_name || detail?.name, "默认经营方案");
-  const cropName = toText(detail?.crop_name || program?.crop_name || detail?.crop_code || program?.crop_code, "-");
+  const cropCode = toText(detail?.crop_code || program?.crop_code, "-");
+  const cropName = toText(detail?.crop_name || program?.crop_name || cropCode, "-");
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
@@ -188,6 +189,7 @@ export function buildProgramDetailViewModel(args: {
 
     goalSummary: [
       { label: "作物", value: cropName },
+      { label: "作物编码", value: cropCode },
       { label: "目标品质", value: toPriorityLabel(detail?.goal_profile?.quality_priority || detail?.quality_priority, "高") },
       { label: "目标产量", value: toPriorityLabel(detail?.goal_profile?.yield_priority || detail?.yield_priority, "中") },
       { label: "农残限制", value: toPriorityLabel(detail?.goal_profile?.residue_priority || detail?.residue_priority, "严格") === "高" ? "严格" : "标准" },
