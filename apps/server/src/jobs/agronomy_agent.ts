@@ -515,13 +515,46 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         continue;
       }
 
-      const agronomy = evaluateAgronomy({
-        crop_code: selectedProgram.crop_code,
-        soil_moisture: effectiveSoilMoisture,
-      });
-
-      const action_type = "IRRIGATE";
-      const reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+      const cropCode = safeString(selectedProgram.crop_code).toLowerCase();
+      let action_type = "IRRIGATE";
+      let reason_code = "soil_moisture_below_optimal";
+      let recommendation_type = "irrigation_recommendation_v1";
+      let suggested_action_type = "irrigation.start";
+      let summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
+      switch (cropCode) {
+        case "corn": {
+          const agronomy = evaluateAgronomy({
+            crop_code: selectedProgram.crop_code,
+            soil_moisture: effectiveSoilMoisture,
+          });
+          action_type = "IRRIGATE";
+          reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+          recommendation_type = "irrigation_recommendation_v1";
+          suggested_action_type = "irrigation.start";
+          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
+          break;
+        }
+        case "tomato": {
+          action_type = "FERTILIZE";
+          reason_code = "tomato_nutrient_maintenance";
+          recommendation_type = "fertilization_recommendation_v1";
+          suggested_action_type = "fertilization.apply";
+          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行追肥处理`;
+          break;
+        }
+        default: {
+          const agronomy = evaluateAgronomy({
+            crop_code: selectedProgram.crop_code,
+            soil_moisture: effectiveSoilMoisture,
+          });
+          action_type = "IRRIGATE";
+          reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+          recommendation_type = "irrigation_recommendation_v1";
+          suggested_action_type = "irrigation.start";
+          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
+          break;
+        }
+      }
       const duplicated = await existsRecentRecommendation(pool, selectedProgram.tenant, selectedProgram.program_id, selectedProgram.field_id, action_type, reason_code);
       if (duplicated) {
         skipped += 1;
@@ -543,7 +576,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         action_type,
         reason_codes: [reason_code],
         title: "系统建议",
-        summary: `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`,
+        summary,
       };
 
       await insertFact(pool, AGENT_SOURCE, {
@@ -560,7 +593,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         payload: {
           ...basePayload,
           recommendation_id,
-          recommendation_type: "irrigation_recommendation_v1",
+          recommendation_type,
           status: "proposed",
           evidence_refs: ["telemetry:soil_moisture"],
           rule_hit: [
@@ -572,7 +605,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           ],
           confidence: 0.8,
           suggested_action: {
-            action_type: "irrigation.start",
+            action_type: suggested_action_type,
             summary: basePayload.summary,
             parameters: {
               program_id: selectedProgram.program_id,
