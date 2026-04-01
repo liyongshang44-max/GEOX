@@ -8,6 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
+import { computeEffect } from "../domain/agronomy/effect_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -497,14 +498,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       afterMetrics = buildMetricsSnapshot(afterTelemetryQ.rows ?? []);
     }
     const expectedEffect = toExpectedEffect(recommendationPayload);
-    const actualEffectValue = (afterMetrics.soil_moisture != null && beforeMetrics.soil_moisture != null)
-      ? Number((afterMetrics.soil_moisture - beforeMetrics.soil_moisture).toFixed(3))
-      : null;
-    const actualEffect = actualEffectValue == null
+    const computedEffect = computeEffect(beforeMetrics, afterMetrics);
+    const actualEffect = computedEffect == null
       ? null
       : {
         type: expectedEffect?.type ?? "moisture_increase",
-        value: actualEffectValue
+        value: computedEffect.moisture_delta
       };
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({

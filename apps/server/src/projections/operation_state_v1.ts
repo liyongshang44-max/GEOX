@@ -172,6 +172,23 @@ function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
 }
 
+function toNumOrUndef(v: unknown): number | undefined {
+  const n = Number(v ?? NaN);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toMetricsSnapshot(v: any): { soil_moisture?: number; temperature?: number; humidity?: number } {
+  const raw = (v && typeof v === "object") ? v : {};
+  const out: { soil_moisture?: number; temperature?: number; humidity?: number } = {};
+  const sm = toNumOrUndef(raw.soil_moisture);
+  const temp = toNumOrUndef(raw.temperature);
+  const hum = toNumOrUndef(raw.humidity);
+  if (sm !== undefined) out.soil_moisture = sm;
+  if (temp !== undefined) out.temperature = temp;
+  if (hum !== undefined) out.humidity = hum;
+  return out;
+}
+
 function normalizeAcceptanceVerdict(verdictRaw: unknown): "PASS" | "FAIL" | "PENDING" | null {
   const verdict = String(verdictRaw ?? "").trim().toUpperCase();
   if (!verdict) return null;
@@ -390,6 +407,22 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         ?? ""
       ).trim() || null;
     })();
+    const latestPlanPayload = allPlanFacts[allPlanFacts.length - 1]?.record_json?.payload ?? payload;
+    const planBeforeMetrics = toMetricsSnapshot(latestPlanPayload?.before_metrics);
+    const planAfterMetrics = toMetricsSnapshot(latestPlanPayload?.after_metrics);
+    const expectedEffectFromRecommendation = (() => {
+      const candidate = rec?.record_json?.payload?.expected_effect ?? rec?.record_json?.payload?.suggested_action?.parameters?.expected_effect;
+      const type = String(candidate?.type ?? "").trim();
+      const value = Number(candidate?.value ?? NaN);
+      if ((type === "moisture_increase" || type === "growth_boost") && Number.isFinite(value)) return { type, value } as const;
+      return null;
+    })();
+    const actualEffectFromPlan = (() => {
+      const effect = latestPlanPayload?.actual_effect ?? latestPlanPayload?.effect_snapshot?.effect;
+      const value = Number(effect?.moisture_delta ?? effect?.value ?? NaN);
+      if (!Number.isFinite(value)) return null;
+      return { type: String(effect?.type ?? "moisture_increase"), value };
+    })();
 
     states.push({
       operation_id: operation_plan_id,
@@ -422,10 +455,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()
       ) ?? (String(task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null),
-      before_metrics: {},
-      after_metrics: {},
-      expected_effect: null,
-      actual_effect: null,
+      before_metrics: planBeforeMetrics,
+      after_metrics: planAfterMetrics,
+      expected_effect: expectedEffectFromRecommendation,
+      actual_effect: actualEffectFromPlan,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
