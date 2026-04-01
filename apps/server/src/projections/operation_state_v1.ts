@@ -344,6 +344,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const receipt_id = receipt
       ? String(receipt.record_json?.payload?.receipt_id ?? receipt.fact_id ?? "").trim() || null
       : null;
+    const recordProgramId = String(row.record_json?.payload?.program_id ?? "").trim() || null;
 
     const inferredFieldId = latestNonEmpty(
       allPlanFacts,
@@ -370,7 +371,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       act_task_id: task_id,
       receipt_id,
       program_id: String(
-        payload.program_id
+        recordProgramId
         ?? rec?.record_json?.payload?.program_id
         ?? req?.record_json?.payload?.program_id
         ?? task?.record_json?.payload?.program_id
