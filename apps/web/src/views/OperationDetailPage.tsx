@@ -71,6 +71,18 @@ export default function OperationDetailPage(): React.ReactElement {
   const fieldLabel = mapFieldDisplayName(fieldSource, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(deviceSource, model.deviceLabel);
   const resultSummary = buildResultSummary(model);
+  const agronomy = (detail as any)?.agronomy ?? {};
+  const beforeMoisture = Number(agronomy?.before_metrics?.soil_moisture ?? NaN);
+  const afterMoisture = Number(agronomy?.after_metrics?.soil_moisture ?? NaN);
+  const expectedValue = Number(agronomy?.expected_effect?.value ?? NaN);
+  const actualValue = Number(agronomy?.actual_effect?.value ?? NaN);
+  const formatPct = (v: number): string => (Number.isFinite(v) ? `${v.toFixed(0)}%` : "--");
+  const formatSignedPct = (v: number): string => (Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` : "--");
+  const effectResultLabel = !Number.isFinite(actualValue)
+    ? "无数据"
+    : (Number.isFinite(expectedValue) && actualValue >= expectedValue)
+      ? "✔ 超出预期"
+      : "偏差";
 
   const billingLabel = billing
     ? billing.billable
@@ -115,6 +127,17 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
       <section className="demoContentGrid">
         <OperationExecutionCard task={model.execution} acceptance={model.acceptance} invalidReason={model.invalidReason} />
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">作业效果评估</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>土壤湿度：{formatPct(beforeMoisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行后</span><strong>土壤湿度：{formatPct(afterMoisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期</span><strong>{formatSignedPct(expectedValue)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">实际</span><strong>{formatSignedPct(actualValue)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果</span><strong>{effectResultLabel}</strong></div>
+        </div>
       </section>
 
       <section className="demoContentGrid">
