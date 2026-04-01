@@ -99,17 +99,7 @@ async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<DashboardOverview> {
-  return safe(
-    apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params)),
-    {
-      window: { from_ts_ms: 0, to_ts_ms: 0 },
-      summary: { field_count: 0, online_device_count: 0, open_alert_count: 0, running_task_count: 0 },
-      trend_series: [],
-      latest_alerts: [],
-      latest_receipts: [],
-      quick_actions: [],
-    },
-  );
+  return apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
 }
 
 export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{ ok: boolean; item: DashboardControlPlaneItem }> {
@@ -190,7 +180,7 @@ export async function fetchDashboardAssignments(limit = 100): Promise<DashboardA
   return Array.isArray(list) ? list : [];
 }
 
-export async function getOverview(): Promise<{
+export async function getOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{
   field_count: number;
   normal_field_count: number;
   risk_field_count: number;
@@ -198,7 +188,10 @@ export async function getOverview(): Promise<{
   pending_acceptance_count: number;
 }> {
   const now = Date.now();
-  const res = await fetchDashboardOverview({ from_ts_ms: now - 24 * 60 * 60 * 1000, to_ts_ms: now });
+  const res = await fetchDashboardOverview({
+    from_ts_ms: params?.from_ts_ms ?? now - 24 * 60 * 60 * 1000,
+    to_ts_ms: params?.to_ts_ms ?? now,
+  });
   const fieldCount = Number(res?.summary?.field_count ?? 0);
   const riskFieldCount = Number(res?.summary?.open_alert_count ?? 0);
   const runningTaskCount = Number(res?.summary?.running_task_count ?? 0);

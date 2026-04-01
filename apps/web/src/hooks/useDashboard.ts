@@ -71,8 +71,9 @@ function mapRiskSource(title: string): DashboardRiskVm["source"] {
   return "执行缺失";
 }
 
-export function useDashboard(api: any): DashboardVm {
+export function useDashboard(api: any): { data: DashboardVm; error: string | null } {
   const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -91,7 +92,12 @@ export function useDashboard(api: any): DashboardVm {
       };
 
       try {
-        const overview = await api.getOverview();
+        const now = Date.now();
+        const from = now - 7 * 24 * 60 * 60 * 1000;
+        const overview = await api.getOverview?.({
+          from_ts_ms: from,
+          to_ts_ms: now,
+        });
         const executions = await safeList(() => api.getRecentExecutions?.({ limit: 8 }));
         const useLegacyRiskEndpoints = Boolean(api?.enableLegacyDashboardEndpoints);
         const riskItems = useLegacyRiskEndpoints
@@ -238,16 +244,18 @@ export function useDashboard(api: any): DashboardVm {
           },
           todayActions,
         });
+        setError(null);
       } catch {
-        setData((d) => ({ ...d }));
+        setError("数据加载失败（overview）");
+        throw new Error("overview_load_failed");
       }
     }
 
-    void load();
+    void load().catch(() => undefined);
     return () => {
       mounted = false;
     };
   }, [api]);
 
-  return data;
+  return { data, error };
 }

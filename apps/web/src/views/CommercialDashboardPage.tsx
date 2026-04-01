@@ -55,7 +55,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
     }),
     [],
   );
-  const d = useDashboard(api);
+  const { data: d, error } = useDashboard(api);
   const [sla, setSla] = React.useState<SlaSummary>({
     total_operations: 0,
     success_rate: 0,
@@ -206,6 +206,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
 
   return (
     <div className="productPage demoDashboardPage">
+      {error ? <EmptyBlock text="数据加载失败（overview）" /> : null}
       <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
         <article className="operationsSummaryMetric card">
           <span className="operationsSummaryLabel">成功率</span>
