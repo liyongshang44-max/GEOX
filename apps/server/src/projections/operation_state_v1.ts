@@ -40,7 +40,27 @@ export type OperationStateV1 = {
   device_id: string | null;
   field_id: string | null;
   season_id: string | null;
+  crop_code: string | null;
+  crop_stage: string | null;
   action_type: string | null;
+  before_metrics: {
+    soil_moisture?: number;
+    temperature?: number;
+    humidity?: number;
+  };
+  after_metrics: {
+    soil_moisture?: number;
+    temperature?: number;
+    humidity?: number;
+  };
+  expected_effect: {
+    type: "moisture_increase" | "growth_boost";
+    value: number;
+  } | null;
+  actual_effect: {
+    type: string;
+    value: number;
+  } | null;
   dispatch_status: string;
   receipt_status: string;
   acceptance: {
@@ -351,6 +371,14 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
     ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null);
     const inferredSeasonId = String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null;
+    const inferredCropCode = latestNonEmpty(
+      allPlanFacts,
+      (planFact) => String(planFact.record_json?.payload?.crop_code ?? "").trim()
+    ) ?? (String(rec?.record_json?.payload?.crop_code ?? "").trim() || null);
+    const inferredCropStage = latestNonEmpty(
+      allPlanFacts,
+      (planFact) => String(planFact.record_json?.payload?.crop_stage ?? "").trim()
+    ) ?? (String(rec?.record_json?.payload?.crop_stage ?? "").trim() || null);
     const inferredProgramFromProgramFact = (() => {
       if (!inferredFieldId) return null;
       const fieldSeasonKey = `${inferredFieldId}::${inferredSeasonId ?? ""}`;
@@ -388,10 +416,16 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ) ?? (String(task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null),
       field_id: inferredFieldId,
       season_id: inferredSeasonId,
+      crop_code: inferredCropCode,
+      crop_stage: inferredCropStage,
       action_type: latestNonEmpty(
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()
       ) ?? (String(task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null),
+      before_metrics: {},
+      after_metrics: {},
+      expected_effect: null,
+      actual_effect: null,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
