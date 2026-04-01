@@ -29,13 +29,13 @@ export default function OperationExecutionCard({ task, acceptance, invalidReason
       ? "未上传执行证据"
       : "仅有调试证据，不构成正式执行证明";
   const handlingHint =
-    status === "INVALID_EXECUTION"
+    !task.taskId
+      ? "等待审批"
+      : status === "INVALID_EXECUTION"
       ? "需重新执行或补充证据"
       : status === "PENDING_ACCEPTANCE"
         ? "等待验收判定"
-        : acceptance.statusLabel === "PENDING"
-          ? "等待验收判定"
-          : "当前无需处理";
+        : "当前无需处理";
   const hasReceipt = status === "INVALID_EXECUTION" || status === "PENDING_ACCEPTANCE" || status === "SUCCESS";
   return (
     <section className="card sectionBlock geoxSectionCard operationBusinessCard">

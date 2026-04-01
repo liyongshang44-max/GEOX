@@ -535,7 +535,62 @@ export function buildOperationDetailViewModel(args?: {
   const debugEvidenceCount = simTraceCount;
   const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
   const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
-  const cost = safeDetail?.cost ?? {};
+  const execution = safeDetail?.task
+    ? {
+      executionModeLabel: executionMode === "device" ? "设备自动执行（灌溉设备）" : `人工执行（${humanExecutorName}）`,
+      executorTypeLabel: mapExecutionModeLabel(executionMode),
+      actionType: toText(safeDetail?.task?.action_type),
+      planId: toText(safeDetail?.operation_plan_id),
+      taskId: toText(safeDetail?.task?.task_id),
+      deviceId: toText(safeDetail?.task?.device_id),
+      executorLabel: executionMode === "device"
+        ? `设备 ${deviceExecutorName}`
+        : `人工执行（${humanExecutorName}）`,
+      executionWindowLabel: windowStart != null
+        ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
+        : "-",
+      dispatchedAtLabel: toDateLabel(safeDetail?.task?.dispatched_at),
+      ackedAtLabel: toDateLabel(safeDetail?.task?.acked_at),
+      ackStatusLabel,
+      progressLabel: resolveExecutionProgress(safeDetail),
+      finalStatus: finalStatusCode || String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
+      finalStatusLabel,
+      dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
+      ackChipLabel: `确认状态：${ackStatusLabel}`,
+      finalChipLabel: `最终结果：${finalStatusLabel}`,
+    }
+    : {
+      executionModeLabel: "尚未执行",
+      executorTypeLabel: "-",
+      actionType: "",
+      planId: "",
+      taskId: "",
+      deviceId: "",
+      executorLabel: "未执行",
+      executionWindowLabel: "-",
+      dispatchedAtLabel: "-",
+      ackedAtLabel: "-",
+      ackStatusLabel: "-",
+      progressLabel: "尚未执行",
+      finalStatus: "PENDING",
+      finalStatusLabel: "未执行",
+      dispatchedChipLabel: "",
+      ackChipLabel: "",
+      finalChipLabel: "",
+    };
+  const cost = safeDetail?.cost
+    ? {
+      waterCostLabel: toMoneyLabel(safeDetail?.cost?.water),
+      electricCostLabel: toMoneyLabel(safeDetail?.cost?.electric),
+      chemicalCostLabel: toMoneyLabel(safeDetail?.cost?.chemical),
+      totalCostLabel: toMoneyLabel(safeDetail?.cost?.total),
+    }
+    : {
+      waterCostLabel: "-",
+      electricCostLabel: "-",
+      chemicalCostLabel: "-",
+      totalCostLabel: "-",
+    };
   const customerViewStage = resolveCustomerViewStage(safeDetail);
   const customerViewFallback = customerViewFallbackByStage(customerViewStage);
   const customerRiskLevel = String(safeDetail?.customer_view?.risk_level ?? customerViewFallback.riskLevel).toLowerCase();
@@ -575,29 +630,7 @@ export function buildOperationDetailViewModel(args?: {
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
     businessEffect,
-    execution: {
-      executionModeLabel: executionMode === "device" ? "设备自动执行（灌溉设备）" : `人工执行（${humanExecutorName}）`,
-      executorTypeLabel: mapExecutionModeLabel(executionMode),
-      actionType: toText(safeDetail?.task?.action_type),
-      planId: toText(safeDetail?.operation_plan_id),
-      taskId: toText(safeDetail?.task?.task_id),
-      deviceId: toText(safeDetail?.task?.device_id),
-      executorLabel: executionMode === "device"
-        ? `设备 ${deviceExecutorName}`
-        : `人工执行（${humanExecutorName}）`,
-      executionWindowLabel: windowStart != null
-        ? `${new Date(windowStart).toLocaleString()} ~ ${windowEnd != null ? new Date(windowEnd).toLocaleString() : "进行中"}`
-        : "-",
-      dispatchedAtLabel: toDateLabel(safeDetail?.task?.dispatched_at),
-      ackedAtLabel: toDateLabel(safeDetail?.task?.acked_at),
-      ackStatusLabel,
-      progressLabel: resolveExecutionProgress(safeDetail),
-      finalStatus: finalStatusCode || String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
-      finalStatusLabel,
-      dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
-      ackChipLabel: `确认状态：${ackStatusLabel}`,
-      finalChipLabel: `最终结果：${finalStatusLabel}`,
-    },
+    execution,
     receiptEvidence: receipt,
     timeline,
     evidenceExport: {
@@ -649,11 +682,6 @@ export function buildOperationDetailViewModel(args?: {
       riskLevel: normalizedCustomerRiskLevel,
       riskLevelLabel: mapRiskLevelLabel(normalizedCustomerRiskLevel),
     },
-    cost: {
-      waterCostLabel: toMoneyLabel(cost?.water),
-      electricCostLabel: toMoneyLabel(cost?.electric),
-      chemicalCostLabel: toMoneyLabel(cost?.chemical),
-      totalCostLabel: toMoneyLabel(cost?.total),
-    },
+    cost,
   };
 }
