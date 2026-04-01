@@ -746,17 +746,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     }
 
     const fact_ids: string[] = [];
+    const resolvedRecommendations: RecommendationV1[] = [];
     for (const rec of recommendations) {
+      const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
+      const recommendationPayload = { ...rec, program_id: resolvedProgramId };
       const recommendation_input_fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
         type: "decision_recommendation_input_facts_v1",
         payload: {
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
           group_id: tenant.group_id,
-          recommendation_id: rec.recommendation_id,
-          field_id: rec.field_id,
-          season_id: rec.season_id,
-          device_id: rec.device_id,
+          recommendation_id: recommendationPayload.recommendation_id,
+          field_id: recommendationPayload.field_id,
+          season_id: recommendationPayload.season_id,
+          device_id: recommendationPayload.device_id,
+          program_id: recommendationPayload.program_id,
           evidence_facts: recommendationEvidenceFacts(telemetry, body.image_recognition),
           created_ts: Date.now()
         }
@@ -767,7 +771,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           tenant_id: tenant.tenant_id,
           project_id: tenant.project_id,
           group_id: tenant.group_id,
-          ...rec,
+          ...recommendationPayload,
           recommendation_input_fact_id,
           data_sources: {
             telemetry,
@@ -776,9 +780,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         }
       });
       fact_ids.push(fact_id);
+      resolvedRecommendations.push(recommendationPayload);
     }
 
-    return reply.send({ ok: true, recommendations, fact_ids });
+    return reply.send({ ok: true, recommendations: resolvedRecommendations, fact_ids });
   });
 
   app.post("/api/v1/recommendations/:recommendation_id/submit-approval", async (req, reply) => {

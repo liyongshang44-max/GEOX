@@ -37,7 +37,12 @@ async function runOnce(pool: Pool): Promise<void> {
   }
 
   if (process.env.AGRONOMY_AGENT_ENABLED === "1") {
-    await runAgronomyAgentOnce(pool);
+    const result = await runAgronomyAgentOnce(pool);
+    console.log(
+      `INFO: agronomy-agent result scanned=${result.scanned} created=${result.created} skipped=${result.skipped} ` +
+      `skipped:no_program=${result.skipped_by_reason.no_program} skipped:no_crop_code=${result.skipped_by_reason.no_crop_code} ` +
+      `skipped:no_telemetry=${result.skipped_by_reason.no_telemetry} skipped:duplicate=${result.skipped_by_reason.duplicate}`
+    );
   }
 
   const reportJobs = await fetchPendingEvidenceReportJobs(pool);
