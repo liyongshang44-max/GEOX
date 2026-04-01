@@ -497,14 +497,11 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ).catch(() => ({ rows: [] as any[] }));
       afterMetrics = buildMetricsSnapshot(afterTelemetryQ.rows ?? []);
     }
-    const expectedEffect = toExpectedEffect(recommendationPayload);
-    const computedEffect = computeEffect(beforeMetrics, afterMetrics);
-    const actualEffect = computedEffect == null
-      ? null
-      : {
-        type: expectedEffect?.type ?? "moisture_increase",
-        value: computedEffect.moisture_delta
-      };
+    const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
+    const expectedEffect =
+      toExpectedEffect(recommendationPayload)
+      ?? (resolvedActionType === "IRRIGATE" ? { type: "moisture_increase" as const, value: 10 } : null);
+    const actualEffect = computeEffect(beforeMetrics, afterMetrics);
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
