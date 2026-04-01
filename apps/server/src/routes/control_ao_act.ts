@@ -627,7 +627,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
       const afterWindowEndTsMs = receiptTsMs + 20 * 60 * 1000;
       let beforeMetrics: EffectMetricSnapshot = {};
       let afterMetrics: EffectMetricSnapshot = {};
-      let computedEffect: { moisture_delta: number } | null = null;
+      let computedEffect: { type: string; value: number } | null = null;
       if (receiptDeviceId && Number.isFinite(beforeTsMs) && Number.isFinite(receiptTsMs)) {
         const beforeQ = await pool.query(
           `SELECT metric, value_num, ts
