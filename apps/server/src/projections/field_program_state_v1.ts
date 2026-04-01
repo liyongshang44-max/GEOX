@@ -20,6 +20,8 @@ export type FieldProgramConstraintsV1 = {
   max_irrigation_mm_per_day: number | null;
   manual_approval_required_for: string[];
   allow_night_irrigation: boolean;
+  max_irrigation_rounds_per_day?: number | null;
+  notes?: string | null;
 };
 
 export type FieldProgramStageV1 =
@@ -40,6 +42,7 @@ export type FieldProgramRiskSummaryV1 = {
 
 export type FieldProgramStateV1 = {
   program_id: string;
+  name: string | null;
   field_id: string;
   season_id: string;
   crop_code: string;
@@ -243,6 +246,7 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
 
     out.push({
       program_id: programId,
+      name: str(p.name) || null,
       field_id: fieldId,
       season_id: seasonId,
       crop_code: str(p.crop_code),
@@ -261,7 +265,9 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
         forbid_fertilizer_types: Array.isArray(p?.constraints?.forbid_fertilizer_types) ? p.constraints.forbid_fertilizer_types.map((x: any) => str(x)).filter(Boolean) : [],
         max_irrigation_mm_per_day: toNum(p?.constraints?.max_irrigation_mm_per_day),
         manual_approval_required_for: Array.isArray(p?.constraints?.manual_approval_required_for) ? p.constraints.manual_approval_required_for.map((x: any) => str(x)).filter(Boolean) : [],
-        allow_night_irrigation: Boolean(p?.constraints?.allow_night_irrigation)
+        allow_night_irrigation: Boolean(p?.constraints?.allow_night_irrigation),
+        max_irrigation_rounds_per_day: toNum(p?.constraints?.max_irrigation_rounds_per_day),
+        notes: str(p?.constraints?.notes) || null
       },
       latest_recommendation: latestRecommendationRow ? {
         recommendation_id: str(recPayload.recommendation_id),

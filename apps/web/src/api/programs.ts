@@ -59,28 +59,27 @@ export type ProgramCreateInput = {
 
 export async function createProgram(input: ProgramCreateInput): Promise<{ ok: boolean; program_id: string; fact_id: string }> {
   const normalizedProgramName = String(input.program_name ?? "").trim();
-  const normalizedProgramId = normalizedProgramName
-    ? `prg_${normalizedProgramName.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40)}`
-    : undefined;
   const body = {
-    program_id: normalizedProgramId,
+    name: normalizedProgramName,
     field_id: input.field_id,
     season_id: input.season_id,
     crop_code: input.crop_code,
     status: "DRAFT",
     goal_profile: {
-      yield_priority: input.goal_yield,
-      quality_priority: input.goal_quality,
-      residue_priority: "high",
+      yield_priority: input.goal_yield || "medium",
+      quality_priority: input.goal_quality || "medium",
+      residue_priority: "medium",
       water_saving_priority: "medium",
       cost_priority: "medium",
     },
     constraints: {
       forbid_pesticide_classes: [],
       forbid_fertilizer_types: [],
-      max_irrigation_mm_per_day: null,
       manual_approval_required_for: [],
       allow_night_irrigation: false,
+      max_irrigation_rounds_per_day: 3,
+      notes: "",
+      max_irrigation_mm_per_day: null,
     },
     budget: {
       max_cost_total: null,

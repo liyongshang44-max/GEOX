@@ -15,8 +15,10 @@ function toText(v: unknown, fallback = ""): string {
 }
 
 function planName(item: any): string {
-  const title = toText(item?.title || item?.display_name || item?.program_name, "");
-  if (title && !/^prg_/i.test(title) && title.toLowerCase() !== String(item?.program_id || "").toLowerCase()) return title;
+  const title = toText(item?.name || item?.title || item?.display_name || item?.program_name, "");
+  if (title) return title;
+  const programId = toText(item?.program_id, "");
+  if (programId) return programId;
   const crop = toText(item?.crop_name || item?.crop_code, "");
   return crop ? `${crop}经营方案` : "默认经营方案";
 }
