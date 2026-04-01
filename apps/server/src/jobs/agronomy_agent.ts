@@ -220,7 +220,7 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
 
   const dedup = new Map<string, ProgramBinding>();
   for (const item of parsed) {
-    const key = `${item.tenant.tenant_id}::${item.field_id}`;
+    const key = `${item.tenant.tenant_id}::${item.field_id}::${item.crop_code}`;
     if (!dedup.has(key)) {
       dedup.set(key, {
         program_id: item.program_id,
