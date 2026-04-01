@@ -52,6 +52,12 @@ export default function OperationDetailPage(): React.ReactElement {
   React.useEffect(() => {
     let mounted = true;
     const id = model.operationPlanId || operationPlanId;
+    if (!id || id === "-") {
+      if (mounted) setBilling(null);
+      return () => {
+        mounted = false;
+      };
+    }
     void fetchOperationBilling(id).then((res) => {
       if (mounted) setBilling(res);
     });

@@ -124,34 +124,42 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
 }
 
 async function loadBeforeMetrics(pool: Pool, field_id: string, ts: number): Promise<number | null> {
-  const result = await pool.query(
-    `SELECT value
-     FROM telemetry
-     WHERE field_id = $1
-       AND metric = 'soil_moisture'
-       AND ts <= $2
-     ORDER BY ts DESC
-     LIMIT 1`,
-    [field_id, ts]
-  );
-  const value = Number(result.rows?.[0]?.value ?? NaN);
-  return Number.isFinite(value) ? value : null;
+  try {
+    const result = await pool.query(
+      `SELECT value
+       FROM telemetry
+       WHERE field_id = $1
+         AND metric = 'soil_moisture'
+         AND ts <= $2
+       ORDER BY ts DESC
+       LIMIT 1`,
+      [field_id, ts]
+    );
+    const value = Number(result.rows?.[0]?.value ?? NaN);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 async function loadAfterMetrics(pool: Pool, field_id: string, receipt_ts: number): Promise<number | null> {
-  const result = await pool.query(
-    `SELECT value
-     FROM telemetry
-     WHERE field_id = $1
-       AND metric = 'soil_moisture'
-       AND ts >= $2
-       AND ts <= $3
-     ORDER BY ts ASC
-     LIMIT 1`,
-    [field_id, receipt_ts + 600000, receipt_ts + 1800000]
-  );
-  const value = Number(result.rows?.[0]?.value ?? NaN);
-  return Number.isFinite(value) ? value : null;
+  try {
+    const result = await pool.query(
+      `SELECT value
+       FROM telemetry
+       WHERE field_id = $1
+         AND metric = 'soil_moisture'
+         AND ts >= $2
+         AND ts <= $3
+       ORDER BY ts ASC
+       LIMIT 1`,
+      [field_id, receipt_ts + 600000, receipt_ts + 1800000]
+    );
+    const value = Number(result.rows?.[0]?.value ?? NaN);
+    return Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
