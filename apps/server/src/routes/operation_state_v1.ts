@@ -616,10 +616,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           media,
           metrics
         },
-        before_metrics: beforeMetrics,
-        after_metrics: afterMetrics,
-        expected_effect: expectedEffect,
-        actual_effect: actualEffect,
+        agronomy: {
+          crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
+          crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
+          before_metrics: beforeMetrics,
+          after_metrics: afterMetrics,
+          expected_effect: expectedEffect,
+          actual_effect: actualEffect
+        },
         business_effect: businessEffect,
         cost: {
           total: costBreakdown.total_cost,
