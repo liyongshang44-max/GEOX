@@ -42,6 +42,14 @@ export type OperationDetailResponse = {
   dispatch?: any;
   receipt?: any;
   timeline?: any[];
+  agronomy?: {
+    crop_code?: string | null;
+    crop_stage?: string | null;
+    before_metrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
+    after_metrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
+    expected_effect?: { type?: string | null; value?: number | null } | null;
+    actual_effect?: { type?: string | null; value?: number | null } | null;
+  } | null;
   evidence_export?: any;
   links?: Record<string, string>;
 };
