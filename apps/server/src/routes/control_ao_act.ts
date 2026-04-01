@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
+import { computeEffect } from "../domain/agronomy/effect_engine";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -114,6 +115,25 @@ type ParamDef = {
   max?: number; // Optional numeric upper bound
   enum?: string[]; // Required for enum type
 };
+
+type EffectMetricSnapshot = {
+  soil_moisture?: number;
+  temperature?: number;
+  humidity?: number;
+};
+
+function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
+  const out: EffectMetricSnapshot = {};
+  for (const row of rows ?? []) {
+    const metric = String(row?.metric ?? "").trim().toLowerCase();
+    const value = Number(row?.value_num ?? NaN);
+    if (!Number.isFinite(value)) continue;
+    if (metric === "soil_moisture" && out.soil_moisture == null) out.soil_moisture = value;
+    if (["temperature", "air_temperature", "soil_temp", "soil_temp_c"].includes(metric) && out.temperature == null) out.temperature = value;
+    if (["humidity", "air_humidity"].includes(metric) && out.humidity == null) out.humidity = value;
+  }
+  return out;
+}
 
 function validateKeyedPrimitives(
   schemaKeys: ParamDef[],
@@ -596,6 +616,47 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
       // v0：observed_parameters 只能使用 task.parameter_schema.keys[] 中已声明的 key；并按类型/界限/枚举校验。
       validateObservedParametersSubset(schemaKeys, body.observed_parameters, "observed_parameters");
 
+      const receiptDeviceId = String(
+        body?.meta?.device_id
+        ?? task?.payload?.meta?.device_id
+        ?? task?.payload?.device_id
+        ?? ""
+      ).trim();
+      const beforeTsMs = Number(body.execution_time.start_ts);
+      const receiptTsMs = Number(body.execution_time.end_ts);
+      const afterWindowEndTsMs = receiptTsMs + 20 * 60 * 1000;
+      let beforeMetrics: EffectMetricSnapshot = {};
+      let afterMetrics: EffectMetricSnapshot = {};
+      let computedEffect: { moisture_delta: number } | null = null;
+      if (receiptDeviceId && Number.isFinite(beforeTsMs) && Number.isFinite(receiptTsMs)) {
+        const beforeQ = await pool.query(
+          `SELECT metric, value_num, ts
+             FROM telemetry_index_v1
+            WHERE tenant_id = $1
+              AND device_id = $2
+              AND metric = ANY($3::text[])
+              AND ts <= to_timestamp($4::double precision / 1000.0)
+            ORDER BY ts DESC
+            LIMIT 20`,
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], beforeTsMs]
+        ).catch(() => ({ rows: [] as any[] }));
+        const afterQ = await pool.query(
+          `SELECT metric, value_num, ts
+             FROM telemetry_index_v1
+            WHERE tenant_id = $1
+              AND device_id = $2
+              AND metric = ANY($3::text[])
+              AND ts >= to_timestamp($4::double precision / 1000.0)
+              AND ts <= to_timestamp($5::double precision / 1000.0)
+            ORDER BY ts ASC
+            LIMIT 100`,
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], receiptTsMs, afterWindowEndTsMs]
+        ).catch(() => ({ rows: [] as any[] }));
+        beforeMetrics = buildEffectMetricSnapshot(beforeQ.rows ?? []);
+        afterMetrics = buildEffectMetricSnapshot(afterQ.rows ?? []);
+        computedEffect = computeEffect(beforeMetrics, afterMetrics);
+      }
+
       const created_at_ts = Date.now();
       const record_json = {
         type: "ao_act_receipt_v0",
@@ -614,6 +675,11 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           constraint_check: body.constraint_check,
           observed_parameters: body.observed_parameters,
           device_refs: (body as any).device_refs,
+          effect_snapshot: {
+            before_metrics: beforeMetrics,
+            after_metrics: afterMetrics,
+            effect: computedEffect
+          },
           created_at_ts,
           meta: {
             ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
@@ -693,6 +759,9 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
             act_task_id: body.act_task_id,
             status: terminalState,
             receipt_fact_id: fact_id,
+            before_metrics: beforeMetrics,
+            after_metrics: afterMetrics,
+            actual_effect: computedEffect,
             updated_ts: Date.now()
           }
         }]

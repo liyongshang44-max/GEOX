@@ -8,6 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
+import { computeEffect } from "../domain/agronomy/effect_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -54,6 +55,47 @@ function toMs(v: unknown): number | null {
     const x = Date.parse(v);
     return Number.isFinite(x) ? x : null;
   }
+  return null;
+}
+
+type OperationMetricsSnapshot = {
+  soil_moisture?: number;
+  temperature?: number;
+  humidity?: number;
+};
+
+function metricValueFromRows(rows: any[], names: string[]): number | undefined {
+  for (const row of rows) {
+    const metric = String(row?.metric ?? "").trim().toLowerCase();
+    if (!names.includes(metric)) continue;
+    const value = Number(row?.value_num ?? NaN);
+    if (Number.isFinite(value)) return value;
+  }
+  return undefined;
+}
+
+function buildMetricsSnapshot(rows: any[]): OperationMetricsSnapshot {
+  const normalized = Array.isArray(rows) ? rows : [];
+  const soilMoisture = metricValueFromRows(normalized, ["soil_moisture"]);
+  const temperature = metricValueFromRows(normalized, ["temperature", "air_temperature", "soil_temp", "soil_temp_c"]);
+  const humidity = metricValueFromRows(normalized, ["humidity", "air_humidity"]);
+  const out: OperationMetricsSnapshot = {};
+  if (soilMoisture !== undefined) out.soil_moisture = soilMoisture;
+  if (temperature !== undefined) out.temperature = temperature;
+  if (humidity !== undefined) out.humidity = humidity;
+  return out;
+}
+
+function toExpectedEffect(recPayload: any): { type: "moisture_increase" | "growth_boost"; value: number } | null {
+  const payload = recPayload && typeof recPayload === "object" ? recPayload : {};
+  const candidate = payload.expected_effect ?? payload?.suggested_action?.parameters?.expected_effect ?? null;
+  const typeRaw = String(candidate?.type ?? "").trim().toLowerCase();
+  const value = Number(candidate?.value ?? NaN);
+  if ((typeRaw === "moisture_increase" || typeRaw === "growth_boost") && Number.isFinite(value)) {
+    return { type: typeRaw, value };
+  }
+  const fallbackValue = Number(payload?.suggested_action?.parameters?.expected_moisture_increase ?? NaN);
+  if (Number.isFinite(fallbackValue)) return { type: "moisture_increase", value: fallbackValue };
   return null;
 }
 
@@ -416,6 +458,53 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       media,
       metrics,
     });
+    const operationPayload = plan?.record_json?.payload ?? {};
+    const recommendationPayload = rec?.record_json?.payload ?? {};
+    const detailDeviceId = toText(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
+    const executionStartMs = toMs(normalizedReceipt?.execution_started_at ?? task?.occurred_at ?? receiptFact?.occurred_at);
+    const receiptMs = toMs(receiptFact?.occurred_at ?? normalizedReceipt?.execution_finished_at ?? normalizedReceipt?.execution_started_at);
+    const afterWindowMinutes = 20;
+    const afterWindowEndMs = receiptMs == null ? null : receiptMs + afterWindowMinutes * 60 * 1000;
+
+    let beforeMetrics: OperationMetricsSnapshot = {};
+    let afterMetrics: OperationMetricsSnapshot = {};
+    if (detailDeviceId && executionStartMs != null) {
+      const beforeTelemetryQ = await pool.query(
+        `SELECT metric, value_num, ts
+           FROM telemetry_index_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND metric = ANY($3::text[])
+            AND ts <= to_timestamp($4::double precision / 1000.0)
+          ORDER BY ts DESC
+          LIMIT 20`,
+        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], executionStartMs]
+      ).catch(() => ({ rows: [] as any[] }));
+      beforeMetrics = buildMetricsSnapshot(beforeTelemetryQ.rows ?? []);
+    }
+    if (detailDeviceId && receiptMs != null && afterWindowEndMs != null) {
+      const afterTelemetryQ = await pool.query(
+        `SELECT metric, value_num, ts
+           FROM telemetry_index_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND metric = ANY($3::text[])
+            AND ts >= to_timestamp($4::double precision / 1000.0)
+            AND ts <= to_timestamp($5::double precision / 1000.0)
+          ORDER BY ts ASC
+          LIMIT 100`,
+        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], receiptMs, afterWindowEndMs]
+      ).catch(() => ({ rows: [] as any[] }));
+      afterMetrics = buildMetricsSnapshot(afterTelemetryQ.rows ?? []);
+    }
+    const expectedEffect = toExpectedEffect(recommendationPayload);
+    const computedEffect = computeEffect(beforeMetrics, afterMetrics);
+    const actualEffect = computedEffect == null
+      ? null
+      : {
+        type: expectedEffect?.type ?? "moisture_increase",
+        value: computedEffect.moisture_delta
+      };
 
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
       id: `${item.type}_${item.ts}_${idx}`,
@@ -472,6 +561,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       operation: {
         operation_plan_id: operationPlanId,
         recommendation_id: toText(state.recommendation_id),
+        crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
+        crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
@@ -525,6 +616,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           media,
           metrics
         },
+        before_metrics: beforeMetrics,
+        after_metrics: afterMetrics,
+        expected_effect: expectedEffect,
+        actual_effect: actualEffect,
         business_effect: businessEffect,
         cost: {
           total: costBreakdown.total_cost,
