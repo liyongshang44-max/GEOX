@@ -44,7 +44,7 @@ export type OperationStateV1 = {
   crop_stage: string | null;
   action_type: string | null;
   before_metrics: {
-    soil_moisture?: number;
+    soil_moisture?: number | null;
     temperature?: number;
     humidity?: number;
   };
@@ -121,6 +121,21 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
     occurred_at: String(row.occurred_at),
     record_json: parseRecordJson(row.record_json) ?? row.record_json
   }));
+}
+
+async function loadBeforeMetrics(pool: Pool, field_id: string, ts: number): Promise<number | null> {
+  const result = await pool.query(
+    `SELECT value
+     FROM telemetry
+     WHERE field_id = $1
+       AND metric = 'soil_moisture'
+       AND ts <= $2
+     ORDER BY ts DESC
+     LIMIT 1`,
+    [field_id, ts]
+  );
+  const value = Number(result.rows?.[0]?.value ?? NaN);
+  return Number.isFinite(value) ? value : null;
 }
 
 function transitionToTimelineType(statusRaw: string): TimelineType | null {
@@ -489,5 +504,20 @@ function latestNonEmpty<T>(rows: FactRow[], pick: (row: FactRow) => T | null | u
 
 export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple): Promise<OperationStateV1[]> {
   const facts = await loadFacts(pool, tenant);
-  return projectOperationStateFromFacts(facts);
+  const states = projectOperationStateFromFacts(facts);
+  const enrichedStates = await Promise.all(
+    states.map(async (state) => {
+      if (!state.field_id) return state;
+      const beforeTs = state.timeline[0]?.ts ?? state.last_event_ts;
+      const soilMoisture = await loadBeforeMetrics(pool, state.field_id, beforeTs);
+      return {
+        ...state,
+        before_metrics: {
+          ...state.before_metrics,
+          soil_moisture: soilMoisture ?? null,
+        },
+      };
+    })
+  );
+  return enrichedStates;
 }
