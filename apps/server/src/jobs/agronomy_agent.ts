@@ -33,6 +33,13 @@ type ProgramBinding = {
   season_id: string;
   tenant: TenantTriple;
   crop_code: string;
+  status: string;
+};
+
+type ScanTarget = {
+  tenant_id: string;
+  field_id: string;
+  season_id: string;
 };
 
 type ScanTarget = {
@@ -46,6 +53,7 @@ const DEDUPE_WINDOW_MINUTES = 30;
 const DEFAULT_SOIL_MOISTURE = 30;
 const DEBUG_FIELD_ID = "field_c8_demo";
 const DEBUG_SEASON_ID = "season_demo";
+const ALLOWED_PROGRAM_STATUSES = new Set(["ACTIVE", "DRAFT"]);
 
 function safeString(v: any): string {
   return String(v ?? "").trim();
@@ -145,7 +153,7 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
       };
     })
     .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
-    .map(({ status: _status, ...rest }) => rest);
+    .map((item) => ({ ...item, status: String(item.status ?? "").toUpperCase() }));
 }
 
 async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> {
@@ -199,7 +207,30 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
       };
     })
     .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
-    .map(({ status: _status, ...rest }) => rest);
+    .map((item) => ({ ...item, status: String(item.status ?? "").toUpperCase() }));
+}
+
+async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
+  const q = await pool.query(
+    `SELECT
+        (record_json::jsonb#>>'{payload,program_id}') AS program_id,
+        (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+        (record_json::jsonb#>>'{payload,season_id}') AS season_id,
+        (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+        (record_json::jsonb#>>'{payload,status}') AS status,
+        (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
+        (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
+        occurred_at,
+        fact_id
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
+        AND (record_json::jsonb#>>'{payload,field_id}') = $1
+        AND (record_json::jsonb#>>'{payload,season_id}') = $2
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 20`,
+    [DEBUG_FIELD_ID, DEBUG_SEASON_ID],
+  );
+  return q.rows ?? [];
 }
 
 async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
@@ -374,18 +405,22 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       scannedCount += 1;
       const hasSeasonId = safeString(target.season_id).length > 0;
       const matchMode = hasSeasonId ? "field+season" : "field_fallback";
-      let candidates: ProgramBinding[] = [];
+      let rawCandidates: ProgramBinding[] = [];
       if (hasSeasonId) {
-        candidates = programsByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`) ?? [];
+        rawCandidates = programsByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`) ?? [];
       }
-      if (!candidates.length) {
+      if (!rawCandidates.length) {
         const fallbackByTenantField = latestProgramByField.get(`${target.tenant_id}::${target.field_id}`);
         const fallbackByFieldOnly = fallbackByTenantField
           ? null
           : latestProgramsByField.find((item) => item.field_id === target.field_id) ?? null;
         const fallbackProgram = fallbackByTenantField ?? fallbackByFieldOnly;
-        candidates = fallbackProgram ? [fallbackProgram] : [];
+        rawCandidates = fallbackProgram ? [fallbackProgram] : [];
       }
+      const rejectedProgramStatuses = rawCandidates
+        .filter((candidate) => !ALLOWED_PROGRAM_STATUSES.has(candidate.status))
+        .map((candidate) => candidate.status || "UNKNOWN");
+      const candidates = rawCandidates.filter((candidate) => ALLOWED_PROGRAM_STATUSES.has(candidate.status));
       const selectedProgram: ProgramBinding | null = candidates[0] ?? null;
       const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
       const programHit = candidates.length;
@@ -396,12 +431,16 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         telemetry_hits: telemetryHit,
         program_hits: programHit,
         selected_program_id: selectedProgram?.program_id ?? null,
+        selected_program_status: selectedProgram?.status ?? null,
         crop_code: selectedProgram?.crop_code ?? null,
+        rejected_program_statuses: rejectedProgramStatuses,
       });
       console.log("[agronomy-agent] selected_program", {
         field_id: target.field_id,
         season_id: target.season_id || null,
         selected_program_id: selectedProgram?.program_id ?? null,
+        selected_program_status: selectedProgram?.status ?? null,
+        rejected_program_statuses: rejectedProgramStatuses,
         crop_code: selectedProgram?.crop_code ?? null,
         match_mode: matchMode,
       });
