@@ -40,7 +40,27 @@ export type OperationStateV1 = {
   device_id: string | null;
   field_id: string | null;
   season_id: string | null;
+  crop_code: string | null;
+  crop_stage: string | null;
   action_type: string | null;
+  before_metrics: {
+    soil_moisture?: number;
+    temperature?: number;
+    humidity?: number;
+  };
+  after_metrics: {
+    soil_moisture?: number;
+    temperature?: number;
+    humidity?: number;
+  };
+  expected_effect: {
+    type: "moisture_increase" | "growth_boost";
+    value: number;
+  } | null;
+  actual_effect: {
+    type: string;
+    value: number;
+  } | null;
   dispatch_status: string;
   receipt_status: string;
   acceptance: {
@@ -150,6 +170,23 @@ function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   const status = String(statusRaw ?? "").trim().toUpperCase();
   if (!status) return false;
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
+}
+
+function toNumOrUndef(v: unknown): number | undefined {
+  const n = Number(v ?? NaN);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function toMetricsSnapshot(v: any): { soil_moisture?: number; temperature?: number; humidity?: number } {
+  const raw = (v && typeof v === "object") ? v : {};
+  const out: { soil_moisture?: number; temperature?: number; humidity?: number } = {};
+  const sm = toNumOrUndef(raw.soil_moisture);
+  const temp = toNumOrUndef(raw.temperature);
+  const hum = toNumOrUndef(raw.humidity);
+  if (sm !== undefined) out.soil_moisture = sm;
+  if (temp !== undefined) out.temperature = temp;
+  if (hum !== undefined) out.humidity = hum;
+  return out;
 }
 
 function normalizeAcceptanceVerdict(verdictRaw: unknown): "PASS" | "FAIL" | "PENDING" | null {
@@ -351,6 +388,14 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
     ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null);
     const inferredSeasonId = String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null;
+    const inferredCropCode = latestNonEmpty(
+      allPlanFacts,
+      (planFact) => String(planFact.record_json?.payload?.crop_code ?? "").trim()
+    ) ?? (String(rec?.record_json?.payload?.crop_code ?? "").trim() || null);
+    const inferredCropStage = latestNonEmpty(
+      allPlanFacts,
+      (planFact) => String(planFact.record_json?.payload?.crop_stage ?? "").trim()
+    ) ?? (String(rec?.record_json?.payload?.crop_stage ?? "").trim() || null);
     const inferredProgramFromProgramFact = (() => {
       if (!inferredFieldId) return null;
       const fieldSeasonKey = `${inferredFieldId}::${inferredSeasonId ?? ""}`;
@@ -361,6 +406,22 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         ?? fieldMatched?.record_json?.payload?.program_id
         ?? ""
       ).trim() || null;
+    })();
+    const latestPlanPayload = allPlanFacts[allPlanFacts.length - 1]?.record_json?.payload ?? payload;
+    const planBeforeMetrics = toMetricsSnapshot(latestPlanPayload?.before_metrics);
+    const planAfterMetrics = toMetricsSnapshot(latestPlanPayload?.after_metrics);
+    const expectedEffectFromRecommendation = (() => {
+      const candidate = rec?.record_json?.payload?.expected_effect ?? rec?.record_json?.payload?.suggested_action?.parameters?.expected_effect;
+      const type = String(candidate?.type ?? "").trim();
+      const value = Number(candidate?.value ?? NaN);
+      if ((type === "moisture_increase" || type === "growth_boost") && Number.isFinite(value)) return { type, value } as const;
+      return null;
+    })();
+    const actualEffectFromPlan = (() => {
+      const effect = latestPlanPayload?.actual_effect ?? latestPlanPayload?.effect_snapshot?.effect;
+      const value = Number(effect?.moisture_delta ?? effect?.value ?? NaN);
+      if (!Number.isFinite(value)) return null;
+      return { type: String(effect?.type ?? "moisture_increase"), value };
     })();
 
     states.push({
@@ -388,10 +449,16 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       ) ?? (String(task?.record_json?.payload?.meta?.device_id ?? rec?.record_json?.payload?.device_id ?? "").trim() || null),
       field_id: inferredFieldId,
       season_id: inferredSeasonId,
+      crop_code: inferredCropCode,
+      crop_stage: inferredCropStage,
       action_type: latestNonEmpty(
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()
       ) ?? (String(task?.record_json?.payload?.action_type ?? rec?.record_json?.payload?.suggested_action?.action_type ?? "").trim() || null),
+      before_metrics: planBeforeMetrics,
+      after_metrics: planAfterMetrics,
+      expected_effect: expectedEffectFromRecommendation,
+      actual_effect: actualEffectFromPlan,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
