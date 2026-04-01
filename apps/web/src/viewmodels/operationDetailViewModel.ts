@@ -117,10 +117,25 @@ export type OperationDetailPageVm = {
 function toText(v: unknown, fallback = "-"): string {
   if (typeof v === "string") {
     const x = v.trim();
-    return x || fallback;
+    return x ? repairMojibakeText(x) : fallback;
   }
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return fallback;
+}
+
+function repairMojibakeText(input: string): string {
+  const text = String(input ?? "");
+  if (!text) return text;
+  const suspicious = /[ÃÂâ][\x80-\xBF]?|å|ç|æ|ï|ð/.test(text);
+  if (!suspicious) return text;
+  try {
+    const bytes = Uint8Array.from(text, (ch) => ch.charCodeAt(0) & 0xff);
+    const repaired = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    if (/[\u4e00-\u9fff]/.test(repaired)) return repaired;
+  } catch {
+    return text;
+  }
+  return text;
 }
 
 function toDateLabel(v: unknown): string {
@@ -180,6 +195,7 @@ function normalizeFinalStatusCode(detail: any): string {
 }
 
 function resolveExecutionProgress(detail: any): string {
+  if (!detail?.approval && !detail?.task) return "暂无执行数据";
   const finalStatus = normalizeFinalStatusCode(detail);
   if (["SUCCEEDED", "SUCCESS", "EXECUTED"].includes(finalStatus)) return "已完成并回传结果";
   if (["FAILED", "ERROR", "NOT_EXECUTED"].includes(finalStatus)) return "执行结束（异常）";
@@ -204,6 +220,7 @@ function buildExpectedOutcomeLabel(detail: any): string {
 }
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
+  if (!detail?.approval && !detail?.task) return "暂无效果评估";
   const finalStatus = normalizeFinalStatusCode(detail);
   if (finalStatus === "INVALID_EXECUTION") return "⚠️ 执行无效：当前仅收到调试日志或证据不足，无法进入正式验收";
   if (!receipt) {
@@ -264,6 +281,7 @@ function buildEvidenceBundleStatus(evidenceBundle: any): string {
 }
 
 function resolveAcceptanceStatus(detail: any, receipt?: ReceiptEvidenceVm): "PASS" | "FAIL" | "PENDING" {
+  if (!detail?.approval && !detail?.task) return "PENDING";
   const raw = String(
     detail?.acceptance?.verdict
     ?? "",
@@ -351,6 +369,36 @@ function buildStorySummary(label: string, sourceSummary: string, sourceActor: st
       return "作业进入失败终态，请核查设备回执与失败原因。";
     default:
       return finalStatus === "PENDING" ? "等待推进" : `${actor}已更新作业状态。`;
+  }
+}
+
+type CustomerViewStage = "待审批" | "执行中" | "待回执" | "待验收" | "已完成" | "无效执行";
+
+function resolveCustomerViewStage(detail: any): CustomerViewStage {
+  const finalStatus = normalizeFinalStatusCode(detail);
+  if (finalStatus === "INVALID_EXECUTION") return "无效执行";
+  if (!detail?.approval && !detail?.task) return "待审批";
+  if (finalStatus === "PENDING_ACCEPTANCE" || detail?.receipt) return "待验收";
+  if (["SUCCEEDED", "SUCCESS", "EXECUTED", "DONE"].includes(finalStatus) || detail?.acceptance?.verdict) return "已完成";
+  if (detail?.task && !detail?.receipt) return "待回执";
+  return "执行中";
+}
+
+function customerViewFallbackByStage(stage: CustomerViewStage): { summary: string; todayAction: string; riskLevel: "low" | "medium" | "high" } {
+  switch (stage) {
+    case "待审批":
+      return { summary: "当前建议待审批，尚未进入执行阶段", todayAction: "下一步：等待审批", riskLevel: "medium" };
+    case "执行中":
+      return { summary: "作业执行中，系统正在持续采集进度", todayAction: "保持设备在线并关注执行状态", riskLevel: "medium" };
+    case "待回执":
+      return { summary: "作业已下发，等待回执数据", todayAction: "督促执行端回传回执与证据", riskLevel: "medium" };
+    case "待验收":
+      return { summary: "已收到执行数据，待验收确认", todayAction: "下一步：进入验收", riskLevel: "low" };
+    case "已完成":
+      return { summary: "作业已完成并形成闭环", todayAction: "继续观察效果并归档证据", riskLevel: "low" };
+    case "无效执行":
+    default:
+      return { summary: "本次作业未被系统认定为有效执行", todayAction: "需重新执行或补充证据", riskLevel: "high" };
   }
 }
 
@@ -488,9 +536,10 @@ export function buildOperationDetailViewModel(args?: {
   const formalEvidenceCount = photoCount + metricCount + Math.max(0, logCount - simTraceCount);
   const onlySimTrace = formalEvidenceCount === 0 && debugEvidenceCount > 0;
   const cost = safeDetail?.cost ?? {};
-  const finalStatusUpper = String(finalStatusCode || safeDetail?.final_status || "").toUpperCase();
-  const customerRiskLevel = String(safeDetail?.customer_view?.risk_level ?? (finalStatusUpper === "INVALID_EXECUTION" ? "high" : "low")).toLowerCase();
-  const normalizedCustomerRiskLevel: "low" | "medium" | "high" = customerRiskLevel === "high" ? "high" : customerRiskLevel === "medium" ? "medium" : "low";
+  const customerViewStage = resolveCustomerViewStage(safeDetail);
+  const customerViewFallback = customerViewFallbackByStage(customerViewStage);
+  const customerRiskLevel = String(safeDetail?.customer_view?.risk_level ?? customerViewFallback.riskLevel).toLowerCase();
+  const normalizedCustomerRiskLevel: "low" | "medium" | "high" = customerRiskLevel === "high" ? "high" : customerRiskLevel === "medium" ? "medium" : customerViewFallback.riskLevel;
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -591,11 +640,11 @@ export function buildOperationDetailViewModel(args?: {
     customerView: {
       summary: toText(
         safeDetail?.customer_view?.summary,
-        finalStatusUpper === "INVALID_EXECUTION" ? "本次作业未被系统认定为有效执行" : "作业已完成，预计改善作物状态",
+        customerViewFallback.summary,
       ),
       todayAction: toText(
         safeDetail?.customer_view?.today_action,
-        finalStatusUpper === "INVALID_EXECUTION" ? "需重新执行或补充证据" : "继续观察或进入验收",
+        customerViewFallback.todayAction,
       ),
       riskLevel: normalizedCustomerRiskLevel,
       riskLevelLabel: mapRiskLevelLabel(normalizedCustomerRiskLevel),
