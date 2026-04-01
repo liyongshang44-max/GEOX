@@ -49,7 +49,7 @@ export type OperationStateV1 = {
     humidity?: number;
   };
   after_metrics: {
-    soil_moisture?: number;
+    soil_moisture?: number | null;
     temperature?: number;
     humidity?: number;
   };
@@ -133,6 +133,22 @@ async function loadBeforeMetrics(pool: Pool, field_id: string, ts: number): Prom
      ORDER BY ts DESC
      LIMIT 1`,
     [field_id, ts]
+  );
+  const value = Number(result.rows?.[0]?.value ?? NaN);
+  return Number.isFinite(value) ? value : null;
+}
+
+async function loadAfterMetrics(pool: Pool, field_id: string, receipt_ts: number): Promise<number | null> {
+  const result = await pool.query(
+    `SELECT value
+     FROM telemetry
+     WHERE field_id = $1
+       AND metric = 'soil_moisture'
+       AND ts >= $2
+       AND ts <= $3
+     ORDER BY ts ASC
+     LIMIT 1`,
+    [field_id, receipt_ts + 600000, receipt_ts + 1800000]
   );
   const value = Number(result.rows?.[0]?.value ?? NaN);
   return Number.isFinite(value) ? value : null;
@@ -509,12 +525,20 @@ export async function projectOperationStateV1(pool: Pool, tenant: TenantTriple):
     states.map(async (state) => {
       if (!state.field_id) return state;
       const beforeTs = state.timeline[0]?.ts ?? state.last_event_ts;
-      const soilMoisture = await loadBeforeMetrics(pool, state.field_id, beforeTs);
+      const beforeSoilMoisture = await loadBeforeMetrics(pool, state.field_id, beforeTs);
+      const receiptTs = state.timeline.find((item) => item.type === "RECEIPT_SUBMITTED")?.ts;
+      const afterSoilMoisture = receiptTs
+        ? await loadAfterMetrics(pool, state.field_id, receiptTs)
+        : null;
       return {
         ...state,
         before_metrics: {
           ...state.before_metrics,
-          soil_moisture: soilMoisture ?? null,
+          soil_moisture: beforeSoilMoisture ?? null,
+        },
+        after_metrics: {
+          ...state.after_metrics,
+          soil_moisture: afterSoilMoisture ?? null,
         },
       };
     })
