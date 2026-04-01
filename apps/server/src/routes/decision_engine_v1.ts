@@ -440,6 +440,8 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     rule_hit: Array.isArray(payload.rule_hit) ? payload.rule_hit : [],
     confidence: payload.confidence ?? null,
     model_version: payload.model_version ?? null,
+    title: payload.title ?? null,
+    summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
   };
 }
@@ -573,7 +575,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
       return {
         recommendation_id: item.recommendation_id,
-        title: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议",
+        title: item.title || (item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
         status: {
           code: statusCode,
           label: recommendationStatusLabel(statusCode),
@@ -637,7 +639,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       item: {
         recommendation: {
           recommendation_id: item.recommendation_id,
-          title: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议",
+          title: item.title || (item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
           subtitle: item?.suggested_action?.summary || "建议已生成，待执行链路推进。",
           status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) },
           type: {

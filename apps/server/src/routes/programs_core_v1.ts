@@ -21,6 +21,7 @@ const ProgramCreateBodySchema = z.object({
   tenant_id: z.string().min(1).optional(),
   project_id: z.string().min(1).optional(),
   group_id: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
   program_id: z.string().min(1).optional(),
   field_id: z.string().min(1),
   season_id: z.string().min(1),
@@ -38,7 +39,9 @@ const ProgramCreateBodySchema = z.object({
     forbid_fertilizer_types: z.array(z.string()),
     max_irrigation_mm_per_day: z.number().finite().nullable().optional(),
     manual_approval_required_for: z.array(z.string()),
-    allow_night_irrigation: z.boolean()
+    allow_night_irrigation: z.boolean(),
+    max_irrigation_rounds_per_day: z.number().int().positive().optional(),
+    notes: z.string().optional()
   }),
   budget: z.object({
     max_cost_total: z.number().finite().nullable().optional(),
@@ -128,6 +131,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
+        name: body.name ?? null,
         program_id,
         field_id,
         season_id,
