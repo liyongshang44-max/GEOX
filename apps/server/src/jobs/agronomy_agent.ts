@@ -44,6 +44,8 @@ type ScanTarget = {
 const AGENT_SOURCE = "jobs/agronomy_agent";
 const DEDUPE_WINDOW_MINUTES = 30;
 const DEFAULT_SOIL_MOISTURE = 30;
+const DEBUG_FIELD_ID = "field_c8_demo";
+const DEBUG_SEASON_ID = "season_demo";
 
 function safeString(v: any): string {
   return String(v ?? "").trim();
@@ -144,6 +146,29 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
     })
     .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
     .map(({ status: _status, ...rest }) => rest);
+}
+
+async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
+  const q = await pool.query(
+    `SELECT
+        (record_json::jsonb#>>'{payload,program_id}') AS program_id,
+        (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+        (record_json::jsonb#>>'{payload,season_id}') AS season_id,
+        (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+        (record_json::jsonb#>>'{payload,status}') AS status,
+        (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
+        (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
+        occurred_at,
+        fact_id
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
+        AND (record_json::jsonb#>>'{payload,field_id}') = $1
+        AND (record_json::jsonb#>>'{payload,season_id}') = $2
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 20`,
+    [DEBUG_FIELD_ID, DEBUG_SEASON_ID],
+  );
+  return q.rows ?? [];
 }
 
 async function existsRecentRecommendation(
@@ -262,11 +287,13 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
   let scannedCount = 0;
 
   try {
-    const [programs, telemetryRows] = await Promise.all([
+    const [programs, telemetryRows, debugCandidates] = await Promise.all([
       loadActivePrograms(pool),
       loadLatestSoilTelemetryByField(pool),
+      loadDebugProgramCandidates(pool),
     ]);
     console.log("[agronomy-agent] scan loaded", { programs: programs.length, telemetry_fields: telemetryRows.length });
+    console.log("[agronomy-agent] debug:field_c8_demo:program_candidates", debugCandidates);
     const telemetryByField = new Map(telemetryRows.map((row) => [`${row.tenant_id}::${row.field_id}`, row]));
     const targets = new Map<string, ScanTarget>();
     for (const program of programs) {
@@ -284,10 +311,29 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
     for (const target of targets.values()) {
       scannedCount += 1;
       const program = programByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`);
+      const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
+      const programHit = program ? 1 : 0;
+      console.log("[agronomy-agent] scan target", {
+        field_id: target.field_id,
+        season_id: target.season_id || null,
+        telemetry_hits: telemetryHit,
+        program_hits: programHit,
+        selected_program_id: program?.program_id ?? null,
+        crop_code: program?.crop_code ?? null,
+      });
+      if (target.field_id === DEBUG_FIELD_ID && (target.season_id || "") === DEBUG_SEASON_ID) {
+        console.log("[agronomy-agent] debug:field_c8_demo:selected", {
+          field_id: target.field_id,
+          season_id: target.season_id,
+          selected_program_id: program?.program_id ?? null,
+          crop_code: program?.crop_code ?? null,
+        });
+      }
       if (!program) {
         skipped += 1;
         skippedByReason.no_program += 1;
         console.log("[agronomy-agent] skipped:no_program", { field_id: target.field_id, season_id: target.season_id || null });
+        console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: target.field_id, season_id: target.season_id || null });
         continue;
       }
       console.log("[agronomy-agent] selected_program", {
@@ -300,6 +346,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       if (!Number.isFinite(soilMoisture ?? Number.NaN)) {
         skippedByReason.no_telemetry += 1;
         console.log("[agronomy-agent] skipped:no_telemetry", { field_id: program.field_id });
+        console.log("[agronomy-agent] branch", { result: "skipped:no_telemetry", field_id: program.field_id, season_id: program.season_id || null, program_id: program.program_id });
       }
       const effectiveSoilMoisture = Number.isFinite(soilMoisture ?? Number.NaN)
         ? Number(soilMoisture)
@@ -309,18 +356,21 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         skipped += 1;
         skippedByReason.no_program += 1;
         console.log("[agronomy-agent] skipped:no_program", { field_id: program.field_id, season_id: program.season_id || null });
+        console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: program.field_id, season_id: program.season_id || null });
         continue;
       }
       if (!program.tenant.tenant_id || !program.tenant.project_id || !program.tenant.group_id) {
         skipped += 1;
         skippedByReason.no_program += 1;
         console.log("[agronomy-agent] skipped:no_program", { field_id: program.field_id, season_id: program.season_id || null });
+        console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: program.field_id, season_id: program.season_id || null });
         continue;
       }
       if (!program.crop_code) {
         skipped += 1;
         skippedByReason.no_crop_code += 1;
         console.log("[agronomy-agent] skipped:no_crop_code", { program_id: program.program_id });
+        console.log("[agronomy-agent] branch", { result: "skipped:no_crop_code", field_id: program.field_id, season_id: program.season_id || null, program_id: program.program_id });
         continue;
       }
 
@@ -329,6 +379,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         skipped += 1;
         skippedByReason.duplicate += 1;
         console.log("[agronomy-agent] skipped:duplicate", { field_id: program.field_id, program_id: program.program_id });
+        console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: program.field_id, season_id: program.season_id || null, program_id: program.program_id });
         continue;
       }
 
@@ -344,6 +395,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         skipped += 1;
         skippedByReason.duplicate += 1;
         console.log("[agronomy-agent] skipped:duplicate", { field_id: program.field_id, program_id: program.program_id });
+        console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: program.field_id, season_id: program.season_id || null, program_id: program.program_id });
         continue;
       }
 
@@ -417,6 +469,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         crop_code: program.crop_code,
         action_type,
       });
+      console.log("[agronomy-agent] branch", { result: "created", field_id: program.field_id, season_id: program.season_id || null, program_id: program.program_id });
     }
   } catch (error: any) {
     runError = error;
