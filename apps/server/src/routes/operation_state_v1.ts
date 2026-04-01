@@ -561,6 +561,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       operation: {
         operation_plan_id: operationPlanId,
         recommendation_id: toText(state.recommendation_id),
+        crop_code: toText(state.crop_code ?? rec?.record_json?.payload?.crop_code ?? plan?.record_json?.payload?.crop_code),
+        crop_stage: toText(state.crop_stage ?? rec?.record_json?.payload?.crop_stage ?? plan?.record_json?.payload?.crop_stage),
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
