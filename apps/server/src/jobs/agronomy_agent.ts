@@ -435,7 +435,8 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       const rejectedProgramStatuses = rawCandidates
         .filter((candidate) => !ALLOWED_PROGRAM_STATUSES.has(candidate.status))
         .map((candidate) => candidate.status || "UNKNOWN");
-      const selectedProgram: ProgramBinding | null = candidates[0] ?? null;
+      const selectedPrograms: ProgramBinding[] = matchMode === "field_fallback" ? candidates : candidates.slice(0, 1);
+      const selectedProgram: ProgramBinding | null = selectedPrograms[0] ?? null;
       const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
       const programHit = candidates.length;
       console.log("[agronomy-agent] scan target", {
@@ -457,6 +458,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         rejected_program_statuses: rejectedProgramStatuses,
         crop_code: selectedProgram?.crop_code ?? null,
         match_mode: matchMode,
+        selected_program_ids: selectedPrograms.map((item) => item.program_id),
       });
       if (target.field_id === DEBUG_FIELD_ID && (target.season_id || "") === DEBUG_SEASON_ID) {
         console.log("[agronomy-agent] debug:field_c8_demo:selected", {
@@ -473,168 +475,177 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
         console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: target.field_id, season_id: target.season_id || null });
         continue;
       }
-      const telemetry = telemetryByField.get(`${selectedProgram.tenant.tenant_id}::${selectedProgram.field_id}`);
-      const soilMoisture = telemetry?.soil_moisture;
-      if (!Number.isFinite(soilMoisture ?? Number.NaN)) {
-        skippedByReason.no_telemetry += 1;
-        console.log("[agronomy-agent] skipped:no_telemetry", { field_id: selectedProgram.field_id });
-        console.log("[agronomy-agent] branch", { result: "skipped:no_telemetry", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null, program_id: selectedProgram.program_id });
-      }
-      const effectiveSoilMoisture = Number.isFinite(soilMoisture ?? Number.NaN)
-        ? Number(soilMoisture)
-        : DEFAULT_SOIL_MOISTURE;
-
-      if (!selectedProgram.program_id) {
-        skipped += 1;
-        skippedByReason.no_program += 1;
-        console.log("[agronomy-agent] skipped:no_program", { field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null });
-        console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null });
-        continue;
-      }
-      if (!selectedProgram.tenant.tenant_id || !selectedProgram.tenant.project_id || !selectedProgram.tenant.group_id) {
-        skipped += 1;
-        skippedByReason.no_program += 1;
-        console.log("[agronomy-agent] skipped:no_program", { field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null });
-        console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null });
-        continue;
-      }
-      if (!selectedProgram.crop_code) {
-        skipped += 1;
-        skippedByReason.no_crop_code += 1;
-        console.log("[agronomy-agent] skipped:no_crop_code", { program_id: selectedProgram.program_id });
-        console.log("[agronomy-agent] branch", { result: "skipped:no_crop_code", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null, program_id: selectedProgram.program_id });
-        continue;
-      }
-
-      const hasPendingPlan = await existsPendingOperationPlan(pool, selectedProgram.tenant, selectedProgram.program_id);
-      if (hasPendingPlan) {
-        skipped += 1;
-        skippedByReason.duplicate += 1;
-        console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgram.field_id, program_id: selectedProgram.program_id });
-        console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null, program_id: selectedProgram.program_id });
-        continue;
-      }
-
-      const cropCode = safeString(selectedProgram.crop_code).toLowerCase();
-      let action_type = "IRRIGATE";
-      let reason_code = "soil_moisture_below_optimal";
-      let recommendation_type = "irrigation_recommendation_v1";
-      let suggested_action_type = "irrigation.start";
-      let summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
-      switch (cropCode) {
-        case "corn": {
-          const agronomy = evaluateAgronomy({
-            crop_code: selectedProgram.crop_code,
-            soil_moisture: effectiveSoilMoisture,
-          });
-          action_type = "IRRIGATE";
-          reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-          recommendation_type = "irrigation_recommendation_v1";
-          suggested_action_type = "irrigation.start";
-          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
-          break;
+      for (const selectedProgramItem of selectedPrograms) {
+        console.log("[agronomy-agent] candidate attempt", {
+          field_id: selectedProgramItem.field_id,
+          season_id: selectedProgramItem.season_id || null,
+          program_id: selectedProgramItem.program_id,
+          crop_code: selectedProgramItem.crop_code,
+          match_mode: matchMode,
+        });
+        const telemetry = telemetryByField.get(`${selectedProgramItem.tenant.tenant_id}::${selectedProgramItem.field_id}`);
+        const soilMoisture = telemetry?.soil_moisture;
+        if (!Number.isFinite(soilMoisture ?? Number.NaN)) {
+          skippedByReason.no_telemetry += 1;
+          console.log("[agronomy-agent] skipped:no_telemetry", { field_id: selectedProgramItem.field_id });
+          console.log("[agronomy-agent] branch", { result: "skipped:no_telemetry", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
         }
-        case "tomato": {
-          action_type = "FERTILIZE";
-          reason_code = "tomato_nutrient_maintenance";
-          recommendation_type = "fertilization_recommendation_v1";
-          suggested_action_type = "fertilization.apply";
-          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行追肥处理`;
-          break;
+        const effectiveSoilMoisture = Number.isFinite(soilMoisture ?? Number.NaN)
+          ? Number(soilMoisture)
+          : DEFAULT_SOIL_MOISTURE;
+
+        if (!selectedProgramItem.program_id) {
+          skipped += 1;
+          skippedByReason.no_program += 1;
+          console.log("[agronomy-agent] skipped:no_program", { field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null });
+          console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null });
+          continue;
         }
-        default: {
-          const agronomy = evaluateAgronomy({
-            crop_code: selectedProgram.crop_code,
-            soil_moisture: effectiveSoilMoisture,
-          });
-          action_type = "IRRIGATE";
-          reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-          recommendation_type = "irrigation_recommendation_v1";
-          suggested_action_type = "irrigation.start";
-          summary = `根据当前作物模型（${selectedProgram.crop_code}），建议进行灌溉处理`;
-          break;
+        if (!selectedProgramItem.tenant.tenant_id || !selectedProgramItem.tenant.project_id || !selectedProgramItem.tenant.group_id) {
+          skipped += 1;
+          skippedByReason.no_program += 1;
+          console.log("[agronomy-agent] skipped:no_program", { field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null });
+          console.log("[agronomy-agent] branch", { result: "skipped:no_program", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null });
+          continue;
         }
-      }
-      const duplicated = await existsRecentRecommendation(pool, selectedProgram.tenant, selectedProgram.program_id, selectedProgram.field_id, action_type, reason_code);
-      if (duplicated) {
-        skipped += 1;
-        skippedByReason.duplicate += 1;
-        console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgram.field_id, program_id: selectedProgram.program_id });
-        console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null, program_id: selectedProgram.program_id });
-        continue;
-      }
+        if (!selectedProgramItem.crop_code) {
+          skipped += 1;
+          skippedByReason.no_crop_code += 1;
+          console.log("[agronomy-agent] skipped:no_crop_code", { program_id: selectedProgramItem.program_id });
+          console.log("[agronomy-agent] branch", { result: "skipped:no_crop_code", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+          continue;
+        }
 
-      const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
-      const basePayload = {
-        tenant_id: selectedProgram.tenant.tenant_id,
-        project_id: selectedProgram.tenant.project_id,
-        group_id: selectedProgram.tenant.group_id,
-        program_id: selectedProgram.program_id,
-        field_id: selectedProgram.field_id,
-        device_id: telemetry?.device_id ?? null,
-        season_id: selectedProgram.season_id || null,
-        action_type,
-        reason_codes: [reason_code],
-        title: "系统建议",
-        summary,
-      };
+        const hasPendingPlan = await existsPendingOperationPlan(pool, selectedProgramItem.tenant, selectedProgramItem.program_id);
+        if (hasPendingPlan) {
+          skipped += 1;
+          skippedByReason.duplicate += 1;
+          console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgramItem.field_id, program_id: selectedProgramItem.program_id });
+          console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+          continue;
+        }
 
-      await insertFact(pool, AGENT_SOURCE, {
-        type: "recommendation_v1",
-        payload: {
-          ...basePayload,
-          recommendation_id,
-          created_ts: Date.now(),
-        },
-      });
-
-      await insertFact(pool, AGENT_SOURCE, {
-        type: "decision_recommendation_v1",
-        payload: {
-          ...basePayload,
-          recommendation_id,
-          recommendation_type,
-          status: "proposed",
-          evidence_refs: ["telemetry:soil_moisture"],
-          rule_hit: [
-            {
-              rule_id: "agronomy_agent_soil_moisture_v1",
-              matched: true,
-              actual: effectiveSoilMoisture,
-            },
-          ],
-          confidence: 0.8,
-          suggested_action: {
-            action_type: suggested_action_type,
-            summary: basePayload.summary,
-            parameters: {
-              program_id: selectedProgram.program_id,
-              crop_code: selectedProgram.crop_code,
+        const cropCode = safeString(selectedProgramItem.crop_code).toLowerCase();
+        let action_type = "IRRIGATE";
+        let reason_code = "soil_moisture_below_optimal";
+        let recommendation_type = "irrigation_recommendation_v1";
+        let suggested_action_type = "irrigation.start";
+        let summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
+        switch (cropCode) {
+          case "corn": {
+            const agronomy = evaluateAgronomy({
+              crop_code: selectedProgramItem.crop_code,
               soil_moisture: effectiveSoilMoisture,
-            },
-          },
-          created_ts: Date.now(),
-          model_version: "agronomy_agent_v1",
-        },
-      });
-      await createOperationPlanFromRecommendation(pool, selectedProgram.tenant, {
-        recommendation_id,
-        program_id: selectedProgram.program_id,
-        field_id: selectedProgram.field_id,
-        season_id: selectedProgram.season_id || null,
-        action_type,
-        device_id: telemetry?.device_id ?? null,
-      });
+            });
+            action_type = "IRRIGATE";
+            reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+            recommendation_type = "irrigation_recommendation_v1";
+            suggested_action_type = "irrigation.start";
+            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
+            break;
+          }
+          case "tomato": {
+            action_type = "FERTILIZE";
+            reason_code = "tomato_nutrient_maintenance";
+            recommendation_type = "fertilization_recommendation_v1";
+            suggested_action_type = "fertilization.apply";
+            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行追肥处理`;
+            break;
+          }
+          default: {
+            const agronomy = evaluateAgronomy({
+              crop_code: selectedProgramItem.crop_code,
+              soil_moisture: effectiveSoilMoisture,
+            });
+            action_type = "IRRIGATE";
+            reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
+            recommendation_type = "irrigation_recommendation_v1";
+            suggested_action_type = "irrigation.start";
+            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
+            break;
+          }
+        }
+        const duplicated = await existsRecentRecommendation(pool, selectedProgramItem.tenant, selectedProgramItem.program_id, selectedProgramItem.field_id, action_type, reason_code);
+        if (duplicated) {
+          skipped += 1;
+          skippedByReason.duplicate += 1;
+          console.log("[agronomy-agent] skipped:duplicate", { field_id: selectedProgramItem.field_id, program_id: selectedProgramItem.program_id });
+          console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+          continue;
+        }
 
-      created += 1;
-      console.log("[agronomy-agent] recommendation created", {
-        field_id: selectedProgram.field_id,
-        season_id: selectedProgram.season_id || null,
-        program_id: selectedProgram.program_id,
-        crop_code: selectedProgram.crop_code,
-        action_type,
-      });
-      console.log("[agronomy-agent] branch", { result: "created", field_id: selectedProgram.field_id, season_id: selectedProgram.season_id || null, program_id: selectedProgram.program_id });
+        const recommendation_id = `rec_agent_${randomUUID().replace(/-/g, "")}`;
+        const basePayload = {
+          tenant_id: selectedProgramItem.tenant.tenant_id,
+          project_id: selectedProgramItem.tenant.project_id,
+          group_id: selectedProgramItem.tenant.group_id,
+          program_id: selectedProgramItem.program_id,
+          field_id: selectedProgramItem.field_id,
+          device_id: telemetry?.device_id ?? null,
+          season_id: selectedProgramItem.season_id || null,
+          action_type,
+          reason_codes: [reason_code],
+          title: "系统建议",
+          summary,
+        };
+
+        await insertFact(pool, AGENT_SOURCE, {
+          type: "recommendation_v1",
+          payload: {
+            ...basePayload,
+            recommendation_id,
+            created_ts: Date.now(),
+          },
+        });
+
+        await insertFact(pool, AGENT_SOURCE, {
+          type: "decision_recommendation_v1",
+          payload: {
+            ...basePayload,
+            recommendation_id,
+            recommendation_type,
+            status: "proposed",
+            evidence_refs: ["telemetry:soil_moisture"],
+            rule_hit: [
+              {
+                rule_id: "agronomy_agent_soil_moisture_v1",
+                matched: true,
+                actual: effectiveSoilMoisture,
+              },
+            ],
+            confidence: 0.8,
+            suggested_action: {
+              action_type: suggested_action_type,
+              summary: basePayload.summary,
+              parameters: {
+                program_id: selectedProgramItem.program_id,
+                crop_code: selectedProgramItem.crop_code,
+                soil_moisture: effectiveSoilMoisture,
+              },
+            },
+            created_ts: Date.now(),
+            model_version: "agronomy_agent_v1",
+          },
+        });
+        await createOperationPlanFromRecommendation(pool, selectedProgramItem.tenant, {
+          recommendation_id,
+          program_id: selectedProgramItem.program_id,
+          field_id: selectedProgramItem.field_id,
+          season_id: selectedProgramItem.season_id || null,
+          action_type,
+          device_id: telemetry?.device_id ?? null,
+        });
+
+        created += 1;
+        console.log("[agronomy-agent] recommendation created", {
+          field_id: selectedProgramItem.field_id,
+          season_id: selectedProgramItem.season_id || null,
+          program_id: selectedProgramItem.program_id,
+          crop_code: selectedProgramItem.crop_code,
+          action_type,
+        });
+        console.log("[agronomy-agent] branch", { result: "created", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+      }
     }
   } catch (error: any) {
     runError = error;
