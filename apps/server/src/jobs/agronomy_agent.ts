@@ -42,12 +42,6 @@ type ScanTarget = {
   season_id: string;
 };
 
-type ScanTarget = {
-  tenant_id: string;
-  field_id: string;
-  season_id: string;
-};
-
 const AGENT_SOURCE = "jobs/agronomy_agent";
 const DEDUPE_WINDOW_MINUTES = 30;
 const DEFAULT_SOIL_MOISTURE = 30;
@@ -210,30 +204,7 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
     .map((item) => ({ ...item, status: String(item.status ?? "").toUpperCase() }));
 }
 
-async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
-  const q = await pool.query(
-    `SELECT
-        (record_json::jsonb#>>'{payload,program_id}') AS program_id,
-        (record_json::jsonb#>>'{payload,field_id}') AS field_id,
-        (record_json::jsonb#>>'{payload,season_id}') AS season_id,
-        (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
-        (record_json::jsonb#>>'{payload,status}') AS status,
-        (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
-        (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
-        occurred_at,
-        fact_id
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
-        AND (record_json::jsonb#>>'{payload,field_id}') = $1
-        AND (record_json::jsonb#>>'{payload,season_id}') = $2
-      ORDER BY occurred_at DESC, fact_id DESC
-      LIMIT 20`,
-    [DEBUG_FIELD_ID, DEBUG_SEASON_ID],
-  );
-  return q.rows ?? [];
-}
-
-async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
+async function loadDebugProgramCandidatesForField(pool: Pool): Promise<any[]> {
   const q = await pool.query(
     `SELECT
         (record_json::jsonb#>>'{payload,program_id}') AS program_id,
@@ -376,7 +347,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
       loadActivePrograms(pool),
       loadLatestProgramsByField(pool),
       loadLatestSoilTelemetryByField(pool),
-      loadDebugProgramCandidates(pool),
+      loadDebugProgramCandidatesForField(pool),
     ]);
     console.log("[agronomy-agent] scan loaded", { programs: programs.length, telemetry_fields: telemetryRows.length });
     console.log("[agronomy-agent] debug:field_c8_demo:program_candidates", debugCandidates);
