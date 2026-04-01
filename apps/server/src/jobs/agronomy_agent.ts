@@ -148,6 +148,60 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
     .map(({ status: _status, ...rest }) => rest);
 }
 
+async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> {
+  const q = await pool.query(
+    `WITH ranked_programs AS (
+      SELECT
+        record_json,
+        ROW_NUMBER() OVER (
+          PARTITION BY
+            (record_json::jsonb#>>'{payload,tenant_id}'),
+            (record_json::jsonb#>>'{payload,field_id}')
+          ORDER BY
+            CASE WHEN (record_json::jsonb#>>'{payload,program_id}') LIKE 'prg_chain_%' THEN 1 ELSE 0 END ASC,
+            CASE
+              WHEN COALESCE((record_json::jsonb#>>'{payload,updated_ts}'), '') ~ '^[0-9]+$'
+              THEN (record_json::jsonb#>>'{payload,updated_ts}')::bigint
+              ELSE 0
+            END DESC,
+            CASE
+              WHEN COALESCE((record_json::jsonb#>>'{payload,created_ts}'), '') ~ '^[0-9]+$'
+              THEN (record_json::jsonb#>>'{payload,created_ts}')::bigint
+              ELSE 0
+            END DESC,
+            occurred_at DESC,
+            fact_id DESC
+        ) AS rn
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'field_program_v1'
+    )
+    SELECT record_json
+    FROM ranked_programs
+    WHERE rn = 1`,
+  );
+
+  const blockedStatus = new Set(["CANCELLED", "COMPLETED", "ARCHIVED"]);
+  return (q.rows ?? [])
+    .map((row: any) => row?.record_json?.payload ?? {})
+    .map((payload: any) => {
+      const status = safeString(payload.status).toUpperCase();
+      return {
+        status,
+        program_id: safeString(payload.program_id),
+        field_id: safeString(payload.field_id),
+        season_id: safeString(payload.season_id),
+        tenant: {
+          tenant_id: safeString(payload.tenant_id),
+          project_id: safeString(payload.project_id),
+          group_id: safeString(payload.group_id),
+        },
+        crop_code: safeString(payload.crop_code),
+      };
+    })
+    .filter((x) => x.program_id && x.field_id && x.tenant.tenant_id && !blockedStatus.has(x.status))
+    .map(({ status: _status, ...rest }) => rest);
+}
+
 async function loadDebugProgramCandidates(pool: Pool): Promise<any[]> {
   const q = await pool.query(
     `SELECT
@@ -287,8 +341,9 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
   let scannedCount = 0;
 
   try {
-    const [programs, telemetryRows, debugCandidates] = await Promise.all([
+    const [programs, latestProgramsByField, telemetryRows, debugCandidates] = await Promise.all([
       loadActivePrograms(pool),
+      loadLatestProgramsByField(pool),
       loadLatestSoilTelemetryByField(pool),
       loadDebugProgramCandidates(pool),
     ]);
@@ -308,14 +363,20 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
     }
 
     const programByTarget = new Map(programs.map((program) => [`${program.tenant.tenant_id}::${program.field_id}::${program.season_id}`, program]));
+    const programByField = new Map(latestProgramsByField.map((program) => [`${program.tenant.tenant_id}::${program.field_id}`, program]));
     for (const target of targets.values()) {
       scannedCount += 1;
-      const program = programByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`);
+      const hasSeasonId = safeString(target.season_id).length > 0;
+      const program = hasSeasonId
+        ? programByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`)
+        : (programByField.get(`${target.tenant_id}::${target.field_id}`)
+          ?? programByTarget.get(`${target.tenant_id}::${target.field_id}::${target.season_id}`));
       const telemetryHit = telemetryByField.has(`${target.tenant_id}::${target.field_id}`) ? 1 : 0;
       const programHit = program ? 1 : 0;
       console.log("[agronomy-agent] scan target", {
         field_id: target.field_id,
         season_id: target.season_id || null,
+        match_mode: hasSeasonId ? "field+season" : "field_fallback",
         telemetry_hits: telemetryHit,
         program_hits: programHit,
         selected_program_id: program?.program_id ?? null,
