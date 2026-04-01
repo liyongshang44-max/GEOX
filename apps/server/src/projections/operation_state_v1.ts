@@ -339,7 +339,13 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       approval_id,
       act_task_id: task_id,
       receipt_id,
-      program_id: String(payload.program_id ?? rec?.record_json?.payload?.program_id ?? "").trim() || null,
+      program_id: String(
+        payload.program_id
+        ?? rec?.record_json?.payload?.program_id
+        ?? task?.record_json?.payload?.program_id
+        ?? task?.record_json?.payload?.meta?.program_id
+        ?? ""
+      ).trim() || null,
       approval_request_id,
       approval_decision_id,
       task_id,
