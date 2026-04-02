@@ -12,6 +12,13 @@ export type ProgramDetailMetric = { label: string; value: string };
 export type ProgramDetailViewModel = any;
 
 type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
+type ProgramActiveRule = {
+  ruleId: string;
+  priorityLabel: string;
+  actionLabel: string;
+  reasonCodesLabel: string;
+  riskIfNotExecute: string;
+};
 
 export type ProgramConsoleViewModel = {
   title: string;
@@ -41,6 +48,21 @@ export type ProgramConsoleViewModel = {
     keyMetrics: Array<{ label: string; value: string }>;
     activeRuleCount: number;
   };
+  programAgronomy: {
+    cropCode: string;
+    cropLabel: string;
+    cropStage: string;
+    cropStageLabel: string;
+    stageSummary: string;
+    stageGoal: string;
+  };
+  currentMetrics: {
+    soilMoistureLabel: string;
+    temperatureLabel: string;
+    humidityLabel: string;
+    updatedAtLabel: string;
+  };
+  activeRules: ProgramActiveRule[];
   timeline: Array<{
     ts: number;
     label: string;
@@ -90,8 +112,39 @@ function cropDisplayName(code: unknown): string {
 
 function metricValueText(value: unknown, suffix = ""): string {
   const n = toNumber(value);
-  if (!Number.isFinite(n)) return "-";
+  if (!Number.isFinite(n)) return "暂无数据";
   return `${n}${suffix}`;
+}
+
+function normalizeStageCode(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function cropStageDisplayLabel(stageCode: unknown): string {
+  const normalized = normalizeStageCode(stageCode);
+  if (["vegetative", "veg", "v"].includes(normalized)) return "营养生长期（vegetative）";
+  if (["reproductive", "repr", "r"].includes(normalized)) return "生殖生长期（reproductive）";
+  if (["seedling", "emergence"].includes(normalized)) return "苗期（seedling）";
+  if (["maturity", "ripening"].includes(normalized)) return "成熟期（maturity）";
+  return normalized || "-";
+}
+
+function cropStageSummary(stageCode: unknown): string {
+  const normalized = normalizeStageCode(stageCode);
+  if (["vegetative", "veg", "v"].includes(normalized)) return "当前重点关注土壤含水、温度与长势稳定性。";
+  if (["reproductive", "repr", "r"].includes(normalized)) return "当前重点关注授粉/坐果相关环境，避免水分和温度波动。";
+  if (["seedling", "emergence"].includes(normalized)) return "当前重点关注出苗整齐度、土壤墒情和早期病虫风险。";
+  if (["maturity", "ripening"].includes(normalized)) return "当前重点关注成熟一致性、含水控制和收获窗口。";
+  return "当前重点关注关键环境指标稳定，避免影响作物阶段推进。";
+}
+
+function cropStageGoal(stageCode: unknown): string {
+  const normalized = normalizeStageCode(stageCode);
+  if (["vegetative", "veg", "v"].includes(normalized)) return "保持水分在安全区间，避免缺水抑制营养生长。";
+  if (["reproductive", "repr", "r"].includes(normalized)) return "保障生殖生长环境稳定，降低落花落果与减产风险。";
+  if (["seedling", "emergence"].includes(normalized)) return "确保苗齐苗壮，为后续生长建立稳定群体基础。";
+  if (["maturity", "ripening"].includes(normalized)) return "稳住后期品质与产量，按计划进入采收节奏。";
+  return "保持阶段关键指标在安全范围内，降低异常波动风险。";
 }
 
 function readableActionType(code: unknown): string {
@@ -100,6 +153,53 @@ function readableActionType(code: unknown): string {
   if (text.includes("SPRAY")) return "喷施";
   if (text.includes("SCOUT") || text.includes("INSPECT")) return "巡检";
   return "作业";
+}
+
+function riskIfNotExecuteByAction(actionLabel: string): string {
+  if (actionLabel === "灌溉") return "土壤含水继续下降，可能抑制长势并造成后续减产风险";
+  if (actionLabel === "喷施") return "病虫害风险可能扩大，影响后续品质和产量稳定性";
+  if (actionLabel === "巡检") return "异常问题可能无法及时发现，导致处置窗口延误";
+  return "风险可能持续累积，并带来额外生产成本损失";
+}
+
+function buildActiveRules(detail: any): ProgramActiveRule[] {
+  const recommendation = detail?.latest_recommendation ?? {};
+  const activeRulesRaw = Array.isArray(recommendation?.active_rules)
+    ? recommendation.active_rules
+    : Array.isArray(recommendation?.rule_hit)
+      ? recommendation.rule_hit
+      : [];
+
+  return activeRulesRaw.map((rule: any) => {
+    const actionLabel = readableActionType(
+      rule?.action_type
+      || rule?.suggested_action
+      || recommendation?.suggested_action?.action_type
+      || recommendation?.action_type
+      || ""
+    );
+    const reasonCodes = Array.isArray(rule?.reason_codes)
+      ? rule.reason_codes.map((v: unknown) => toText(v, "")).filter(Boolean)
+      : [];
+    const reasonCodesLabel = toText(
+      reasonCodes.join(" / ")
+      || rule?.reason_code
+      || rule?.reason
+      || recommendation?.reason_codes?.join(" / "),
+      "暂无数据"
+    );
+
+    return {
+      ruleId: toText(rule?.rule_id || rule?.id, "暂无数据"),
+      priorityLabel: toPriorityLabel(rule?.priority ?? recommendation?.priority, "中"),
+      actionLabel: actionLabel || "作业",
+      reasonCodesLabel,
+      riskIfNotExecute: toText(
+        rule?.risk_if_not_execute || recommendation?.business_effect?.risk_if_not_execute,
+        riskIfNotExecuteByAction(actionLabel)
+      ),
+    };
+  });
 }
 
 function topStatus(code: unknown): { status: ProgramConsoleStatus; label: string } {
@@ -157,12 +257,27 @@ export function buildProgramDetailViewModel(args: {
     || "-",
     "-"
   );
+  const stageSummary = toText(
+    detail?.crop_stage_summary || detail?.latest_recommendation?.crop_stage_summary,
+    cropStageSummary(cropStage)
+  );
+  const stageGoal = toText(
+    detail?.crop_stage_goal || detail?.latest_recommendation?.crop_stage_goal,
+    cropStageGoal(cropStage)
+  );
 
   const metricsSource =
     detail?.latest_recommendation?.current_metrics
     ?? detail?.current_metrics
     ?? detail?.latest_metrics
     ?? {};
+  const metricsUpdatedAt =
+    detail?.latest_recommendation?.current_metrics_updated_at
+    ?? detail?.latest_recommendation?.updated_at
+    ?? detail?.current_metrics_updated_at
+    ?? detail?.latest_metrics_updated_at
+    ?? detail?.updated_at
+    ?? null;
   const keyMetrics = [
     { label: "土壤湿度", value: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%") },
     { label: "温度", value: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃") },
@@ -173,6 +288,7 @@ export function buildProgramDetailViewModel(args: {
     ?? detail?.latest_recommendation?.rule_count
     ?? (Array.isArray(detail?.latest_recommendation?.rule_hit) ? detail.latest_recommendation.rule_hit.length : NaN)
   );
+  const activeRules = buildActiveRules(detail);
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
@@ -264,6 +380,21 @@ export function buildProgramDetailViewModel(args: {
       keyMetrics,
       activeRuleCount: Number.isFinite(activeRuleCount) ? activeRuleCount : 0,
     },
+    programAgronomy: {
+      cropCode,
+      cropLabel: cropName,
+      cropStage,
+      cropStageLabel: cropStageDisplayLabel(cropStage),
+      stageSummary,
+      stageGoal,
+    },
+    currentMetrics: {
+      soilMoistureLabel: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%"),
+      temperatureLabel: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃"),
+      humidityLabel: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%"),
+      updatedAtLabel: formatDateTime(metricsUpdatedAt, "暂无数据"),
+    },
+    activeRules,
     timeline,
   };
 }

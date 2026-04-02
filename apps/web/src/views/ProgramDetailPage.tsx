@@ -70,6 +70,83 @@ export default function ProgramDetailPage(): React.ReactElement {
       <div className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">作物阶段卡</div>
+            <div className="detailSectionLead">帮助用户快速理解当前作物所处阶段、阶段说明与目标。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前作物</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.cropLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前阶段</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.cropStageLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">阶段说明</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.stageSummary}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">阶段目标</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.stageGoal}</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">关键指标卡</div>
+            <div className="detailSectionLead">展示当前监测指标及最近更新时间。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">土壤湿度</div>
+              <div className="decisionItemMeta">{viewModel.currentMetrics.soilMoistureLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">温度</div>
+              <div className="decisionItemMeta">{viewModel.currentMetrics.temperatureLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">空气湿度</div>
+              <div className="decisionItemMeta">{viewModel.currentMetrics.humidityLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最近更新时间</div>
+              <div className="decisionItemMeta">{viewModel.currentMetrics.updatedAtLabel}</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">当前激活规则</div>
+            <div className="detailSectionLead">阶段5核心表达：当前系统已触发的农学规则与风险提示。</div>
+          </div>
+          {!viewModel.activeRules.length ? (
+            <div className="decisionItemStatic">当前暂无触发中的农学规则</div>
+          ) : (
+            <div className="decisionList">
+              {viewModel.activeRules.map((rule) => (
+                <div key={`${rule.ruleId}_${rule.reasonCodesLabel}`} className="decisionItemStatic">
+                  <div className="decisionItemTitle">规则名称</div>
+                  <div className="decisionItemMeta">{rule.ruleId}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>优先级</div>
+                  <div className="decisionItemMeta">{rule.priorityLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>触发原因</div>
+                  <div className="decisionItemMeta">{rule.reasonCodesLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>建议动作</div>
+                  <div className="decisionItemMeta">{rule.actionLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>不执行风险</div>
+                  <div className="decisionItemMeta">{rule.riskIfNotExecute}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">作物阶段概览</div>
             <div className="detailSectionLead">用于快速查看当前作物、阶段、关键指标与规则激活情况。</div>
           </div>
