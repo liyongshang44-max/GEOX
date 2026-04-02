@@ -120,6 +120,33 @@ export default function ProgramDetailPage(): React.ReactElement {
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">当前激活规则</div>
+            <div className="detailSectionLead">阶段5核心表达：当前系统已触发的农学规则与风险提示。</div>
+          </div>
+          {!viewModel.activeRules.length ? (
+            <div className="decisionItemStatic">当前暂无触发中的农学规则</div>
+          ) : (
+            <div className="decisionList">
+              {viewModel.activeRules.map((rule) => (
+                <div key={`${rule.ruleId}_${rule.reasonCodesLabel}`} className="decisionItemStatic">
+                  <div className="decisionItemTitle">规则名称</div>
+                  <div className="decisionItemMeta">{rule.ruleId}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>优先级</div>
+                  <div className="decisionItemMeta">{rule.priorityLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>触发原因</div>
+                  <div className="decisionItemMeta">{rule.reasonCodesLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>建议动作</div>
+                  <div className="decisionItemMeta">{rule.actionLabel}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>不执行风险</div>
+                  <div className="decisionItemMeta">{rule.riskIfNotExecute}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">作物阶段概览</div>
             <div className="detailSectionLead">用于快速查看当前作物、阶段、关键指标与规则激活情况。</div>
           </div>

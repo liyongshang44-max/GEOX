@@ -12,6 +12,13 @@ export type ProgramDetailMetric = { label: string; value: string };
 export type ProgramDetailViewModel = any;
 
 type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
+type ProgramActiveRule = {
+  ruleId: string;
+  priorityLabel: string;
+  actionLabel: string;
+  reasonCodesLabel: string;
+  riskIfNotExecute: string;
+};
 
 export type ProgramConsoleViewModel = {
   title: string;
@@ -55,6 +62,7 @@ export type ProgramConsoleViewModel = {
     humidityLabel: string;
     updatedAtLabel: string;
   };
+  activeRules: ProgramActiveRule[];
   timeline: Array<{
     ts: number;
     label: string;
@@ -147,6 +155,53 @@ function readableActionType(code: unknown): string {
   return "作业";
 }
 
+function riskIfNotExecuteByAction(actionLabel: string): string {
+  if (actionLabel === "灌溉") return "土壤含水继续下降，可能抑制长势并造成后续减产风险";
+  if (actionLabel === "喷施") return "病虫害风险可能扩大，影响后续品质和产量稳定性";
+  if (actionLabel === "巡检") return "异常问题可能无法及时发现，导致处置窗口延误";
+  return "风险可能持续累积，并带来额外生产成本损失";
+}
+
+function buildActiveRules(detail: any): ProgramActiveRule[] {
+  const recommendation = detail?.latest_recommendation ?? {};
+  const activeRulesRaw = Array.isArray(recommendation?.active_rules)
+    ? recommendation.active_rules
+    : Array.isArray(recommendation?.rule_hit)
+      ? recommendation.rule_hit
+      : [];
+
+  return activeRulesRaw.map((rule: any) => {
+    const actionLabel = readableActionType(
+      rule?.action_type
+      || rule?.suggested_action
+      || recommendation?.suggested_action?.action_type
+      || recommendation?.action_type
+      || ""
+    );
+    const reasonCodes = Array.isArray(rule?.reason_codes)
+      ? rule.reason_codes.map((v: unknown) => toText(v, "")).filter(Boolean)
+      : [];
+    const reasonCodesLabel = toText(
+      reasonCodes.join(" / ")
+      || rule?.reason_code
+      || rule?.reason
+      || recommendation?.reason_codes?.join(" / "),
+      "暂无数据"
+    );
+
+    return {
+      ruleId: toText(rule?.rule_id || rule?.id, "暂无数据"),
+      priorityLabel: toPriorityLabel(rule?.priority ?? recommendation?.priority, "中"),
+      actionLabel: actionLabel || "作业",
+      reasonCodesLabel,
+      riskIfNotExecute: toText(
+        rule?.risk_if_not_execute || recommendation?.business_effect?.risk_if_not_execute,
+        riskIfNotExecuteByAction(actionLabel)
+      ),
+    };
+  });
+}
+
 function topStatus(code: unknown): { status: ProgramConsoleStatus; label: string } {
   const normalized = String(code ?? "").toUpperCase();
   if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED", "BLOCKED"].includes(normalized)) return { status: "error", label: "异常" };
@@ -233,6 +288,7 @@ export function buildProgramDetailViewModel(args: {
     ?? detail?.latest_recommendation?.rule_count
     ?? (Array.isArray(detail?.latest_recommendation?.rule_hit) ? detail.latest_recommendation.rule_hit.length : NaN)
   );
+  const activeRules = buildActiveRules(detail);
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
@@ -338,6 +394,7 @@ export function buildProgramDetailViewModel(args: {
       humidityLabel: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%"),
       updatedAtLabel: formatDateTime(metricsUpdatedAt, "暂无数据"),
     },
+    activeRules,
     timeline,
   };
 }
