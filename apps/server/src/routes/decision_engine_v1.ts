@@ -29,6 +29,8 @@ type RecommendationV1 = {
   };
   created_ts: number;
   model_version: "decision_engine_v1";
+  rank_score?: number;
+  rule_performance_score?: number;
 };
 
 function badRequest(reply: FastifyReply, error: string) {
@@ -137,6 +139,7 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
       soil_moisture: soilMoisture
     })
     : { should_irrigate: false, reason: "soil_moisture_missing" };
+  const moistureThreshold = 35;
 
   const irrigationNeed = irrigationEval.should_irrigate || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
   if (irrigationNeed) {
@@ -155,13 +158,13 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
       reason_codes: [irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress"],
       evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
       rule_hit: [
-        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < (irrigationDecision.moisture_threshold ?? 35) : false, threshold: irrigationDecision.moisture_threshold ?? 35, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
+        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < moistureThreshold : false, threshold: moistureThreshold, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
         { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
       ],
       confidence,
       suggested_action: {
         action_type: "irrigation.start",
-        summary: `${irrigationDecision.crop_name ?? crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
+        summary: `${crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
         parameters: {
           crop_code,
           duration_min: durationMin,
@@ -213,6 +216,52 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
   }
 
   return out;
+}
+
+async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
+      rule_id TEXT PRIMARY KEY,
+      crop_code TEXT NOT NULL,
+      total_count INT NOT NULL DEFAULT 0,
+      effective_count INT NOT NULL DEFAULT 0,
+      partial_count INT NOT NULL DEFAULT 0,
+      ineffective_count INT NOT NULL DEFAULT 0,
+      no_data_count INT NOT NULL DEFAULT 0,
+      score NUMERIC NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, number>> {
+  if (!ruleIds.length) return new Map();
+  const sql = `
+    SELECT rule_id, score, total_count
+    FROM agronomy_rule_performance
+    WHERE crop_code = $1
+      AND rule_id = ANY($2::text[])
+  `;
+  const res = await pool.query(sql, [cropCode, ruleIds]);
+  const map = new Map<string, number>();
+  for (const row of (res.rows ?? [])) {
+    const ruleId = String(row.rule_id ?? "").trim();
+    if (!ruleId) continue;
+    const score = Number(row.score ?? 0);
+    const totalCount = Number(row.total_count ?? 0);
+    const stableScore = Number.isFinite(totalCount) && totalCount >= 5 && Number.isFinite(score) ? score : 0;
+    map.set(ruleId, stableScore);
+  }
+  return map;
+}
+
+function recommendationRulePerformanceScore(rec: RecommendationV1, ruleScoreMap: Map<string, number>): number {
+  const matchedRules = (Array.isArray(rec.rule_hit) ? rec.rule_hit : []).filter((x) => Boolean(x?.matched) && typeof x?.rule_id === "string");
+  if (!matchedRules.length) return 0;
+  const values = matchedRules.map((x) => Number(ruleScoreMap.get(String(x.rule_id).trim()) ?? 0)).filter((x) => Number.isFinite(x));
+  if (!values.length) return 0;
+  const avg = values.reduce((acc, x) => acc + x, 0) / values.length;
+  return Number(avg.toFixed(6));
 }
 
 async function loadRecommendationById(pool: Pool, recommendation_id: string, tenant: TenantTriple): Promise<any | null> {
@@ -550,6 +599,10 @@ function toAoActParameterSchema(parameters: Record<string, number | boolean | st
 }
 
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.addHook("onReady", async () => {
+    await ensureRulePerformanceTable(pool);
+  });
+
   app.get("/api/v1/agronomy/recommendations", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -744,6 +797,20 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
+    const cropCode = String(body.crop_code ?? "").trim();
+    const matchedRuleIds = Array.from(new Set(
+      recommendations.flatMap((x) => (Array.isArray(x.rule_hit) ? x.rule_hit : []))
+        .filter((x: any) => Boolean(x?.matched))
+        .map((x: any) => String(x?.rule_id ?? "").trim())
+        .filter(Boolean)
+    ));
+    const ruleScoreMap = cropCode ? await loadRuleScores(pool, cropCode, matchedRuleIds) : new Map<string, number>();
+    recommendations.forEach((rec) => {
+      const perfScore = recommendationRulePerformanceScore(rec, ruleScoreMap);
+      rec.rule_performance_score = perfScore;
+      rec.rank_score = Number((Number(rec.confidence ?? 0) * (1 + perfScore)).toFixed(6));
+    });
+    recommendations.sort((a, b) => Number(b.rank_score ?? 0) - Number(a.rank_score ?? 0));
 
     const fact_ids: string[] = [];
     const resolvedRecommendations: RecommendationV1[] = [];
