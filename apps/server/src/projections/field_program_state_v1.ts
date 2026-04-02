@@ -1,6 +1,7 @@
 import type { Pool } from "pg";
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -46,6 +47,7 @@ export type FieldProgramStateV1 = {
   field_id: string;
   season_id: string;
   crop_code: string;
+  crop_stage: string | null;
   variety_code: string | null;
   status: string;
   current_stage: FieldProgramStageV1;
@@ -56,6 +58,8 @@ export type FieldProgramStateV1 = {
     recommendation_type: string;
     status: string;
     confidence: number | null;
+    crop_stage: string | null;
+    rule_id: string | null;
     created_ts: number;
     fact_id: string;
   } | null;
@@ -221,6 +225,14 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
     }));
 
     const recPayload = latestRecommendationRow?.record_json?.payload ?? {};
+    const createdTs = toNum(p?.created_ts) ?? toMs(programRow.occurred_at);
+    const resolvedProgramCropStage = (() => {
+      const latestStage = str(recPayload?.crop_stage) || null;
+      if (latestStage) return latestStage;
+      const cropCode = str(p?.crop_code);
+      if (!cropCode) return null;
+      return resolveCropStage({ cropCode, startDate: createdTs, now: Date.now() });
+    })();
     const recRiskScore = toNum(recPayload?.suggested_action?.parameters?.risk_score ?? recPayload?.confidence);
     const pendingStatus = str(pendingPlanRow?.record_json?.payload?.status) || null;
     const acceptanceVerdict = str(latestAcceptance?.record_json?.payload?.verdict) || null;
@@ -250,6 +262,7 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
       field_id: fieldId,
       season_id: seasonId,
       crop_code: str(p.crop_code),
+      crop_stage: resolvedProgramCropStage,
       variety_code: str(p.variety_code) || null,
       status: currentStatus,
       current_stage: deriveStage(currentStatus, pendingStatus),
@@ -274,6 +287,8 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
         recommendation_type: str(recPayload.recommendation_type),
         status: str(recPayload.status),
         confidence: toNum(recPayload.confidence),
+        crop_stage: str(recPayload.crop_stage) || null,
+        rule_id: str(recPayload.rule_id) || null,
         created_ts: toNum(recPayload.created_ts) ?? toMs(latestRecommendationRow.occurred_at),
         fact_id: latestRecommendationRow.fact_id
       } : null,
