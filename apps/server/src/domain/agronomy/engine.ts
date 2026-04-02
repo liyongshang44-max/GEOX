@@ -56,10 +56,15 @@ function buildSummary(payload: {
   cropCode: string;
   cropStage: string;
   actionType: string;
-  reasonCodes: string[];
 }): string {
-  const reasonText = payload.reasonCodes.length > 0 ? payload.reasonCodes.join("+") : "rule_matched";
-  return `${payload.cropCode} 在 ${payload.cropStage} 阶段建议执行 ${payload.actionType}（${reasonText}）`;
+  const actionMap: Record<string, string> = {
+    IRRIGATE: "灌溉处理",
+    FERTILIZE: "追肥处理",
+    SPRAY: "喷施处理",
+    INSPECT: "巡检处理",
+  };
+  const actionLabel = actionMap[payload.actionType] ?? "农事处理";
+  return `根据当前作物阶段（${payload.cropCode} / ${payload.cropStage}）与田间指标，建议进行${actionLabel}。`;
 }
 
 export function runAgronomyEngine(input: {
@@ -102,7 +107,6 @@ export function runAgronomyEngine(input: {
       cropCode: context.cropCode,
       cropStage: context.cropStage,
       actionType: bestRule.actionType,
-      reasonCodes: bestRule.reasonCodes,
     }),
   };
 }
