@@ -70,6 +70,31 @@ export default function ProgramDetailPage(): React.ReactElement {
       <div className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">作物阶段卡</div>
+            <div className="detailSectionLead">帮助用户快速理解当前作物所处阶段、阶段说明与目标。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前作物</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.cropLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前阶段</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.cropStageLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">阶段说明</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.stageSummary}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">阶段目标</div>
+              <div className="decisionItemMeta">{viewModel.programAgronomy.stageGoal}</div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">作物阶段概览</div>
             <div className="detailSectionLead">用于快速查看当前作物、阶段、关键指标与规则激活情况。</div>
           </div>
