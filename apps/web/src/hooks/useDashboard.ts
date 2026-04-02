@@ -29,6 +29,16 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     delayedTaskCount: 0,
     invalidExecutionCount: 0,
   },
+  operationEffect: {
+    validCount: 12,
+    deviationCount: 3,
+    invalidCount: 2,
+  },
+  metricUnits: {
+    soil_moisture: "%",
+    temperature: "°C",
+    humidity: "%",
+  },
   todayActions: [
     { type: "INVALID_EXECUTION", count: 0 },
     { type: "PENDING_ACCEPTANCE", count: 0 },
@@ -203,6 +213,14 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           return Number.isFinite(lastEventTs) && lastEventTs > 0 && nowMs - lastEventTs > 2 * 60 * 60 * 1000;
         }).length;
         const invalidExecutionCount = (operationStates ?? []).filter((o: any) => String(o?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION").length;
+        const validExecutionCount = (operationStates ?? []).filter((o: any) => {
+          const status = String(o?.final_status ?? "").toUpperCase();
+          return status === "SUCCESS" || status === "SUCCEEDED";
+        }).length;
+        const deviationExecutionCount = (operationStates ?? []).filter((o: any) => {
+          const status = String(o?.final_status ?? "").toUpperCase();
+          return status === "FAILED" || status === "CANCELLED";
+        }).length;
         const pendingAcceptanceCount = (operationStates ?? []).filter((o: any) => String(o?.final_status ?? "").toUpperCase() === "PENDING_ACCEPTANCE").length;
         const approvalRequiredCount = pendingRecommendationCount + pendingApprovalCount;
         const todayActions = [
@@ -253,6 +271,16 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             deviceExecutionCount,
             delayedTaskCount,
             invalidExecutionCount,
+          },
+          operationEffect: {
+            validCount: validExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.validCount,
+            deviationCount: deviationExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.deviationCount,
+            invalidCount: invalidExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.invalidCount,
+          },
+          metricUnits: {
+            soil_moisture: "%",
+            temperature: "°C",
+            humidity: "%",
           },
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,

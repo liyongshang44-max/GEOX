@@ -60,6 +60,16 @@ export type DashboardVm = {
   riskItems: DashboardRiskVm[];
   decisions: DashboardDecisionVm;
   execution: DashboardExecutionVm;
+  operationEffect: {
+    validCount: number;
+    deviationCount: number;
+    invalidCount: number;
+  };
+  metricUnits: {
+    soil_moisture: "%";
+    temperature: "°C";
+    humidity: "%";
+  };
   todayActions: Array<{
     type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED";
     count: number;
