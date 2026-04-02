@@ -39,6 +39,7 @@ function runViewModelChecks(): void {
   assert.ok(programVm.currentMetrics);
   assert.ok(Array.isArray(programVm.activeRules));
   assert.ok(Array.isArray(programVm.recentRecommendations));
+  assert.notEqual(programVm.programAgronomy.cropStage, "-");
 
   const opVm = buildOperationDetailViewModel({
     detail: {
@@ -65,6 +66,7 @@ function runViewModelChecks(): void {
   assert.ok(opVm.expectedEffectCard);
   assert.ok(opVm.effectEvaluation);
   assert.notEqual(opVm.agronomyDecision.ruleId, "-");
+  assert.notEqual(opVm.agronomyDecision.cropStageLabel, "-");
 }
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));

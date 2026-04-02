@@ -9,6 +9,7 @@ import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -662,12 +663,22 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_code
       ?? plan?.record_json?.payload?.crop_code
     );
-    const agronomyCropStage = toText(
+    const agronomyCropStageRaw = toText(
       state.crop_stage
       ?? rec?.record_json?.payload?.crop_stage
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
       ?? plan?.record_json?.payload?.crop_stage
     );
+    const agronomyCropStage = agronomyCropStageRaw || (() => {
+      if (!agronomyCropCode) return null;
+      const stageStartTs = Number(
+        rec?.record_json?.payload?.created_ts
+        ?? plan?.record_json?.payload?.created_ts
+        ?? state.last_event_ts
+        ?? Date.now(),
+      );
+      return resolveCropStage({ cropCode: agronomyCropCode, startDate: stageStartTs, now: Date.now() });
+    })();
     const agronomyRuleId = toText(
       rec?.record_json?.payload?.rule_id
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.rule_id
