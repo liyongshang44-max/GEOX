@@ -67,6 +67,13 @@ function buildSummary(payload: {
   return `根据当前作物阶段（${payload.cropCode} / ${payload.cropStage}）与田间指标，建议进行${actionLabel}。`;
 }
 
+function fallbackStagesByCrop(cropCode: string): string[] {
+  const code = String(cropCode ?? "").trim().toLowerCase();
+  if (code === "corn") return ["vegetative", "flowering", "grain_filling"];
+  if (code === "tomato") return ["vegetative", "flowering", "fruiting"];
+  return [];
+}
+
 export function runAgronomyEngine(input: {
   program: ProgramSource;
   currentMetrics?: MetricsSource | null;
@@ -82,7 +89,7 @@ export function runAgronomyEngine(input: {
     now: input.now,
   });
 
-  const context = buildAgronomyContext({
+  let context = buildAgronomyContext({
     program,
     currentMetrics: input.currentMetrics,
     now: input.now,
@@ -90,8 +97,22 @@ export function runAgronomyEngine(input: {
     constraints: input.constraints,
   });
 
-  const matchedRules = evaluateRules(context);
-  const bestRule = pickBestRule(matchedRules);
+  let matchedRules = evaluateRules(context);
+  let bestRule = pickBestRule(matchedRules);
+  if (!bestRule) {
+    for (const stage of fallbackStagesByCrop(cropCode)) {
+      context = buildAgronomyContext({
+        program,
+        currentMetrics: input.currentMetrics,
+        now: input.now,
+        cropStage: stage,
+        constraints: input.constraints,
+      });
+      matchedRules = evaluateRules(context);
+      bestRule = pickBestRule(matchedRules);
+      if (bestRule) break;
+    }
+  }
   if (!bestRule) return null;
 
   return {
