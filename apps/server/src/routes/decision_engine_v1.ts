@@ -31,6 +31,13 @@ type RecommendationV1 = {
   model_version: "decision_engine_v1";
   rank_score?: number;
   rule_performance_score?: number;
+  rule_score?: number;
+  rule_confidence?: "low" | "medium" | "high";
+};
+
+type RulePerformanceStats = {
+  score: number;
+  total_count: number;
 };
 
 function badRequest(reply: FastifyReply, error: string) {
@@ -234,7 +241,7 @@ async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
   `);
 }
 
-async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, number>> {
+async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, RulePerformanceStats>> {
   if (!ruleIds.length) return new Map();
   const sql = `
     SELECT rule_id, score, total_count
@@ -243,25 +250,46 @@ async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): 
       AND rule_id = ANY($2::text[])
   `;
   const res = await pool.query(sql, [cropCode, ruleIds]);
-  const map = new Map<string, number>();
+  const map = new Map<string, RulePerformanceStats>();
   for (const row of (res.rows ?? [])) {
     const ruleId = String(row.rule_id ?? "").trim();
     if (!ruleId) continue;
     const score = Number(row.score ?? 0);
     const totalCount = Number(row.total_count ?? 0);
-    const stableScore = Number.isFinite(totalCount) && totalCount >= 5 && Number.isFinite(score) ? score : 0;
-    map.set(ruleId, stableScore);
+    map.set(ruleId, {
+      score: Number.isFinite(score) ? score : 0,
+      total_count: Number.isFinite(totalCount) ? totalCount : 0,
+    });
   }
   return map;
 }
 
-function recommendationRulePerformanceScore(rec: RecommendationV1, ruleScoreMap: Map<string, number>): number {
+function recommendationRulePerformanceScore(rec: RecommendationV1, ruleScoreMap: Map<string, RulePerformanceStats>): number {
   const matchedRules = (Array.isArray(rec.rule_hit) ? rec.rule_hit : []).filter((x) => Boolean(x?.matched) && typeof x?.rule_id === "string");
   if (!matchedRules.length) return 0;
-  const values = matchedRules.map((x) => Number(ruleScoreMap.get(String(x.rule_id).trim()) ?? 0)).filter((x) => Number.isFinite(x));
+  const values = matchedRules
+    .map((x) => ruleScoreMap.get(String(x.rule_id).trim()))
+    .map((stats) => (stats && stats.total_count >= 5 ? stats.score : 0))
+    .filter((x) => Number.isFinite(x));
   if (!values.length) return 0;
   const avg = values.reduce((acc, x) => acc + x, 0) / values.length;
   return Number(avg.toFixed(6));
+}
+
+function recommendationRuleScoreAndConfidence(
+  rec: RecommendationV1,
+  ruleScoreMap: Map<string, RulePerformanceStats>,
+): { rule_score: number; rule_confidence: "low" | "medium" | "high" } {
+  const firstMatchedRuleId = (Array.isArray(rec.rule_hit) ? rec.rule_hit : [])
+    .find((x) => Boolean(x?.matched) && typeof x?.rule_id === "string")?.rule_id;
+  const stats = firstMatchedRuleId ? ruleScoreMap.get(String(firstMatchedRuleId).trim()) : undefined;
+  const score = Number.isFinite(Number(stats?.score)) ? Number(stats?.score) : 0.5;
+  const totalCount = Number.isFinite(Number(stats?.total_count)) ? Number(stats?.total_count) : 0;
+
+  if (totalCount < 5) return { rule_score: Number(score.toFixed(6)), rule_confidence: "low" };
+  if (score > 0.8) return { rule_score: Number(score.toFixed(6)), rule_confidence: "high" };
+  if (score > 0.5) return { rule_score: Number(score.toFixed(6)), rule_confidence: "medium" };
+  return { rule_score: Number(score.toFixed(6)), rule_confidence: "low" };
 }
 
 async function loadRecommendationById(pool: Pool, recommendation_id: string, tenant: TenantTriple): Promise<any | null> {
@@ -804,10 +832,13 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         .map((x: any) => String(x?.rule_id ?? "").trim())
         .filter(Boolean)
     ));
-    const ruleScoreMap = cropCode ? await loadRuleScores(pool, cropCode, matchedRuleIds) : new Map<string, number>();
+    const ruleScoreMap = cropCode ? await loadRuleScores(pool, cropCode, matchedRuleIds) : new Map<string, RulePerformanceStats>();
     recommendations.forEach((rec) => {
       const perfScore = recommendationRulePerformanceScore(rec, ruleScoreMap);
+      const payloadStats = recommendationRuleScoreAndConfidence(rec, ruleScoreMap);
       rec.rule_performance_score = perfScore;
+      rec.rule_score = payloadStats.rule_score;
+      rec.rule_confidence = payloadStats.rule_confidence;
       rec.rank_score = Number((Number(rec.confidence ?? 0) * (1 + perfScore)).toFixed(6));
     });
     recommendations.sort((a, b) => Number(b.rank_score ?? 0) - Number(a.rank_score ?? 0));
