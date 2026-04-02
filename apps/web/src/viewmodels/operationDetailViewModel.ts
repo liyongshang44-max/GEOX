@@ -63,6 +63,13 @@ export type OperationDetailPageVm = {
     effectValueLabel: string;
     businessSummary: string;
   };
+  effectEvaluation: {
+    beforeLabel: string;
+    afterLabel: string;
+    expectedLabel: string;
+    actualLabel: string;
+    verdictLabel: string;
+  };
   execution: {
     executionModeLabel: string;
     executorTypeLabel: string;
@@ -205,6 +212,27 @@ function mapExpectedEffectValueLabel(raw: unknown): string {
   const value = Number(raw ?? NaN);
   if (!Number.isFinite(value)) return "-";
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
+}
+
+function mapPercentLabel(raw: unknown): string {
+  const value = Number(raw ?? NaN);
+  if (!Number.isFinite(value)) return "--";
+  return `${value.toFixed(0)}%`;
+}
+
+function mapSignedPercentLabel(raw: unknown): string {
+  const value = Number(raw ?? NaN);
+  if (!Number.isFinite(value)) return "--";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
+}
+
+function mapEffectVerdictLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toUpperCase();
+  if (key === "EFFECTIVE") return "达到预期";
+  if (key === "PARTIAL") return "部分达到预期";
+  if (key === "INEFFECTIVE") return "未达到预期";
+  if (key === "NO_DATA") return "暂无效果数据";
+  return "暂无效果数据";
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -687,6 +715,13 @@ export function buildOperationDetailViewModel(args?: {
       effectTypeLabel: mapExpectedEffectTypeLabel(safeDetail?.agronomy?.expected_effect?.type),
       effectValueLabel: mapExpectedEffectValueLabel(safeDetail?.agronomy?.expected_effect?.value),
       businessSummary: toText(safeDetail?.agronomy?.expected_effect?.business_summary, businessEffect.expectedImpact),
+    },
+    effectEvaluation: {
+      beforeLabel: mapPercentLabel(safeDetail?.agronomy?.before_metrics?.soil_moisture),
+      afterLabel: mapPercentLabel(safeDetail?.agronomy?.after_metrics?.soil_moisture),
+      expectedLabel: mapSignedPercentLabel(safeDetail?.agronomy?.expected_effect?.value),
+      actualLabel: mapSignedPercentLabel(safeDetail?.agronomy?.actual_effect?.value),
+      verdictLabel: mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict),
     },
     execution,
     receiptEvidence: receipt,
