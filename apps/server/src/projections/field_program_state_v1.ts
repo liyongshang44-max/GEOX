@@ -60,6 +60,12 @@ export type FieldProgramStateV1 = {
     confidence: number | null;
     crop_stage: string | null;
     rule_id: string | null;
+    action_type: string | null;
+    priority: string | null;
+    reason_codes: string[];
+    rule_hit: Array<{ rule_id: string; matched: boolean }>;
+    expected_effect: { type?: string; value?: number | null } | null;
+    risk_if_not_execute: string | null;
     created_ts: number;
     fact_id: string;
   } | null;
@@ -289,6 +295,19 @@ export function projectFieldProgramStateFromFacts(rows: FieldProgramProjectionFa
         confidence: toNum(recPayload.confidence),
         crop_stage: str(recPayload.crop_stage) || null,
         rule_id: str(recPayload.rule_id) || null,
+        action_type: str(recPayload.action_type || recPayload?.suggested_action?.action_type) || null,
+        priority: str(recPayload.priority) || null,
+        reason_codes: Array.isArray(recPayload.reason_codes) ? recPayload.reason_codes.map((x: any) => str(x)).filter(Boolean) : [],
+        rule_hit: Array.isArray(recPayload.rule_hit)
+          ? recPayload.rule_hit.map((x: any) => ({ rule_id: str(x?.rule_id), matched: Boolean(x?.matched) })).filter((x: any) => Boolean(x.rule_id))
+          : [],
+        expected_effect: recPayload?.expected_effect && typeof recPayload.expected_effect === "object"
+          ? {
+            type: str(recPayload.expected_effect.type) || undefined,
+            value: toNum(recPayload.expected_effect.value),
+          }
+          : null,
+        risk_if_not_execute: str(recPayload.risk_if_not_execute) || null,
         created_ts: toNum(recPayload.created_ts) ?? toMs(latestRecommendationRow.occurred_at),
         fact_id: latestRecommendationRow.fact_id
       } : null,

@@ -248,22 +248,23 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             summary: String(item?.summary ?? item?.reason_summary ?? "-"),
           }));
         const cropStageDistribution = Object.values(
-          (recommendationItems ?? []).reduce((acc: Record<string, { cropLabel: string; cropStageLabel: string; fieldIds: Set<string> }>, item: any) => {
+          (recommendationItems ?? []).reduce((acc: Record<string, { cropLabel: string; cropStageLabel: string; fieldIds: Set<string>; fallbackCount: number }>, item: any) => {
             const cropLabel = mapCropLabel(item?.crop_code ?? item?.cropCode);
             const cropStageLabel = mapCropStageLabel(item?.crop_stage ?? item?.cropStage);
             const key = `${cropLabel}|${cropStageLabel}`;
             if (!acc[key]) {
-              acc[key] = { cropLabel, cropStageLabel, fieldIds: new Set<string>() };
+              acc[key] = { cropLabel, cropStageLabel, fieldIds: new Set<string>(), fallbackCount: 0 };
             }
             const fieldId = String(item?.field?.field_id ?? item?.field_id ?? "").trim();
             if (fieldId) acc[key].fieldIds.add(fieldId);
+            else acc[key].fallbackCount += 1;
             return acc;
           }, {}),
         )
           .map((entry) => ({
             cropLabel: entry.cropLabel,
             cropStageLabel: entry.cropStageLabel,
-            fieldCount: entry.fieldIds.size,
+            fieldCount: entry.fieldIds.size || entry.fallbackCount,
           }))
           .filter((entry) => entry.fieldCount > 0)
           .sort((a, b) => b.fieldCount - a.fieldCount)

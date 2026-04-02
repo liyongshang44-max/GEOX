@@ -16,6 +16,8 @@ function runViewModelChecks(): void {
       latest_recommendation: {
         crop_stage: "vegetative",
         summary: "土壤湿度偏低，建议灌溉",
+        rule_hit: [{ rule_id: "corn_vegetative_irrigation_v1", matched: true }],
+        reason_codes: ["soil_moisture_below_optimal"],
         current_metrics: { soil_moisture: 18, temperature: 30, humidity: 48 },
         updated_at: new Date().toISOString(),
       },
@@ -40,6 +42,9 @@ function runViewModelChecks(): void {
   assert.ok(Array.isArray(programVm.activeRules));
   assert.ok(Array.isArray(programVm.recentRecommendations));
   assert.notEqual(programVm.programAgronomy.cropStage, "-");
+  if (programVm.activeRules.length > 0) {
+    assert.notEqual(programVm.activeRules[0].ruleId, "暂无数据");
+  }
 
   const opVm = buildOperationDetailViewModel({
     detail: {
