@@ -45,6 +45,13 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     { type: "APPROVAL_REQUIRED", count: 0 },
   ],
   agronomyRecommendations: [],
+  cropStageDistribution: [],
+  effectSummary: {
+    effectiveCount: 0,
+    partialCount: 0,
+    ineffectiveCount: 0,
+    noDataCount: 0,
+  },
 };
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -80,6 +87,62 @@ function mapRiskSource(title: string): DashboardRiskVm["source"] {
   if (t.includes("旱") || t.includes("dry") || t.includes("moisture")) return "干旱";
   if (t.includes("病") || t.includes("pest") || t.includes("disease")) return "病害";
   return "执行缺失";
+}
+
+function mapCropLabel(cropCode: unknown): string {
+  const code = String(cropCode ?? "").trim().toUpperCase();
+  if (!code) return "-";
+  if (code === "CORN") return "玉米";
+  if (code === "TOMATO") return "番茄";
+  if (code === "WHEAT") return "小麦";
+  if (code === "RICE") return "水稻";
+  return String(cropCode);
+}
+
+function mapCropStageLabel(stageCode: unknown): string {
+  const stage = String(stageCode ?? "").trim().toUpperCase();
+  if (!stage) return "-";
+  if (["VEGETATIVE", "V", "GROWTH"].includes(stage)) return "营养生长期";
+  if (["REPRODUCTIVE", "R", "FLOWERING"].includes(stage)) return "生殖生长期";
+  if (["SEEDLING", "EMERGENCE"].includes(stage)) return "苗期";
+  if (["MATURITY", "MATURE"].includes(stage)) return "成熟期";
+  return String(stageCode);
+}
+
+function mapAgronomyActionLabel(actionType: unknown): string {
+  const action = String(actionType ?? "").trim().toUpperCase();
+  if (!action) return "-";
+  if (action === "IRRIGATION") return "灌溉";
+  if (action === "FERTILIZATION") return "施肥";
+  if (action === "SPRAYING") return "喷施";
+  if (action === "HARVEST") return "收获";
+  return String(actionType);
+}
+
+function mapPriorityLabel(priority: unknown): string {
+  const p = String(priority ?? "").trim().toUpperCase();
+  if (!p) return "-";
+  if (p === "HIGH") return "高";
+  if (p === "MEDIUM") return "中";
+  if (p === "LOW") return "低";
+  return String(priority);
+}
+
+function mapEffectCategory(item: any): "effective" | "partial" | "ineffective" | "no_data" {
+  const raw = String(
+    item?.effect_status
+    ?? item?.effectiveness_status
+    ?? item?.effectiveness
+    ?? item?.feedback_status
+    ?? item?.outcome
+    ?? item?.result
+    ?? "",
+  ).trim().toUpperCase();
+  if (!raw) return "no_data";
+  if (["EFFECTIVE", "SUCCESS", "SUCCEEDED", "PASS", "VALID"].includes(raw)) return "effective";
+  if (["PARTIAL", "PARTIALLY_EFFECTIVE", "PARTIALLY_VALID"].includes(raw)) return "partial";
+  if (["INEFFECTIVE", "INVALID", "FAILED", "FAIL", "REJECTED"].includes(raw)) return "ineffective";
+  return "no_data";
 }
 
 export function useDashboard(api: any): { data: DashboardVm; error: string | null } {
@@ -178,12 +241,49 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           .slice(0, 6)
           .map((item: any) => ({
             fieldLabel: String(item?.field?.field_name ?? item?.field?.field_id ?? item?.field_id ?? "-"),
-            cropCode: String(item?.crop_code ?? item?.cropCode ?? "-"),
-            cropStage: String(item?.crop_stage ?? item?.cropStage ?? "-"),
-            actionType: String(item?.action_type ?? item?.suggested_action?.action_type ?? "-"),
-            priority: String(item?.priority ?? "-"),
+            cropLabel: mapCropLabel(item?.crop_code ?? item?.cropCode),
+            cropStageLabel: mapCropStageLabel(item?.crop_stage ?? item?.cropStage),
+            actionLabel: mapAgronomyActionLabel(item?.action_type ?? item?.suggested_action?.action_type),
+            priorityLabel: mapPriorityLabel(item?.priority),
             summary: String(item?.summary ?? item?.reason_summary ?? "-"),
           }));
+        const cropStageDistribution = Object.values(
+          (recommendationItems ?? []).reduce((acc: Record<string, { cropLabel: string; cropStageLabel: string; fieldIds: Set<string> }>, item: any) => {
+            const cropLabel = mapCropLabel(item?.crop_code ?? item?.cropCode);
+            const cropStageLabel = mapCropStageLabel(item?.crop_stage ?? item?.cropStage);
+            const key = `${cropLabel}|${cropStageLabel}`;
+            if (!acc[key]) {
+              acc[key] = { cropLabel, cropStageLabel, fieldIds: new Set<string>() };
+            }
+            const fieldId = String(item?.field?.field_id ?? item?.field_id ?? "").trim();
+            if (fieldId) acc[key].fieldIds.add(fieldId);
+            return acc;
+          }, {}),
+        )
+          .map((entry) => ({
+            cropLabel: entry.cropLabel,
+            cropStageLabel: entry.cropStageLabel,
+            fieldCount: entry.fieldIds.size,
+          }))
+          .filter((entry) => entry.fieldCount > 0)
+          .sort((a, b) => b.fieldCount - a.fieldCount)
+          .slice(0, 6);
+        const effectSummary = (recommendationItems ?? []).reduce(
+          (acc: { effectiveCount: number; partialCount: number; ineffectiveCount: number; noDataCount: number }, item: any) => {
+            const category = mapEffectCategory(item);
+            if (category === "effective") acc.effectiveCount += 1;
+            else if (category === "partial") acc.partialCount += 1;
+            else if (category === "ineffective") acc.ineffectiveCount += 1;
+            else acc.noDataCount += 1;
+            return acc;
+          },
+          {
+            effectiveCount: 0,
+            partialCount: 0,
+            ineffectiveCount: 0,
+            noDataCount: 0,
+          },
+        );
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -284,6 +384,8 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           },
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,
+          cropStageDistribution,
+          effectSummary,
         });
         setError(null);
       } catch {

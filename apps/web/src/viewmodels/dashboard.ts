@@ -76,10 +76,21 @@ export type DashboardVm = {
   }>;
   agronomyRecommendations: Array<{
     fieldLabel: string;
-    cropCode: string;
-    cropStage: string;
-    actionType: string;
-    priority: string;
+    cropLabel: string;
+    cropStageLabel: string;
+    actionLabel: string;
+    priorityLabel: string;
     summary: string;
   }>;
+  cropStageDistribution: Array<{
+    cropLabel: string;
+    cropStageLabel: string;
+    fieldCount: number;
+  }>;
+  effectSummary: {
+    effectiveCount: number;
+    partialCount: number;
+    ineffectiveCount: number;
+    noDataCount: number;
+  };
 };
