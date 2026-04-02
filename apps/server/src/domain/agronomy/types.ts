@@ -1,0 +1,55 @@
+export type AgronomyActionType = "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
+
+export type AgronomyPriority = "low" | "medium" | "high";
+
+export type EffectType = "moisture_increase" | "nutrition_boost" | "disease_risk_reduce";
+
+export type AgronomyContext = {
+  tenantId: string;
+  projectId: string;
+  groupId: string;
+  fieldId: string;
+  seasonId?: string;
+  programId?: string;
+
+  cropCode: string;
+  cropStage: string;
+
+  currentMetrics: {
+    soil_moisture?: number | null;
+    temperature?: number | null;
+    humidity?: number | null;
+  };
+
+  constraints?: Record<string, unknown>;
+};
+
+export type AgronomyRule = {
+  ruleId: string;
+  cropCode: string;
+  cropStage: string;
+  actionType: AgronomyActionType;
+  priority: AgronomyPriority;
+  reasonCodes: string[];
+  expectedEffect: {
+    type: EffectType;
+    value: number;
+  };
+  riskIfNotExecute: string;
+  matches: (ctx: AgronomyContext) => boolean;
+};
+
+export type AgronomyRecommendationPayload = {
+  crop_code: string;
+  crop_stage: string;
+  rule_id: string;
+  action_type: AgronomyActionType;
+  priority: AgronomyPriority;
+  reason_codes: string[];
+  expected_effect: {
+    type: EffectType;
+    value: number;
+  };
+  risk_if_not_execute: string;
+  summary: string;
+};
