@@ -64,4 +64,12 @@ export type DashboardVm = {
     type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED";
     count: number;
   }>;
+  agronomyRecommendations: Array<{
+    fieldLabel: string;
+    cropCode: string;
+    cropStage: string;
+    actionType: string;
+    priority: string;
+    summary: string;
+  }>;
 };
