@@ -8,7 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
+import { computeEffect, evaluateEffectVerdict, recordRulePerformance } from "../domain/agronomy/effect_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -40,21 +40,6 @@ function parseRecordJson(v: unknown): any {
   } catch {
     return null;
   }
-}
-
-function computeRulePerformanceScore(counts: {
-  total_count: number;
-  effective_count: number;
-  partial_count: number;
-  ineffective_count: number;
-  no_data_count: number;
-}): number {
-  const total = Number(counts.total_count ?? 0);
-  if (total <= 0) return 0;
-  const effective = Number(counts.effective_count ?? 0);
-  const partial = Number(counts.partial_count ?? 0);
-  const raw = (effective * 1 + partial * 0.5) / total;
-  return Number(raw.toFixed(6));
 }
 
 async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
@@ -105,44 +90,12 @@ async function updateRulePerformance(params: {
   for (const ruleId of ruleIds) {
     const exists = await hasRuleFeedbackRecorded(pool, tenant, operationPlanId, ruleId);
     if (exists) continue;
-
-    const upsert = await pool.query(
-      `INSERT INTO agronomy_rule_performance (
-         rule_id, crop_code,
-         total_count, effective_count, partial_count, ineffective_count, no_data_count, score, updated_at
-       )
-       VALUES (
-         $1, $2,
-         CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
-         CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
-         CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
-         CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,
-         CASE WHEN $3 = 'NO_DATA' THEN 1 ELSE 0 END,
-         0,
-         NOW()
-       )
-       ON CONFLICT (rule_id) DO UPDATE SET
-         crop_code = EXCLUDED.crop_code,
-         total_count = agronomy_rule_performance.total_count + CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
-         effective_count = agronomy_rule_performance.effective_count + CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
-         partial_count = agronomy_rule_performance.partial_count + CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
-         ineffective_count = agronomy_rule_performance.ineffective_count + CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,
-         no_data_count = agronomy_rule_performance.no_data_count + CASE WHEN $3 = 'NO_DATA' THEN 1 ELSE 0 END,
-         updated_at = NOW()
-       RETURNING total_count, effective_count, partial_count, ineffective_count, no_data_count`,
-      [ruleId, cropCode, effectVerdict]
-    );
-    const row = upsert.rows?.[0];
-    if (row) {
-      const score = computeRulePerformanceScore({
-        total_count: Number(row.total_count ?? 0),
-        effective_count: Number(row.effective_count ?? 0),
-        partial_count: Number(row.partial_count ?? 0),
-        ineffective_count: Number(row.ineffective_count ?? 0),
-        no_data_count: Number(row.no_data_count ?? 0),
-      });
-      await pool.query(`UPDATE agronomy_rule_performance SET score = $2, updated_at = NOW() WHERE rule_id = $1`, [ruleId, score]);
-    }
+    await recordRulePerformance({
+      pool,
+      ruleId,
+      cropCode,
+      verdict: effectVerdict,
+    });
 
     await pool.query(
       "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
