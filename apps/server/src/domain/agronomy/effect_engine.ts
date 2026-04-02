@@ -17,12 +17,14 @@ export function evaluateEffectVerdict(input: {
   expectedEffect?: { type: string; value: number } | null;
   actualEffect?: { type: string; value: number } | null;
 }): "EFFECTIVE" | "PARTIAL" | "INEFFECTIVE" | "NO_DATA" {
-  const expected = Number(input.expectedEffect?.value ?? NaN);
-  const actual = Number(input.actualEffect?.value ?? NaN);
-  if (!Number.isFinite(expected) || !Number.isFinite(actual)) return "NO_DATA";
+  const expected = input.expectedEffect?.value;
+  const actual = input.actualEffect?.value;
+
+  if (typeof expected !== "number" || typeof actual !== "number") {
+    return "NO_DATA";
+  }
 
   if (actual >= expected) return "EFFECTIVE";
   if (actual > 0 && actual < expected) return "PARTIAL";
-  if (actual <= 0) return "INEFFECTIVE";
-  return "NO_DATA";
+  return "INEFFECTIVE";
 }
