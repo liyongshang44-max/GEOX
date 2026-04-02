@@ -22,7 +22,6 @@
     "pg": "^8.16.3",
     "zod": "^3.25.76"
   },
-  
   "scripts": {
     "dev:server": "pnpm --filter @geox/server dev",
     "dev:web": "pnpm --filter @geox/web dev",
@@ -32,7 +31,8 @@
     "typecheck:judge": "pnpm --filter @geox/judge typecheck",
     "build:server": "pnpm --filter @geox/server build",
     "build:web": "pnpm --filter @geox/web build",
-    "build:judge": "pnpm --filter @geox/judge build"
+    "build:judge": "pnpm --filter @geox/judge build",
+    "acceptance:stage5": "pnpm --filter @geox/server test:agronomy:stage5 && pnpm --filter @geox/server test:stage5:frontend"
   },
   "volta": {
     "node": "20.11.1"
