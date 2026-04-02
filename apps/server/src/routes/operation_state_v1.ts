@@ -53,9 +53,7 @@ function computeRulePerformanceScore(counts: {
   if (total <= 0) return 0;
   const effective = Number(counts.effective_count ?? 0);
   const partial = Number(counts.partial_count ?? 0);
-  const ineffective = Number(counts.ineffective_count ?? 0);
-  const noData = Number(counts.no_data_count ?? 0);
-  const raw = (effective * 1 + partial * 0.5 + ineffective * -1 + noData * 0) / total;
+  const raw = (effective * 1 + partial * 0.5) / total;
   return Number(raw.toFixed(6));
 }
 
@@ -115,7 +113,7 @@ async function updateRulePerformance(params: {
        )
        VALUES (
          $1, $2,
-         1,
+         CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
          CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
          CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
          CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,
@@ -125,7 +123,7 @@ async function updateRulePerformance(params: {
        )
        ON CONFLICT (rule_id) DO UPDATE SET
          crop_code = EXCLUDED.crop_code,
-         total_count = agronomy_rule_performance.total_count + 1,
+         total_count = agronomy_rule_performance.total_count + CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
          effective_count = agronomy_rule_performance.effective_count + CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
          partial_count = agronomy_rule_performance.partial_count + CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
          ineffective_count = agronomy_rule_performance.ineffective_count + CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,

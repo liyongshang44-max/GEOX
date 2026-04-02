@@ -237,7 +237,7 @@ async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
 async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, number>> {
   if (!ruleIds.length) return new Map();
   const sql = `
-    SELECT rule_id, score
+    SELECT rule_id, score, total_count
     FROM agronomy_rule_performance
     WHERE crop_code = $1
       AND rule_id = ANY($2::text[])
@@ -248,7 +248,9 @@ async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): 
     const ruleId = String(row.rule_id ?? "").trim();
     if (!ruleId) continue;
     const score = Number(row.score ?? 0);
-    map.set(ruleId, Number.isFinite(score) ? score : 0);
+    const totalCount = Number(row.total_count ?? 0);
+    const stableScore = Number.isFinite(totalCount) && totalCount > 5 && Number.isFinite(score) ? score : 0;
+    map.set(ruleId, stableScore);
   }
   return map;
 }
