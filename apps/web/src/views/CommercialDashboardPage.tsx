@@ -41,14 +41,6 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
   };
 }
 
-function priorityLabel(priority: string): string {
-  const p = String(priority ?? "").toUpperCase();
-  if (p === "HIGH") return "高";
-  if (p === "LOW") return "低";
-  if (p === "MEDIUM") return "中";
-  return p || "-";
-}
-
 export default function CommercialDashboardPage(): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
@@ -485,10 +477,10 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <div className="sectionTitle">农学建议</div>
         <div className="decisionList" style={{ marginTop: 12 }}>
           {d.agronomyRecommendations.map((item, idx) => (
-            <div key={`${item.fieldLabel}_${item.actionType}_${idx}`} className="decisionItemStatic">
+            <div key={`${item.fieldLabel}_${item.actionLabel}_${idx}`} className="decisionItemStatic">
               <div className="decisionItemTitle">{item.fieldLabel}</div>
               <div className="decisionItemMeta">
-                {item.cropCode} / {item.cropStage} · {item.actionType} · 优先级 {priorityLabel(item.priority)}
+                {item.cropLabel} / {item.cropStageLabel} · {item.actionLabel} · 优先级 {item.priorityLabel}
               </div>
               <div className="muted" style={{ marginTop: 4 }}>{item.summary}</div>
             </div>
@@ -496,6 +488,42 @@ export default function CommercialDashboardPage(): React.ReactElement {
           {d.agronomyRecommendations.length === 0 ? <EmptyBlock text="暂无最近农学建议" /> : null}
         </div>
       </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">当前阶段分布</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          {d.cropStageDistribution.map((item, idx) => (
+            <div key={`${item.cropLabel}_${item.cropStageLabel}_${idx}`} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.cropLabel}｜{item.cropStageLabel}</div>
+              <div className="decisionItemMeta">{item.fieldCount}块地</div>
+            </div>
+          ))}
+          {d.cropStageDistribution.length === 0 ? <EmptyBlock text="暂无阶段分布数据" /> : null}
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">效果反馈摘要</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">有效建议</div>
+            <div className="decisionItemMeta">{d.effectSummary.effectiveCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">部分有效</div>
+            <div className="decisionItemMeta">{d.effectSummary.partialCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">无效建议</div>
+            <div className="decisionItemMeta">{d.effectSummary.ineffectiveCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">无数据</div>
+            <div className="decisionItemMeta">{d.effectSummary.noDataCount}</div>
+          </div>
+        </div>
+      </section>
+
       <section className="card" style={{ marginTop: 16 }}>
         <div className="sectionTitle">本周服务质量</div>
         <div className="decisionList" style={{ marginTop: 12 }}>
