@@ -49,6 +49,12 @@ export type ProgramConsoleViewModel = {
     stageSummary: string;
     stageGoal: string;
   };
+  currentMetrics: {
+    soilMoistureLabel: string;
+    temperatureLabel: string;
+    humidityLabel: string;
+    updatedAtLabel: string;
+  };
   timeline: Array<{
     ts: number;
     label: string;
@@ -98,7 +104,7 @@ function cropDisplayName(code: unknown): string {
 
 function metricValueText(value: unknown, suffix = ""): string {
   const n = toNumber(value);
-  if (!Number.isFinite(n)) return "-";
+  if (!Number.isFinite(n)) return "暂无数据";
   return `${n}${suffix}`;
 }
 
@@ -210,6 +216,13 @@ export function buildProgramDetailViewModel(args: {
     ?? detail?.current_metrics
     ?? detail?.latest_metrics
     ?? {};
+  const metricsUpdatedAt =
+    detail?.latest_recommendation?.current_metrics_updated_at
+    ?? detail?.latest_recommendation?.updated_at
+    ?? detail?.current_metrics_updated_at
+    ?? detail?.latest_metrics_updated_at
+    ?? detail?.updated_at
+    ?? null;
   const keyMetrics = [
     { label: "土壤湿度", value: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%") },
     { label: "温度", value: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃") },
@@ -318,6 +331,12 @@ export function buildProgramDetailViewModel(args: {
       cropStageLabel: cropStageDisplayLabel(cropStage),
       stageSummary,
       stageGoal,
+    },
+    currentMetrics: {
+      soilMoistureLabel: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%"),
+      temperatureLabel: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃"),
+      humidityLabel: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%"),
+      updatedAtLabel: formatDateTime(metricsUpdatedAt, "暂无数据"),
     },
     timeline,
   };
