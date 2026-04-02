@@ -374,6 +374,42 @@ export default function CommercialDashboardPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">最近作业效果</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">✔ 有效作业</div>
+            <div className="decisionItemMeta">{d.operationEffect.validCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">⚠️ 偏差作业</div>
+            <div className="decisionItemMeta">{d.operationEffect.deviationCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">❌ 无效执行</div>
+            <div className="decisionItemMeta">{d.operationEffect.invalidCount}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">指标单位标准化</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">soil_moisture</div>
+            <div className="decisionItemMeta">{d.metricUnits.soil_moisture}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">temperature</div>
+            <div className="decisionItemMeta">{d.metricUnits.temperature}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">humidity</div>
+            <div className="decisionItemMeta">{d.metricUnits.humidity}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
         <div className="sectionTitle">智能建议</div>
         <div className="decisionList" style={{ marginTop: 12 }}>
           <div className="decisionItemStatic">
