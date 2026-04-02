@@ -488,6 +488,20 @@ export default function CommercialDashboardPage(): React.ReactElement {
           {d.agronomyRecommendations.length === 0 ? <EmptyBlock text="暂无最近农学建议" /> : null}
         </div>
       </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">当前阶段分布</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          {d.cropStageDistribution.map((item, idx) => (
+            <div key={`${item.cropLabel}_${item.cropStageLabel}_${idx}`} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.cropLabel}｜{item.cropStageLabel}</div>
+              <div className="decisionItemMeta">{item.fieldCount}块地</div>
+            </div>
+          ))}
+          {d.cropStageDistribution.length === 0 ? <EmptyBlock text="暂无阶段分布数据" /> : null}
+        </div>
+      </section>
+
       <section className="card" style={{ marginTop: 16 }}>
         <div className="sectionTitle">本周服务质量</div>
         <div className="decisionList" style={{ marginTop: 12 }}>

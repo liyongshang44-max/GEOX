@@ -82,4 +82,9 @@ export type DashboardVm = {
     priorityLabel: string;
     summary: string;
   }>;
+  cropStageDistribution: Array<{
+    cropLabel: string;
+    cropStageLabel: string;
+    fieldCount: number;
+  }>;
 };

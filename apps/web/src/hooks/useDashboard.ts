@@ -45,6 +45,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     { type: "APPROVAL_REQUIRED", count: 0 },
   ],
   agronomyRecommendations: [],
+  cropStageDistribution: [],
 };
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -223,6 +224,27 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             priorityLabel: mapPriorityLabel(item?.priority),
             summary: String(item?.summary ?? item?.reason_summary ?? "-"),
           }));
+        const cropStageDistribution = Object.values(
+          (recommendationItems ?? []).reduce((acc: Record<string, { cropLabel: string; cropStageLabel: string; fieldIds: Set<string> }>, item: any) => {
+            const cropLabel = mapCropLabel(item?.crop_code ?? item?.cropCode);
+            const cropStageLabel = mapCropStageLabel(item?.crop_stage ?? item?.cropStage);
+            const key = `${cropLabel}|${cropStageLabel}`;
+            if (!acc[key]) {
+              acc[key] = { cropLabel, cropStageLabel, fieldIds: new Set<string>() };
+            }
+            const fieldId = String(item?.field?.field_id ?? item?.field_id ?? "").trim();
+            if (fieldId) acc[key].fieldIds.add(fieldId);
+            return acc;
+          }, {}),
+        )
+          .map((entry) => ({
+            cropLabel: entry.cropLabel,
+            cropStageLabel: entry.cropStageLabel,
+            fieldCount: entry.fieldIds.size,
+          }))
+          .filter((entry) => entry.fieldCount > 0)
+          .sort((a, b) => b.fieldCount - a.fieldCount)
+          .slice(0, 6);
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -323,6 +345,7 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           },
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,
+          cropStageDistribution,
         });
         setError(null);
       } catch {
