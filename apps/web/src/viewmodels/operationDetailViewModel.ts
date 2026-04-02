@@ -37,6 +37,8 @@ export type OperationDetailPageVm = {
     reasonCodesLabel: string;
     triggerSummary: string;
     createdAtLabel: string;
+    ruleConfidenceLabel: string;
+    historyEffectivenessLabel: string;
   };
   approval: {
     requestId: string;
@@ -191,6 +193,20 @@ function mapRiskLevelLabel(level: string): string {
   if (key === "high") return "高";
   if (key === "medium") return "中";
   return "低";
+}
+
+function mapRuleConfidenceLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (key === "high") return "高";
+  if (key === "medium") return "中";
+  return "低";
+}
+
+function mapHistoryEffectivenessLabel(raw: unknown): string {
+  const value = Number(raw ?? NaN);
+  if (!Number.isFinite(value)) return "--";
+  const normalized = Math.max(0, Math.min(1, value));
+  return `${Math.round(normalized * 100)}%`;
 }
 
 function mapCropLabel(raw: unknown): string {
@@ -710,6 +726,8 @@ export function buildOperationDetailViewModel(args?: {
       reasonCodesLabel,
       triggerSummary: "这些信号共同触发了作业建议。",
       createdAtLabel: toDateLabel(safeDetail?.recommendation?.created_at),
+      ruleConfidenceLabel: mapRuleConfidenceLabel(safeDetail?.recommendation?.rule_confidence),
+      historyEffectivenessLabel: mapHistoryEffectivenessLabel(safeDetail?.recommendation?.rule_score),
     },
     approval: {
       requestId: toText(safeDetail?.approval?.approval_request_id),

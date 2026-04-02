@@ -131,6 +131,8 @@ export default function ProgramDetailPage(): React.ReactElement {
                 <div key={`${rule.ruleId}_${rule.reasonCodesLabel}`} className="decisionItemStatic">
                   <div className="decisionItemTitle">规则名称</div>
                   <div className="decisionItemMeta">{rule.ruleId}</div>
+                  <div className="decisionItemTitle" style={{ marginTop: 10 }}>规则健康度</div>
+                  <div className="decisionItemMeta">{rule.performanceLabel}（{rule.effectivenessLabel}）</div>
                   <div className="decisionItemTitle" style={{ marginTop: 10 }}>优先级</div>
                   <div className="decisionItemMeta">{rule.priorityLabel}</div>
                   <div className="decisionItemTitle" style={{ marginTop: 10 }}>触发原因</div>
