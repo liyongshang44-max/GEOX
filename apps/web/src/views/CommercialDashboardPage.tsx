@@ -503,6 +503,28 @@ export default function CommercialDashboardPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">效果反馈摘要</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">有效建议</div>
+            <div className="decisionItemMeta">{d.effectSummary.effectiveCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">部分有效</div>
+            <div className="decisionItemMeta">{d.effectSummary.partialCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">无效建议</div>
+            <div className="decisionItemMeta">{d.effectSummary.ineffectiveCount}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">无数据</div>
+            <div className="decisionItemMeta">{d.effectSummary.noDataCount}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
         <div className="sectionTitle">本周服务质量</div>
         <div className="decisionList" style={{ marginTop: 12 }}>
           <div className="decisionItemStatic">

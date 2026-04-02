@@ -46,6 +46,12 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   ],
   agronomyRecommendations: [],
   cropStageDistribution: [],
+  effectSummary: {
+    effectiveCount: 0,
+    partialCount: 0,
+    ineffectiveCount: 0,
+    noDataCount: 0,
+  },
 };
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -120,6 +126,23 @@ function mapPriorityLabel(priority: unknown): string {
   if (p === "MEDIUM") return "中";
   if (p === "LOW") return "低";
   return String(priority);
+}
+
+function mapEffectCategory(item: any): "effective" | "partial" | "ineffective" | "no_data" {
+  const raw = String(
+    item?.effect_status
+    ?? item?.effectiveness_status
+    ?? item?.effectiveness
+    ?? item?.feedback_status
+    ?? item?.outcome
+    ?? item?.result
+    ?? "",
+  ).trim().toUpperCase();
+  if (!raw) return "no_data";
+  if (["EFFECTIVE", "SUCCESS", "SUCCEEDED", "PASS", "VALID"].includes(raw)) return "effective";
+  if (["PARTIAL", "PARTIALLY_EFFECTIVE", "PARTIALLY_VALID"].includes(raw)) return "partial";
+  if (["INEFFECTIVE", "INVALID", "FAILED", "FAIL", "REJECTED"].includes(raw)) return "ineffective";
+  return "no_data";
 }
 
 export function useDashboard(api: any): { data: DashboardVm; error: string | null } {
@@ -245,6 +268,22 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           .filter((entry) => entry.fieldCount > 0)
           .sort((a, b) => b.fieldCount - a.fieldCount)
           .slice(0, 6);
+        const effectSummary = (recommendationItems ?? []).reduce(
+          (acc: { effectiveCount: number; partialCount: number; ineffectiveCount: number; noDataCount: number }, item: any) => {
+            const category = mapEffectCategory(item);
+            if (category === "effective") acc.effectiveCount += 1;
+            else if (category === "partial") acc.partialCount += 1;
+            else if (category === "ineffective") acc.ineffectiveCount += 1;
+            else acc.noDataCount += 1;
+            return acc;
+          },
+          {
+            effectiveCount: 0,
+            partialCount: 0,
+            ineffectiveCount: 0,
+            noDataCount: 0,
+          },
+        );
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -346,6 +385,7 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,
           cropStageDistribution,
+          effectSummary,
         });
         setError(null);
       } catch {

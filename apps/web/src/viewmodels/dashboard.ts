@@ -87,4 +87,10 @@ export type DashboardVm = {
     cropStageLabel: string;
     fieldCount: number;
   }>;
+  effectSummary: {
+    effectiveCount: number;
+    partialCount: number;
+    ineffectiveCount: number;
+    noDataCount: number;
+  };
 };
