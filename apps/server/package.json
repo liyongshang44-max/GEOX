@@ -25,6 +25,7 @@
     "build": "pnpm -w exec tsc -p apps/server/tsconfig.json",
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json",
     "seed:p6.1-real-chain": "pnpm -w exec tsx apps/server/scripts/generate_p6_1_real_chain_sample.ts",
-    "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts"
+    "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts",
+    "test:stage5:frontend": "pnpm -w exec tsx apps/server/scripts/stage5_frontend_acceptance.ts"
   }
 }
