@@ -151,6 +151,15 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">预期效果</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期类型</span><strong>{model.expectedEffectCard.effectTypeLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期数值</span><strong>{model.expectedEffectCard.effectValueLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务解释</span><strong>{model.expectedEffectCard.businessSummary}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">作业效果评估</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>{formatPct(beforeMoisture)}</strong></div>

@@ -58,6 +58,11 @@ export type OperationDetailPageVm = {
     reasonCodesLabel: string;
     riskIfNotExecute: string;
   };
+  expectedEffectCard: {
+    effectTypeLabel: string;
+    effectValueLabel: string;
+    businessSummary: string;
+  };
   execution: {
     executionModeLabel: string;
     executorTypeLabel: string;
@@ -187,6 +192,19 @@ function mapCropStageLabel(raw: unknown): string {
   if (key === "reproductive") return "生殖生长期";
   if (key === "seedling") return "苗期";
   return toText(raw);
+}
+
+function mapExpectedEffectTypeLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (key === "soil_moisture_delta" || key === "soil_moisture_increase") return "土壤湿度提升";
+  if (key === "canopy_temperature_drop") return "冠层温度下降";
+  return toText(raw);
+}
+
+function mapExpectedEffectValueLabel(raw: unknown): string {
+  const value = Number(raw ?? NaN);
+  if (!Number.isFinite(value)) return "-";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -664,6 +682,11 @@ export function buildOperationDetailViewModel(args?: {
       actionLabel: toText(safeDetail?.agronomy?.action_label, toText(safeDetail?.task?.action_type, "作业")),
       reasonCodesLabel: agronomyReasonCodesLabel,
       riskIfNotExecute: toText(safeDetail?.agronomy?.risk_if_not_execute, businessEffect.riskIfNotExecute),
+    },
+    expectedEffectCard: {
+      effectTypeLabel: mapExpectedEffectTypeLabel(safeDetail?.agronomy?.expected_effect?.type),
+      effectValueLabel: mapExpectedEffectValueLabel(safeDetail?.agronomy?.expected_effect?.value),
+      businessSummary: toText(safeDetail?.agronomy?.expected_effect?.business_summary, businessEffect.expectedImpact),
     },
     execution,
     receiptEvidence: receipt,
