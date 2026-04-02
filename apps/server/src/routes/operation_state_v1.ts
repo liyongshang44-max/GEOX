@@ -58,7 +58,7 @@ async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
   `);
 }
 
-async function hasRuleFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string, ruleId: string): Promise<boolean> {
+async function hasOperationFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<boolean> {
   const q = await pool.query(
     `SELECT 1
      FROM facts
@@ -67,9 +67,8 @@ async function hasRuleFeedbackRecorded(pool: Pool, tenant: TenantTriple, operati
        AND (record_json::jsonb#>>'{payload,project_id}') = $2
        AND (record_json::jsonb#>>'{payload,group_id}') = $3
        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
-       AND (record_json::jsonb#>>'{payload,rule_id}') = $5
      LIMIT 1`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, ruleId]
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
   );
   return Boolean(q.rows?.length);
 }
@@ -80,45 +79,43 @@ async function updateRulePerformance(params: {
   operationPlanId: string;
   recommendationId: string | null;
   cropCode: string;
-  ruleIds: string[];
+  ruleId: string | null;
   effectVerdict: EffectVerdict;
 }): Promise<void> {
   const { pool, tenant, operationPlanId, recommendationId, cropCode, effectVerdict } = params;
-  const ruleIds = Array.from(new Set(params.ruleIds.map((x) => String(x ?? "").trim()).filter(Boolean)));
-  if (!operationPlanId || !cropCode || !ruleIds.length) return;
+  const ruleId = String(params.ruleId ?? "").trim();
+  if (!operationPlanId || !cropCode || !ruleId || !effectVerdict) return;
+  const exists = await hasOperationFeedbackRecorded(pool, tenant, operationPlanId);
+  if (exists) return;
 
-  for (const ruleId of ruleIds) {
-    const exists = await hasRuleFeedbackRecorded(pool, tenant, operationPlanId, ruleId);
-    if (exists) continue;
-    await recordRulePerformance({
-      pool,
-      ruleId,
-      cropCode,
-      verdict: effectVerdict,
-    });
+  await recordRulePerformance({
+    pool,
+    ruleId,
+    cropCode,
+    verdict: effectVerdict,
+  });
 
-    await pool.query(
-      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-      [
-        `rule_perf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
-        "api/v1/operation/state",
-        JSON.stringify({
-          type: "rule_performance_feedback_v1",
-          payload: {
-            tenant_id: tenant.tenant_id,
-            project_id: tenant.project_id,
-            group_id: tenant.group_id,
-            operation_plan_id: operationPlanId,
-            recommendation_id: recommendationId,
-            crop_code: cropCode,
-            rule_id: ruleId,
-            effect_verdict: effectVerdict,
-            recorded_at: Date.now(),
-          }
-        })
-      ]
-    );
-  }
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [
+      `rule_perf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      "api/v1/operation/state",
+      JSON.stringify({
+        type: "rule_performance_feedback_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id: operationPlanId,
+          recommendation_id: recommendationId,
+          crop_code: cropCode,
+          rule_id: ruleId,
+          effect_verdict: effectVerdict,
+          recorded_at: Date.now(),
+        }
+      })
+    ]
+  );
 }
 
 function toText(v: unknown): string | null {
@@ -792,20 +789,16 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
     );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
-    const matchedRuleIds = (Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec.record_json.payload.rule_hit : [])
-      .filter((x: any) => Boolean(x?.matched))
-      .map((x: any) => toText(x?.rule_id))
-      .filter(Boolean) as string[];
     const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
-    if (shouldRecordPerformance) {
+    if (shouldRecordPerformance && agronomyRuleId && agronomyCropCode && effectVerdict) {
       await updateRulePerformance({
         pool,
         tenant,
         operationPlanId,
         recommendationId: toText(state.recommendation_id),
         cropCode: agronomyCropCode ?? "unknown",
-        ruleIds: matchedRuleIds,
+        ruleId: agronomyRuleId,
         effectVerdict: effectVerdict as EffectVerdict,
       });
     }

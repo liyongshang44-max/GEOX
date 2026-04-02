@@ -2,6 +2,8 @@ import { cornRules } from "./crops/corn/rules";
 import { tomatoRules } from "./crops/tomato/rules";
 import type { AgronomyContext, AgronomyRule } from "./types";
 
+type RuleWithScore = AgronomyRule & { score?: number };
+
 function getRulesForCrop(cropCode: string): AgronomyRule[] {
   const key = String(cropCode || "").toLowerCase();
   if (key === "corn") return cornRules;
@@ -15,11 +17,23 @@ function priorityWeight(priority: string): number {
   return 1;
 }
 
+function sortRules(rules: RuleWithScore[]): RuleWithScore[] {
+  return rules.sort((a, b) => {
+    const p = priorityWeight(b.priority) - priorityWeight(a.priority);
+    if (p !== 0) return p;
+
+    const sA = a.score ?? 0;
+    const sB = b.score ?? 0;
+    return sB - sA;
+  });
+}
+
 export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
-  return getRulesForCrop(ctx.cropCode)
-    .filter((rule) => rule.cropStage === ctx.cropStage)
-    .filter((rule) => rule.matches(ctx))
-    .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority));
+  return sortRules(
+    getRulesForCrop(ctx.cropCode)
+      .filter((rule) => rule.cropStage === ctx.cropStage)
+      .filter((rule) => rule.matches(ctx)),
+  );
 }
 
 export function pickBestRule(rules: AgronomyRule[]): AgronomyRule | null {
