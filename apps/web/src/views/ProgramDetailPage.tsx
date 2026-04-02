@@ -70,6 +70,33 @@ export default function ProgramDetailPage(): React.ReactElement {
       <div className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">作物阶段概览</div>
+            <div className="detailSectionLead">用于快速查看当前作物、阶段、关键指标与规则激活情况。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">作物</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.cropLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前阶段</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.cropStage}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前激活规则数量</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.activeRuleCount}</div>
+            </div>
+            {viewModel.cropInsight.keyMetrics.map((metric) => (
+              <div key={metric.label} className="decisionItemStatic">
+                <div className="decisionItemTitle">{metric.label}</div>
+                <div className="decisionItemMeta">{metric.value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">经营目标</div>
             <div className="detailSectionLead">后面的建议、审批和执行，都围绕这些目标展开。</div>
           </div>

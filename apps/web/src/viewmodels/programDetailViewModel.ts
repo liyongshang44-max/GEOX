@@ -35,6 +35,12 @@ export type ProgramConsoleViewModel = {
   latestEvidenceAtLabel?: string;
   latestEvidenceDeviceLabel?: string;
   latestEvidenceResultLabel?: string;
+  cropInsight: {
+    cropLabel: string;
+    cropStage: string;
+    keyMetrics: Array<{ label: string; value: string }>;
+    activeRuleCount: number;
+  };
   timeline: Array<{
     ts: number;
     label: string;
@@ -73,6 +79,19 @@ function formatDateTime(msOrText: unknown, fallback = "-"): string {
   if (!Number.isFinite(ms)) return fallback;
   const date = new Date(ms);
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function cropDisplayName(code: unknown): string {
+  const normalized = String(code ?? "").trim().toLowerCase();
+  if (normalized === "corn") return "玉米";
+  if (normalized === "tomato") return "番茄";
+  return normalized || "-";
+}
+
+function metricValueText(value: unknown, suffix = ""): string {
+  const n = toNumber(value);
+  if (!Number.isFinite(n)) return "-";
+  return `${n}${suffix}`;
 }
 
 function readableActionType(code: unknown): string {
@@ -130,7 +149,30 @@ export function buildProgramDetailViewModel(args: {
 
   const displayTitle = toText(program?.title || detail?.program_name || detail?.name, "默认经营方案");
   const cropCode = toText(detail?.crop_code || program?.crop_code, "-");
-  const cropName = toText(detail?.crop_name || program?.crop_name || cropCode, "-");
+  const cropName = toText(detail?.crop_name || program?.crop_name || cropDisplayName(cropCode), "-");
+  const cropStage = toText(
+    detail?.crop_stage
+    || detail?.latest_recommendation?.crop_stage
+    || detail?.latest_recommendation?.suggested_action?.parameters?.crop_stage
+    || "-",
+    "-"
+  );
+
+  const metricsSource =
+    detail?.latest_recommendation?.current_metrics
+    ?? detail?.current_metrics
+    ?? detail?.latest_metrics
+    ?? {};
+  const keyMetrics = [
+    { label: "土壤湿度", value: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%") },
+    { label: "温度", value: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃") },
+    { label: "湿度", value: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%") },
+  ];
+  const activeRuleCount = Number(
+    detail?.latest_recommendation?.active_rule_count
+    ?? detail?.latest_recommendation?.rule_count
+    ?? (Array.isArray(detail?.latest_recommendation?.rule_hit) ? detail.latest_recommendation.rule_hit.length : NaN)
+  );
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
@@ -216,6 +258,12 @@ export function buildProgramDetailViewModel(args: {
     latestEvidenceAtLabel: formatDateTime(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at, "-"),
     latestEvidenceDeviceLabel: toText(latestEvidenceRaw?.device_id || latestEvidenceRaw?.executor_id, "-"),
     latestEvidenceResultLabel: latestEvidenceVm?.constraintCheckLabel,
+    cropInsight: {
+      cropLabel: cropName,
+      cropStage,
+      keyMetrics,
+      activeRuleCount: Number.isFinite(activeRuleCount) ? activeRuleCount : 0,
+    },
     timeline,
   };
 }
