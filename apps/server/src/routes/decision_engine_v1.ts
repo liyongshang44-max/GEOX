@@ -249,7 +249,7 @@ async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): 
     if (!ruleId) continue;
     const score = Number(row.score ?? 0);
     const totalCount = Number(row.total_count ?? 0);
-    const stableScore = Number.isFinite(totalCount) && totalCount > 5 && Number.isFinite(score) ? score : 0;
+    const stableScore = Number.isFinite(totalCount) && totalCount >= 5 && Number.isFinite(score) ? score : 0;
     map.set(ruleId, stableScore);
   }
   return map;

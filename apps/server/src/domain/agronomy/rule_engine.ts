@@ -3,7 +3,7 @@ import { cornRules } from "./crops/corn/rules";
 import { tomatoRules } from "./crops/tomato/rules";
 import type { AgronomyContext, AgronomyRule } from "./types";
 
-export type RuleWithScore = AgronomyRule & { score?: number };
+export type RuleWithScore = AgronomyRule & { score?: number; totalCount?: number };
 
 function getRulesForCrop(cropCode: string): AgronomyRule[] {
   const key = String(cropCode || "").toLowerCase();
@@ -23,9 +23,11 @@ export function sortRules(rules: RuleWithScore[]): RuleWithScore[] {
     const p = priorityWeight(b.priority) - priorityWeight(a.priority);
     if (p !== 0) return p;
 
-    const sA = a.score ?? 0;
-    const sB = b.score ?? 0;
-    return sB - sA;
+    const sA = a.totalCount !== undefined && a.totalCount < 5 ? undefined : a.score;
+    const sB = b.totalCount !== undefined && b.totalCount < 5 ? undefined : b.score;
+
+    if (sA === undefined || sB === undefined) return 0;
+    return (sB ?? 0) - (sA ?? 0);
   });
 }
 
@@ -33,11 +35,11 @@ export async function attachRuleScores(rules: AgronomyRule[], pool: Pool): Promi
   if (!Array.isArray(rules) || !rules.length) return [];
 
   const ruleIds = Array.from(new Set(rules.map((rule) => String(rule.ruleId ?? "").trim()).filter(Boolean)));
-  const scoreMap = new Map<string, number>();
+  const scoreMap = new Map<string, { score: number; totalCount: number }>();
 
   if (ruleIds.length) {
     const res = await pool.query(
-      `SELECT rule_id, score
+      `SELECT rule_id, score, total_count
        FROM agronomy_rule_performance
        WHERE rule_id = ANY($1::text[])`,
       [ruleIds],
@@ -47,14 +49,25 @@ export async function attachRuleScores(rules: AgronomyRule[], pool: Pool): Promi
       const ruleId = String(row.rule_id ?? "").trim();
       if (!ruleId) continue;
       const score = Number(row.score ?? 0.5);
-      scoreMap.set(ruleId, Number.isFinite(score) ? score : 0.5);
+      const totalCount = Number(row.total_count ?? 0);
+      scoreMap.set(ruleId, {
+        score: Number.isFinite(score) ? score : 0.5,
+        totalCount: Number.isFinite(totalCount) ? totalCount : 0,
+      });
     }
   }
 
-  return rules.map((rule) => ({
-    ...rule,
-    score: scoreMap.get(rule.ruleId) ?? 0.5,
-  }));
+  return rules.map((rule) => {
+    const stats = scoreMap.get(rule.ruleId);
+    const totalCount = stats?.totalCount ?? 0;
+    const stable = totalCount >= 5;
+
+    return {
+      ...rule,
+      score: stable ? (stats?.score ?? 0.5) : undefined,
+      totalCount,
+    };
+  });
 }
 
 export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
