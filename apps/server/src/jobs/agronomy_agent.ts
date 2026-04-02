@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { runAgronomyEngine } from "../domain/agronomy/engine";
+import { buildAgronomyContext } from "../domain/agronomy/context_builder";
+import { generateAgronomyRecommendation } from "../domain/agronomy/engine";
 
 type TenantTriple = {
   tenant_id: string;
@@ -567,21 +568,20 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           continue;
         }
 
-        const recommendation = runAgronomyEngine({
-          program: {
-            tenant_id: selectedProgramItem.tenant.tenant_id,
-            project_id: selectedProgramItem.tenant.project_id,
-            group_id: selectedProgramItem.tenant.group_id,
-            field_id: selectedProgramItem.field_id,
-            season_id: selectedProgramItem.season_id || undefined,
-            program_id: selectedProgramItem.program_id,
-            crop_code: selectedProgramItem.crop_code,
-          },
+        const ctx = await buildAgronomyContext({
+          tenantId: selectedProgramItem.tenant.tenant_id,
+          projectId: selectedProgramItem.tenant.project_id,
+          groupId: selectedProgramItem.tenant.group_id,
+          fieldId: selectedProgramItem.field_id,
+          seasonId: selectedProgramItem.season_id || undefined,
+          programId: selectedProgramItem.program_id,
+          cropCode: selectedProgramItem.crop_code,
+          startDate: Date.now(),
           currentMetrics: {
             soil_moisture: effectiveSoilMoisture,
           },
-          now: Date.now(),
         });
+        const recommendation = generateAgronomyRecommendation(ctx);
         if (!recommendation) {
           skipped += 1;
           skippedByReason.no_program += 1;
