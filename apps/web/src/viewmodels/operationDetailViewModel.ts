@@ -211,6 +211,8 @@ function mapCropStageLabel(raw: unknown): string {
 function mapExpectedEffectTypeLabel(raw: unknown): string {
   const key = String(raw ?? "").trim().toLowerCase();
   if (key === "soil_moisture_delta" || key === "soil_moisture_increase") return "土壤湿度提升";
+  if (key === "moisture_increase") return "土壤湿度提升";
+  if (key === "growth_boost" || key === "nutrition_boost") return "生长势提升";
   if (key === "canopy_temperature_drop") return "冠层温度下降";
   return toText(raw);
 }

@@ -9,6 +9,7 @@ import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -112,13 +113,28 @@ function buildMetricsSnapshot(rows: any[]): OperationMetricsSnapshot {
 function toExpectedEffect(recPayload: any): { type: "moisture_increase" | "growth_boost"; value: number } | null {
   const payload = recPayload && typeof recPayload === "object" ? recPayload : {};
   const candidate = payload.expected_effect ?? payload?.suggested_action?.parameters?.expected_effect ?? null;
-  const typeRaw = String(candidate?.type ?? "").trim().toLowerCase();
-  const value = Number(candidate?.value ?? NaN);
+  const typeRaw = String(candidate?.type ?? payload?.suggested_action?.parameters?.expected_effect_type ?? "").trim().toLowerCase();
+  const value = Number(candidate?.value ?? payload?.suggested_action?.parameters?.expected_effect_value ?? NaN);
   if ((typeRaw === "moisture_increase" || typeRaw === "growth_boost") && Number.isFinite(value)) {
     return { type: typeRaw, value };
   }
+  if (typeRaw === "nutrition_boost" && Number.isFinite(value)) {
+    return { type: "growth_boost", value };
+  }
+  const looseNumericValue = Number(candidate ?? NaN);
+  if (Number.isFinite(looseNumericValue)) {
+    return { type: "moisture_increase", value: looseNumericValue };
+  }
   const fallbackValue = Number(payload?.suggested_action?.parameters?.expected_moisture_increase ?? NaN);
   if (Number.isFinite(fallbackValue)) return { type: "moisture_increase", value: fallbackValue };
+  return null;
+}
+
+function inferExpectedEffectFromAction(actionTypeRaw: unknown): { type: "moisture_increase" | "growth_boost"; value: number } | null {
+  const action = String(actionTypeRaw ?? "").trim().toUpperCase();
+  if (!action) return null;
+  if (action.includes("IRRIGATE") || action.includes("IRRIGATION")) return { type: "moisture_increase", value: 10 };
+  if (action.includes("FERTILIZE") || action.includes("FERTILIZATION")) return { type: "growth_boost", value: 8 };
   return null;
 }
 
@@ -590,7 +606,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
     const expectedEffect =
       toExpectedEffect(recommendationPayload)
-      ?? (resolvedActionType === "IRRIGATE" ? { type: "moisture_increase" as const, value: 10 } : null);
+      ?? inferExpectedEffectFromAction(resolvedActionType);
     const actualEffect = computeEffect(beforeMetrics, afterMetrics);
     const effectVerdict = evaluateEffectVerdict({
       expectedEffect,
@@ -662,15 +678,27 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_code
       ?? plan?.record_json?.payload?.crop_code
     );
-    const agronomyCropStage = toText(
+    const agronomyCropStageRaw = toText(
       state.crop_stage
       ?? rec?.record_json?.payload?.crop_stage
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
       ?? plan?.record_json?.payload?.crop_stage
     );
+    const agronomyCropStage = agronomyCropStageRaw || (() => {
+      if (!agronomyCropCode) return null;
+      const stageStartTs = Number(
+        rec?.record_json?.payload?.created_ts
+        ?? plan?.record_json?.payload?.created_ts
+        ?? state.last_event_ts
+        ?? Date.now(),
+      );
+      return resolveCropStage({ cropCode: agronomyCropCode, startDate: stageStartTs, now: Date.now() });
+    })();
     const agronomyRuleId = toText(
       rec?.record_json?.payload?.rule_id
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.rule_id
+      ?? rec?.record_json?.payload?.rule_hit?.[0]?.rule_id
+      ?? rec?.record_json?.payload?.reason_codes?.[0]
     );
     const agronomyReasonCodes = Array.isArray(rec?.record_json?.payload?.reason_codes)
       ? rec.record_json.payload.reason_codes
