@@ -358,6 +358,10 @@ async function createOperationPlanFromRecommendation(
     program_id: string;
     field_id: string;
     season_id: string | null;
+    crop_code: string | null;
+    crop_stage: string | null;
+    rule_id: string | null;
+    expected_effect: { type: string; value: number } | null;
     action_type: string;
     device_id: string | null;
   },
@@ -375,6 +379,10 @@ async function createOperationPlanFromRecommendation(
       program_id: input.program_id,
       field_id: input.field_id,
       season_id: input.season_id,
+      crop_code: input.crop_code,
+      crop_stage: input.crop_stage,
+      rule_id: input.rule_id,
+      expected_effect: input.expected_effect,
       device_id: input.device_id,
       action_type: input.action_type,
       status: "CREATED",
@@ -688,6 +696,10 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           program_id: selectedProgramItem.program_id,
           field_id: selectedProgramItem.field_id,
           season_id: selectedProgramItem.season_id || null,
+          crop_code: recommendation.crop_code ?? null,
+          crop_stage: recommendation.crop_stage ?? null,
+          rule_id: recommendation.rule_id ?? null,
+          expected_effect: recommendation.expected_effect ?? null,
           action_type,
           device_id: telemetry?.device_id ?? null,
         });

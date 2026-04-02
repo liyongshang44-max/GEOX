@@ -129,6 +129,8 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前作物</span><strong>{model.agronomyDecision.cropLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前阶段</span><strong>{model.agronomyDecision.cropStageLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.agronomyDecision.ruleId}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则表现</span><strong>{model.recommendation.ruleConfidenceLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">历史有效率</span><strong>{model.recommendation.historyEffectivenessLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.agronomyDecision.reasonCodesLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议动作</span><strong>{model.agronomyDecision.actionLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">不执行风险</span><strong>{model.agronomyDecision.riskIfNotExecute}</strong></div>

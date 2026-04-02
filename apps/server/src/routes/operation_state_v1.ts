@@ -8,11 +8,12 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
+import { computeEffect, evaluateEffectVerdict, recordRulePerformance } from "../domain/agronomy/effect_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
+type EffectVerdict = "EFFECTIVE" | "PARTIAL" | "INEFFECTIVE" | "NO_DATA";
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -39,6 +40,82 @@ function parseRecordJson(v: unknown): any {
   } catch {
     return null;
   }
+}
+
+async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
+      rule_id TEXT PRIMARY KEY,
+      crop_code TEXT NOT NULL,
+      total_count INT NOT NULL DEFAULT 0,
+      effective_count INT NOT NULL DEFAULT 0,
+      partial_count INT NOT NULL DEFAULT 0,
+      ineffective_count INT NOT NULL DEFAULT 0,
+      no_data_count INT NOT NULL DEFAULT 0,
+      score NUMERIC NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function hasOperationFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<boolean> {
+  const q = await pool.query(
+    `SELECT 1
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'rule_performance_feedback_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+     LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
+  );
+  return Boolean(q.rows?.length);
+}
+
+async function updateRulePerformance(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  recommendationId: string | null;
+  cropCode: string;
+  ruleId: string | null;
+  effectVerdict: EffectVerdict;
+}): Promise<void> {
+  const { pool, tenant, operationPlanId, recommendationId, cropCode, effectVerdict } = params;
+  const ruleId = String(params.ruleId ?? "").trim();
+  if (!operationPlanId || !cropCode || !ruleId || !effectVerdict) return;
+  const exists = await hasOperationFeedbackRecorded(pool, tenant, operationPlanId);
+  if (exists) return;
+
+  await recordRulePerformance({
+    pool,
+    ruleId,
+    cropCode,
+    verdict: effectVerdict,
+  });
+
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [
+      `rule_perf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      "api/v1/operation/state",
+      JSON.stringify({
+        type: "rule_performance_feedback_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id: operationPlanId,
+          recommendation_id: recommendationId,
+          crop_code: cropCode,
+          rule_id: ruleId,
+          effect_verdict: effectVerdict,
+          recorded_at: Date.now(),
+        }
+      })
+    ]
+  );
 }
 
 function toText(v: unknown): string | null {
@@ -336,6 +413,10 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
 }
 
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.addHook("onReady", async () => {
+    await ensureRulePerformanceTable(pool);
+  });
+
   app.get("/api/v1/operations/:operationPlanId/evidence-export", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -562,6 +643,20 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     });
     const operationPayload = plan?.record_json?.payload ?? {};
     const recommendationPayload = rec?.record_json?.payload ?? {};
+    const recommendationPayloadWithFallback = {
+      ...recommendationPayload,
+      crop_code: recommendationPayload?.crop_code ?? state.crop_code ?? operationPayload?.crop_code ?? null,
+      crop_stage: recommendationPayload?.crop_stage ?? state.crop_stage ?? operationPayload?.crop_stage ?? null,
+      rule_id: recommendationPayload?.rule_id ?? state.rule_id ?? operationPayload?.rule_id ?? null,
+      rule_hit: Array.isArray(recommendationPayload?.rule_hit)
+        ? recommendationPayload.rule_hit
+        : (Array.isArray(state.rule_hit) ? state.rule_hit : (Array.isArray(operationPayload?.rule_hit) ? operationPayload.rule_hit : [])),
+      reason_codes: Array.isArray(recommendationPayload?.reason_codes)
+        ? recommendationPayload.reason_codes
+        : (Array.isArray(state.reason_codes) ? state.reason_codes : (Array.isArray(operationPayload?.reason_codes) ? operationPayload.reason_codes : [])),
+      expected_effect: recommendationPayload?.expected_effect ?? state.expected_effect ?? operationPayload?.expected_effect ?? null,
+      risk_if_not_execute: recommendationPayload?.risk_if_not_execute ?? state.risk_if_not_execute ?? operationPayload?.risk_if_not_execute ?? null,
+    };
     const taskDeviceId = normalizeDeviceId(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
     const recommendedDeviceId = taskDeviceId;
     const receiptDeviceId = normalizeDeviceId(normalizedReceipt?.device_id);
@@ -605,7 +700,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
     const expectedEffect =
-      toExpectedEffect(recommendationPayload)
+      toExpectedEffect(recommendationPayloadWithFallback)
       ?? inferExpectedEffectFromAction(resolvedActionType);
     const actualEffect = computeEffect(beforeMetrics, afterMetrics);
     const effectVerdict = evaluateEffectVerdict({
@@ -673,15 +768,15 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     });
     const customerView = customerViewByStatus(customerViewStatus);
     const agronomyCropCode = toText(
-      state.crop_code
-      ?? rec?.record_json?.payload?.crop_code
-      ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_code
+      rec?.record_json?.payload?.crop_code
+      ?? state.crop_code
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_code
       ?? plan?.record_json?.payload?.crop_code
     );
     const agronomyCropStageRaw = toText(
-      state.crop_stage
-      ?? rec?.record_json?.payload?.crop_stage
-      ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
+      rec?.record_json?.payload?.crop_stage
+      ?? state.crop_stage
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_stage
       ?? plan?.record_json?.payload?.crop_stage
     );
     const agronomyCropStage = agronomyCropStageRaw || (() => {
@@ -696,18 +791,33 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     })();
     const agronomyRuleId = toText(
       rec?.record_json?.payload?.rule_id
-      ?? rec?.record_json?.payload?.suggested_action?.parameters?.rule_id
-      ?? rec?.record_json?.payload?.rule_hit?.[0]?.rule_id
-      ?? rec?.record_json?.payload?.reason_codes?.[0]
+      ?? state.rule_id
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.rule_id
+      ?? recommendationPayloadWithFallback?.rule_hit?.[0]?.rule_id
+      ?? recommendationPayloadWithFallback?.reason_codes?.[0]
     );
-    const agronomyReasonCodes = Array.isArray(rec?.record_json?.payload?.reason_codes)
-      ? rec.record_json.payload.reason_codes
+    const agronomyReasonCodes = Array.isArray(recommendationPayloadWithFallback?.reason_codes)
+      ? recommendationPayloadWithFallback.reason_codes
       : [];
     const agronomyRiskIfNotExecute = toText(
-      rec?.record_json?.payload?.risk_if_not_execute
-      ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
+      recommendationPayloadWithFallback?.risk_if_not_execute
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.risk_if_not_execute
     );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
+    const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
+    const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
+    if (shouldRecordPerformance && agronomyRuleId && agronomyCropCode && effectVerdict) {
+      await updateRulePerformance({
+        pool,
+        tenant,
+        operationPlanId,
+        recommendationId: toText(state.recommendation_id),
+        cropCode: agronomyCropCode ?? "unknown",
+        ruleId: agronomyRuleId,
+        effectVerdict: effectVerdict as EffectVerdict,
+      });
+    }
+
     return reply.send({
       ok: true,
       operation: {
