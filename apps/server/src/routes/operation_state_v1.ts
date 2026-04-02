@@ -13,6 +13,7 @@ import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
+type EffectVerdict = "EFFECTIVE" | "PARTIAL" | "INEFFECTIVE" | "NO_DATA";
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -38,6 +39,132 @@ function parseRecordJson(v: unknown): any {
     return JSON.parse(v);
   } catch {
     return null;
+  }
+}
+
+function computeRulePerformanceScore(counts: {
+  total_count: number;
+  effective_count: number;
+  partial_count: number;
+  ineffective_count: number;
+  no_data_count: number;
+}): number {
+  const total = Number(counts.total_count ?? 0);
+  if (total <= 0) return 0;
+  const effective = Number(counts.effective_count ?? 0);
+  const partial = Number(counts.partial_count ?? 0);
+  const raw = (effective * 1 + partial * 0.5) / total;
+  return Number(raw.toFixed(6));
+}
+
+async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
+      rule_id TEXT PRIMARY KEY,
+      crop_code TEXT NOT NULL,
+      total_count INT NOT NULL DEFAULT 0,
+      effective_count INT NOT NULL DEFAULT 0,
+      partial_count INT NOT NULL DEFAULT 0,
+      ineffective_count INT NOT NULL DEFAULT 0,
+      no_data_count INT NOT NULL DEFAULT 0,
+      score NUMERIC NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function hasRuleFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string, ruleId: string): Promise<boolean> {
+  const q = await pool.query(
+    `SELECT 1
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'rule_performance_feedback_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+       AND (record_json::jsonb#>>'{payload,rule_id}') = $5
+     LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, ruleId]
+  );
+  return Boolean(q.rows?.length);
+}
+
+async function updateRulePerformance(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  recommendationId: string | null;
+  cropCode: string;
+  ruleIds: string[];
+  effectVerdict: EffectVerdict;
+}): Promise<void> {
+  const { pool, tenant, operationPlanId, recommendationId, cropCode, effectVerdict } = params;
+  const ruleIds = Array.from(new Set(params.ruleIds.map((x) => String(x ?? "").trim()).filter(Boolean)));
+  if (!operationPlanId || !cropCode || !ruleIds.length) return;
+
+  for (const ruleId of ruleIds) {
+    const exists = await hasRuleFeedbackRecorded(pool, tenant, operationPlanId, ruleId);
+    if (exists) continue;
+
+    const upsert = await pool.query(
+      `INSERT INTO agronomy_rule_performance (
+         rule_id, crop_code,
+         total_count, effective_count, partial_count, ineffective_count, no_data_count, score, updated_at
+       )
+       VALUES (
+         $1, $2,
+         CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
+         CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
+         CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
+         CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,
+         CASE WHEN $3 = 'NO_DATA' THEN 1 ELSE 0 END,
+         0,
+         NOW()
+       )
+       ON CONFLICT (rule_id) DO UPDATE SET
+         crop_code = EXCLUDED.crop_code,
+         total_count = agronomy_rule_performance.total_count + CASE WHEN $3 = 'NO_DATA' THEN 0 ELSE 1 END,
+         effective_count = agronomy_rule_performance.effective_count + CASE WHEN $3 = 'EFFECTIVE' THEN 1 ELSE 0 END,
+         partial_count = agronomy_rule_performance.partial_count + CASE WHEN $3 = 'PARTIAL' THEN 1 ELSE 0 END,
+         ineffective_count = agronomy_rule_performance.ineffective_count + CASE WHEN $3 = 'INEFFECTIVE' THEN 1 ELSE 0 END,
+         no_data_count = agronomy_rule_performance.no_data_count + CASE WHEN $3 = 'NO_DATA' THEN 1 ELSE 0 END,
+         updated_at = NOW()
+       RETURNING total_count, effective_count, partial_count, ineffective_count, no_data_count`,
+      [ruleId, cropCode, effectVerdict]
+    );
+    const row = upsert.rows?.[0];
+    if (row) {
+      const score = computeRulePerformanceScore({
+        total_count: Number(row.total_count ?? 0),
+        effective_count: Number(row.effective_count ?? 0),
+        partial_count: Number(row.partial_count ?? 0),
+        ineffective_count: Number(row.ineffective_count ?? 0),
+        no_data_count: Number(row.no_data_count ?? 0),
+      });
+      await pool.query(`UPDATE agronomy_rule_performance SET score = $2, updated_at = NOW() WHERE rule_id = $1`, [ruleId, score]);
+    }
+
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [
+        `rule_perf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        "api/v1/operation/state",
+        JSON.stringify({
+          type: "rule_performance_feedback_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: operationPlanId,
+            recommendation_id: recommendationId,
+            crop_code: cropCode,
+            rule_id: ruleId,
+            effect_verdict: effectVerdict,
+            recorded_at: Date.now(),
+          }
+        })
+      ]
+    );
   }
 }
 
@@ -336,6 +463,10 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
 }
 
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.addHook("onReady", async () => {
+    await ensureRulePerformanceTable(pool);
+  });
+
   app.get("/api/v1/operations/:operationPlanId/evidence-export", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -708,6 +839,24 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
     );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
+    const matchedRuleIds = (Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec.record_json.payload.rule_hit : [])
+      .filter((x: any) => Boolean(x?.matched))
+      .map((x: any) => toText(x?.rule_id))
+      .filter(Boolean) as string[];
+    const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
+    const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
+    if (shouldRecordPerformance) {
+      await updateRulePerformance({
+        pool,
+        tenant,
+        operationPlanId,
+        recommendationId: toText(state.recommendation_id),
+        cropCode: agronomyCropCode ?? "unknown",
+        ruleIds: matchedRuleIds,
+        effectVerdict: effectVerdict as EffectVerdict,
+      });
+    }
+
     return reply.send({
       ok: true,
       operation: {
