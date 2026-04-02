@@ -37,21 +37,6 @@ function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewMod
   return `已回传执行结果，当前状态为${finalStatus}。`;
 }
 
-function cropLabel(code: unknown): string {
-  const normalized = String(code ?? "").trim().toLowerCase();
-  if (normalized === "corn") return "玉米";
-  if (normalized === "tomato") return "番茄";
-  return normalized || "-";
-}
-
-function formatExpectedEffect(effect: any): string {
-  if (!effect || typeof effect !== "object") return "-";
-  const type = String(effect.type ?? "").trim() || "unknown";
-  const value = Number(effect.value ?? NaN);
-  if (!Number.isFinite(value)) return type;
-  return `${type} ${value >= 0 ? "+" : ""}${value}`;
-}
-
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
@@ -107,9 +92,6 @@ export default function OperationDetailPage(): React.ReactElement {
       : Number(actual?.value) >= Number(expected?.value)
         ? "✔ 达到预期"
         : "⚠ 未达预期";
-  const reasonCodes = Array.isArray(agronomy?.reason_codes)
-    ? agronomy.reason_codes.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
-    : [];
 
   const billingLabel = billing
     ? billing.billable
@@ -159,12 +141,21 @@ export default function OperationDetailPage(): React.ReactElement {
       <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">为什么建议这次作业</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前作物</span><strong>{cropLabel(agronomy?.crop_code)}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前阶段</span><strong>{String(agronomy?.crop_stage ?? "-")}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{String(agronomy?.rule_id ?? "-")}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{reasonCodes.length ? reasonCodes.join(" / ") : "-"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">不执行风险</span><strong>{String(agronomy?.risk_if_not_execute ?? "-")}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期效果</span><strong>{formatExpectedEffect(agronomy?.expected_effect)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前作物</span><strong>{model.agronomyDecision.cropLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前阶段</span><strong>{model.agronomyDecision.cropStageLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.agronomyDecision.ruleId}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.agronomyDecision.reasonCodesLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议动作</span><strong>{model.agronomyDecision.actionLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">不执行风险</span><strong>{model.agronomyDecision.riskIfNotExecute}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">预期效果</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期类型</span><strong>{model.expectedEffectCard.effectTypeLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期数值</span><strong>{model.expectedEffectCard.effectValueLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务解释</span><strong>{model.expectedEffectCard.businessSummary}</strong></div>
         </div>
       </section>
 

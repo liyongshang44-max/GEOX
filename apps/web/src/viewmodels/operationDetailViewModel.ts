@@ -50,6 +50,19 @@ export type OperationDetailPageVm = {
     riskIfNotExecute: string;
     estimatedGain: string;
   };
+  agronomyDecision: {
+    cropLabel: string;
+    cropStageLabel: string;
+    ruleId: string;
+    actionLabel: string;
+    reasonCodesLabel: string;
+    riskIfNotExecute: string;
+  };
+  expectedEffectCard: {
+    effectTypeLabel: string;
+    effectValueLabel: string;
+    businessSummary: string;
+  };
   execution: {
     executionModeLabel: string;
     executorTypeLabel: string;
@@ -164,6 +177,34 @@ function mapRiskLevelLabel(level: string): string {
   if (key === "high") return "高";
   if (key === "medium") return "中";
   return "低";
+}
+
+function mapCropLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (key === "corn") return "玉米";
+  if (key === "tomato") return "番茄";
+  return toText(raw);
+}
+
+function mapCropStageLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (key === "vegetative") return "营养生长期";
+  if (key === "reproductive") return "生殖生长期";
+  if (key === "seedling") return "苗期";
+  return toText(raw);
+}
+
+function mapExpectedEffectTypeLabel(raw: unknown): string {
+  const key = String(raw ?? "").trim().toLowerCase();
+  if (key === "soil_moisture_delta" || key === "soil_moisture_increase") return "土壤湿度提升";
+  if (key === "canopy_temperature_drop") return "冠层温度下降";
+  return toText(raw);
+}
+
+function mapExpectedEffectValueLabel(raw: unknown): string {
+  const value = Number(raw ?? NaN);
+  if (!Number.isFinite(value)) return "-";
+  return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -497,6 +538,10 @@ export function buildOperationDetailViewModel(args?: {
     ? safeDetail.recommendation.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
     : [];
   const reasonCodesLabel = reasonCodes.join(" / ") || "暂无";
+  const agronomyReasonCodes = Array.isArray(safeDetail?.agronomy?.reason_codes)
+    ? safeDetail.agronomy.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
+    : [];
+  const agronomyReasonCodesLabel = agronomyReasonCodes.join(" / ") || reasonCodesLabel;
   const approvalActorLabel = toText(safeDetail?.approval?.actor_label, "系统/未知");
   const approvalDecidedAtLabel = toDateLabel(safeDetail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
@@ -630,6 +675,19 @@ export function buildOperationDetailViewModel(args?: {
       decisionSummary: `由 ${approvalActorLabel} · ${approvalDecidedAtLabel}`,
     },
     businessEffect,
+    agronomyDecision: {
+      cropLabel: mapCropLabel(safeDetail?.agronomy?.crop_code),
+      cropStageLabel: mapCropStageLabel(safeDetail?.agronomy?.crop_stage),
+      ruleId: toText(safeDetail?.agronomy?.rule_id),
+      actionLabel: toText(safeDetail?.agronomy?.action_label, toText(safeDetail?.task?.action_type, "作业")),
+      reasonCodesLabel: agronomyReasonCodesLabel,
+      riskIfNotExecute: toText(safeDetail?.agronomy?.risk_if_not_execute, businessEffect.riskIfNotExecute),
+    },
+    expectedEffectCard: {
+      effectTypeLabel: mapExpectedEffectTypeLabel(safeDetail?.agronomy?.expected_effect?.type),
+      effectValueLabel: mapExpectedEffectValueLabel(safeDetail?.agronomy?.expected_effect?.value),
+      businessSummary: toText(safeDetail?.agronomy?.expected_effect?.business_summary, businessEffect.expectedImpact),
+    },
     execution,
     receiptEvidence: receipt,
     timeline,
