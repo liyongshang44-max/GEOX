@@ -34,6 +34,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     { type: "PENDING_ACCEPTANCE", count: 0 },
     { type: "APPROVAL_REQUIRED", count: 0 },
   ],
+  agronomyRecommendations: [],
 };
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -162,6 +163,17 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           ...item,
           normalized_metrics: normalizeModelMetrics(item?.metrics ?? item?.model_metrics),
         }));
+        const recentAgronomyRecommendations = [...(recommendationItems ?? [])]
+          .sort((a: any, b: any) => Number(b?.updated_ts_ms ?? 0) - Number(a?.updated_ts_ms ?? 0))
+          .slice(0, 6)
+          .map((item: any) => ({
+            fieldLabel: String(item?.field?.field_name ?? item?.field?.field_id ?? item?.field_id ?? "-"),
+            cropCode: String(item?.crop_code ?? item?.cropCode ?? "-"),
+            cropStage: String(item?.crop_stage ?? item?.cropStage ?? "-"),
+            actionType: String(item?.action_type ?? item?.suggested_action?.action_type ?? "-"),
+            priority: String(item?.priority ?? "-"),
+            summary: String(item?.summary ?? item?.reason_summary ?? "-"),
+          }));
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -243,6 +255,7 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             invalidExecutionCount,
           },
           todayActions,
+          agronomyRecommendations: recentAgronomyRecommendations,
         });
         setError(null);
       } catch {
