@@ -37,6 +37,21 @@ function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewMod
   return `已回传执行结果，当前状态为${finalStatus}。`;
 }
 
+function cropLabel(code: unknown): string {
+  const normalized = String(code ?? "").trim().toLowerCase();
+  if (normalized === "corn") return "玉米";
+  if (normalized === "tomato") return "番茄";
+  return normalized || "-";
+}
+
+function formatExpectedEffect(effect: any): string {
+  if (!effect || typeof effect !== "object") return "-";
+  const type = String(effect.type ?? "").trim() || "unknown";
+  const value = Number(effect.value ?? NaN);
+  if (!Number.isFinite(value)) return type;
+  return `${type} ${value >= 0 ? "+" : ""}${value}`;
+}
+
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
@@ -52,6 +67,12 @@ export default function OperationDetailPage(): React.ReactElement {
   React.useEffect(() => {
     let mounted = true;
     const id = model.operationPlanId || operationPlanId;
+    if (!id || id === "-") {
+      if (mounted) setBilling(null);
+      return () => {
+        mounted = false;
+      };
+    }
     void fetchOperationBilling(id).then((res) => {
       if (mounted) setBilling(res);
     });
@@ -74,15 +95,21 @@ export default function OperationDetailPage(): React.ReactElement {
   const agronomy = (detail as any)?.agronomy ?? {};
   const beforeMoisture = Number(agronomy?.before_metrics?.soil_moisture ?? NaN);
   const afterMoisture = Number(agronomy?.after_metrics?.soil_moisture ?? NaN);
+  const expected = agronomy?.expected_effect ?? null;
+  const actual = agronomy?.actual_effect ?? null;
   const expectedValue = Number(agronomy?.expected_effect?.value ?? NaN);
   const actualValue = Number(agronomy?.actual_effect?.value ?? NaN);
   const formatPct = (v: number): string => (Number.isFinite(v) ? `${v.toFixed(0)}%` : "--");
   const formatSignedPct = (v: number): string => (Number.isFinite(v) ? `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` : "--");
-  const effectResultLabel = !Number.isFinite(actualValue)
-    ? "无数据"
-    : (Number.isFinite(expectedValue) && actualValue >= expectedValue)
-      ? "✔ 超出预期"
-      : "偏差";
+  const effectResultLabel =
+    !actual
+      ? "无数据"
+      : Number(actual?.value) >= Number(expected?.value)
+        ? "✔ 达到预期"
+        : "⚠ 未达预期";
+  const reasonCodes = Array.isArray(agronomy?.reason_codes)
+    ? agronomy.reason_codes.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
+    : [];
 
   const billingLabel = billing
     ? billing.billable
@@ -130,10 +157,22 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">为什么建议这次作业</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前作物</span><strong>{cropLabel(agronomy?.crop_code)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">当前阶段</span><strong>{String(agronomy?.crop_stage ?? "-")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{String(agronomy?.rule_id ?? "-")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{reasonCodes.length ? reasonCodes.join(" / ") : "-"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">不执行风险</span><strong>{String(agronomy?.risk_if_not_execute ?? "-")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期效果</span><strong>{formatExpectedEffect(agronomy?.expected_effect)}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">作业效果评估</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>土壤湿度：{formatPct(beforeMoisture)}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行后</span><strong>土壤湿度：{formatPct(afterMoisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>{formatPct(beforeMoisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行后</span><strong>{formatPct(afterMoisture)}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">预期</span><strong>{formatSignedPct(expectedValue)}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">实际</span><strong>{formatSignedPct(actualValue)}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果</span><strong>{effectResultLabel}</strong></div>

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
+import { runAgronomyEngine } from "../domain/agronomy/engine";
 
 type TenantTriple = {
   tenant_id: string;
@@ -48,6 +48,18 @@ const DEFAULT_SOIL_MOISTURE = 30;
 const DEBUG_FIELD_ID = "field_c8_demo";
 const DEBUG_SEASON_ID = "season_demo";
 const ALLOWED_PROGRAM_STATUSES = new Set(["ACTIVE", "DRAFT"]);
+const ACTION_TO_RECOMMENDATION_TYPE: Record<string, string> = {
+  IRRIGATE: "irrigation_recommendation_v1",
+  FERTILIZE: "fertilization_recommendation_v1",
+  SPRAY: "spray_recommendation_v1",
+  INSPECT: "inspection_recommendation_v1",
+};
+const ACTION_TO_SUGGESTED_ACTION_TYPE: Record<string, string> = {
+  IRRIGATE: "irrigation.start",
+  FERTILIZE: "fertilization.apply",
+  SPRAY: "spray.start",
+  INSPECT: "inspection.start",
+};
 
 function safeString(v: any): string {
   return String(v ?? "").trim();
@@ -555,46 +567,41 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           continue;
         }
 
-        const cropCode = safeString(selectedProgramItem.crop_code).toLowerCase();
-        let action_type = "IRRIGATE";
-        let reason_code = "soil_moisture_below_optimal";
-        let recommendation_type = "irrigation_recommendation_v1";
-        let suggested_action_type = "irrigation.start";
-        let summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
-        switch (cropCode) {
-          case "corn": {
-            const agronomy = evaluateAgronomy({
-              crop_code: selectedProgramItem.crop_code,
-              soil_moisture: effectiveSoilMoisture,
-            });
-            action_type = "IRRIGATE";
-            reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-            recommendation_type = "irrigation_recommendation_v1";
-            suggested_action_type = "irrigation.start";
-            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
-            break;
-          }
-          case "tomato": {
-            action_type = "FERTILIZE";
-            reason_code = "tomato_nutrient_maintenance";
-            recommendation_type = "fertilization_recommendation_v1";
-            suggested_action_type = "fertilization.apply";
-            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行追肥处理`;
-            break;
-          }
-          default: {
-            const agronomy = evaluateAgronomy({
-              crop_code: selectedProgramItem.crop_code,
-              soil_moisture: effectiveSoilMoisture,
-            });
-            action_type = "IRRIGATE";
-            reason_code = safeString(agronomy.reason) || "soil_moisture_below_optimal";
-            recommendation_type = "irrigation_recommendation_v1";
-            suggested_action_type = "irrigation.start";
-            summary = `根据当前作物模型（${selectedProgramItem.crop_code}），建议进行灌溉处理`;
-            break;
-          }
+        const recommendation = runAgronomyEngine({
+          program: {
+            tenant_id: selectedProgramItem.tenant.tenant_id,
+            project_id: selectedProgramItem.tenant.project_id,
+            group_id: selectedProgramItem.tenant.group_id,
+            field_id: selectedProgramItem.field_id,
+            season_id: selectedProgramItem.season_id || undefined,
+            program_id: selectedProgramItem.program_id,
+            crop_code: selectedProgramItem.crop_code,
+          },
+          currentMetrics: {
+            soil_moisture: effectiveSoilMoisture,
+          },
+          now: Date.now(),
+        });
+        if (!recommendation) {
+          skipped += 1;
+          skippedByReason.no_program += 1;
+          console.log("[agronomy-agent] skipped:no_recommendation", {
+            field_id: selectedProgramItem.field_id,
+            season_id: selectedProgramItem.season_id || null,
+            program_id: selectedProgramItem.program_id,
+            crop_code: selectedProgramItem.crop_code,
+          });
+          console.log("[agronomy-agent] branch", { result: "skipped:no_recommendation", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
+          continue;
         }
+        const action_type = recommendation.action_type;
+        const reasonCodes = Array.isArray(recommendation.reason_codes)
+          ? recommendation.reason_codes.map((x) => safeString(x)).filter(Boolean)
+          : [];
+        const reason_code = safeString(reasonCodes[0]) || "rule_matched";
+        const recommendation_type = ACTION_TO_RECOMMENDATION_TYPE[action_type] ?? "agronomy_recommendation_v1";
+        const suggested_action_type = ACTION_TO_SUGGESTED_ACTION_TYPE[action_type] ?? "agronomy.action";
+        const summary = recommendation.summary;
         const recentRecommendationDedup = await existsRecentRecommendation(
           pool,
           selectedProgramItem.tenant,
@@ -627,7 +634,13 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           device_id: telemetry?.device_id ?? null,
           season_id: selectedProgramItem.season_id || null,
           action_type,
-          reason_codes: [reason_code],
+          reason_codes: reasonCodes.length > 0 ? reasonCodes : [reason_code],
+          crop_code: recommendation.crop_code,
+          crop_stage: recommendation.crop_stage,
+          rule_id: recommendation.rule_id,
+          expected_effect: recommendation.expected_effect,
+          risk_if_not_execute: recommendation.risk_if_not_execute,
+          priority: recommendation.priority,
           title: "系统建议",
           summary,
         };
@@ -651,7 +664,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
             evidence_refs: ["telemetry:soil_moisture"],
             rule_hit: [
               {
-                rule_id: "agronomy_agent_soil_moisture_v1",
+                rule_id: recommendation.rule_id,
                 matched: true,
                 actual: effectiveSoilMoisture,
               },

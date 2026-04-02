@@ -44,7 +44,36 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     { type: "PENDING_ACCEPTANCE", count: 0 },
     { type: "APPROVAL_REQUIRED", count: 0 },
   ],
+  agronomyRecommendations: [],
 };
+
+function normalizePercentMetric(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (n >= 0 && n <= 1) return Number((n * 100).toFixed(2));
+  return Number(n.toFixed(2));
+}
+
+function normalizeTemperatureMetric(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Number(n.toFixed(2));
+}
+
+function normalizeModelMetrics(metrics: any): any {
+  if (!metrics || typeof metrics !== "object") return metrics;
+  return {
+    ...metrics,
+    soil_moisture: normalizePercentMetric(metrics.soil_moisture),
+    temperature: normalizeTemperatureMetric(metrics.temperature),
+    humidity: normalizePercentMetric(metrics.humidity),
+    units: {
+      soil_moisture: "%",
+      temperature: "°C",
+      humidity: "%",
+    },
+  };
+}
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
   const t = title.toLowerCase();
@@ -53,8 +82,9 @@ function mapRiskSource(title: string): DashboardRiskVm["source"] {
   return "执行缺失";
 }
 
-export function useDashboard(api: any): DashboardVm {
+export function useDashboard(api: any): { data: DashboardVm; error: string | null } {
   const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -73,7 +103,12 @@ export function useDashboard(api: any): DashboardVm {
       };
 
       try {
-        const overview = await api.getOverview();
+        const now = Date.now();
+        const from = now - 7 * 24 * 60 * 60 * 1000;
+        const overview = await api.getOverview?.({
+          from_ts_ms: from,
+          to_ts_ms: now,
+        });
         const executions = await safeList(() => api.getRecentExecutions?.({ limit: 8 }));
         const useLegacyRiskEndpoints = Boolean(api?.enableLegacyDashboardEndpoints);
         const riskItems = useLegacyRiskEndpoints
@@ -134,7 +169,21 @@ export function useDashboard(api: any): DashboardVm {
           };
         });
 
-        const recommendationList = recommendationItems ?? [];
+        const recommendationList = (recommendationItems ?? []).map((item: any) => ({
+          ...item,
+          normalized_metrics: normalizeModelMetrics(item?.metrics ?? item?.model_metrics),
+        }));
+        const recentAgronomyRecommendations = [...(recommendationItems ?? [])]
+          .sort((a: any, b: any) => Number(b?.updated_ts_ms ?? 0) - Number(a?.updated_ts_ms ?? 0))
+          .slice(0, 6)
+          .map((item: any) => ({
+            fieldLabel: String(item?.field?.field_name ?? item?.field?.field_id ?? item?.field_id ?? "-"),
+            cropCode: String(item?.crop_code ?? item?.cropCode ?? "-"),
+            cropStage: String(item?.crop_stage ?? item?.cropStage ?? "-"),
+            actionType: String(item?.action_type ?? item?.suggested_action?.action_type ?? "-"),
+            priority: String(item?.priority ?? "-"),
+            summary: String(item?.summary ?? item?.reason_summary ?? "-"),
+          }));
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
           if (item?.pending != null) return Boolean(item.pending);
           return !item?.linked_refs?.receipt_fact_id;
@@ -199,6 +248,12 @@ export function useDashboard(api: any): DashboardVm {
             isPendingAcceptance: Boolean(item?.is_pending_acceptance ?? (item?.receipt_fact_id && String(item?.acceptance_verdict ?? "PENDING").toUpperCase() !== "PASS")),
             card: mapDashboardEvidenceToVm({
               ...item,
+              normalized_metrics: normalizeModelMetrics(
+                item?.normalized_metrics
+                ?? item?.summary?.metrics
+                ?? item?.summary?.before_metrics
+                ?? item?.summary?.after_metrics,
+              ),
               href: toOperationDetailPath(item),
             }),
           })),
@@ -228,17 +283,20 @@ export function useDashboard(api: any): DashboardVm {
             humidity: "%",
           },
           todayActions,
+          agronomyRecommendations: recentAgronomyRecommendations,
         });
+        setError(null);
       } catch {
-        setData((d) => ({ ...d }));
+        setError("数据加载失败（overview）");
+        throw new Error("overview_load_failed");
       }
     }
 
-    void load();
+    void load().catch(() => undefined);
     return () => {
       mounted = false;
     };
   }, [api]);
 
-  return data;
+  return { data, error };
 }
