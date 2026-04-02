@@ -8,11 +8,12 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
+import { computeEffect, evaluateEffectVerdict, recordRulePerformance } from "../domain/agronomy/effect_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
+type EffectVerdict = "EFFECTIVE" | "PARTIAL" | "INEFFECTIVE" | "NO_DATA";
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -38,6 +39,85 @@ function parseRecordJson(v: unknown): any {
     return JSON.parse(v);
   } catch {
     return null;
+  }
+}
+
+async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
+      rule_id TEXT PRIMARY KEY,
+      crop_code TEXT NOT NULL,
+      total_count INT NOT NULL DEFAULT 0,
+      effective_count INT NOT NULL DEFAULT 0,
+      partial_count INT NOT NULL DEFAULT 0,
+      ineffective_count INT NOT NULL DEFAULT 0,
+      no_data_count INT NOT NULL DEFAULT 0,
+      score NUMERIC NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function hasRuleFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string, ruleId: string): Promise<boolean> {
+  const q = await pool.query(
+    `SELECT 1
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'rule_performance_feedback_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+       AND (record_json::jsonb#>>'{payload,project_id}') = $2
+       AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+       AND (record_json::jsonb#>>'{payload,rule_id}') = $5
+     LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, ruleId]
+  );
+  return Boolean(q.rows?.length);
+}
+
+async function updateRulePerformance(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  recommendationId: string | null;
+  cropCode: string;
+  ruleIds: string[];
+  effectVerdict: EffectVerdict;
+}): Promise<void> {
+  const { pool, tenant, operationPlanId, recommendationId, cropCode, effectVerdict } = params;
+  const ruleIds = Array.from(new Set(params.ruleIds.map((x) => String(x ?? "").trim()).filter(Boolean)));
+  if (!operationPlanId || !cropCode || !ruleIds.length) return;
+
+  for (const ruleId of ruleIds) {
+    const exists = await hasRuleFeedbackRecorded(pool, tenant, operationPlanId, ruleId);
+    if (exists) continue;
+    await recordRulePerformance({
+      pool,
+      ruleId,
+      cropCode,
+      verdict: effectVerdict,
+    });
+
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [
+        `rule_perf_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        "api/v1/operation/state",
+        JSON.stringify({
+          type: "rule_performance_feedback_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: operationPlanId,
+            recommendation_id: recommendationId,
+            crop_code: cropCode,
+            rule_id: ruleId,
+            effect_verdict: effectVerdict,
+            recorded_at: Date.now(),
+          }
+        })
+      ]
+    );
   }
 }
 
@@ -336,6 +416,10 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
 }
 
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.addHook("onReady", async () => {
+    await ensureRulePerformanceTable(pool);
+  });
+
   app.get("/api/v1/operations/:operationPlanId/evidence-export", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -708,6 +792,24 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
     );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
+    const matchedRuleIds = (Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec.record_json.payload.rule_hit : [])
+      .filter((x: any) => Boolean(x?.matched))
+      .map((x: any) => toText(x?.rule_id))
+      .filter(Boolean) as string[];
+    const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
+    const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
+    if (shouldRecordPerformance) {
+      await updateRulePerformance({
+        pool,
+        tenant,
+        operationPlanId,
+        recommendationId: toText(state.recommendation_id),
+        cropCode: agronomyCropCode ?? "unknown",
+        ruleIds: matchedRuleIds,
+        effectVerdict: effectVerdict as EffectVerdict,
+      });
+    }
+
     return reply.send({
       ok: true,
       operation: {
