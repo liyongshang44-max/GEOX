@@ -42,6 +42,9 @@ export type OperationStateV1 = {
   season_id: string | null;
   crop_code: string | null;
   crop_stage: string | null;
+  rule_id: string | null;
+  rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
+  reason_codes: string[];
   action_type: string | null;
   before_metrics: {
     soil_moisture?: number | null;
@@ -57,6 +60,7 @@ export type OperationStateV1 = {
     type: "moisture_increase" | "growth_boost";
     value: number;
   } | null;
+  risk_if_not_execute: string | null;
   actual_effect: {
     type: string;
     value: number;
@@ -429,14 +433,18 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       (planFact) => String(planFact.record_json?.payload?.field_id ?? planFact.record_json?.payload?.target?.ref ?? "").trim()
     ) ?? (String(rec?.record_json?.payload?.field_id ?? "").trim() || null);
     const inferredSeasonId = String(payload.season_id ?? rec?.record_json?.payload?.season_id ?? "").trim() || null;
-    const inferredCropCode = latestNonEmpty(
-      allPlanFacts,
-      (planFact) => String(planFact.record_json?.payload?.crop_code ?? "").trim()
-    ) ?? (String(rec?.record_json?.payload?.crop_code ?? "").trim() || null);
-    const inferredCropStage = latestNonEmpty(
-      allPlanFacts,
-      (planFact) => String(planFact.record_json?.payload?.crop_stage ?? "").trim()
-    ) ?? (String(rec?.record_json?.payload?.crop_stage ?? "").trim() || null);
+    const inferredCropCode =
+      (String(rec?.record_json?.payload?.crop_code ?? "").trim() || null)
+      ?? latestNonEmpty(
+        allPlanFacts,
+        (planFact) => String(planFact.record_json?.payload?.crop_code ?? "").trim()
+      );
+    const inferredCropStage =
+      (String(rec?.record_json?.payload?.crop_stage ?? "").trim() || null)
+      ?? latestNonEmpty(
+        allPlanFacts,
+        (planFact) => String(planFact.record_json?.payload?.crop_stage ?? "").trim()
+      );
     const inferredProgramFromProgramFact = (() => {
       if (!inferredFieldId) return null;
       const fieldSeasonKey = `${inferredFieldId}::${inferredSeasonId ?? ""}`;
@@ -452,12 +460,41 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const planBeforeMetrics = toMetricsSnapshot(latestPlanPayload?.before_metrics);
     const planAfterMetrics = toMetricsSnapshot(latestPlanPayload?.after_metrics);
     const expectedEffectFromRecommendation = (() => {
-      const candidate = rec?.record_json?.payload?.expected_effect ?? rec?.record_json?.payload?.suggested_action?.parameters?.expected_effect;
+      const candidate =
+        rec?.record_json?.payload?.expected_effect
+        ?? rec?.record_json?.payload?.suggested_action?.parameters?.expected_effect
+        ?? latestPlanPayload?.expected_effect;
       const type = String(candidate?.type ?? "").trim();
       const value = Number(candidate?.value ?? NaN);
       if ((type === "moisture_increase" || type === "growth_boost") && Number.isFinite(value)) return { type, value } as const;
       return null;
     })();
+    const inferredRuleId =
+      (String(rec?.record_json?.payload?.rule_id ?? "").trim() || null)
+      ?? latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.rule_id ?? "").trim())
+      ?? (String(rec?.record_json?.payload?.rule_hit?.[0]?.rule_id ?? "").trim() || null);
+    const inferredRuleHit = (() => {
+      const fromRec = Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec.record_json.payload.rule_hit : null;
+      const fromPlan = Array.isArray(latestPlanPayload?.rule_hit) ? latestPlanPayload.rule_hit : null;
+      const source = fromRec ?? fromPlan ?? [];
+      return source
+        .map((hit: any) => ({
+          rule_id: String(hit?.rule_id ?? "").trim(),
+          matched: Boolean(hit?.matched),
+          threshold: Number.isFinite(Number(hit?.threshold)) ? Number(hit.threshold) : null,
+          actual: Number.isFinite(Number(hit?.actual)) ? Number(hit.actual) : null,
+        }))
+        .filter((hit: any) => Boolean(hit.rule_id));
+    })();
+    const inferredReasonCodes = (() => {
+      const fromRec = Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [];
+      const fromPlan = Array.isArray(latestPlanPayload?.reason_codes) ? latestPlanPayload.reason_codes : [];
+      const source = fromRec.length ? fromRec : fromPlan;
+      return source.map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
+    })();
+    const inferredRiskIfNotExecute =
+      (String(rec?.record_json?.payload?.risk_if_not_execute ?? "").trim() || null)
+      ?? (String(latestPlanPayload?.risk_if_not_execute ?? "").trim() || null);
     const actualEffectFromPlan = (() => {
       const effect = latestPlanPayload?.actual_effect ?? latestPlanPayload?.effect_snapshot?.effect;
       const value = Number(effect?.moisture_delta ?? effect?.value ?? NaN);
@@ -492,6 +529,9 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       season_id: inferredSeasonId,
       crop_code: inferredCropCode,
       crop_stage: inferredCropStage,
+      rule_id: inferredRuleId,
+      rule_hit: inferredRuleHit,
+      reason_codes: inferredReasonCodes,
       action_type: latestNonEmpty(
         allPlanFacts,
         (planFact) => String(planFact.record_json?.payload?.action_type ?? "").trim()
@@ -499,6 +539,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       before_metrics: planBeforeMetrics,
       after_metrics: planAfterMetrics,
       expected_effect: expectedEffectFromRecommendation,
+      risk_if_not_execute: inferredRiskIfNotExecute,
       actual_effect: actualEffectFromPlan,
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
