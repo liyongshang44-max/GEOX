@@ -664,6 +664,17 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
       ?? plan?.record_json?.payload?.crop_stage
     );
+    const agronomyRuleId = toText(
+      rec?.record_json?.payload?.rule_id
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.rule_id
+    );
+    const agronomyReasonCodes = Array.isArray(rec?.record_json?.payload?.reason_codes)
+      ? rec.record_json.payload.reason_codes
+      : [];
+    const agronomyRiskIfNotExecute = toText(
+      rec?.record_json?.payload?.risk_if_not_execute
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
+    );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -730,6 +741,9 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         agronomy: {
           crop_code: agronomyCropCode,
           crop_stage: agronomyCropStage,
+          rule_id: agronomyRuleId,
+          reason_codes: agronomyReasonCodes,
+          risk_if_not_execute: agronomyRiskIfNotExecute,
           before_metrics: beforeMetricsForResponse,
           after_metrics: afterMetricsForResponse,
           expected_effect: expectedEffect,
