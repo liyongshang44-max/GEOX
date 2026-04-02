@@ -8,7 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect } from "../domain/agronomy/effect_engine";
+import { computeEffect, evaluateEffectVerdict } from "../domain/agronomy/effect_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -592,6 +592,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       toExpectedEffect(recommendationPayload)
       ?? (resolvedActionType === "IRRIGATE" ? { type: "moisture_increase" as const, value: 10 } : null);
     const actualEffect = computeEffect(beforeMetrics, afterMetrics);
+    const effectVerdict = evaluateEffectVerdict({
+      expectedEffect,
+      actualEffect,
+    });
     const beforeMetricsForResponse = {
       ...beforeMetrics,
       soil_moisture: Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN))
@@ -664,6 +668,17 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? rec?.record_json?.payload?.suggested_action?.parameters?.crop_stage
       ?? plan?.record_json?.payload?.crop_stage
     );
+    const agronomyRuleId = toText(
+      rec?.record_json?.payload?.rule_id
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.rule_id
+    );
+    const agronomyReasonCodes = Array.isArray(rec?.record_json?.payload?.reason_codes)
+      ? rec.record_json.payload.reason_codes
+      : [];
+    const agronomyRiskIfNotExecute = toText(
+      rec?.record_json?.payload?.risk_if_not_execute
+      ?? rec?.record_json?.payload?.suggested_action?.parameters?.risk_if_not_execute
+    );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     return reply.send({
       ok: true,
@@ -730,10 +745,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         agronomy: {
           crop_code: agronomyCropCode,
           crop_stage: agronomyCropStage,
+          rule_id: agronomyRuleId,
+          reason_codes: agronomyReasonCodes,
+          risk_if_not_execute: agronomyRiskIfNotExecute,
           before_metrics: beforeMetricsForResponse,
           after_metrics: afterMetricsForResponse,
           expected_effect: expectedEffect,
-          actual_effect: actualEffect
+          actual_effect: actualEffect,
+          effect_verdict: effectVerdict
         },
         business_effect: businessEffect,
         cost: {

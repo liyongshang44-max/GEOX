@@ -21,31 +21,31 @@ export type AgronomyRule = {
 
 export const tomatoRules: AgronomyRule[] = [
   {
-    ruleId: "tomato_vegetative_fertilize_nutrient_deficit",
+    ruleId: "tomato_vegetative_fertilize_soil_dry",
     cropCode: "tomato",
     cropStage: "vegetative",
     actionType: "FERTILIZE",
     priority: "medium",
-    reasonCodes: ["nutrient_deficit_placeholder"],
+    reasonCodes: ["soil_dry_nutrient_support"],
     expectedEffect: {
       type: "vegetative_nutrition_support",
       value: 10
     },
     riskIfNotExecute: "leaf_area_expansion_limited",
-    matches: (ctx) => ctx.cropStage === "vegetative" && Boolean(ctx.nutrientDeficit)
+    matches: (ctx) => ctx.cropStage === "vegetative" && Boolean(ctx.soilDry)
   },
   {
-    ruleId: "tomato_fruiting_irrigate_soil_dry",
+    ruleId: "tomato_fruiting_inspect_nutrient_deficit",
     cropCode: "tomato",
     cropStage: "fruiting",
-    actionType: "IRRIGATE",
+    actionType: "INSPECT",
     priority: "high",
-    reasonCodes: ["soil_dry"],
+    reasonCodes: ["nutrient_deficit"],
     expectedEffect: {
-      type: "fruit_set_water_support",
-      value: 12
+      type: "fruiting_nutrient_diagnosis",
+      value: 8
     },
     riskIfNotExecute: "fruit_crack_and_size_reduction_risk",
-    matches: (ctx) => ctx.cropStage === "fruiting" && Boolean(ctx.soilDry)
+    matches: (ctx) => ctx.cropStage === "fruiting" && Boolean(ctx.nutrientDeficit)
   }
 ];

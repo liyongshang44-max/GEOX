@@ -41,6 +41,14 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
   };
 }
 
+function priorityLabel(priority: string): string {
+  const p = String(priority ?? "").toUpperCase();
+  if (p === "HIGH") return "高";
+  if (p === "LOW") return "低";
+  if (p === "MEDIUM") return "中";
+  return p || "-";
+}
+
 export default function CommercialDashboardPage(): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
@@ -452,6 +460,22 @@ export default function CommercialDashboardPage(): React.ReactElement {
             <div className="decisionItemTitle">humidity（%）</div>
             <div className="decisionItemMeta">{humidity == null ? "--" : `${Number(humidity).toFixed(1)}%`}</div>
           </div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 16 }}>
+        <div className="sectionTitle">农学建议</div>
+        <div className="decisionList" style={{ marginTop: 12 }}>
+          {d.agronomyRecommendations.map((item, idx) => (
+            <div key={`${item.fieldLabel}_${item.actionType}_${idx}`} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.fieldLabel}</div>
+              <div className="decisionItemMeta">
+                {item.cropCode} / {item.cropStage} · {item.actionType} · 优先级 {priorityLabel(item.priority)}
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>{item.summary}</div>
+            </div>
+          ))}
+          {d.agronomyRecommendations.length === 0 ? <EmptyBlock text="暂无最近农学建议" /> : null}
         </div>
       </section>
       <section className="card" style={{ marginTop: 16 }}>
