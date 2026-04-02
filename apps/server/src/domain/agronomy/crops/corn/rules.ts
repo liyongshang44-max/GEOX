@@ -1,50 +1,38 @@
-export type AgronomyContext = {
-  cropStage: string;
-  soilMoisture?: number;
-};
-
-export type AgronomyRule = {
-  ruleId: string;
-  cropCode: string;
-  cropStage: string;
-  actionType: "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
-  priority: "low" | "medium" | "high";
-  reasonCodes: string[];
-  expectedEffect: {
-    type: string;
-    value: number;
-  };
-  riskIfNotExecute: string;
-  matches: (ctx: AgronomyContext) => boolean;
-};
+import type { AgronomyContext, AgronomyRule } from "../../types";
 
 export const cornRules: AgronomyRule[] = [
   {
-    ruleId: "corn_vegetative_irrigate_low_soil_moisture",
+    ruleId: "corn_vegetative_irrigation_v1",
     cropCode: "corn",
     cropStage: "vegetative",
     actionType: "IRRIGATE",
-    priority: "medium",
-    reasonCodes: ["soil_moisture_low"],
+    priority: "high",
+    reasonCodes: ["soil_moisture_below_optimal"],
     expectedEffect: {
-      type: "soil_moisture_recovery",
-      value: 15
+      type: "moisture_increase",
+      value: 10,
     },
-    riskIfNotExecute: "vegetative_growth_slowdown",
-    matches: (ctx) => ctx.cropStage === "vegetative" && (ctx.soilMoisture ?? 100) < 35
+    riskIfNotExecute: "土壤含水继续下降，可能抑制玉米营养生长期长势并造成后续减产风险。",
+    matches: (ctx: AgronomyContext) => {
+      const moisture = ctx.currentMetrics.soil_moisture;
+      return typeof moisture === "number" && moisture < 25;
+    },
   },
   {
-    ruleId: "corn_flowering_irrigate_very_low_soil_moisture",
+    ruleId: "corn_flowering_irrigation_critical_v1",
     cropCode: "corn",
     cropStage: "flowering",
     actionType: "IRRIGATE",
     priority: "high",
-    reasonCodes: ["soil_moisture_very_low"],
+    reasonCodes: ["soil_moisture_critical_during_flowering"],
     expectedEffect: {
-      type: "flowering_water_stress_relief",
-      value: 20
+      type: "moisture_increase",
+      value: 12,
     },
-    riskIfNotExecute: "pollination_failure_risk",
-    matches: (ctx) => ctx.cropStage === "flowering" && (ctx.soilMoisture ?? 100) < 25
-  }
+    riskIfNotExecute: "开花期缺水会直接影响授粉与结实，存在明显减产风险。",
+    matches: (ctx: AgronomyContext) => {
+      const moisture = ctx.currentMetrics.soil_moisture;
+      return typeof moisture === "number" && moisture < 28;
+    },
+  },
 ];

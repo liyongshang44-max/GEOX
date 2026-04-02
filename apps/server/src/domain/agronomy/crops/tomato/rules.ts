@@ -1,51 +1,37 @@
-export type AgronomyContext = {
-  cropStage: string;
-  nutrientDeficit?: boolean;
-  soilDry?: boolean;
-};
-
-export type AgronomyRule = {
-  ruleId: string;
-  cropCode: string;
-  cropStage: string;
-  actionType: "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
-  priority: "low" | "medium" | "high";
-  reasonCodes: string[];
-  expectedEffect: {
-    type: string;
-    value: number;
-  };
-  riskIfNotExecute: string;
-  matches: (ctx: AgronomyContext) => boolean;
-};
+import type { AgronomyContext, AgronomyRule } from "../../types";
 
 export const tomatoRules: AgronomyRule[] = [
   {
-    ruleId: "tomato_vegetative_fertilize_soil_dry",
+    ruleId: "tomato_vegetative_fertilize_v1",
     cropCode: "tomato",
     cropStage: "vegetative",
     actionType: "FERTILIZE",
     priority: "medium",
-    reasonCodes: ["soil_dry_nutrient_support"],
+    reasonCodes: ["nutrition_support_needed"],
     expectedEffect: {
-      type: "vegetative_nutrition_support",
-      value: 10
+      type: "nutrition_boost",
+      value: 8,
     },
-    riskIfNotExecute: "leaf_area_expansion_limited",
-    matches: (ctx) => ctx.cropStage === "vegetative" && Boolean(ctx.soilDry)
+    riskIfNotExecute: "营养生长期养分补给不足，可能导致长势偏弱并影响后续开花坐果。",
+    matches: (_ctx: AgronomyContext) => {
+      return true;
+    },
   },
   {
-    ruleId: "tomato_fruiting_inspect_nutrient_deficit",
+    ruleId: "tomato_fruiting_irrigation_v1",
     cropCode: "tomato",
     cropStage: "fruiting",
-    actionType: "INSPECT",
+    actionType: "IRRIGATE",
     priority: "high",
-    reasonCodes: ["nutrient_deficit"],
+    reasonCodes: ["fruiting_stage_water_stress"],
     expectedEffect: {
-      type: "fruiting_nutrient_diagnosis",
-      value: 8
+      type: "moisture_increase",
+      value: 10,
     },
-    riskIfNotExecute: "fruit_crack_and_size_reduction_risk",
-    matches: (ctx) => ctx.cropStage === "fruiting" && Boolean(ctx.nutrientDeficit)
-  }
+    riskIfNotExecute: "结果期持续缺水会导致果实膨大不足，影响产量与品质。",
+    matches: (ctx: AgronomyContext) => {
+      const moisture = ctx.currentMetrics.soil_moisture;
+      return typeof moisture === "number" && moisture < 30;
+    },
+  },
 ];
