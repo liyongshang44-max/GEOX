@@ -82,6 +82,45 @@ function mapRiskSource(title: string): DashboardRiskVm["source"] {
   return "执行缺失";
 }
 
+function mapCropLabel(cropCode: unknown): string {
+  const code = String(cropCode ?? "").trim().toUpperCase();
+  if (!code) return "-";
+  if (code === "CORN") return "玉米";
+  if (code === "TOMATO") return "番茄";
+  if (code === "WHEAT") return "小麦";
+  if (code === "RICE") return "水稻";
+  return String(cropCode);
+}
+
+function mapCropStageLabel(stageCode: unknown): string {
+  const stage = String(stageCode ?? "").trim().toUpperCase();
+  if (!stage) return "-";
+  if (["VEGETATIVE", "V", "GROWTH"].includes(stage)) return "营养生长期";
+  if (["REPRODUCTIVE", "R", "FLOWERING"].includes(stage)) return "生殖生长期";
+  if (["SEEDLING", "EMERGENCE"].includes(stage)) return "苗期";
+  if (["MATURITY", "MATURE"].includes(stage)) return "成熟期";
+  return String(stageCode);
+}
+
+function mapAgronomyActionLabel(actionType: unknown): string {
+  const action = String(actionType ?? "").trim().toUpperCase();
+  if (!action) return "-";
+  if (action === "IRRIGATION") return "灌溉";
+  if (action === "FERTILIZATION") return "施肥";
+  if (action === "SPRAYING") return "喷施";
+  if (action === "HARVEST") return "收获";
+  return String(actionType);
+}
+
+function mapPriorityLabel(priority: unknown): string {
+  const p = String(priority ?? "").trim().toUpperCase();
+  if (!p) return "-";
+  if (p === "HIGH") return "高";
+  if (p === "MEDIUM") return "中";
+  if (p === "LOW") return "低";
+  return String(priority);
+}
+
 export function useDashboard(api: any): { data: DashboardVm; error: string | null } {
   const [data, setData] = useState<DashboardVm>(DEFAULT_DASHBOARD_DATA);
   const [error, setError] = useState<string | null>(null);
@@ -178,10 +217,10 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           .slice(0, 6)
           .map((item: any) => ({
             fieldLabel: String(item?.field?.field_name ?? item?.field?.field_id ?? item?.field_id ?? "-"),
-            cropCode: String(item?.crop_code ?? item?.cropCode ?? "-"),
-            cropStage: String(item?.crop_stage ?? item?.cropStage ?? "-"),
-            actionType: String(item?.action_type ?? item?.suggested_action?.action_type ?? "-"),
-            priority: String(item?.priority ?? "-"),
+            cropLabel: mapCropLabel(item?.crop_code ?? item?.cropCode),
+            cropStageLabel: mapCropStageLabel(item?.crop_stage ?? item?.cropStage),
+            actionLabel: mapAgronomyActionLabel(item?.action_type ?? item?.suggested_action?.action_type),
+            priorityLabel: mapPriorityLabel(item?.priority),
             summary: String(item?.summary ?? item?.reason_summary ?? "-"),
           }));
         const pendingRecommendationCount = recommendationList.filter((item: any) => {
