@@ -15,6 +15,8 @@ type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
 type ProgramActiveRule = {
   ruleId: string;
   priorityLabel: string;
+  performanceLabel: string;
+  effectivenessLabel: string;
   actionLabel: string;
   reasonCodesLabel: string;
   riskIfNotExecute: string;
@@ -102,6 +104,20 @@ function toPriorityLabel(value: unknown, fallback = "中"): string {
   if (["LOW", "P3", "RELAXED", "LOOSE"].includes(code)) return "低";
   if (["MEDIUM", "MID", "NORMAL", "P2"].includes(code)) return "中";
   return fallback;
+}
+
+function toRulePerformanceLabel(value: unknown): string {
+  const key = String(value ?? "").trim().toLowerCase();
+  if (key === "high") return "高";
+  if (key === "medium") return "中";
+  return "低";
+}
+
+function toRuleEffectivenessLabel(value: unknown): string {
+  const score = toNumber(value);
+  if (!Number.isFinite(score)) return "--";
+  const normalized = Math.max(0, Math.min(1, Number(score)));
+  return `${Math.round(normalized * 100)}%`;
 }
 
 function formatDateTime(msOrText: unknown, fallback = "-"): string {
@@ -200,6 +216,8 @@ function buildActiveRules(detail: any): ProgramActiveRule[] {
     return {
       ruleId: toText(rule?.rule_id || rule?.id, "暂无数据"),
       priorityLabel: toPriorityLabel(rule?.priority ?? recommendation?.priority, "中"),
+      performanceLabel: toRulePerformanceLabel(rule?.rule_confidence ?? recommendation?.rule_confidence),
+      effectivenessLabel: toRuleEffectivenessLabel(rule?.rule_score ?? recommendation?.rule_score),
       actionLabel: actionLabel || "作业",
       reasonCodesLabel,
       riskIfNotExecute: toText(
