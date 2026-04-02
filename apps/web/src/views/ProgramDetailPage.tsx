@@ -147,6 +147,26 @@ export default function ProgramDetailPage(): React.ReactElement {
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">最近农学建议</div>
+            <div className="detailSectionLead">仅展示最近 3–5 条 recommendation，用于快速判断当前决策方向。</div>
+          </div>
+          {!viewModel.recentRecommendations.length ? (
+            <div className="decisionItemStatic">暂无最近农学建议</div>
+          ) : (
+            <div className="decisionList">
+              {viewModel.recentRecommendations.map((item, idx) => (
+                <div key={`${item.timeLabel}_${item.summary}_${idx}`} className="decisionItemStatic">
+                  <div className="decisionItemMeta">
+                    {item.timeLabel}｜{item.stageLabel}｜{item.actionLabel}｜{item.summary}｜{item.statusLabel}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">作物阶段概览</div>
             <div className="detailSectionLead">用于快速查看当前作物、阶段、关键指标与规则激活情况。</div>
           </div>

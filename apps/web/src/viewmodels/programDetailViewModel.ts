@@ -19,6 +19,13 @@ type ProgramActiveRule = {
   reasonCodesLabel: string;
   riskIfNotExecute: string;
 };
+type ProgramRecommendationItem = {
+  timeLabel: string;
+  stageLabel: string;
+  actionLabel: string;
+  summary: string;
+  statusLabel: string;
+};
 
 export type ProgramConsoleViewModel = {
   title: string;
@@ -63,6 +70,7 @@ export type ProgramConsoleViewModel = {
     updatedAtLabel: string;
   };
   activeRules: ProgramActiveRule[];
+  recentRecommendations: ProgramRecommendationItem[];
   timeline: Array<{
     ts: number;
     label: string;
@@ -202,6 +210,61 @@ function buildActiveRules(detail: any): ProgramActiveRule[] {
   });
 }
 
+function toRecommendationStatusLabel(value: unknown): string {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (["APPROVED", "SUCCEEDED", "DONE"].includes(code)) return "已通过";
+  if (["REJECTED", "FAILED"].includes(code)) return "已拒绝";
+  if (["RUNNING", "IN_PROGRESS"].includes(code)) return "执行中";
+  if (["PENDING", "APPROVAL_REQUIRED", "APPROVAL_REQUESTED", ""].includes(code)) return "待审批";
+  return "待审批";
+}
+
+function buildRecentRecommendations(detail: any, controlPlane: any): ProgramRecommendationItem[] {
+  const recommendation = detail?.latest_recommendation ?? {};
+  const recommendationEvents = Array.isArray(controlPlane?.decision_timeline)
+    ? controlPlane.decision_timeline.filter((item: any) => String(item?.fact_type || item?.type || "").toLowerCase().includes("recommend"))
+    : [];
+  const fallbackList = Array.isArray(detail?.recommendations) ? detail.recommendations : [];
+
+  const baseItems = [
+    ...recommendationEvents,
+    ...fallbackList,
+  ];
+  const normalized = baseItems.map((item: any) => {
+    const actionCode =
+      item?.action_type
+      || item?.suggested_action?.action_type
+      || recommendation?.suggested_action?.action_type
+      || recommendation?.action_type
+      || "";
+    return {
+      timeMs: Number(item?.ts_ms || Date.parse(String(item?.created_at || item?.ts_label || item?.time || "")) || 0),
+      timeLabel: formatDateTime(item?.ts_ms || item?.created_at || item?.ts_label || item?.time, "暂无数据"),
+      stageLabel: cropStageDisplayLabel(item?.crop_stage || recommendation?.crop_stage),
+      actionLabel: readableActionType(actionCode),
+      summary: toText(item?.summary || item?.reason || recommendation?.summary, "暂无数据"),
+      statusLabel: toRecommendationStatusLabel(item?.status || detail?.latest_approval?.status || controlPlane?.summary?.approval?.code),
+    };
+  });
+
+  const withLatest = normalized.length
+    ? normalized
+    : [{
+      timeMs: Date.parse(String(recommendation?.created_at || recommendation?.updated_at || "")) || 0,
+      timeLabel: formatDateTime(recommendation?.created_at || recommendation?.updated_at, "暂无数据"),
+      stageLabel: cropStageDisplayLabel(recommendation?.crop_stage),
+      actionLabel: readableActionType(recommendation?.suggested_action?.action_type || recommendation?.action_type),
+      summary: toText(recommendation?.summary, "暂无数据"),
+      statusLabel: toRecommendationStatusLabel(detail?.latest_approval?.status || controlPlane?.summary?.approval?.code),
+    }];
+
+  return withLatest
+    .filter((item) => item.summary !== "暂无数据" || item.actionLabel !== "作业")
+    .sort((a, b) => b.timeMs - a.timeMs)
+    .slice(0, 5)
+    .map(({ timeMs: _timeMs, ...item }) => item);
+}
+
 function topStatus(code: unknown): { status: ProgramConsoleStatus; label: string } {
   const normalized = String(code ?? "").toUpperCase();
   if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED", "BLOCKED"].includes(normalized)) return { status: "error", label: "异常" };
@@ -289,6 +352,7 @@ export function buildProgramDetailViewModel(args: {
     ?? (Array.isArray(detail?.latest_recommendation?.rule_hit) ? detail.latest_recommendation.rule_hit.length : NaN)
   );
   const activeRules = buildActiveRules(detail);
+  const recentRecommendations = buildRecentRecommendations(detail, controlPlane);
 
   const top = topStatus(summary?.execution?.code || summary?.receipt?.code || detail?.status || program?.status?.code);
   const latestOperation = [...ops].sort((a, b) => Number(b?.last_event_ts || 0) - Number(a?.last_event_ts || 0))[0];
@@ -395,6 +459,7 @@ export function buildProgramDetailViewModel(args: {
       updatedAtLabel: formatDateTime(metricsUpdatedAt, "暂无数据"),
     },
     activeRules,
+    recentRecommendations,
     timeline,
   };
 }
