@@ -66,13 +66,14 @@ export function buildAgronomyContext(input: {
   program: ProgramSource;
   currentMetrics?: MetricsSource | null;
   now?: number;
+  cropStage?: string;
   constraints?: Record<string, unknown>;
 }): AgronomyContext {
   const program = input.program ?? {};
   const metrics = input.currentMetrics ?? {};
 
   const cropCode = toStringValue(program.crop_code).toLowerCase();
-  const cropStage = resolveCropStage({
+  const cropStage = toStringValue(input.cropStage) || resolveCropStage({
     cropCode,
     startDate: pickStartDate(program),
     now: input.now,
