@@ -145,6 +145,17 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">规则与执行链</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物来源</span><strong>{model.ruleExecutionBridge.cropSummary}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">生长阶段</span><strong>{model.ruleExecutionBridge.stageSummary}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.ruleExecutionBridge.ruleSummary}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议单号</span><strong>{model.ruleExecutionBridge.recommendationSummary}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行计划号</span><strong>{model.ruleExecutionBridge.operationPlanSummary}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">作业效果评估</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>{model.effectEvaluation.beforeLabel}</strong></div>

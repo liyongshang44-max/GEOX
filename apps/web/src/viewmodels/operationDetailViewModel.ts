@@ -70,6 +70,13 @@ export type OperationDetailPageVm = {
     actualLabel: string;
     verdictLabel: string;
   };
+  ruleExecutionBridge: {
+    cropSummary: string;
+    stageSummary: string;
+    ruleSummary: string;
+    recommendationSummary: string;
+    operationPlanSummary: string;
+  };
   execution: {
     executionModeLabel: string;
     executorTypeLabel: string;
@@ -233,6 +240,13 @@ function mapEffectVerdictLabel(raw: unknown): string {
   if (key === "INEFFECTIVE") return "未达到预期";
   if (key === "NO_DATA") return "暂无效果数据";
   return "暂无效果数据";
+}
+
+function buildSummaryWithCode(label: string, code: unknown): string {
+  const codeText = toText(code, "");
+  if (!codeText) return label;
+  if (label === "-" || !label) return codeText;
+  return `${label}（${codeText}）`;
 }
 
 function mapStatusLabel(raw: unknown): string {
@@ -722,6 +736,13 @@ export function buildOperationDetailViewModel(args?: {
       expectedLabel: mapSignedPercentLabel(safeDetail?.agronomy?.expected_effect?.value),
       actualLabel: mapSignedPercentLabel(safeDetail?.agronomy?.actual_effect?.value),
       verdictLabel: mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict),
+    },
+    ruleExecutionBridge: {
+      cropSummary: buildSummaryWithCode(mapCropLabel(safeDetail?.agronomy?.crop_code), safeDetail?.agronomy?.crop_code),
+      stageSummary: buildSummaryWithCode(mapCropStageLabel(safeDetail?.agronomy?.crop_stage), safeDetail?.agronomy?.crop_stage),
+      ruleSummary: toText(safeDetail?.agronomy?.rule_id),
+      recommendationSummary: toText(safeDetail?.recommendation?.recommendation_id),
+      operationPlanSummary: toText(safeDetail?.operation_plan_id),
     },
     execution,
     receiptEvidence: receipt,
