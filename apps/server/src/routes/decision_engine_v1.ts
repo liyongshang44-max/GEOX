@@ -6,15 +6,22 @@ import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
 import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver";
+import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
 
 type RecommendationV1 = {
   recommendation_id: string;
+  snapshot_id: string;
   field_id: string;
   season_id: string;
   device_id: string;
+  crop_code: string;
+  crop_stage: string;
+  rule_id: string;
+  expected_effect?: Record<string, number> | null;
   program_id?: string | null;
   recommendation_type: RecommendationTypeV1;
   status: "proposed" | "approved" | "rejected" | "executed";
@@ -119,7 +126,7 @@ function recommendationEvidenceFacts(telemetry: any, imageInput: any): Array<{ k
   ];
 }
 
-function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[] {
+function buildRecommendations(body: any, telemetryInput: any, snapshotId: string): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
@@ -140,6 +147,13 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
 
   const out: RecommendationV1[] = [];
   const program = (body.program && typeof body.program === "object") ? body.program : {};
+  const resolvedCropStage = resolveCropStage({
+    cropCode: crop_code,
+    explicitStage: String(body.crop_stage ?? program.crop_stage ?? "").trim() || undefined,
+    daysAfterPlanting: Number.isFinite(Number(body.days_after_planting ?? program.days_after_planting))
+      ? Number(body.days_after_planting ?? program.days_after_planting)
+      : undefined,
+  });
   const irrigationEval = Number.isFinite(soilMoisture)
     ? evaluateAgronomy({
       crop_code: String(program.crop_code || body.crop_code || "corn"),
@@ -154,11 +168,17 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
     const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
     const confidence = Number((0.45 + 0.3 * moistureTerm + 0.15 * heatTerm + 0.1 * imageConfidence).toFixed(3));
     const durationMin = Number.isFinite(soilMoisture) && soilMoisture < 25 ? 35 : 20;
+    const irrigationRuleId = irrigationEval.should_irrigate ? "irrigation_rule_soil_moisture_v1" : "irrigation_rule_heat_stress_v1";
     out.push({
       recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+      snapshot_id: snapshotId,
       field_id,
       season_id,
       device_id,
+      crop_code,
+      crop_stage: resolvedCropStage,
+      rule_id: irrigationRuleId,
+      expected_effect: { soil_moisture: durationMin >= 30 ? 10 : 6 },
       program_id,
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
@@ -194,9 +214,14 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
     const alertKind = diseaseScore >= pestRisk ? "disease" : "pest";
     out.push({
       recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+      snapshot_id: snapshotId,
       field_id,
       season_id,
       device_id,
+      crop_code,
+      crop_stage: resolvedCropStage,
+      rule_id: "crop_health_risk_rule_v1",
+      expected_effect: { health_risk: -0.2 },
       program_id,
       recommendation_type: "crop_health_alert_v1",
       status: "proposed",
@@ -228,15 +253,17 @@ function buildRecommendations(body: any, telemetryInput: any): RecommendationV1[
 async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
-      rule_id TEXT PRIMARY KEY,
+      rule_id TEXT NOT NULL,
       crop_code TEXT NOT NULL,
+      crop_stage TEXT NOT NULL,
       total_count INT NOT NULL DEFAULT 0,
-      effective_count INT NOT NULL DEFAULT 0,
+      success_count INT NOT NULL DEFAULT 0,
       partial_count INT NOT NULL DEFAULT 0,
-      ineffective_count INT NOT NULL DEFAULT 0,
+      failed_count INT NOT NULL DEFAULT 0,
       no_data_count INT NOT NULL DEFAULT 0,
       score NUMERIC NOT NULL DEFAULT 0,
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (rule_id, crop_code, crop_stage)
     )
   `);
 }
@@ -244,10 +271,15 @@ async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
 async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, RulePerformanceStats>> {
   if (!ruleIds.length) return new Map();
   const sql = `
-    SELECT rule_id, score, total_count
+    SELECT rule_id,
+           CASE WHEN SUM(total_count) > 0
+             THEN (SUM(success_count) + SUM(partial_count) * 0.5) / SUM(total_count)
+             ELSE 0 END AS score,
+           SUM(total_count) AS total_count
     FROM agronomy_rule_performance
     WHERE crop_code = $1
       AND rule_id = ANY($2::text[])
+    GROUP BY rule_id
   `;
   const res = await pool.query(sql, [cropCode, ruleIds]);
   const map = new Map<string, RulePerformanceStats>();
@@ -821,7 +853,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       return badRequest(reply, "AGRONOMY_SNAPSHOT_INCOMPLETE");
     }
 
-    const recommendations = buildRecommendations(body, telemetry);
+    const snapshot_id = `snap_${tenant.tenant_id}_${requestedDeviceId}_${snapshot.updated_ts_ms}`;
+    const recommendations = buildRecommendations(body, telemetry, snapshot_id);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
@@ -848,6 +881,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     for (const rec of recommendations) {
       const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
       const recommendationPayload = { ...rec, program_id: resolvedProgramId };
+      const chainValidation = validateRecommendationMainChainFields(recommendationPayload);
+      if (!chainValidation.ok) {
+        return badRequest(reply, chainValidation.error);
+      }
       const recommendation_input_fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
         type: "decision_recommendation_input_facts_v1",
         payload: {
@@ -855,6 +892,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           project_id: tenant.project_id,
           group_id: tenant.group_id,
           recommendation_id: recommendationPayload.recommendation_id,
+          snapshot_id: recommendationPayload.snapshot_id,
           field_id: recommendationPayload.field_id,
           season_id: recommendationPayload.season_id,
           device_id: recommendationPayload.device_id,
