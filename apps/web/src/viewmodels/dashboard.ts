@@ -93,4 +93,24 @@ export type DashboardVm = {
     ineffectiveCount: number;
     noDataCount: number;
   };
+  agronomyValue: {
+    weeklyRecommendationCount: number;
+    verdictCounts: {
+      SUCCESS: number;
+      PARTIAL: number;
+      FAILED: number;
+      NO_DATA: number;
+    };
+    successRate: number;
+    topRules: Array<{
+      ruleId: string;
+      successRate: number;
+      triggerCount: number;
+    }>;
+    riskRules: Array<{
+      ruleId: string;
+      successRate: number;
+      triggerCount: number;
+    }>;
+  };
 };
