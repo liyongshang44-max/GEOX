@@ -26,6 +26,16 @@ function normalizeStage(value?: string | null): string | null {
   return stage || null;
 }
 
+function pickFirstExplicitStage(stages: Array<string | null | undefined>, stageAllowlist?: Set<string>): string | null {
+  for (const candidate of stages) {
+    const normalized = normalizeStage(candidate);
+    if (!normalized) continue;
+    if (stageAllowlist && !stageAllowlist.has(normalized)) continue;
+    return normalized;
+  }
+  return null;
+}
+
 function resolveByDays(cropCode: string, daysAfterPlanting: number): string {
   if (cropCode === "corn") return resolveCornStage(daysAfterPlanting);
   if (cropCode === "tomato") return resolveTomatoStage(daysAfterPlanting);
@@ -58,4 +68,22 @@ export function resolveCropStage(input: {
   }
 
   return "unknown";
+}
+
+export function resolveCropStageByPriority(input: {
+  cropCode: string;
+  explicitStages?: Array<string | null | undefined>;
+  daysAfterPlanting?: number | null;
+  startDate?: string | number | Date;
+  now?: number;
+}): string {
+  const cropCode = String(input.cropCode || "").toLowerCase();
+  const explicitStage = pickFirstExplicitStage(input.explicitStages ?? [], CROP_STAGE_ALLOWLIST[cropCode]);
+  return resolveCropStage({
+    cropCode,
+    explicitStage,
+    daysAfterPlanting: input.daysAfterPlanting,
+    startDate: input.startDate,
+    now: input.now,
+  });
 }

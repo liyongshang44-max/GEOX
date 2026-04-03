@@ -47,6 +47,7 @@ type ScanTarget = {
 
 const AGENT_SOURCE = "jobs/agronomy_agent";
 const DEDUPE_WINDOW_MINUTES = 30;
+const PENDING_PLAN_REEVALUATE_AFTER_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SOIL_MOISTURE = 30;
 const DEBUG_FIELD_ID = "field_c8_demo";
 const DEBUG_SEASON_ID = "season_demo";
@@ -329,11 +330,25 @@ async function existsPendingOperationPlan(
   pool: Pool,
   tenant: TenantTriple,
   program_id: string,
-): Promise<{ matched: boolean; matched_program_id: string | null; matched_operation_plan_id: string | null }> {
+): Promise<{
+  matched: boolean;
+  matched_program_id: string | null;
+  matched_operation_plan_id: string | null;
+  pending_status: string | null;
+  pending_age_ms: number | null;
+  allow_reevaluate: boolean;
+}> {
   const q = await pool.query(
     `SELECT
         (record_json::jsonb#>>'{payload,program_id}') AS matched_program_id,
-        (record_json::jsonb#>>'{payload,operation_plan_id}') AS matched_operation_plan_id
+        (record_json::jsonb#>>'{payload,operation_plan_id}') AS matched_operation_plan_id,
+        UPPER(COALESCE(record_json::jsonb#>>'{payload,status}', '')) AS pending_status,
+        COALESCE(
+          CASE WHEN (record_json::jsonb#>>'{payload,updated_ts}') ~ '^[0-9]+$' THEN (record_json::jsonb#>>'{payload,updated_ts}')::bigint ELSE NULL END,
+          CASE WHEN (record_json::jsonb#>>'{payload,created_ts}') ~ '^[0-9]+$' THEN (record_json::jsonb#>>'{payload,created_ts}')::bigint ELSE NULL END,
+          0
+        ) AS pending_updated_ts,
+        occurred_at
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
@@ -341,17 +356,29 @@ async function existsPendingOperationPlan(
         AND (record_json::jsonb#>>'{payload,group_id}') = $3
         AND (record_json::jsonb#>>'{payload,program_id}') = $4
         AND UPPER(COALESCE(record_json::jsonb#>>'{payload,status}', '')) NOT IN ('SUCCEEDED','SUCCESS','DONE','FAILED','ERROR','CANCELLED','REJECTED','ARCHIVED')
+      ORDER BY occurred_at DESC
       LIMIT 1`,
     [tenant.tenant_id, tenant.project_id, tenant.group_id, program_id],
   );
   const row = (q.rows ?? [])[0] as any;
   const matchedProgramId = safeString(row?.matched_program_id) || null;
   const matchedOperationPlanId = safeString(row?.matched_operation_plan_id) || null;
+  const pendingStatus = safeString(row?.pending_status) || null;
+  const updatedTs = Number(row?.pending_updated_ts ?? NaN);
+  const occurredAtMs = row?.occurred_at ? new Date(row.occurred_at).getTime() : NaN;
+  const anchorTs = Number.isFinite(updatedTs) && updatedTs > 0
+    ? updatedTs
+    : (Number.isFinite(occurredAtMs) ? occurredAtMs : NaN);
+  const pendingAgeMs = Number.isFinite(anchorTs) ? Math.max(0, Date.now() - anchorTs) : null;
   const matched = (q.rowCount ?? 0) > 0 && matchedProgramId === program_id;
+  const allowReevaluate = matched && Number.isFinite(Number(pendingAgeMs)) && Number(pendingAgeMs) > PENDING_PLAN_REEVALUATE_AFTER_MS;
   return {
-    matched,
+    matched: matched && !allowReevaluate,
     matched_program_id: matchedProgramId,
     matched_operation_plan_id: matchedOperationPlanId,
+    pending_status: pendingStatus,
+    pending_age_ms: pendingAgeMs,
+    allow_reevaluate: allowReevaluate,
   };
 }
 
@@ -375,6 +402,7 @@ async function createOperationPlanFromRecommendation(
     crop_code: string | null;
     crop_stage: string | null;
     rule_id: string | null;
+    reason_codes: string[];
     expected_effect: { type: string; value: number } | null;
     action_type: string;
     device_id: string | null;
@@ -396,6 +424,7 @@ async function createOperationPlanFromRecommendation(
       crop_code: input.crop_code,
       crop_stage: input.crop_stage,
       rule_id: input.rule_id,
+      reason_codes: Array.isArray(input.reason_codes) ? input.reason_codes : [],
       expected_effect: input.expected_effect,
       device_id: input.device_id,
       action_type: input.action_type,
@@ -585,9 +614,21 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
             duplicate_source: "pending_plan",
             matched_program_id: pendingPlanDedup.matched_program_id,
             matched_operation_plan_id: pendingPlanDedup.matched_operation_plan_id,
+            pending_status: pendingPlanDedup.pending_status,
+            pending_age_ms: pendingPlanDedup.pending_age_ms,
           });
           console.log("[agronomy-agent] branch", { result: "skipped:duplicate", field_id: selectedProgramItem.field_id, season_id: selectedProgramItem.season_id || null, program_id: selectedProgramItem.program_id });
           continue;
+        }
+        if (pendingPlanDedup.allow_reevaluate) {
+          console.log("[agronomy-agent] pending_plan_expired:allow_reevaluate", {
+            field_id: selectedProgramItem.field_id,
+            program_id: selectedProgramItem.program_id,
+            matched_operation_plan_id: pendingPlanDedup.matched_operation_plan_id,
+            pending_status: pendingPlanDedup.pending_status,
+            pending_age_ms: pendingPlanDedup.pending_age_ms,
+            threshold_ms: PENDING_PLAN_REEVALUATE_AFTER_MS,
+          });
         }
 
         const ctx = await buildAgronomyContext({
@@ -720,6 +761,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           crop_code: recommendation.crop_code ?? null,
           crop_stage: recommendation.crop_stage ?? null,
           rule_id: recommendation.rule_id ?? null,
+          reason_codes: reasonCodes.length > 0 ? reasonCodes : [reason_code],
           expected_effect: primaryExpectedEffect,
           action_type,
           device_id: telemetry?.device_id ?? null,
