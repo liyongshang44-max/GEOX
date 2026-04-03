@@ -20,6 +20,7 @@ export type AgronomyContext = {
   currentMetrics: {
     soil_moisture?: number | null;
     temperature?: number | null;
+    canopy_temp?: number | null;
     humidity?: number | null;
   };
 

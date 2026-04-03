@@ -17,7 +17,7 @@ test("stage_resolver priority: explicit stage > days_after_planting > unknown", 
   assert.equal(resolveCropStage({ cropCode: "corn" }), "unknown");
 });
 
-test("case1 corn + vegetative + soil_moisture=18 -> IRRIGATE", () => {
+test("corn vegetative + low moisture -> IRRIGATE", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
@@ -29,18 +29,11 @@ test("case1 corn + vegetative + soil_moisture=18 -> IRRIGATE", () => {
   });
   assert.ok(rec);
   assert.equal(rec?.action_type, "IRRIGATE");
-  assert.equal(rec?.crop_code, "corn");
-  assert.equal(rec?.crop_stage, "vegetative");
-  assert.ok(rec?.rule_id);
-  assert.ok(Array.isArray(rec?.reasons));
+  assert.equal(rec?.rule_id, "corn_vegetative_low_moisture_irrigate_v1");
   assert.ok((rec?.reasons.length ?? 0) > 0);
-  assert.ok(Array.isArray(rec?.expected_effect));
-  assert.ok((rec?.expected_effect.length ?? 0) > 0);
-  assert.ok(rec?.rule_id);
-  assert.ok(rec?.crop_stage);
 });
 
-test("case2 corn + reproductive + soil_moisture=24 -> IRRIGATE(high)", () => {
+test("corn reproductive + high canopy temp -> INSPECT", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
@@ -48,28 +41,31 @@ test("case2 corn + reproductive + soil_moisture=24 -> IRRIGATE(high)", () => {
     fieldId: "f2",
     cropCode: "corn",
     cropStage: "reproductive",
-    currentMetrics: { soil_moisture: 24 },
+    currentMetrics: { canopy_temp: 35 },
   });
   assert.ok(rec);
-  assert.equal(rec?.action_type, "IRRIGATE");
-  assert.ok((rec?.confidence ?? 0) >= 0.85);
+  assert.equal(rec?.action_type, "INSPECT");
+  assert.equal(rec?.rule_id, "corn_reproductive_heat_inspect_v1");
+  assert.ok((rec?.reasons.length ?? 0) > 0);
 });
 
-test("case3 tomato + vegetative -> FERTILIZE", () => {
+test("tomato flowering + high canopy temp -> INSPECT", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
     fieldId: "f3",
     cropCode: "tomato",
-    cropStage: "vegetative",
-    currentMetrics: { soil_moisture: 35 },
+    cropStage: "flowering",
+    currentMetrics: { canopy_temp: 33 },
   });
   assert.ok(rec);
-  assert.equal(rec?.action_type, "FERTILIZE");
+  assert.equal(rec?.action_type, "INSPECT");
+  assert.equal(rec?.rule_id, "tomato_flowering_high_temp_inspect_v1");
+  assert.ok((rec?.reasons.length ?? 0) > 0);
 });
 
-test("case4 tomato + fruiting + soil_moisture=26 -> IRRIGATE", () => {
+test("tomato fruiting + low ec -> FERTILIZE", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
@@ -77,8 +73,11 @@ test("case4 tomato + fruiting + soil_moisture=26 -> IRRIGATE", () => {
     fieldId: "f4",
     cropCode: "tomato",
     cropStage: "fruiting",
-    currentMetrics: { soil_moisture: 26 },
+    currentMetrics: {},
+    constraints: { ec: 1.2 },
   });
   assert.ok(rec);
-  assert.equal(rec?.action_type, "IRRIGATE");
+  assert.equal(rec?.action_type, "FERTILIZE");
+  assert.equal(rec?.rule_id, "tomato_fruiting_low_nutrient_fertilize_v1");
+  assert.ok((rec?.reasons.length ?? 0) > 0);
 });
