@@ -375,6 +375,7 @@ async function createOperationPlanFromRecommendation(
     crop_code: string | null;
     crop_stage: string | null;
     rule_id: string | null;
+    reason_codes: string[];
     expected_effect: { type: string; value: number } | null;
     action_type: string;
     device_id: string | null;
@@ -396,6 +397,7 @@ async function createOperationPlanFromRecommendation(
       crop_code: input.crop_code,
       crop_stage: input.crop_stage,
       rule_id: input.rule_id,
+      reason_codes: Array.isArray(input.reason_codes) ? input.reason_codes : [],
       expected_effect: input.expected_effect,
       device_id: input.device_id,
       action_type: input.action_type,
@@ -720,6 +722,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           crop_code: recommendation.crop_code ?? null,
           crop_stage: recommendation.crop_stage ?? null,
           rule_id: recommendation.rule_id ?? null,
+          reason_codes: reasonCodes.length > 0 ? reasonCodes : [reason_code],
           expected_effect: primaryExpectedEffect,
           action_type,
           device_id: telemetry?.device_id ?? null,

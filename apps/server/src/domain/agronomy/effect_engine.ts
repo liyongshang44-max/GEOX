@@ -12,6 +12,8 @@ export function computeEffect(before: any, after: any) {
   const delta = afterMoisture - beforeMoisture;
 
   return {
+    metric: "soil_moisture",
+    delta,
     type: "moisture_increase",
     value: delta
   };
@@ -19,17 +21,20 @@ export function computeEffect(before: any, after: any) {
 
 export function evaluateEffectVerdict(input: {
   expectedEffect?: { type: string; value: number } | null;
-  actualEffect?: { type: string; value: number } | null;
+  actualEffect?: { metric?: string; delta?: number; type?: string; value?: number } | null;
 }): EffectVerdict {
-  const expected = input.expectedEffect?.value;
-  const actual = input.actualEffect?.value;
+  const expectedRaw = Number(input.expectedEffect?.value ?? NaN);
+  const expectedLowerBound = Number.isFinite(expectedRaw) ? expectedRaw : 0;
+  const actual = Number.isFinite(Number(input.actualEffect?.delta))
+    ? Number(input.actualEffect?.delta)
+    : input.actualEffect?.value;
 
-  if (typeof expected !== "number" || typeof actual !== "number") {
+  if (typeof actual !== "number" || !Number.isFinite(actual)) {
     return "NO_DATA";
   }
 
-  if (actual >= expected) return "SUCCESS";
-  if (actual > 0 && actual < expected) return "PARTIAL";
+  if (actual >= expectedLowerBound) return "SUCCESS";
+  if (actual > 0 && actual < expectedLowerBound) return "PARTIAL";
   return "FAILED";
 }
 
