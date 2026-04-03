@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { evaluateRules, pickBestRule } from "./rule_engine";
 import type { AgronomyContext, AgronomyRecommendationPayload } from "./types";
 
