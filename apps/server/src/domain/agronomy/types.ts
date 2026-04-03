@@ -1,3 +1,5 @@
+import type { AgronomyRecommendationV2 } from "@geox/contracts";
+
 export type AgronomyActionType = "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
 
 export type AgronomyPriority = "low" | "medium" | "high";
@@ -39,17 +41,4 @@ export type AgronomyRule = {
   matches: (ctx: AgronomyContext) => boolean;
 };
 
-export type AgronomyRecommendationPayload = {
-  crop_code: string;
-  crop_stage: string;
-  rule_id: string;
-  action_type: AgronomyActionType;
-  priority: AgronomyPriority;
-  reason_codes: string[];
-  expected_effect: {
-    type: EffectType;
-    value: number;
-  };
-  risk_if_not_execute: string;
-  summary: string;
-};
+export type AgronomyRecommendationPayload = AgronomyRecommendationV2;

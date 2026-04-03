@@ -16,6 +16,7 @@ export * from "./schema/telemetry_metric_catalog_v1";
 export * from "./schema/agronomy_decision_context_v1";
 export * from "./schema/agronomy_recommendation_v1";
 export * from "./agronomy/rule_input_v1";
+export * from "./agronomy/recommendation_v2";
 
 export * from "./schema/actuator_adapter_v1";
 export * from "./schema/operation_plan_v1";
