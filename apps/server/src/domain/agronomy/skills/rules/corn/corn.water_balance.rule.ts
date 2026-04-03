@@ -1,36 +1,28 @@
-import type { RuleSkill, RuleSkillInput, RuleSkillResult } from "../../types";
+import type { AgronomyRuleSkill } from "../../types";
 
-function evaluateCornWaterBalance(input: RuleSkillInput): RuleSkillResult {
-  const soilMoisture = Number(input.telemetry?.soil_moisture ?? NaN);
-  if (!Number.isFinite(soilMoisture)) {
-    return {
-      matched: false,
-      action_type: "INSPECT",
-      reason_codes: ["SOIL_MOISTURE_MISSING"],
-      confidence: 0.2,
-    };
-  }
-
-  if (soilMoisture < 35) {
-    return {
-      matched: true,
-      action_type: "IRRIGATE",
-      reason_codes: ["CORN_SOIL_MOISTURE_LOW"],
-      confidence: 0.88,
-    };
-  }
-
-  return {
-    matched: false,
-    action_type: "INSPECT",
-    reason_codes: ["CORN_SOIL_MOISTURE_OK"],
-    confidence: 0.6,
-  };
-}
-
-export const CORN_WATER_BALANCE_RULE_V1: RuleSkill = {
-  rule_id: "rule.corn.water_balance.v1",
+export const CORN_WATER_BALANCE_RULE: AgronomyRuleSkill = {
+  id: "corn.water_balance.rule.v1",
   crop_code: "corn",
-  version: "1.0.0",
-  evaluate: evaluateCornWaterBalance,
+  match({ crop_stage, metrics }) {
+    const soilMoisture = Number(metrics?.soil_moisture ?? NaN);
+    if (!Number.isFinite(soilMoisture)) return false;
+    if (crop_stage === "seedling") return soilMoisture < 38;
+    return soilMoisture < 35;
+  },
+  recommend({ field_id, crop_stage, metrics }) {
+    const soilMoisture = Number(metrics?.soil_moisture ?? NaN);
+    return {
+      action_type: "IRRIGATE",
+      parameters: {
+        field_id,
+        target_soil_moisture: crop_stage === "seedling" ? 42 : 40,
+        current_soil_moisture: Number.isFinite(soilMoisture) ? soilMoisture : null,
+      },
+      expected_effect: {
+        type: "moisture_increase",
+        value: 8,
+      },
+      reason_codes: ["CORN_SOIL_MOISTURE_LOW"],
+    };
+  },
 };

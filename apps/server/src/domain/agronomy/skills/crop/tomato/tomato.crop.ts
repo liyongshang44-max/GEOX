@@ -1,11 +1,16 @@
 import type { CropSkill } from "../../types";
 
-export const TOMATO_CROP_SKILL_V1: CropSkill = {
-  skill_id: "crop.tomato.v1",
+export const TOMATO_CROP_SKILL: CropSkill = {
   crop_code: "tomato",
-  version: "1.0.0",
-  display_name: "番茄作物技能",
-  supported_stages: ["monitor", "suggest", "acceptance", "review"],
-  min_soil_moisture: 28,
-  target_soil_moisture: 36,
+  resolveStage(input) {
+    const days = Number(input.days_after_sowing ?? NaN);
+    if (!Number.isFinite(days) || days < 12) return "seedling";
+    if (days < 35) return "vegetative";
+    if (days < 60) return "flowering";
+    return "fruiting";
+  },
+  thresholds: {
+    soil_moisture_min: 28,
+    soil_moisture_max: 45,
+  },
 };

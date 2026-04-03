@@ -1,38 +1,29 @@
-import type { RuleSkill, RuleSkillInput, RuleSkillResult } from "../../types";
+import type { AgronomyRuleSkill } from "../../types";
 
-function evaluateTomatoFertilize(input: RuleSkillInput): RuleSkillResult {
-  const stage = String(input.crop_stage ?? "").toLowerCase();
-  const humidity = Number(input.telemetry?.humidity ?? NaN);
-
-  if (stage === "flowering" || stage === "fruiting") {
-    if (Number.isFinite(humidity) && humidity < 45) {
-      return {
-        matched: true,
-        action_type: "FERTILIZE",
-        reason_codes: ["TOMATO_FRUIT_STAGE_NEEDS_FERTILIZE"],
-        confidence: 0.8,
-      };
-    }
-
-    return {
-      matched: true,
-      action_type: "FERTILIZE",
-      reason_codes: ["TOMATO_STAGE_PRIORITY_FERTILIZE"],
-      confidence: 0.7,
-    };
-  }
-
-  return {
-    matched: false,
-    action_type: "INSPECT",
-    reason_codes: ["TOMATO_STAGE_NOT_MATCHED"],
-    confidence: 0.55,
-  };
-}
-
-export const TOMATO_FERTILIZE_RULE_V1: RuleSkill = {
-  rule_id: "rule.tomato.fertilize.v1",
+export const TOMATO_FERTILIZE_RULE: AgronomyRuleSkill = {
+  id: "tomato.fertilize.rule.v1",
   crop_code: "tomato",
-  version: "1.0.0",
-  evaluate: evaluateTomatoFertilize,
+  match({ crop_stage, metrics }) {
+    if (crop_stage !== "flowering" && crop_stage !== "fruiting") return false;
+    const ec = Number(metrics?.ec ?? NaN);
+    if (!Number.isFinite(ec)) return true;
+    return ec < 1.8;
+  },
+  recommend({ field_id, crop_stage, metrics }) {
+    const ec = Number(metrics?.ec ?? NaN);
+    return {
+      action_type: "FERTILIZE",
+      parameters: {
+        field_id,
+        formula: crop_stage === "flowering" ? "NPK_15_15_15" : "NPK_12_6_24",
+        target_ec: 2,
+        current_ec: Number.isFinite(ec) ? ec : null,
+      },
+      expected_effect: {
+        type: "nutrition_boost",
+        value: 0.7,
+      },
+      reason_codes: ["TOMATO_NUTRITION_SUPPORT"],
+    };
+  },
 };

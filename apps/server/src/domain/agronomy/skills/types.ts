@@ -1,55 +1,54 @@
-export type SkillStage = "monitor" | "suggest" | "approve" | "execute" | "receipt" | "acceptance" | "review";
+export type CropStage =
+  | "seedling"
+  | "vegetative"
+  | "flowering"
+  | "fruiting";
 
-export type CropSkill = {
-  skill_id: string;
+export interface CropSkill {
   crop_code: string;
-  version: string;
-  display_name: string;
-  supported_stages: SkillStage[];
-  min_soil_moisture?: number;
-  target_soil_moisture?: number;
-};
 
-export type RuleSkillInput = {
-  crop_code: string;
-  crop_stage: string;
-  telemetry?: {
-    soil_moisture?: number | null;
-    humidity?: number | null;
-    temperature?: number | null;
+  resolveStage(input: {
+    days_after_sowing?: number;
+    metrics?: any;
+  }): CropStage;
+
+  thresholds: {
+    soil_moisture_min?: number;
+    soil_moisture_max?: number;
   };
-  constraints?: Record<string, unknown>;
-};
+}
 
-export type RuleSkillResult = {
-  matched: boolean;
-  action_type: "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
-  reason_codes: string[];
-  confidence: number;
-};
-
-export type RuleSkill = {
-  rule_id: string;
+export interface AgronomyRuleSkill {
+  id: string;
   crop_code: string;
-  version: string;
-  evaluate: (input: RuleSkillInput) => RuleSkillResult;
-};
 
-export type AcceptanceInput = {
-  action_type: "IRRIGATE" | "FERTILIZE" | "SPRAY" | "INSPECT";
-  observed_parameters?: Record<string, unknown>;
-  expected_parameters?: Record<string, unknown>;
-};
+  match(input: {
+    crop_stage: CropStage;
+    metrics: any;
+  }): boolean;
 
-export type AcceptanceResult = {
-  pass: boolean;
-  score: number;
-  reason: string;
-};
+  recommend(input: {
+    field_id: string;
+    crop_stage: CropStage;
+    metrics: any;
+  }): {
+    action_type: string;
+    parameters?: any;
+    expected_effect?: {
+      type: string;
+      value: number;
+    };
+    reason_codes?: string[];
+  };
+}
 
-export type AcceptanceSkill = {
-  acceptance_id: string;
-  action_type: "IRRIGATE" | "FERTILIZE";
-  version: string;
-  evaluate: (input: AcceptanceInput) => AcceptanceResult;
-};
+export interface AcceptanceSkill {
+  action_type: string;
+
+  validate(input: {
+    evidence: any;
+  }): {
+    verdict: "PASS" | "FAIL" | "PENDING";
+    reason?: string;
+  };
+}
