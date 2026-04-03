@@ -2,7 +2,8 @@ export type CropStage =
   | "seedling"
   | "vegetative"
   | "flowering"
-  | "fruiting";
+  | "fruiting"
+  | "reproductive";
 
 export interface CropSkill {
   crop_code: string;
