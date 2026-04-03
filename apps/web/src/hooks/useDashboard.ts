@@ -52,6 +52,18 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     ineffectiveCount: 0,
     noDataCount: 0,
   },
+  agronomyValue: {
+    weeklyRecommendationCount: 0,
+    verdictCounts: {
+      SUCCESS: 0,
+      PARTIAL: 0,
+      FAILED: 0,
+      NO_DATA: 0,
+    },
+    successRate: 0,
+    topRules: [],
+    riskRules: [],
+  },
 };
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -329,6 +341,67 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           { type: "PENDING_ACCEPTANCE" as const, count: pendingAcceptanceCount },
           { type: "APPROVAL_REQUIRED" as const, count: approvalRequiredCount },
         ];
+        const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+        const weeklyOperationIds = (operationStates ?? [])
+          .filter((item: any) => {
+            const ts = Number(item?.last_event_ts ?? 0);
+            return Number.isFinite(ts) && ts > 0 && now - ts <= oneWeekMs;
+          })
+          .map((item: any) => String(item?.operation_id ?? item?.operation_plan_id ?? "").trim())
+          .filter(Boolean)
+          .slice(0, 40);
+        const evidencePacks = api.getOperationEvidence
+          ? (await Promise.all(weeklyOperationIds.map(async (id: string) => {
+            try {
+              return await api.getOperationEvidence(id);
+            } catch {
+              return null;
+            }
+          }))).filter(Boolean)
+          : [];
+        const agronomyVerdictCounts = evidencePacks.reduce(
+          (acc: { SUCCESS: number; PARTIAL: number; FAILED: number; NO_DATA: number }, pack: any) => {
+            const verdict = String(pack?.effect_verdict ?? "NO_DATA").trim().toUpperCase();
+            if (verdict === "SUCCESS") acc.SUCCESS += 1;
+            else if (verdict === "PARTIAL") acc.PARTIAL += 1;
+            else if (verdict === "FAILED") acc.FAILED += 1;
+            else acc.NO_DATA += 1;
+            return acc;
+          },
+          { SUCCESS: 0, PARTIAL: 0, FAILED: 0, NO_DATA: 0 },
+        );
+        const weeklyRecommendationCount = evidencePacks.length;
+        const successRate = weeklyRecommendationCount > 0
+          ? Number((agronomyVerdictCounts.SUCCESS / weeklyRecommendationCount).toFixed(4))
+          : 0;
+        const ruleStats = evidencePacks.reduce((acc: Map<string, { triggerCount: number; successCount: number }>, pack: any) => {
+          const ruleId = String(pack?.decision?.rule_id ?? "").trim();
+          if (!ruleId) return acc;
+          const current = acc.get(ruleId) ?? { triggerCount: 0, successCount: 0 };
+          current.triggerCount += 1;
+          const verdict = String(pack?.effect_verdict ?? "").trim().toUpperCase();
+          if (verdict === "SUCCESS") current.successCount += 1;
+          acc.set(ruleId, current);
+          return acc;
+        }, new Map<string, { triggerCount: number; successCount: number }>());
+        const rankedRules = Array.from(ruleStats.entries())
+          .map(([ruleId, stats]) => ({
+            ruleId,
+            successRate: stats.triggerCount > 0 ? Number((stats.successCount / stats.triggerCount).toFixed(4)) : 0,
+            triggerCount: stats.triggerCount,
+          }))
+          .sort((a, b) => {
+            if (b.triggerCount !== a.triggerCount) return b.triggerCount - a.triggerCount;
+            return b.successRate - a.successRate;
+          });
+        const topRules = rankedRules.slice(0, 3);
+        const riskRules = rankedRules
+          .filter((item) => item.triggerCount >= 2 && item.successRate < 0.6)
+          .sort((a, b) => {
+            if (b.triggerCount !== a.triggerCount) return b.triggerCount - a.triggerCount;
+            return a.successRate - b.successRate;
+          })
+          .slice(0, 3);
 
         setData({
           overview: {
@@ -387,6 +460,13 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           agronomyRecommendations: recentAgronomyRecommendations,
           cropStageDistribution,
           effectSummary,
+          agronomyValue: {
+            weeklyRecommendationCount,
+            verdictCounts: agronomyVerdictCounts,
+            successRate,
+            topRules,
+            riskRules,
+          },
         });
         setError(null);
       } catch {
