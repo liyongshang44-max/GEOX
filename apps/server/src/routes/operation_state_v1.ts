@@ -8,13 +8,11 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict, recordRulePerformance } from "../domain/agronomy/effect_engine";
+import { computeEffect, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
-type EffectVerdict = "EFFECTIVE" | "PARTIAL" | "INEFFECTIVE" | "NO_DATA";
-
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
   return {
@@ -45,15 +43,17 @@ function parseRecordJson(v: unknown): any {
 async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
-      rule_id TEXT PRIMARY KEY,
+      rule_id TEXT NOT NULL,
       crop_code TEXT NOT NULL,
+      crop_stage TEXT NOT NULL,
       total_count INT NOT NULL DEFAULT 0,
-      effective_count INT NOT NULL DEFAULT 0,
+      success_count INT NOT NULL DEFAULT 0,
       partial_count INT NOT NULL DEFAULT 0,
-      ineffective_count INT NOT NULL DEFAULT 0,
+      failed_count INT NOT NULL DEFAULT 0,
       no_data_count INT NOT NULL DEFAULT 0,
       score NUMERIC NOT NULL DEFAULT 0,
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (rule_id, crop_code, crop_stage)
     )
   `);
 }
@@ -80,11 +80,12 @@ async function updateRulePerformance(params: {
   recommendationId: string | null;
   cropCode: string;
   ruleId: string | null;
+  cropStage: string;
   effectVerdict: EffectVerdict;
 }): Promise<void> {
-  const { pool, tenant, operationPlanId, recommendationId, cropCode, effectVerdict } = params;
+  const { pool, tenant, operationPlanId, recommendationId, cropCode, cropStage, effectVerdict } = params;
   const ruleId = String(params.ruleId ?? "").trim();
-  if (!operationPlanId || !cropCode || !ruleId || !effectVerdict) return;
+  if (!operationPlanId || !cropCode || !cropStage || !ruleId || !effectVerdict) return;
   const exists = await hasOperationFeedbackRecorded(pool, tenant, operationPlanId);
   if (exists) return;
 
@@ -92,6 +93,7 @@ async function updateRulePerformance(params: {
     pool,
     ruleId,
     cropCode,
+    cropStage,
     verdict: effectVerdict,
   });
 
@@ -109,6 +111,7 @@ async function updateRulePerformance(params: {
           operation_plan_id: operationPlanId,
           recommendation_id: recommendationId,
           crop_code: cropCode,
+          crop_stage: cropStage,
           rule_id: ruleId,
           effect_verdict: effectVerdict,
           recorded_at: Date.now(),
@@ -819,6 +822,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         operationPlanId,
         recommendationId: toText(state.recommendation_id),
         cropCode: performanceCropCode,
+        cropStage: agronomyCropStage ?? "unknown",
         ruleId: agronomyRuleId,
         effectVerdict: effectVerdict as EffectVerdict,
       });

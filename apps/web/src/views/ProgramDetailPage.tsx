@@ -70,6 +70,39 @@ export default function ProgramDetailPage(): React.ReactElement {
       <div className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
+            <div className="sectionTitle">当前作物策略</div>
+            <div className="detailSectionLead">把“为什么建议这样做”前置展示，帮助用户快速理解策略上下文。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前 crop_code</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.cropLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前 crop_stage</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.cropStage}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前生效规则数</div>
+              <div className="decisionItemMeta">{viewModel.cropInsight.activeRuleCount}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最近 3 条 recommendation</div>
+              <div className="decisionItemMeta">
+                {!viewModel.recentRecommendations.length
+                  ? "暂无 recommendation"
+                  : viewModel.recentRecommendations.slice(0, 3).map((item, idx) => (
+                    <div key={`${item.timeLabel}_${item.summary}_${idx}`} style={{ marginBottom: idx === 2 ? 0 : 6 }}>
+                      {item.timeLabel}｜{item.stageLabel}｜{item.actionLabel}｜{item.summary}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
             <div className="sectionTitle">作物阶段卡</div>
             <div className="detailSectionLead">帮助用户快速理解当前作物所处阶段、阶段说明与目标。</div>
           </div>
