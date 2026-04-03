@@ -8,8 +8,8 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
-import { resolveCropStage } from "../domain/agronomy/stage_resolver";
+import { computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
+import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -38,24 +38,6 @@ function parseRecordJson(v: unknown): any {
   } catch {
     return null;
   }
-}
-
-async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
-      rule_id TEXT NOT NULL,
-      crop_code TEXT NOT NULL,
-      crop_stage TEXT NOT NULL,
-      total_count INT NOT NULL DEFAULT 0,
-      success_count INT NOT NULL DEFAULT 0,
-      partial_count INT NOT NULL DEFAULT 0,
-      failed_count INT NOT NULL DEFAULT 0,
-      no_data_count INT NOT NULL DEFAULT 0,
-      score NUMERIC NOT NULL DEFAULT 0,
-      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (rule_id, crop_code, crop_stage)
-    )
-  `);
 }
 
 async function hasOperationFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<boolean> {
@@ -188,6 +170,96 @@ function buildMetricsSnapshot(rows: any[]): OperationMetricsSnapshot {
   if (temperature !== undefined) out.temperature = temperature;
   if (humidity !== undefined) out.humidity = humidity;
   return out;
+}
+
+async function queryTelemetrySoilMoisture(params: {
+  pool: Pool;
+  tenantId: string;
+  deviceId: string;
+  beforeMs?: number | null;
+  afterMs?: number | null;
+}): Promise<number | null> {
+  const { pool, tenantId, deviceId } = params;
+  if (!tenantId || !deviceId) return null;
+  try {
+    if (Number.isFinite(Number(params.beforeMs))) {
+      const q = await pool.query(
+        `SELECT value_num
+           FROM telemetry_index_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND metric = 'soil_moisture'
+            AND ts <= to_timestamp($3::double precision / 1000.0)
+          ORDER BY ts DESC
+          LIMIT 1`,
+        [tenantId, deviceId, Number(params.beforeMs)]
+      );
+      const value = Number(q.rows?.[0]?.value_num ?? NaN);
+      return Number.isFinite(value) ? value : null;
+    }
+    if (Number.isFinite(Number(params.afterMs))) {
+      const q = await pool.query(
+        `SELECT value_num
+           FROM telemetry_index_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND metric = 'soil_moisture'
+            AND ts >= to_timestamp($3::double precision / 1000.0)
+          ORDER BY ts ASC
+          LIMIT 1`,
+        [tenantId, deviceId, Number(params.afterMs)]
+      );
+      const value = Number(q.rows?.[0]?.value_num ?? NaN);
+      return Number.isFinite(value) ? value : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function querySnapshotSoilMoisture(params: {
+  pool: Pool;
+  tenantId: string;
+  deviceId: string;
+  beforeMs?: number | null;
+  afterMs?: number | null;
+}): Promise<number | null> {
+  const { pool, tenantId, deviceId } = params;
+  if (!tenantId || !deviceId) return null;
+  try {
+    if (Number.isFinite(Number(params.beforeMs))) {
+      const q = await pool.query(
+        `SELECT soil_moisture_pct
+           FROM agronomy_signal_snapshot_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND observed_ts_ms <= $3
+          ORDER BY observed_ts_ms DESC
+          LIMIT 1`,
+        [tenantId, deviceId, Number(params.beforeMs)]
+      );
+      const value = Number(q.rows?.[0]?.soil_moisture_pct ?? NaN);
+      return Number.isFinite(value) ? value : null;
+    }
+    if (Number.isFinite(Number(params.afterMs))) {
+      const q = await pool.query(
+        `SELECT soil_moisture_pct
+           FROM agronomy_signal_snapshot_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND observed_ts_ms >= $3
+          ORDER BY observed_ts_ms ASC
+          LIMIT 1`,
+        [tenantId, deviceId, Number(params.afterMs)]
+      );
+      const value = Number(q.rows?.[0]?.soil_moisture_pct ?? NaN);
+      return Number.isFinite(value) ? value : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
 
 function toExpectedEffect(recPayload: any): { type: "moisture_increase" | "growth_boost"; value: number } | null {
@@ -648,17 +720,17 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const recommendationPayload = rec?.record_json?.payload ?? {};
     const recommendationPayloadWithFallback = {
       ...recommendationPayload,
-      crop_code: recommendationPayload?.crop_code ?? state.crop_code ?? operationPayload?.crop_code ?? null,
-      crop_stage: recommendationPayload?.crop_stage ?? state.crop_stage ?? operationPayload?.crop_stage ?? null,
-      rule_id: recommendationPayload?.rule_id ?? state.rule_id ?? operationPayload?.rule_id ?? null,
+      crop_code: recommendationPayload?.crop_code ?? operationPayload?.crop_code ?? state.crop_code ?? null,
+      crop_stage: recommendationPayload?.crop_stage ?? operationPayload?.crop_stage ?? state.crop_stage ?? null,
+      rule_id: recommendationPayload?.rule_id ?? operationPayload?.rule_id ?? state.rule_id ?? null,
       rule_hit: Array.isArray(recommendationPayload?.rule_hit)
         ? recommendationPayload.rule_hit
-        : (Array.isArray(state.rule_hit) ? state.rule_hit : (Array.isArray(operationPayload?.rule_hit) ? operationPayload.rule_hit : [])),
+        : (Array.isArray(operationPayload?.rule_hit) ? operationPayload.rule_hit : (Array.isArray(state.rule_hit) ? state.rule_hit : [])),
       reason_codes: Array.isArray(recommendationPayload?.reason_codes)
         ? recommendationPayload.reason_codes
-        : (Array.isArray(state.reason_codes) ? state.reason_codes : (Array.isArray(operationPayload?.reason_codes) ? operationPayload.reason_codes : [])),
-      expected_effect: recommendationPayload?.expected_effect ?? state.expected_effect ?? operationPayload?.expected_effect ?? null,
-      risk_if_not_execute: recommendationPayload?.risk_if_not_execute ?? state.risk_if_not_execute ?? operationPayload?.risk_if_not_execute ?? null,
+        : (Array.isArray(operationPayload?.reason_codes) ? operationPayload.reason_codes : (Array.isArray(state.reason_codes) ? state.reason_codes : [])),
+      expected_effect: recommendationPayload?.expected_effect ?? operationPayload?.expected_effect ?? state.expected_effect ?? null,
+      risk_if_not_execute: recommendationPayload?.risk_if_not_execute ?? operationPayload?.risk_if_not_execute ?? state.risk_if_not_execute ?? null,
     };
     const taskDeviceId = normalizeDeviceId(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
     const recommendedDeviceId = taskDeviceId;
@@ -667,11 +739,20 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const detailDeviceId = executorDeviceId === "unknown" ? null : executorDeviceId;
     const executionStartMs = toMs(normalizedReceipt?.execution_started_at ?? task?.occurred_at ?? receiptFact?.occurred_at);
     const receiptMs = toMs(receiptFact?.occurred_at ?? normalizedReceipt?.execution_finished_at ?? normalizedReceipt?.execution_started_at);
+    const operationCreatedMs = toMs(plan?.record_json?.payload?.created_ts ?? plan?.occurred_at ?? rec?.record_json?.payload?.created_ts);
     const afterWindowMinutes = 20;
     const afterWindowEndMs = receiptMs == null ? null : receiptMs + afterWindowMinutes * 60 * 1000;
 
-    let beforeMetrics: OperationMetricsSnapshot = {};
-    let afterMetrics: OperationMetricsSnapshot = {};
+    let beforeMetrics: OperationMetricsSnapshot = {
+      soil_moisture: Number.isFinite(Number(state?.before_metrics?.soil_moisture ?? NaN))
+        ? Number(state?.before_metrics?.soil_moisture)
+        : undefined,
+    };
+    let afterMetrics: OperationMetricsSnapshot = {
+      soil_moisture: Number.isFinite(Number(state?.after_metrics?.soil_moisture ?? NaN))
+        ? Number(state?.after_metrics?.soil_moisture)
+        : undefined,
+    };
     if (detailDeviceId && executionStartMs != null) {
       const beforeTelemetryQ = await pool.query(
         `SELECT metric, value_num, ts
@@ -684,7 +765,16 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           LIMIT 20`,
         [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], executionStartMs]
       ).catch(() => ({ rows: [] as any[] }));
-      beforeMetrics = buildMetricsSnapshot(beforeTelemetryQ.rows ?? []);
+      beforeMetrics = { ...beforeMetrics, ...buildMetricsSnapshot(beforeTelemetryQ.rows ?? []) };
+    }
+    if (!Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN)) && detailDeviceId) {
+      const beforeAnchorMs = executionStartMs ?? operationCreatedMs;
+      const [beforeFromTelemetry, beforeFromSnapshot] = await Promise.all([
+        queryTelemetrySoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, beforeMs: beforeAnchorMs }),
+        querySnapshotSoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, beforeMs: beforeAnchorMs }),
+      ]);
+      if (Number.isFinite(Number(beforeFromTelemetry ?? NaN))) beforeMetrics.soil_moisture = Number(beforeFromTelemetry);
+      else if (Number.isFinite(Number(beforeFromSnapshot ?? NaN))) beforeMetrics.soil_moisture = Number(beforeFromSnapshot);
     }
     if (detailDeviceId && receiptMs != null && afterWindowEndMs != null) {
       const afterTelemetryQ = await pool.query(
@@ -699,7 +789,15 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           LIMIT 100`,
         [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], receiptMs, afterWindowEndMs]
       ).catch(() => ({ rows: [] as any[] }));
-      afterMetrics = buildMetricsSnapshot(afterTelemetryQ.rows ?? []);
+      afterMetrics = { ...afterMetrics, ...buildMetricsSnapshot(afterTelemetryQ.rows ?? []) };
+    }
+    if (!Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN)) && detailDeviceId && receiptMs != null) {
+      const [afterFromTelemetry, afterFromSnapshot] = await Promise.all([
+        queryTelemetrySoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, afterMs: receiptMs }),
+        querySnapshotSoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, afterMs: receiptMs }),
+      ]);
+      if (Number.isFinite(Number(afterFromTelemetry ?? NaN))) afterMetrics.soil_moisture = Number(afterFromTelemetry);
+      else if (Number.isFinite(Number(afterFromSnapshot ?? NaN))) afterMetrics.soil_moisture = Number(afterFromSnapshot);
     }
     const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
     const expectedEffect =
@@ -772,32 +870,39 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const customerView = customerViewByStatus(customerViewStatus);
     const agronomyCropCode = toText(
       rec?.record_json?.payload?.crop_code
-      ?? state.crop_code
-      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_code
       ?? plan?.record_json?.payload?.crop_code
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_code
+      ?? state.crop_code
     );
-    const agronomyCropStageRaw = toText(
-      rec?.record_json?.payload?.crop_stage
-      ?? state.crop_stage
-      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_stage
-      ?? plan?.record_json?.payload?.crop_stage
-    );
+    const agronomyCropStageRaw = agronomyCropCode
+      ? resolveCropStageByPriority({
+          cropCode: agronomyCropCode,
+          explicitStages: [
+            toText(rec?.record_json?.payload?.crop_stage),
+            toText(plan?.record_json?.payload?.crop_stage),
+            toText(recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_stage),
+            toText(state.crop_stage),
+          ],
+          startDate: Number(
+            rec?.record_json?.payload?.created_ts
+            ?? plan?.record_json?.payload?.created_ts
+            ?? state.last_event_ts
+            ?? Date.now(),
+          ),
+          now: Date.now(),
+        })
+      : null;
     const agronomyCropStage = agronomyCropStageRaw || (() => {
       if (!agronomyCropCode) return null;
-      const stageStartTs = Number(
-        rec?.record_json?.payload?.created_ts
-        ?? plan?.record_json?.payload?.created_ts
-        ?? state.last_event_ts
-        ?? Date.now(),
-      );
-      return resolveCropStage({ cropCode: agronomyCropCode, startDate: stageStartTs, now: Date.now() });
+      return "unknown";
     })();
     const agronomyRuleId = toText(
       rec?.record_json?.payload?.rule_id
-      ?? state.rule_id
+      ?? plan?.record_json?.payload?.rule_id
       ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.rule_id
       ?? recommendationPayloadWithFallback?.rule_hit?.[0]?.rule_id
       ?? recommendationPayloadWithFallback?.reason_codes?.[0]
+      ?? state.rule_id
     );
     const agronomyReasonCodes = Array.isArray(recommendationPayloadWithFallback?.reason_codes)
       ? recommendationPayloadWithFallback.reason_codes
@@ -813,6 +918,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       agronomyCropCode
       ?? toText(recommendationPayloadWithFallback?.crop_code)
       ?? toText(recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_code)
+      ?? toText(plan?.record_json?.payload?.crop_code)
       ?? toText(state.crop_code)
       ?? null;
     if (shouldRecordPerformance && agronomyRuleId && performanceCropCode && effectVerdict) {
