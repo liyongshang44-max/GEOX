@@ -37,6 +37,15 @@ function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewMod
   return `已回传执行结果，当前状态为${finalStatus}。`;
 }
 
+function snapshotTimeLabel(snapshotId: string): string {
+  const raw = String(snapshotId || "").trim();
+  if (!raw) return "-";
+  const parts = raw.split("_");
+  const maybeTs = Number(parts.length ? parts[parts.length - 1] : NaN);
+  if (!Number.isFinite(maybeTs)) return raw;
+  return new Date(maybeTs).toLocaleString();
+}
+
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
@@ -109,6 +118,28 @@ export default function OperationDetailPage(): React.ReactElement {
 
       </section>
 
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">建议依据</div>
+        <div className="decisionList" style={{ marginTop: 10 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">触发规则</div>
+            <div className="decisionItemMeta">{model.agronomyDecision.ruleId || "-"}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">触发原因</div>
+            <div className="decisionItemMeta">{model.recommendation.reasonCodesLabel || model.recommendation.summary || "-"}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">预期效果</div>
+            <div className="decisionItemMeta">{model.expectedEffectCard.effectTypeLabel} · {model.expectedEffectCard.effectValueLabel}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">snapshot 时间</div>
+            <div className="decisionItemMeta">{snapshotTimeLabel((detail as any)?.recommendation?.snapshot_id ?? (detail as any)?.snapshot_id ?? "")}</div>
+          </div>
+        </div>
+      </section>
 
       <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">作业结论（客户视角）</div>

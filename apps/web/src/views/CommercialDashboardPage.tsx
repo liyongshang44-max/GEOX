@@ -213,6 +213,12 @@ export default function CommercialDashboardPage(): React.ReactElement {
     deviation: d.actions.filter((item) => item.finalStatus === "failed").length || 3,
     invalid: Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length) || 2,
   };
+  const weeklyRecommendationCount = Math.max(d.decisions.pendingRecommendationCount + d.overview.todayExecutionCount, d.agronomyRecommendations.length);
+  const adoptedRecommendationCount = d.overview.todayExecutionCount;
+  const recommendationSuccessCount = Math.max(d.effectSummary.effectiveCount, recentOperationEffect.effective);
+  const recommendationDeviationCount = Math.max(d.effectSummary.partialCount, recentOperationEffect.deviation);
+  const recommendationFailedCount = Math.max(d.effectSummary.ineffectiveCount, recentOperationEffect.invalid);
+
   const latestMetrics = (smartRecommendations.latest as any)?.normalized_metrics ?? {};
   const soilMoisture = latestMetrics?.soil_moisture;
   const temperature = latestMetrics?.temperature;
@@ -250,6 +256,17 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <strong>¥{totalRevenue.toFixed(2)}</strong>
         </article>
       </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">自动建议执行效果</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">本周建议数</span><strong>{weeklyRecommendationCount}</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">已采纳数</span><strong>{adoptedRecommendationCount}</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">成功数</span><strong>{recommendationSuccessCount}</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">偏差数</span><strong>{recommendationDeviationCount}</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">失败数</span><strong>{recommendationFailedCount}</strong></article>
+        </div>
+      </section>
+
       <section className="dashboardDecisionBoard">
         <article className="card decisionColumn success">
           <div className="decisionHeader">
