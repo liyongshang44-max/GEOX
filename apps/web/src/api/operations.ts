@@ -65,6 +65,18 @@ export type OperationEvidenceExportResponse = {
   missing_reason?: string | null;
 };
 
+export type OperationEvidencePackV1 = {
+  operation_id: string;
+  crop?: { crop_code?: string | null; crop_stage?: string | null } | null;
+  decision?: { rule_id?: string | null; reason_codes?: string[] | null } | null;
+  before?: { soil_moisture?: number | null } | null;
+  after?: { soil_moisture?: number | null } | null;
+  expected_effect?: { type?: string | null; value?: number | null } | null;
+  actual_effect?: { value?: number | null } | null;
+  effect_verdict?: "SUCCESS" | "PARTIAL" | "FAILED" | "NO_DATA" | string | null;
+  timeline?: any[];
+};
+
 export async function fetchOperationDetail(operationPlanId: string): Promise<OperationDetailResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
@@ -77,6 +89,12 @@ export async function fetchOperationEvidenceExport(operationPlanId: string): Pro
   if (!id) return null;
   const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceExportResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-export`);
   return res?.item ?? null;
+}
+
+export async function fetchOperationEvidencePack(operationId: string): Promise<OperationEvidencePackV1 | null> {
+  const id = String(operationId ?? "").trim();
+  if (!id) return null;
+  return apiRequestOptional<OperationEvidencePackV1>(`/api/v1/operations/${encodeURIComponent(id)}/evidence`);
 }
 
 export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null> {
