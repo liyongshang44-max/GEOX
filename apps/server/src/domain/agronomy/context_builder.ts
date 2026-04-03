@@ -9,7 +9,9 @@ export async function buildAgronomyContext(input: {
   seasonId?: string;
   programId?: string;
   cropCode: string;
-  startDate: string | number | Date;
+  cropStage?: string;
+  daysAfterPlanting?: number;
+  startDate?: string | number | Date;
   currentMetrics?: {
     soil_moisture?: number | null;
     temperature?: number | null;
@@ -19,6 +21,8 @@ export async function buildAgronomyContext(input: {
 }): Promise<AgronomyContext> {
   const cropStage = resolveCropStage({
     cropCode: input.cropCode,
+    explicitStage: input.cropStage,
+    daysAfterPlanting: input.daysAfterPlanting,
     startDate: input.startDate,
   });
 

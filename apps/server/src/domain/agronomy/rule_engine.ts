@@ -1,6 +1,8 @@
 import type { Pool } from "pg";
+import type { AgronomyRuleInput } from "@geox/contracts";
 import { cornRules } from "./crops/corn/rules";
 import { tomatoRules } from "./crops/tomato/rules";
+import { resolveCropStage } from "./stage_resolver";
 import type { AgronomyContext, AgronomyRule } from "./types";
 
 export type RuleWithScore = AgronomyRule & { score?: number; totalCount?: number };
@@ -70,12 +72,57 @@ export async function attachRuleScores(rules: AgronomyRule[], pool: Pool): Promi
   });
 }
 
+export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyContext {
+  return {
+    tenantId: input.tenant_id,
+    projectId: input.project_id,
+    groupId: input.group_id,
+    fieldId: input.field_id,
+    seasonId: input.season_id,
+    cropCode: input.crop_code,
+    cropStage: resolveCropStage({
+      cropCode: input.crop_code,
+      explicitStage: input.crop_stage,
+    }),
+    currentMetrics: {
+      soil_moisture: input.telemetry.soil_moisture ?? null,
+      temperature: input.telemetry.air_temp ?? input.telemetry.canopy_temp ?? null,
+      humidity: input.telemetry.humidity ?? null,
+    },
+    constraints: {
+      ...(input.constraints ?? {}),
+      ...(input.context ? { context: input.context } : {}),
+    },
+  };
+}
+
+function resolveStageForRuleEngine(ctx: AgronomyContext): string {
+  const daysAfterPlantingRaw = (ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting;
+  const daysAfterPlanting = Number.isFinite(Number(daysAfterPlantingRaw)) ? Number(daysAfterPlantingRaw) : undefined;
+
+  return resolveCropStage({
+    cropCode: ctx.cropCode,
+    explicitStage: ctx.cropStage,
+    daysAfterPlanting,
+  });
+}
+
 export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
+  const resolvedStage = resolveStageForRuleEngine(ctx);
+  const normalizedCtx: AgronomyContext = {
+    ...ctx,
+    cropStage: resolvedStage,
+  };
+
   return sortRules(
-    getRulesForCrop(ctx.cropCode)
-      .filter((rule) => rule.cropStage === ctx.cropStage)
-      .filter((rule) => rule.matches(ctx)),
+    getRulesForCrop(normalizedCtx.cropCode)
+      .filter((rule) => rule.cropStage === normalizedCtx.cropStage)
+      .filter((rule) => rule.matches(normalizedCtx)),
   );
+}
+
+export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRule[] {
+  return evaluateRules(normalizeAgronomyRuleInput(input));
 }
 
 export function pickBestRule(rules: AgronomyRule[]): AgronomyRule | null {
