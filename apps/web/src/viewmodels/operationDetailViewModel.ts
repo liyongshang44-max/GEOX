@@ -60,6 +60,13 @@ export type OperationDetailPageVm = {
     reasonCodesLabel: string;
     riskIfNotExecute: string;
   };
+  recommendationBasis: {
+    ruleId: string;
+    cropCode: string;
+    cropStage: string;
+    reasonCodesLabel: string;
+    expectedEffectLabel: string;
+  };
   expectedEffectCard: {
     effectTypeLabel: string;
     effectValueLabel: string;
@@ -71,6 +78,12 @@ export type OperationDetailPageVm = {
     expectedLabel: string;
     actualLabel: string;
     verdictLabel: string;
+  };
+  effectAssessment: {
+    beforeMetricsLabel: string;
+    afterMetricsLabel: string;
+    actualEffectLabel: string;
+    effectVerdictLabel: string;
   };
   ruleExecutionBridge: {
     cropSummary: string;
@@ -253,10 +266,10 @@ function mapSignedPercentLabel(raw: unknown): string {
 
 function mapEffectVerdictLabel(raw: unknown): string {
   const key = String(raw ?? "").trim().toUpperCase();
-  if (key === "EFFECTIVE") return "达到预期";
+  if (key === "SUCCESS") return "SUCCESS（达到预期）";
   if (key === "PARTIAL") return "部分达到预期";
-  if (key === "INEFFECTIVE") return "未达到预期";
-  if (key === "NO_DATA") return "暂无效果数据";
+  if (key === "FAILED") return "FAILED（未达到预期）";
+  if (key === "NO_DATA") return "NO_DATA（暂无效果数据）";
   return "暂无效果数据";
 }
 
@@ -318,6 +331,14 @@ function buildExpectedOutcomeLabel(detail: any): string {
   if (action.includes("SPRAY")) return "降低病虫害风险，稳定作物健康状态";
   if (action.includes("FERTILIZE")) return "补充养分，改善生长势";
   return "完成系统建议的现场动作，并获得可复盘证据";
+}
+
+function mapExpectedEffectSummary(effect: any): string {
+  const typeLabel = mapExpectedEffectTypeLabel(effect?.type);
+  const valueLabel = mapExpectedEffectValueLabel(effect?.value);
+  if (typeLabel === "-" && valueLabel === "-") return "暂无预期效果";
+  if (valueLabel === "-") return typeLabel;
+  return `${typeLabel}（${valueLabel}）`;
 }
 
 function buildActualOutcomeLabel(detail: any, receipt?: ReceiptEvidenceVm): string {
@@ -602,6 +623,7 @@ export function buildOperationDetailViewModel(args?: {
     ? safeDetail.agronomy.reason_codes.map((x: any) => toText(x)).filter((x: string) => x !== "-")
     : [];
   const agronomyReasonCodesLabel = agronomyReasonCodes.join(" / ") || reasonCodesLabel;
+  const actualEffectDelta = safeDetail?.agronomy?.actual_effect?.delta ?? safeDetail?.agronomy?.actual_effect?.value;
   const approvalActorLabel = toText(safeDetail?.approval?.actor_label, "系统/未知");
   const approvalDecidedAtLabel = toDateLabel(safeDetail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
@@ -745,6 +767,13 @@ export function buildOperationDetailViewModel(args?: {
       reasonCodesLabel: agronomyReasonCodesLabel,
       riskIfNotExecute: toText(safeDetail?.agronomy?.risk_if_not_execute, businessEffect.riskIfNotExecute),
     },
+    recommendationBasis: {
+      ruleId: toText(safeDetail?.agronomy?.rule_id),
+      cropCode: toText(safeDetail?.agronomy?.crop_code),
+      cropStage: toText(safeDetail?.agronomy?.crop_stage),
+      reasonCodesLabel: agronomyReasonCodesLabel,
+      expectedEffectLabel: mapExpectedEffectSummary(safeDetail?.agronomy?.expected_effect),
+    },
     expectedEffectCard: {
       effectTypeLabel: mapExpectedEffectTypeLabel(safeDetail?.agronomy?.expected_effect?.type),
       effectValueLabel: mapExpectedEffectValueLabel(safeDetail?.agronomy?.expected_effect?.value),
@@ -754,8 +783,14 @@ export function buildOperationDetailViewModel(args?: {
       beforeLabel: mapPercentLabel(safeDetail?.agronomy?.before_metrics?.soil_moisture),
       afterLabel: mapPercentLabel(safeDetail?.agronomy?.after_metrics?.soil_moisture),
       expectedLabel: mapSignedPercentLabel(safeDetail?.agronomy?.expected_effect?.value),
-      actualLabel: mapSignedPercentLabel(safeDetail?.agronomy?.actual_effect?.value),
+      actualLabel: mapSignedPercentLabel(actualEffectDelta),
       verdictLabel: mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict),
+    },
+    effectAssessment: {
+      beforeMetricsLabel: `执行前土壤湿度：${mapPercentLabel(safeDetail?.agronomy?.before_metrics?.soil_moisture)}`,
+      afterMetricsLabel: `执行后土壤湿度：${mapPercentLabel(safeDetail?.agronomy?.after_metrics?.soil_moisture)}`,
+      actualEffectLabel: `实际效果：${mapSignedPercentLabel(actualEffectDelta)}`,
+      effectVerdictLabel: `效果结论：${mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict)}`,
     },
     ruleExecutionBridge: {
       cropSummary: buildSummaryWithCode(mapCropLabel(safeDetail?.agronomy?.crop_code), safeDetail?.agronomy?.crop_code),
