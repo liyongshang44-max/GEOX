@@ -806,13 +806,19 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
-    if (shouldRecordPerformance && agronomyRuleId && agronomyCropCode && effectVerdict) {
+    const performanceCropCode =
+      agronomyCropCode
+      ?? toText(recommendationPayloadWithFallback?.crop_code)
+      ?? toText(recommendationPayloadWithFallback?.suggested_action?.parameters?.crop_code)
+      ?? toText(state.crop_code)
+      ?? null;
+    if (shouldRecordPerformance && agronomyRuleId && performanceCropCode && effectVerdict) {
       await updateRulePerformance({
         pool,
         tenant,
         operationPlanId,
         recommendationId: toText(state.recommendation_id),
-        cropCode: agronomyCropCode ?? "unknown",
+        cropCode: performanceCropCode,
         ruleId: agronomyRuleId,
         effectVerdict: effectVerdict as EffectVerdict,
       });
