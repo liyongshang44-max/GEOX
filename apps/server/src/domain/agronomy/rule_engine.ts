@@ -1,83 +1,65 @@
-import type { Pool } from "pg";
-import { cornRules } from "./crops/corn/rules";
-import { tomatoRules } from "./crops/tomato/rules";
-import type { AgronomyContext, AgronomyRule } from "./types";
+import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
+import { evaluateRuleRegistry } from "./rules";
+import { resolveCropStage } from "./stage_resolver";
+import type { AgronomyContext } from "./types";
 
-export type RuleWithScore = AgronomyRule & { score?: number; totalCount?: number };
-
-function getRulesForCrop(cropCode: string): AgronomyRule[] {
-  const key = String(cropCode || "").toLowerCase();
-  if (key === "corn") return cornRules;
-  if (key === "tomato") return tomatoRules;
-  return [];
+export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyRuleInput {
+  return {
+    ...input,
+    crop_code: String(input.crop_code ?? "").toLowerCase(),
+    crop_stage: resolveCropStage({
+      cropCode: input.crop_code,
+      explicitStage: input.crop_stage,
+      daysAfterPlanting: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+        ? Number((input.constraints as Record<string, unknown>).days_after_planting)
+        : undefined,
+    }),
+  };
 }
 
-function priorityWeight(priority: string): number {
-  if (priority === "high") return 3;
-  if (priority === "medium") return 2;
-  return 1;
+function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
+  return {
+    tenant_id: ctx.tenantId,
+    project_id: ctx.projectId,
+    group_id: ctx.groupId,
+    field_id: ctx.fieldId,
+    season_id: ctx.seasonId ?? "unknown",
+    crop_code: String(ctx.cropCode ?? "").toLowerCase(),
+    crop_stage: resolveCropStage({
+      cropCode: ctx.cropCode,
+      explicitStage: ctx.cropStage,
+      daysAfterPlanting: Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+        ? Number((ctx.constraints as Record<string, unknown>).days_after_planting)
+        : undefined,
+    }),
+    telemetry: {
+      soil_moisture: ctx.currentMetrics.soil_moisture ?? undefined,
+      canopy_temp: ctx.currentMetrics.canopy_temp ?? ctx.currentMetrics.temperature ?? undefined,
+      air_temp: ctx.currentMetrics.temperature ?? undefined,
+      humidity: ctx.currentMetrics.humidity ?? undefined,
+      ec: Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.ec))
+        ? Number((ctx.constraints as Record<string, unknown>).ec)
+        : undefined,
+      ph: Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.ph))
+        ? Number((ctx.constraints as Record<string, unknown>).ph)
+        : undefined,
+    },
+    constraints: ctx.constraints as AgronomyRuleInput["constraints"] | undefined,
+    context: {
+      snapshot_ts: Date.now(),
+    },
+  };
 }
 
-export function sortRules(rules: RuleWithScore[]): RuleWithScore[] {
-  return rules.sort((a, b) => {
-    const p = priorityWeight(b.priority) - priorityWeight(a.priority);
-    if (p !== 0) return p;
-
-    const sA = a.totalCount !== undefined && a.totalCount < 5 ? undefined : a.score;
-    const sB = b.totalCount !== undefined && b.totalCount < 5 ? undefined : b.score;
-
-    if (sA === undefined || sB === undefined) return 0;
-    return (sB ?? 0) - (sA ?? 0);
-  });
+export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] {
+  const normalizedInput = normalizeContextToRuleInput(ctx);
+  return evaluateRulesByInput(normalizedInput);
 }
 
-export async function attachRuleScores(rules: AgronomyRule[], pool: Pool): Promise<RuleWithScore[]> {
-  if (!Array.isArray(rules) || !rules.length) return [];
-
-  const ruleIds = Array.from(new Set(rules.map((rule) => String(rule.ruleId ?? "").trim()).filter(Boolean)));
-  const scoreMap = new Map<string, { score: number; totalCount: number }>();
-
-  if (ruleIds.length) {
-    const res = await pool.query(
-      `SELECT rule_id, score, total_count
-       FROM agronomy_rule_performance
-       WHERE rule_id = ANY($1::text[])`,
-      [ruleIds],
-    );
-
-    for (const row of res.rows ?? []) {
-      const ruleId = String(row.rule_id ?? "").trim();
-      if (!ruleId) continue;
-      const score = Number(row.score ?? 0.5);
-      const totalCount = Number(row.total_count ?? 0);
-      scoreMap.set(ruleId, {
-        score: Number.isFinite(score) ? score : 0.5,
-        totalCount: Number.isFinite(totalCount) ? totalCount : 0,
-      });
-    }
-  }
-
-  return rules.map((rule) => {
-    const stats = scoreMap.get(rule.ruleId);
-    const totalCount = stats?.totalCount ?? 0;
-    const stable = totalCount >= 5;
-
-    return {
-      ...rule,
-      score: stable ? (stats?.score ?? 0.5) : undefined,
-      totalCount,
-    };
-  });
+export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommendationV2[] {
+  return evaluateRuleRegistry(normalizeAgronomyRuleInput(input));
 }
 
-export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
-  return sortRules(
-    getRulesForCrop(ctx.cropCode)
-      .filter((rule) => rule.cropStage === ctx.cropStage)
-      .filter((rule) => rule.matches(ctx)),
-  );
-}
-
-export function pickBestRule(rules: AgronomyRule[]): AgronomyRule | null {
-  return rules[0] ?? null;
+export function pickBestRule(recommendations: AgronomyRecommendationV2[]): AgronomyRecommendationV2 | null {
+  return recommendations[0] ?? null;
 }
