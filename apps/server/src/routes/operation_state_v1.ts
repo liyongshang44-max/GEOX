@@ -412,6 +412,41 @@ function mapExportJobStatusLabel(s: string | null): string {
   return code;
 }
 
+function buildEvidenceTimeline(state: any, approvalDecision: FactRow | null, facts: FactRow[]): Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> {
+  const timelineFromState: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state?.timeline ?? []).map((item: any, idx: number) => ({
+    id: `${item.type}_${item.ts}_${idx}`,
+    kind: String(item.type ?? "UNKNOWN"),
+    label: item.label || statusLabel(item.type),
+    status: state?.final_status ?? null,
+    occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
+    actor_label: null,
+    summary: item.label || ""
+  }));
+  if (approvalDecision) {
+    timelineFromState.push({
+      id: `approval_decision_${approvalDecision.fact_id}`,
+      kind: "APPROVAL_DECISION",
+      label: "审批决策",
+      status: toText(approvalDecision.record_json?.payload?.decision) ?? "",
+      occurred_at: approvalDecision.occurred_at,
+      actor_label: toText(approvalDecision.record_json?.payload?.decider ?? approvalDecision.record_json?.payload?.actor_label),
+      summary: statusLabel(toText(approvalDecision.record_json?.payload?.decision))
+    });
+  }
+  const fallbackFromFacts = facts.map((item) => ({
+    id: `fact_${item.fact_id}`,
+    kind: String(item.record_json?.type ?? "fact"),
+    label: String(item.record_json?.type ?? "fact"),
+    status: null,
+    occurred_at: item.occurred_at ?? null,
+    actor_label: null,
+    summary: toText(item.record_json?.payload?.status ?? item.record_json?.payload?.decision ?? item.record_json?.payload?.verdict) ?? ""
+  }));
+  const merged = timelineFromState.length > 0 ? timelineFromState : fallbackFromFacts;
+  merged.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
+  return merged;
+}
+
 async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
   const sql = `
     SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
@@ -655,6 +690,142 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const item = items.find((x) => x.operation_id === operation_id);
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, item });
+  });
+
+  app.get("/api/v1/operations/:operation_id/evidence", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const tenant = tenantFromReq(req as any, auth);
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const operationId = String((req.params as any)?.operation_id ?? "").trim();
+    if (!operationId) return reply.status(400).send({ ok: false, error: "MISSING_OPERATION_ID" });
+
+    const states = await projectOperationStateV1(pool, tenant);
+    const state = states.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId);
+    if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const operationPlanId = String(state.operation_plan_id ?? state.operation_id ?? operationId);
+    const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
+    const latestByType = (type: string) => [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === type) ?? null;
+    const rec = latestByType("decision_recommendation_v1");
+    const approvalDecision = latestByType("approval_decision_v1");
+    const plan = latestByType("operation_plan_v1");
+    const task = latestByType("ao_act_task_v0");
+    const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
+    const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
+
+    const recommendationPayload = rec?.record_json?.payload ?? {};
+    const operationPayload = plan?.record_json?.payload ?? {};
+    const recommendationPayloadWithFallback = {
+      ...recommendationPayload,
+      expected_effect: recommendationPayload?.expected_effect ?? operationPayload?.expected_effect ?? state.expected_effect ?? null,
+      reason_codes: Array.isArray(recommendationPayload?.reason_codes)
+        ? recommendationPayload.reason_codes
+        : (Array.isArray(operationPayload?.reason_codes) ? operationPayload.reason_codes : (Array.isArray(state.reason_codes) ? state.reason_codes : [])),
+    };
+    const taskDeviceId = normalizeDeviceId(task?.record_json?.payload?.meta?.device_id ?? state.device_id ?? recommendationPayload?.device_id ?? operationPayload?.device_id);
+    const receiptDeviceId = normalizeDeviceId(normalizedReceipt?.device_id);
+    const detailDeviceId = receiptDeviceId ?? taskDeviceId;
+    const executionStartMs = toMs(normalizedReceipt?.execution_started_at ?? task?.occurred_at ?? receiptFact?.occurred_at);
+    const receiptMs = toMs(receiptFact?.occurred_at ?? normalizedReceipt?.execution_finished_at ?? normalizedReceipt?.execution_started_at);
+    const operationCreatedMs = toMs(plan?.record_json?.payload?.created_ts ?? plan?.occurred_at ?? rec?.record_json?.payload?.created_ts);
+    const afterWindowMinutes = 20;
+    const afterWindowEndMs = receiptMs == null ? null : receiptMs + afterWindowMinutes * 60 * 1000;
+
+    let beforeMetrics: OperationMetricsSnapshot = {
+      soil_moisture: Number.isFinite(Number(state?.before_metrics?.soil_moisture ?? NaN))
+        ? Number(state?.before_metrics?.soil_moisture)
+        : undefined,
+    };
+    let afterMetrics: OperationMetricsSnapshot = {
+      soil_moisture: Number.isFinite(Number(state?.after_metrics?.soil_moisture ?? NaN))
+        ? Number(state?.after_metrics?.soil_moisture)
+        : undefined,
+    };
+    if (!Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN)) && detailDeviceId) {
+      const beforeAnchorMs = executionStartMs ?? operationCreatedMs;
+      const [beforeFromTelemetry, beforeFromSnapshot] = await Promise.all([
+        queryTelemetrySoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, beforeMs: beforeAnchorMs }),
+        querySnapshotSoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, beforeMs: beforeAnchorMs }),
+      ]);
+      if (Number.isFinite(Number(beforeFromTelemetry ?? NaN))) beforeMetrics.soil_moisture = Number(beforeFromTelemetry);
+      else if (Number.isFinite(Number(beforeFromSnapshot ?? NaN))) beforeMetrics.soil_moisture = Number(beforeFromSnapshot);
+    }
+    if (!Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN)) && detailDeviceId && receiptMs != null) {
+      const [afterFromTelemetry, afterFromSnapshot] = await Promise.all([
+        queryTelemetrySoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, afterMs: receiptMs }),
+        querySnapshotSoilMoisture({ pool, tenantId: tenant.tenant_id, deviceId: detailDeviceId, afterMs: receiptMs }),
+      ]);
+      if (Number.isFinite(Number(afterFromTelemetry ?? NaN))) afterMetrics.soil_moisture = Number(afterFromTelemetry);
+      else if (Number.isFinite(Number(afterFromSnapshot ?? NaN))) afterMetrics.soil_moisture = Number(afterFromSnapshot);
+    }
+    if (detailDeviceId && receiptMs != null && afterWindowEndMs != null && !Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN))) {
+      const afterTelemetryQ = await pool.query(
+        `SELECT metric, value_num, ts
+           FROM telemetry_index_v1
+          WHERE tenant_id = $1
+            AND device_id = $2
+            AND metric = ANY($3::text[])
+            AND ts >= to_timestamp($4::double precision / 1000.0)
+            AND ts <= to_timestamp($5::double precision / 1000.0)
+          ORDER BY ts ASC
+          LIMIT 100`,
+        [tenant.tenant_id, detailDeviceId, ["soil_moisture"], receiptMs, afterWindowEndMs]
+      ).catch(() => ({ rows: [] as any[] }));
+      afterMetrics = { ...afterMetrics, ...buildMetricsSnapshot(afterTelemetryQ.rows ?? []) };
+    }
+
+    const resolvedActionType = String(task?.record_json?.payload?.action_type ?? state.action_type ?? "").trim().toUpperCase();
+    const expectedEffect = toExpectedEffect(recommendationPayloadWithFallback) ?? inferExpectedEffectFromAction(resolvedActionType);
+    const actualEffect = computeEffect(beforeMetrics, afterMetrics);
+    const effectVerdict = evaluateEffectVerdict({ expectedEffect, actualEffect });
+    const cropCode = toText(recommendationPayload?.crop_code ?? operationPayload?.crop_code ?? state.crop_code) ?? "unknown";
+    const cropStage = resolveCropStageByPriority({
+      cropCode,
+      explicitStages: [
+        toText(recommendationPayload?.crop_stage),
+        toText(operationPayload?.crop_stage),
+        toText(state.crop_stage)
+      ],
+      startDate: Number(recommendationPayload?.created_ts ?? operationPayload?.created_ts ?? state.last_event_ts ?? Date.now()),
+      now: Date.now(),
+    }) ?? "unknown";
+    const ruleId = toText(
+      recommendationPayload?.rule_id
+      ?? operationPayload?.rule_id
+      ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.rule_id
+      ?? recommendationPayloadWithFallback?.rule_hit?.[0]?.rule_id
+      ?? recommendationPayloadWithFallback?.reason_codes?.[0]
+      ?? state.rule_id
+    ) ?? "unknown_rule";
+    const reasonCodes = Array.isArray(recommendationPayloadWithFallback?.reason_codes) ? recommendationPayloadWithFallback.reason_codes : [];
+    const timeline = buildEvidenceTimeline(state, approvalDecision, facts);
+
+    return reply.send({
+      operation_id: operationPlanId,
+      crop: {
+        crop_code: cropCode,
+        crop_stage: cropStage
+      },
+      decision: {
+        rule_id: ruleId,
+        reason_codes: reasonCodes
+      },
+      before: {
+        soil_moisture: Number.isFinite(Number(beforeMetrics?.soil_moisture ?? NaN)) ? Number(beforeMetrics?.soil_moisture) : null
+      },
+      after: {
+        soil_moisture: Number.isFinite(Number(afterMetrics?.soil_moisture ?? NaN)) ? Number(afterMetrics?.soil_moisture) : null
+      },
+      expected_effect: {
+        type: expectedEffect?.type ?? "moisture_increase",
+        value: Number.isFinite(Number(expectedEffect?.value ?? NaN)) ? Number(expectedEffect?.value) : null
+      },
+      actual_effect: {
+        value: Number.isFinite(Number(actualEffect?.value ?? NaN)) ? Number(actualEffect?.value) : null
+      },
+      effect_verdict: effectVerdict,
+      timeline
+    });
   });
 
   app.get("/api/v1/operations/:operationPlanId/detail", async (req, reply) => {
