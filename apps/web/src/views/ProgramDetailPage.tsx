@@ -75,28 +75,24 @@ export default function ProgramDetailPage(): React.ReactElement {
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">当前 crop_code</div>
-              <div className="decisionItemMeta">{viewModel.cropInsight.cropLabel}</div>
+              <div className="decisionItemTitle">当前作物</div>
+              <div className="decisionItemMeta">{viewModel.strategyOverview.cropLabel}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">当前 crop_stage</div>
-              <div className="decisionItemMeta">{viewModel.cropInsight.cropStage}</div>
+              <div className="decisionItemTitle">当前阶段</div>
+              <div className="decisionItemMeta">{viewModel.strategyOverview.cropStageLabel}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">当前生效规则数</div>
-              <div className="decisionItemMeta">{viewModel.cropInsight.activeRuleCount}</div>
+              <div className="decisionItemTitle">当前主规则</div>
+              <div className="decisionItemMeta">{viewModel.strategyOverview.primaryRuleLabel}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">最近 3 条 recommendation</div>
-              <div className="decisionItemMeta">
-                {!viewModel.recentRecommendations.length
-                  ? "暂无 recommendation"
-                  : viewModel.recentRecommendations.slice(0, 3).map((item, idx) => (
-                    <div key={`${item.timeLabel}_${item.summary}_${idx}`} style={{ marginBottom: idx === 2 ? 0 : 6 }}>
-                      {item.timeLabel}｜{item.stageLabel}｜{item.actionLabel}｜{item.summary}
-                    </div>
-                  ))}
-              </div>
+              <div className="decisionItemTitle">最近一次 recommendation</div>
+              <div className="decisionItemMeta">{viewModel.strategyOverview.latestRecommendationLabel}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最近一次效果 verdict</div>
+              <div className="decisionItemMeta">{viewModel.strategyOverview.latestEffectVerdictLabel}</div>
             </div>
           </div>
         </section>

@@ -73,6 +73,13 @@ export type ProgramConsoleViewModel = {
   };
   activeRules: ProgramActiveRule[];
   recentRecommendations: ProgramRecommendationItem[];
+  strategyOverview: {
+    cropLabel: string;
+    cropStageLabel: string;
+    primaryRuleLabel: string;
+    latestRecommendationLabel: string;
+    latestEffectVerdictLabel: string;
+  };
   timeline: Array<{
     ts: number;
     label: string;
@@ -177,6 +184,15 @@ function readableActionType(code: unknown): string {
   if (text.includes("SPRAY")) return "喷施";
   if (text.includes("SCOUT") || text.includes("INSPECT")) return "巡检";
   return "作业";
+}
+
+function toEffectVerdictLabel(value: unknown): string {
+  const code = String(value ?? "").trim().toUpperCase();
+  if (code === "SUCCESS") return "SUCCESS（达成预期）";
+  if (code === "PARTIAL") return "PARTIAL（部分达成）";
+  if (code === "FAILED") return "FAILED（未达成）";
+  if (code === "NO_DATA") return "NO_DATA（数据不足）";
+  return "暂无 verdict";
 }
 
 function riskIfNotExecuteByAction(actionLabel: string): string {
@@ -417,6 +433,23 @@ export function buildProgramDetailViewModel(args: {
   ]);
 
   const latestTimelineItem = timeline[timeline.length - 1];
+  const primaryRuleLabel = toText(
+    detail?.latest_recommendation?.rule_id
+    || detail?.latest_recommendation?.rule_hit?.[0]?.rule_id
+    || activeRules?.[0]?.ruleId,
+    "暂无主规则"
+  );
+  const latestRecommendationLabel = toText(
+    recentRecommendations?.[0]?.summary
+    || detail?.latest_recommendation?.summary
+    || detail?.latest_recommendation?.reason,
+    "暂无 recommendation"
+  );
+  const latestEffectVerdictLabel = toEffectVerdictLabel(
+    latestOperation?.agronomy?.effect_verdict
+    ?? latestOperation?.effect_verdict
+    ?? latestOperation?.actual_effect?.verdict
+  );
 
   return {
     title: `${displayTitle}` ,
@@ -478,6 +511,13 @@ export function buildProgramDetailViewModel(args: {
     },
     activeRules,
     recentRecommendations,
+    strategyOverview: {
+      cropLabel: cropName,
+      cropStageLabel: cropStageDisplayLabel(cropStage),
+      primaryRuleLabel,
+      latestRecommendationLabel,
+      latestEffectVerdictLabel,
+    },
     timeline,
   };
 }
