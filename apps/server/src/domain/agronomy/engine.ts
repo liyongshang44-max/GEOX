@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { evaluateRules, pickBestRule } from "./rule_engine";
-import type { AgronomyContext, AgronomyPriority, AgronomyRecommendationPayload, EffectType } from "./types";
+import type { AgronomyContext, AgronomyRecommendationPayload } from "./types";
 
 export function generateAgronomyRecommendation(ctx: AgronomyContext): AgronomyRecommendationPayload | null {
   const matched = evaluateRules(ctx);

@@ -63,3 +63,22 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
 export function pickBestRule(recommendations: AgronomyRecommendationV2[]): AgronomyRecommendationV2 | null {
   return recommendations[0] ?? null;
 }
+
+export function validateRecommendationMainChainFields(input: {
+  snapshot_id?: unknown;
+  crop_code?: unknown;
+  crop_stage?: unknown;
+  rule_id?: unknown;
+}): { ok: true } | { ok: false; error: string } {
+  const snapshotId = String(input.snapshot_id ?? "").trim();
+  const cropCode = String(input.crop_code ?? "").trim();
+  const cropStage = String(input.crop_stage ?? "").trim();
+  const ruleId = String(input.rule_id ?? "").trim();
+
+  if (!snapshotId) return { ok: false, error: "MISSING_SNAPSHOT_ID" };
+  if (!cropCode) return { ok: false, error: "MISSING_CROP_CODE" };
+  if (!cropStage) return { ok: false, error: "MISSING_CROP_STAGE" };
+  if (!ruleId) return { ok: false, error: "MISSING_RULE_ID" };
+  return { ok: true };
+}
+
