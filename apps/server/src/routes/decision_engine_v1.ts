@@ -8,6 +8,7 @@ import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1"
 import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
+import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -248,24 +249,6 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
   }
 
   return out;
-}
-
-async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
-      rule_id TEXT NOT NULL,
-      crop_code TEXT NOT NULL,
-      crop_stage TEXT NOT NULL,
-      total_count INT NOT NULL DEFAULT 0,
-      success_count INT NOT NULL DEFAULT 0,
-      partial_count INT NOT NULL DEFAULT 0,
-      failed_count INT NOT NULL DEFAULT 0,
-      no_data_count INT NOT NULL DEFAULT 0,
-      score NUMERIC NOT NULL DEFAULT 0,
-      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (rule_id, crop_code, crop_stage)
-    )
-  `);
 }
 
 async function loadRuleScores(pool: Pool, cropCode: string, ruleIds: string[]): Promise<Map<string, RulePerformanceStats>> {
@@ -661,6 +644,38 @@ function toAoActParameterSchema(parameters: Record<string, number | boolean | st
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
   app.addHook("onReady", async () => {
     await ensureRulePerformanceTable(pool);
+  });
+
+  app.get("/api/v1/agronomy/rule-performance", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const limit = Math.max(1, Math.min(Number(q.limit ?? 200) || 200, 500));
+    const items = await listRulePerformance({ pool, limit });
+    return reply.send({ ok: true, items });
+  });
+
+  app.get("/api/v1/agronomy/rule-performance/:rule_id", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const p: any = (req as any).params ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(q.tenant_id ?? auth.tenant_id),
+      project_id: String(q.project_id ?? auth.project_id),
+      group_id: String(q.group_id ?? auth.group_id)
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const ruleId = String(p.rule_id ?? "").trim();
+    if (!ruleId) return badRequest(reply, "MISSING_RULE_ID");
+    const items = await listRulePerformance({ pool, ruleId, limit: 500 });
+    return reply.send({ ok: true, items });
   });
 
   app.get("/api/v1/agronomy/recommendations", async (req, reply) => {
