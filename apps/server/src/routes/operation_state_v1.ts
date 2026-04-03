@@ -8,7 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
+import { computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
 import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -38,24 +38,6 @@ function parseRecordJson(v: unknown): any {
   } catch {
     return null;
   }
-}
-
-async function ensureRulePerformanceTable(pool: Pool): Promise<void> {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS agronomy_rule_performance (
-      rule_id TEXT NOT NULL,
-      crop_code TEXT NOT NULL,
-      crop_stage TEXT NOT NULL,
-      total_count INT NOT NULL DEFAULT 0,
-      success_count INT NOT NULL DEFAULT 0,
-      partial_count INT NOT NULL DEFAULT 0,
-      failed_count INT NOT NULL DEFAULT 0,
-      no_data_count INT NOT NULL DEFAULT 0,
-      score NUMERIC NOT NULL DEFAULT 0,
-      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (rule_id, crop_code, crop_stage)
-    )
-  `);
 }
 
 async function hasOperationFeedbackRecorded(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<boolean> {
