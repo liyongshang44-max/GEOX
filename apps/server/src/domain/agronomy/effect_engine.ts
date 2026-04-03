@@ -12,6 +12,8 @@ export function computeEffect(before: any, after: any) {
   const delta = afterMoisture - beforeMoisture;
 
   return {
+    metric: "soil_moisture",
+    delta,
     type: "moisture_increase",
     value: delta
   };
@@ -19,10 +21,12 @@ export function computeEffect(before: any, after: any) {
 
 export function evaluateEffectVerdict(input: {
   expectedEffect?: { type: string; value: number } | null;
-  actualEffect?: { type: string; value: number } | null;
+  actualEffect?: { metric?: string; delta?: number; type?: string; value?: number } | null;
 }): EffectVerdict {
   const expected = input.expectedEffect?.value;
-  const actual = input.actualEffect?.value;
+  const actual = Number.isFinite(Number(input.actualEffect?.delta))
+    ? Number(input.actualEffect?.delta)
+    : input.actualEffect?.value;
 
   if (typeof expected !== "number" || typeof actual !== "number") {
     return "NO_DATA";
