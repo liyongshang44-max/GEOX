@@ -34,6 +34,8 @@ type ProgramBinding = {
   season_id: string;
   tenant: TenantTriple;
   crop_code: string;
+  crop_stage?: string | null;
+  days_after_planting?: number | null;
   status: string;
 };
 
@@ -118,6 +120,8 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
       (record_json::jsonb#>>'{payload,project_id}') AS project_id,
       (record_json::jsonb#>>'{payload,group_id}') AS group_id,
       (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+      (record_json::jsonb#>>'{payload,crop_stage}') AS crop_stage,
+      (record_json::jsonb#>>'{payload,days_after_planting}') AS days_after_planting,
       (record_json::jsonb#>>'{payload,status}') AS status,
       (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
       (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
@@ -143,6 +147,8 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
           group_id: safeString(row.group_id),
         },
         crop_code: safeString(row.crop_code),
+        crop_stage: safeString(row.crop_stage) || null,
+        days_after_planting: Number.isFinite(Number(row.days_after_planting)) ? Number(row.days_after_planting) : null,
         updated_ts: /^[0-9]+$/.test(updatedTs) ? Number(updatedTs) : 0,
         created_ts: /^[0-9]+$/.test(createdTs) ? Number(createdTs) : 0,
         occurred_at_ms: row.occurred_at ? new Date(row.occurred_at).getTime() : 0,
@@ -171,6 +177,8 @@ async function loadActivePrograms(pool: Pool): Promise<ProgramBinding[]> {
         season_id: item.season_id,
         tenant: item.tenant,
         crop_code: item.crop_code,
+        crop_stage: item.crop_stage ?? null,
+        days_after_planting: item.days_after_planting ?? null,
         status: item.status,
       });
     }
@@ -188,6 +196,8 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
       (record_json::jsonb#>>'{payload,project_id}') AS project_id,
       (record_json::jsonb#>>'{payload,group_id}') AS group_id,
       (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
+      (record_json::jsonb#>>'{payload,crop_stage}') AS crop_stage,
+      (record_json::jsonb#>>'{payload,days_after_planting}') AS days_after_planting,
       (record_json::jsonb#>>'{payload,status}') AS status,
       (record_json::jsonb#>>'{payload,updated_ts}') AS updated_ts,
       (record_json::jsonb#>>'{payload,created_ts}') AS created_ts,
@@ -213,6 +223,8 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
           group_id: safeString(row.group_id),
         },
         crop_code: safeString(row.crop_code),
+        crop_stage: safeString(row.crop_stage) || null,
+        days_after_planting: Number.isFinite(Number(row.days_after_planting)) ? Number(row.days_after_planting) : null,
         updated_ts: /^[0-9]+$/.test(updatedTs) ? Number(updatedTs) : 0,
         created_ts: /^[0-9]+$/.test(createdTs) ? Number(createdTs) : 0,
         occurred_at_ms: row.occurred_at ? new Date(row.occurred_at).getTime() : 0,
@@ -241,6 +253,8 @@ async function loadLatestProgramsByField(pool: Pool): Promise<ProgramBinding[]> 
         season_id: item.season_id,
         tenant: item.tenant,
         crop_code: item.crop_code,
+        crop_stage: item.crop_stage ?? null,
+        days_after_planting: item.days_after_planting ?? null,
         status: item.status,
       });
     }
@@ -584,7 +598,8 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           seasonId: selectedProgramItem.season_id || undefined,
           programId: selectedProgramItem.program_id,
           cropCode: selectedProgramItem.crop_code,
-          startDate: Date.now(),
+          cropStage: selectedProgramItem.crop_stage ?? undefined,
+          daysAfterPlanting: selectedProgramItem.days_after_planting ?? undefined,
           currentMetrics: {
             soil_moisture: effectiveSoilMoisture,
           },

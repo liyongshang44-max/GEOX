@@ -11,6 +11,12 @@ test("stage_resolver can produce crop stage for corn and tomato", () => {
   assert.equal(tomatoStage, "fruiting");
 });
 
+test("stage_resolver priority: explicit stage > days_after_planting > unknown", () => {
+  assert.equal(resolveCropStage({ cropCode: "corn", explicitStage: "reproductive", daysAfterPlanting: 5 }), "reproductive");
+  assert.equal(resolveCropStage({ cropCode: "corn", daysAfterPlanting: 45 }), "reproductive");
+  assert.equal(resolveCropStage({ cropCode: "corn" }), "unknown");
+});
+
 test("case1 corn + vegetative + soil_moisture=18 -> IRRIGATE", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
@@ -34,14 +40,14 @@ test("case1 corn + vegetative + soil_moisture=18 -> IRRIGATE", () => {
   assert.ok(rec?.crop_stage);
 });
 
-test("case2 corn + flowering + soil_moisture=24 -> IRRIGATE(high)", () => {
+test("case2 corn + reproductive + soil_moisture=24 -> IRRIGATE(high)", () => {
   const rec = generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
     fieldId: "f2",
     cropCode: "corn",
-    cropStage: "flowering",
+    cropStage: "reproductive",
     currentMetrics: { soil_moisture: 24 },
   });
   assert.ok(rec);

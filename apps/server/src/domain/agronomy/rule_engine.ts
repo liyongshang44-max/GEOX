@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import type { AgronomyRuleInput } from "@geox/contracts";
 import { cornRules } from "./crops/corn/rules";
 import { tomatoRules } from "./crops/tomato/rules";
+import { resolveCropStage } from "./stage_resolver";
 import type { AgronomyContext, AgronomyRule } from "./types";
 
 export type RuleWithScore = AgronomyRule & { score?: number; totalCount?: number };
@@ -79,7 +80,10 @@ export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyCo
     fieldId: input.field_id,
     seasonId: input.season_id,
     cropCode: input.crop_code,
-    cropStage: input.crop_stage,
+    cropStage: resolveCropStage({
+      cropCode: input.crop_code,
+      explicitStage: input.crop_stage,
+    }),
     currentMetrics: {
       soil_moisture: input.telemetry.soil_moisture ?? null,
       temperature: input.telemetry.air_temp ?? input.telemetry.canopy_temp ?? null,
@@ -92,11 +96,28 @@ export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyCo
   };
 }
 
+function resolveStageForRuleEngine(ctx: AgronomyContext): string {
+  const daysAfterPlantingRaw = (ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting;
+  const daysAfterPlanting = Number.isFinite(Number(daysAfterPlantingRaw)) ? Number(daysAfterPlantingRaw) : undefined;
+
+  return resolveCropStage({
+    cropCode: ctx.cropCode,
+    explicitStage: ctx.cropStage,
+    daysAfterPlanting,
+  });
+}
+
 export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
+  const resolvedStage = resolveStageForRuleEngine(ctx);
+  const normalizedCtx: AgronomyContext = {
+    ...ctx,
+    cropStage: resolvedStage,
+  };
+
   return sortRules(
-    getRulesForCrop(ctx.cropCode)
-      .filter((rule) => rule.cropStage === ctx.cropStage)
-      .filter((rule) => rule.matches(ctx)),
+    getRulesForCrop(normalizedCtx.cropCode)
+      .filter((rule) => rule.cropStage === normalizedCtx.cropStage)
+      .filter((rule) => rule.matches(normalizedCtx)),
   );
 }
 

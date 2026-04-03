@@ -1,7 +1,6 @@
-export function resolveTomatoStage(daysFromStart: number): string {
-  if (daysFromStart <= 14) return "seedling";
-  if (daysFromStart <= 35) return "vegetative";
-  if (daysFromStart <= 55) return "flowering";
-  if (daysFromStart <= 95) return "fruiting";
-  return "harvest";
+export function resolveTomatoStage(daysAfterPlanting: number): string {
+  if (daysAfterPlanting <= 14) return "seedling";
+  if (daysAfterPlanting <= 35) return "vegetative";
+  if (daysAfterPlanting <= 55) return "flowering";
+  return "fruiting";
 }

@@ -21,7 +21,7 @@ export const cornRules: AgronomyRule[] = [
   {
     ruleId: "corn_flowering_irrigation_critical_v1",
     cropCode: "corn",
-    cropStage: "flowering",
+    cropStage: "reproductive",
     actionType: "IRRIGATE",
     priority: "high",
     reasonCodes: ["soil_moisture_critical_during_flowering"],
