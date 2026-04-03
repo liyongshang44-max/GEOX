@@ -1,4 +1,5 @@
 import type { Pool } from "pg";
+import type { AgronomyRuleInput } from "@geox/contracts";
 import { cornRules } from "./crops/corn/rules";
 import { tomatoRules } from "./crops/tomato/rules";
 import type { AgronomyContext, AgronomyRule } from "./types";
@@ -70,12 +71,37 @@ export async function attachRuleScores(rules: AgronomyRule[], pool: Pool): Promi
   });
 }
 
+export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyContext {
+  return {
+    tenantId: input.tenant_id,
+    projectId: input.project_id,
+    groupId: input.group_id,
+    fieldId: input.field_id,
+    seasonId: input.season_id,
+    cropCode: input.crop_code,
+    cropStage: input.crop_stage,
+    currentMetrics: {
+      soil_moisture: input.telemetry.soil_moisture ?? null,
+      temperature: input.telemetry.air_temp ?? input.telemetry.canopy_temp ?? null,
+      humidity: input.telemetry.humidity ?? null,
+    },
+    constraints: {
+      ...(input.constraints ?? {}),
+      ...(input.context ? { context: input.context } : {}),
+    },
+  };
+}
+
 export function evaluateRules(ctx: AgronomyContext): AgronomyRule[] {
   return sortRules(
     getRulesForCrop(ctx.cropCode)
       .filter((rule) => rule.cropStage === ctx.cropStage)
       .filter((rule) => rule.matches(ctx)),
   );
+}
+
+export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRule[] {
+  return evaluateRules(normalizeAgronomyRuleInput(input));
 }
 
 export function pickBestRule(rules: AgronomyRule[]): AgronomyRule | null {

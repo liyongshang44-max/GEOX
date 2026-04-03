@@ -603,13 +603,19 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           continue;
         }
         const action_type = recommendation.action_type;
-        const reasonCodes = Array.isArray(recommendation.reason_codes)
-          ? recommendation.reason_codes.map((x) => safeString(x)).filter(Boolean)
+        const reasonCodes = Array.isArray(recommendation.reasons)
+          ? recommendation.reasons.map((x) => safeString(x)).filter(Boolean)
           : [];
         const reason_code = safeString(reasonCodes[0]) || "rule_matched";
         const recommendation_type = ACTION_TO_RECOMMENDATION_TYPE[action_type] ?? "agronomy_recommendation_v1";
         const suggested_action_type = ACTION_TO_SUGGESTED_ACTION_TYPE[action_type] ?? "agronomy.action";
-        const summary = recommendation.summary;
+        const summary = `根据当前作物阶段（${recommendation.crop_code} / ${recommendation.crop_stage}）与田间指标，建议执行 ${action_type}。规则：${recommendation.rule_id}`;
+        const primaryExpectedEffect = recommendation.expected_effect[0]
+          ? {
+              type: safeString(recommendation.expected_effect[0].metric) || "unknown",
+              value: Number(recommendation.expected_effect[0].value ?? 0),
+            }
+          : null;
         const recentRecommendationDedup = await existsRecentRecommendation(
           pool,
           selectedProgramItem.tenant,
@@ -646,9 +652,9 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           crop_code: recommendation.crop_code,
           crop_stage: recommendation.crop_stage,
           rule_id: recommendation.rule_id,
-          expected_effect: recommendation.expected_effect,
-          risk_if_not_execute: recommendation.risk_if_not_execute,
-          priority: recommendation.priority,
+          expected_effect: primaryExpectedEffect,
+          risk_if_not_execute: "执行延迟可能导致当前生育阶段风险累积。",
+          priority: recommendation.confidence >= 0.85 ? "high" : recommendation.confidence >= 0.7 ? "medium" : "low",
           title: "系统建议",
           summary,
         };
@@ -699,7 +705,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
           crop_code: recommendation.crop_code ?? null,
           crop_stage: recommendation.crop_stage ?? null,
           rule_id: recommendation.rule_id ?? null,
-          expected_effect: recommendation.expected_effect ?? null,
+          expected_effect: primaryExpectedEffect,
           action_type,
           device_id: telemetry?.device_id ?? null,
         });
