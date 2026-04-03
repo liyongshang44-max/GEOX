@@ -39,6 +39,12 @@ function buildResultSummary(model: ReturnType<typeof buildOperationDetailViewMod
   return `已回传执行结果，当前状态为${finalStatus}。`;
 }
 
+function formatMaybeNumber(value: unknown): string {
+  const n = Number(value ?? NaN);
+  if (!Number.isFinite(n)) return "--";
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
@@ -79,6 +85,26 @@ export default function OperationDetailPage(): React.ReactElement {
   const fieldLabel = mapFieldDisplayName(fieldSource, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(deviceSource, model.deviceLabel);
   const resultSummary = buildResultSummary(model);
+  const decisionRule = model.recommendationBasis.ruleId || model.agronomyDecision.ruleId || "--";
+  const decisionStage = String((detail as any)?.agronomy?.crop_stage ?? model.recommendationBasis.cropStage ?? "--");
+  const decisionReason = (() => {
+    const reasonCodes = (detail as any)?.agronomy?.reason_codes;
+    if (Array.isArray(reasonCodes) && reasonCodes.length > 0) return String(reasonCodes[0]);
+    if (Array.isArray(model.recommendation.reasonCodes) && model.recommendation.reasonCodes.length > 0) return String(model.recommendation.reasonCodes[0]);
+    return model.recommendationBasis.reasonCodesLabel || "--";
+  })();
+  const effectBeforeRaw = (detail as any)?.agronomy?.before_metrics?.soil_moisture;
+  const effectAfterRaw = (detail as any)?.agronomy?.after_metrics?.soil_moisture;
+  const effectBefore = formatMaybeNumber(effectBeforeRaw);
+  const effectAfter = formatMaybeNumber(effectAfterRaw);
+  const effectDelta = (() => {
+    const before = Number(effectBeforeRaw ?? NaN);
+    const after = Number(effectAfterRaw ?? NaN);
+    if (!Number.isFinite(before) || !Number.isFinite(after)) return "--";
+    const delta = after - before;
+    return `${delta >= 0 ? "+" : ""}${formatMaybeNumber(delta)}`;
+  })();
+  const effectVerdict = String((detail as any)?.agronomy?.effect_verdict ?? "").trim().toUpperCase() || "--";
 
   const billingLabel = billing
     ? billing.billable
@@ -112,6 +138,25 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <OperationRecommendationBasisCard basis={model.recommendationBasis} />
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">决策依据</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则</span><strong>{decisionRule}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">阶段</span><strong>{decisionStage}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{decisionReason}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">效果评估</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行前</span><strong>{effectBefore}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行后</span><strong>{effectAfter}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">变化</span><strong>{effectDelta}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结论</span><strong>{effectVerdict}</strong></div>
+        </div>
+      </section>
 
       <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">作业结论（客户视角）</div>
