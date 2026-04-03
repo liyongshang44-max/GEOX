@@ -70,8 +70,8 @@ export default function ProgramDetailPage(): React.ReactElement {
       <div className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
-            <div className="sectionTitle">当前作物策略</div>
-            <div className="detailSectionLead">把“为什么建议这样做”前置展示，帮助用户快速理解策略上下文。</div>
+            <div className="sectionTitle">当前农学策略</div>
+            <div className="detailSectionLead">打开一个 program，先看系统当前在用什么逻辑种地。</div>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
@@ -87,11 +87,7 @@ export default function ProgramDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">{viewModel.strategyOverview.primaryRuleLabel}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">最近一次 recommendation</div>
-              <div className="decisionItemMeta">{viewModel.strategyOverview.latestRecommendationLabel}</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">最近一次效果 verdict</div>
+              <div className="decisionItemTitle">最近一次效果</div>
               <div className="decisionItemMeta">{viewModel.strategyOverview.latestEffectVerdictLabel}</div>
             </div>
           </div>
