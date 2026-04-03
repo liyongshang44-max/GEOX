@@ -2,7 +2,7 @@ import { cornCrop } from "./crop/corn/corn.crop";
 import { tomatoCrop } from "./crop/tomato/tomato.crop";
 import { cornWaterRule } from "./rules/corn/corn.water_balance.rule";
 import { tomatoFertilizeRule } from "./rules/tomato/tomato.fertilize.rule";
-import { IRRIGATION_ACCEPTANCE_SKILL } from "./acceptance/irrigation.acceptance";
+import { irrigationAcceptance } from "./acceptance/irrigation.acceptance";
 import { FERTILIZE_ACCEPTANCE_SKILL } from "./acceptance/fertilize.acceptance";
 import type { AcceptanceSkill, AgronomyRuleSkill, CropSkill, CropStage } from "./types";
 
@@ -17,7 +17,7 @@ export const AGRONOMY_RULE_SKILLS: AgronomyRuleSkill[] = [
 ];
 
 export const ACCEPTANCE_SKILLS: AcceptanceSkill[] = [
-  IRRIGATION_ACCEPTANCE_SKILL,
+  irrigationAcceptance,
   FERTILIZE_ACCEPTANCE_SKILL,
 ];
 
