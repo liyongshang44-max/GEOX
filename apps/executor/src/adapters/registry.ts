@@ -22,7 +22,7 @@ export function createAdapterRegistry(ctx: AdapterRuntimeContext): AdapterRegist
   const registry: AdapterRegistry = new Map<string, Adapter>();
   const api = createExecutorApi(ctx);
   registerAdapter(registry, createIrrigationRealAdapter(ctx));
-  registerAdapter(registry, createIrrigationSimulatorAdapter(api));
+  registerAdapter(registry, createIrrigationSimulatorAdapter(ctx, api));
   registerAdapter(registry, createMqttAdapter(api));
   registerAdapter(registry, createIrrigationHttpV1Adapter(ctx));
   return registry;
