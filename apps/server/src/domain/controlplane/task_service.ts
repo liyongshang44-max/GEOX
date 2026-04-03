@@ -1454,7 +1454,9 @@ function adapterSupportsAction(adapterType: string, actionType: string): boolean
   const a = String(adapterType ?? "").trim().toLowerCase();
   const action = normalizeActionType(actionType);
   const taskType = toTaskType(actionType);
+  const normalized = String(actionType ?? "").trim().toUpperCase();
   if (!a || !action) return false;
+  if (normalized === "FERTILIZE" || taskType === "FERTILIZE") return true;
   const adapter = a === "mqtt_downlink_once_v1" ? "mqtt" : a; // Keep mqtt alias aligned with normalizeAdapterHint("mqtt").
   if (adapter === "mqtt" && (action === "irrigate" || action === "irrigation.start" || taskType === "IRRIGATE")) return true; // Explicitly allow irrigation aliases.
   if (adapter === "mqtt") return true;
