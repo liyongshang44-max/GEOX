@@ -402,16 +402,30 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         safe_guard: {
           requires_approval: pending && !slaFix,
         },
+        failure_strategy: {
+          retryable: true,
+          max_retries: 2,
+          fallback_action: "CHECK_FIELD_STATUS",
+        },
         time_window: {
           start_ts: Number(item?.last_event_ts ?? Date.now()),
           end_ts: Number(item?.last_event_ts ?? Date.now()) + 60 * 60 * 1000,
         },
         idempotency_key: `${operationId}_${recommendedNextAction.action_type}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
       };
+      const capabilityCheck = (() => {
+        if (!executionPlan.target.ref) return { supported: false, reason: "MISSING_DEVICE_TARGET" };
+        const normalized = String(executionPlan.action_type ?? "").toUpperCase();
+        if (!["IRRIGATE", "FERTILIZE", "SPRAY", "CHECK_FIELD_STATUS", "REVIEW_APPROVAL", "COLLECT_RECEIPT", "PROMOTE_ACCEPTANCE", "RETRY_EXECUTION"].includes(normalized)) {
+          return { supported: false, reason: "ACTION_NOT_SUPPORTED" };
+        }
+        return { supported: true as const };
+      })();
       const executionBlockers: string[] = [];
       if (!executionPlan.target.ref) executionBlockers.push("INVALID_TARGET");
       if (!executionPlan.parameters || Object.keys(executionPlan.parameters).length < 1) executionBlockers.push("MISSING_PARAMETERS");
       if (executionPlan.safe_guard.requires_approval) executionBlockers.push("REQUIRES_APPROVAL");
+      if (!capabilityCheck.supported) executionBlockers.push(capabilityCheck.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED");
       const trendAdjustment = finalStatusCode === "INVALID_EXECUTION" ? 2 : (pending ? 1 : 0);
       const fieldRiskAdjustment = priorityBucket === "P0" ? 3 : priorityBucket === "P1" ? 1 : 0;
       const globalPriorityComponents = {
@@ -437,6 +451,14 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         execution_plan: executionPlan,
         execution_ready: executionBlockers.length === 0,
         execution_blockers: executionBlockers,
+        device_capability_check: capabilityCheck,
+        execution_trace: {
+          execution_id: executionPlan.idempotency_key,
+          task_id: String(item?.task_id ?? item?.act_task_id ?? ""),
+          receipt_id: item?.receipt_id ? String(item.receipt_id) : undefined,
+          evidence_refs: undefined,
+          status: item?.receipt_id ? "SUCCESS" : (finalStatusCode === "INVALID_EXECUTION" ? "FAILED" : "PENDING"),
+        },
         priority_adjustment_by_trend: trendAdjustment,
         trend_adjustment_policy: {
           window: "7d",

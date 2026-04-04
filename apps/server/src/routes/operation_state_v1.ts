@@ -586,6 +586,7 @@ function buildExecutionPlan(input: {
   parameters: Record<string, unknown>;
   execution_mode: "AUTO" | "MANUAL";
   safe_guard: { requires_approval: boolean };
+  failure_strategy: { retryable: boolean; max_retries: number; fallback_action?: string };
   time_window?: { start_ts?: number; end_ts?: number };
   idempotency_key: string;
 } {
@@ -602,19 +603,60 @@ function buildExecutionPlan(input: {
     parameters,
     execution_mode: targetKind === "device" ? "AUTO" : "MANUAL",
     safe_guard: { requires_approval: input.requiresApproval },
+    failure_strategy: {
+      retryable: true,
+      max_retries: 2,
+      fallback_action: "CHECK_FIELD_STATUS",
+    },
     time_window: { start_ts: startTs, end_ts: startTs + 60 * 60 * 1000 },
     idempotency_key: `${input.operationPlanId}_${actionType}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
   };
 }
 
+function normalizeActionTypeForCapability(actionType: string): string {
+  const action = String(actionType ?? "").trim().toUpperCase();
+  if (!action) return "CHECK_FIELD_STATUS";
+  if (action.includes("IRRIGATE")) return "IRRIGATE";
+  if (action.includes("FERTILIZE")) return "FERTILIZE";
+  if (action.includes("SPRAY")) return "SPRAY";
+  return action;
+}
+
+function evaluateDeviceCapabilityCheck(input: {
+  actionType: string;
+  executionMode: "AUTO" | "MANUAL";
+  targetRef: string;
+}): { supported: boolean; reason?: string } {
+  const action = normalizeActionTypeForCapability(input.actionType);
+  const allowlist = new Set(["IRRIGATE", "FERTILIZE", "SPRAY", "CHECK_FIELD_STATUS"]);
+  if (!allowlist.has(action)) return { supported: false, reason: "ACTION_NOT_SUPPORTED" };
+  if (input.executionMode === "AUTO" && !String(input.targetRef ?? "").trim()) {
+    return { supported: false, reason: "MISSING_DEVICE_TARGET" };
+  }
+  return { supported: true };
+}
+
+function executionReadyFromState(
+  finalStatusCode: string,
+  hasReceipt: boolean,
+  hasEvidence: boolean,
+): "PENDING" | "SUCCESS" | "FAILED" {
+  const status = String(finalStatusCode ?? "").toUpperCase();
+  if (["FAILED", "ERROR", "INVALID_EXECUTION", "REJECTED"].includes(status)) return "FAILED";
+  if (hasReceipt && hasEvidence && ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "PENDING_ACCEPTANCE"].includes(status)) return "SUCCESS";
+  return "PENDING";
+}
+
 function evaluateExecutionReadiness(input: {
   plan: { parameters: Record<string, unknown>; target: { ref: string }; safe_guard: { requires_approval: boolean } };
   approvalGranted: boolean;
+  capability: { supported: boolean; reason?: string };
 }): { execution_ready: boolean; execution_blockers: string[] } {
   const blockers: string[] = [];
   if (!input.plan.target?.ref) blockers.push("INVALID_TARGET");
   if (!input.plan.parameters || Object.keys(input.plan.parameters).length < 1) blockers.push("MISSING_PARAMETERS");
   if (input.plan.safe_guard.requires_approval && !input.approvalGranted) blockers.push("REQUIRES_APPROVAL");
+  if (!input.capability.supported) blockers.push(input.capability.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED");
   return {
     execution_ready: blockers.length === 0,
     execution_blockers: blockers,
@@ -1406,9 +1448,30 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       requiresApproval: !approvalGranted && !Boolean(approvalReq),
       dispatchedAtMs: toMs(task?.occurred_at),
     });
+    const capabilityCheck = evaluateDeviceCapabilityCheck({
+      actionType: executionPlan.action_type,
+      executionMode: executionPlan.execution_mode,
+      targetRef: executionPlan.target.ref,
+    });
+    const retryStatsQ = await pool.query(
+      `SELECT COUNT(*)::int AS cnt
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+          AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, executionPlan.idempotency_key]
+    ).catch(() => ({ rows: [{ cnt: 0 }] }));
+    const retryCount = Number(retryStatsQ.rows?.[0]?.cnt ?? 0);
+    if (executionPlan.failure_strategy.retryable && retryCount >= executionPlan.failure_strategy.max_retries) {
+      executionPlan.failure_strategy.retryable = false;
+      executionPlan.failure_strategy.fallback_action = executionPlan.failure_strategy.fallback_action ?? "CHECK_FIELD_STATUS";
+    }
     const readiness = evaluateExecutionReadiness({
       plan: executionPlan,
       approvalGranted,
+      capability: capabilityCheck,
     });
     const trendAdjustmentPolicy = {
       window: "7d" as const,
@@ -1427,6 +1490,18 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       field_risk_adjustment: fieldRiskAdjustment,
     };
     const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
+    const evidenceRefs = artifacts
+      .map((item: any) => String(item?.payload?.ref ?? item?.payload?.path ?? item?.payload?.url ?? "").trim())
+      .filter(Boolean)
+      .slice(0, 20);
+    const traceStatus: "PENDING" | "SUCCESS" | "FAILED" = executionReadyFromState(finalStatusCode, Boolean(normalizedReceipt), evidenceRefs.length > 0);
+    const executionTrace = {
+      execution_id: executionPlan.idempotency_key,
+      task_id: toText(state.act_task_id ?? state.task_id) ?? "",
+      receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id) ?? undefined,
+      evidence_refs: evidenceRefs.length > 0 ? evidenceRefs : undefined,
+      status: traceStatus,
+    };
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
     const performanceCropCode =
       agronomyCropCode
@@ -1555,6 +1630,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       execution_plan: executionPlan,
       execution_ready: readiness.execution_ready,
       execution_blockers: readiness.execution_blockers,
+      device_capability_check: capabilityCheck,
+      execution_trace: executionTrace,
       priority_adjustment_by_trend: priorityAdjustmentByTrend,
       trend_adjustment_policy: trendAdjustmentPolicy,
       global_priority_score: globalPriorityScore,

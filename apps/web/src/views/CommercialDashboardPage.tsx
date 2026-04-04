@@ -303,6 +303,9 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <div className="muted" style={{ marginTop: 4 }}>
                 {item.execution_ready ? "可执行" : `阻断：${(item.execution_blockers ?? []).join(",") || "未知"}`}
               </div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                trace: {item.execution_trace?.status ?? "PENDING"} · retry {item.execution_plan?.failure_strategy?.max_retries ?? 0}
+              </div>
               <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
                 {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
               </button>

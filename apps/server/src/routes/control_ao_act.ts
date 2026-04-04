@@ -526,6 +526,15 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           parameters: z.record(z.any()),
           execution_mode: z.enum(["AUTO", "MANUAL"]),
           safe_guard: z.object({ requires_approval: z.boolean() }),
+          failure_strategy: z.object({
+            retryable: z.boolean(),
+            max_retries: z.number().int().min(0).max(5),
+            fallback_action: z.string().min(1).optional(),
+          }),
+          device_capability_check: z.object({
+            supported: z.boolean(),
+            reason: z.string().min(1).optional(),
+          }).optional(),
           time_window: z.object({ start_ts: z.number().optional(), end_ts: z.number().optional() }).optional(),
           idempotency_key: z.string().min(1),
         }),
@@ -545,6 +554,9 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       if (body.execution_plan.safe_guard.requires_approval) {
         return reply.status(403).send({ ok: false, error: "REQUIRES_APPROVAL" });
       }
+      if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
+        return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
+      }
       const dup = await pool.query(
         `SELECT record_json::jsonb AS record_json
            FROM facts
@@ -559,6 +571,21 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       ).catch(() => ({ rows: [] as any[] }));
       const existingTaskId = String(dup.rows?.[0]?.record_json?.payload?.act_task_id ?? "").trim();
       if (existingTaskId) return reply.send({ ok: true, act_task_id: existingTaskId, idempotent: true });
+      const retryCountQ = await pool.query(
+        `SELECT COUNT(*)::int AS cnt
+         FROM facts
+         WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+           AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+           AND (record_json::jsonb#>>'{payload,project_id}') = $2
+           AND (record_json::jsonb#>>'{payload,group_id}') = $3
+           AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, body.execution_plan.idempotency_key]
+      ).catch(() => ({ rows: [{ cnt: 0 }] }));
+      const retryCount = Number(retryCountQ.rows?.[0]?.cnt ?? 0);
+      if (body.execution_plan.failure_strategy.retryable && retryCount >= body.execution_plan.failure_strategy.max_retries) {
+        const fallback = String(body.execution_plan.failure_strategy.fallback_action ?? "CHECK_FIELD_STATUS").trim().toUpperCase();
+        return reply.status(409).send({ ok: false, error: "RETRY_LIMIT_REACHED", fallback_action: fallback });
+      }
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
       const now = Date.now();
@@ -582,6 +609,8 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           meta: {
             execution_mode: body.execution_plan.execution_mode,
             idempotency_key: body.execution_plan.idempotency_key,
+            failure_strategy: body.execution_plan.failure_strategy,
+            device_capability_check: body.execution_plan.device_capability_check ?? { supported: true },
           },
         }
       };
@@ -602,6 +631,11 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
             idempotency_key: body.execution_plan.idempotency_key,
             action_type: actionType,
             target: body.execution_plan.target,
+            execution_trace: {
+              execution_id: body.execution_plan.idempotency_key,
+              task_id: act_task_id,
+              status: "PENDING",
+            },
           }
         }]
       );

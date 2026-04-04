@@ -120,6 +120,8 @@ export type ExecutionPlanV1 = {
   parameters: Record<string, unknown>;
   execution_mode: "AUTO" | "MANUAL";
   safe_guard: { requires_approval: boolean };
+  failure_strategy: { retryable: boolean; max_retries: number; fallback_action?: string };
+  device_capability_check?: { supported: boolean; reason?: string };
   time_window?: { start_ts?: number; end_ts?: number };
   idempotency_key: string;
 };

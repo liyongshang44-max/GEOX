@@ -93,11 +93,21 @@ export type DashboardTopActionItem = {
     parameters: Record<string, unknown>;
     execution_mode: "AUTO" | "MANUAL";
     safe_guard: { requires_approval: boolean };
+    failure_strategy: { retryable: boolean; max_retries: number; fallback_action?: string };
+    device_capability_check?: { supported: boolean; reason?: string };
     time_window?: { start_ts?: number; end_ts?: number };
     idempotency_key: string;
   };
   execution_ready?: boolean;
   execution_blockers?: string[];
+  device_capability_check?: { supported: boolean; reason?: string };
+  execution_trace?: {
+    execution_id: string;
+    task_id: string;
+    receipt_id?: string;
+    evidence_refs?: string[];
+    status: "PENDING" | "SUCCESS" | "FAILED";
+  };
 };
 export type DashboardOverviewV2Response = {
   ok: boolean;

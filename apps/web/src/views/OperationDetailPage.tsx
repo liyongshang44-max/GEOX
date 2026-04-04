@@ -155,6 +155,8 @@ export default function OperationDetailPage(): React.ReactElement {
   const executionPlan = (detail as any)?.execution_plan ?? null;
   const executionReady = Boolean((detail as any)?.execution_ready);
   const executionBlockers = Array.isArray((detail as any)?.execution_blockers) ? (detail as any).execution_blockers : [];
+  const capabilityCheck = (detail as any)?.device_capability_check ?? (executionPlan?.device_capability_check ?? {});
+  const executionTrace = (detail as any)?.execution_trace ?? {};
   const executionContext = (detail as any)?.execution_context ?? {};
   const [executing, setExecuting] = React.useState(false);
 
@@ -281,6 +283,9 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{String(nextAction?.source ?? "FALLBACK")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{String(nextAction?.reason ?? "当前无可执行项，建议先检查田块状态")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : `否（${executionBlockers.join(",") || "阻断"}）`}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">失败策略</span><strong>{executionPlan?.failure_strategy ? `retry=${executionPlan.failure_strategy.retryable ? "Y" : "N"} / max=${executionPlan.failure_strategy.max_retries}` : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">能力校验</span><strong>{capabilityCheck?.supported === false ? `不支持（${capabilityCheck?.reason ?? "-"})` : "支持"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace</span><strong>{String(executionTrace?.status ?? "PENDING")} · task {String(executionTrace?.task_id ?? "--")}</strong></div>
         </div>
         <div style={{ marginTop: 10 }}>
           <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
