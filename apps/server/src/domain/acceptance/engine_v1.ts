@@ -1,4 +1,4 @@
-import { acceptanceSkills } from "../agronomy/skills/registry";
+import { acceptanceSkills } from "../agronomy/skills";
 import { buildGeoMetrics } from "./rules/geo";
 import type { AcceptanceEvaluationOutput } from "./rules/types";
 

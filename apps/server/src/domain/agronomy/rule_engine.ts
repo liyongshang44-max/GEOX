@@ -1,6 +1,7 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
 import type { AgronomyContext } from "./types";
-import { cropSkills, ruleSkills } from "./skills/registry";
+import { cropSkills } from "./skills";
+import { getRuleSkills } from "./skills/registry";
 import type { CropStage } from "./skills/types";
 
 function normalizeSkillStage(stage: string): CropStage {
@@ -128,7 +129,10 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
     ? cropSkill.resolveStage({ days_after_sowing, metrics })
     : normalizeSkillStage(String(normalized.crop_stage ?? ""));
 
-  const rules = ruleSkills.filter((r) => r.crop_code === crop_code);
+  const rules = getRuleSkills({
+    crop_code,
+    tenant_id: normalized.tenant_id,
+  });
 
   for (const rule of rules) {
     if (rule.match({ crop_stage, metrics })) {
