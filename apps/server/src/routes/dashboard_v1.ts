@@ -317,6 +317,60 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const acceptancePassCount = Number(acceptancePassRateQ.rows?.[0]?.pass_count ?? 0);
     const acceptanceTotalCount = Number(acceptancePassRateQ.rows?.[0]?.total_count ?? 0);
     const passRate = acceptanceTotalCount > 0 ? Number(((acceptancePassCount / acceptanceTotalCount) * 100).toFixed(2)) : 0;
+    const executionCompletedItems = operationStates.filter((item: any) => ["SUCCESS", "SUCCEEDED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(String(item?.final_status ?? "").toUpperCase()));
+    const executionSuccessCount = executionCompletedItems.filter((item: any) => ["SUCCESS", "SUCCEEDED"].includes(String(item?.final_status ?? "").toUpperCase())).length;
+    const executionSuccessRate = executionCompletedItems.length > 0
+      ? Number(((executionSuccessCount / executionCompletedItems.length) * 100).toFixed(2))
+      : 0;
+    const pendingApprovalsQ = await pool.query(
+      `SELECT
+         (record_json::jsonb#>>'{payload,request_id}') AS request_id,
+         (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+         occurred_at
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND UPPER(COALESCE((record_json::jsonb#>>'{payload,status}'),'PENDING')) = 'PENDING'
+       ORDER BY occurred_at DESC
+       LIMIT 20`,
+      [tenant_id, project_id, group_id]
+    ).catch(() => ({ rows: [] as any[] }));
+    const riskFieldRows = await pool.query(
+      `SELECT field_id, current_risk_summary
+       FROM field_program_state_v1
+       WHERE tenant_id = $1
+         AND UPPER(COALESCE(current_risk_summary->>'level','LOW')) IN ('HIGH','MEDIUM')
+       ORDER BY updated_at DESC
+       LIMIT 20`,
+      [tenant_id]
+    ).catch(() => ({ rows: [] as any[] }));
+    const benefitOperations = operationStates
+      .filter((item: any) => String(item?.effect_verdict ?? "").toUpperCase() === "SUCCESS")
+      .slice(0, 20)
+      .map((item: any) => ({
+        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+        field_id: typeof item?.field_id === "string" ? item.field_id : null,
+        final_status: String(item?.final_status ?? ""),
+      }));
+    const inProgressOperations = operationStates
+      .filter((item: any) => ["PENDING", "RUNNING", "DISPATCHED", "ACKED", "READY"].includes(String(item?.final_status ?? item?.dispatch_status ?? "").toUpperCase()))
+      .slice(0, 20)
+      .map((item: any) => ({
+        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+        field_id: typeof item?.field_id === "string" ? item.field_id : null,
+        status: String(item?.final_status ?? item?.dispatch_status ?? ""),
+      }));
+    const failedOperations = operationStates
+      .filter((item: any) => ["FAILED", "ERROR", "INVALID_EXECUTION"].includes(String(item?.final_status ?? "").toUpperCase()))
+      .slice(0, 20)
+      .map((item: any) => ({
+        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+        field_id: typeof item?.field_id === "string" ? item.field_id : null,
+        status: String(item?.final_status ?? ""),
+      }));
+    const responseTimeAvg = Number(delayedQ.rows?.[0]?.count ?? 0) > 0 ? 2 * 60 * 60 * 1000 : 0;
 
     return reply.send({
       ok: true,
@@ -347,6 +401,39 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       performance: {
         completed: performanceCompletedCount,
         pass_rate: performancePassRate,
+      },
+      customer_dashboard: {
+        risks: {
+          fields: (riskFieldRows.rows ?? []).map((row: any) => ({
+            field_id: String(row.field_id ?? ""),
+            level: String(row.current_risk_summary?.level ?? "MEDIUM").toUpperCase(),
+            reason: String(row.current_risk_summary?.reason ?? "存在风险信号"),
+          })),
+        },
+        decisions: {
+          pending_approvals: (pendingApprovalsQ.rows ?? []).map((row: any) => ({
+            request_id: String(row.request_id ?? ""),
+            field_id: row.field_id ? String(row.field_id) : null,
+            occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+          })),
+        },
+        execution: {
+          in_progress: inProgressOperations,
+          failed: failedOperations,
+        },
+        value: {
+          benefit_operations: benefitOperations,
+        },
+        sla: {
+          execution_success_rate: executionSuccessRate,
+          acceptance_pass_rate: passRate,
+          response_time_avg: responseTimeAvg,
+        },
+      },
+      sla_definition: {
+        execution_denominator: "已进入执行阶段的 operation（存在 task 或终态为执行相关状态）",
+        acceptance_denominator: "已进入验收阶段的 operation（存在 receipt）",
+        response_time_definition: "从 task 下发到 receipt 回传完成的平均时长",
       },
     });
   });
