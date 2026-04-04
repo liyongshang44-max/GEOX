@@ -228,6 +228,31 @@ export default function CommercialDashboardPage(): React.ReactElement {
         </article>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">客户四问（经营视角）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪块地有风险</span>
+            <strong>{riskAlerts.length > 0 ? `${riskAlerts[0].fieldId || riskAlerts[0].title}（共${riskAlerts.length}项）` : "当前无高优先风险地块"}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪些操作带来收益</span>
+            <strong>{agronomyValue.verdictCounts.SUCCESS > 0 ? `SUCCESS 操作 ${agronomyValue.verdictCounts.SUCCESS} 项` : "暂无可确认收益操作"}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪些执行失败</span>
+            <strong>{Math.max(invalidExecutionTasks.length, d.execution.invalidExecutionCount)} 项无效/失败执行</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">SLA 总览</span>
+            <strong>执行成功率 {Math.round((sla.success_rate || 0) * 100)}% · 验收时长 {toMinuteLabel(sla.avg_acceptance_time_ms || 0)}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">待决策（审批）</span>
+            <strong>{d.decisions.pendingApprovalCount} 项待审批</strong>
+          </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">农学效果总览</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
           <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">本周建议数</span><strong>{weeklyRecommendationCount}</strong></article>
