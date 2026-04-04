@@ -1,8 +1,6 @@
-import { irrigationRule } from "./rules/irrigation";
-import { inspectionRule } from "./rules/inspection";
-import { sprayRule } from "./rules/spray";
-import { manualRule } from "./rules/manual";
-import type { AcceptanceEvaluationOutput, AcceptanceRule } from "./rules/types";
+import { acceptanceSkills } from "../agronomy/skills/registry";
+import { buildGeoMetrics } from "./rules/geo";
+import type { AcceptanceEvaluationOutput } from "./rules/types";
 
 type EvaluateInput = {
   action_type: string;
@@ -11,22 +9,31 @@ type EvaluateInput = {
   acceptance_policy_ref: string | null;
 };
 
-const RULE_PACK: Record<string, AcceptanceRule> = {
-  [irrigationRule.task_type]: irrigationRule,
-  [inspectionRule.task_type]: inspectionRule,
-  [sprayRule.task_type]: sprayRule,
-  [manualRule.task_type]: manualRule
-};
-
-function loadRule(task_type: string): AcceptanceRule {
-  return RULE_PACK[String(task_type ?? "").trim().toUpperCase()] ?? manualRule;
-}
-
 export function evaluateAcceptanceV1(input: EvaluateInput): AcceptanceEvaluationOutput {
-  const rule = loadRule(input.action_type);
-  return rule.run({
+  const action_type = String(input.action_type ?? "").trim().toUpperCase();
+  const skill = acceptanceSkills.find((s) => s.action_type === action_type);
+  const evidence = {
+    ...input.telemetry,
+    ...input.parameters,
     parameters: input.parameters ?? {},
     telemetry: input.telemetry ?? {},
-    acceptance_policy_ref: input.acceptance_policy_ref ?? null
-  });
+    acceptance_policy_ref: input.acceptance_policy_ref ?? null,
+  };
+  const result = skill?.validate({ evidence });
+  const geo = buildGeoMetrics(input.telemetry ?? {});
+  const rule_id = skill ? `${skill.id}_${skill.version}` : "acceptance_manual_fallback_v1";
+  const normalizedVerdict = result?.verdict ?? "PENDING";
+  const outputResult: AcceptanceEvaluationOutput["result"] =
+    normalizedVerdict === "PASS" ? "PASSED" : normalizedVerdict === "FAIL" ? "FAILED" : "INCONCLUSIVE";
+
+  return {
+    result: outputResult,
+    score: outputResult === "PASSED" ? 1 : outputResult === "FAILED" ? 0 : undefined,
+    metrics: {
+      track_point_count: geo.trackPointCount,
+      track_points_in_field: geo.inFieldCount,
+      in_field_ratio: geo.inFieldRatio,
+    },
+    rule_id,
+  };
 }

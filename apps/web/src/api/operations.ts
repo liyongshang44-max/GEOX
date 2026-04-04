@@ -48,6 +48,8 @@ export type OperationDetailResponse = {
   agronomy?: {
     crop_code?: string | null;
     crop_stage?: string | null;
+    rule_id: string;
+    rule_version: string;
     before_metrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
     after_metrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
     expected_effect?: { type?: string | null; value?: number | null } | null;

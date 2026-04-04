@@ -1,5 +1,4 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
-import { resolveCropStage as resolveCropStageFromProfile } from "./stage_resolver";
 import type { AgronomyContext } from "./types";
 import { cropSkills, ruleSkills } from "./skills/registry";
 import type { CropStage } from "./skills/types";
@@ -14,14 +13,6 @@ function normalizeSkillStage(stage: string): CropStage {
 
 export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyRuleInput {
   const cropCode = String(input.crop_code ?? "").toLowerCase();
-  const fromLegacyResolver = resolveCropStageFromProfile({
-    cropCode: input.crop_code,
-    explicitStage: input.crop_stage,
-    daysAfterPlanting: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_planting))
-      ? Number((input.constraints as Record<string, unknown>).days_after_planting)
-      : undefined,
-  });
-
   const crop = cropSkills.find((x) => x.crop_code === cropCode);
   const fromSkillResolver = crop?.resolveStage({
     days_after_sowing: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_sowing))
@@ -37,25 +28,29 @@ export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyRu
   return {
     ...input,
     crop_code: cropCode,
-    crop_stage: explicitStage || fromSkillResolver || fromLegacyResolver,
+    crop_stage: fromSkillResolver || explicitStage || "seedling",
   };
 }
 
 function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
+  const cropCode = String(ctx.cropCode ?? "").toLowerCase();
+  const days_after_sowing = Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.days_after_sowing))
+    ? Number((ctx.constraints as Record<string, unknown>).days_after_sowing)
+    : Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+      ? Number((ctx.constraints as Record<string, unknown>).days_after_planting)
+      : undefined;
+  const cropSkill = cropSkills.find((x) => x.crop_code === cropCode);
   return {
     tenant_id: ctx.tenantId,
     project_id: ctx.projectId,
     group_id: ctx.groupId,
     field_id: ctx.fieldId,
     season_id: ctx.seasonId ?? "unknown",
-    crop_code: String(ctx.cropCode ?? "").toLowerCase(),
-    crop_stage: resolveCropStageFromProfile({
-      cropCode: ctx.cropCode,
-      explicitStage: ctx.cropStage,
-      daysAfterPlanting: Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting))
-        ? Number((ctx.constraints as Record<string, unknown>).days_after_planting)
-        : undefined,
-    }),
+    crop_code: cropCode,
+    crop_stage: cropSkill?.resolveStage({
+      days_after_sowing,
+      metrics: ctx.currentMetrics,
+    }) ?? normalizeSkillStage(String(ctx.cropStage ?? "seedling")),
     telemetry: {
       soil_moisture: ctx.currentMetrics.soil_moisture ?? undefined,
       canopy_temp: ctx.currentMetrics.canopy_temp ?? ctx.currentMetrics.temperature ?? undefined,
@@ -77,12 +72,13 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
 
 function mapRuleRecommendationToV2(params: {
   input: AgronomyRuleInput;
-  ruleId: string;
   skillId: string;
   recommendation: {
     action_type: string;
     expected_effect?: { type: string; value: number };
-    reason_codes?: string[];
+    reason_codes: string[];
+    rule_id: string;
+    version: string;
   };
 }): AgronomyRecommendationV2 {
   const metric = String(params.recommendation.expected_effect?.type ?? "general_effect");
@@ -92,11 +88,11 @@ function mapRuleRecommendationToV2(params: {
     recommendation_id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     crop_code: String(params.input.crop_code ?? "").toLowerCase(),
     crop_stage: String(params.input.crop_stage ?? ""),
-    rule_id: params.ruleId,
+    rule_id: `${params.recommendation.rule_id}_${params.recommendation.version}`,
     action_type: String(params.recommendation.action_type ?? "INSPECT") as AgronomyRecommendationV2["action_type"],
     confidence: 0.8,
-    reasons: params.recommendation.reason_codes ?? [],
-    reason_codes: params.recommendation.reason_codes ?? [],
+    reasons: params.recommendation.reason_codes,
+    reason_codes: params.recommendation.reason_codes,
     skill_id: params.skillId,
     expected_effect: [
       {
@@ -121,8 +117,16 @@ export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] 
 export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommendationV2[] {
   const normalized = normalizeAgronomyRuleInput(input);
   const crop_code = String(normalized.crop_code ?? "").toLowerCase();
-  const crop_stage = normalizeSkillStage(String(normalized.crop_stage ?? ""));
   const metrics = normalized.telemetry ?? {};
+  const days_after_sowing = Number.isFinite(Number((normalized.constraints as Record<string, unknown> | undefined)?.days_after_sowing))
+    ? Number((normalized.constraints as Record<string, unknown>).days_after_sowing)
+    : Number.isFinite(Number((normalized.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+      ? Number((normalized.constraints as Record<string, unknown>).days_after_planting)
+      : undefined;
+  const cropSkill = cropSkills.find((c) => c.crop_code === crop_code);
+  const crop_stage = cropSkill
+    ? cropSkill.resolveStage({ days_after_sowing, metrics })
+    : normalizeSkillStage(String(normalized.crop_stage ?? ""));
 
   const rules = ruleSkills.filter((r) => r.crop_code === crop_code);
 
@@ -133,7 +137,13 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
         crop_stage,
         metrics,
       });
-      return [mapRuleRecommendationToV2({ input: normalized, ruleId: `${rule.id}_${rule.version}`, skillId: `${rule.id}_${rule.version}`, recommendation })];
+      return [
+        mapRuleRecommendationToV2({
+          input: { ...normalized, crop_stage },
+          skillId: `${rule.id}_${rule.version}`,
+          recommendation
+        })
+      ];
     }
   }
 

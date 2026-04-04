@@ -86,6 +86,10 @@ export default function OperationDetailPage(): React.ReactElement {
   const deviceLabel = mapDeviceDisplayName(deviceSource, model.deviceLabel);
   const resultSummary = buildResultSummary(model);
   const decisionRule = model.recommendationBasis.ruleId || model.agronomyDecision.ruleId || "--";
+  const decisionRuleVersion = String((detail as any)?.agronomy?.rule_version ?? "").trim();
+  const decisionRuleSource = decisionRule !== "--" && decisionRuleVersion
+    ? `${decisionRule}_${decisionRuleVersion}`
+    : decisionRule;
   const decisionStage = String((detail as any)?.agronomy?.crop_stage ?? model.recommendationBasis.cropStage ?? "--");
   const decisionReason = (() => {
     const reasonCodes = (detail as any)?.agronomy?.reason_codes;
@@ -141,8 +145,16 @@ export default function OperationDetailPage(): React.ReactElement {
 
       <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">决策依据</div>
+        <div className="detailSectionLead">
+          系统依据：
+          <br />
+          - 作物阶段：{decisionStage}
+          <br />
+          - 规则：{decisionRuleSource}
+        </div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则</span><strong>{decisionRule}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则</span><strong>{decisionRuleSource}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则来源</span><strong>{decisionRuleSource}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">阶段</span><strong>{decisionStage}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{decisionReason}</strong></div>
         </div>
