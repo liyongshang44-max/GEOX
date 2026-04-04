@@ -7,7 +7,9 @@ import {
   fetchDashboardAssignments,
   getOverview,
   getRecentEvidence,
+  fetchDashboardOverviewV2,
   fetchSlaSummary,
+  type DashboardTopActionItem,
   type DashboardRecommendationItem,
   type SlaSummary,
 } from "../api/dashboard";
@@ -65,6 +67,8 @@ export default function CommercialDashboardPage(): React.ReactElement {
     avg_acceptance_time_ms: 0,
   });
   const [totalRevenue, setTotalRevenue] = React.useState(0);
+  const [topActions, setTopActions] = React.useState<DashboardTopActionItem[]>([]);
+  const [trendSummary, setTrendSummary] = React.useState<{ risk: string; effect: string }>({ risk: "NO_DATA", effect: "NO_DATA" });
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
     todayCount: number;
@@ -77,6 +81,21 @@ export default function CommercialDashboardPage(): React.ReactElement {
     let mounted = true;
     void fetchSlaSummary().then((summary) => {
       if (mounted) setSla(summary);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    void fetchDashboardOverviewV2().then((res) => {
+      if (!mounted || !res) return;
+      setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
+      setTrendSummary({
+        risk: String(res.risk_trend ?? "NO_DATA"),
+        effect: String(res.effect_trend ?? "NO_DATA"),
+      });
     });
     return () => {
       mounted = false;
@@ -250,6 +269,23 @@ export default function CommercialDashboardPage(): React.ReactElement {
             <span className="operationsSummaryLabel">待决策（审批）</span>
             <strong>{d.decisions.pendingApprovalCount} 项待审批</strong>
           </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">Top 3 优先动作（后端排序）</div>
+        <div className="decisionList" style={{ marginTop: 10 }}>
+          {topActions.map((item) => (
+            <div key={item.operation_id} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.priority_bucket} · {item.action_type} · score {item.priority_score}</div>
+              <div className="decisionItemMeta">{item.reason}</div>
+              <div className="muted" style={{ marginTop: 4 }}>{item.recommended_next_action.source} / {item.recommended_next_action.action_type}</div>
+            </div>
+          ))}
+          {!topActions.length ? <EmptyBlock text="暂无可执行动作，默认建议：CHECK_FIELD_STATUS" /> : null}
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">趋势摘要</div>
+            <div className="decisionItemMeta">风险趋势 {trendSummary.risk} · 效果趋势 {trendSummary.effect}</div>
+          </div>
         </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>

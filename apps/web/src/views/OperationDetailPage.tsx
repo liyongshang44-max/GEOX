@@ -145,6 +145,13 @@ export default function OperationDetailPage(): React.ReactElement {
   const valueProfile = (detail as any)?.value_profile ?? {};
   const slaSnapshot = (detail as any)?.sla_snapshot ?? {};
   const slaDefinition = (detail as any)?.sla_definition ?? {};
+  const priorityBucket = String((detail as any)?.priority_bucket ?? "--");
+  const priorityScore = (detail as any)?.priority_score;
+  const priorityComponents = (detail as any)?.priority_components ?? {};
+  const riskTrend = String((detail as any)?.risk_trend ?? "NO_DATA");
+  const effectTrend = String((detail as any)?.effect_trend ?? "NO_DATA");
+  const trendDefinition = (detail as any)?.trend_definition ?? {};
+  const nextAction = (detail as any)?.recommended_next_action ?? {};
 
   return (
     <div className="demoDashboardPage">
@@ -232,6 +239,25 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行纳入口径</span><strong>{String(slaSnapshot?.sla_inclusion?.execution ?? "--")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收纳入口径</span><strong>{String(slaSnapshot?.sla_inclusion?.acceptance ?? "--")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">口径说明</span><strong>{String(slaDefinition?.response_time_definition ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">决策优先级与趋势</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">优先级分桶</span><strong>{priorityBucket}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">优先级分数</span><strong>{typeof priorityScore === "number" ? priorityScore : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">分数拆解</span><strong>R{priorityComponents?.risk ?? 0}/V{priorityComponents?.value ?? 0}/C{priorityComponents?.confidence ?? 0}/T{priorityComponents?.timeliness ?? 0}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险趋势</span><strong>{riskTrend}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果趋势</span><strong>{effectTrend}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">趋势基线</span><strong>{String(trendDefinition?.window ?? "--")} vs {String(trendDefinition?.baseline ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">下一步动作建议</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">动作类型</span><strong>{String(nextAction?.action_type ?? "CHECK_FIELD_STATUS")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{String(nextAction?.source ?? "FALLBACK")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{String(nextAction?.reason ?? "当前无可执行项，建议先检查田块状态")}</strong></div>
         </div>
       </section>
 

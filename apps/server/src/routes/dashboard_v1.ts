@@ -37,6 +37,18 @@ function parseJsonMaybe(v: any): any { if (v && typeof v === "object") return v;
 function parseLimit(q: any, fallback = 8, max = 50): number { const n = Number(q?.limit ?? fallback); return Number.isFinite(n) ? Math.max(1, Math.min(max, Math.floor(n))) : fallback; } // Parse bounded list limit.
 function relativeLabel(tsMs: number | null | undefined): string { if (!Number.isFinite(Number(tsMs))) return "-"; const d = Date.now() - Number(tsMs); if (d < 60_000) return "刚刚"; if (d < 3_600_000) return `${Math.max(1, Math.floor(d / 60_000))} 分钟前`; if (d < 86_400_000) return `${Math.max(1, Math.floor(d / 3_600_000))} 小时前`; return `${Math.max(1, Math.floor(d / 86_400_000))} 天前`; }
 function statusTone(status: string): "success" | "info" | "warning" | "neutral" { const s = String(status ?? "").toUpperCase(); if (["ACTIVE", "DONE", "EXECUTED", "SUCCESS"].includes(s)) return "success"; if (["ACKED", "DISPATCHED", "RUNNING"].includes(s)) return "info"; if (["BLOCKED", "FAILED", "ERROR"].includes(s)) return "warning"; return "neutral"; }
+type PriorityBucket = "P0" | "P1" | "P2";
+type TrendValue = "UP" | "DOWN" | "FLAT" | "NO_DATA";
+
+function bucketRank(bucket: PriorityBucket): number { if (bucket === "P0") return 0; if (bucket === "P1") return 1; return 2; }
+function computeTrendByCounts(values: number[]): TrendValue {
+  const cleaned = values.filter((v) => Number.isFinite(v));
+  if (cleaned.length < 2) return "NO_DATA";
+  const first = cleaned[0];
+  const last = cleaned[cleaned.length - 1];
+  if (last === first) return "FLAT";
+  return last > first ? "UP" : "DOWN";
+}
 
 function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): DashboardTrendSeries[] { // Convert raw telemetry rows into fixed buckets.
   const metrics = ["soil_moisture", "soil_temp"]; // Blueprint default metrics.
@@ -346,14 +358,57 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
        LIMIT 20`,
       [tenant_id]
     ).catch(() => ({ rows: [] as any[] }));
-    const benefitOperations = operationStates
-      .filter((item: any) => String(item?.effect_verdict ?? "").toUpperCase() === "SUCCESS")
-      .slice(0, 20)
-      .map((item: any) => ({
-        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
-        field_id: typeof item?.field_id === "string" ? item.field_id : null,
-        final_status: String(item?.final_status ?? ""),
-      }));
+    const rankingNowMs = Date.now();
+    const scoredActions = operationStates.map((item: any) => {
+      const finalStatusCode = String(item?.final_status ?? "").toUpperCase();
+      const hasTask = Boolean(item?.task_id ?? item?.act_task_id);
+      const hasReceipt = Boolean(item?.receipt_id);
+      const hasAcceptance = finalStatusCode === "PENDING_ACCEPTANCE" ? false : Boolean(item?.acceptance?.status);
+      const invalid = finalStatusCode === "INVALID_EXECUTION";
+      const slaFix = invalid || (hasTask && !hasReceipt) || (hasReceipt && !hasAcceptance);
+      const highRiskHighConfidence = String(item?.risk_level ?? "").toUpperCase() === "HIGH" && String(item?.confidence ?? "").toUpperCase() === "HIGH";
+      const pending = ["PENDING", "PENDING_APPROVAL", "APPROVED", "RUNNING", "DISPATCHED", "ACKED"].includes(finalStatusCode);
+      const priorityBucket: PriorityBucket = slaFix ? "P0" : highRiskHighConfidence ? "P0" : pending ? "P1" : "P2";
+      const risk = priorityBucket === "P0" ? 40 : priorityBucket === "P1" ? 20 : 10;
+      const value = finalStatusCode === "SUCCESS" || finalStatusCode === "SUCCEEDED" ? 20 : 10;
+      const confidence = String(item?.confidence ?? "").toUpperCase() === "HIGH" ? 20 : 10;
+      const lastTs = Number(item?.last_event_ts ?? 0);
+      const timeliness = Number.isFinite(lastTs) && lastTs > 0 && (rankingNowMs - lastTs > 2 * 60 * 60 * 1000) ? 20 : 8;
+      const priorityScore = risk + value + confidence + timeliness;
+      const operationId = String(item?.operation_plan_id ?? item?.operation_id ?? "");
+      let recommendedNextAction: { action_type: string; source: "RULE" | "SLA_FIX" | "MANUAL" | "FALLBACK"; reason: string };
+      if (invalid) {
+        recommendedNextAction = { action_type: "RETRY_EXECUTION", source: "SLA_FIX", reason: "无效执行，需优先修复并补充有效证据" };
+      } else if (hasTask && !hasReceipt) {
+        recommendedNextAction = { action_type: "COLLECT_RECEIPT", source: "SLA_FIX", reason: "任务已下发但未回执，需补回执" };
+      } else if (hasReceipt && !hasAcceptance) {
+        recommendedNextAction = { action_type: "PROMOTE_ACCEPTANCE", source: "SLA_FIX", reason: "已回执但未验收，需推动验收" };
+      } else if (pending) {
+        recommendedNextAction = { action_type: "REVIEW_APPROVAL", source: "MANUAL", reason: "当前待审批，需人工确认" };
+      } else {
+        recommendedNextAction = { action_type: "CHECK_FIELD_STATUS", source: "FALLBACK", reason: "无规则与SLA修复项，先核查田块状态" };
+      }
+      return {
+        operation_id: operationId,
+        action_type: String(item?.action_type ?? "CHECK_FIELD_STATUS"),
+        priority_bucket: priorityBucket,
+        priority_score: priorityScore,
+        priority_components: { risk, value, confidence, timeliness },
+        reason: recommendedNextAction.reason,
+        risk_if_not_execute: priorityBucket === "P0" ? "闭环中断风险上升" : "执行效率下降",
+        recommended_next_action: recommendedNextAction,
+        last_event_ts: Number(item?.last_event_ts ?? 0),
+      };
+    });
+    const topActions = [...scoredActions]
+      .sort((a, b) => {
+        const br = bucketRank(a.priority_bucket) - bucketRank(b.priority_bucket);
+        if (br !== 0) return br;
+        if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
+        return Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0);
+      })
+      .slice(0, 3);
+    const benefitOperations = topActions.filter((item) => item.priority_components.value >= 20);
     const inProgressOperations = operationStates
       .filter((item: any) => ["PENDING", "RUNNING", "DISPATCHED", "ACKED", "READY"].includes(String(item?.final_status ?? item?.dispatch_status ?? "").toUpperCase()))
       .slice(0, 20)
@@ -371,6 +426,14 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         status: String(item?.final_status ?? ""),
       }));
     const responseTimeAvg = Number(delayedQ.rows?.[0]?.count ?? 0) > 0 ? 2 * 60 * 60 * 1000 : 0;
+    const riskTrend: TrendValue = computeTrendByCounts([
+      Number(riskBreakdownQ.rows?.[0]?.high ?? 0) + Number(riskBreakdownQ.rows?.[0]?.medium ?? 0),
+      Number(fieldRiskQ.rows?.[0]?.count ?? 0),
+    ]);
+    const effectTrend: TrendValue = computeTrendByCounts([
+      performanceCompletedCount,
+      performancePassCount,
+    ]);
 
     return reply.send({
       ok: true,
@@ -429,6 +492,13 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
           acceptance_pass_rate: passRate,
           response_time_avg: responseTimeAvg,
         },
+      },
+      top_actions: topActions.map(({ last_event_ts, ...item }) => item),
+      risk_trend: riskTrend,
+      effect_trend: effectTrend,
+      trend_definition: {
+        window: "7d",
+        baseline: "previous_7d",
       },
       sla_definition: {
         execution_denominator: "已进入执行阶段的 operation（存在 task 或终态为执行相关状态）",
