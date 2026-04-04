@@ -21,6 +21,15 @@ export const AO_ACT_ACTION_TYPE_ALLOWLIST_V0 = [
 ] as const; // Frozen minimal set
 
 const FACT_SOURCE_AO_ACT_V0 = "api/control/ao_act"; // Source label for facts written by AO-ACT routes (DB NOT NULL constraint).
+const ACTION_EXECUTION_ALLOWLIST_V1 = [
+  ...AO_ACT_ACTION_TYPE_ALLOWLIST_V0,
+  "FERTILIZE",
+  "CHECK_FIELD_STATUS",
+  "REVIEW_APPROVAL",
+  "COLLECT_RECEIPT",
+  "PROMOTE_ACCEPTANCE",
+  "RETRY_EXECUTION"
+] as const;
 
 const FORBID_KEYS_V0 = new Set<string>([
   "problem_state_id",
@@ -505,6 +514,140 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       });
 
       return reply.send({ ok: true, fact_id, act_task_id });
+    } catch (e: any) {
+      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+    }
+  });
+
+  app.post("/api/v1/actions/execute", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      if (!auth) return;
+      const body = z.object({
+        tenant_id: z.string().min(1),
+        project_id: z.string().min(1),
+        group_id: z.string().min(1),
+        operation_id: z.string().min(1),
+        execution_plan: z.object({
+          action_type: z.string().min(1),
+          target: z.object({ kind: z.enum(["field", "device"]), ref: z.string().min(1) }),
+          parameters: z.record(z.any()),
+          execution_mode: z.enum(["AUTO", "MANUAL"]),
+          safe_guard: z.object({ requires_approval: z.boolean() }),
+          failure_strategy: z.object({
+            retryable: z.boolean(),
+            max_retries: z.number().int().min(0).max(5),
+            fallback_action: z.string().min(1).optional(),
+          }),
+          device_capability_check: z.object({
+            supported: z.boolean(),
+            reason: z.string().min(1).optional(),
+          }).optional(),
+          time_window: z.object({ start_ts: z.number().optional(), end_ts: z.number().optional() }).optional(),
+          idempotency_key: z.string().min(1),
+        }),
+      }).parse(req.body ?? {});
+      const tenant = assertTenantFieldsPresentV0(body, "body");
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+      const actionType = String(body.execution_plan.action_type ?? "").trim().toUpperCase();
+      if (!ACTION_EXECUTION_ALLOWLIST_V1.includes(actionType as any)) {
+        return reply.status(400).send({ ok: false, error: "ACTION_TYPE_NOT_ALLOWED" });
+      }
+      if (!body.execution_plan.parameters || Object.keys(body.execution_plan.parameters).length < 1) {
+        return reply.status(400).send({ ok: false, error: "MISSING_PARAMETERS" });
+      }
+      if (!body.execution_plan.target?.ref) {
+        return reply.status(400).send({ ok: false, error: "INVALID_TARGET" });
+      }
+      if (body.execution_plan.safe_guard.requires_approval) {
+        return reply.status(403).send({ ok: false, error: "REQUIRES_APPROVAL" });
+      }
+      if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
+        return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
+      }
+      const dup = await pool.query(
+        `SELECT record_json::jsonb AS record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3
+            AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4
+          ORDER BY occurred_at DESC
+          LIMIT 1`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, body.execution_plan.idempotency_key]
+      ).catch(() => ({ rows: [] as any[] }));
+      const existingTaskId = String(dup.rows?.[0]?.record_json?.payload?.act_task_id ?? "").trim();
+      if (existingTaskId) return reply.send({ ok: true, act_task_id: existingTaskId, idempotent: true });
+      const retryCountQ = await pool.query(
+        `SELECT COUNT(*)::int AS cnt
+         FROM facts
+         WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+           AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+           AND (record_json::jsonb#>>'{payload,project_id}') = $2
+           AND (record_json::jsonb#>>'{payload,group_id}') = $3
+           AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, body.execution_plan.idempotency_key]
+      ).catch(() => ({ rows: [{ cnt: 0 }] }));
+      const retryCount = Number(retryCountQ.rows?.[0]?.cnt ?? 0);
+      if (body.execution_plan.failure_strategy.retryable && retryCount >= body.execution_plan.failure_strategy.max_retries) {
+        const fallback = String(body.execution_plan.failure_strategy.fallback_action ?? "CHECK_FIELD_STATUS").trim().toUpperCase();
+        return reply.status(409).send({ ok: false, error: "RETRY_LIMIT_REACHED", fallback_action: fallback });
+      }
+
+      const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
+      const now = Date.now();
+      const aoTask = {
+        type: "ao_act_task_v0",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id: body.operation_id,
+          approval_request_id: `direct_${body.execution_plan.idempotency_key}`,
+          act_task_id,
+          issuer: { kind: "human", id: auth.actor_id, namespace: "ao_act" },
+          action_type: actionType,
+          target: body.execution_plan.target,
+          time_window: body.execution_plan.time_window ?? { start_ts: now, end_ts: now + 60 * 60 * 1000 },
+          parameter_schema: { keys: Object.keys(body.execution_plan.parameters).map((k) => ({ name: k, type: "enum", enum: [String(body.execution_plan.parameters[k])] })) },
+          parameters: body.execution_plan.parameters,
+          constraints: {},
+          created_at_ts: now,
+          meta: {
+            execution_mode: body.execution_plan.execution_mode,
+            idempotency_key: body.execution_plan.idempotency_key,
+            failure_strategy: body.execution_plan.failure_strategy,
+            device_capability_check: body.execution_plan.device_capability_check ?? { supported: true },
+          },
+        }
+      };
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [randomUUID(), FACT_SOURCE_AO_ACT_V0, aoTask]
+      );
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [randomUUID(), "api/v1/actions/execute", {
+          type: "action_execution_request_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_id: body.operation_id,
+            act_task_id,
+            idempotency_key: body.execution_plan.idempotency_key,
+            action_type: actionType,
+            target: body.execution_plan.target,
+            execution_trace: {
+              execution_id: body.execution_plan.idempotency_key,
+              task_id: act_task_id,
+              status: "PENDING",
+            },
+          }
+        }]
+      );
+      return reply.send({ ok: true, act_task_id, idempotent: false });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }

@@ -114,6 +114,30 @@ export async function fetchOperationBilling(operationId: string): Promise<Operat
 }
 
 export type OperationBillingResponse = { billable: boolean; charge: number };
+export type ExecutionPlanV1 = {
+  action_type: string;
+  target: { kind: "field" | "device"; ref: string };
+  parameters: Record<string, unknown>;
+  execution_mode: "AUTO" | "MANUAL";
+  safe_guard: { requires_approval: boolean };
+  failure_strategy: { retryable: boolean; max_retries: number; fallback_action?: string };
+  device_capability_check?: { supported: boolean; reason?: string };
+  time_window?: { start_ts?: number; end_ts?: number };
+  idempotency_key: string;
+};
+
+export async function executeOperationAction(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  operation_id: string;
+  execution_plan: ExecutionPlanV1;
+}): Promise<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }> {
+  return apiRequest<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }>("/api/v1/actions/execute", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
 
 export type EvidenceReportCreateResponse = { ok?: boolean; job_id?: string };
 export type EvidenceReportStatusResponse = { ok?: boolean; status?: "PENDING" | "DONE" | "FAILED"; download_url?: string | null; error?: string | null };

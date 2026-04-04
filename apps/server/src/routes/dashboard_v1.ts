@@ -37,6 +37,18 @@ function parseJsonMaybe(v: any): any { if (v && typeof v === "object") return v;
 function parseLimit(q: any, fallback = 8, max = 50): number { const n = Number(q?.limit ?? fallback); return Number.isFinite(n) ? Math.max(1, Math.min(max, Math.floor(n))) : fallback; } // Parse bounded list limit.
 function relativeLabel(tsMs: number | null | undefined): string { if (!Number.isFinite(Number(tsMs))) return "-"; const d = Date.now() - Number(tsMs); if (d < 60_000) return "刚刚"; if (d < 3_600_000) return `${Math.max(1, Math.floor(d / 60_000))} 分钟前`; if (d < 86_400_000) return `${Math.max(1, Math.floor(d / 3_600_000))} 小时前`; return `${Math.max(1, Math.floor(d / 86_400_000))} 天前`; }
 function statusTone(status: string): "success" | "info" | "warning" | "neutral" { const s = String(status ?? "").toUpperCase(); if (["ACTIVE", "DONE", "EXECUTED", "SUCCESS"].includes(s)) return "success"; if (["ACKED", "DISPATCHED", "RUNNING"].includes(s)) return "info"; if (["BLOCKED", "FAILED", "ERROR"].includes(s)) return "warning"; return "neutral"; }
+type PriorityBucket = "P0" | "P1" | "P2";
+type TrendValue = "UP" | "DOWN" | "FLAT" | "NO_DATA";
+
+function bucketRank(bucket: PriorityBucket): number { if (bucket === "P0") return 0; if (bucket === "P1") return 1; return 2; }
+function computeTrendByCounts(values: number[]): TrendValue {
+  const cleaned = values.filter((v) => Number.isFinite(v));
+  if (cleaned.length < 2) return "NO_DATA";
+  const first = cleaned[0];
+  const last = cleaned[cleaned.length - 1];
+  if (last === first) return "FLAT";
+  return last > first ? "UP" : "DOWN";
+}
 
 function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): DashboardTrendSeries[] { // Convert raw telemetry rows into fixed buckets.
   const metrics = ["soil_moisture", "soil_temp"]; // Blueprint default metrics.
@@ -317,6 +329,181 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const acceptancePassCount = Number(acceptancePassRateQ.rows?.[0]?.pass_count ?? 0);
     const acceptanceTotalCount = Number(acceptancePassRateQ.rows?.[0]?.total_count ?? 0);
     const passRate = acceptanceTotalCount > 0 ? Number(((acceptancePassCount / acceptanceTotalCount) * 100).toFixed(2)) : 0;
+    const executionCompletedItems = operationStates.filter((item: any) => ["SUCCESS", "SUCCEEDED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(String(item?.final_status ?? "").toUpperCase()));
+    const executionSuccessCount = executionCompletedItems.filter((item: any) => ["SUCCESS", "SUCCEEDED"].includes(String(item?.final_status ?? "").toUpperCase())).length;
+    const executionSuccessRate = executionCompletedItems.length > 0
+      ? Number(((executionSuccessCount / executionCompletedItems.length) * 100).toFixed(2))
+      : 0;
+    const pendingApprovalsQ = await pool.query(
+      `SELECT
+         (record_json::jsonb#>>'{payload,request_id}') AS request_id,
+         (record_json::jsonb#>>'{payload,field_id}') AS field_id,
+         occurred_at
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND UPPER(COALESCE((record_json::jsonb#>>'{payload,status}'),'PENDING')) = 'PENDING'
+       ORDER BY occurred_at DESC
+       LIMIT 20`,
+      [tenant_id, project_id, group_id]
+    ).catch(() => ({ rows: [] as any[] }));
+    const riskFieldRows = await pool.query(
+      `SELECT field_id, current_risk_summary
+       FROM field_program_state_v1
+       WHERE tenant_id = $1
+         AND UPPER(COALESCE(current_risk_summary->>'level','LOW')) IN ('HIGH','MEDIUM')
+       ORDER BY updated_at DESC
+       LIMIT 20`,
+      [tenant_id]
+    ).catch(() => ({ rows: [] as any[] }));
+    const rankingNowMs = Date.now();
+    const scoredActions = operationStates.map((item: any) => {
+      const finalStatusCode = String(item?.final_status ?? "").toUpperCase();
+      const hasTask = Boolean(item?.task_id ?? item?.act_task_id);
+      const hasReceipt = Boolean(item?.receipt_id);
+      const hasAcceptance = finalStatusCode === "PENDING_ACCEPTANCE" ? false : Boolean(item?.acceptance?.status);
+      const invalid = finalStatusCode === "INVALID_EXECUTION";
+      const slaFix = invalid || (hasTask && !hasReceipt) || (hasReceipt && !hasAcceptance);
+      const highRiskHighConfidence = String(item?.risk_level ?? "").toUpperCase() === "HIGH" && String(item?.confidence ?? "").toUpperCase() === "HIGH";
+      const pending = ["PENDING", "PENDING_APPROVAL", "APPROVED", "RUNNING", "DISPATCHED", "ACKED"].includes(finalStatusCode);
+      const priorityBucket: PriorityBucket = slaFix ? "P0" : highRiskHighConfidence ? "P0" : pending ? "P1" : "P2";
+      const risk = priorityBucket === "P0" ? 40 : priorityBucket === "P1" ? 20 : 10;
+      const value = finalStatusCode === "SUCCESS" || finalStatusCode === "SUCCEEDED" ? 20 : 10;
+      const confidence = String(item?.confidence ?? "").toUpperCase() === "HIGH" ? 20 : 10;
+      const lastTs = Number(item?.last_event_ts ?? 0);
+      const timeliness = Number.isFinite(lastTs) && lastTs > 0 && (rankingNowMs - lastTs > 2 * 60 * 60 * 1000) ? 20 : 8;
+      const priorityScore = risk + value + confidence + timeliness;
+      const operationId = String(item?.operation_plan_id ?? item?.operation_id ?? "");
+      let recommendedNextAction: { action_type: string; source: "RULE" | "SLA_FIX" | "MANUAL" | "FALLBACK"; reason: string };
+      if (invalid) {
+        recommendedNextAction = { action_type: "RETRY_EXECUTION", source: "SLA_FIX", reason: "无效执行，需优先修复并补充有效证据" };
+      } else if (hasTask && !hasReceipt) {
+        recommendedNextAction = { action_type: "COLLECT_RECEIPT", source: "SLA_FIX", reason: "任务已下发但未回执，需补回执" };
+      } else if (hasReceipt && !hasAcceptance) {
+        recommendedNextAction = { action_type: "PROMOTE_ACCEPTANCE", source: "SLA_FIX", reason: "已回执但未验收，需推动验收" };
+      } else if (pending) {
+        recommendedNextAction = { action_type: "REVIEW_APPROVAL", source: "MANUAL", reason: "当前待审批，需人工确认" };
+      } else {
+        recommendedNextAction = { action_type: "CHECK_FIELD_STATUS", source: "FALLBACK", reason: "无规则与SLA修复项，先核查田块状态" };
+      }
+      const idempotencySeedTs = Number(item?.last_event_ts ?? Date.now());
+      const executionPlan = {
+        action_type: recommendedNextAction.action_type,
+        target: {
+          kind: (item?.device_id ? "device" : "field") as "field" | "device",
+          ref: String(item?.device_id ?? item?.field_id ?? ""),
+        },
+        parameters: {
+          operation_id: operationId,
+          action_type: recommendedNextAction.action_type,
+        },
+        execution_mode: item?.device_id ? "AUTO" as const : "MANUAL" as const,
+        safe_guard: {
+          requires_approval: pending && !slaFix,
+        },
+        failure_strategy: {
+          retryable: true,
+          max_retries: 2,
+          fallback_action: "CHECK_FIELD_STATUS",
+        },
+        time_window: {
+          start_ts: idempotencySeedTs,
+          end_ts: idempotencySeedTs + 60 * 60 * 1000,
+        },
+        idempotency_key: `${operationId}_${recommendedNextAction.action_type}_${idempotencySeedTs}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
+      };
+      const capabilityCheck = (() => {
+        if (!executionPlan.target.ref) return { supported: false, reason: "MISSING_DEVICE_TARGET" };
+        const normalized = String(executionPlan.action_type ?? "").toUpperCase();
+        if (!["IRRIGATE", "FERTILIZE", "SPRAY", "CHECK_FIELD_STATUS", "REVIEW_APPROVAL", "COLLECT_RECEIPT", "PROMOTE_ACCEPTANCE", "RETRY_EXECUTION"].includes(normalized)) {
+          return { supported: false, reason: "ACTION_NOT_SUPPORTED" };
+        }
+        return { supported: true as const };
+      })();
+      const executionBlockers: string[] = [];
+      if (!executionPlan.target.ref) executionBlockers.push("INVALID_TARGET");
+      if (!executionPlan.parameters || Object.keys(executionPlan.parameters).length < 1) executionBlockers.push("MISSING_PARAMETERS");
+      if (executionPlan.safe_guard.requires_approval) executionBlockers.push("REQUIRES_APPROVAL");
+      if (!capabilityCheck.supported) executionBlockers.push(capabilityCheck.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED");
+      const trendAdjustment = finalStatusCode === "INVALID_EXECUTION" ? 2 : (pending ? 1 : 0);
+      const fieldRiskAdjustment = priorityBucket === "P0" ? 3 : priorityBucket === "P1" ? 1 : 0;
+      const globalPriorityComponents = {
+        base: priorityScore,
+        trend_adjustment: trendAdjustment,
+        field_risk_adjustment: fieldRiskAdjustment,
+      };
+      const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
+      return {
+        tenant_id,
+        project_id,
+        group_id,
+        operation_id: operationId,
+        action_type: String(item?.action_type ?? "CHECK_FIELD_STATUS"),
+        priority_bucket: priorityBucket,
+        priority_score: priorityScore,
+        priority_components: { risk, value, confidence, timeliness },
+        global_priority_score: globalPriorityScore,
+        global_priority_components: globalPriorityComponents,
+        reason: recommendedNextAction.reason,
+        risk_if_not_execute: priorityBucket === "P0" ? "闭环中断风险上升" : "执行效率下降",
+        recommended_next_action: recommendedNextAction,
+        execution_plan: executionPlan,
+        execution_ready: executionBlockers.length === 0,
+        execution_blockers: executionBlockers,
+        device_capability_check: capabilityCheck,
+        execution_trace: {
+          execution_id: executionPlan.idempotency_key,
+          task_id: String(item?.task_id ?? item?.act_task_id ?? ""),
+          receipt_id: item?.receipt_id ? String(item.receipt_id) : undefined,
+          evidence_refs: undefined,
+          status: item?.receipt_id ? "SUCCESS" : (finalStatusCode === "INVALID_EXECUTION" ? "FAILED" : "PENDING"),
+        },
+        priority_adjustment_by_trend: trendAdjustment,
+        trend_adjustment_policy: {
+          window: "7d",
+          baseline: "previous_7d",
+          min_samples: 2,
+          hysteresis: 1,
+        },
+        last_event_ts: Number(item?.last_event_ts ?? 0),
+      };
+    });
+    const topActions = [...scoredActions]
+      .sort((a, b) => {
+        const br = bucketRank(a.priority_bucket) - bucketRank(b.priority_bucket);
+        if (br !== 0) return br;
+        if (b.global_priority_score !== a.global_priority_score) return b.global_priority_score - a.global_priority_score;
+        return Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0);
+      })
+      .slice(0, 3);
+    const benefitOperations = topActions.filter((item) => item.priority_components.value >= 20);
+    const inProgressOperations = operationStates
+      .filter((item: any) => ["PENDING", "RUNNING", "DISPATCHED", "ACKED", "READY"].includes(String(item?.final_status ?? item?.dispatch_status ?? "").toUpperCase()))
+      .slice(0, 20)
+      .map((item: any) => ({
+        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+        field_id: typeof item?.field_id === "string" ? item.field_id : null,
+        status: String(item?.final_status ?? item?.dispatch_status ?? ""),
+      }));
+    const failedOperations = operationStates
+      .filter((item: any) => ["FAILED", "ERROR", "INVALID_EXECUTION"].includes(String(item?.final_status ?? "").toUpperCase()))
+      .slice(0, 20)
+      .map((item: any) => ({
+        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+        field_id: typeof item?.field_id === "string" ? item.field_id : null,
+        status: String(item?.final_status ?? ""),
+      }));
+    const responseTimeAvg = Number(delayedQ.rows?.[0]?.count ?? 0) > 0 ? 2 * 60 * 60 * 1000 : 0;
+    const riskTrend: TrendValue = computeTrendByCounts([
+      Number(riskBreakdownQ.rows?.[0]?.high ?? 0) + Number(riskBreakdownQ.rows?.[0]?.medium ?? 0),
+      Number(fieldRiskQ.rows?.[0]?.count ?? 0),
+    ]);
+    const effectTrend: TrendValue = computeTrendByCounts([
+      performanceCompletedCount,
+      performancePassCount,
+    ]);
 
     return reply.send({
       ok: true,
@@ -347,6 +534,46 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       performance: {
         completed: performanceCompletedCount,
         pass_rate: performancePassRate,
+      },
+      customer_dashboard: {
+        risks: {
+          fields: (riskFieldRows.rows ?? []).map((row: any) => ({
+            field_id: String(row.field_id ?? ""),
+            level: String(row.current_risk_summary?.level ?? "MEDIUM").toUpperCase(),
+            reason: String(row.current_risk_summary?.reason ?? "存在风险信号"),
+          })),
+        },
+        decisions: {
+          pending_approvals: (pendingApprovalsQ.rows ?? []).map((row: any) => ({
+            request_id: String(row.request_id ?? ""),
+            field_id: row.field_id ? String(row.field_id) : null,
+            occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+          })),
+        },
+        execution: {
+          in_progress: inProgressOperations,
+          failed: failedOperations,
+        },
+        value: {
+          benefit_operations: benefitOperations,
+        },
+        sla: {
+          execution_success_rate: executionSuccessRate,
+          acceptance_pass_rate: passRate,
+          response_time_avg: responseTimeAvg,
+        },
+      },
+      top_actions: topActions.map(({ last_event_ts, ...item }) => item),
+      risk_trend: riskTrend,
+      effect_trend: effectTrend,
+      trend_definition: {
+        window: "7d",
+        baseline: "previous_7d",
+      },
+      sla_definition: {
+        execution_denominator: "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
+        acceptance_denominator: "已进入验收阶段的 operation（存在 receipt）",
+        response_time_definition: "从 task 下发到 receipt 回传完成的平均时长",
       },
     });
   });
