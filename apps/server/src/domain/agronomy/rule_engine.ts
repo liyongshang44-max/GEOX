@@ -41,6 +41,9 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
       ? Number((ctx.constraints as Record<string, unknown>).days_after_planting)
       : undefined;
   const cropSkill = cropSkills.find((x) => x.crop_code === cropCode);
+  const explicitStageRaw = String(ctx.cropStage ?? "").trim();
+  const explicitStage = explicitStageRaw ? normalizeSkillStage(explicitStageRaw) : null;
+
   return {
     tenant_id: ctx.tenantId,
     project_id: ctx.projectId,
@@ -48,10 +51,10 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
     field_id: ctx.fieldId,
     season_id: ctx.seasonId ?? "unknown",
     crop_code: cropCode,
-    crop_stage: cropSkill?.resolveStage({
+    crop_stage: explicitStage ?? cropSkill?.resolveStage({
       days_after_sowing,
       metrics: ctx.currentMetrics,
-    }) ?? normalizeSkillStage(String(ctx.cropStage ?? "seedling")),
+    }) ?? "seedling",
     telemetry: {
       soil_moisture: ctx.currentMetrics.soil_moisture ?? undefined,
       canopy_temp: ctx.currentMetrics.canopy_temp ?? ctx.currentMetrics.temperature ?? undefined,

@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import type { AgronomyRuleSkill } from "./types";
 import { ruleSkills } from "./index";
-import { getDefaultFallbackSkillSwitches, listFallbackSkillSwitches, type SkillSwitch } from "./runtime_config";
+import { listFallbackSkillSwitches, type SkillSwitch } from "./runtime_config";
 
 type ResolvedRuleSkill = AgronomyRuleSkill & { __priority: number };
 
@@ -19,7 +19,7 @@ export type SkillBindingRecord = {
 export type SkillBindingSource = "tenant+crop" | "tenant+*" | "*+crop" | "global" | "fallback_config";
 
 let bindingsPool: Pool | null = null;
-let bindingsTableEnsured = false;
+let bindingsTableChecked = false;
 
 function normalizeScopeValue(input?: string): string | null {
   const normalized = typeof input === "string" ? input.trim() : "";
@@ -56,64 +56,13 @@ function pickBySkill(rows: Array<SkillBindingRecord & { source: SkillBindingSour
   return picked;
 }
 
-async function ensureBindingsTable(): Promise<void> {
-  if (!bindingsPool || bindingsTableEnsured) return;
-
-  await bindingsPool.query(`
-    CREATE TABLE IF NOT EXISTS skill_rule_bindings (
-      id text PRIMARY KEY,
-      skill_id text NOT NULL,
-      version text NOT NULL,
-      crop_code text NULL,
-      tenant_id text NULL,
-      enabled boolean NOT NULL DEFAULT true,
-      priority integer NOT NULL DEFAULT 0,
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      tenant_scope text GENERATED ALWAYS AS (COALESCE(tenant_id, '')) STORED,
-      crop_scope text GENERATED ALWAYS AS (COALESCE(crop_code, '')) STORED
-    )
-  `);
-
-
-  await bindingsPool.query(`
-    ALTER TABLE skill_rule_bindings
-    ADD COLUMN IF NOT EXISTS tenant_scope text GENERATED ALWAYS AS (COALESCE(tenant_id, '')) STORED
-  `);
-
-  await bindingsPool.query(`
-    ALTER TABLE skill_rule_bindings
-    ADD COLUMN IF NOT EXISTS crop_scope text GENERATED ALWAYS AS (COALESCE(crop_code, '')) STORED
-  `);
-
-  await bindingsPool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS ux_skill_rule_bindings_identity
-    ON skill_rule_bindings (skill_id, version, tenant_scope, crop_scope)
-  `);
-
-  await bindingsPool.query(`
-    CREATE UNIQUE INDEX IF NOT EXISTS ux_skill_rule_bindings_enabled_scope_skill
-    ON skill_rule_bindings (tenant_scope, crop_scope, skill_id)
-    WHERE enabled = true
-  `);
-
-  await bindingsPool.query(`
-    CREATE INDEX IF NOT EXISTS idx_skill_rule_bindings_lookup
-    ON skill_rule_bindings (skill_id, tenant_id, crop_code, enabled, priority DESC)
-  `);
-
-  const existing = await bindingsPool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM skill_rule_bindings");
-  if ((Number(existing.rows[0]?.count ?? 0)) === 0) {
-    const defaults = getDefaultFallbackSkillSwitches();
-    for (const row of defaults) {
-      await bindingsPool.query(
-        `INSERT INTO skill_rule_bindings (id, skill_id, version, crop_code, tenant_id, enabled, priority, updated_at)
-         VALUES (md5(random()::text || clock_timestamp()::text), $1, $2, $3, $4, $5, $6, now())`,
-        [row.skill_id, row.version, normalizeScopeValue(row.scope?.crop_code), normalizeScopeValue(row.scope?.tenant_id), row.enabled, row.priority]
-      );
-    }
+async function assertBindingsTableReady(): Promise<void> {
+  if (!bindingsPool || bindingsTableChecked) return;
+  const checked = await bindingsPool.query<{ reg: string | null }>("SELECT to_regclass('public.skill_rule_bindings') AS reg");
+  if (!checked.rows[0]?.reg) {
+    throw new Error("SKILL_RULE_BINDINGS_TABLE_MISSING: apply DB migration first");
   }
-
-  bindingsTableEnsured = true;
+  bindingsTableChecked = true;
 }
 
 export function configureSkillBindingsPool(pool: Pool): void {
@@ -138,7 +87,7 @@ export async function listSkillBindings(input?: {
     }));
   }
 
-  await ensureBindingsTable();
+  await assertBindingsTableReady();
 
   const params: unknown[] = [];
   const where: string[] = [];
@@ -176,7 +125,7 @@ export async function switchSkillBinding(input: {
     throw new Error("SKILL_BINDINGS_DB_UNAVAILABLE");
   }
 
-  await ensureBindingsTable();
+  await assertBindingsTableReady();
 
   const tenant_id = normalizeScopeValue(input.scope?.tenant_id);
   const crop_code = normalizeScopeValue(input.scope?.crop_code);
@@ -291,7 +240,7 @@ export async function resolveRuleSkillBindings(input: {
   }
 
   try {
-    await ensureBindingsTable();
+    await assertBindingsTableReady();
     const rows = await bindingsPool.query<SkillBindingRecord>(
       `SELECT id, skill_id, version, tenant_id, crop_code, enabled, priority, updated_at
        FROM skill_rule_bindings
