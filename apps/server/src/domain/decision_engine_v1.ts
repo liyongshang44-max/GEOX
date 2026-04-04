@@ -30,7 +30,7 @@ export function evaluateIrrigationDecisionV1(input: DecisionEngineInputV1): Irri
       should_irrigate: true,
       reason_codes: [agronomy.reason, heatRuleMatched ? "heat_stress_risk" : "soil_moisture_low_or_heat_stress"],
       moisture_threshold: crop?.stages[0]?.soil_moisture_min ?? null,
-      crop_name: crop?.name ?? null
+      crop_name: crop?.code ?? null
     };
   }
 
@@ -38,6 +38,6 @@ export function evaluateIrrigationDecisionV1(input: DecisionEngineInputV1): Irri
     should_irrigate: false,
     reason_codes: [agronomy.reason],
     moisture_threshold: crop?.stages[0]?.soil_moisture_min ?? null,
-    crop_name: crop?.name ?? null
+    crop_name: crop?.code ?? null
   };
 }

@@ -41,6 +41,9 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
       ? Number((ctx.constraints as Record<string, unknown>).days_after_planting)
       : undefined;
   const cropSkill = cropSkills.find((x) => x.crop_code === cropCode);
+  const explicitStageRaw = String(ctx.cropStage ?? "").trim();
+  const explicitStage = explicitStageRaw ? normalizeSkillStage(explicitStageRaw) : null;
+
   return {
     tenant_id: ctx.tenantId,
     project_id: ctx.projectId,
@@ -48,10 +51,10 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
     field_id: ctx.fieldId,
     season_id: ctx.seasonId ?? "unknown",
     crop_code: cropCode,
-    crop_stage: cropSkill?.resolveStage({
+    crop_stage: explicitStage ?? cropSkill?.resolveStage({
       days_after_sowing,
       metrics: ctx.currentMetrics,
-    }) ?? normalizeSkillStage(String(ctx.cropStage ?? "seedling")),
+    }) ?? "seedling",
     telemetry: {
       soil_moisture: ctx.currentMetrics.soil_moisture ?? undefined,
       canopy_temp: ctx.currentMetrics.canopy_temp ?? ctx.currentMetrics.temperature ?? undefined,
@@ -110,12 +113,12 @@ function mapRuleRecommendationToV2(params: {
   return recommendation;
 }
 
-export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] {
+export async function evaluateRules(ctx: AgronomyContext): Promise<AgronomyRecommendationV2[]> {
   const normalizedInput = normalizeContextToRuleInput(ctx);
   return evaluateRulesByInput(normalizedInput);
 }
 
-export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommendationV2[] {
+export async function evaluateRulesByInput(input: AgronomyRuleInput): Promise<AgronomyRecommendationV2[]> {
   const normalized = normalizeAgronomyRuleInput(input);
   const crop_code = String(normalized.crop_code ?? "").toLowerCase();
   const metrics = normalized.telemetry ?? {};
@@ -132,9 +135,14 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
       ? cropSkill.resolveStage({ days_after_sowing, metrics })
       : "seedling";
 
-  const rules = getRuleSkills({
+  const tenant_id = String(normalized.tenant_id ?? "").trim();
+  if (!tenant_id) {
+    throw new Error("TENANT_ID_REQUIRED_FOR_RULE_ENGINE");
+  }
+
+  const rules = await getRuleSkills({
     crop_code,
-    tenant_id: normalized.tenant_id,
+    tenant_id,
   });
 
   for (const rule of rules) {

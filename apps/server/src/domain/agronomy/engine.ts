@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { evaluateRules, pickBestRule } from "./rule_engine";
 import type { AgronomyContext, AgronomyRecommendationPayload } from "./types";
 
-export function generateAgronomyRecommendation(ctx: AgronomyContext): AgronomyRecommendationPayload | null {
-  const matched = evaluateRules(ctx);
+export async function generateAgronomyRecommendation(ctx: AgronomyContext): Promise<AgronomyRecommendationPayload | null> {
+  const matched = await evaluateRules(ctx);
   const best = pickBestRule(matched);
   if (!best) return null;
 
@@ -12,4 +12,8 @@ export function generateAgronomyRecommendation(ctx: AgronomyContext): AgronomyRe
   if (!Array.isArray(best.reasons) || best.reasons.length === 0) return null;
 
   return best;
+}
+
+export function newRecommendationId(prefix = "rec"): string {
+  return `${prefix}_${randomUUID().replace(/-/g, "")}`;
 }

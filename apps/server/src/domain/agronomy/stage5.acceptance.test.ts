@@ -17,8 +17,8 @@ test("stage_resolver priority: explicit stage > days_after_planting > unknown", 
   assert.equal(resolveCropStage({ cropCode: "corn" }), "unknown");
 });
 
-test("corn vegetative + low moisture -> IRRIGATE", () => {
-  const rec = generateAgronomyRecommendation({
+test("corn vegetative + low moisture -> skill rule v2", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -29,12 +29,14 @@ test("corn vegetative + low moisture -> IRRIGATE", () => {
   });
   assert.ok(rec);
   assert.equal(rec?.action_type, "IRRIGATE");
-  assert.equal(rec?.rule_id, "corn_vegetative_low_moisture_irrigate_v1");
-  assert.ok((rec?.reasons.length ?? 0) > 0);
+  assert.equal(rec?.rule_id, "corn_water_balance_v2");
+  assert.deepEqual(rec?.reasons, ["LOW_SOIL_MOISTURE_V2"]);
+  assert.equal(rec?.expected_effect?.[0]?.metric, "moisture_increase");
+  assert.equal(rec?.expected_effect?.[0]?.value, 15);
 });
 
-test("corn reproductive + high canopy temp -> INSPECT", () => {
-  const rec = generateAgronomyRecommendation({
+test("corn reproductive currently has no enabled skill rule", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -43,14 +45,11 @@ test("corn reproductive + high canopy temp -> INSPECT", () => {
     cropStage: "reproductive",
     currentMetrics: { canopy_temp: 35 },
   });
-  assert.ok(rec);
-  assert.equal(rec?.action_type, "INSPECT");
-  assert.equal(rec?.rule_id, "corn_reproductive_heat_inspect_v1");
-  assert.ok((rec?.reasons.length ?? 0) > 0);
+  assert.equal(rec, null);
 });
 
-test("tomato flowering + high canopy temp -> INSPECT", () => {
-  const rec = generateAgronomyRecommendation({
+test("tomato flowering currently has no enabled skill rule", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -59,14 +58,11 @@ test("tomato flowering + high canopy temp -> INSPECT", () => {
     cropStage: "flowering",
     currentMetrics: { canopy_temp: 33 },
   });
-  assert.ok(rec);
-  assert.equal(rec?.action_type, "INSPECT");
-  assert.equal(rec?.rule_id, "tomato_flowering_high_temp_inspect_v1");
-  assert.ok((rec?.reasons.length ?? 0) > 0);
+  assert.equal(rec, null);
 });
 
-test("tomato fruiting + low ec -> FERTILIZE", () => {
-  const rec = generateAgronomyRecommendation({
+test("tomato fruiting -> fertilize skill rule", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -78,6 +74,8 @@ test("tomato fruiting + low ec -> FERTILIZE", () => {
   });
   assert.ok(rec);
   assert.equal(rec?.action_type, "FERTILIZE");
-  assert.equal(rec?.rule_id, "tomato_fruiting_low_nutrient_fertilize_v1");
-  assert.ok((rec?.reasons.length ?? 0) > 0);
+  assert.equal(rec?.rule_id, "tomato_fertilize_v1");
+  assert.deepEqual(rec?.reasons, ["FRUITING_STAGE"]);
+  assert.equal(rec?.expected_effect?.[0]?.metric, "growth_boost");
+  assert.equal(rec?.expected_effect?.[0]?.value, 15);
 });
