@@ -81,6 +81,8 @@ export default function OperationsPage(): React.ReactElement {
           const deviceLabel = mapDeviceDisplayName(x.device_name, x.device_id);
           const planId = resolveOperationPlanId(x);
           const badge = statusBadge(normalized);
+          const suggestionSource = String(x.skill_id || x.rule_id || "-");
+          const reasonCodesLabel = Array.isArray(x.reason_codes) && x.reason_codes.length > 0 ? x.reason_codes.join(", ") : "-";
           return (
             <article key={planId || x.operation_id} className="card operationsSummaryCard">
               <div className="operationsSummaryTop">
@@ -119,6 +121,17 @@ export default function OperationsPage(): React.ReactElement {
                   <span>执行任务编号：{String(x.task_id || "-")}</span>
                 </div>
               </details>
+
+              <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
+                <div className="operationsSummaryMetric">
+                  <span className="operationsSummaryLabel">建议来源</span>
+                  <strong>{suggestionSource}</strong>
+                </div>
+                <div className="operationsSummaryMetric">
+                  <span className="operationsSummaryLabel">原因</span>
+                  <strong>{reasonCodesLabel}</strong>
+                </div>
+              </div>
 
               <div className="operationsSummaryActions">
                 <Link className="btn" to={toOperationDetailPath(x)}>查看作业详情</Link>

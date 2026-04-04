@@ -1,6 +1,9 @@
 import type { AcceptanceSkill } from "../types";
 
 export const irrigationAcceptance: AcceptanceSkill = {
+  id: "irrigation_acceptance",
+  version: "v1",
+  enabled: true,
   action_type: "IRRIGATE",
 
   validate({ evidence }) {

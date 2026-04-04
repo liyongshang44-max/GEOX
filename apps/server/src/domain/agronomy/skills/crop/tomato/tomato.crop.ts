@@ -1,6 +1,10 @@
 import type { CropSkill } from "../../types";
 
 export const tomatoCrop: CropSkill = {
+  id: "tomato_crop",
+  version: "v1",
+  enabled: true,
+
   crop_code: "tomato",
 
   resolveStage({ days_after_sowing }) {

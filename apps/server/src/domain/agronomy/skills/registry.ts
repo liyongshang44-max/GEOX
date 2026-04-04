@@ -5,6 +5,7 @@ import { cornWaterRule } from "./rules/corn/corn.water_balance.rule";
 import { tomatoFertilizeRule } from "./rules/tomato/tomato.fertilize.rule";
 
 import { irrigationAcceptance } from "./acceptance/irrigation.acceptance";
+import { fertilizeAcceptance } from "./acceptance/fertilize.acceptance";
 
 export const cropSkills = [cornCrop, tomatoCrop];
 
@@ -14,5 +15,6 @@ export const ruleSkills = [
 ];
 
 export const acceptanceSkills = [
-  irrigationAcceptance
+  irrigationAcceptance,
+  fertilizeAcceptance
 ];

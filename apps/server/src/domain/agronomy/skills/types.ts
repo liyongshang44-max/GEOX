@@ -6,6 +6,10 @@ export type CropStage =
   | "reproductive";
 
 export interface CropSkill {
+  id: string;
+  version: string;
+  enabled: boolean;
+
   crop_code: string;
 
   resolveStage(input: {
@@ -21,6 +25,9 @@ export interface CropSkill {
 
 export interface AgronomyRuleSkill {
   id: string;
+  version: string;
+  enabled: boolean;
+
   crop_code: string;
 
   match(input: {
@@ -44,6 +51,10 @@ export interface AgronomyRuleSkill {
 }
 
 export interface AcceptanceSkill {
+  id: string;
+  version: string;
+  enabled: boolean;
+
   action_type: string;
 
   validate(input: {

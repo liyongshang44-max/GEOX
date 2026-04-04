@@ -78,6 +78,7 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
 function mapRuleRecommendationToV2(params: {
   input: AgronomyRuleInput;
   ruleId: string;
+  skillId: string;
   recommendation: {
     action_type: string;
     expected_effect?: { type: string; value: number };
@@ -87,7 +88,7 @@ function mapRuleRecommendationToV2(params: {
   const metric = String(params.recommendation.expected_effect?.type ?? "general_effect");
   const direction = metric.includes("decrease") ? "decrease" : metric.includes("stabil") ? "stabilize" : "increase";
 
-  return {
+  const recommendation: AgronomyRecommendationV2 & { skill_id: string; reason_codes: string[] } = {
     recommendation_id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
     crop_code: String(params.input.crop_code ?? "").toLowerCase(),
     crop_stage: String(params.input.crop_stage ?? ""),
@@ -95,6 +96,8 @@ function mapRuleRecommendationToV2(params: {
     action_type: String(params.recommendation.action_type ?? "INSPECT") as AgronomyRecommendationV2["action_type"],
     confidence: 0.8,
     reasons: params.recommendation.reason_codes ?? [],
+    reason_codes: params.recommendation.reason_codes ?? [],
+    skill_id: params.skillId,
     expected_effect: [
       {
         metric,
@@ -107,6 +110,7 @@ function mapRuleRecommendationToV2(params: {
       telemetry_refs: [],
     },
   };
+  return recommendation;
 }
 
 export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] {
@@ -129,7 +133,7 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
         crop_stage,
         metrics,
       });
-      return [mapRuleRecommendationToV2({ input: normalized, ruleId: rule.id, recommendation })];
+      return [mapRuleRecommendationToV2({ input: normalized, ruleId: `${rule.id}_${rule.version}`, skillId: `${rule.id}_${rule.version}`, recommendation })];
     }
   }
 

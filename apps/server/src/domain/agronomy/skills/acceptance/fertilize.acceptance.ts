@@ -1,6 +1,9 @@
 import type { AcceptanceSkill } from "../types";
 
-export const FERTILIZE_ACCEPTANCE_SKILL: AcceptanceSkill = {
+export const fertilizeAcceptance: AcceptanceSkill = {
+  id: "fertilize_acceptance",
+  version: "v1",
+  enabled: true,
   action_type: "FERTILIZE",
   validate({ evidence }) {
     const amount = Number(evidence?.fertilizer_kg ?? NaN);

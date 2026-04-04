@@ -1,16 +1,19 @@
 import type { AgronomyRuleSkill } from "../../types";
 
 export const tomatoFertilizeRule: AgronomyRuleSkill = {
-  id: "tomato_fertilize_v1",
+  id: "tomato_fertilize",
+  version: "v1",
+  enabled: true,
   crop_code: "tomato",
 
   match({ crop_stage }) {
     return crop_stage === "fruiting";
   },
 
-  recommend() {
+  recommend({ field_id }) {
     return {
       action_type: "FERTILIZE",
+      parameters: { field_id },
       expected_effect: {
         type: "growth_boost",
         value: 15

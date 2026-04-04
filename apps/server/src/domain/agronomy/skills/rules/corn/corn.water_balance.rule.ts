@@ -1,7 +1,9 @@
 import type { AgronomyRuleSkill } from "../../types";
 
 export const cornWaterRule: AgronomyRuleSkill = {
-  id: "corn_water_balance_v1",
+  id: "corn_water_balance",
+  version: "v1",
+  enabled: true,
   crop_code: "corn",
 
   match({ crop_stage, metrics }) {
@@ -14,6 +16,7 @@ export const cornWaterRule: AgronomyRuleSkill = {
   recommend({ field_id }) {
     return {
       action_type: "IRRIGATE",
+      parameters: { field_id },
       expected_effect: {
         type: "moisture_increase",
         value: 10
