@@ -18,7 +18,9 @@ export const tomatoFertilizeRule: AgronomyRuleSkill = {
         type: "growth_boost",
         value: 15
       },
-      reason_codes: ["FRUITING_STAGE"]
+      reason_codes: ["FRUITING_STAGE"],
+      rule_id: "tomato_fertilize",
+      version: "v1",
     };
   }
 };

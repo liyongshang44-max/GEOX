@@ -135,6 +135,15 @@ function toMs(v: unknown): number | null {
   return null;
 }
 
+function parseRuleVersion(params: { explicitVersion?: unknown; compositeRuleId?: unknown }): string | null {
+  const explicit = toText(params.explicitVersion);
+  if (explicit) return explicit;
+  const composite = toText(params.compositeRuleId);
+  if (!composite) return null;
+  const match = composite.match(/_(v\d+)$/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
 function normalizeDeviceId(v: unknown): string | null {
   const raw = toText(v);
   if (!raw) return null;
@@ -1075,6 +1084,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       ?? recommendationPayloadWithFallback?.reason_codes?.[0]
       ?? state.rule_id
     );
+    const agronomyRuleVersion = parseRuleVersion({
+      explicitVersion:
+        rec?.record_json?.payload?.rule_version
+        ?? plan?.record_json?.payload?.rule_version
+        ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.rule_version
+        ?? (state as Record<string, unknown>)?.rule_version,
+      compositeRuleId: agronomyRuleId,
+    });
     const agronomyReasonCodes = Array.isArray(recommendationPayloadWithFallback?.reason_codes)
       ? recommendationPayloadWithFallback.reason_codes
       : [];
@@ -1171,6 +1188,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           crop_code: agronomyCropCode,
           crop_stage: agronomyCropStage,
           rule_id: agronomyRuleId,
+          rule_version: agronomyRuleVersion,
           reason_codes: agronomyReasonCodes,
           risk_if_not_execute: agronomyRiskIfNotExecute,
           before_metrics: beforeMetricsForResponse,

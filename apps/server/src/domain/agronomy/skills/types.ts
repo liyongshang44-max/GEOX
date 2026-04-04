@@ -23,6 +23,21 @@ export interface CropSkill {
   };
 }
 
+export interface RuleResult {
+  action_type: string;
+  parameters?: any;
+
+  expected_effect?: {
+    type: string;
+    value: number;
+  };
+
+  reason_codes: string[];
+
+  rule_id: string;
+  version: string;
+}
+
 export interface AgronomyRuleSkill {
   id: string;
   version: string;
@@ -39,15 +54,7 @@ export interface AgronomyRuleSkill {
     field_id: string;
     crop_stage: CropStage;
     metrics: any;
-  }): {
-    action_type: string;
-    parameters?: any;
-    expected_effect?: {
-      type: string;
-      value: number;
-    };
-    reason_codes?: string[];
-  };
+  }): RuleResult;
 }
 
 export interface AcceptanceSkill {

@@ -21,7 +21,9 @@ export const cornWaterRule: AgronomyRuleSkill = {
         type: "moisture_increase",
         value: 10
       },
-      reason_codes: ["LOW_SOIL_MOISTURE"]
+      reason_codes: ["LOW_SOIL_MOISTURE"],
+      rule_id: "corn_water_balance",
+      version: "v1",
     };
   }
 };
