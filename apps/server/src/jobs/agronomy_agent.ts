@@ -645,7 +645,7 @@ export async function runAgronomyAgentOnce(pool: Pool): Promise<AgentRunResult> 
             soil_moisture: effectiveSoilMoisture,
           },
         });
-        const recommendation = generateAgronomyRecommendation(ctx);
+        const recommendation = await generateAgronomyRecommendation(ctx);
         if (!recommendation) {
           skipped += 1;
           skippedByReason.no_program += 1;

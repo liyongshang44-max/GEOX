@@ -291,7 +291,7 @@ registerProgramsV1Routes(app, pool); // Program management + field/season scoped
 registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerEvidenceBundleV1Routes(app, pool); // Stage 3: aggregate operation evidence bundle for frontend consumption.
 registerEvidenceReportV1Routes(app, pool); // Stage 5: async commercial evidence report generation.
-registerSkillRulesV1Routes(app); // Stage 6: runtime agronomy skill switch/list APIs.
+registerSkillRulesV1Routes(app, pool); // Stage 7: DB-driven runtime agronomy skill switch/list APIs.
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
