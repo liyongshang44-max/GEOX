@@ -16,6 +16,7 @@ import OperationEffectEvaluationCard from "../components/operations/OperationEff
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
 import { fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
+import { listSkillRules, type SkillRuleSwitch } from "../api/skills";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
 
 const COPY = {
@@ -56,6 +57,7 @@ export default function OperationDetailPage(): React.ReactElement {
     }
   }, [detail]);
   const [billing, setBilling] = React.useState<OperationBillingResponse | null>(null);
+  const [ruleSwitches, setRuleSwitches] = React.useState<SkillRuleSwitch[]>([]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -74,6 +76,25 @@ export default function OperationDetailPage(): React.ReactElement {
     };
   }, [model.operationPlanId, operationPlanId]);
 
+  React.useEffect(() => {
+    const cropCode = String((detail as any)?.agronomy?.crop_code ?? "").trim();
+    if (!cropCode) {
+      setRuleSwitches([]);
+      return;
+    }
+    let mounted = true;
+    void listSkillRules({ crop_code: cropCode, enabled_only: true })
+      .then((items) => {
+        if (mounted) setRuleSwitches(Array.isArray(items) ? items : []);
+      })
+      .catch(() => {
+        if (mounted) setRuleSwitches([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [detail]);
+
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !detail) {
     return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
@@ -87,8 +108,12 @@ export default function OperationDetailPage(): React.ReactElement {
   const resultSummary = buildResultSummary(model);
   const decisionRule = model.recommendationBasis.ruleId || model.agronomyDecision.ruleId || "--";
   const decisionRuleVersion = String((detail as any)?.agronomy?.rule_version ?? "").trim();
+  const matchedRuleSwitch = ruleSwitches.find((item) =>
+    item.skill_id === decisionRule
+    && String(item.version ?? "").trim() === decisionRuleVersion
+  );
   const decisionRuleSource = decisionRule !== "--" && decisionRuleVersion
-    ? `${decisionRule}_${decisionRuleVersion}`
+    ? `${decisionRule}_${decisionRuleVersion}${matchedRuleSwitch ? `（优先级${matchedRuleSwitch.priority}）` : ""}`
     : decisionRule;
   const decisionStage = String((detail as any)?.agronomy?.crop_stage ?? model.recommendationBasis.cropStage ?? "--");
   const decisionReason = (() => {

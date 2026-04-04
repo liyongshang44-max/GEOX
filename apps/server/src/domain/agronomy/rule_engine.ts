@@ -24,12 +24,12 @@ export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyRu
     metrics: input.telemetry,
   });
 
-  const explicitStage = String(input.crop_stage ?? "").trim();
+  const explicitStage = normalizeSkillStage(String(input.crop_stage ?? ""));
 
   return {
     ...input,
     crop_code: cropCode,
-    crop_stage: fromSkillResolver || explicitStage || "seedling",
+    crop_stage: (String(input.crop_stage ?? "").trim() ? explicitStage : fromSkillResolver) || "seedling",
   };
 }
 
@@ -125,9 +125,12 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
       ? Number((normalized.constraints as Record<string, unknown>).days_after_planting)
       : undefined;
   const cropSkill = cropSkills.find((c) => c.crop_code === crop_code);
-  const crop_stage = cropSkill
-    ? cropSkill.resolveStage({ days_after_sowing, metrics })
-    : normalizeSkillStage(String(normalized.crop_stage ?? ""));
+  const explicitStage = String(normalized.crop_stage ?? "").trim();
+  const crop_stage = explicitStage
+    ? normalizeSkillStage(explicitStage)
+    : cropSkill
+      ? cropSkill.resolveStage({ days_after_sowing, metrics })
+      : "seedling";
 
   const rules = getRuleSkills({
     crop_code,
