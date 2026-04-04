@@ -82,6 +82,8 @@ export default function CommercialDashboardPage(): React.ReactElement {
     trace_gap_definition: "--",
     time_window: "7d",
   });
+  const [customerReport, setCustomerReport] = React.useState<any>(null);
+  const [policySuggestions, setPolicySuggestions] = React.useState<Array<{ rule_id: string; issue: string; recommendation: string; suggested_action?: { action_type: string; target: string; parameters: any } }>>([]);
   const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
@@ -122,6 +124,8 @@ export default function CommercialDashboardPage(): React.ReactElement {
         trace_gap_definition: "--",
         time_window: "7d",
       });
+      setCustomerReport(res.customer_report_v1 ?? null);
+      setPolicySuggestions(Array.isArray(res.policy_suggestion_v1) ? res.policy_suggestion_v1 : []);
     });
     return () => {
       mounted = false;
@@ -383,6 +387,47 @@ export default function CommercialDashboardPage(): React.ReactElement {
             <span className="operationsSummaryLabel">口径窗口</span>
             <strong>{opsDefinition.time_window}</strong>
           </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">客户报告（可签约结构）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">报告版本</span>
+            <strong>{String(customerReport?.report_meta?.version ?? "--")}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">租户</span>
+            <strong>{String(customerReport?.report_meta?.tenant_id ?? "--")}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">数据窗口</span>
+            <strong>
+              {customerReport?.report_meta?.data_window
+                ? `${new Date(customerReport.report_meta.data_window.start).toLocaleDateString()} ~ ${new Date(customerReport.report_meta.data_window.end).toLocaleDateString()}`
+                : "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">生成时间</span>
+            <strong>{customerReport?.report_meta?.generated_at ? new Date(customerReport.report_meta.generated_at).toLocaleString() : "--"}</strong>
+          </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">策略优化建议（可执行）</div>
+        <div className="decisionList" style={{ marginTop: 10 }}>
+          {policySuggestions.map((item) => (
+            <div key={item.rule_id} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.rule_id}</div>
+              <div className="decisionItemMeta">{item.issue}</div>
+              <div className="muted" style={{ marginTop: 4 }}>{item.recommendation}</div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                action: {String(item.suggested_action?.action_type ?? "--")} / target: {String(item.suggested_action?.target ?? "--")}
+              </div>
+            </div>
+          ))}
+          {!policySuggestions.length ? <EmptyBlock text="暂无策略建议" /> : null}
         </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>

@@ -73,6 +73,13 @@ export type OperationDetailResponse = {
     executable: boolean;
     fallback_plan?: any;
   };
+  value_attribution_v1?: {
+    operation_plan_id: string;
+    expected_effect?: any;
+    actual_effect?: any;
+    outcome?: { effect_verdict?: string; final_status?: string };
+    attribution_basis?: { source_metrics: string[]; method: string };
+  };
 };
 
 export type OperationEvidenceExportResponse = {

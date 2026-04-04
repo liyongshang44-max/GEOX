@@ -3,6 +3,7 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
+import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -569,6 +570,53 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
          AND group_id = $3`,
       [tenant_id, project_id, group_id, nowMs - 15 * 60 * 1000]
     ).catch(() => ({ rows: [{ online: 0, offline: 0, busy: 0, low_battery: 0 }] }));
+    const reportWindow = {
+      start: nowMs - 7 * 24 * 60 * 60 * 1000,
+      end: nowMs,
+    };
+    const customerReportV1 = {
+      report_meta: {
+        tenant_id,
+        generated_at: nowMs,
+        version: "v1" as const,
+        data_window: reportWindow,
+      },
+      sla: {
+        execution_success_rate: executionSuccessRate,
+        acceptance_pass_rate: passRate,
+        response_time_avg: responseTimeAvg,
+      },
+      execution: {
+        running: Number(executionBreakdownQ.rows?.[0]?.running ?? 0),
+        human: Number(executionBreakdownQ.rows?.[0]?.human ?? 0),
+        device: Number(executionBreakdownQ.rows?.[0]?.device ?? 0),
+        delayed: Number(delayedQ.rows?.[0]?.count ?? 0),
+      },
+      risk: {
+        high: Number(riskBreakdownQ.rows?.[0]?.high ?? 0),
+        medium: Number(riskBreakdownQ.rows?.[0]?.medium ?? 0),
+        low: Number(riskBreakdownQ.rows?.[0]?.low ?? 0),
+      },
+      value: {
+        benefit_operations_count: benefitOperations.length,
+        top_benefit_operations: benefitOperations.slice(0, 5),
+      },
+      definitions: {
+        sla_definition: {
+          execution_denominator: "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
+          acceptance_denominator: "已进入验收阶段的 operation（存在 receipt）",
+          response_time_definition: "从 task 下发到 receipt 回传完成的平均时长",
+        },
+        execution_definition: "running/human/device/delayed 基于 dispatch_queue_v1 与 operation_state 投影统计",
+        risk_definition: "HIGH/MEDIUM/LOW 基于 field_program_state_v1 current_risk_summary.level",
+        value_definition: "benefit_operations 由 top_actions 中 value 组件高值项聚合",
+      },
+    };
+    const policySuggestionV1 = buildPolicySuggestionsFromStats({
+      failureDistribution,
+      retryDistribution,
+      traceGapCount,
+    });
 
     return reply.send({
       ok: true,
@@ -657,6 +705,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         trace_gap_definition: "missing_receipt=有task无receipt；missing_evidence=有receipt但无evidence_artifact",
         time_window: "7d",
       },
+      customer_report_v1: customerReportV1,
+      policy_suggestion_v1: policySuggestionV1,
     });
   });
 

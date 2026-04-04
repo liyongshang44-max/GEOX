@@ -13,6 +13,11 @@ export type RulePerformanceItem = {
   last_updated_at: string;
 };
 
+export type AttributionBasisV1 = {
+  source_metrics: string[];
+  method: string;
+};
+
 export function computeEffect(before: any, after: any) {
   const beforeMoisture = Number(before?.soil_moisture ?? NaN);
   const afterMoisture = Number(after?.soil_moisture ?? NaN);
@@ -47,6 +52,37 @@ export function evaluateEffectVerdict(input: {
   if (actual >= expectedLowerBound) return "SUCCESS";
   if (actual > 0 && actual < expectedLowerBound) return "PARTIAL";
   return "FAILED";
+}
+
+export function buildAttributionBasis(input: {
+  expectedEffect?: { type?: string | null; value?: number | null } | null;
+  actualEffect?: { metric?: string | null; delta?: number | null; type?: string | null; value?: number | null } | null;
+  beforeMetrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
+  afterMetrics?: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null } | null;
+}): AttributionBasisV1 {
+  const source_metrics: string[] = [];
+  if (Number.isFinite(Number(input.beforeMetrics?.soil_moisture ?? NaN)) || Number.isFinite(Number(input.afterMetrics?.soil_moisture ?? NaN))) {
+    source_metrics.push("soil_moisture");
+  }
+  if (Number.isFinite(Number(input.beforeMetrics?.temperature ?? NaN)) || Number.isFinite(Number(input.afterMetrics?.temperature ?? NaN))) {
+    source_metrics.push("temperature");
+  }
+  if (Number.isFinite(Number(input.beforeMetrics?.humidity ?? NaN)) || Number.isFinite(Number(input.afterMetrics?.humidity ?? NaN))) {
+    source_metrics.push("humidity");
+  }
+  const expectedValue = Number(input.expectedEffect?.value ?? NaN);
+  const actualValue = Number(
+    Number.isFinite(Number(input.actualEffect?.delta ?? NaN))
+      ? input.actualEffect?.delta
+      : input.actualEffect?.value
+  );
+  const method = Number.isFinite(expectedValue) && Number.isFinite(actualValue)
+    ? "rule_based_delta_compare: actual_delta_vs_expected_threshold"
+    : "rule_based_observation: missing_expected_or_actual";
+  return {
+    source_metrics: source_metrics.length > 0 ? source_metrics : ["soil_moisture"],
+    method,
+  };
 }
 
 export async function recordRulePerformance(input: {

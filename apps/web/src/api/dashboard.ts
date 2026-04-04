@@ -132,6 +132,25 @@ export type DashboardOverviewV2Response = {
     trace_gap_definition: string;
     time_window: "7d";
   };
+  customer_report_v1?: {
+    report_meta: {
+      tenant_id: string;
+      generated_at: number;
+      version: "v1";
+      data_window: { start: number; end: number };
+    };
+    sla?: any;
+    execution?: any;
+    risk?: any;
+    value?: any;
+    definitions?: any;
+  };
+  policy_suggestion_v1?: Array<{
+    rule_id: string;
+    issue: string;
+    recommendation: string;
+    suggested_action?: { action_type: string; target: string; parameters: any };
+  }>;
 };
 
 export type SlaSummary = {

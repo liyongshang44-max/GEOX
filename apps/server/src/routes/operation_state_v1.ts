@@ -8,7 +8,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
+import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
 import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -1397,6 +1397,21 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       actualEffect,
       costTotal: costBreakdown.total_cost,
     });
+    const valueAttributionV1 = {
+      operation_plan_id: operationPlanId,
+      expected_effect: expectedEffect,
+      actual_effect: actualEffect,
+      outcome: {
+        effect_verdict: effectVerdict,
+        final_status: finalStatusCode,
+      },
+      attribution_basis: buildAttributionBasis({
+        expectedEffect,
+        actualEffect,
+        beforeMetrics: beforeMetricsForResponse,
+        afterMetrics: afterMetricsForResponse,
+      }),
+    };
     const executionInclusion: "INCLUDED" | "EXCLUDED_NO_TASK" | "EXCLUDED_INVALID" = !task
       ? "EXCLUDED_NO_TASK"
       : invalidExecution
@@ -1653,6 +1668,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         human: explainHuman,
       },
       value_profile: valueProfile,
+      value_attribution_v1: valueAttributionV1,
       priority_bucket: priority.priority_bucket,
       priority_score: priority.priority_score,
       priority_components: priority.priority_components,

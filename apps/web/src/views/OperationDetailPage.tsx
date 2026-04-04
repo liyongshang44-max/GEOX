@@ -161,6 +161,7 @@ export default function OperationDetailPage(): React.ReactElement {
   const attemptHistory = Array.isArray((detail as any)?.attempt_history) ? (detail as any).attempt_history : [];
   const traceGap = (detail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
   const fallbackState = (detail as any)?.fallback_state ?? { generated: false, executable: false };
+  const valueAttribution = (detail as any)?.value_attribution_v1 ?? null;
   const [executing, setExecuting] = React.useState(false);
 
   const runFromDetail = async (): Promise<void> => {
@@ -254,6 +255,17 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">成本影响分档</span><strong>{String(valueProfile?.cost_impact_tier ?? "--")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果方向</span><strong>{String(valueProfile?.result_direction ?? "--")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果可信度</span><strong>{String(valueProfile?.confidence ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">收益归因（可审计）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Operation</span><strong>{String(valueAttribution?.operation_plan_id ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Expected</span><strong>{String(valueAttribution?.expected_effect?.value ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Actual</span><strong>{String(valueAttribution?.actual_effect?.value ?? valueAttribution?.actual_effect?.delta ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Verdict</span><strong>{String(valueAttribution?.outcome?.effect_verdict ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Attribution Metrics</span><strong>{Array.isArray(valueAttribution?.attribution_basis?.source_metrics) ? valueAttribution.attribution_basis.source_metrics.join(", ") : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Attribution Method</span><strong>{String(valueAttribution?.attribution_basis?.method ?? "--")}</strong></div>
         </div>
       </section>
 
