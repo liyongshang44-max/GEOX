@@ -9,6 +9,9 @@ export type OperationStateItemV1 = {
   device_id?: string | null;
   field_id?: string | null;
   action_type?: string | null;
+  rule_id?: string | null;
+  skill_id?: string | null;
+  reason_codes?: string[] | null;
   dispatch_status: string;
   receipt_status: string;
   final_status: string;

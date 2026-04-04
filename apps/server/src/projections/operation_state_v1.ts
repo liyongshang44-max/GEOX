@@ -43,6 +43,7 @@ export type OperationStateV1 = {
   crop_code: string | null;
   crop_stage: string | null;
   rule_id: string | null;
+  skill_id: string | null;
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   reason_codes: string[];
   action_type: string | null;
@@ -473,6 +474,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       (String(rec?.record_json?.payload?.rule_id ?? "").trim() || null)
       ?? latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.rule_id ?? "").trim())
       ?? (String(rec?.record_json?.payload?.rule_hit?.[0]?.rule_id ?? "").trim() || null);
+    const inferredSkillId =
+      (String(rec?.record_json?.payload?.skill_id ?? "").trim() || null)
+      ?? latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.skill_id ?? "").trim())
+      ?? inferredRuleId;
     const inferredRuleHit = (() => {
       const fromRec = Array.isArray(rec?.record_json?.payload?.rule_hit) ? rec.record_json.payload.rule_hit : null;
       const fromPlan = Array.isArray(latestPlanPayload?.rule_hit) ? latestPlanPayload.rule_hit : null;
@@ -530,6 +535,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       crop_code: inferredCropCode,
       crop_stage: inferredCropStage,
       rule_id: inferredRuleId,
+      skill_id: inferredSkillId,
       rule_hit: inferredRuleHit,
       reason_codes: inferredReasonCodes,
       action_type: latestNonEmpty(

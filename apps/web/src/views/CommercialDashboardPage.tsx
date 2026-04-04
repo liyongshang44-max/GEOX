@@ -182,11 +182,6 @@ export default function CommercialDashboardPage(): React.ReactElement {
   };
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
-  const recentOperationEffect = {
-    effective: d.actions.filter((item) => item.finalStatus === "succeeded").length || 12,
-    deviation: d.actions.filter((item) => item.finalStatus === "failed").length || 3,
-    invalid: Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length) || 2,
-  };
   const agronomyValue = d.agronomyValue;
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;

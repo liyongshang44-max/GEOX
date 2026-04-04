@@ -1,19 +1,43 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
-import { evaluateRuleRegistry } from "./rules";
-import { resolveCropStage } from "./stage_resolver";
+import { resolveCropStage as resolveCropStageFromProfile } from "./stage_resolver";
 import type { AgronomyContext } from "./types";
+import { cropSkills, ruleSkills } from "./skills/registry";
+import type { CropStage } from "./skills/types";
+
+function normalizeSkillStage(stage: string): CropStage {
+  const s = String(stage ?? "").trim().toLowerCase();
+  if (s === "seedling" || s === "vegetative" || s === "flowering" || s === "fruiting" || s === "reproductive") {
+    return s;
+  }
+  return "seedling";
+}
 
 export function normalizeAgronomyRuleInput(input: AgronomyRuleInput): AgronomyRuleInput {
-  return {
-    ...input,
-    crop_code: String(input.crop_code ?? "").toLowerCase(),
-    crop_stage: resolveCropStage({
-      cropCode: input.crop_code,
-      explicitStage: input.crop_stage,
-      daysAfterPlanting: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+  const cropCode = String(input.crop_code ?? "").toLowerCase();
+  const fromLegacyResolver = resolveCropStageFromProfile({
+    cropCode: input.crop_code,
+    explicitStage: input.crop_stage,
+    daysAfterPlanting: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_planting))
+      ? Number((input.constraints as Record<string, unknown>).days_after_planting)
+      : undefined,
+  });
+
+  const crop = cropSkills.find((x) => x.crop_code === cropCode);
+  const fromSkillResolver = crop?.resolveStage({
+    days_after_sowing: Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_sowing))
+      ? Number((input.constraints as Record<string, unknown>).days_after_sowing)
+      : Number.isFinite(Number((input.constraints as Record<string, unknown> | undefined)?.days_after_planting))
         ? Number((input.constraints as Record<string, unknown>).days_after_planting)
         : undefined,
-    }),
+    metrics: input.telemetry,
+  });
+
+  const explicitStage = String(input.crop_stage ?? "").trim();
+
+  return {
+    ...input,
+    crop_code: cropCode,
+    crop_stage: explicitStage || fromSkillResolver || fromLegacyResolver,
   };
 }
 
@@ -25,7 +49,7 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
     field_id: ctx.fieldId,
     season_id: ctx.seasonId ?? "unknown",
     crop_code: String(ctx.cropCode ?? "").toLowerCase(),
-    crop_stage: resolveCropStage({
+    crop_stage: resolveCropStageFromProfile({
       cropCode: ctx.cropCode,
       explicitStage: ctx.cropStage,
       daysAfterPlanting: Number.isFinite(Number((ctx.constraints as Record<string, unknown> | undefined)?.days_after_planting))
@@ -51,13 +75,69 @@ function normalizeContextToRuleInput(ctx: AgronomyContext): AgronomyRuleInput {
   };
 }
 
+function mapRuleRecommendationToV2(params: {
+  input: AgronomyRuleInput;
+  ruleId: string;
+  skillId: string;
+  recommendation: {
+    action_type: string;
+    expected_effect?: { type: string; value: number };
+    reason_codes?: string[];
+  };
+}): AgronomyRecommendationV2 {
+  const metric = String(params.recommendation.expected_effect?.type ?? "general_effect");
+  const direction = metric.includes("decrease") ? "decrease" : metric.includes("stabil") ? "stabilize" : "increase";
+
+  const recommendation: AgronomyRecommendationV2 & { skill_id: string; reason_codes: string[] } = {
+    recommendation_id: `rec_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    crop_code: String(params.input.crop_code ?? "").toLowerCase(),
+    crop_stage: String(params.input.crop_stage ?? ""),
+    rule_id: params.ruleId,
+    action_type: String(params.recommendation.action_type ?? "INSPECT") as AgronomyRecommendationV2["action_type"],
+    confidence: 0.8,
+    reasons: params.recommendation.reason_codes ?? [],
+    reason_codes: params.recommendation.reason_codes ?? [],
+    skill_id: params.skillId,
+    expected_effect: [
+      {
+        metric,
+        direction,
+        value: Number(params.recommendation.expected_effect?.value ?? NaN),
+      }
+    ],
+    evidence_basis: {
+      snapshot_id: String((params.input.context as Record<string, unknown> | undefined)?.snapshot_id ?? ""),
+      telemetry_refs: [],
+    },
+  };
+  return recommendation;
+}
+
 export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] {
   const normalizedInput = normalizeContextToRuleInput(ctx);
   return evaluateRulesByInput(normalizedInput);
 }
 
 export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommendationV2[] {
-  return evaluateRuleRegistry(normalizeAgronomyRuleInput(input));
+  const normalized = normalizeAgronomyRuleInput(input);
+  const crop_code = String(normalized.crop_code ?? "").toLowerCase();
+  const crop_stage = normalizeSkillStage(String(normalized.crop_stage ?? ""));
+  const metrics = normalized.telemetry ?? {};
+
+  const rules = ruleSkills.filter((r) => r.crop_code === crop_code);
+
+  for (const rule of rules) {
+    if (rule.match({ crop_stage, metrics })) {
+      const recommendation = rule.recommend({
+        field_id: String(normalized.field_id ?? ""),
+        crop_stage,
+        metrics,
+      });
+      return [mapRuleRecommendationToV2({ input: normalized, ruleId: `${rule.id}_${rule.version}`, skillId: `${rule.id}_${rule.version}`, recommendation })];
+    }
+  }
+
+  return [];
 }
 
 export function pickBestRule(recommendations: AgronomyRecommendationV2[]): AgronomyRecommendationV2 | null {
@@ -81,4 +161,3 @@ export function validateRecommendationMainChainFields(input: {
   if (!ruleId) return { ok: false, error: "MISSING_RULE_ID" };
   return { ok: true };
 }
-
