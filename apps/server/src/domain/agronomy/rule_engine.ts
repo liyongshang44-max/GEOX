@@ -110,12 +110,12 @@ function mapRuleRecommendationToV2(params: {
   return recommendation;
 }
 
-export function evaluateRules(ctx: AgronomyContext): AgronomyRecommendationV2[] {
+export async function evaluateRules(ctx: AgronomyContext): Promise<AgronomyRecommendationV2[]> {
   const normalizedInput = normalizeContextToRuleInput(ctx);
   return evaluateRulesByInput(normalizedInput);
 }
 
-export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommendationV2[] {
+export async function evaluateRulesByInput(input: AgronomyRuleInput): Promise<AgronomyRecommendationV2[]> {
   const normalized = normalizeAgronomyRuleInput(input);
   const crop_code = String(normalized.crop_code ?? "").toLowerCase();
   const metrics = normalized.telemetry ?? {};
@@ -132,9 +132,14 @@ export function evaluateRulesByInput(input: AgronomyRuleInput): AgronomyRecommen
       ? cropSkill.resolveStage({ days_after_sowing, metrics })
       : "seedling";
 
-  const rules = getRuleSkills({
+  const tenant_id = String(normalized.tenant_id ?? "").trim();
+  if (!tenant_id) {
+    throw new Error("TENANT_ID_REQUIRED_FOR_RULE_ENGINE");
+  }
+
+  const rules = await getRuleSkills({
     crop_code,
-    tenant_id: normalized.tenant_id,
+    tenant_id,
   });
 
   for (const rule of rules) {

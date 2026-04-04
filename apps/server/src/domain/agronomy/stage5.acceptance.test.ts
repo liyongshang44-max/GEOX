@@ -17,8 +17,8 @@ test("stage_resolver priority: explicit stage > days_after_planting > unknown", 
   assert.equal(resolveCropStage({ cropCode: "corn" }), "unknown");
 });
 
-test("corn vegetative + low moisture -> IRRIGATE", () => {
-  const rec = generateAgronomyRecommendation({
+test("corn vegetative + low moisture -> IRRIGATE", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -33,8 +33,8 @@ test("corn vegetative + low moisture -> IRRIGATE", () => {
   assert.ok((rec?.reasons.length ?? 0) > 0);
 });
 
-test("corn reproductive + high canopy temp -> INSPECT", () => {
-  const rec = generateAgronomyRecommendation({
+test("corn reproductive + high canopy temp -> INSPECT", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -49,8 +49,8 @@ test("corn reproductive + high canopy temp -> INSPECT", () => {
   assert.ok((rec?.reasons.length ?? 0) > 0);
 });
 
-test("tomato flowering + high canopy temp -> INSPECT", () => {
-  const rec = generateAgronomyRecommendation({
+test("tomato flowering + high canopy temp -> INSPECT", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
@@ -65,8 +65,8 @@ test("tomato flowering + high canopy temp -> INSPECT", () => {
   assert.ok((rec?.reasons.length ?? 0) > 0);
 });
 
-test("tomato fruiting + low ec -> FERTILIZE", () => {
-  const rec = generateAgronomyRecommendation({
+test("tomato fruiting + low ec -> FERTILIZE", async () => {
+  const rec = await generateAgronomyRecommendation({
     tenantId: "t",
     projectId: "p",
     groupId: "g",
