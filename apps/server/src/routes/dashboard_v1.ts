@@ -388,6 +388,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       } else {
         recommendedNextAction = { action_type: "CHECK_FIELD_STATUS", source: "FALLBACK", reason: "无规则与SLA修复项，先核查田块状态" };
       }
+      const idempotencySeedTs = Number(item?.last_event_ts ?? Date.now());
       const executionPlan = {
         action_type: recommendedNextAction.action_type,
         target: {
@@ -408,10 +409,10 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
           fallback_action: "CHECK_FIELD_STATUS",
         },
         time_window: {
-          start_ts: Number(item?.last_event_ts ?? Date.now()),
-          end_ts: Number(item?.last_event_ts ?? Date.now()) + 60 * 60 * 1000,
+          start_ts: idempotencySeedTs,
+          end_ts: idempotencySeedTs + 60 * 60 * 1000,
         },
-        idempotency_key: `${operationId}_${recommendedNextAction.action_type}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
+        idempotency_key: `${operationId}_${recommendedNextAction.action_type}_${idempotencySeedTs}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
       };
       const capabilityCheck = (() => {
         if (!executionPlan.target.ref) return { supported: false, reason: "MISSING_DEVICE_TARGET" };
@@ -570,7 +571,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         baseline: "previous_7d",
       },
       sla_definition: {
-        execution_denominator: "已进入执行阶段的 operation（存在 task 或终态为执行相关状态）",
+        execution_denominator: "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
         acceptance_denominator: "已进入验收阶段的 operation（存在 receipt）",
         response_time_definition: "从 task 下发到 receipt 回传完成的平均时长",
       },

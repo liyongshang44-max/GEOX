@@ -21,7 +21,15 @@ export const AO_ACT_ACTION_TYPE_ALLOWLIST_V0 = [
 ] as const; // Frozen minimal set
 
 const FACT_SOURCE_AO_ACT_V0 = "api/control/ao_act"; // Source label for facts written by AO-ACT routes (DB NOT NULL constraint).
-const ACTION_EXECUTION_ALLOWLIST_V1 = [...AO_ACT_ACTION_TYPE_ALLOWLIST_V0, "FERTILIZE", "CHECK_FIELD_STATUS"] as const;
+const ACTION_EXECUTION_ALLOWLIST_V1 = [
+  ...AO_ACT_ACTION_TYPE_ALLOWLIST_V0,
+  "FERTILIZE",
+  "CHECK_FIELD_STATUS",
+  "REVIEW_APPROVAL",
+  "COLLECT_RECEIPT",
+  "PROMOTE_ACCEPTANCE",
+  "RETRY_EXECUTION"
+] as const;
 
 const FORBID_KEYS_V0 = new Set<string>([
   "problem_state_id",
