@@ -57,6 +57,29 @@ export type OperationDetailResponse = {
   } | null;
   evidence_export?: any;
   links?: Record<string, string>;
+  attempt_history?: Array<{
+    attempt_no: number;
+    execution_key: string;
+    retry_of?: string;
+    timestamp: number;
+    result: "SUCCESS" | "FAILED" | "PENDING";
+  }>;
+  trace_gap?: {
+    missing_receipt: boolean;
+    missing_evidence: boolean;
+  };
+  fallback_state?: {
+    generated: boolean;
+    executable: boolean;
+    fallback_plan?: any;
+  };
+  value_attribution_v1?: {
+    operation_plan_id: string;
+    expected_effect?: any;
+    actual_effect?: any;
+    outcome?: { effect_verdict?: string; final_status?: string };
+    attribution_basis?: { source_metrics: string[]; method: string };
+  };
 };
 
 export type OperationEvidenceExportResponse = {
@@ -114,6 +137,30 @@ export async function fetchOperationBilling(operationId: string): Promise<Operat
 }
 
 export type OperationBillingResponse = { billable: boolean; charge: number };
+export type ExecutionPlanV1 = {
+  action_type: string;
+  target: { kind: "field" | "device"; ref: string };
+  parameters: Record<string, unknown>;
+  execution_mode: "AUTO" | "MANUAL";
+  safe_guard: { requires_approval: boolean };
+  failure_strategy: { retryable: boolean; max_retries: number; fallback_action?: string };
+  device_capability_check?: { supported: boolean; reason?: string };
+  time_window?: { start_ts?: number; end_ts?: number };
+  idempotency_key: string;
+};
+
+export async function executeOperationAction(input: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  operation_id: string;
+  execution_plan: ExecutionPlanV1;
+}): Promise<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }> {
+  return apiRequest<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }>("/api/v1/actions/execute", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
 
 export type EvidenceReportCreateResponse = { ok?: boolean; job_id?: string };
 export type EvidenceReportStatusResponse = { ok?: boolean; status?: "PENDING" | "DONE" | "FAILED"; download_url?: string | null; error?: string | null };
