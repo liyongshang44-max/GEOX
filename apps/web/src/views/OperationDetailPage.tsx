@@ -15,7 +15,7 @@ import OperationRecommendationBasisCard from "../components/operations/Operation
 import OperationEffectEvaluationCard from "../components/operations/OperationEffectEvaluationCard";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
-import { fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
+import { executeOperationAction, fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
 import { listSkillRules, type SkillRuleSwitch } from "../api/skills";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
 
@@ -152,6 +152,28 @@ export default function OperationDetailPage(): React.ReactElement {
   const effectTrend = String((detail as any)?.effect_trend ?? "NO_DATA");
   const trendDefinition = (detail as any)?.trend_definition ?? {};
   const nextAction = (detail as any)?.recommended_next_action ?? {};
+  const executionPlan = (detail as any)?.execution_plan ?? null;
+  const executionReady = Boolean((detail as any)?.execution_ready);
+  const executionBlockers = Array.isArray((detail as any)?.execution_blockers) ? (detail as any).execution_blockers : [];
+  const executionContext = (detail as any)?.execution_context ?? {};
+  const [executing, setExecuting] = React.useState(false);
+
+  const runFromDetail = async (): Promise<void> => {
+    if (!executionReady || !executionPlan) return;
+    setExecuting(true);
+    try {
+      await executeOperationAction({
+        tenant_id: String(executionContext?.tenant_id ?? ""),
+        project_id: String(executionContext?.project_id ?? ""),
+        group_id: String(executionContext?.group_id ?? ""),
+        operation_id: String(model.operationPlanId || operationPlanId),
+        execution_plan: executionPlan,
+      });
+      await reload();
+    } finally {
+      setExecuting(false);
+    }
+  };
 
   return (
     <div className="demoDashboardPage">
@@ -258,6 +280,12 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">动作类型</span><strong>{String(nextAction?.action_type ?? "CHECK_FIELD_STATUS")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{String(nextAction?.source ?? "FALLBACK")}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{String(nextAction?.reason ?? "当前无可执行项，建议先检查田块状态")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : `否（${executionBlockers.join(",") || "阻断"}）`}</strong></div>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
+            {executing ? "执行中..." : "一键执行"}
+          </button>
         </div>
       </section>
 

@@ -388,15 +388,62 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       } else {
         recommendedNextAction = { action_type: "CHECK_FIELD_STATUS", source: "FALLBACK", reason: "无规则与SLA修复项，先核查田块状态" };
       }
+      const executionPlan = {
+        action_type: recommendedNextAction.action_type,
+        target: {
+          kind: (item?.device_id ? "device" : "field") as "field" | "device",
+          ref: String(item?.device_id ?? item?.field_id ?? ""),
+        },
+        parameters: {
+          operation_id: operationId,
+          action_type: recommendedNextAction.action_type,
+        },
+        execution_mode: item?.device_id ? "AUTO" as const : "MANUAL" as const,
+        safe_guard: {
+          requires_approval: pending && !slaFix,
+        },
+        time_window: {
+          start_ts: Number(item?.last_event_ts ?? Date.now()),
+          end_ts: Number(item?.last_event_ts ?? Date.now()) + 60 * 60 * 1000,
+        },
+        idempotency_key: `${operationId}_${recommendedNextAction.action_type}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
+      };
+      const executionBlockers: string[] = [];
+      if (!executionPlan.target.ref) executionBlockers.push("INVALID_TARGET");
+      if (!executionPlan.parameters || Object.keys(executionPlan.parameters).length < 1) executionBlockers.push("MISSING_PARAMETERS");
+      if (executionPlan.safe_guard.requires_approval) executionBlockers.push("REQUIRES_APPROVAL");
+      const trendAdjustment = finalStatusCode === "INVALID_EXECUTION" ? 2 : (pending ? 1 : 0);
+      const fieldRiskAdjustment = priorityBucket === "P0" ? 3 : priorityBucket === "P1" ? 1 : 0;
+      const globalPriorityComponents = {
+        base: priorityScore,
+        trend_adjustment: trendAdjustment,
+        field_risk_adjustment: fieldRiskAdjustment,
+      };
+      const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
       return {
+        tenant_id,
+        project_id,
+        group_id,
         operation_id: operationId,
         action_type: String(item?.action_type ?? "CHECK_FIELD_STATUS"),
         priority_bucket: priorityBucket,
         priority_score: priorityScore,
         priority_components: { risk, value, confidence, timeliness },
+        global_priority_score: globalPriorityScore,
+        global_priority_components: globalPriorityComponents,
         reason: recommendedNextAction.reason,
         risk_if_not_execute: priorityBucket === "P0" ? "闭环中断风险上升" : "执行效率下降",
         recommended_next_action: recommendedNextAction,
+        execution_plan: executionPlan,
+        execution_ready: executionBlockers.length === 0,
+        execution_blockers: executionBlockers,
+        priority_adjustment_by_trend: trendAdjustment,
+        trend_adjustment_policy: {
+          window: "7d",
+          baseline: "previous_7d",
+          min_samples: 2,
+          hysteresis: 1,
+        },
         last_event_ts: Number(item?.last_event_ts ?? 0),
       };
     });
@@ -404,7 +451,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       .sort((a, b) => {
         const br = bucketRank(a.priority_bucket) - bucketRank(b.priority_bucket);
         if (br !== 0) return br;
-        if (b.priority_score !== a.priority_score) return b.priority_score - a.priority_score;
+        if (b.global_priority_score !== a.global_priority_score) return b.global_priority_score - a.global_priority_score;
         return Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0);
       })
       .slice(0, 3);

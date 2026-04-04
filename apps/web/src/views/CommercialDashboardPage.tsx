@@ -15,6 +15,7 @@ import {
 } from "../api/dashboard";
 import { fetchOperationStates } from "../api";
 import { fetchOperationBilling, fetchOperationEvidencePack } from "../api/operations";
+import { executeOperationAction } from "../api/operations";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 
@@ -69,6 +70,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const [totalRevenue, setTotalRevenue] = React.useState(0);
   const [topActions, setTopActions] = React.useState<DashboardTopActionItem[]>([]);
   const [trendSummary, setTrendSummary] = React.useState<{ risk: string; effect: string }>({ risk: "NO_DATA", effect: "NO_DATA" });
+  const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
     todayCount: number;
@@ -228,6 +230,25 @@ export default function CommercialDashboardPage(): React.ReactElement {
     if (target?.closest("a")) return;
     navigate(to);
   };
+  const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
+    if (!item.execution_ready || !item.execution_plan) return;
+    setExecutingActionId(item.operation_id);
+    try {
+      await executeOperationAction({
+        tenant_id: String(item.tenant_id ?? ""),
+        project_id: String(item.project_id ?? ""),
+        group_id: String(item.group_id ?? ""),
+        operation_id: item.operation_id,
+        execution_plan: item.execution_plan,
+      });
+      void fetchDashboardOverviewV2().then((res) => {
+        if (!res) return;
+        setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
+      });
+    } finally {
+      setExecutingActionId(null);
+    }
+  };
 
   return (
     <div className="productPage demoDashboardPage">
@@ -276,9 +297,15 @@ export default function CommercialDashboardPage(): React.ReactElement {
         <div className="decisionList" style={{ marginTop: 10 }}>
           {topActions.map((item) => (
             <div key={item.operation_id} className="decisionItemStatic">
-              <div className="decisionItemTitle">{item.priority_bucket} · {item.action_type} · score {item.priority_score}</div>
+              <div className="decisionItemTitle">{item.priority_bucket} · {item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
               <div className="decisionItemMeta">{item.reason}</div>
               <div className="muted" style={{ marginTop: 4 }}>{item.recommended_next_action.source} / {item.recommended_next_action.action_type}</div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                {item.execution_ready ? "可执行" : `阻断：${(item.execution_blockers ?? []).join(",") || "未知"}`}
+              </div>
+              <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
+                {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
+              </button>
             </div>
           ))}
           {!topActions.length ? <EmptyBlock text="暂无可执行动作，默认建议：CHECK_FIELD_STATUS" /> : null}

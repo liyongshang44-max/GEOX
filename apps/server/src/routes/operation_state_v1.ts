@@ -572,6 +572,55 @@ function resolveRecommendedNextAction(params: {
   };
 }
 
+function buildExecutionPlan(input: {
+  operationPlanId: string;
+  actionType: string | null;
+  fieldId: string | null;
+  deviceId: string | null;
+  expectedEffect?: { type?: string | null; value?: number | null } | null;
+  requiresApproval: boolean;
+  dispatchedAtMs: number | null;
+}): {
+  action_type: string;
+  target: { kind: "field" | "device"; ref: string };
+  parameters: Record<string, unknown>;
+  execution_mode: "AUTO" | "MANUAL";
+  safe_guard: { requires_approval: boolean };
+  time_window?: { start_ts?: number; end_ts?: number };
+  idempotency_key: string;
+} {
+  const actionType = String(input.actionType ?? "").trim().toUpperCase() || "CHECK_FIELD_STATUS";
+  const targetKind: "field" | "device" = input.deviceId ? "device" : "field";
+  const targetRef = String((targetKind === "device" ? input.deviceId : input.fieldId) ?? "").trim();
+  const parameters: Record<string, unknown> = {};
+  if (input.expectedEffect?.type) parameters.expected_effect_type = String(input.expectedEffect.type);
+  if (Number.isFinite(Number(input.expectedEffect?.value ?? NaN))) parameters.expected_effect_value = Number(input.expectedEffect?.value);
+  const startTs = input.dispatchedAtMs ?? Date.now();
+  return {
+    action_type: actionType,
+    target: { kind: targetKind, ref: targetRef },
+    parameters,
+    execution_mode: targetKind === "device" ? "AUTO" : "MANUAL",
+    safe_guard: { requires_approval: input.requiresApproval },
+    time_window: { start_ts: startTs, end_ts: startTs + 60 * 60 * 1000 },
+    idempotency_key: `${input.operationPlanId}_${actionType}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
+  };
+}
+
+function evaluateExecutionReadiness(input: {
+  plan: { parameters: Record<string, unknown>; target: { ref: string }; safe_guard: { requires_approval: boolean } };
+  approvalGranted: boolean;
+}): { execution_ready: boolean; execution_blockers: string[] } {
+  const blockers: string[] = [];
+  if (!input.plan.target?.ref) blockers.push("INVALID_TARGET");
+  if (!input.plan.parameters || Object.keys(input.plan.parameters).length < 1) blockers.push("MISSING_PARAMETERS");
+  if (input.plan.safe_guard.requires_approval && !input.approvalGranted) blockers.push("REQUIRES_APPROVAL");
+  return {
+    execution_ready: blockers.length === 0,
+    execution_blockers: blockers,
+  };
+}
+
 
 function cleanJsonText(v: unknown, fallback: string): string {
   const raw = toText(v) ?? fallback;
@@ -1346,6 +1395,38 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       actionType: resolvedActionType || null,
       hasRule: Boolean(agronomyRuleId && agronomyRuleId !== "unknown_rule"),
     });
+    const approvalDecisionCode = String(approvalDecision?.record_json?.payload?.decision ?? "").trim().toUpperCase();
+    const approvalGranted = approvalDecisionCode === "APPROVE" || approvalDecisionCode === "APPROVED";
+    const executionPlan = buildExecutionPlan({
+      operationPlanId,
+      actionType: recommendedNextAction.action_type,
+      fieldId: toText(state.field_id ?? operationPayload?.field_id),
+      deviceId: detailDeviceId,
+      expectedEffect,
+      requiresApproval: !approvalGranted && !Boolean(approvalReq),
+      dispatchedAtMs: toMs(task?.occurred_at),
+    });
+    const readiness = evaluateExecutionReadiness({
+      plan: executionPlan,
+      approvalGranted,
+    });
+    const trendAdjustmentPolicy = {
+      window: "7d" as const,
+      baseline: "previous_7d" as const,
+      min_samples: 2,
+      hysteresis: 1,
+    };
+    const trendSamples = [riskTrend, effectTrend].filter((x) => x !== "NO_DATA").length;
+    const priorityAdjustmentByTrend = trendSamples < trendAdjustmentPolicy.min_samples
+      ? 0
+      : (riskTrend === "UP" ? 2 : riskTrend === "DOWN" ? -1 : 0) + (effectTrend === "DOWN" ? 1 : effectTrend === "UP" ? -1 : 0);
+    const fieldRiskAdjustment = customerView.risk_level === "high" ? 3 : customerView.risk_level === "medium" ? 1 : 0;
+    const globalPriorityComponents = {
+      base: priority.priority_score,
+      trend_adjustment: priorityAdjustmentByTrend,
+      field_risk_adjustment: fieldRiskAdjustment,
+    };
+    const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
     const performanceCropCode =
       agronomyCropCode
@@ -1471,6 +1552,18 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         baseline: "previous_7d",
       },
       recommended_next_action: recommendedNextAction,
+      execution_plan: executionPlan,
+      execution_ready: readiness.execution_ready,
+      execution_blockers: readiness.execution_blockers,
+      priority_adjustment_by_trend: priorityAdjustmentByTrend,
+      trend_adjustment_policy: trendAdjustmentPolicy,
+      global_priority_score: globalPriorityScore,
+      global_priority_components: globalPriorityComponents,
+      execution_context: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+      },
       sla_snapshot: {
         execution_success: executionSuccess,
         acceptance_pass: acceptancePass,
