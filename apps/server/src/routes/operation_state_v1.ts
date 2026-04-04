@@ -379,6 +379,248 @@ function customerViewByStatus(status: CustomerViewStatus): { summary: string; to
   }
 }
 
+function mapReasonCodeToText(code: string): string {
+  const key = String(code ?? "").trim().toLowerCase();
+  if (!key) return "触发了系统规则条件";
+  if (key.includes("moisture_low")) return "土壤湿度偏低，存在水分胁迫风险";
+  if (key.includes("temp_high") || key.includes("heat")) return "温度偏高，作物存在热胁迫风险";
+  if (key.includes("humidity_high")) return "湿度偏高，病害风险上升";
+  if (key.includes("risk")) return "系统检测到风险升高";
+  return `触发条件：${code}`;
+}
+
+function buildExplainHuman(input: {
+  cropStage: string | null;
+  reasonCodes: string[];
+  expectedEffect?: { type?: string | null; value?: number | null } | null;
+}): { summary: string; reason_text: string[] } {
+  const stage = String(input.cropStage ?? "").trim() || "当前阶段";
+  const reasonText = (Array.isArray(input.reasonCodes) ? input.reasonCodes : [])
+    .slice(0, 5)
+    .map((code) => mapReasonCodeToText(String(code)));
+  const effectType = String(input.expectedEffect?.type ?? "").trim();
+  const effectValue = Number(input.expectedEffect?.value ?? NaN);
+  const effectText = effectType
+    ? `预期将${effectType}${Number.isFinite(effectValue) ? `（目标变化 ${effectValue}）` : ""}`
+    : "预期改善当前关键农学指标";
+  return {
+    summary: `系统基于${stage}阶段和当前风险信号触发该作业，${effectText}。`,
+    reason_text: reasonText.length > 0 ? reasonText : ["系统检测到可执行的改进机会"],
+  };
+}
+
+function toValueProfile(params: {
+  effectVerdict: EffectVerdict;
+  actualEffect?: { value?: number | null; delta?: number | null } | null;
+  costTotal?: number | null;
+}): {
+  benefit_tier: "HIGH" | "MEDIUM" | "LOW";
+  risk_change: "DOWN" | "STABLE" | "UP";
+  cost_impact_tier: "LOW" | "MEDIUM" | "HIGH";
+  result_direction: "IMPROVE" | "STABLE" | "DEVIATE";
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+} {
+  const verdict = String(params.effectVerdict ?? "NO_DATA").toUpperCase() as EffectVerdict;
+  const actual = Number.isFinite(Number(params.actualEffect?.delta))
+    ? Number(params.actualEffect?.delta)
+    : Number(params.actualEffect?.value ?? NaN);
+  const cost = Number(params.costTotal ?? NaN);
+  const costTier: "LOW" | "MEDIUM" | "HIGH" = !Number.isFinite(cost) || cost <= 30
+    ? "LOW"
+    : cost <= 100
+      ? "MEDIUM"
+      : "HIGH";
+  if (verdict === "SUCCESS") {
+    return {
+      benefit_tier: "HIGH",
+      risk_change: "DOWN",
+      cost_impact_tier: costTier,
+      result_direction: "IMPROVE",
+      confidence: "HIGH",
+    };
+  }
+  if (verdict === "PARTIAL") {
+    return {
+      benefit_tier: "MEDIUM",
+      risk_change: Number.isFinite(actual) && actual > 0 ? "DOWN" : "STABLE",
+      cost_impact_tier: costTier,
+      result_direction: "STABLE",
+      confidence: "MEDIUM",
+    };
+  }
+  if (verdict === "FAILED") {
+    return {
+      benefit_tier: "LOW",
+      risk_change: "UP",
+      cost_impact_tier: costTier,
+      result_direction: "DEVIATE",
+      confidence: "LOW",
+    };
+  }
+  return {
+    benefit_tier: "LOW",
+    risk_change: "STABLE",
+    cost_impact_tier: costTier,
+    result_direction: "STABLE",
+    confidence: "LOW",
+  };
+}
+
+type TrendValue = "UP" | "DOWN" | "FLAT" | "NO_DATA";
+type NextActionSource = "RULE" | "SLA_FIX" | "MANUAL" | "FALLBACK";
+type PriorityBucket = "P0" | "P1" | "P2";
+
+function computeTrendFromSeries(values: number[]): TrendValue {
+  const cleaned = values.filter((v) => Number.isFinite(v));
+  if (cleaned.length < 2) return "NO_DATA";
+  const first = cleaned[0];
+  const last = cleaned[cleaned.length - 1];
+  const delta = last - first;
+  if (Math.abs(delta) < 0.01) return "FLAT";
+  return delta > 0 ? "UP" : "DOWN";
+}
+
+function calcPriority(params: {
+  finalStatusCode: string;
+  valueProfile: { risk_change: "DOWN" | "STABLE" | "UP"; confidence: "HIGH" | "MEDIUM" | "LOW" };
+  hasTask: boolean;
+  hasReceipt: boolean;
+  hasAcceptance: boolean;
+  invalidExecution: boolean;
+}): {
+  priority_bucket: PriorityBucket;
+  priority_score: number;
+  priority_components: { risk: number; value: number; confidence: number; timeliness: number };
+} {
+  const slaFix = params.invalidExecution || (params.hasTask && !params.hasReceipt) || (params.hasReceipt && !params.hasAcceptance);
+  const highRiskHighConfidence = params.valueProfile.risk_change === "UP" && params.valueProfile.confidence === "HIGH";
+  const pendingState = ["PENDING", "PENDING_APPROVAL", "APPROVED", "DISPATCHED", "ACKED", "RUNNING"].includes(params.finalStatusCode);
+  const bucket: PriorityBucket = slaFix
+    ? "P0"
+    : highRiskHighConfidence
+      ? "P0"
+      : pendingState
+        ? "P1"
+        : "P2";
+  const risk = bucket === "P0" ? 40 : bucket === "P1" ? 20 : 10;
+  const value = params.valueProfile.risk_change === "UP" ? 25 : params.valueProfile.risk_change === "DOWN" ? 10 : 15;
+  const confidence = params.valueProfile.confidence === "HIGH" ? 20 : params.valueProfile.confidence === "MEDIUM" ? 12 : 6;
+  const timeliness = params.hasTask && !params.hasReceipt ? 15 : params.hasReceipt && !params.hasAcceptance ? 12 : 5;
+  const priority_score = risk + value + confidence + timeliness;
+  return {
+    priority_bucket: bucket,
+    priority_score,
+    priority_components: { risk, value, confidence, timeliness },
+  };
+}
+
+function resolveRecommendedNextAction(params: {
+  operationPlanId: string;
+  finalStatusCode: string;
+  invalidExecution: boolean;
+  hasTask: boolean;
+  hasReceipt: boolean;
+  hasAcceptance: boolean;
+  actionType: string | null;
+  hasRule: boolean;
+}): { action_type: string; source: NextActionSource; reason: string; related_operation_id?: string } {
+  if (params.invalidExecution) {
+    return {
+      action_type: "RETRY_EXECUTION",
+      source: "SLA_FIX",
+      reason: "该作业为 INVALID_EXECUTION，需优先修复执行并补充有效证据",
+      related_operation_id: params.operationPlanId,
+    };
+  }
+  if (params.hasTask && !params.hasReceipt) {
+    return {
+      action_type: "COLLECT_RECEIPT",
+      source: "SLA_FIX",
+      reason: "已有任务但缺少回执，需立即补回执数据",
+      related_operation_id: params.operationPlanId,
+    };
+  }
+  if (params.hasReceipt && !params.hasAcceptance) {
+    return {
+      action_type: "PROMOTE_ACCEPTANCE",
+      source: "SLA_FIX",
+      reason: "已有回执但未验收，需推动验收闭环",
+      related_operation_id: params.operationPlanId,
+    };
+  }
+  if (params.hasRule && params.actionType) {
+    return {
+      action_type: params.actionType,
+      source: "RULE",
+      reason: "根据规则链路建议继续执行当前动作",
+      related_operation_id: params.operationPlanId,
+    };
+  }
+  if (["PENDING", "PENDING_APPROVAL"].includes(params.finalStatusCode)) {
+    return {
+      action_type: "REVIEW_APPROVAL",
+      source: "MANUAL",
+      reason: "当前作业待审批，需人工确认后推进",
+      related_operation_id: params.operationPlanId,
+    };
+  }
+  return {
+    action_type: "CHECK_FIELD_STATUS",
+    source: "FALLBACK",
+    reason: "当前无可自动匹配规则且无SLA修复项，建议先核查田块状态",
+    related_operation_id: params.operationPlanId,
+  };
+}
+
+function buildExecutionPlan(input: {
+  operationPlanId: string;
+  actionType: string | null;
+  fieldId: string | null;
+  deviceId: string | null;
+  expectedEffect?: { type?: string | null; value?: number | null } | null;
+  requiresApproval: boolean;
+  dispatchedAtMs: number | null;
+}): {
+  action_type: string;
+  target: { kind: "field" | "device"; ref: string };
+  parameters: Record<string, unknown>;
+  execution_mode: "AUTO" | "MANUAL";
+  safe_guard: { requires_approval: boolean };
+  time_window?: { start_ts?: number; end_ts?: number };
+  idempotency_key: string;
+} {
+  const actionType = String(input.actionType ?? "").trim().toUpperCase() || "CHECK_FIELD_STATUS";
+  const targetKind: "field" | "device" = input.deviceId ? "device" : "field";
+  const targetRef = String((targetKind === "device" ? input.deviceId : input.fieldId) ?? "").trim();
+  const parameters: Record<string, unknown> = {};
+  if (input.expectedEffect?.type) parameters.expected_effect_type = String(input.expectedEffect.type);
+  if (Number.isFinite(Number(input.expectedEffect?.value ?? NaN))) parameters.expected_effect_value = Number(input.expectedEffect?.value);
+  const startTs = input.dispatchedAtMs ?? Date.now();
+  return {
+    action_type: actionType,
+    target: { kind: targetKind, ref: targetRef },
+    parameters,
+    execution_mode: targetKind === "device" ? "AUTO" : "MANUAL",
+    safe_guard: { requires_approval: input.requiresApproval },
+    time_window: { start_ts: startTs, end_ts: startTs + 60 * 60 * 1000 },
+    idempotency_key: `${input.operationPlanId}_${actionType}`.replace(/[^a-zA-Z0-9_:-]/g, "_"),
+  };
+}
+
+function evaluateExecutionReadiness(input: {
+  plan: { parameters: Record<string, unknown>; target: { ref: string }; safe_guard: { requires_approval: boolean } };
+  approvalGranted: boolean;
+}): { execution_ready: boolean; execution_blockers: string[] } {
+  const blockers: string[] = [];
+  if (!input.plan.target?.ref) blockers.push("INVALID_TARGET");
+  if (!input.plan.parameters || Object.keys(input.plan.parameters).length < 1) blockers.push("MISSING_PARAMETERS");
+  if (input.plan.safe_guard.requires_approval && !input.approvalGranted) blockers.push("REQUIRES_APPROVAL");
+  return {
+    execution_ready: blockers.length === 0,
+    execution_blockers: blockers,
+  };
+}
+
 
 function cleanJsonText(v: unknown, fallback: string): string {
   const raw = toText(v) ?? fallback;
@@ -1101,6 +1343,90 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     );
     const acceptanceForResponse = invalidExecution ? null : acceptance;
     const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
+    const explainHuman = buildExplainHuman({
+      cropStage: agronomyCropStage,
+      reasonCodes: agronomyReasonCodes,
+      expectedEffect,
+    });
+    const valueProfile = toValueProfile({
+      effectVerdict: effectVerdict as EffectVerdict,
+      actualEffect,
+      costTotal: costBreakdown.total_cost,
+    });
+    const executionInclusion: "INCLUDED" | "EXCLUDED_NO_TASK" | "EXCLUDED_INVALID" = !task
+      ? "EXCLUDED_NO_TASK"
+      : invalidExecution
+        ? "EXCLUDED_INVALID"
+        : "INCLUDED";
+    const acceptanceInclusion: "INCLUDED" | "EXCLUDED_NO_RECEIPT" = normalizedReceipt ? "INCLUDED" : "EXCLUDED_NO_RECEIPT";
+    const responseTimeMs = executionStartMs != null && receiptMs != null && receiptMs >= executionStartMs
+      ? receiptMs - executionStartMs
+      : null;
+    const acceptanceVerdict = String(acceptanceForResponse?.record_json?.payload?.verdict ?? "").trim().toUpperCase();
+    const executionSuccess = executionInclusion === "INCLUDED"
+      ? ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(finalStatusCode)
+      : null;
+    const acceptancePass = acceptanceInclusion === "INCLUDED"
+      ? (acceptanceVerdict ? acceptanceVerdict === "PASS" : null)
+      : null;
+    const riskTrend = computeTrendFromSeries([
+      Number(beforeMetricsForResponse?.soil_moisture ?? NaN),
+      Number(afterMetricsForResponse?.soil_moisture ?? NaN),
+    ]);
+    const effectTrend = computeTrendFromSeries([
+      Number(expectedEffect?.value ?? NaN),
+      Number(actualEffect?.value ?? NaN),
+    ]);
+    const priority = calcPriority({
+      finalStatusCode,
+      valueProfile,
+      hasTask: Boolean(task),
+      hasReceipt: Boolean(normalizedReceipt),
+      hasAcceptance: Boolean(acceptanceForResponse),
+      invalidExecution,
+    });
+    const recommendedNextAction = resolveRecommendedNextAction({
+      operationPlanId,
+      finalStatusCode,
+      invalidExecution,
+      hasTask: Boolean(task),
+      hasReceipt: Boolean(normalizedReceipt),
+      hasAcceptance: Boolean(acceptanceForResponse),
+      actionType: resolvedActionType || null,
+      hasRule: Boolean(agronomyRuleId && agronomyRuleId !== "unknown_rule"),
+    });
+    const approvalDecisionCode = String(approvalDecision?.record_json?.payload?.decision ?? "").trim().toUpperCase();
+    const approvalGranted = approvalDecisionCode === "APPROVE" || approvalDecisionCode === "APPROVED";
+    const executionPlan = buildExecutionPlan({
+      operationPlanId,
+      actionType: recommendedNextAction.action_type,
+      fieldId: toText(state.field_id ?? operationPayload?.field_id),
+      deviceId: detailDeviceId,
+      expectedEffect,
+      requiresApproval: !approvalGranted && !Boolean(approvalReq),
+      dispatchedAtMs: toMs(task?.occurred_at),
+    });
+    const readiness = evaluateExecutionReadiness({
+      plan: executionPlan,
+      approvalGranted,
+    });
+    const trendAdjustmentPolicy = {
+      window: "7d" as const,
+      baseline: "previous_7d" as const,
+      min_samples: 2,
+      hysteresis: 1,
+    };
+    const trendSamples = [riskTrend, effectTrend].filter((x) => x !== "NO_DATA").length;
+    const priorityAdjustmentByTrend = trendSamples < trendAdjustmentPolicy.min_samples
+      ? 0
+      : (riskTrend === "UP" ? 2 : riskTrend === "DOWN" ? -1 : 0) + (effectTrend === "DOWN" ? 1 : effectTrend === "UP" ? -1 : 0);
+    const fieldRiskAdjustment = customerView.risk_level === "high" ? 3 : customerView.risk_level === "medium" ? 1 : 0;
+    const globalPriorityComponents = {
+      base: priority.priority_score,
+      trend_adjustment: priorityAdjustmentByTrend,
+      field_risk_adjustment: fieldRiskAdjustment,
+    };
+    const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
     const performanceCropCode =
       agronomyCropCode
@@ -1205,6 +1531,52 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           chemical: costBreakdown.chemical_cost
         },
         customer_view: customerView
+      },
+      explain: {
+        system: {
+          rule_id: agronomyRuleId,
+          rule_version: agronomyRuleVersion,
+          crop_stage: agronomyCropStage,
+          reason_codes: agronomyReasonCodes,
+        },
+        human: explainHuman,
+      },
+      value_profile: valueProfile,
+      priority_bucket: priority.priority_bucket,
+      priority_score: priority.priority_score,
+      priority_components: priority.priority_components,
+      risk_trend: riskTrend,
+      effect_trend: effectTrend,
+      trend_definition: {
+        window: "7d",
+        baseline: "previous_7d",
+      },
+      recommended_next_action: recommendedNextAction,
+      execution_plan: executionPlan,
+      execution_ready: readiness.execution_ready,
+      execution_blockers: readiness.execution_blockers,
+      priority_adjustment_by_trend: priorityAdjustmentByTrend,
+      trend_adjustment_policy: trendAdjustmentPolicy,
+      global_priority_score: globalPriorityScore,
+      global_priority_components: globalPriorityComponents,
+      execution_context: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+      },
+      sla_snapshot: {
+        execution_success: executionSuccess,
+        acceptance_pass: acceptancePass,
+        response_time_ms: responseTimeMs,
+        sla_inclusion: {
+          execution: executionInclusion,
+          acceptance: acceptanceInclusion,
+        },
+      },
+      sla_definition: {
+        execution_denominator: "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
+        acceptance_denominator: "已回执的 operation（存在 receipt）",
+        response_time_definition: "从 task.dispatched_at / execution_started_at 到 receipt.execution_finished_at（缺失则用 receipt fact occurred_at）",
       }
     });
   });

@@ -69,6 +69,43 @@ export type DashboardOverview = {
 };
 
 export type DashboardControlPlaneItem = any;
+export type DashboardTopActionItem = {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  operation_id: string;
+  action_type: string;
+  priority_bucket: "P0" | "P1" | "P2";
+  priority_score: number;
+  priority_components: { risk: number; value: number; confidence: number; timeliness: number };
+  global_priority_score?: number;
+  global_priority_components?: { base: number; trend_adjustment: number; field_risk_adjustment: number };
+  reason: string;
+  risk_if_not_execute?: string;
+  recommended_next_action: {
+    action_type: string;
+    source: "RULE" | "SLA_FIX" | "MANUAL" | "FALLBACK";
+    reason: string;
+  };
+  execution_plan?: {
+    action_type: string;
+    target: { kind: "field" | "device"; ref: string };
+    parameters: Record<string, unknown>;
+    execution_mode: "AUTO" | "MANUAL";
+    safe_guard: { requires_approval: boolean };
+    time_window?: { start_ts?: number; end_ts?: number };
+    idempotency_key: string;
+  };
+  execution_ready?: boolean;
+  execution_blockers?: string[];
+};
+export type DashboardOverviewV2Response = {
+  ok: boolean;
+  top_actions?: DashboardTopActionItem[];
+  risk_trend?: "UP" | "DOWN" | "FLAT" | "NO_DATA";
+  effect_trend?: "UP" | "DOWN" | "FLAT" | "NO_DATA";
+  trend_definition?: { window: string; baseline: string };
+};
 
 export type SlaSummary = {
   total_operations: number;
@@ -221,4 +258,8 @@ export async function fetchSlaSummary(params?: { tenant_id?: string; project_id?
       avg_acceptance_time_ms: 0,
     },
   );
+}
+
+export async function fetchDashboardOverviewV2(): Promise<DashboardOverviewV2Response | null> {
+  return safe(apiRequest<DashboardOverviewV2Response>("/api/v1/dashboard/overview_v2"), null);
 }
