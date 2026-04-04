@@ -57,6 +57,22 @@ export type OperationDetailResponse = {
   } | null;
   evidence_export?: any;
   links?: Record<string, string>;
+  attempt_history?: Array<{
+    attempt_no: number;
+    execution_key: string;
+    retry_of?: string;
+    timestamp: number;
+    result: "SUCCESS" | "FAILED" | "PENDING";
+  }>;
+  trace_gap?: {
+    missing_receipt: boolean;
+    missing_evidence: boolean;
+  };
+  fallback_state?: {
+    generated: boolean;
+    executable: boolean;
+    fallback_plan?: any;
+  };
 };
 
 export type OperationEvidenceExportResponse = {

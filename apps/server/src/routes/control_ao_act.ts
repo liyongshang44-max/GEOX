@@ -550,6 +550,8 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       const tenant = assertTenantFieldsPresentV0(body, "body");
       if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
       const actionType = String(body.execution_plan.action_type ?? "").trim().toUpperCase();
+      const executionKey = `${String(body.operation_id ?? "").trim()}_${actionType}`.replace(/[^a-zA-Z0-9_:-]/g, "_");
+      const dedupeKey = String(body.execution_plan.idempotency_key ?? "").trim();
       if (!ACTION_EXECUTION_ALLOWLIST_V1.includes(actionType as any)) {
         return reply.status(400).send({ ok: false, error: "ACTION_TYPE_NOT_ALLOWED" });
       }
@@ -568,31 +570,98 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       const dup = await pool.query(
         `SELECT record_json::jsonb AS record_json
            FROM facts
-          WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+          WHERE (record_json::jsonb->>'type') IN ('action_execution_request_v1', 'action_execution_attempt_v1')
             AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
             AND (record_json::jsonb#>>'{payload,project_id}') = $2
             AND (record_json::jsonb#>>'{payload,group_id}') = $3
-            AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4
+            AND (
+              (record_json::jsonb#>>'{payload,dedupe_key}') = $4
+              OR (record_json::jsonb#>>'{payload,idempotency_key}') = $4
+            )
           ORDER BY occurred_at DESC
           LIMIT 1`,
-        [tenant.tenant_id, tenant.project_id, tenant.group_id, body.execution_plan.idempotency_key]
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, dedupeKey]
       ).catch(() => ({ rows: [] as any[] }));
       const existingTaskId = String(dup.rows?.[0]?.record_json?.payload?.act_task_id ?? "").trim();
       if (existingTaskId) return reply.send({ ok: true, act_task_id: existingTaskId, idempotent: true });
-      const retryCountQ = await pool.query(
+      const attemptCountQ = await pool.query(
         `SELECT COUNT(*)::int AS cnt
          FROM facts
-         WHERE (record_json::jsonb->>'type') = 'action_execution_request_v1'
+         WHERE (record_json::jsonb->>'type') IN ('action_execution_request_v1', 'action_execution_attempt_v1')
            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
            AND (record_json::jsonb#>>'{payload,project_id}') = $2
            AND (record_json::jsonb#>>'{payload,group_id}') = $3
-           AND (record_json::jsonb#>>'{payload,idempotency_key}') = $4`,
-        [tenant.tenant_id, tenant.project_id, tenant.group_id, body.execution_plan.idempotency_key]
+           AND (record_json::jsonb#>>'{payload,execution_key}') = $4`,
+        [tenant.tenant_id, tenant.project_id, tenant.group_id, executionKey]
       ).catch(() => ({ rows: [{ cnt: 0 }] }));
-      const retryCount = Number(retryCountQ.rows?.[0]?.cnt ?? 0);
-      if (body.execution_plan.failure_strategy.retryable && retryCount >= body.execution_plan.failure_strategy.max_retries) {
-        const fallback = String(body.execution_plan.failure_strategy.fallback_action ?? "CHECK_FIELD_STATUS").trim().toUpperCase();
-        return reply.status(409).send({ ok: false, error: "RETRY_LIMIT_REACHED", fallback_action: fallback });
+      const attemptNo = Number(attemptCountQ.rows?.[0]?.cnt ?? 0) + 1;
+      const isRetry = attemptNo > 1;
+      const retryable = Boolean(body.execution_plan.failure_strategy?.retryable);
+      const maxRetries = Number(body.execution_plan.failure_strategy?.max_retries ?? 0);
+      const fallbackAction = String(body.execution_plan.failure_strategy.fallback_action ?? "CHECK_FIELD_STATUS").trim().toUpperCase();
+      const fallbackPlan = {
+        ...body.execution_plan,
+        action_type: fallbackAction,
+      };
+      const fallbackState = {
+        generated: false,
+        executable: false,
+        fallback_plan: undefined as any,
+      };
+
+      if (isRetry && !retryable) {
+        fallbackState.generated = true;
+        fallbackState.fallback_plan = fallbackPlan;
+        await pool.query(
+          "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+          [randomUUID(), "api/v1/actions/execute", {
+            type: "action_execution_attempt_v1",
+            payload: {
+              tenant_id: tenant.tenant_id,
+              project_id: tenant.project_id,
+              group_id: tenant.group_id,
+              operation_id: body.operation_id,
+              act_task_id: null,
+              execution_context: { execution_key: executionKey, dedupe_key: dedupeKey },
+              attempt: {
+                attempt_no: attemptNo,
+                execution_key: executionKey,
+                retry_of: executionKey,
+                timestamp: Date.now(),
+                result: "FAILED",
+              },
+              fallback_state: fallbackState,
+            }
+          }]
+        );
+        return reply.status(409).send({ ok: false, error: "RETRY_DISABLED", fallback_state: fallbackState });
+      }
+      if (isRetry && attemptNo >= maxRetries) {
+        fallbackState.generated = true;
+        fallbackState.fallback_plan = fallbackPlan;
+        await pool.query(
+          "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+          [randomUUID(), "api/v1/actions/execute", {
+            type: "action_execution_attempt_v1",
+            payload: {
+              tenant_id: tenant.tenant_id,
+              project_id: tenant.project_id,
+              group_id: tenant.group_id,
+              operation_id: body.operation_id,
+              act_task_id: null,
+              execution_context: { execution_key: executionKey, dedupe_key: dedupeKey },
+              attempt: {
+                attempt_no: attemptNo,
+                execution_key: executionKey,
+                retry_of: executionKey,
+                timestamp: Date.now(),
+                result: "FAILED",
+              },
+              fallback_state: fallbackState,
+            }
+          }]
+        );
+        return reply.status(409).send({ ok: false, error: "RETRY_LIMIT_REACHED", fallback_state: fallbackState, fallback_action: fallbackAction });
       }
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`;
@@ -616,9 +685,13 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           created_at_ts: now,
           meta: {
             execution_mode: body.execution_plan.execution_mode,
-            idempotency_key: body.execution_plan.idempotency_key,
+            idempotency_key: dedupeKey,
             failure_strategy: body.execution_plan.failure_strategy,
             device_capability_check: body.execution_plan.device_capability_check ?? { supported: true },
+            execution_context: {
+              execution_key: executionKey,
+              dedupe_key: dedupeKey,
+            },
           },
         }
       };
@@ -636,14 +709,61 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
             group_id: tenant.group_id,
             operation_id: body.operation_id,
             act_task_id,
-            idempotency_key: body.execution_plan.idempotency_key,
+            idempotency_key: dedupeKey,
+            dedupe_key: dedupeKey,
+            execution_key: executionKey,
             action_type: actionType,
             target: body.execution_plan.target,
+            execution_context: {
+              execution_key: executionKey,
+              dedupe_key: dedupeKey,
+            },
+            attempt: {
+              attempt_no: attemptNo,
+              execution_key: executionKey,
+              retry_of: isRetry ? executionKey : undefined,
+              timestamp: Date.now(),
+              result: "PENDING",
+            },
+            fallback_state: {
+              generated: false,
+              executable: false,
+            },
             execution_trace: {
-              execution_id: body.execution_plan.idempotency_key,
+              execution_id: dedupeKey,
               task_id: act_task_id,
               status: "PENDING",
             },
+          }
+        }]
+      );
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [randomUUID(), "api/v1/actions/execute", {
+          type: "action_execution_attempt_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_id: body.operation_id,
+            act_task_id,
+            execution_key: executionKey,
+            dedupe_key: dedupeKey,
+            execution_context: {
+              execution_key: executionKey,
+              dedupe_key: dedupeKey,
+            },
+            attempt: {
+              attempt_no: attemptNo,
+              execution_key: executionKey,
+              retry_of: isRetry ? executionKey : undefined,
+              timestamp: Date.now(),
+              result: "PENDING",
+            },
+            fallback_state: {
+              generated: false,
+              executable: false,
+            }
           }
         }]
       );

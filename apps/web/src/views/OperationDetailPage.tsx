@@ -158,6 +158,9 @@ export default function OperationDetailPage(): React.ReactElement {
   const capabilityCheck = (detail as any)?.device_capability_check ?? (executionPlan?.device_capability_check ?? {});
   const executionTrace = (detail as any)?.execution_trace ?? {};
   const executionContext = (detail as any)?.execution_context ?? {};
+  const attemptHistory = Array.isArray((detail as any)?.attempt_history) ? (detail as any).attempt_history : [];
+  const traceGap = (detail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
+  const fallbackState = (detail as any)?.fallback_state ?? { generated: false, executable: false };
   const [executing, setExecuting] = React.useState(false);
 
   const runFromDetail = async (): Promise<void> => {
@@ -291,6 +294,28 @@ export default function OperationDetailPage(): React.ReactElement {
           <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
             {executing ? "执行中..." : "一键执行"}
           </button>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">Attempt 时间线（后端记录）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          {attemptHistory.map((item: any) => (
+            <div key={`${item.execution_key}_${item.attempt_no}_${item.timestamp}`} className="operationsSummaryMetric">
+              <span className="operationsSummaryLabel">#{item.attempt_no} · {String(item.result ?? "PENDING")}</span>
+              <strong>{new Date(Number(item.timestamp ?? 0)).toLocaleString()}</strong>
+            </div>
+          ))}
+          {!attemptHistory.length ? <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">暂无</span><strong>--</strong></div> : null}
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace缺口-回执</span><strong>{traceGap?.missing_receipt ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace缺口-证据</span><strong>{traceGap?.missing_evidence ? "是" : "否"}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">Fallback 状态（仅生成，不自动执行）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">已生成</span><strong>{fallbackState?.generated ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">可自动执行</span><strong>{fallbackState?.executable ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Fallback 动作</span><strong>{String(fallbackState?.fallback_plan?.action_type ?? "--")}</strong></div>
         </div>
       </section>
 

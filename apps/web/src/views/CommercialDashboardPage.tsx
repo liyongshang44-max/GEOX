@@ -70,6 +70,18 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const [totalRevenue, setTotalRevenue] = React.useState(0);
   const [topActions, setTopActions] = React.useState<DashboardTopActionItem[]>([]);
   const [trendSummary, setTrendSummary] = React.useState<{ risk: string; effect: string }>({ risk: "NO_DATA", effect: "NO_DATA" });
+  const [opsHealth, setOpsHealth] = React.useState<{
+    failure_distribution: Record<string, number>;
+    retry_distribution: Array<{ attempt_no: number; count: number }>;
+    trace_gap_count: { missing_receipt: number; missing_evidence: number };
+  }>({ failure_distribution: {}, retry_distribution: [], trace_gap_count: { missing_receipt: 0, missing_evidence: 0 } });
+  const [deviceSummary, setDeviceSummary] = React.useState({ online: 0, offline: 0, busy: 0, low_battery: 0 });
+  const [opsDefinition, setOpsDefinition] = React.useState({
+    failure_definition: "--",
+    retry_definition: "--",
+    trace_gap_definition: "--",
+    time_window: "7d",
+  });
   const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
@@ -97,6 +109,18 @@ export default function CommercialDashboardPage(): React.ReactElement {
       setTrendSummary({
         risk: String(res.risk_trend ?? "NO_DATA"),
         effect: String(res.effect_trend ?? "NO_DATA"),
+      });
+      setOpsHealth({
+        failure_distribution: res.ops_health?.failure_distribution ?? {},
+        retry_distribution: Array.isArray(res.ops_health?.retry_distribution) ? res.ops_health?.retry_distribution : [],
+        trace_gap_count: res.ops_health?.trace_gap_count ?? { missing_receipt: 0, missing_evidence: 0 },
+      });
+      setDeviceSummary(res.device_status_summary ?? { online: 0, offline: 0, busy: 0, low_battery: 0 });
+      setOpsDefinition(res.ops_definition ?? {
+        failure_definition: "--",
+        retry_definition: "--",
+        trace_gap_definition: "--",
+        time_window: "7d",
       });
     });
     return () => {
@@ -316,6 +340,49 @@ export default function CommercialDashboardPage(): React.ReactElement {
             <div className="decisionItemTitle">趋势摘要</div>
             <div className="decisionItemMeta">风险趋势 {trendSummary.risk} · 效果趋势 {trendSummary.effect}</div>
           </div>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">运维健康面板（后端口径）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">设备在线/离线</span>
+            <strong>{deviceSummary.online} / {deviceSummary.offline}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">设备忙碌/低电量</span>
+            <strong>{deviceSummary.busy} / {deviceSummary.low_battery}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Trace 缺口（回执）</span>
+            <strong>{opsHealth.trace_gap_count.missing_receipt}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Trace 缺口（证据）</span>
+            <strong>{opsHealth.trace_gap_count.missing_evidence}</strong>
+          </article>
+        </div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Top失败原因</span>
+            <strong>
+              {Object.entries(opsHealth.failure_distribution)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([k, v]) => `${k}:${v}`)
+                .join(" | ") || "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Retry分布</span>
+            <strong>
+              {opsHealth.retry_distribution.map((x) => `#${x.attempt_no}:${x.count}`).join(" | ") || "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">口径窗口</span>
+            <strong>{opsDefinition.time_window}</strong>
+          </article>
         </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>

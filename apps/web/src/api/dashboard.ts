@@ -115,6 +115,23 @@ export type DashboardOverviewV2Response = {
   risk_trend?: "UP" | "DOWN" | "FLAT" | "NO_DATA";
   effect_trend?: "UP" | "DOWN" | "FLAT" | "NO_DATA";
   trend_definition?: { window: string; baseline: string };
+  ops_health?: {
+    failure_distribution?: Record<string, number>;
+    retry_distribution?: Array<{ attempt_no: number; count: number }>;
+    trace_gap_count?: { missing_receipt: number; missing_evidence: number };
+  };
+  device_status_summary?: {
+    online: number;
+    offline: number;
+    busy: number;
+    low_battery: number;
+  };
+  ops_definition?: {
+    failure_definition: string;
+    retry_definition: string;
+    trace_gap_definition: string;
+    time_window: "7d";
+  };
 };
 
 export type SlaSummary = {

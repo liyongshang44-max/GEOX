@@ -504,6 +504,71 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       performanceCompletedCount,
       performancePassCount,
     ]);
+    const failureDistribution = operationStates.reduce((acc: Record<string, number>, item: any) => {
+      const status = String(item?.final_status ?? "").toUpperCase();
+      if (["FAILED", "ERROR", "INVALID_EXECUTION"].includes(status)) {
+        acc[status] = (acc[status] ?? 0) + 1;
+      }
+      return acc;
+    }, {});
+    const retryDistributionQ = await pool.query(
+      `SELECT
+         COALESCE((record_json::jsonb#>>'{payload,attempt,attempt_no}'),'1')::int AS attempt_no,
+         COUNT(*)::bigint AS count
+       FROM facts
+       WHERE (record_json::jsonb->>'type') = 'action_execution_attempt_v1'
+         AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+         AND (record_json::jsonb#>>'{payload,project_id}') = $2
+         AND (record_json::jsonb#>>'{payload,group_id}') = $3
+         AND occurred_at >= NOW() - INTERVAL '7 days'
+       GROUP BY 1
+       ORDER BY 1 ASC`,
+      [tenant_id, project_id, group_id]
+    ).catch(() => ({ rows: [] as any[] }));
+    const retryDistribution = (retryDistributionQ.rows ?? []).map((row: any) => ({
+      attempt_no: Number(row.attempt_no ?? 1),
+      count: Number(row.count ?? 0),
+    }));
+    const receiptOpIds = new Set(
+      operationStates
+        .filter((item: any) => Boolean(item?.receipt_id))
+        .map((item: any) => String(item?.operation_plan_id ?? item?.operation_id ?? "").trim())
+        .filter(Boolean)
+    );
+    let opsWithEvidence = new Set<string>();
+    if (receiptOpIds.size > 0) {
+      const evidenceQ = await pool.query(
+        `SELECT DISTINCT (record_json::jsonb#>>'{payload,operation_plan_id}') AS operation_plan_id
+           FROM facts
+          WHERE (record_json::jsonb->>'type') = 'evidence_artifact_v1'
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+            AND (record_json::jsonb#>>'{payload,project_id}') = $2
+            AND (record_json::jsonb#>>'{payload,group_id}') = $3
+            AND (record_json::jsonb#>>'{payload,operation_plan_id}') = ANY($4::text[])`,
+        [tenant_id, project_id, group_id, Array.from(receiptOpIds)]
+      ).catch(() => ({ rows: [] as any[] }));
+      opsWithEvidence = new Set((evidenceQ.rows ?? []).map((row: any) => String(row.operation_plan_id ?? "").trim()).filter(Boolean));
+    }
+    const traceGapCount = {
+      missing_receipt: operationStates.filter((item: any) => Boolean(item?.task_id) && !Boolean(item?.receipt_id)).length,
+      missing_evidence: operationStates.filter((item: any) => {
+        const opId = String(item?.operation_plan_id ?? item?.operation_id ?? "").trim();
+        if (!opId || !Boolean(item?.receipt_id)) return false;
+        return !opsWithEvidence.has(opId);
+      }).length,
+    };
+    const deviceSummaryQ = await pool.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE last_heartbeat_ts_ms IS NOT NULL AND last_heartbeat_ts_ms >= $4)::bigint AS online,
+         COUNT(*) FILTER (WHERE last_heartbeat_ts_ms IS NULL OR last_heartbeat_ts_ms < $4)::bigint AS offline,
+         COUNT(*) FILTER (WHERE UPPER(COALESCE(status,'')) IN ('BUSY','RUNNING'))::bigint AS busy,
+         COUNT(*) FILTER (WHERE COALESCE(battery_pct, 100) < 20)::bigint AS low_battery
+       FROM device_status_index_v1
+       WHERE tenant_id = $1
+         AND project_id = $2
+         AND group_id = $3`,
+      [tenant_id, project_id, group_id, nowMs - 15 * 60 * 1000]
+    ).catch(() => ({ rows: [{ online: 0, offline: 0, busy: 0, low_battery: 0 }] }));
 
     return reply.send({
       ok: true,
@@ -574,6 +639,23 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         execution_denominator: "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
         acceptance_denominator: "已进入验收阶段的 operation（存在 receipt）",
         response_time_definition: "从 task 下发到 receipt 回传完成的平均时长",
+      },
+      ops_health: {
+        failure_distribution: failureDistribution,
+        retry_distribution: retryDistribution,
+        trace_gap_count: traceGapCount,
+      },
+      device_status_summary: {
+        online: Number(deviceSummaryQ.rows?.[0]?.online ?? 0),
+        offline: Number(deviceSummaryQ.rows?.[0]?.offline ?? 0),
+        busy: Number(deviceSummaryQ.rows?.[0]?.busy ?? 0),
+        low_battery: Number(deviceSummaryQ.rows?.[0]?.low_battery ?? 0),
+      },
+      ops_definition: {
+        failure_definition: "final_status 属于 FAILED/ERROR/INVALID_EXECUTION 计为失败",
+        retry_definition: "按 attempt.attempt_no 统计近7天 action_execution_attempt_v1 分布",
+        trace_gap_definition: "missing_receipt=有task无receipt；missing_evidence=有receipt但无evidence_artifact",
+        time_window: "7d",
       },
     });
   });

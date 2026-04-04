@@ -809,6 +809,8 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
       record_json: parseRecordJson(row.record_json) ?? row.record_json
     })));
   }
+  extra.push(...await q("action_execution_request_v1", "operation_id", operationPlanId));
+  extra.push(...await q("action_execution_attempt_v1", "operation_id", operationPlanId));
   extra.push(...await q("acceptance_result_v1", "operation_plan_id", operationPlanId));
   const all = [...rows, ...extra];
   all.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
@@ -1502,6 +1504,40 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       evidence_refs: evidenceRefs.length > 0 ? evidenceRefs : undefined,
       status: traceStatus,
     };
+    const attemptFacts = [...facts].filter((x) => {
+      const t = String(x.record_json?.type ?? "");
+      return t === "action_execution_attempt_v1" || t === "action_execution_request_v1";
+    });
+    const attemptHistory = attemptFacts
+      .map((x) => {
+        const payload = x.record_json?.payload ?? {};
+        const attempt = payload?.attempt ?? {};
+        const attemptNo = Number(attempt?.attempt_no ?? NaN);
+        const timestamp = Number(attempt?.timestamp ?? toMs(x.occurred_at) ?? 0);
+        return {
+          attempt_no: Number.isFinite(attemptNo) ? attemptNo : 1,
+          execution_key: toText(attempt?.execution_key ?? payload?.execution_key ?? payload?.execution_context?.execution_key) ?? executionPlan.idempotency_key,
+          retry_of: toText(attempt?.retry_of) ?? undefined,
+          timestamp: Number.isFinite(timestamp) ? timestamp : 0,
+          result: ["SUCCESS", "FAILED", "PENDING"].includes(String(attempt?.result ?? "").toUpperCase())
+            ? String(attempt?.result ?? "").toUpperCase()
+            : "PENDING",
+        };
+      })
+      .sort((a, b) => Number(b.timestamp ?? 0) - Number(a.timestamp ?? 0))
+      .slice(0, 5);
+    const latestAttemptPayload = [...attemptFacts]
+      .reverse()
+      .map((x) => x.record_json?.payload ?? {})
+      .find((x) => x?.fallback_state || x?.execution_context) ?? {};
+    const fallbackState = latestAttemptPayload?.fallback_state ?? {
+      generated: false,
+      executable: false,
+    };
+    const traceGap = {
+      missing_receipt: Boolean(task) && !Boolean(normalizedReceipt),
+      missing_evidence: Boolean(normalizedReceipt) && evidenceRefs.length < 1,
+    };
     const shouldRecordPerformance = Boolean(normalizedReceipt) || ["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "FAILED", "ERROR", "INVALID_EXECUTION", "PENDING_ACCEPTANCE"].includes(finalStatusCode);
     const performanceCropCode =
       agronomyCropCode
@@ -1632,6 +1668,9 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       execution_blockers: readiness.execution_blockers,
       device_capability_check: capabilityCheck,
       execution_trace: executionTrace,
+      attempt_history: attemptHistory,
+      trace_gap: traceGap,
+      fallback_state: fallbackState,
       priority_adjustment_by_trend: priorityAdjustmentByTrend,
       trend_adjustment_policy: trendAdjustmentPolicy,
       global_priority_score: globalPriorityScore,
