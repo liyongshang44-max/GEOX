@@ -177,6 +177,16 @@ export function buildFieldDetailViewModel(params: {
       };
     });
 
+  const battleSections = {
+    header: { key: "header", title: "田块头部" },
+    initChecklist: { key: "init_checklist", title: "初始化检查区" },
+    currentStatus: { key: "current_status", title: "当前状态区" },
+    riskAndRecommendation: { key: "risk_recommendation", title: "当前风险与建议区" },
+    recentOperation: { key: "recent_operation", title: "最近作业与验收区" },
+    gis: { key: "gis", title: "GIS 与轨迹区" },
+    relatedAssets: { key: "related_assets", title: "相关方案与设备区" },
+  } as const;
+
   return {
     detail,
     summaryCards,
@@ -191,6 +201,7 @@ export function buildFieldDetailViewModel(params: {
     programsBySeason,
     seasonOptions,
     recentRecommendations,
+    battleSections,
     mapInput: {
       polygonGeoJson: detail?.geometry || detail?.polygon?.geojson_json,
       heatGeoJson: detail?.map_layers?.alert_heat_geojson || { type: "FeatureCollection", features: [] },
