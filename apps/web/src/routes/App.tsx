@@ -143,16 +143,20 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 
         <div className="sideGroupTitle">业务导航</div>
         <nav className="sideNav">
-          <SidebarLink to="/dashboard" label="监控台" />
-          <SidebarLink to="/fields" label="田块与 GIS" />
-          <SidebarLink to="/devices" label="设备中心" />
+          <SidebarLink to="/dashboard" label="总览" />
+          <SidebarLink to="/fields" label="田块" />
+          <SidebarLink to="/operations" label="作业" />
+          <SidebarLink to="/programs" label="方案" />
+          <SidebarLink to="/delivery/export-jobs" label="报告" />
+          <SidebarLink to="/devices" label="设备" />
+        </nav>
+
+        <div className="sideGroupTitle">运营扩展</div>
+        <nav className="sideNav">
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/operations" label="作业中心" />
           <SidebarLink to="/human-assignments" label="人工执行" />
-          <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
 

@@ -44,7 +44,7 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
   };
 }
 
-export default function CommercialDashboardPage(): React.ReactElement {
+export default function CommercialDashboardPage({ expert = false }: { expert?: boolean }): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
     () => ({
@@ -233,6 +233,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const agronomyValue = d.agronomyValue;
+  const shouldShowOnboarding = Number(d.overview.fieldCount ?? 0) < 1 || Number(deviceSummary.online + deviceSummary.offline) < 1;
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
   const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;
@@ -298,6 +299,12 @@ export default function CommercialDashboardPage(): React.ReactElement {
     <div className="productPage demoDashboardPage">
       {error ? <EmptyBlock text="数据加载失败（overview）" /> : null}
       <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
+        {expert ? (
+          <article className="operationsSummaryMetric card">
+            <span className="operationsSummaryLabel">模式</span>
+            <strong>研发模式</strong>
+          </article>
+        ) : null}
         <article className="operationsSummaryMetric card">
           <span className="operationsSummaryLabel">成功率</span>
           <strong>{Math.round((sla.success_rate || 0) * 100)}%</strong>
@@ -337,6 +344,17 @@ export default function CommercialDashboardPage(): React.ReactElement {
         </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>
+        {shouldShowOnboarding ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">首次开局引导</div>
+            <div className="decisionItemMeta">当前缺少基础对象。请按“田块 → 设备 → 方案”完成初始化。</div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <Link className="btn" to="/fields">新建田块</Link>
+              <Link className="btn" to="/devices/onboarding">接入设备</Link>
+              <Link className="btn" to="/programs/new">创建方案</Link>
+            </div>
+          </div>
+        ) : null}
         <div className="sectionTitle">全链路操作引导</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
           <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 1 决策</span><strong>查看 Top Actions / 客户报告</strong></article>
