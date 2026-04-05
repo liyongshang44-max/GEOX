@@ -346,12 +346,17 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       <section className="card" style={{ marginBottom: 12 }}>
         {shouldShowOnboarding ? (
           <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
-            <div className="decisionItemTitle">首次开局引导</div>
-            <div className="decisionItemMeta">当前缺少基础对象。请按“田块 → 设备 → 方案”完成初始化。</div>
+            <div className="decisionItemTitle">开始配置你的第一块田</div>
+            <div className="decisionItemMeta">先创建田块、接入设备并初始化经营方案，系统才能生成建议与作业。</div>
+            <div className="decisionList" style={{ marginTop: 8 }}>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(d.overview.fieldCount ?? 0) > 0 ? "✅" : "⚪"} 田块已创建</span><Link to={Number(d.overview.fieldCount ?? 0) > 0 ? "/fields" : "/fields/new"}>{Number(d.overview.fieldCount ?? 0) > 0 ? "查看田块" : "去创建"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "✅" : "⚪"} 设备已接入</span><Link to={Number(deviceSummary.online + deviceSummary.offline) > 0 ? "/devices" : "/devices/onboarding"}>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "查看设备" : "查看接入说明"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.decisions.pendingRecommendationCount > 0 ? "✅" : "⚪"} 系统建议已生成</span><Link to="/agronomy/recommendations">{d.decisions.pendingRecommendationCount > 0 ? "查看建议" : "刷新评估"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.overview.todayExecutionCount > 0 ? "✅" : "⚪"} 作业链路已开始</span><Link to="/operations">{d.overview.todayExecutionCount > 0 ? "查看作业" : "查看推荐动作"}</Link></div>
+            </div>
             <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-              <Link className="btn" to="/fields">新建田块</Link>
-              <Link className="btn" to="/devices/onboarding">接入设备</Link>
-              <Link className="btn" to="/programs/new">创建方案</Link>
+              <Link className="btn primary" to="/fields/new">新建田块</Link>
+              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
             </div>
           </div>
         ) : null}

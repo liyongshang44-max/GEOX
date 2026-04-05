@@ -122,6 +122,10 @@ export async function createField(input: {
   field_id: string;
   name: string;
   area_ha?: number | null;
+  crop_code?: string | null;
+  location_text?: string | null;
+  group_id?: string | null;
+  boundary_geojson?: unknown | null;
 }): Promise<{ ok?: boolean; field_id?: string; error?: string }> {
   return apiRequest<{ ok?: boolean; field_id?: string; error?: string }>("/api/v1/fields", {
     method: "POST",
@@ -129,6 +133,10 @@ export async function createField(input: {
       field_id: input.field_id,
       name: input.name,
       area_ha: input.area_ha ?? null,
+      crop_code: input.crop_code ?? null,
+      location_text: input.location_text ?? null,
+      group_id: input.group_id ?? null,
+      boundary_geojson: input.boundary_geojson ?? null,
     }),
   });
 }

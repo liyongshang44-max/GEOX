@@ -1,6 +1,6 @@
 import React from "react";
 import { useSession } from "../auth/useSession";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { fetchDevices, type DeviceListItem } from "../lib/api";
 import { bindDeviceToField } from "../api/devices";
 import StatusBadge from "../components/common/StatusBadge";
@@ -9,6 +9,7 @@ import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
 
 export default function DevicesPage(): React.ReactElement {
+  const navigate = useNavigate();
   const { token, setToken } = useSession();
   const [items, setItems] = React.useState<DeviceListItem[]>([]);
   const [status, setStatus] = React.useState<string>("正在准备设备中心...");
@@ -102,13 +103,17 @@ export default function DevicesPage(): React.ReactElement {
                 }
                 setBindMsg("正在绑定...");
                 try {
+                  const selected = items.find((item) => item.device_id === bindForm.device_id.trim());
+                  const isOffline = String(selected?.connection_status ?? "").toUpperCase() !== "ONLINE";
                   const res = await bindDeviceToField({
                     device_id: bindForm.device_id.trim(),
                     field_id: bindForm.field_id.trim(),
                   });
                   if (res?.ok) {
-                    setBindMsg(`绑定成功：${res.device_id} -> ${res.field_id}`);
+                    const offlineHint = isOffline ? "；当前设备离线，建议先校验在线状态" : "";
+                    setBindMsg(`绑定成功：${res.device_id} -> ${res.field_id}${offlineHint}`);
                     await refresh();
+                    navigate(`/fields/${encodeURIComponent(res.field_id ?? bindForm.field_id.trim())}`);
                   } else {
                     setBindMsg(`绑定失败：${res?.error ?? "UNKNOWN_ERROR"}`);
                   }
