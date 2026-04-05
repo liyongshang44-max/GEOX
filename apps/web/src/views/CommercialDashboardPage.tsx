@@ -237,6 +237,58 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   const shouldShowOnboarding = Number(d.overview.fieldCount ?? 0) < 1 || Number(deviceSummary.online + deviceSummary.offline) < 1;
   const hasFieldButNoData = Number(d.overview.fieldCount ?? 0) > 0 && Number(deviceSummary.online + deviceSummary.offline) > 0 && smartRecommendations.latest == null;
   const hasDataButNoRecommendation = Number(d.overview.fieldCount ?? 0) > 0 && smartRecommendations.latest != null && d.decisions.pendingRecommendationCount < 1;
+  const initChecklist = React.useMemo(() => {
+    const fieldCreated = Number(d.overview.fieldCount ?? 0) > 0;
+    const boundDevice = Number(deviceSummary.online + deviceSummary.offline) > 0;
+    const onlineDevice = Number(deviceSummary.online) > 0;
+    const firstData = smartRecommendations.latest != null;
+    const hasRecommendation = d.decisions.pendingRecommendationCount > 0;
+    const hasOperation = Number(d.overview.todayExecutionCount ?? 0) > 0;
+    return [
+      {
+        key: "field",
+        label: "田块是否已创建",
+        status: fieldCreated ? "已完成" : "待完成",
+        actionLabel: fieldCreated ? "查看田块" : "新建田块",
+        to: fieldCreated ? "/fields" : "/fields/new",
+      },
+      {
+        key: "bind",
+        label: "是否已绑定设备",
+        status: boundDevice ? "已完成" : "待完成",
+        actionLabel: boundDevice ? "查看设备" : "去绑定设备",
+        to: "/devices",
+      },
+      {
+        key: "online",
+        label: "设备是否在线",
+        status: onlineDevice ? "已完成" : "需要处理",
+        actionLabel: "查看设备状态",
+        to: "/devices",
+      },
+      {
+        key: "first_data",
+        label: "是否收到首条数据",
+        status: firstData ? "已完成" : "等待数据",
+        actionLabel: firstData ? "查看田块状态" : "查看接入说明",
+        to: firstData ? "/fields" : "/devices/onboarding",
+      },
+      {
+        key: "rec",
+        label: "是否已有建议",
+        status: hasRecommendation ? "已完成" : "等待数据",
+        actionLabel: "刷新评估",
+        to: "/agronomy/recommendations",
+      },
+      {
+        key: "op",
+        label: "是否已有作业",
+        status: hasOperation ? "已完成" : "待完成",
+        actionLabel: "查看作业",
+        to: "/operations",
+      },
+    ];
+  }, [d.decisions.pendingRecommendationCount, d.overview.fieldCount, d.overview.todayExecutionCount, deviceSummary.offline, deviceSummary.online, smartRecommendations.latest]);
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
   const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;
@@ -367,6 +419,19 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
               <Link className="btn primary" to="/fields/new">新建田块</Link>
               <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
               <Link className="btn" to="/programs/create">初始化经营</Link>
+            </div>
+          </div>
+        ) : null}
+        {(shouldShowOnboarding || hasFieldButNoData || hasDataButNoRecommendation) ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">初始化检查卡</div>
+            <div className="decisionList" style={{ marginTop: 8 }}>
+              {initChecklist.map((item) => (
+                <div key={item.key} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                  <div>{item.label} · <strong>{item.status}</strong></div>
+                  <Link to={item.to}>{item.actionLabel}</Link>
+                </div>
+              ))}
             </div>
           </div>
         ) : null}

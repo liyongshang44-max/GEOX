@@ -111,12 +111,12 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasRecommendations = String(model?.currentStatus?.latestSuggestion ?? "").trim() !== "" && !String(model?.currentStatus?.latestSuggestion ?? "").includes("暂无");
   const hasOperations = Boolean(model?.currentTask || (model?.timeline ?? []).some((item) => item.type === "operation"));
   const checklist = [
-    { label: "田块已创建", ok: Boolean(fieldId), action: <Link to="/fields">查看田块列表</Link> },
-    { label: "设备已绑定", ok: hasBoundDevice, action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : <span><Link to="/devices">去绑定设备</Link></span> },
-    { label: "设备在线", ok: hasOnlineDevice, action: hasOnlineDevice ? <Link to="/devices">查看设备状态</Link> : <span><Link to="/devices">设备离线，去查看状态</Link></span> },
-    { label: "首条数据已到达", ok: hasTelemetry, action: hasTelemetry ? <span>已收到遥测</span> : <Link to="/devices/onboarding">查看接入说明</Link> },
-    { label: "系统建议已生成", ok: hasRecommendations, action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link> },
-    { label: "作业链路已开始", ok: hasOperations, action: hasOperations ? <Link to="/operations">查看作业</Link> : <Link to="/operations">查看推荐动作</Link> },
+    { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
+    { label: "是否已绑定设备", status: hasBoundDevice ? "已完成" : "待完成", action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : <Link to="/devices">去绑定设备</Link> },
+    { label: "设备是否在线", status: hasOnlineDevice ? "已完成" : "需要处理", action: <Link to="/devices">查看设备状态</Link> },
+    { label: "是否收到首条数据", status: hasTelemetry ? "已完成" : "等待数据", action: hasTelemetry ? <Link to="/fields">查看田块状态</Link> : <Link to="/devices/onboarding">查看接入说明</Link> },
+    { label: "是否已有建议", status: hasRecommendations ? "已完成" : "等待数据", action: <Link to="/agronomy/recommendations">刷新评估</Link> },
+    { label: "是否已有作业", status: hasOperations ? "已完成" : "待完成", action: <Link to="/operations">查看作业</Link> },
   ];
 
   return (
@@ -164,7 +164,7 @@ export default function FieldDetailPage(): React.ReactElement {
         <div className="decisionList" style={{ marginTop: 8 }}>
           {checklist.map((item) => (
             <div key={item.label} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div>{item.ok ? "✅" : "⚪"} {item.label}</div>
+              <div>{item.label} · <strong>{item.status}</strong></div>
               <div>{item.action}</div>
             </div>
           ))}
