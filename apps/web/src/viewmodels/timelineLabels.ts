@@ -51,3 +51,14 @@ export function resolveTimelineLabel(input: TimelineEventInput): string {
     ?? "执行状态更新"
   );
 }
+
+export function toBusinessTimelineLabel(raw: unknown): string {
+  const code = String(raw ?? "").trim().toUpperCase();
+  if (!code) return "状态更新";
+  if (["AO_ACT_TASK_V0", "AO_ACT_TASK_V1"].includes(code)) return "系统已创建执行任务";
+  if (["AO_ACT_RECEIPT_V0", "AO_ACT_RECEIPT_V1"].includes(code)) return "设备已回传执行回执";
+  if (code === "DECISION_RECOMMENDATION_V1") return "系统生成了作业建议";
+  if (code === "APPROVAL_REQUEST_V1") return "建议进入审批";
+  if (code === "OPERATION_PLAN_V1") return "已形成可执行作业计划";
+  return "作业状态更新";
+}

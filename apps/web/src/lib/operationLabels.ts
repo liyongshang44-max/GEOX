@@ -182,3 +182,21 @@ export function mapOperationActionLabel(value?: string | null, locale: UiLocale 
 export function mapOperationStatusLabel(value?: string | null, locale: UiLocale = "zh"): string {
   return localizeOperationStatus(value, locale);
 }
+
+export function toBusinessExecutionNarrative(status?: string | null, locale: UiLocale = "zh"): string {
+  const raw = String(status ?? "").trim().toUpperCase();
+  if (locale === "en") {
+    if (raw === "PENDING_ACCEPTANCE") return "Execution finished, waiting for acceptance.";
+    if (raw === "INVALID_EXECUTION") return "Execution returned but marked invalid; needs review.";
+    if (["SUCCESS", "SUCCEEDED"].includes(raw)) return "Execution and receipt completed.";
+    if (["FAILED", "ERROR"].includes(raw)) return "Execution ended with exception, please review evidence.";
+    if (["PENDING", "READY"].includes(raw)) return "Ready to execute.";
+    return "Execution status updated.";
+  }
+  if (raw === "PENDING_ACCEPTANCE") return "已执行，等待验收。";
+  if (raw === "INVALID_EXECUTION") return "已回传但判定无效，需人工复核。";
+  if (["SUCCESS", "SUCCEEDED"].includes(raw)) return "执行与回执已完成。";
+  if (["FAILED", "ERROR"].includes(raw)) return "执行异常结束，请检查证据与设备状态。";
+  if (["PENDING", "READY"].includes(raw)) return "待执行，请确认并下发。";
+  return "执行状态已更新。";
+}

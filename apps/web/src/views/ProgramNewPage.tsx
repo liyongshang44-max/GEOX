@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { createProgram } from "../api/programs";
 import { fetchFields } from "../api/fields";
@@ -12,6 +12,13 @@ type FormState = {
   field_id: string;
   season_id: string;
   crop_code: CropCode;
+  crop_variety: string;
+  template: "basic" | "water_saving" | "cost_control";
+  target_yield_value: string;
+  constraints_notes: string;
+  period_start_date: string;
+  period_end_date: string;
+  goal_desc: string;
   goal_quality: Priority;
   goal_yield: Priority;
 };
@@ -21,6 +28,13 @@ const INITIAL_FORM: FormState = {
   field_id: "",
   season_id: "",
   crop_code: "corn",
+  crop_variety: "",
+  template: "basic",
+  target_yield_value: "",
+  constraints_notes: "",
+  period_start_date: "",
+  period_end_date: "",
+  goal_desc: "",
   goal_quality: "high",
   goal_yield: "medium",
 };
@@ -41,6 +55,7 @@ function parseSchemaErrors(error: unknown): string[] {
 
 export default function ProgramNewPage(): React.ReactElement {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = React.useState<FormState>(INITIAL_FORM);
   const [submitting, setSubmitting] = React.useState(false);
   const [errors, setErrors] = React.useState<string[]>([]);
@@ -62,6 +77,11 @@ export default function ProgramNewPage(): React.ReactElement {
     return () => { mounted = false; };
   }, []);
 
+  React.useEffect(() => {
+    const fieldFromQuery = String(searchParams.get("field_id") ?? "").trim();
+    if (fieldFromQuery) setForm((prev) => ({ ...prev, field_id: fieldFromQuery }));
+  }, [searchParams]);
+
   const onChange = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -71,7 +91,27 @@ export default function ProgramNewPage(): React.ReactElement {
     setSubmitting(true);
     setErrors([]);
     try {
-      const result = await createProgram(form);
+      const seasonId =
+        form.season_id.trim() ||
+        `season_${form.period_start_date || new Date().toISOString().slice(0, 10)}_${form.crop_code}`;
+      const notes = [
+        `template=${form.template}`,
+        form.target_yield_value ? `target_yield=${form.target_yield_value}` : "",
+        form.crop_variety ? `variety=${form.crop_variety}` : "",
+        form.period_start_date ? `start=${form.period_start_date}` : "",
+        form.period_end_date ? `end=${form.period_end_date}` : "",
+        form.goal_desc ? `goal=${form.goal_desc}` : "",
+        form.constraints_notes ? `constraints=${form.constraints_notes}` : "",
+      ].filter(Boolean).join("; ");
+      const result = await createProgram({
+        program_name: form.program_name,
+        field_id: form.field_id,
+        season_id: seasonId,
+        crop_code: form.crop_code,
+        goal_quality: form.goal_quality,
+        goal_yield: form.goal_yield,
+        constraints_notes: notes,
+      });
       navigate(`/programs/${encodeURIComponent(result.program_id)}`);
     } catch (error) {
       setErrors(parseSchemaErrors(error));
@@ -107,7 +147,15 @@ export default function ProgramNewPage(): React.ReactElement {
 
           <label className="decisionItemStatic">
             <div className="decisionItemTitle">season_id</div>
-            <input className="input" value={form.season_id} onChange={(e) => onChange("season_id", e.target.value)} placeholder="season_demo_2026" required />
+            <input className="input" value={form.season_id} onChange={(e) => onChange("season_id", e.target.value)} placeholder="可选，不填则按日期自动生成" />
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">模板</div>
+            <select className="select" value={form.template} onChange={(e) => onChange("template", e.target.value as FormState["template"])}>
+              <option value="basic">基础模板</option>
+              <option value="water_saving">节水优先</option>
+              <option value="cost_control">成本优先</option>
+            </select>
           </label>
 
           <label className="decisionItemStatic">
@@ -116,6 +164,29 @@ export default function ProgramNewPage(): React.ReactElement {
               <option value="corn">corn</option>
               <option value="tomato">tomato</option>
             </select>
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">品种（可选）</div>
+            <input className="input" value={form.crop_variety} onChange={(e) => onChange("crop_variety", e.target.value)} placeholder="例如：甜玉米 608" />
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">目标产量</div>
+            <input className="input" value={form.target_yield_value} onChange={(e) => onChange("target_yield_value", e.target.value)} placeholder="例如：9000 kg/ha" />
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">限制条件</div>
+            <textarea className="input" value={form.constraints_notes} onChange={(e) => onChange("constraints_notes", e.target.value)} placeholder="例如：禁止夜间灌溉，农药需人工复核" />
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">周期起止（可选）</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <input className="input" type="date" value={form.period_start_date} onChange={(e) => onChange("period_start_date", e.target.value)} />
+              <input className="input" type="date" value={form.period_end_date} onChange={(e) => onChange("period_end_date", e.target.value)} />
+            </div>
+          </label>
+          <label className="decisionItemStatic">
+            <div className="decisionItemTitle">经营目标说明（可选）</div>
+            <textarea className="input" value={form.goal_desc} onChange={(e) => onChange("goal_desc", e.target.value)} placeholder="例如：优先保品质，控制成本波动" />
           </label>
 
           <label className="decisionItemStatic">
