@@ -163,18 +163,25 @@ export default function OperationDetailPage(): React.ReactElement {
   const fallbackState = (detail as any)?.fallback_state ?? { generated: false, executable: false };
   const valueAttribution = (detail as any)?.value_attribution_v1 ?? null;
   const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
 
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
     setExecuting(true);
+    setRunFeedback("");
     try {
-      await executeOperationAction({
+      const res = await executeOperationAction({
         tenant_id: String(executionContext?.tenant_id ?? ""),
         project_id: String(executionContext?.project_id ?? ""),
         group_id: String(executionContext?.group_id ?? ""),
         operation_id: String(model.operationPlanId || operationPlanId),
         execution_plan: executionPlan,
       });
+      if (res?.ok) {
+        setRunFeedback(res.idempotent ? `已复用任务 ${res.act_task_id ?? "-"}` : `已创建任务 ${res.act_task_id ?? "-"}`);
+      } else {
+        setRunFeedback(`执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+      }
       await reload();
     } finally {
       setExecuting(false);
@@ -292,6 +299,21 @@ export default function OperationDetailPage(): React.ReactElement {
         </div>
       </section>
       <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">全链路进度（决策→执行→回执→验收→复盘）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">决策</span><strong>{decisionRuleSource !== "--" ? "已生成" : "待生成"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行</span><strong>{executionTrace?.task_id ? "已下发" : "待执行"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">回执</span><strong>{traceGap?.missing_receipt ? "缺失" : "已回传"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据</span><strong>{traceGap?.missing_evidence ? "缺失" : "已关联"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">复盘</span><strong>{String(valueAttribution?.outcome?.effect_verdict ?? "--")}</strong></div>
+        </div>
+        <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <Link to="/">返回经营总览</Link>
+          <Link to={`/operations?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>刷新当前作业</Link>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">下一步动作建议</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">动作类型</span><strong>{String(nextAction?.action_type ?? "CHECK_FIELD_STATUS")}</strong></div>
@@ -306,6 +328,7 @@ export default function OperationDetailPage(): React.ReactElement {
           <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
             {executing ? "执行中..." : "一键执行"}
           </button>
+          {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
         </div>
       </section>
       <section className="card" style={{ marginTop: 12 }}>

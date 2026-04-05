@@ -85,6 +85,7 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const [customerReport, setCustomerReport] = React.useState<any>(null);
   const [policySuggestions, setPolicySuggestions] = React.useState<Array<{ rule_id: string; issue: string; recommendation: string; suggested_action?: { action_type: string; target: string; parameters: any } }>>([]);
   const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
+  const [executeFeedback, setExecuteFeedback] = React.useState<{ tone: "success" | "warning" | "neutral"; text: string; operationId?: string } | null>(null);
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
     todayCount: number;
@@ -261,14 +262,29 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
     if (!item.execution_ready || !item.execution_plan) return;
     setExecutingActionId(item.operation_id);
+    setExecuteFeedback(null);
     try {
-      await executeOperationAction({
+      const res = await executeOperationAction({
         tenant_id: String(item.tenant_id ?? ""),
         project_id: String(item.project_id ?? ""),
         group_id: String(item.group_id ?? ""),
         operation_id: item.operation_id,
         execution_plan: item.execution_plan,
       });
+      if (res?.ok) {
+        setExecuteFeedback({
+          tone: "success",
+          text: res.idempotent ? `已复用执行任务 ${res.act_task_id ?? "-"}` : `已创建执行任务 ${res.act_task_id ?? "-"}`,
+          operationId: item.operation_id,
+        });
+      } else {
+        const fallback = res?.fallback_state?.generated ? `，已生成 fallback: ${res?.fallback_action ?? res?.fallback_state?.fallback_plan?.action_type ?? "-"}` : "";
+        setExecuteFeedback({
+          tone: "warning",
+          text: `执行未完成：${res?.error ?? "UNKNOWN_ERROR"}${fallback}`,
+          operationId: item.operation_id,
+        });
+      }
       void fetchDashboardOverviewV2().then((res) => {
         if (!res) return;
         setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
@@ -321,7 +337,26 @@ export default function CommercialDashboardPage(): React.ReactElement {
         </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">全链路操作引导</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 1 决策</span><strong>查看 Top Actions / 客户报告</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 2 执行</span><strong>点击「一键执行」生成任务</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 3 回执</span><strong>进入作业详情查看 attempt/trace/fallback</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 4 复盘</span><strong>回到报告与策略建议闭环</strong></article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">Top 3 优先动作（后端排序）</div>
+        {executeFeedback ? (
+          <div className={`muted ${executeFeedback.tone === "success" ? "traceChipLive" : executeFeedback.tone === "warning" ? "traceChipWarn" : ""}`} style={{ marginTop: 8, padding: 8 }}>
+            {executeFeedback.text}
+            {executeFeedback.operationId ? (
+              <span style={{ marginLeft: 8 }}>
+                <Link to={`/operations?operation_plan_id=${encodeURIComponent(executeFeedback.operationId)}`}>查看作业详情</Link>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         <div className="decisionList" style={{ marginTop: 10 }}>
           {topActions.map((item) => (
             <div key={item.operation_id} className="decisionItemStatic">
@@ -337,6 +372,9 @@ export default function CommercialDashboardPage(): React.ReactElement {
               <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
                 {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
               </button>
+              <div style={{ marginTop: 8 }}>
+                <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`}>进入该作业全链路详情</Link>
+              </div>
             </div>
           ))}
           {!topActions.length ? <EmptyBlock text="暂无可执行动作，默认建议：CHECK_FIELD_STATUS" /> : null}

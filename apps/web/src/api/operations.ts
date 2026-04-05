@@ -155,8 +155,8 @@ export async function executeOperationAction(input: {
   group_id: string;
   operation_id: string;
   execution_plan: ExecutionPlanV1;
-}): Promise<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }> {
-  return apiRequest<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string }>("/api/v1/actions/execute", {
+}): Promise<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string; fallback_state?: any; fallback_action?: string }> {
+  return apiRequest<{ ok?: boolean; act_task_id?: string; idempotent?: boolean; error?: string; fallback_state?: any; fallback_action?: string }>("/api/v1/actions/execute", {
     method: "POST",
     body: JSON.stringify(input),
   });
