@@ -2,8 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { DashboardTopActionItem } from "../../../api/dashboard";
 import { buildOperationSummary, mapOperationActionLabel } from "../../../lib/operationLabels";
-import SectionCard from "./SectionCard";
-import { EmptyGuide } from "../../../shared/ui";
+import { SectionCard } from "../../../shared/ui";
 
 
 export default function DecisionOperationQueue({

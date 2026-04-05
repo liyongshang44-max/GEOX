@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import SectionCard from "./SectionCard";
-import { EmptyGuide } from "../../../shared/ui";
+import { EmptyGuide, SectionCard } from "../../../shared/ui";
 
 function EmptyStateGuide({
   fieldCount,
@@ -13,15 +12,21 @@ function EmptyStateGuide({
   hasFirstData: boolean;
 }): React.ReactElement | null {
   if (fieldCount < 1) {
-    return <EmptyGuide title="空态引导：无田块" description="先建田块，再接入设备。" actions={[{ label: "新建田块", to: "/fields/new", tone: "primary" }, { label: "查看田块列表", to: "/fields" }]} />;
+    return (
+      <EmptyGuide title="空态引导：无田块" message="先建田块，再接入设备。" actionLabel="新建田块" actionTo="/fields/new" />
+    );
   }
 
   if (deviceCount < 1) {
-    return <EmptyGuide title="空态引导：无设备" description="绑定设备，开启监测。" actions={[{ label: "去绑定设备", to: "/devices/onboarding", tone: "primary" }, { label: "设备中心", to: "/devices" }]} />;
+    return (
+      <EmptyGuide title="空态引导：无设备" message="绑定设备，开启监测。" actionLabel="去绑定设备" actionTo="/devices/onboarding" />
+    );
   }
 
   if (!hasFirstData) {
-    return <EmptyGuide title="空态引导：无首条数据" description="设备已接入，等待首条回传。" actions={[{ label: "查看设备状态", to: "/devices", tone: "primary" }, { label: "接入说明", to: "/devices/onboarding" }]} />;
+    return (
+      <EmptyGuide title="空态引导：无首条数据" message="设备已接入，等待首条回传。" actionLabel="查看设备状态" actionTo="/devices" />
+    );
   }
 
   return null;

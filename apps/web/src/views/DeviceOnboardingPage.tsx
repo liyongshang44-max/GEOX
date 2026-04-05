@@ -1,7 +1,7 @@
 import React from "react";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
-import { EmptyGuide, PageHeader, SectionCard, StatusPill } from "../shared/ui";
+import { PageHeader, SectionCard, Stepper } from "../shared/ui";
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
@@ -152,16 +152,17 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   }
 
   const completed = isStepDone("first_telemetry", onboarding, localBoundFieldId);
+  const activeStep = stepFlow.find((step) => !isStepDone(step, onboarding, localBoundFieldId));
 
   return (
     <div className="consolePage">
       <PageHeader
-        eyebrow="Devices · Onboarding"
         title="设备接入向导"
         description="按步骤执行“注册设备 → 凭据确认 → 绑定田块 → telemetry 校验”，每步独立操作与刷新，避免一次性批量提交。"
       />
 
       <SectionCard title="基础信息">
+        <div className="sectionHeader"><div><div className="sectionTitle">基础信息</div></div></div>
         <div className="contentGridTwo alignStart">
           <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           <label className="field">设备 ID<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
@@ -171,15 +172,15 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-      <SectionCard title="Stepper（步骤 key ↔ 后端状态字段）">
-        <div className="meta wrapMeta">
-          {stepFlow.map((step) => {
-            const done = isStepDone(step, onboarding, localBoundFieldId);
-            return (
-              <StatusPill key={step} tone={done ? "normal" : "risk"}>{step} ↔ {STEP_STATUS_FIELD_MAP[step]}</StatusPill>
-            );
-          })}
-        </div>
+      <SectionCard title="接入步骤">
+        <Stepper
+          items={stepFlow.map((step) => ({
+            key: step,
+            title: `${STEP_TITLES[step]}（${STEP_STATUS_FIELD_MAP[step]}）`,
+            done: isStepDone(step, onboarding, localBoundFieldId),
+            active: step === activeStep,
+          }))}
+        />
       </SectionCard>
 
       {stepFlow.map((step, index) => {

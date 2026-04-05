@@ -11,6 +11,7 @@ import { buildOperationDetailViewModel } from "../viewmodels/operationDetailView
 import { executeOperationAction } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../lib/operationLabels";
 import { toBusinessTimelineLabel } from "../viewmodels/timelineLabels";
+import { DetailAside, StatusPill } from "../shared/ui";
 
 const COPY = {
   backToList: "返回作业列表",
@@ -167,9 +168,9 @@ export default function OperationDetailPage(): React.ReactElement {
             <section className="card operationAlertCard">
               <div className="sectionTitle">重点状态提醒</div>
               <div className="operationStatusPills">
-                {isInvalidExecution ? <StatusPill tone="failed">执行无效</StatusPill> : null}
-                {isEvidenceMissing ? <StatusPill tone="risk">证据缺失</StatusPill> : null}
-                {isPendingAcceptance ? <StatusPill tone="pending">待验收</StatusPill> : null}
+                {isInvalidExecution ? <StatusPill tone="danger">执行无效</StatusPill> : null}
+                {isEvidenceMissing ? <StatusPill tone="warning">证据缺失</StatusPill> : null}
+                {isPendingAcceptance ? <StatusPill tone="info">待验收</StatusPill> : null}
               </div>
               {isInvalidExecution ? (
                 <div className="operationWarningBlock danger">
@@ -276,25 +277,25 @@ export default function OperationDetailPage(): React.ReactElement {
           </section>
         </div>
 
-        <DetailAside
-          title="Detail Aside"
-          items={[
-            { label: "执行状态", value: topStatusLabel },
-            { label: "验收", value: model.acceptance.statusLabel },
-            { label: "证据完整性", value: isEvidenceMissing ? "缺失" : "完整" },
-            { label: "证据包状态", value: model.evidenceExport.bundleStatusLabel },
-            { label: "证据缺失项", value: model.acceptance.missingEvidenceLabel },
-            { label: "验收摘要", value: model.acceptance.summary },
-            { label: "下一步", value: model.nextStepHint || "按时间线逐项推进" },
-          ]}
-          actions={<>
+        <DetailAside title="Detail Aside">
+          <div className="sectionTitle">Detail Aside</div>
+          <div className="operationAsideBody">
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{model.acceptance.statusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据完整性</span><strong>{isEvidenceMissing ? "缺失" : "完整"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据包状态</span><strong>{model.evidenceExport.bundleStatusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据缺失项</span><strong>{model.acceptance.missingEvidenceLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收摘要</span><strong>{model.acceptance.summary}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下一步</span><strong>{model.nextStepHint || "按时间线逐项推进"}</strong></div>
+          </div>
+          <div className="operationAsideActions">
             <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
               {executing ? "执行中..." : "一键执行"}
             </button>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
             <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
-          </>}
-        />
+          </div>
+        </DetailAside>
       </section>
 
       <section className="card operationEvidenceMain" style={{ marginTop: 12 }}>

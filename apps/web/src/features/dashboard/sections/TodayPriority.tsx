@@ -1,7 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import SectionCard from "./SectionCard";
-import { EmptyGuide } from "../../../shared/ui";
+import { SectionCard, StatusPill } from "../../../shared/ui";
 
 
 export default function TodayPriority({
@@ -29,7 +28,7 @@ export default function TodayPriority({
         {todayActions.map((item, idx) => (
           <div key={`${item.type}_${idx}`} className="decisionItemStatic">
             <div className="decisionItemTitle">{idx + 1}. {todayActionLabel(item.type, item.count)}</div>
-            <div className="decisionItemMeta">风险等级：{todayActionRiskLevel(item.type)}</div>
+            <div className="decisionItemMeta">风险等级：<StatusPill tone={todayActionRiskLevel(item.type) === "高" ? "danger" : todayActionRiskLevel(item.type) === "中" ? "warning" : "info"}>{todayActionRiskLevel(item.type)}</StatusPill></div>
             <div className="decisionItemMeta">原因摘要：{todayActionReason(item.type, item.count)}</div>
             <div className="decisionItemMeta">建议动作：{todayActionSuggestion(item.type, item.count)}</div>
             <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>

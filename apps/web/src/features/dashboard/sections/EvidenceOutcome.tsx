@@ -4,8 +4,7 @@ import type { DashboardRecommendationItem } from "../../../api/dashboard";
 import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
 import { mapFieldDisplayName } from "../../../lib/operationLabels";
-import SectionCard from "./SectionCard";
-import { StatusPill } from "../../../shared/ui";
+import { SectionCard } from "../../../shared/ui";
 
 type EvidenceItem = {
   id: string;
