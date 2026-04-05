@@ -13,6 +13,7 @@ import ExportJobsPage from "../views/ExportJobsPage";
 import CommercialDashboardPage from "../views/CommercialDashboardPage";
 import DevToolsPage from "../views/DevToolsPage";
 import FieldsPage from "../views/FieldsPage";
+import FieldCreatePage from "../views/FieldCreatePage";
 import FieldDetailPage from "../views/FieldDetailPage";
 import DevicesPage from "../views/DevicesPage";
 import DeviceDetailPage from "../views/DeviceDetailPage";
@@ -41,6 +42,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "总览";
   if (pathname.startsWith("/delivery/export-jobs")) return "证据中心";
   if (pathname === "/fields") return "田块与 GIS";
+  if (pathname === "/fields/new") return "新建田块";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备中心";
   if (pathname === "/devices/onboarding") return "设备接入向导";
@@ -64,6 +66,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "一眼查看经营方案运行态、待执行动作、证据状态与风险摘要。";
   if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
+  if (pathname === "/fields/new") return "创建田块并开始开局链路。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
@@ -87,6 +90,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "总览" }];
   if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
+  if (pathname === "/fields/new") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "新建田块" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
@@ -143,16 +147,20 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 
         <div className="sideGroupTitle">业务导航</div>
         <nav className="sideNav">
-          <SidebarLink to="/dashboard" label="监控台" />
-          <SidebarLink to="/fields" label="田块与 GIS" />
-          <SidebarLink to="/devices" label="设备中心" />
+          <SidebarLink to="/dashboard" label="总览" />
+          <SidebarLink to="/fields" label="田块" />
+          <SidebarLink to="/operations" label="作业" />
+          <SidebarLink to="/programs" label="方案" />
+          <SidebarLink to="/delivery/export-jobs" label="报告" />
+          <SidebarLink to="/devices" label="设备" />
+        </nav>
+
+        <div className="sideGroupTitle">运营扩展</div>
+        <nav className="sideNav">
           <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/operations" label="作业中心" />
           <SidebarLink to="/human-assignments" label="人工执行" />
-          <SidebarLink to="/programs" label="经营方案" />
           <SidebarLink to="/agronomy/recommendations" label="农业建议" />
           <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/delivery/export-jobs" label="证据中心" />
           <SidebarLink to="/settings" label="系统设置" />
         </nav>
 
@@ -194,6 +202,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />
             <Route path="/delivery/export-jobs" element={<ExportJobsPage />} />
             <Route path="/fields" element={<FieldsPage />} />
+            <Route path="/fields/new" element={<FieldCreatePage />} />
             <Route path="/fields/:fieldId" element={<FieldDetailPage />} />
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />

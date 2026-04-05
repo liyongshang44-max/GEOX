@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useSession } from "../auth/useSession";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   bindDeviceToField,
   fetchDeviceControlPlane,
@@ -58,6 +58,7 @@ async function resolveBoundFieldFromFields(token: string, deviceId: string): Pro
 }
 
 export default function DeviceDetailPage(): React.ReactElement {
+  const navigate = useNavigate();
   const { deviceId } = useParams();
   const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<DeviceDetail | null>(null);
@@ -129,7 +130,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   async function handleBindField(): Promise<void> {
     if (!deviceId || !bindFieldId.trim()) return;
     setBusy(true); setStatus(`正在绑定到田块 ${bindFieldId} ...`);
-    try { await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() }); await refresh(); setStatus(`设备已绑定到田块：${bindFieldId}`); }
+    try { await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() }); await refresh(); setStatus(`设备已绑定到田块：${bindFieldId}`); navigate(`/fields/${encodeURIComponent(bindFieldId.trim())}`); }
     catch (e: any) { setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
 

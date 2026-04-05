@@ -1,6 +1,6 @@
 import React from "react";
 import { apiRequestOptional } from "../api/client";
-import { fetchFieldDetail, fetchFieldGeometry } from "../api/fields";
+import { fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
 import { fetchAgronomyRecommendations } from "../api/programs";
 import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
@@ -243,7 +243,7 @@ export function useFieldDetail(params: {
       });
       setStatus(lang === "zh" ? "基础详情已加载" : "Base field detail loaded");
 
-      const [cpRes, opsRes, recsRes, geometryRes, positionsRes, trajectoriesRes] = await Promise.allSettled([
+      const [cpRes, opsRes, recsRes, geometryRes, positionsRes, trajectoriesRes, currentProgramRes] = await Promise.allSettled([
         cpPromise,
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
@@ -254,6 +254,7 @@ export function useFieldDetail(params: {
         Promise.resolve().then(() =>
           apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/trajectories`)
         ),
+        Promise.resolve().then(() => fetchFieldCurrentProgram(fieldId)),
       ]);
 
       const geometry = geometryRes.status === "fulfilled" ? geometryRes.value?.geometry ?? geometryRes.value : null;
@@ -265,7 +266,7 @@ export function useFieldDetail(params: {
         recsRes.status === "fulfilled"
           ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8)
           : [];
-      const currentProgram = null;
+      const currentProgram = currentProgramRes.status === "fulfilled" ? currentProgramRes.value : null;
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
       const cp = cpRes.status === "fulfilled" ? cpRes.value : null;

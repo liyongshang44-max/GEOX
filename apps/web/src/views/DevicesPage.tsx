@@ -1,13 +1,15 @@
 import React from "react";
 import { useSession } from "../auth/useSession";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { fetchDevices, type DeviceListItem } from "../lib/api";
+import { bindDeviceToField } from "../api/devices";
 import StatusBadge from "../components/common/StatusBadge";
 import EmptyState from "../components/common/EmptyState";
 import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
 
 export default function DevicesPage(): React.ReactElement {
+  const navigate = useNavigate();
   const { token, setToken } = useSession();
   const [items, setItems] = React.useState<DeviceListItem[]>([]);
   const [status, setStatus] = React.useState<string>("正在准备设备中心...");
@@ -16,6 +18,8 @@ export default function DevicesPage(): React.ReactElement {
   const [onlineFilter, setOnlineFilter] = React.useState<"ALL" | "ONLINE" | "OFFLINE">("ALL");
   const [boundFilter, setBoundFilter] = React.useState<"ALL" | "BOUND" | "UNBOUND">("ALL");
   const [receiptFilter, setReceiptFilter] = React.useState<"ALL" | "HAS" | "NONE">("ALL");
+  const [bindForm, setBindForm] = React.useState({ device_id: "", field_id: "" });
+  const [bindMsg, setBindMsg] = React.useState("");
 
   async function refresh(): Promise<void> {
     setBusy(true);
@@ -73,6 +77,57 @@ export default function DevicesPage(): React.ReactElement {
         <div className="metricCard card"><div className="metricLabel">已绑定田块</div><div className="metricValue">{items.filter((x) => !!x.field_id).length}</div><div className="metricHint">具备 field 归属</div></div>
         <div className="metricCard card"><div className="metricLabel">页面状态</div><div className="metricValue">{status.includes("失败") ? "异常" : "正常"}</div><div className="metricHint">{status}</div></div>
       </div>
+
+      <section className="card sectionBlock">
+        <div className="sectionHeader">
+          <div>
+            <div className="sectionTitle">首次开局：设备绑定田块</div>
+            <div className="sectionDesc">完成设备接入后，将设备绑定到目标田块，再进入方案创建。</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link className="btn" to="/fields">上一步：田块</Link>
+            <Link className="btn" to="/programs/new">下一步：创建方案</Link>
+          </div>
+        </div>
+        <div className="toolbarFilters">
+          <input className="input" placeholder="设备ID" value={bindForm.device_id} onChange={(e) => setBindForm((s) => ({ ...s, device_id: e.target.value }))} />
+          <input className="input" placeholder="田块ID" value={bindForm.field_id} onChange={(e) => setBindForm((s) => ({ ...s, field_id: e.target.value }))} />
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                if (!bindForm.device_id.trim() || !bindForm.field_id.trim()) {
+                  setBindMsg("请填写设备ID和田块ID");
+                  return;
+                }
+                setBindMsg("正在绑定...");
+                try {
+                  const selected = items.find((item) => item.device_id === bindForm.device_id.trim());
+                  const isOffline = String(selected?.connection_status ?? "").toUpperCase() !== "ONLINE";
+                  const res = await bindDeviceToField({
+                    device_id: bindForm.device_id.trim(),
+                    field_id: bindForm.field_id.trim(),
+                  });
+                  if (res?.ok) {
+                    const offlineHint = isOffline ? "；当前设备离线，建议先校验在线状态" : "";
+                    setBindMsg(`绑定成功：${res.device_id} -> ${res.field_id}${offlineHint}`);
+                    await refresh();
+                    navigate(`/fields/${encodeURIComponent(res.field_id ?? bindForm.field_id.trim())}`);
+                  } else {
+                    setBindMsg(`绑定失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+                  }
+                } catch (e: any) {
+                  setBindMsg(`绑定失败：${e?.bodyText || e?.message || String(e)}`);
+                }
+              })();
+            }}
+          >
+            绑定设备
+          </button>
+        </div>
+        {bindMsg ? <div className="metaText" style={{ marginTop: 8 }}>{bindMsg}</div> : null}
+      </section>
 
       <section className="card sectionBlock">
         <div className="sectionHeader">
