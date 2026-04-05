@@ -1,157 +1,183 @@
-# GEOX 前端产品化收口任务书（Stage 10）
+# GEOX 前端产品化整改任务书 v1
 
-## 0. 任务定义
+## 一、任务背景
 
-将 GEOX 前端从“功能展示界面”整改为“远程农业经营控制台”。
+当前 GEOX 前端已经具备监控、作业、经营方案、证据与报告展示能力，但仍有三个核心问题：
 
-本轮只做前端信息架构与表达收口：
-- 用现有读模型（不大改 API 契约）
-- 统一业务语言、状态词、按钮层级
-- 打通 Dashboard -> Field -> Operation -> Program 主线
+1. 系统默认“基础对象已经存在”，缺少新客户首次进入系统时的开局链路。
+2. 页面之间虽然有功能，但没有明确主线导航和动作闭环，用户容易迷路。
+3. 空数据、异常、权限不足、设备离线等真实场景缺少规范化处理，页面虽能显示，但不能引导用户继续完成任务。
 
----
-
-## 1. 页面目标（按主线）
-
-### 1.1 CommercialDashboardPage（主入口）
-
-**目标**：5 秒内让用户知道“当前最重要事项”。
-
-**固定 6 区块**：
-1. 顶部总览带（建议数/执行中/待验收/风险田块/产值成本净值）
-2. 今日最重要动作（<=3）
-3. 风险田块列表（地块视角）
-4. 最近执行结果（最近 5 条）
-5. 经营趋势（产值/成本/成功率/无效执行率）
-6. 客户报告与证据入口（收口）
-
-**要求**：
-- 每条重要动作可“直接执行”或“进详情”
-- 首页优先行动，不展开技术细节
+本轮整改目标不是增加零散功能，而是把 GEOX 收口为一个可被客户实际使用的远程农业经营控制台。
 
 ---
 
-### 1.2 FieldDetailPage（田块作战页）
+## 二、整改总目标
 
-**目标**：围绕“某块田当前怎么管”形成指挥界面。
+本轮整改后，前端必须满足以下 5 个目标：
 
-**固定 5 区块**：
-1. 田块头部（名称/面积/作物/阶段/健康/更新时间/主 CTA）
-2. 当前状态（土壤湿度/温度/空气湿度/设备在线/遥测摘要）
-3. 风险与建议（风险、推荐动作、不执行后果、建议原因）
-4. 最近作业与验收（3~5 条）
-5. GIS/轨迹/热区（增强区，后置）
-
----
-
-### 1.3 OperationDetailPage（单次作业故事页）
-
-**目标**：用户在一个页面读懂“为什么做、怎么做、做成没、值不值”。
-
-**固定 6 区块**：
-1. 故事头（状态/田块/执行对象/时间/主按钮）
-2. 决策依据（recommendation、触发原因、当前指标、不执行风险）
-3. 执行过程（task/dispatch/receipt，业务语言时间线）
-4. 证据与验收（evidence、acceptance、missing evidence）
-5. 价值归因（收益/风险降低/成本变化/对目标影响）
-6. 审计补充（折叠）
+1. 新客户第一次进入系统，可以从 0 开始完成“田块 → 设备 → 初始经营方案 → 看到第一批数据”的开局链路。
+2. 全站形成清晰主线：总览 → 田块 → 作业 → 方案 → 报告 → 设备。
+3. 每个页面不只“展示信息”，还要明确“下一步做什么”。
+4. 空态、异常态、无数据态、权限态都有明确文案和后续动作。
+5. 所有页面的业务语言、状态词、按钮语义、视觉层级统一。
 
 ---
 
-### 1.4 ProgramDetailPage（经营方案页）
+## 三、用户角色与主线场景
 
-**目标**：表达“目标—策略—执行结果”而非实时监控拼盘。
+本轮以前端主用户为“远程农业管理者/田块经营者”为核心，不以研发或运维视角设计。
 
-**固定 4 区块**：
-1. 目标卡（作物/品种/目标产量/限制/经营目标）
-2. 进度卡（阶段/重点/里程碑/偏差）
-3. 策略卡（当前主规则/当前建议/建议原因）
-4. 最近影响卡（最近作业是否推动目标前进、风险影响）
+### 场景 A：首次开局
 
----
+新客户进入系统后，需要完成：
 
-## 2. 文件级任务拆解
+- 新建田块
+- 录入当前作物/目标作物
+- 绑定设备
+- 创建初始 Program
+- 完成首次数据可见性检查
 
-## 2.1 页面层
+### 场景 B：日常经营
 
-### `apps/web/src/views/CommercialDashboardPage.tsx`
-- 组装并固定 6 个一级区块
-- 将“风险”统一改为地块列表表达，不展示原始告警流水
-- Top Actions 收敛到 3 条并统一结构（田块/动作/原因/风险/预计影响）
-- 增加客户报告/证据收口入口
+客户每天进入系统后，需要完成：
 
-### `apps/web/src/views/FieldDetailPage.tsx`
-- 重排结构为 5 区块（GIS 后置）
-- 强化主 CTA（查看建议 / 发起作业）
+- 查看总览
+- 确认风险田块
+- 处理建议
+- 执行作业
+- 查看证据和验收
+- 跟踪经营方案偏差
 
-### `apps/web/src/views/OperationDetailPage.tsx`
-- 把现有信息按 6 区块重排
-- 时间线标签改业务词，避免技术事件名裸露
-- 证据与验收提升为主区
+### 场景 C：复盘与报告
 
-### `apps/web/src/views/ProgramDetailPage.tsx`
-- 收敛为 4 区块
-- 移除与 Dashboard/Operation 重复的信息
+客户需要：
 
-### `apps/web/src/views/OperationsPage.tsx`
-- 强化从列表进入“故事页”路径
-- 提供状态筛选与统一状态词映射
+- 查看最近作业结果
+- 查看证据和报告
+- 了解经营目标与实际偏差
+- 输出客户报告
 
-### `apps/web/src/views/ProgramListPage.tsx`
-- 列表表达聚焦经营目标与偏差，不再堆技术指标
+所有页面整改都要围绕这三条场景服务。
 
 ---
 
-## 2.2 视图模型层
+## 四、全站导航与主线规范
 
-### `apps/web/src/viewmodels/dashboardViewModel.ts`
-- 输出 Dashboard 六区块所需结构
-- 将后端字段转换为统一状态词与展示文案
+这是本轮必须新增的内容，不能缺。
 
-### `apps/web/src/viewmodels/fieldDetailViewModel.ts`
-- 输出田块作战页 5 区块结构
+### 4.1 全站一级主导航
 
-### `apps/web/src/viewmodels/operationDetailViewModel.ts`
-- 输出作业故事页 6 区块结构
-- 时间线业务化文案映射在此统一处理
+全站左侧或顶部必须固定以下 6 个一级入口（顺序固定）：
 
-### `apps/web/src/viewmodels/programDetailViewModel.ts`
-- 输出 Program 四区块结构
+1. 总览
+2. 田块
+3. 作业
+4. 方案
+5. 报告
+6. 设备
 
-### `apps/web/src/lib/operationLabels.ts`
-- 全站状态词统一映射（见第 3 节）
+命名统一使用中文，不允许一页写 Program、一页写 Portfolio、一页写 Operations。
+
+推荐对应路由含义：
+
+- 总览：Dashboard，总体经营入口
+- 田块：Field 列表与田块详情
+- 作业：作业列表与作业详情
+- 方案：Program 列表与经营方案详情
+- 报告：证据/报告中心
+- 设备：设备接入、状态、绑定
+
+### 4.2 面包屑规则
+
+所有详情页必须有固定 breadcrumb，不允许用户只能靠浏览器返回。
+
+规则如下：
+
+- 田块详情：总览 / 田块 / 田块详情
+- 作业详情：总览 / 作业 / 作业详情
+- 方案详情：总览 / 方案 / 方案详情
+- 设备详情：总览 / 设备 / 设备详情
+- 报告详情：总览 / 报告 / 报告详情
+
+### 4.3 页面级“下一步”按钮规范
+
+每个主页面必须有一个明确的“下一步”主动作，不允许只有“查看详情”。
+
+页面主按钮规范：
+
+- 总览页：处理最重要建议
+- 田块详情：发起作业 或 查看建议
+- 作业详情：查看证据 / 返回田块 / 进入验收
+- 方案详情：调整方案 / 查看相关田块
+- 设备页：接入设备 / 绑定田块
+- 报告页：查看最新报告 / 导出报告
+
+### 4.4 关键路径跳转规则
+
+- 规则 1：新建田块后，跳转到该田块“初始化经营页”或详情初始化模块，不回空列表。
+- 规则 2：完成设备绑定后，跳转到该田块详情页并提示“设备已绑定，等待首条数据”。
+- 规则 3：完成初始 Program 创建后，跳转到 Program 详情页并提供“返回田块/查看总览”。
+- 规则 4：执行作业后，如进入 receipt/待验收流程，跳到作业详情页，不直接回列表。
+- 规则 5：验收完成后，优先回作业详情页并给出“返回田块/查看报告”。
+- 规则 6：首次进入且无基础对象时，优先进入开局向导，不展示空白 Dashboard。
 
 ---
 
-## 2.3 样式层
+## 五、页面整改结构（收口版）
 
-### `apps/web/src/styles/dashboard.css`
-- 首页六区块布局、顶部总览带、主 CTA 强调
+### 5.1 Dashboard（绝对主入口）
 
-### `apps/web/src/styles/field.css`
-- 田块作战页信息优先级样式
+首页只回答 5 个问题：
+- 今天哪些地块值得关注
+- 哪些建议需要处理
+- 哪些作业正在执行/待验收
+- 最近结果变好还是变坏
+- 本周期经营结果怎样
 
-### `apps/web/src/styles/operation.css`
-- 作业故事页时间线与证据区强化
+固定为 6 区块：
+A. 顶部总览带
+B. 今日最重要动作（<=3）
+C. 风险田块列表
+D. 最近执行结果（最近 5 条）
+E. 经营趋势
+F. 客户报告/证据入口
 
-### `apps/web/src/styles/program.css`
-- 经营页目标与偏差表达样式
+原则：先行动，再解释。
 
-### `apps/web/src/styles/cards.css`
-- 卡片密度下调，统一间距、标题、次级文本
+### 5.2 FieldDetailPage（田块作战页）
 
-### `apps/web/src/styles/layout.css`
-- 页面主次层级统一
+固定 5 区块：
+A. 田块头部
+B. 当前状态
+C. 风险与建议
+D. 最近作业与验收
+E. GIS/轨迹/热区（后置）
 
-### `apps/web/src/styles/base.css`
-- 状态色与按钮语义规范落地
+### 5.3 OperationDetailPage（单次作业故事页）
+
+固定 6 区块：
+A. 故事头
+B. 决策依据
+C. 执行过程
+D. 证据与验收
+E. 价值归因
+F. 审计补充（折叠）
+
+### 5.4 ProgramDetailPage（经营方案页）
+
+固定 4 区块：
+A. 目标卡
+B. 当前进度卡
+C. 策略卡
+D. 最近影响卡
 
 ---
 
-## 3. 文案与交互口径
+## 六、设计语言统一规范
 
-## 3.1 状态词（全站唯一）
-仅允许：
+### 6.1 状态词统一（全站仅保留）
+
 - 待处理
 - 待执行
 - 执行中
@@ -160,96 +186,91 @@
 - 执行无效
 - 存在风险
 
-## 3.2 按钮语义（全站唯一）
+### 6.2 按钮层级统一
+
 - 主按钮：处理当前最重要事项
 - 次按钮：查看详情
 - 弱按钮：刷新 / 返回 / 导出
 
-## 3.3 文案规范
-- 中文为主，不混杂英文状态码
-- 先结论后解释
-- 空态语气统一（简洁、可行动）
+### 6.3 文案统一
+
+- 中文为主，不大面积中英混杂
+- 指标先结论、后解释
+- 空态文案统一语气（简短、可行动）
 
 ---
 
-## 4. 组件拆分建议（防止页面继续膨胀）
+## 七、实施范围（本轮）
 
-## Dashboard
-- `DashboardOverviewBand`
-- `DashboardTopActions`
-- `DashboardRiskFields`
-- `DashboardRecentExecutions`
-- `DashboardBusinessTrend`
-- `DashboardReportEntry`
+### 页面层
+- `apps/web/src/views/CommercialDashboardPage.tsx`
+- `apps/web/src/views/FieldDetailPage.tsx`
+- `apps/web/src/views/OperationDetailPage.tsx`
+- `apps/web/src/views/ProgramDetailPage.tsx`
+- `apps/web/src/views/OperationsPage.tsx`
+- `apps/web/src/views/ProgramListPage.tsx`
 
-## Field
-- `FieldHeaderCard`
-- `FieldCurrentStateCard`
-- `FieldRiskSuggestionCard`
-- `FieldRecentOperationsCard`
-- `FieldMapPanel`
+### 视图模型层
+- `apps/web/src/viewmodels/dashboardViewModel.ts`
+- `apps/web/src/viewmodels/fieldDetailViewModel.ts`
+- `apps/web/src/viewmodels/operationDetailViewModel.ts`
+- `apps/web/src/viewmodels/programDetailViewModel.ts`
+- `apps/web/src/lib/operationLabels.ts`
 
-## Operation
-- `OperationStoryHeader`
-- `OperationDecisionPanel`
-- `OperationExecutionTimeline`
-- `OperationEvidenceAcceptancePanel`
-- `OperationValueImpactPanel`
-- `OperationAuditCollapse`
-
-## Program
-- `ProgramGoalCard`
-- `ProgramProgressCard`
-- `ProgramStrategyCard`
-- `ProgramImpactCard`
+### 样式层
+- `apps/web/src/styles/dashboard.css`
+- `apps/web/src/styles/field.css`
+- `apps/web/src/styles/operation.css`
+- `apps/web/src/styles/program.css`
+- `apps/web/src/styles/cards.css`
+- `apps/web/src/styles/layout.css`
+- `apps/web/src/styles/base.css`
 
 ---
 
-## 5. 开发顺序（严格）
+## 八、开发顺序
 
-1. 先改 viewmodel（统一输出）
-2. 再改页面骨架（区块重排）
-3. 再改文案映射（状态词统一）
-4. 最后改样式（密度/层级/按钮）
-5. 回归验证全链路跳转与关键 CTA
+1. 先完成开局向导入口与主导航框架（信息架构）
+2. 再做 Dashboard 6 区块收口
+3. 再做 Field/Operation/Program 三个详情页重排
+4. 最后做状态词、按钮语义与样式统一
+5. 全链路回归（首次开局 + 日常经营 + 复盘报告）
 
 ---
 
-## 6. 验收清单（产品标准）
+## 九、验收标准（产品标准）
 
-## Dashboard
-- 5 秒内识别最重要事项
-- 一级区块 <= 6
-- 至少 1 条可直接进入执行路径
-- 风险按“地块+动作”表达
+### Dashboard 验收
+- 打开 5 秒内看懂最重要事项
+- 首页不超过 6 个一级区块
+- 至少 1 个主 CTA 直达执行路径
 
-## Field
-- 快速看到：状态、风险、最近动作、下一步建议
-- GIS 后置，不抢叙事
-- 空态/异常态可用
+### Field 验收
+- 进入某块田后，快速知道状态、风险、最近动作、下一步建议
+- GIS 区不抢主叙事
+- 空态和异常态不白屏
 
-## Operation
-- 单页读懂：为何执行、如何执行、是否成功、如何验收、造成什么影响
-- 时间线为业务语言
-- 证据与验收为主块
+### Operation 验收
+- 单页看懂：为何执行、如何执行、是否成功、如何验收、造成什么影响
+- 证据与验收区是主区块
 
-## Program
-- 清楚表达目标、偏差、策略与执行影响
-- 不与 Dashboard/Operation 重复
+### Program 验收
+- 经营目标与当前偏差表达清晰
+- 体现“目标—策略—执行结果”关系
 
-## 全站
-- 状态词统一
+### 全站验收
+- 中文口径统一
 - 按钮层级统一
 - 卡片密度下降
-- 主次明确
+- 页面主次明确
 - 无“调试页观感”
 
 ---
 
-## 7. 非目标（本轮不做）
+## 十、非目标
 
-- 不大改 API 契约
-- 不新增复杂图表库
-- 不做 AI 优化
+- 不大改后端核心协议
+- 不引入复杂图表库
+- 不做 AI 自动优化
 - 不做大屏视觉工程
 
