@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
 import { PageHeader, SectionCard, Stepper } from "../shared/ui";
@@ -196,8 +195,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         else stepAction = { label: "下一步：刷新 telemetry 校验", onClick: () => void handleRefreshTelemetryStep() };
 
         return (
-          <section key={step} className="card sectionBlock">
-            <div className="sectionHeader"><div><div className="sectionTitle">{STEP_TITLES[step]}</div></div></div>
+          <SectionCard key={step} title={STEP_TITLES[step]}>
             <div className="metaText">当前状态：{done ? "已完成" : "未完成"}</div>
             <div className="metaText">状态映射：<code>{step}</code> → <code>{STEP_STATUS_FIELD_MAP[step]}</code></div>
             <div className="metaText" style={{ marginTop: 8 }}>成功信息：{feedback.success || "-"}</div>
@@ -207,24 +205,22 @@ export default function DeviceOnboardingPage(): React.ReactElement {
               <button className="btn" disabled={busyStep !== null} onClick={() => void refreshOnboardingStatus(step, `${STEP_TITLES[step]}：状态已刷新。`).catch((e: any) => markStepFailure(step, `状态刷新失败：${e?.bodyText || e?.message || String(e)}`))}>仅刷新本步骤状态</button>
             </div>
             <div className="metaText" style={{ marginTop: 8 }}>失败排查指引：{STEP_TROUBLESHOOTING[step]}</div>
-          </section>
+          </SectionCard>
         );
       })}
 
       {registerResult ? (
-        <section className="card sectionBlock">
-          <div className="sectionHeader"><div><div className="sectionTitle">一次性凭据（请立即保存）</div></div></div>
+        <SectionCard title="一次性凭据（请立即保存）">
           <div className="meta wrapMeta">
             <span>设备：{registerResult.device_id}</span>
             <span>凭据：{registerResult.credential_id}</span>
             <span>Topic：{registerResult?.access_info?.telemetry_topic || "-"}</span>
           </div>
           <pre className="jsonPreview">{registerResult.credential_secret}</pre>
-        </section>
+        </SectionCard>
       ) : null}
 
-      <section className="card sectionBlock">
-        <div className="sectionHeader"><div><div className="sectionTitle">设备端配置指南</div></div></div>
+      <SectionCard title="设备端配置指南">
         <ol className="metaText" style={{ lineHeight: 1.8 }}>
           <li>设置 MQTT Client ID：<code>{onboarding?.access_info?.mqtt_client_id || `geox-&lt;tenant&gt;-${deviceId}`}</code></li>
           <li>认证用户名建议使用设备 ID，密码使用上方一次性 credential secret。</li>
@@ -232,10 +228,9 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <li>建议同时上报 heartbeat 到 Topic：<code>{onboarding?.access_info?.heartbeat_topic || `heartbeat/&lt;tenant&gt;/${deviceId}`}</code></li>
           <li>首条 telemetry 建议 JSON 示例：<code>{`{"metric":"battery_percent","value":87,"ts_ms":${Date.now()}}`}</code></li>
         </ol>
-      </section>
+      </SectionCard>
 
-      <section className="card sectionBlock">
-        <div className="sectionHeader"><div><div className="sectionTitle">接入进度</div></div></div>
+      <SectionCard title="接入进度">
         <div className="summaryGrid">
           <div className="metricCard card"><div className="metricLabel">设备已注册</div><div className="metricValue">{onboarding?.registration_completed ? "是" : "否"}</div></div>
           <div className="metricCard card"><div className="metricLabel">凭据可用</div><div className="metricValue">{onboarding?.credential_ready ? "是" : "否"}</div></div>
@@ -243,17 +238,17 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <div className="metricCard card"><div className="metricLabel">首条遥测</div><div className="metricValue">{onboarding?.first_telemetry_uploaded ? "已上传" : "未上传"}</div></div>
           <div className="metricCard card"><div className="metricLabel">最近遥测时间</div><div className="metricValue" style={{ fontSize: 14 }}>{fmtTs(onboarding?.last_telemetry_ts_ms)}</div></div>
         </div>
-      </section>
+      </SectionCard>
 
       {completed ? (
-        <section className="card sectionBlock">
-          <div className="sectionHeader"><div><div className="sectionTitle">✅ 接入完成</div></div></div>
-          <p className="metaText">首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。</p>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转：设备详情</Link>
-            <Link className="btn" to="/dashboard">跳转：监控台</Link>
-          </div>
-        </section>
+        <EmptyGuide
+          title="✅ 接入完成"
+          description="首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。"
+          actions={[
+            { label: "跳转：设备详情", to: `/devices/${encodeURIComponent(deviceId.trim())}`, tone: "primary" },
+            { label: "跳转：监控台", to: "/dashboard" },
+          ]}
+        />
       ) : null}
     </div>
   );

@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import { DetailAside, PageHeader, SectionCard, StatusPill } from "../shared/ui";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
@@ -135,35 +136,33 @@ export default function OperationDetailPage(): React.ReactElement {
 
   return (
     <div className="demoDashboardPage operationPageClosure">
-      <section className="card detailHeroCard detailHeroCardV3">
-        <div className="sectionHeader">
-          <div>
-            <div className="eyebrow">GEOX / 作业页收口</div>
-            <h1 className="demoHeroTitle" style={{ marginTop: 6 }}>{actionLabel} · {fieldLabel}</h1>
-            <p className="demoHeroSubTitle">{toBusinessExecutionNarrative(model.finalStatus)}</p>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="traceChip traceChipLive">{topStatusLabel}</span>
-            <Link className="btn" to="/operations">{COPY.backToList}</Link>
-            <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
-          </div>
-        </div>
+      <PageHeader
+        eyebrow="GEOX / 作业页收口"
+        title={`${actionLabel} · ${fieldLabel}`}
+        description={toBusinessExecutionNarrative(model.finalStatus)}
+        actions={[
+          { label: topStatusLabel },
+          { label: COPY.backToList, to: "/operations" },
+          { label: "刷新", onClick: () => void reload() },
+        ]}
+      />
+
+      <SectionCard title="作业关键信息">
         <div className="operationsSummaryGrid detailSummaryGridV3">
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{fieldLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{deviceLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{model.execution.progressLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
-      </section>
+      </SectionCard>
 
       <section className="operationDetailTwoColumn">
         <div className="operationTimelineColumn">
-          <section className="card">
-            <div className="sectionTitle">执行时间线</div>
+          <SectionCard title="执行时间线">
             <div className="operationTimelineWrap" style={{ marginTop: 10 }}>
               <OperationStoryTimeline items={timelineItems} />
             </div>
-          </section>
+          </SectionCard>
 
           {(isInvalidExecution || isEvidenceMissing || isPendingAcceptance) ? (
             <section className="card operationAlertCard">
