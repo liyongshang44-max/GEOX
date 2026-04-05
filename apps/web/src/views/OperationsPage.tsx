@@ -7,11 +7,12 @@ import EmptyState from "../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
 import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 
-type StatusFilter = "ALL" | "SUCCESS" | "INVALID_EXECUTION" | "PENDING";
+type StatusFilter = "ALL" | "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
 function normalizeStatus(item: any): string {
   const status = String(item?.final_status || item?.status || "").toUpperCase();
   if (status === "INVALID_EXECUTION") return "INVALID_EXECUTION";
+  if (status === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
   if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(status)) return "SUCCESS";
   if (["PENDING", "READY", "DISPATCHED", "ACKED", "RUNNING", "PENDING_ACCEPTANCE"].includes(status)) return "PENDING";
   return status || "PENDING";
@@ -37,7 +38,12 @@ export default function OperationsPage(): React.ReactElement {
 
   const filteredItems = React.useMemo(() => {
     if (filter === "ALL") return items;
-    return items.filter((item) => normalizeStatus(item) === filter);
+    if (filter === "TODO") return items.filter((item) => normalizeStatus(item) === "PENDING");
+    if (filter === "PENDING_ACCEPTANCE") return items.filter((item) => normalizeStatus(item) === "PENDING_ACCEPTANCE");
+    return items.filter((item) => {
+      const status = normalizeStatus(item);
+      return status === "SUCCESS" || status === "INVALID_EXECUTION" || status === "FAILED";
+    });
   }, [filter, items]);
 
   const statusBadge = (status: string): { text: string; tone: string } => {
@@ -54,7 +60,7 @@ export default function OperationsPage(): React.ReactElement {
             <div className="eyebrow">GEOX / 远程农业控制平面</div>
             <div className="breadcrumbBar"><span className="breadcrumbCurrent">总览</span><span className="breadcrumbSep">/</span><span className="breadcrumbCurrent">待执行动作</span></div>
             <h1 className="pageTitle">待执行动作</h1>
-            <div className="pageLead">支持 SUCCESS / INVALID_EXECUTION / PENDING 的状态识别与筛选。</div>
+            <div className="pageLead">默认按 待执行 / 待验收 / 已完成或异常 分组，便于快速推进下一步。</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
@@ -63,9 +69,9 @@ export default function OperationsPage(): React.ReactElement {
         <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
           {([
             ["ALL", "全部"],
-            ["SUCCESS", "已完成"],
-            ["INVALID_EXECUTION", "执行无效"],
-            ["PENDING", "待执行"],
+            ["TODO", "待执行"],
+            ["PENDING_ACCEPTANCE", "待验收"],
+            ["DONE_OR_EXCEPTION", "已完成/异常"],
           ] as Array<[StatusFilter, string]>).map(([value, label]) => (
             <button key={value} className="btn" onClick={() => setFilter(value)} disabled={loading || filter === value}>{label}</button>
           ))}
@@ -135,6 +141,7 @@ export default function OperationsPage(): React.ReactElement {
 
               <div className="operationsSummaryActions">
                 <Link className="btn" to={toOperationDetailPath(x)}>查看作业详情</Link>
+                {normalized === "PENDING" ? <Link className="btn" to="/agronomy/recommendations">返回待处理建议</Link> : null}
                 <CopyButton value={planId} label="复制作业计划编号" />
               </div>
             </article>

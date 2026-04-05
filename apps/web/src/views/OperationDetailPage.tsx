@@ -96,6 +96,11 @@ export default function OperationDetailPage(): React.ReactElement {
   }, [detail]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
+  const errorText = String(error ?? "").toLowerCase();
+  const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
+  if (permissionDenied) {
+    return <ErrorState title="你没有查看此作业详情的权限" message="请联系管理员开通权限后重试。" onRetry={() => void reload()} />;
+  }
   if (error || !detail) {
     return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
   }
@@ -187,6 +192,7 @@ export default function OperationDetailPage(): React.ReactElement {
       setExecuting(false);
     }
   };
+  const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
 
   return (
     <div className="demoDashboardPage">
@@ -200,6 +206,8 @@ export default function OperationDetailPage(): React.ReactElement {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span className="traceChip traceChipLive">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
+            {notExecutedYet ? <Link className="btn" to="/agronomy/recommendations">返回待处理建议</Link> : null}
+            {notExecutedYet ? <Link className="btn" to={`/fields/${encodeURIComponent(String((detail as any)?.field_id ?? model.fieldLabel ?? ""))}`}>查看田块</Link> : null}
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
@@ -313,6 +321,17 @@ export default function OperationDetailPage(): React.ReactElement {
           <Link to={`/operations?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>刷新当前作业</Link>
         </div>
       </section>
+      {!model.receiptEvidence ? (
+        <section className="card" style={{ marginTop: 12 }}>
+          <div className="sectionTitle">证据状态</div>
+          <div className="detailSectionLead">证据尚未回传。你可以刷新状态，或先去设备/回执页面检查链路。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+            <Link className="btn" to="/devices">查看设备</Link>
+            <Link className="btn" to="/delivery/export-jobs">查看回执/证据</Link>
+          </div>
+        </section>
+      ) : null}
       <section className="card" style={{ marginTop: 12 }}>
         <div className="sectionTitle">下一步动作建议</div>
         <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>

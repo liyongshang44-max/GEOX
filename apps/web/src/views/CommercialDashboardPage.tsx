@@ -234,6 +234,8 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const agronomyValue = d.agronomyValue;
   const shouldShowOnboarding = Number(d.overview.fieldCount ?? 0) < 1 || Number(deviceSummary.online + deviceSummary.offline) < 1;
+  const hasFieldButNoData = Number(d.overview.fieldCount ?? 0) > 0 && Number(deviceSummary.online + deviceSummary.offline) > 0 && smartRecommendations.latest == null;
+  const hasDataButNoRecommendation = Number(d.overview.fieldCount ?? 0) > 0 && smartRecommendations.latest != null && d.decisions.pendingRecommendationCount < 1;
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
   const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;
@@ -357,6 +359,25 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
             <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
               <Link className="btn primary" to="/fields/new">新建田块</Link>
               <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+            </div>
+          </div>
+        ) : null}
+        {hasFieldButNoData ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">等待首条数据</div>
+            <div className="decisionItemMeta">已存在田块，但还没有可用于评估的首条遥测数据。</div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <Link className="btn" to="/devices">查看设备状态</Link>
+              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+            </div>
+          </div>
+        ) : null}
+        {hasDataButNoRecommendation ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">当前暂无建议</div>
+            <div className="decisionItemMeta">系统将在数据更新后重新评估。</div>
+            <div style={{ marginTop: 8 }}>
+              <Link className="btn" to="/agronomy/recommendations">刷新评估</Link>
             </div>
           </div>
         ) : null}

@@ -63,7 +63,8 @@ export default function ProgramDetailPage(): React.ReactElement {
         <div className="operationsSummaryActions">
           <Link className="btn" to={fieldHref}>主入口：查看当前田块</Link>
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
-          <Link className="btn" to="/agronomy">次入口：查看农业建议</Link>
+          <Link className="btn" to="/programs">返回方案列表</Link>
+          <Link className="btn" to="/dashboard">返回总览</Link>
         </div>
       </section>
 
@@ -277,7 +278,7 @@ export default function ProgramDetailPage(): React.ReactElement {
             <div className="sectionTitle">最近一次执行证据</div>
             <div className="detailSectionLead">证据是继续推进方案与否的最后判断依据。</div>
           </div>
-          {viewModel.latestEvidence ? <ReceiptEvidenceCard data={viewModel.latestEvidence} /> : <div className="decisionItemStatic">当前还没有最近一次执行证据。</div>}
+          {viewModel.latestEvidence ? <ReceiptEvidenceCard data={viewModel.latestEvidence} /> : <div className="decisionItemStatic">尚未初始化经营方案或暂无执行证据。</div>}
         </section>
       </div>
 

@@ -54,6 +54,27 @@ export default function DevicesPage(): React.ReactElement {
     }
     return true;
   });
+  const stateCounts = React.useMemo(() => {
+    const counts = {
+      未接入: items.length < 1 ? 1 : 0,
+      已接入未绑定: 0,
+      已绑定待数据: 0,
+      在线正常: 0,
+      离线: 0,
+      数据异常: 0,
+    };
+    for (const item of items) {
+      const online = String(item.connection_status ?? "").toUpperCase() === "ONLINE";
+      const bound = Boolean(item.field_id);
+      const hasData = Boolean(item.last_telemetry_ts_ms || item.last_receipt_ts_ms);
+      if (!bound) counts.已接入未绑定 += 1;
+      if (bound && !hasData) counts.已绑定待数据 += 1;
+      if (online && hasData) counts.在线正常 += 1;
+      if (!online) counts.离线 += 1;
+      if (String(item.last_receipt_status ?? "").toUpperCase().includes("FAIL")) counts.数据异常 += 1;
+    }
+    return counts;
+  }, [items]);
 
   return (
     <div className="consolePage">
@@ -77,6 +98,73 @@ export default function DevicesPage(): React.ReactElement {
         <div className="metricCard card"><div className="metricLabel">已绑定田块</div><div className="metricValue">{items.filter((x) => !!x.field_id).length}</div><div className="metricHint">具备 field 归属</div></div>
         <div className="metricCard card"><div className="metricLabel">页面状态</div><div className="metricValue">{status.includes("失败") ? "异常" : "正常"}</div><div className="metricHint">{status}</div></div>
       </div>
+      <section className="card sectionBlock">
+        <div className="sectionHeader">
+          <div>
+            <div className="sectionTitle">设备状态卡</div>
+            <div className="sectionDesc">覆盖未接入 / 已接入未绑定 / 已绑定待数据 / 在线正常 / 离线 / 数据异常。</div>
+          </div>
+        </div>
+        <div className="operationsSummaryGrid">
+          {Object.entries(stateCounts).map(([label, count]) => (
+            <div key={label} className="operationsSummaryMetric">
+              <span className="operationsSummaryLabel">{label}</span>
+              <strong>{count}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="card sectionBlock">
+        <div className="sectionHeader">
+          <div>
+            <div className="sectionTitle">首次开局：设备绑定田块</div>
+            <div className="sectionDesc">完成设备接入后，将设备绑定到目标田块，再进入方案创建。</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link className="btn" to="/fields">上一步：田块</Link>
+            <Link className="btn" to="/programs/new">下一步：创建方案</Link>
+          </div>
+        </div>
+        <div className="toolbarFilters">
+          <input className="input" placeholder="设备ID" value={bindForm.device_id} onChange={(e) => setBindForm((s) => ({ ...s, device_id: e.target.value }))} />
+          <input className="input" placeholder="田块ID" value={bindForm.field_id} onChange={(e) => setBindForm((s) => ({ ...s, field_id: e.target.value }))} />
+          <button
+            className="btn primary"
+            disabled={busy}
+            onClick={() => {
+              void (async () => {
+                if (!bindForm.device_id.trim() || !bindForm.field_id.trim()) {
+                  setBindMsg("请填写设备ID和田块ID");
+                  return;
+                }
+                setBindMsg("正在绑定...");
+                try {
+                  const selected = items.find((item) => item.device_id === bindForm.device_id.trim());
+                  const isOffline = String(selected?.connection_status ?? "").toUpperCase() !== "ONLINE";
+                  const res = await bindDeviceToField({
+                    device_id: bindForm.device_id.trim(),
+                    field_id: bindForm.field_id.trim(),
+                  });
+                  if (res?.ok) {
+                    const offlineHint = isOffline ? "；当前设备离线，建议先校验在线状态" : "";
+                    setBindMsg(`绑定成功：${res.device_id} -> ${res.field_id}${offlineHint}`);
+                    await refresh();
+                    navigate(`/fields/${encodeURIComponent(res.field_id ?? bindForm.field_id.trim())}`);
+                  } else {
+                    setBindMsg(`绑定失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+                  }
+                } catch (e: any) {
+                  setBindMsg(`绑定失败：${e?.bodyText || e?.message || String(e)}`);
+                }
+              })();
+            }}
+          >
+            绑定设备
+          </button>
+        </div>
+        {bindMsg ? <div className="metaText" style={{ marginTop: 8 }}>{bindMsg}</div> : null}
+      </section>
 
       <section className="card sectionBlock">
         <div className="sectionHeader">

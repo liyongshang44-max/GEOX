@@ -168,6 +168,23 @@ export default function FieldDetailPage(): React.ReactElement {
           ))}
         </div>
       </section>
+      {!hasBoundDevice ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">接入并绑定设备</div>
+          <div className="detailSectionLead">当前田块还没有绑定设备，建议先完成接入与绑定。</div>
+          <div style={{ marginTop: 8 }}><Link className="btn" to="/devices">去设备中心绑定</Link></div>
+        </section>
+      ) : null}
+      {hasBoundDevice && !hasTelemetry ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">等待首条数据</div>
+          <div className="detailSectionLead">设备已绑定，但还未收到首条遥测。可先检查设备在线状态与接入日志。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <Link className="btn" to="/devices">查看设备状态</Link>
+            <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+          </div>
+        </section>
+      ) : null}
 
       <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">从田块绑定设备</div>
@@ -243,7 +260,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
         </div>
         {!hasGeometry ? (
-          <div className="decisionItemStatic">该地块暂无可用边界数据</div>
+          <div className="decisionItemStatic">边界尚未补充，可先完成设备与方案初始化。</div>
         ) : (
           <>
             <FieldGisMap

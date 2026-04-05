@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { fetchEvidenceControlPlane } from "../api";
 import { StatusTag } from "../components/StatusTag";
 import EmptyState from "../components/common/EmptyState";
@@ -76,7 +77,7 @@ export default function EvidenceCenterPage(): React.ReactElement {
               </div>
             </article>
           ))}
-          {!exportJobs.length ? <EmptyState title="最近暂无证据包" description="请先发起导出任务并等待生成完成。" /> : null}
+          {!exportJobs.length ? <EmptyState title="暂无可查看的报告" description="完成作业并形成证据后，系统会在这里生成报告。" actionText="查看最近作业" onAction={() => window.location.assign("/operations")} /> : null}
         </div>
       </section>
 
@@ -97,7 +98,7 @@ export default function EvidenceCenterPage(): React.ReactElement {
               </div>
             </article>
           ))}
-          {!evidenceItems.length ? <EmptyState title="最近暂无回执" description="执行链路产生回执后会显示在这里。" /> : null}
+          {!evidenceItems.length ? <EmptyState title="最近暂无回执" description="执行链路产生回执后会显示在这里。" actionText="查看最近作业" onAction={() => window.location.assign("/operations")} /> : null}
         </div>
       </section>
 
@@ -106,6 +107,7 @@ export default function EvidenceCenterPage(): React.ReactElement {
         <p style={{ margin: "8px 0 0", color: "#475467" }}>
           证据包包含建议、审批、执行计划、执行回执等完整链路，用于审计与交付。
         </p>
+        <div style={{ marginTop: 8 }}><Link to="/operations">查看最近作业</Link></div>
       </section>
     </div>
   );
