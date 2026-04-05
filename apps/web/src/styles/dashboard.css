@@ -2,12 +2,12 @@
 
 .demoDashboardPage {
   display: grid;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .demoHero {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: #fff;
+  border: 1px solid var(--color-border-accent);
+  background: var(--color-bg-surface);
 }
 
 .demoHeroTitle {
@@ -20,44 +20,44 @@
 
 .demoHeroSubTitle {
   margin: 10px 0 0;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 14px;
   line-height: 1.65;
 }
 
 .demoSummaryGrid {
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .demoMetricCard {
   min-height: 126px;
-  padding: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.05);
+  padding: var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .demoMetricLabel {
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 13px;
   line-height: 1.5;
 }
 
 .demoMetricValue {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   font-size: 36px;
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.03em;
-  color: #0f172a;
+  color: var(--color-text-emphasis);
 }
 
 .demoContentGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .dashboardDecisionBoard {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -66,7 +66,7 @@
 }
 
 .demoSectionHeader {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .demoList {
@@ -74,11 +74,11 @@
 }
 
 .demoInfoCard {
-  padding: 14px;
+  padding: var(--space-4);
   display: block;
   text-decoration: none;
   color: inherit;
-  border: 1px solid rgba(15, 23, 42, 0.05);
+  border: 1px solid var(--color-border-subtle);
   min-height: 132px;
 }
 
@@ -87,28 +87,28 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 
 .demoMetricHint {
-  margin-top: 12px;
-  color: #64748b;
+  margin-top: var(--space-3);
+  color: var(--color-text-tertiary);
   font-size: 13px;
   line-height: 1.6;
 }
 .dashboardHeroV2 {
-  padding: 22px;
+  padding: var(--space-5);
 }
 .dashboardDecisionGrid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 }
 .priorityStrip {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   display: grid;
   grid-template-columns: 76px 1fr;
-  gap: 14px;
+  gap: var(--space-4);
   align-items: center;
 }
 .priorityMainValue {
@@ -126,19 +126,19 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 .fieldStatusItem {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
-  padding: 14px;
-  background: rgba(255,255,255,0.75);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  background: var(--color-bg-overlay);
 }
 .fieldStatusItem span {
   display: block;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 12px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .fieldStatusItem strong {
   font-size: 28px;
@@ -149,13 +149,13 @@
   min-height: 154px;
 }
 .dashboardActionMeta {
-  margin-bottom: 8px;
-  color: #0f172a;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-emphasis);
   font-weight: 600;
 }
 .dashboardActionSummary {
   margin: 8px 0 10px;
-  color: #475569;
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -165,15 +165,15 @@
 }
 .operationsCardGrid {
   display: grid;
-  gap: 14px;
+  gap: var(--space-4);
 }
 .operationsSummaryCard {
-  padding: 18px;
+  padding: var(--space-4) var(--space-4);
 }
 .operationsSummaryTop {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: flex-start;
 }
 .operationsSummaryTitle {
@@ -184,21 +184,21 @@
 }
 .operationsSummaryLead {
   margin-top: 8px;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 14px;
   line-height: 1.6;
 }
 .operationsSummaryGrid {
-  margin-top: 16px;
+  margin-top: var(--space-4);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 .operationsSummaryMetric {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
-  padding: 16px;
-  background: rgba(248,250,252,0.9);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4);
+  background: var(--color-bg-subtle);
 }
 .operationsSummaryMetric strong {
   display: block;
@@ -209,21 +209,21 @@
 .operationsSummaryLabel {
   display: block;
   margin-bottom: 10px;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 12px;
 }
 .operationsSummaryActions {
-  margin-top: 14px;
+  margin-top: var(--space-4);
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 .traceDetails {
-  margin-top: 14px;
+  margin-top: var(--space-4);
 }
 .traceDetails summary {
   cursor: pointer;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   font-size: 13px;
 }
 .traceGrid {
@@ -236,9 +236,9 @@
   display: block;
   padding: 10px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(248,250,252,0.95);
-  color: #334155;
+  border: 1px solid var(--color-border-accent);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   overflow-wrap: anywhere;
 }
 .detailHeroCard {
@@ -255,8 +255,8 @@
 }
 
 .detailHeroCardV3 {
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid var(--color-border-accent);
+  background: linear-gradient(180deg, var(--color-bg-surface) 0%, var(--color-bg-subtle) 100%);
 }
 .detailSummaryGridV3 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -268,24 +268,24 @@
 }
 .operationBusinessCard {
   padding: 28px;
-  border: 1px solid rgba(15, 23, 42, 0.04);
-  background: #fff;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
 }
 .operationBusinessCard .sectionTitle {
   font-size: 22px;
   font-weight: 700;
   line-height: 1.25;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
 }
 .operationBusinessCard .detailSectionLead {
   margin-bottom: 18px;
   font-size: 14px;
-  color: #64748b;
+  color: var(--color-text-tertiary);
 }
 .operationBusinessCard .operationsSummaryMetric,
 .operationBusinessCard .detailMeaningItem {
-  border: 1px solid rgba(15, 23, 42, 0.04);
-  background: #fff;
+  border: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-surface);
 }
 .gisEmptyState,
 .traceChipRow {
@@ -299,9 +299,9 @@
   min-height: 32px;
   padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(248,250,252,0.95);
-  color: #334155;
+  border: 1px solid var(--color-border-accent);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
   font-size: 12px;
 }
 .gisEmptyTitle {
@@ -312,7 +312,7 @@
 }
 .gisEmptyText {
   width: 100%;
-  color: #64748b;
+  color: var(--color-text-tertiary);
   line-height: 1.6;
 }
 @media (max-width: 1100px) {
@@ -325,28 +325,28 @@
 .dashboardDecisionBoard {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 .decisionColumn {
-  padding: 16px;
+  padding: var(--space-4);
 }
 .decisionColumn.danger {
-  border: 1px solid rgba(220, 38, 38, 0.12);
-  background: linear-gradient(180deg, rgba(254,242,242,0.95), #fff 54%);
+  border: 1px solid var(--color-status-failed-border);
+  background: linear-gradient(180deg, var(--color-status-failed-bg), var(--color-bg-surface) 54%);
 }
 .decisionColumn.warning {
-  border: 1px solid rgba(217, 119, 6, 0.12);
-  background: linear-gradient(180deg, rgba(255,251,235,0.95), #fff 54%);
+  border: 1px solid var(--color-status-risk-border);
+  background: linear-gradient(180deg, var(--color-status-risk-bg), var(--color-bg-surface) 54%);
 }
 .decisionColumn.success {
-  border: 1px solid rgba(22, 163, 74, 0.12);
-  background: linear-gradient(180deg, rgba(240,253,244,0.95), #fff 54%);
+  border: 1px solid var(--color-status-normal-border);
+  background: linear-gradient(180deg, var(--color-status-normal-bg), var(--color-bg-surface) 54%);
 }
 .decisionHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: var(--space-3);
   margin-bottom: 12px;
 }
 .decisionCount {
@@ -364,26 +364,26 @@
   display: block;
   text-decoration: none;
   color: inherit;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
-  background: rgba(255,255,255,0.82);
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg-overlay);
   padding: 12px;
 }
 .decisionItemTitle {
   font-size: 14px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--color-text-emphasis);
   margin-bottom: 6px;
 }
 .decisionItemMeta {
   font-size: 13px;
   line-height: 1.55;
-  color: #475569;
+  color: var(--color-text-secondary);
 }
 .traceChipLive {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.18);
-  color: #1d4ed8;
+  background: var(--color-status-pending-bg);
+  border-color: var(--color-status-pending-border);
+  color: var(--color-status-pending-fg);
 }
 .fieldTimeline {
   display: grid;
@@ -392,16 +392,16 @@
 .fieldTimelineItem {
   display: grid;
   grid-template-columns: 72px 34px 1fr;
-  gap: 12px;
+  gap: var(--space-3);
   align-items: center;
   padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255,255,255,0.78);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border-accent);
+  background: var(--color-bg-overlay);
 }
 .fieldTimelineTime {
   font-size: 12px;
-  color: #64748b;
+  color: var(--color-text-tertiary);
 }
 .fieldTimelineDot {
   width: 34px;
@@ -410,19 +410,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.04);
+  background: var(--color-bg-subtle);
   font-size: 15px;
 }
 .fieldTimelineContent {
   font-size: 14px;
-  color: #0f172a;
+  color: var(--color-text-emphasis);
   line-height: 1.5;
 }
 .fieldObjectPanel {
   display: grid;
   gap: 8px;
   font-size: 14px;
-  color: #334155;
+  color: var(--color-text-secondary);
 }
 @media (max-width: 1100px) {
   .dashboardDecisionBoard {

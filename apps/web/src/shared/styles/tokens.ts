@@ -1,0 +1,97 @@
+export const themeTokens = {
+  color: {
+    bg: {
+      canvas: "#f5f5f7",
+      subtle: "#f8fafc",
+      surface: "#ffffff",
+      elevated: "#ffffff",
+      overlay: "rgba(255, 255, 255, 0.75)",
+    },
+    text: {
+      primary: "#101828",
+      secondary: "#475467",
+      tertiary: "#64748b",
+      inverse: "#ffffff",
+      emphasis: "#0f172a",
+    },
+    border: {
+      subtle: "rgba(15, 23, 42, 0.05)",
+      default: "#d0d5dd",
+      strong: "#98a2b3",
+      accent: "rgba(15, 23, 42, 0.12)",
+    },
+    semantic: {
+      normal: { bg: "#ecfdf3", fg: "#067647", border: "#abefc6" },
+      pending: { bg: "#eff8ff", fg: "#175cd3", border: "#b2ddff" },
+      risk: { bg: "#fffaeb", fg: "#b54708", border: "#fedf89" },
+      blocked: { bg: "#f4f3ff", fg: "#5925dc", border: "#d9d6fe" },
+      failed: { bg: "#fef3f2", fg: "#b42318", border: "#fecdca" },
+      partial: { bg: "#fff7ed", fg: "#c2410c", border: "#fdba74" },
+      data: { bg: "#f2f4f7", fg: "#475467", border: "#d0d5dd" },
+      online: { bg: "#ecfdf3", fg: "#067647", border: "#abefc6" },
+      offline: { bg: "#fef3f2", fg: "#b42318", border: "#fecdca" },
+      info: { bg: "#eff8ff", fg: "#175cd3", border: "#b2ddff" },
+    },
+    action: {
+      primaryBg: "#111111",
+      primaryFg: "#ffffff",
+      secondaryBg: "#ffffff",
+      secondaryFg: "#111111",
+    },
+  },
+  spacing: {
+    0: 0,
+    1: 4,
+    2: 8,
+    3: 12,
+    4: 16,
+    5: 20,
+    6: 24,
+    7: 28,
+    8: 32,
+    9: 36,
+    10: 40,
+    11: 44,
+    12: 48,
+  },
+  radius: {
+    none: 0,
+    sm: 8,
+    md: 10,
+    lg: 12,
+    xl: 16,
+    xxl: 20,
+    pill: 999,
+  },
+  shadow: {
+    sm: "0 1px 2px rgba(16, 24, 40, 0.08)",
+    md: "0 10px 30px rgba(0, 0, 0, 0.08)",
+    lg: "0 16px 40px rgba(15, 23, 42, 0.12)",
+    insetSoft: "0 0 0 2px rgba(16, 24, 40, 0.04) inset",
+  },
+} as const;
+
+export const cssVarTokens = {
+  color: {
+    bg: {
+      canvas: "--color-bg-canvas",
+      subtle: "--color-bg-subtle",
+      surface: "--color-bg-surface",
+      elevated: "--color-bg-elevated",
+      overlay: "--color-bg-overlay",
+    },
+    text: {
+      primary: "--color-text-primary",
+      secondary: "--color-text-secondary",
+      tertiary: "--color-text-tertiary",
+      inverse: "--color-text-inverse",
+      emphasis: "--color-text-emphasis",
+    },
+    border: {
+      subtle: "--color-border-subtle",
+      default: "--color-border-default",
+      strong: "--color-border-strong",
+      accent: "--color-border-accent",
+    },
+  },
+} as const;
