@@ -96,6 +96,8 @@ export default function OperationDetailPage(): React.ReactElement {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span className="traceChip traceChipLive">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
+            {notExecutedYet ? <Link className="btn" to="/agronomy/recommendations">返回待处理建议</Link> : null}
+            {notExecutedYet ? <Link className="btn" to={`/fields/${encodeURIComponent(String((detail as any)?.field_id ?? model.fieldLabel ?? ""))}`}>查看田块</Link> : null}
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
