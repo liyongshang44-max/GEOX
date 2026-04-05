@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import SectionCard from "./SectionCard";
+import { EmptyGuide } from "../../../shared/ui";
 
 function EmptyStateGuide({
   fieldCount,
@@ -12,42 +13,15 @@ function EmptyStateGuide({
   hasFirstData: boolean;
 }): React.ReactElement | null {
   if (fieldCount < 1) {
-    return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无田块</div>
-        <div className="decisionItemMeta">先建田块，再接入设备。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/fields/new">新建田块</Link>
-          <Link className="btn" to="/fields">查看田块列表</Link>
-        </div>
-      </section>
-    );
+    return <EmptyGuide title="空态引导：无田块" description="先建田块，再接入设备。" actions={[{ label: "新建田块", to: "/fields/new", tone: "primary" }, { label: "查看田块列表", to: "/fields" }]} />;
   }
 
   if (deviceCount < 1) {
-    return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无设备</div>
-        <div className="decisionItemMeta">绑定设备，开启监测。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/devices/onboarding">去绑定设备</Link>
-          <Link className="btn" to="/devices">设备中心</Link>
-        </div>
-      </section>
-    );
+    return <EmptyGuide title="空态引导：无设备" description="绑定设备，开启监测。" actions={[{ label: "去绑定设备", to: "/devices/onboarding", tone: "primary" }, { label: "设备中心", to: "/devices" }]} />;
   }
 
   if (!hasFirstData) {
-    return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无首条数据</div>
-        <div className="decisionItemMeta">设备已接入，等待首条回传。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/devices">查看设备状态</Link>
-          <Link className="btn" to="/devices/onboarding">接入说明</Link>
-        </div>
-      </section>
-    );
+    return <EmptyGuide title="空态引导：无首条数据" description="设备已接入，等待首条回传。" actions={[{ label: "查看设备状态", to: "/devices", tone: "primary" }, { label: "接入说明", to: "/devices/onboarding" }]} />;
   }
 
   return null;

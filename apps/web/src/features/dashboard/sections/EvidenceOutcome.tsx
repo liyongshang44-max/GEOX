@@ -5,6 +5,7 @@ import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
 import { mapFieldDisplayName } from "../../../lib/operationLabels";
 import SectionCard from "./SectionCard";
+import { StatusPill } from "../../../shared/ui";
 
 type EvidenceItem = {
   id: string;
@@ -40,13 +41,6 @@ const GROUP_META: Record<GroupKey, { title: string; tone: "success" | "warning" 
   EXECUTION_EXCEPTION: { title: "执行异常", tone: "danger" },
   EVIDENCE_MISSING: { title: "证据缺失", tone: "danger" },
 };
-
-function toneStyle(tone: "success" | "warning" | "danger" | "neutral"): React.CSSProperties {
-  if (tone === "success") return { color: "#067647", background: "#ecfdf3", border: "1px solid #abefc6" };
-  if (tone === "warning") return { color: "#b54708", background: "#fffaeb", border: "1px solid #fedf89" };
-  if (tone === "danger") return { color: "#b42318", background: "#fef3f2", border: "1px solid #fecdca" };
-  return { color: "#344054", background: "#f9fafb", border: "1px solid #eaecf0" };
-}
 
 export default function EvidenceOutcomeSection({
   evidenceItems,
@@ -105,9 +99,7 @@ export default function EvidenceOutcomeSection({
               <div key={groupKey} className="decisionItemStatic" style={{ padding: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div className="decisionItemTitle">{meta.title}</div>
-                  <span style={{ ...toneStyle(meta.tone), borderRadius: 999, fontSize: 12, lineHeight: "18px", padding: "2px 8px", fontWeight: 700 }}>
-                    {items.length} 项
-                  </span>
+                  <StatusPill tone={meta.tone === "success" ? "normal" : meta.tone === "warning" ? "risk" : "failed"}>{items.length} 项</StatusPill>
                 </div>
                 {!items.length ? <div className="muted" style={{ fontSize: 13 }}>当前分组暂无数据</div> : null}
                 {items.map((item) => {
