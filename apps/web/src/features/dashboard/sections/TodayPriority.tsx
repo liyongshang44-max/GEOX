@@ -1,10 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import SectionCard from "./SectionCard";
+import { EmptyGuide } from "../../../shared/ui";
 
-function EmptyBlock({ text }: { text: string }): React.ReactElement {
-  return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
-}
 
 export default function TodayPriority({
   todayActions,
@@ -14,6 +12,11 @@ export default function TodayPriority({
   todayActions: Array<{ type: string; count: number }>;
   todayActionHref: (type: string) => string;
   todayActionLabel: (type: string, count: number) => string;
+  todayActionRiskLevel?: (type: string) => string;
+  todayActionReason?: (type: string, count: number) => string;
+  todayActionSuggestion?: (type: string, count: number) => string;
+  todayActionCTA?: (type: string) => string;
+  todayActionEntryLabel?: (type: string) => string;
 }): React.ReactElement {
   return (
     <SectionCard title="TodayPriority" subtitle="先清阻断，再推执行。">
@@ -24,7 +27,7 @@ export default function TodayPriority({
             <div className="decisionItemMeta">立即处理</div>
           </Link>
         ))}
-        {!todayActions.length ? <EmptyBlock text="今日暂无高优先动作" /> : null}
+        {!todayActions.length ? <EmptyGuide title="今日暂无高优先动作" description="当前没有需要立即处理的阻断项。" actions={[{ label: "进入作业队列", to: "/operations?status=pending", tone: "primary" }, { label: "查看全部作业", to: "/operations" }]} /> : null}
       </div>
       <div style={{ marginTop: 8 }}>
         <Link className="btn primary" to="/operations?status=pending">进入作业队列</Link>

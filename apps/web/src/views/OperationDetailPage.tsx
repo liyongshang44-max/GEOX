@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import { DetailAside, PageHeader, SectionCard, StatusPill } from "../shared/ui";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
@@ -25,10 +26,6 @@ const TIMELINE_ORDER = [
   { key: "RECEIPT", label: "回执" },
   { key: "ACCEPTANCE", label: "验收" },
 ] as const;
-
-function StatusPill({ tone, children }: { tone: "danger" | "warning" | "pending"; children: React.ReactNode }): React.ReactElement {
-  return <span className={`statusPill statusPill-${tone}`}>{children}</span>;
-}
 
 function CollapsibleModule({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }): React.ReactElement {
   return (
@@ -138,42 +135,40 @@ export default function OperationDetailPage(): React.ReactElement {
 
   return (
     <div className="demoDashboardPage operationPageClosure">
-      <section className="card detailHeroCard detailHeroCardV3">
-        <div className="sectionHeader">
-          <div>
-            <div className="eyebrow">GEOX / 作业页收口</div>
-            <h1 className="demoHeroTitle" style={{ marginTop: 6 }}>{actionLabel} · {fieldLabel}</h1>
-            <p className="demoHeroSubTitle">{toBusinessExecutionNarrative(model.finalStatus)}</p>
-          </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="traceChip traceChipLive">{topStatusLabel}</span>
-            <Link className="btn" to="/operations">{COPY.backToList}</Link>
-            <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
-          </div>
-        </div>
+      <PageHeader
+        eyebrow="GEOX / 作业页收口"
+        title={`${actionLabel} · ${fieldLabel}`}
+        description={toBusinessExecutionNarrative(model.finalStatus)}
+        actions={[
+          { label: topStatusLabel },
+          { label: COPY.backToList, to: "/operations" },
+          { label: "刷新", onClick: () => void reload() },
+        ]}
+      />
+
+      <SectionCard title="作业关键信息">
         <div className="operationsSummaryGrid detailSummaryGridV3">
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{fieldLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{deviceLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{model.execution.progressLabel}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">更新时间</span><strong>{model.latestUpdatedAtLabel}</strong></div>
         </div>
-      </section>
+      </SectionCard>
 
       <section className="operationDetailTwoColumn">
         <div className="operationTimelineColumn">
-          <section className="card">
-            <div className="sectionTitle">执行时间线</div>
+          <SectionCard title="执行时间线">
             <div className="operationTimelineWrap" style={{ marginTop: 10 }}>
               <OperationStoryTimeline items={timelineItems} />
             </div>
-          </section>
+          </SectionCard>
 
           {(isInvalidExecution || isEvidenceMissing || isPendingAcceptance) ? (
             <section className="card operationAlertCard">
               <div className="sectionTitle">重点状态提醒</div>
               <div className="operationStatusPills">
-                {isInvalidExecution ? <StatusPill tone="danger">执行无效</StatusPill> : null}
-                {isEvidenceMissing ? <StatusPill tone="warning">证据缺失</StatusPill> : null}
+                {isInvalidExecution ? <StatusPill tone="failed">执行无效</StatusPill> : null}
+                {isEvidenceMissing ? <StatusPill tone="risk">证据缺失</StatusPill> : null}
                 {isPendingAcceptance ? <StatusPill tone="pending">待验收</StatusPill> : null}
               </div>
               {isInvalidExecution ? (
@@ -281,25 +276,25 @@ export default function OperationDetailPage(): React.ReactElement {
           </section>
         </div>
 
-        <aside className="operationDetailAside card">
-          <div className="sectionTitle">Detail Aside</div>
-          <div className="operationAsideBody">
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{model.acceptance.statusLabel}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据完整性</span><strong>{isEvidenceMissing ? "缺失" : "完整"}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据包状态</span><strong>{model.evidenceExport.bundleStatusLabel}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据缺失项</span><strong>{model.acceptance.missingEvidenceLabel}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收摘要</span><strong>{model.acceptance.summary}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下一步</span><strong>{model.nextStepHint || "按时间线逐项推进"}</strong></div>
-          </div>
-          <div className="operationAsideActions">
+        <DetailAside
+          title="Detail Aside"
+          items={[
+            { label: "执行状态", value: topStatusLabel },
+            { label: "验收", value: model.acceptance.statusLabel },
+            { label: "证据完整性", value: isEvidenceMissing ? "缺失" : "完整" },
+            { label: "证据包状态", value: model.evidenceExport.bundleStatusLabel },
+            { label: "证据缺失项", value: model.acceptance.missingEvidenceLabel },
+            { label: "验收摘要", value: model.acceptance.summary },
+            { label: "下一步", value: model.nextStepHint || "按时间线逐项推进" },
+          ]}
+          actions={<>
             <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
               {executing ? "执行中..." : "一键执行"}
             </button>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
             <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
-          </div>
-        </aside>
+          </>}
+        />
       </section>
 
       <section className="card operationEvidenceMain" style={{ marginTop: 12 }}>

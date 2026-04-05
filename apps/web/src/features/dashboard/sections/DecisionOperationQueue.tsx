@@ -3,10 +3,8 @@ import { Link } from "react-router-dom";
 import type { DashboardTopActionItem } from "../../../api/dashboard";
 import { buildOperationSummary, mapOperationActionLabel } from "../../../lib/operationLabels";
 import SectionCard from "./SectionCard";
+import { EmptyGuide } from "../../../shared/ui";
 
-function EmptyBlock({ text }: { text: string }): React.ReactElement {
-  return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
-}
 
 export default function DecisionOperationQueue({
   topActions,
@@ -46,7 +44,7 @@ export default function DecisionOperationQueue({
             </div>
           </div>
         ))}
-        {!topActions.length ? <EmptyBlock text="暂无可执行动作" /> : null}
+        {!topActions.length ? <EmptyGuide title="暂无可执行动作" description="当前没有可直接触发的一键执行任务。" actions={[{ label: "查看全部作业", to: "/operations", tone: "primary" }]} /> : null}
       </div>
       <details style={{ marginTop: 10 }}>
         <summary>历史执行摘要（折叠）</summary>
@@ -58,7 +56,7 @@ export default function DecisionOperationQueue({
               <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
             </Link>
           ))}
-          {!runningActions.length ? <EmptyBlock text="暂无执行历史" /> : null}
+          {!runningActions.length ? <EmptyGuide title="暂无执行历史" description="历史执行记录为空，可先在作业页触发一次执行。" actions={[{ label: "去作业页", to: "/operations", tone: "primary" }]} /> : null}
         </div>
       </details>
       <div style={{ marginTop: 8 }}>

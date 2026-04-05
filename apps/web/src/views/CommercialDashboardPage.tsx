@@ -23,6 +23,7 @@ import FieldRuntime from "../features/dashboard/sections/FieldRuntime";
 import DecisionOperationQueue from "../features/dashboard/sections/DecisionOperationQueue";
 import EvidenceOutcome from "../features/dashboard/sections/EvidenceOutcome";
 import { useDashboard } from "../hooks/useDashboard";
+import { PageHeader } from "../shared/ui";
 
 function normalizePercentMetric(value: unknown): number | null {
   const n = Number(value);
@@ -550,6 +551,13 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   return (
     <div className="productPage demoDashboardPage">
       {error ? <ErrorState title="页面加载失败" message="系统暂时无法获取当前数据，请稍后重试。" onRetry={() => window.location.reload()} secondaryText="返回总览" onSecondary={() => navigate("/dashboard")} /> : null}
+
+      <PageHeader
+        eyebrow="Dashboard"
+        title="监控台总览"
+        description="统一监控田块、设备、作业与证据状态，优先处理阻断任务。"
+        actions={[{ label: "进入作业队列", to: "/operations?status=pending", tone: "primary" }, { label: "设备接入", to: "/devices/onboarding" }]}
+      />
 
       <OverviewMetrics
         expert={expert}
