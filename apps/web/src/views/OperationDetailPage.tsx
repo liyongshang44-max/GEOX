@@ -15,7 +15,7 @@ import OperationRecommendationBasisCard from "../components/operations/Operation
 import OperationEffectEvaluationCard from "../components/operations/OperationEffectEvaluationCard";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
-import { fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
+import { executeOperationAction, fetchOperationBilling, type OperationBillingResponse } from "../api/operations";
 import { listSkillRules, type SkillRuleSwitch } from "../api/skills";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName } from "../lib/operationLabels";
 
@@ -96,8 +96,13 @@ export default function OperationDetailPage(): React.ReactElement {
   }, [detail]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
+  const errorText = String(error ?? "").toLowerCase();
+  const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
+  if (permissionDenied) {
+    return <ErrorState title="你没有权限查看此内容" message="当前账号无法访问该对象或执行该动作，请联系管理员开通权限。" onRetry={() => window.history.back()} secondaryText="返回总览" onSecondary={() => window.location.assign("/dashboard")} />;
+  }
   if (error || !detail) {
-    return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
+    return <ErrorState title="页面加载失败" message={error || COPY.operationNotFound} onRetry={() => void reload()} secondaryText="返回总览" onSecondary={() => window.location.assign("/dashboard")} />;
   }
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
@@ -140,6 +145,54 @@ export default function OperationDetailPage(): React.ReactElement {
       ? `本次作业费用：¥${Number(billing.charge ?? 0).toFixed(2)}`
       : "本次作业费用：¥0（无效执行不计费）"
     : "本次作业费用：--";
+  const explainSystem = (detail as any)?.explain?.system ?? {};
+  const explainHuman = (detail as any)?.explain?.human ?? {};
+  const valueProfile = (detail as any)?.value_profile ?? {};
+  const slaSnapshot = (detail as any)?.sla_snapshot ?? {};
+  const slaDefinition = (detail as any)?.sla_definition ?? {};
+  const priorityBucket = String((detail as any)?.priority_bucket ?? "--");
+  const priorityScore = (detail as any)?.priority_score;
+  const priorityComponents = (detail as any)?.priority_components ?? {};
+  const riskTrend = String((detail as any)?.risk_trend ?? "NO_DATA");
+  const effectTrend = String((detail as any)?.effect_trend ?? "NO_DATA");
+  const trendDefinition = (detail as any)?.trend_definition ?? {};
+  const nextAction = (detail as any)?.recommended_next_action ?? {};
+  const executionPlan = (detail as any)?.execution_plan ?? null;
+  const executionReady = Boolean((detail as any)?.execution_ready);
+  const executionBlockers = Array.isArray((detail as any)?.execution_blockers) ? (detail as any).execution_blockers : [];
+  const capabilityCheck = (detail as any)?.device_capability_check ?? (executionPlan?.device_capability_check ?? {});
+  const executionTrace = (detail as any)?.execution_trace ?? {};
+  const executionContext = (detail as any)?.execution_context ?? {};
+  const attemptHistory = Array.isArray((detail as any)?.attempt_history) ? (detail as any).attempt_history : [];
+  const traceGap = (detail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
+  const fallbackState = (detail as any)?.fallback_state ?? { generated: false, executable: false };
+  const valueAttribution = (detail as any)?.value_attribution_v1 ?? null;
+  const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
+
+  const runFromDetail = async (): Promise<void> => {
+    if (!executionReady || !executionPlan) return;
+    setExecuting(true);
+    setRunFeedback("");
+    try {
+      const res = await executeOperationAction({
+        tenant_id: String(executionContext?.tenant_id ?? ""),
+        project_id: String(executionContext?.project_id ?? ""),
+        group_id: String(executionContext?.group_id ?? ""),
+        operation_id: String(model.operationPlanId || operationPlanId),
+        execution_plan: executionPlan,
+      });
+      if (res?.ok) {
+        setRunFeedback(res.idempotent ? `已复用任务 ${res.act_task_id ?? "-"}` : `已创建任务 ${res.act_task_id ?? "-"}`);
+      } else {
+        setRunFeedback(`执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+      }
+      await reload();
+    } finally {
+      setExecuting(false);
+    }
+  };
+  const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
 
   return (
     <div className="demoDashboardPage">
@@ -153,6 +206,8 @@ export default function OperationDetailPage(): React.ReactElement {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span className="traceChip traceChipLive">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
+            {notExecutedYet ? <Link className="btn" to="/agronomy/recommendations">返回待处理建议</Link> : null}
+            {notExecutedYet ? <Link className="btn" to={`/fields/${encodeURIComponent(String((detail as any)?.field_id ?? model.fieldLabel ?? ""))}`}>查看田块</Link> : null}
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
@@ -192,6 +247,135 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行后</span><strong>{effectAfter}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">变化</span><strong>{effectDelta}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结论</span><strong>{effectVerdict}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">客户解释（可签约视图）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">解释摘要</span><strong>{String(explainHuman?.summary ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则ID</span><strong>{String(explainSystem?.rule_id ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则版本</span><strong>{String(explainSystem?.rule_version ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{String(explainSystem?.crop_stage ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因文本</span><strong>{Array.isArray(explainHuman?.reason_text) ? explainHuman.reason_text.join("；") : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{Array.isArray(explainSystem?.reason_codes) ? explainSystem.reason_codes.join(" / ") : "--"}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">收益 / 风险表达（结构化）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">收益贡献分档</span><strong>{String(valueProfile?.benefit_tier ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险变化</span><strong>{String(valueProfile?.risk_change ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">成本影响分档</span><strong>{String(valueProfile?.cost_impact_tier ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果方向</span><strong>{String(valueProfile?.result_direction ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">结果可信度</span><strong>{String(valueProfile?.confidence ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">收益归因（可审计）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Operation</span><strong>{String(valueAttribution?.operation_plan_id ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Expected</span><strong>{String(valueAttribution?.expected_effect?.value ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Actual</span><strong>{String(valueAttribution?.actual_effect?.value ?? valueAttribution?.actual_effect?.delta ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Verdict</span><strong>{String(valueAttribution?.outcome?.effect_verdict ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Attribution Metrics</span><strong>{Array.isArray(valueAttribution?.attribution_basis?.source_metrics) ? valueAttribution.attribution_basis.source_metrics.join(", ") : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Attribution Method</span><strong>{String(valueAttribution?.attribution_basis?.method ?? "--")}</strong></div>
+        </div>
+      </section>
+
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">SLA 快照</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行成功</span><strong>{slaSnapshot?.execution_success == null ? "--" : (slaSnapshot.execution_success ? "是" : "否")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收通过</span><strong>{slaSnapshot?.acceptance_pass == null ? "--" : (slaSnapshot.acceptance_pass ? "是" : "否")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">响应时长</span><strong>{typeof slaSnapshot?.response_time_ms === "number" ? `${Math.round(slaSnapshot.response_time_ms / 60000)}分钟` : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行纳入口径</span><strong>{String(slaSnapshot?.sla_inclusion?.execution ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收纳入口径</span><strong>{String(slaSnapshot?.sla_inclusion?.acceptance ?? "--")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">口径说明</span><strong>{String(slaDefinition?.response_time_definition ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">决策优先级与趋势</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">优先级分桶</span><strong>{priorityBucket}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">优先级分数</span><strong>{typeof priorityScore === "number" ? priorityScore : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">分数拆解</span><strong>R{priorityComponents?.risk ?? 0}/V{priorityComponents?.value ?? 0}/C{priorityComponents?.confidence ?? 0}/T{priorityComponents?.timeliness ?? 0}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险趋势</span><strong>{riskTrend}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果趋势</span><strong>{effectTrend}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">趋势基线</span><strong>{String(trendDefinition?.window ?? "--")} vs {String(trendDefinition?.baseline ?? "--")}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">全链路进度（决策→执行→回执→验收→复盘）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">决策</span><strong>{decisionRuleSource !== "--" ? "已生成" : "待生成"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行</span><strong>{executionTrace?.task_id ? "已下发" : "待执行"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">回执</span><strong>{traceGap?.missing_receipt ? "缺失" : "已回传"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据</span><strong>{traceGap?.missing_evidence ? "缺失" : "已关联"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">复盘</span><strong>{String(valueAttribution?.outcome?.effect_verdict ?? "--")}</strong></div>
+        </div>
+        <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <Link to="/">返回经营总览</Link>
+          <Link to={`/operations?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>刷新当前作业</Link>
+        </div>
+      </section>
+      {!model.receiptEvidence ? (
+        <section className="card" style={{ marginTop: 12 }}>
+          <div className="sectionTitle">证据尚未完整</div>
+          <div className="detailSectionLead">当前作业已有执行记录，但证据或回执尚未回传完整，暂时无法完成验收。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="btn" to={`/operations/${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>查看作业详情</Link>
+            <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+          </div>
+        </section>
+      ) : null}
+      {String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase() === "PENDING" ? (
+        <section className="card" style={{ marginTop: 12 }}>
+          <div className="sectionTitle">验收尚未完成</div>
+          <div className="detailSectionLead">当前作业还没有验收结论，建议继续跟进回执与证据完整性。</div>
+          <div style={{ marginTop: 8 }}><button className="btn" onClick={() => void reload()}>刷新状态</button></div>
+        </section>
+      ) : null}
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">下一步动作建议</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">动作类型</span><strong>{String(nextAction?.action_type ?? "CHECK_FIELD_STATUS")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{String(nextAction?.source ?? "FALLBACK")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因</span><strong>{String(nextAction?.reason ?? "当前无可执行项，建议先检查田块状态")}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : `否（${executionBlockers.join(",") || "阻断"}）`}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">失败策略</span><strong>{executionPlan?.failure_strategy ? `retry=${executionPlan.failure_strategy.retryable ? "Y" : "N"} / max=${executionPlan.failure_strategy.max_retries}` : "--"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">能力校验</span><strong>{capabilityCheck?.supported === false ? `不支持（${capabilityCheck?.reason ?? "-"})` : "支持"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace</span><strong>{String(executionTrace?.status ?? "PENDING")} · task {String(executionTrace?.task_id ?? "--")}</strong></div>
+        </div>
+        <div style={{ marginTop: 10 }}>
+          <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
+            {executing ? "执行中..." : "一键执行"}
+          </button>
+          {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">Attempt 时间线（后端记录）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          {attemptHistory.map((item: any) => (
+            <div key={`${item.execution_key}_${item.attempt_no}_${item.timestamp}`} className="operationsSummaryMetric">
+              <span className="operationsSummaryLabel">#{item.attempt_no} · {String(item.result ?? "PENDING")}</span>
+              <strong>{new Date(Number(item.timestamp ?? 0)).toLocaleString()}</strong>
+            </div>
+          ))}
+          {!attemptHistory.length ? <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">暂无</span><strong>--</strong></div> : null}
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace缺口-回执</span><strong>{traceGap?.missing_receipt ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Trace缺口-证据</span><strong>{traceGap?.missing_evidence ? "是" : "否"}</strong></div>
+        </div>
+      </section>
+      <section className="card" style={{ marginTop: 12 }}>
+        <div className="sectionTitle">Fallback 状态（仅生成，不自动执行）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">已生成</span><strong>{fallbackState?.generated ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">可自动执行</span><strong>{fallbackState?.executable ? "是" : "否"}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Fallback 动作</span><strong>{String(fallbackState?.fallback_plan?.action_type ?? "--")}</strong></div>
         </div>
       </section>
 
