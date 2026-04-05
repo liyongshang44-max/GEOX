@@ -5,6 +5,35 @@
   gap: var(--space-5);
 }
 
+.dashboardSectionCard {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.dashboardSectionHeader {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboardSectionTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.dashboardSectionSubtitle {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.dashboardSectionMetricGrid {
+  margin-top: 0;
+}
+
 .demoHero {
   border: 1px solid var(--color-border-accent);
   background: var(--color-bg-surface);
@@ -251,6 +280,9 @@
   .fieldStatusGrid,
   .traceGrid {
     grid-template-columns: 1fr;
+  }
+  .dashboardSectionCard {
+    padding: var(--space-3);
   }
 }
 
