@@ -29,6 +29,7 @@ import {
 import StatusBadge from "../components/common/StatusBadge";
 import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
+import { normalizeStatusWord } from "../lib/statusVocabulary";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
@@ -145,9 +146,9 @@ export default function DeviceDetailPage(): React.ReactElement {
   const boundFieldId = resolvedBoundField.field_id || deviceListItem?.field_id || (detail as any)?.device?.field_id || null;
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
   const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
-  const recentLatest = latest[0]; const statusLabel = hero?.status?.label || statusObj?.status || "-";
+  const recentLatest = latest[0]; const statusLabel = normalizeStatusWord(hero?.status?.label || statusObj?.status || "-");
   const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
-  const firstDataLabel = firstDataReceived ? "已收到" : "未收到（等待首条数据）";
+  const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
 
@@ -162,8 +163,8 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="demoMetricHint">{summaryLead}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="traceChip traceChipLive">{statusLabel}</span>
-            <Link className="btn" to="/devices">返回设备列表</Link>
+            <span className={`statusWord ${statusLabel === "在线" ? "online" : "offline"}`}>{statusLabel}</span>
+            <Link className="btn secondary" to="/devices">返回设备列表</Link>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
           </div>
         </div>
@@ -178,10 +179,16 @@ export default function DeviceDetailPage(): React.ReactElement {
           <Link className="btn" to="/operations">查看作业中心</Link>
         </div>
         <div className="deviceStatusGrid" style={{ marginTop: 12 }}>
-          <div className="deviceStateCard"><div className="deviceStateTitle">在线状态</div><div className="deviceStateValue">{String(statusLabel || "-").toUpperCase().includes("ONLINE") ? "在线" : "离线"}</div></div>
-          <div className="deviceStateCard"><div className="deviceStateTitle">绑定状态</div><div className="deviceStateValue">{boundFieldId ? "已绑定" : "未绑定"}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">在线状态</div><div className="deviceStateValue">{statusLabel}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">绑定状态</div><div className="deviceStateValue">{boundFieldId ? "已完成" : "待处理"}</div></div>
           <div className="deviceStateCard"><div className="deviceStateTitle">首条数据状态</div><div className="deviceStateValue">{firstDataLabel}</div></div>
         </div>
+        {statusLabel === "离线" ? (
+          <div className="operationsSummaryActions" style={{ marginTop: 8 }}>
+            <Link className="btn secondary" to="/devices/onboarding">离线排查入口</Link>
+            <Link className="btn weak" to="/operations">查看最近作业</Link>
+          </div>
+        ) : null}
       </section>
 
       {error ? <ErrorState title="设备详情暂不可用" message={error} technical={status} onRetry={() => void refresh()} /> : null}

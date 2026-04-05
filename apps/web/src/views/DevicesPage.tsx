@@ -7,6 +7,7 @@ import StatusBadge from "../components/common/StatusBadge";
 import EmptyState from "../components/common/EmptyState";
 import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
+import { normalizeStatusWord } from "../lib/statusVocabulary";
 
 export default function DevicesPage(): React.ReactElement {
   const navigate = useNavigate();
@@ -56,22 +57,22 @@ export default function DevicesPage(): React.ReactElement {
   });
   const stateCounts = React.useMemo(() => {
     const counts = {
-      未接入: items.length < 1 ? 1 : 0,
-      已接入未绑定: 0,
-      已绑定待数据: 0,
-      在线正常: 0,
+      未初始化: items.length < 1 ? 1 : 0,
+      待处理: 0,
+      数据不足: 0,
+      在线: 0,
       离线: 0,
-      数据异常: 0,
+      存在风险: 0,
     };
     for (const item of items) {
       const online = String(item.connection_status ?? "").toUpperCase() === "ONLINE";
       const bound = Boolean(item.field_id);
       const hasData = Boolean(item.last_telemetry_ts_ms || item.last_receipt_ts_ms);
-      if (!bound) counts.已接入未绑定 += 1;
-      if (bound && !hasData) counts.已绑定待数据 += 1;
-      if (online && hasData) counts.在线正常 += 1;
+      if (!bound) counts.待处理 += 1;
+      if (bound && !hasData) counts.数据不足 += 1;
+      if (online && hasData) counts.在线 += 1;
       if (!online) counts.离线 += 1;
-      if (String(item.last_receipt_status ?? "").toUpperCase().includes("FAIL")) counts.数据异常 += 1;
+      if (String(item.last_receipt_status ?? "").toUpperCase().includes("FAIL")) counts.存在风险 += 1;
     }
     return counts;
   }, [items]);
@@ -85,7 +86,7 @@ export default function DevicesPage(): React.ReactElement {
           <p className="heroText">设备列表页作为“设备运营入口”：支持按在线、绑定、回执状态筛选并快速进入详情。</p>
         </div>
         <div className="heroActions">
-          <Link className="btn" to="/devices/onboarding">接入向导</Link>
+          <Link className="btn secondary" to="/devices/onboarding">接入向导</Link>
           <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新设备</button>
         </div>
       </section>
@@ -102,7 +103,7 @@ export default function DevicesPage(): React.ReactElement {
         <div className="sectionHeader">
           <div>
             <div className="sectionTitle">设备状态卡</div>
-            <div className="sectionDesc">覆盖未接入 / 已接入未绑定 / 已绑定待数据 / 在线正常 / 离线 / 数据异常。</div>
+            <div className="sectionDesc">覆盖未初始化 / 待处理 / 数据不足 / 在线 / 离线 / 存在风险。</div>
           </div>
         </div>
         <div className="operationsSummaryGrid">
@@ -123,7 +124,7 @@ export default function DevicesPage(): React.ReactElement {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link className="btn" to="/fields">上一步：田块</Link>
-            <Link className="btn" to="/programs/create">下一步：初始化经营</Link>
+            <Link className="btn secondary" to="/programs/create">下一步：初始化经营</Link>
           </div>
         </div>
         <div className="toolbarFilters">
@@ -202,15 +203,21 @@ export default function DevicesPage(): React.ReactElement {
                   <div className="title">{item.display_name || item.device_id}</div>
                   <div className="metaText">{item.device_id}</div>
                 </div>
-                <StatusBadge status={item.connection_status || "PENDING"} />
+                <span className={`statusWord ${String(item.connection_status || "").toUpperCase() === "ONLINE" ? "online" : "offline"}`}>
+                  {normalizeStatusWord(item.connection_status)}
+                </span>
               </div>
               <div className="meta wrapMeta">
                 <span>绑定地块：{item.field_id || "未绑定"}</span>
                 <span>最近心跳：{formatTimeOrFallback(item.last_heartbeat_ts_ms)}</span>
-                <span>首条数据：{item.last_telemetry_ts_ms || item.last_receipt_ts_ms ? "已收到" : "未收到（等待首条数据）"}</span>
+                <span>首条数据：{item.last_telemetry_ts_ms || item.last_receipt_ts_ms ? "已完成" : "数据不足"}</span>
                 <span>凭据状态：{item.last_credential_status || "未知"}</span>
                 <span>最近命令：{item.last_command_type || "-"}</span>
                 <span>最近回执：<StatusBadge status={item.last_receipt_status || "PENDING"} /></span>
+              </div>
+              <div className="operationsSummaryActions" style={{ marginTop: 8 }}>
+                <Link className="btn weak" to={item.field_id ? `/fields/${encodeURIComponent(String(item.field_id))}` : "/fields"}>跳转田块</Link>
+                {String(item.connection_status || "").toUpperCase() !== "ONLINE" ? <Link className="btn weak" to="/devices/onboarding">离线排查入口</Link> : null}
               </div>
             </Link>
           ))}

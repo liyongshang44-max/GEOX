@@ -1,9 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchEvidenceControlPlane } from "../api";
-import { StatusTag } from "../components/StatusTag";
 import EmptyState from "../components/common/EmptyState";
 import ErrorState from "../components/common/ErrorState";
+import { normalizeStatusWord } from "../lib/statusVocabulary";
 
 export default function EvidenceCenterPage(): React.ReactElement {
   const [item, setItem] = React.useState<any>(null);
@@ -23,93 +23,93 @@ export default function EvidenceCenterPage(): React.ReactElement {
     }
   }, []);
 
-  React.useEffect(() => {
-    void reload();
-  }, [reload]);
+  React.useEffect(() => { void reload(); }, [reload]);
 
+  const reportItems = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
   const evidenceItems = Array.isArray(item?.recent_evidence_items) ? item.recent_evidence_items : [];
-  const exportJobs = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
-  const formatJobLabel = React.useCallback((job: any): string => {
-    const fieldName = String(job?.refs?.program_id || "未标注田块");
-    const actionName = String(job?.title || "证据包导出");
-    return `${fieldName} + ${actionName}`;
-  }, []);
-  const formatReceiptLabel = React.useCallback((ev: any): string => {
-    const fieldName = String(ev?.program?.program_id || "未标注田块");
-    const actionName = String(ev?.title || "执行回执");
-    return `${fieldName} + ${actionName}`;
-  }, []);
+  const successfulOps = evidenceItems.filter((ev: any) => String(ev?.status?.code || "").toUpperCase().includes("SUCC")).slice(0, 6);
 
   return (
     <div className="productPage">
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">证据中心</div>
-            <div className="muted">证据导出 / 审计导出</div>
+            <div className="sectionTitle">报告与证据中心</div>
+            <div className="sectionDesc">在一个页面查看报告、证据包状态与最近成功作业。</div>
           </div>
-          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新证据数据</button>
+          <button className="btn primary" onClick={() => void reload()} disabled={loading}>刷新</button>
         </div>
       </section>
 
-      {error ? <ErrorState title="证据中心加载失败" message="请稍后重试，或检查证据服务状态。" technical={error} onRetry={() => void reload()} /> : null}
+      {error ? <ErrorState title="报告中心加载失败" message="请稍后重试，或检查证据服务状态。" technical={error} onRetry={() => void reload()} /> : null}
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">证据导出</div>
-        <div className="list modernList compactList">
-          {exportJobs.map((job: any) => (
+        <div className="sectionTitle">最近报告列表</div>
+        <div className="list modernList compactList" style={{ marginTop: 8 }}>
+          {reportItems.map((job: any) => (
             <article key={job.job_id} className="infoCard">
               <div className="jobTitleRow">
-                <div className="title">{formatJobLabel(job)}</div>
-                <StatusTag status={job.status?.code || "PENDING"} />
+                <div className="title">{String(job?.title || "证据报告")}</div>
+                <span className="statusWord data">{normalizeStatusWord(job?.status?.code)}</span>
               </div>
               <div className="meta wrapMeta">
-                <span>作业：{formatJobLabel(job)}</span>
-                <span>状态：{job.status?.label || "-"}</span>
-                <span>时间：{job.created_at_label || "-"}</span>
-              </div>
-              {String(job.status?.code ?? "").toUpperCase().includes("RUN") ? <div className="muted" style={{ marginTop: 6 }}>证据包生成中，请稍后刷新。</div> : null}
-              {String(job.status?.code ?? "").toUpperCase().includes("FAIL") ? <div className="muted" style={{ marginTop: 6, color: "#b42318" }}>导出失败，请重试或检查作业证据完整性。</div> : null}
-              <div style={{ marginTop: 8 }}>
-                {job.download?.available ? (
-                  <button type="button" className="btn">下载</button>
-                ) : (
-                  <button type="button" className="btn" disabled>下载</button>
-                )}
+                <span>关联方案：{String(job?.refs?.program_id || "未初始化")}</span>
+                <span>生成时间：{job.created_at_label || "-"}</span>
+                <span>报告状态：{job.status?.label || "数据不足"}</span>
               </div>
             </article>
           ))}
-          {!exportJobs.length ? <EmptyState title="暂无可查看的报告" description="完成作业并形成证据后，系统会在这里生成报告。" actionText="查看最近作业" onAction={() => window.location.assign("/operations")} /> : null}
+          {!reportItems.length ? (
+            <EmptyState
+              title="暂无报告"
+              description="报告只会在作业执行并形成证据包后出现。"
+              actionText="查看最近作业"
+              onAction={() => window.location.assign("/operations")}
+              secondaryActionText="查看设备状态"
+              onSecondaryAction={() => window.location.assign("/devices")}
+            />
+          ) : null}
         </div>
       </section>
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">审计导出</div>
-        <div className="list modernList compactList">
-          {evidenceItems.map((ev: any) => (
+        <div className="sectionTitle">证据包状态</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">待处理</span><strong>{reportItems.filter((x: any) => normalizeStatusWord(x?.status?.code) === "待处理").length}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行中</span><strong>{reportItems.filter((x: any) => normalizeStatusWord(x?.status?.code) === "执行中").length}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">已完成</span><strong>{reportItems.filter((x: any) => normalizeStatusWord(x?.status?.code) === "已完成").length}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">数据不足</span><strong>{reportItems.filter((x: any) => normalizeStatusWord(x?.status?.code) === "数据不足").length}</strong></div>
+        </div>
+      </section>
+
+      <section className="card sectionBlock">
+        <div className="sectionTitle">关联最近成功作业</div>
+        <div className="list modernList compactList" style={{ marginTop: 8 }}>
+          {successfulOps.map((ev: any) => (
             <article key={ev.evidence_id} className="infoCard">
               <div className="jobTitleRow">
-                <div className="title">{formatReceiptLabel(ev)}</div>
-                <StatusTag status={ev.status?.code || "EXECUTED"} />
+                <div className="title">{String(ev?.title || "执行回执")}</div>
+                <span className="statusWord online">已完成</span>
               </div>
               <div className="meta wrapMeta">
-                <span>作业：{formatReceiptLabel(ev)}</span>
-                <span>状态：{ev.status?.label || "-"}</span>
-                <span>时间：{ev.updated_at_label || "-"}</span>
-                <span>日志数：{ev.act_task_id ? 1 : 0}</span>
+                <span>关联作业：{String(ev?.act_task_id || "-")}</span>
+                <span>更新时间：{ev.updated_at_label || "-"}</span>
               </div>
             </article>
           ))}
-          {!evidenceItems.length ? <EmptyState title="最近暂无回执" description="执行链路产生回执后会显示在这里。" actionText="查看最近作业" onAction={() => window.location.assign("/operations")} /> : null}
+          {!successfulOps.length ? <div className="decisionItemStatic">当前没有最近成功作业，可能是尚未执行或证据未回传。</div> : null}
         </div>
       </section>
 
       <section className="card sectionBlock">
-        <div className="sectionTitle">说明区</div>
+        <div className="sectionTitle">说明与去向</div>
         <p style={{ margin: "8px 0 0", color: "#475467" }}>
-          证据包包含建议、审批、执行计划、执行回执等完整链路，用于审计与交付。
+          报告会在执行完成且证据齐全后生成。若没有报告，请先检查设备在线、作业执行与回执完整性。
         </p>
-        <div style={{ marginTop: 8 }}><Link to="/operations">查看最近作业</Link></div>
+        <div className="operationsSummaryActions" style={{ marginTop: 8 }}>
+          <Link className="btn secondary" to="/operations">查看作业</Link>
+          <Link className="btn weak" to="/devices">查看设备</Link>
+        </div>
       </section>
     </div>
   );

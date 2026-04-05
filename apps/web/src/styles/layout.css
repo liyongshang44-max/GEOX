@@ -1,2 +1,27 @@
-.app{ max-width: 1200px; margin: 0 auto; padding: 24px; }
-.card{ background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+.app,
+.productPage,
+.demoDashboardPage,
+.consolePage {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.demoContentGrid,
+.summaryGrid,
+.summaryGrid4 {
+  display: grid;
+  gap: 12px;
+}
+
+.demoContentGrid,
+.summaryGrid4 {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.sectionBlock,
+.detailHeroCard,
+.dashboardHeroV2,
+.operationsHeroCard {
+  margin-top: 12px;
+}
