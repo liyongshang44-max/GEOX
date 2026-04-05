@@ -1,0 +1,46 @@
+{
+  "customer_report_v1": {
+    "report_meta": {
+      "tenant_id": "tenant_demo",
+      "generated_at": 1770000000000,
+      "version": "v1",
+      "data_window": { "start": 1769395200000, "end": 1770000000000 }
+    },
+    "sla": {
+      "execution_success_rate": 0.84,
+      "acceptance_pass_rate": 0.79,
+      "response_time_avg": 3600000
+    },
+    "execution": { "running": 12, "human": 4, "device": 8, "delayed": 2 },
+    "risk": { "high": 3, "medium": 9, "low": 20 },
+    "value": { "benefit_operations_count": 6 },
+    "definitions": {
+      "sla_definition": "已进入执行阶段的 operation（存在 task 且非 invalid execution）",
+      "execution_definition": "dispatch_queue_v1 + operation_state 投影",
+      "risk_definition": "field_program_state_v1.current_risk_summary.level",
+      "value_definition": "top_actions 高 value 组件聚合"
+    }
+  },
+  "value_attribution_v1": {
+    "operation_plan_id": "op_20260404_001",
+    "expected_effect": { "type": "moisture_increase", "value": 8 },
+    "actual_effect": { "type": "moisture_increase", "value": 6.4, "delta": 6.4 },
+    "outcome": { "effect_verdict": "PARTIAL", "final_status": "PENDING_ACCEPTANCE" },
+    "attribution_basis": {
+      "source_metrics": ["soil_moisture", "temperature", "humidity"],
+      "method": "rule_based_delta_compare: actual_delta_vs_expected_threshold"
+    }
+  },
+  "policy_suggestion_v1": [
+    {
+      "rule_id": "policy.trace_gap.v1",
+      "issue": "Trace gaps detected in operation chain",
+      "recommendation": "Enforce receipt/evidence backfill before SLA closeout",
+      "suggested_action": {
+        "action_type": "COLLECT_RECEIPT",
+        "target": "execution_trace",
+        "parameters": { "missing_receipt": 3, "missing_evidence": 2 }
+      }
+    }
+  ]
+}

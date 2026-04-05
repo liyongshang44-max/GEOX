@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import FieldGisMap from "../components/FieldGisMap";
 import { FIELD_TEXT, type FieldLang } from "../lib/fieldViewModel";
 import { getUiLocale } from "../lib/operationLabels";
@@ -9,6 +9,8 @@ import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../components/evidence/ReceiptEvidenceCard";
+import { apiRequestOptional } from "../api/client";
+import { bindDeviceToField } from "../api/devices";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   ok: { color: "#067647", bg: "#ecfdf3", border: "#abefc6" },
@@ -62,14 +64,35 @@ function timelineTypeLabel(type: string): string {
 
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
+  const [searchParams] = useSearchParams();
   const fieldId = decodeURIComponent(params.fieldId || "");
   const [lang] = React.useState<FieldLang>(() => (getUiLocale() === "en" ? "en" : "zh"));
   const labels = FIELD_TEXT[lang];
   const [selectedMapObject, setSelectedMapObject] = React.useState<any | null>(null);
   const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, refresh } = useFieldDetail({ fieldId, lang });
+  const [deviceOptions, setDeviceOptions] = React.useState<Array<{ device_id: string; connection_status?: string; field_id?: string; last_telemetry_ts_ms?: number | null }>>([]);
+  const [bindDeviceId, setBindDeviceId] = React.useState("");
+  const [bindMessage, setBindMessage] = React.useState("");
+
+  React.useEffect(() => {
+    let mounted = true;
+    void apiRequestOptional<{ ok?: boolean; items?: any[]; devices?: any[] }>("/api/v1/devices")
+      .then((res) => {
+        if (!mounted) return;
+        const items = Array.isArray(res?.items) ? res.items : (Array.isArray(res?.devices) ? res.devices : []);
+        setDeviceOptions(items.map((item: any) => ({
+          device_id: String(item?.device_id ?? ""),
+          connection_status: String(item?.connection_status ?? ""),
+          field_id: typeof item?.field_id === "string" ? item.field_id : "",
+          last_telemetry_ts_ms: Number(item?.last_telemetry_ts_ms ?? 0) || null,
+        })).filter((item) => item.device_id));
+      })
+      .catch(() => setDeviceOptions([]));
+    return () => { mounted = false; };
+  }, []);
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
-  if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
+  if (!busy && !model) return <EmptyState title="对象不存在或暂不可用" description="该田块可能尚未创建，或读模型尚未生成。" actionText="重新加载" onAction={() => void refresh()} secondaryActionText="返回田块列表" onSecondaryAction={() => { window.location.assign("/fields"); }} />;
 
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
   const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
@@ -82,6 +105,19 @@ export default function FieldDetailPage(): React.ReactElement {
   const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
   const programHref = "/programs";
+  const hasBoundDevice = deviceOptions.some((item) => item.field_id === fieldId);
+  const hasOnlineDevice = deviceOptions.some((item) => item.field_id === fieldId && String(item.connection_status).toUpperCase() === "ONLINE");
+  const hasTelemetry = deviceOptions.some((item) => item.field_id === fieldId && Number(item.last_telemetry_ts_ms ?? 0) > 0);
+  const hasRecommendations = String(model?.currentStatus?.latestSuggestion ?? "").trim() !== "" && !String(model?.currentStatus?.latestSuggestion ?? "").includes("暂无");
+  const hasOperations = Boolean(model?.currentTask || (model?.timeline ?? []).some((item) => item.type === "operation"));
+  const checklist = [
+    { label: "田块已创建", ok: Boolean(fieldId), action: <Link to="/fields">查看田块列表</Link> },
+    { label: "设备已绑定", ok: hasBoundDevice, action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : <span><Link to="/devices">去绑定设备</Link></span> },
+    { label: "设备在线", ok: hasOnlineDevice, action: hasOnlineDevice ? <Link to="/devices">查看设备状态</Link> : <span><Link to="/devices">设备离线，去查看状态</Link></span> },
+    { label: "首条数据已到达", ok: hasTelemetry, action: hasTelemetry ? <span>已收到遥测</span> : <Link to="/devices/onboarding">查看接入说明</Link> },
+    { label: "系统建议已生成", ok: hasRecommendations, action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link> },
+    { label: "作业链路已开始", ok: hasOperations, action: hasOperations ? <Link to="/operations">查看作业</Link> : <Link to="/operations">查看推荐动作</Link> },
+  ];
 
   return (
     <div className="demoDashboardPage">
@@ -106,11 +142,99 @@ export default function FieldDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
         </div>
         <div className="operationsSummaryActions">
-          {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <span className="traceChip">暂无当前经营方案</span>}
+          {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>创建经营方案</Link>}
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
+        {(searchParams.get("created") === "1" || !hasCurrentPlan) ? (
+          <div className="decisionItemStatic onboardingHintCard fieldInitBanner" style={{ marginTop: 12 }}>
+            <div className="onboardingHintTitle">尚未完成初始化经营</div>
+            <div className="onboardingHintDesc">这块田还没有经营方案。创建经营方案后，系统才能根据目标生成建议与作业。</div>
+            <div className="onboardingActions">
+              <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>初始化经营</Link>
+              <Link className="btn" to="/devices">去绑定设备</Link>
+              <Link className="btn" to="/fields">返回田块列表</Link>
+            </div>
+          </div>
+        ) : null}
         {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制信息</div> : null}
+      </section>
+      <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">首次数据可见性检查</div>
+        <div className="decisionList" style={{ marginTop: 8 }}>
+          {checklist.map((item) => (
+            <div key={item.label} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div>{item.ok ? "✅" : "⚪"} {item.label}</div>
+              <div>{item.action}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+      {!hasBoundDevice ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">接入并绑定设备</div>
+          <div className="detailSectionLead">当前田块还没有绑定设备，建议先完成接入与绑定。</div>
+          <div style={{ marginTop: 8 }}><Link className="btn" to="/devices">去设备中心绑定</Link></div>
+        </section>
+      ) : null}
+      {hasBoundDevice && !hasTelemetry ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">等待首条数据</div>
+          <div className="detailSectionLead">设备已绑定，但还未收到首条遥测。可先检查设备在线状态与接入日志。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <Link className="btn" to="/devices">查看设备状态</Link>
+            <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+          </div>
+        </section>
+      ) : null}
+      {hasBoundDevice && !hasOnlineDevice ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">设备当前离线</div>
+          <div className="detailSectionLead">系统暂时无法获取最新状态，建议先检查设备在线情况或等待恢复连接。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <Link className="btn" to="/devices">查看设备状态</Link>
+            <Link className="btn" to={`/fields/${encodeURIComponent(fieldId)}`}>返回田块详情</Link>
+          </div>
+        </section>
+      ) : null}
+
+      <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">从田块绑定设备</div>
+        <div className="sectionDesc">支持从田块详情直接完成设备绑定；若设备离线，仍允许绑定并提示先校验在线状态。</div>
+        <div className="toolbarFilters" style={{ marginTop: 8 }}>
+          <select className="select" value={bindDeviceId} onChange={(e) => setBindDeviceId(e.target.value)}>
+            <option value="">请选择设备</option>
+            {deviceOptions.map((item) => (
+              <option key={item.device_id} value={item.device_id}>
+                {item.device_id} · {String(item.connection_status || "UNKNOWN").toUpperCase()} {item.field_id ? `(已绑定:${item.field_id})` : "(未绑定)"}
+              </option>
+            ))}
+          </select>
+          <button
+            className="btn"
+            disabled={!bindDeviceId}
+            onClick={() => {
+              void (async () => {
+                const target = deviceOptions.find((item) => item.device_id === bindDeviceId);
+                try {
+                  const res = await bindDeviceToField({ device_id: bindDeviceId, field_id: fieldId });
+                  if (res?.ok) {
+                    const warn = String(target?.connection_status ?? "").toUpperCase() === "ONLINE" ? "" : "；当前设备离线，建议先校验在线状态";
+                    setBindMessage(`绑定成功：${res.device_id} → ${res.field_id}${warn}`);
+                    await refresh();
+                  } else {
+                    setBindMessage(`绑定失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+                  }
+                } catch (e: any) {
+                  setBindMessage(`绑定失败：${e?.bodyText || e?.message || String(e)}`);
+                }
+              })();
+            }}
+          >
+            绑定到当前田块
+          </button>
+        </div>
+        {bindMessage ? <div className="metaText" style={{ marginTop: 8 }}>{bindMessage}</div> : null}
       </section>
 
       {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
@@ -148,7 +272,7 @@ export default function FieldDetailPage(): React.ReactElement {
           {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
         </div>
         {!hasGeometry ? (
-          <div className="decisionItemStatic">该地块暂无可用边界数据</div>
+          <div className="decisionItemStatic">边界尚未补充，可先完成设备与方案初始化。</div>
         ) : (
           <>
             <FieldGisMap

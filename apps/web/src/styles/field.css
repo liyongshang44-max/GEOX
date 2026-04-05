@@ -1,1 +1,6 @@
 /* field page specific rules gradually move here */
+
+.fieldInitBanner {
+  border: 1px dashed #fdb022;
+  background: #fffaeb;
+}
