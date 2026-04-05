@@ -123,7 +123,7 @@ export default function DevicesPage(): React.ReactElement {
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Link className="btn" to="/fields">上一步：田块</Link>
-            <Link className="btn" to="/programs/new">下一步：创建方案</Link>
+            <Link className="btn" to="/programs/create">下一步：初始化经营</Link>
           </div>
         </div>
         <div className="toolbarFilters">

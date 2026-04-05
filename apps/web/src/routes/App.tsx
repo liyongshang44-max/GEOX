@@ -27,6 +27,7 @@ import SettingsPage from "../views/SettingsPage";
 import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
 import ProgramNewPage from "../views/ProgramNewPage";
+import ProgramCreatePage from "../views/ProgramCreatePage";
 import HumanAssignmentsPage from "../views/HumanAssignmentsPage";
 import HumanAssignmentDetailPage from "../views/HumanAssignmentDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
@@ -50,6 +51,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
   if (pathname.startsWith("/human-assignments")) return "人工执行";
   if (pathname === "/programs") return "经营方案";
+  if (pathname === "/programs/create") return "初始化经营";
   if (pathname === "/programs/new") return "新建经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
@@ -74,6 +76,7 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
   if (pathname.startsWith("/human-assignments")) return "按状态处理人工任务，完成接单、执行与提交。";
   if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
+  if (pathname === "/programs/create") return "通过模板快速初始化经营方案。";
   if (pathname === "/programs/new") return "创建新的经营方案，补齐 field/season/crop 上下文。";
   if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
@@ -98,6 +101,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/human-assignments/")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
   if (pathname.startsWith("/human-assignments")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
+  if (pathname === "/programs/create") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "初始化经营" }];
   if (pathname === "/programs/new") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "新建" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
@@ -113,7 +117,7 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
   if (pathname === "/" || pathname === "/dashboard") return { label: "新建田块", to: "/fields/new" };
   if (pathname.startsWith("/fields")) return { label: "新建田块", to: "/fields/new" };
   if (pathname.startsWith("/operations")) return { label: "查看待处理建议", to: "/agronomy/recommendations" };
-  if (pathname.startsWith("/programs")) return { label: "创建经营方案", to: "/programs/new" };
+  if (pathname.startsWith("/programs")) return { label: "初始化经营", to: "/programs/create" };
   if (pathname.startsWith("/delivery/export-jobs")) return { label: "查看最近作业", to: "/operations" };
   if (pathname.startsWith("/devices")) return { label: "接入设备", to: "/devices/onboarding" };
   return { label: "返回总览", to: "/dashboard" };
@@ -167,6 +171,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/human-assignments" element={<HumanAssignmentsPage />} />
             <Route path="/human-assignments/:assignmentId" element={<HumanAssignmentDetailPage />} />
             <Route path="/programs" element={<ProgramListPage />} />
+            <Route path="/programs/create" element={<ProgramCreatePage />} />
             <Route path="/programs/new" element={<ProgramNewPage />} />
             <Route path="/programs/:programId" element={<ProgramDetailPage />} />
             <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />

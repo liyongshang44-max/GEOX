@@ -111,12 +111,32 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasRecommendations = String(model?.currentStatus?.latestSuggestion ?? "").trim() !== "" && !String(model?.currentStatus?.latestSuggestion ?? "").includes("暂无");
   const hasOperations = Boolean(model?.currentTask || (model?.timeline ?? []).some((item) => item.type === "operation"));
   const checklist = [
-    { label: "田块已创建", ok: Boolean(fieldId), action: <Link to="/fields">查看田块列表</Link> },
-    { label: "设备已绑定", ok: hasBoundDevice, action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : <span><Link to="/devices">去绑定设备</Link></span> },
-    { label: "设备在线", ok: hasOnlineDevice, action: hasOnlineDevice ? <Link to="/devices">查看设备状态</Link> : <span><Link to="/devices">设备离线，去查看状态</Link></span> },
-    { label: "首条数据已到达", ok: hasTelemetry, action: hasTelemetry ? <span>已收到遥测</span> : <Link to="/devices/onboarding">查看接入说明</Link> },
-    { label: "系统建议已生成", ok: hasRecommendations, action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link> },
-    { label: "作业链路已开始", ok: hasOperations, action: hasOperations ? <Link to="/operations">查看作业</Link> : <Link to="/operations">查看推荐动作</Link> },
+    { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
+    {
+      label: "是否已绑定设备",
+      status: hasBoundDevice ? "已完成" : (Boolean(fieldId) ? "待完成" : "待前置完成"),
+      action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : (Boolean(fieldId) ? <Link to="/devices">去绑定设备</Link> : <Link to="/fields/new">先新建田块</Link>),
+    },
+    {
+      label: "设备是否在线",
+      status: hasOnlineDevice ? "已完成" : (hasBoundDevice ? "需要处理" : "待前置完成"),
+      action: hasBoundDevice ? <Link to="/devices">查看设备状态</Link> : <Link to="/devices">先绑定设备</Link>,
+    },
+    {
+      label: "是否收到首条数据",
+      status: hasTelemetry ? "已完成" : (hasOnlineDevice ? "等待数据" : "待前置完成"),
+      action: hasTelemetry ? <Link to="/fields">查看田块状态</Link> : (hasOnlineDevice ? <Link to="/devices/onboarding">查看接入说明</Link> : <Link to="/devices">先恢复在线</Link>),
+    },
+    {
+      label: "是否已有建议",
+      status: hasRecommendations ? "已完成" : (hasTelemetry ? "待完成" : "待前置完成"),
+      action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link>,
+    },
+    {
+      label: "是否已有作业",
+      status: hasOperations ? "已完成" : (hasRecommendations ? "待完成" : "待前置完成"),
+      action: hasOperations ? <Link to="/operations">查看作业</Link> : (hasRecommendations ? <Link to="/operations">创建/查看作业</Link> : <Link to="/agronomy/recommendations">先完成建议评估</Link>),
+    },
   ];
 
   return (
@@ -142,7 +162,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
         </div>
         <div className="operationsSummaryActions">
-          {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>创建经营方案</Link>}
+          {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <Link className="btn primary" to={`/programs/create?field_id=${encodeURIComponent(fieldId)}`}>创建经营方案</Link>}
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
@@ -151,7 +171,7 @@ export default function FieldDetailPage(): React.ReactElement {
             <div className="onboardingHintTitle">尚未完成初始化经营</div>
             <div className="onboardingHintDesc">这块田还没有经营方案。创建经营方案后，系统才能根据目标生成建议与作业。</div>
             <div className="onboardingActions">
-              <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>初始化经营</Link>
+              <Link className="btn primary" to={`/programs/create?field_id=${encodeURIComponent(fieldId)}`}>初始化经营</Link>
               <Link className="btn" to="/devices">去绑定设备</Link>
               <Link className="btn" to="/fields">返回田块列表</Link>
             </div>
@@ -164,7 +184,7 @@ export default function FieldDetailPage(): React.ReactElement {
         <div className="decisionList" style={{ marginTop: 8 }}>
           {checklist.map((item) => (
             <div key={item.label} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <div>{item.ok ? "✅" : "⚪"} {item.label}</div>
+              <div>{item.label} · <strong>{item.status}</strong></div>
               <div>{item.action}</div>
             </div>
           ))}

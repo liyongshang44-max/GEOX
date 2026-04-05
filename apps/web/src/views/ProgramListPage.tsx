@@ -116,7 +116,7 @@ export default function ProgramListPage(): React.ReactElement {
         </p>
         <div className="operationsSummaryActions">
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新方案</button>
-          <Link className="btn" to="/programs/new">新建方案</Link>
+          <Link className="btn" to="/programs/create">初始化经营</Link>
           <Link className="btn" to="/agronomy">查看农业建议</Link>
         </div>
       </section>
@@ -207,7 +207,7 @@ export default function ProgramListPage(): React.ReactElement {
         })}
       </section>
 
-      {!loading && !filtered.length ? <EmptyState title="尚未初始化经营方案" description="请先为田块创建 Program，系统才能进入经营推进。" actionText="创建经营方案" onAction={() => window.location.assign("/programs/new")} /> : null}
+      {!loading && !filtered.length ? <EmptyState title="尚未初始化经营方案" description="请先为田块创建 Program，系统才能进入经营推进。" actionText="初始化经营" onAction={() => window.location.assign("/programs/create")} /> : null}
     </div>
   );
 }

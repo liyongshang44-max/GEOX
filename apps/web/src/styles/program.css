@@ -1,1 +1,12 @@
 /* program page specific rules gradually move here */
+
+.programCreateCard {
+  border: 1px solid #d0d5dd;
+}
+
+.programTemplateHint {
+  border: 1px dashed #98a2b3;
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 10px;
+}
