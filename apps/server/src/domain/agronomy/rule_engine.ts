@@ -186,3 +186,69 @@ export function validateRecommendationMainChainFields(input: {
   if (!ruleId) return { ok: false, error: "MISSING_RULE_ID" };
   return { ok: true };
 }
+
+export type PolicySuggestionV1 = {
+  rule_id: string;
+  issue: string;
+  recommendation: string;
+  suggested_action?: {
+    action_type: string;
+    target: string;
+    parameters: any;
+  };
+};
+
+export function buildPolicySuggestionsFromStats(input: {
+  failureDistribution?: Record<string, number>;
+  retryDistribution?: Array<{ attempt_no: number; count: number }>;
+  traceGapCount?: { missing_receipt: number; missing_evidence: number };
+}): PolicySuggestionV1[] {
+  const failureDistribution = input.failureDistribution ?? {};
+  const retryDistribution = input.retryDistribution ?? [];
+  const traceGap = input.traceGapCount ?? { missing_receipt: 0, missing_evidence: 0 };
+  const suggestions: PolicySuggestionV1[] = [];
+
+  if ((failureDistribution.INVALID_EXECUTION ?? 0) > 0) {
+    suggestions.push({
+      rule_id: "policy.invalid_execution.v1",
+      issue: "INVALID_EXECUTION count is elevated",
+      recommendation: "Strengthen evidence completeness checks before closing execution",
+      suggested_action: {
+        action_type: "CHECK_FIELD_STATUS",
+        target: "operation_pipeline",
+        parameters: { focus: "evidence_gate", threshold: failureDistribution.INVALID_EXECUTION },
+      },
+    });
+  }
+
+  const highRetry = retryDistribution.find((x) => Number(x.attempt_no) >= 3 && Number(x.count) > 0);
+  if (highRetry) {
+    suggestions.push({
+      rule_id: "policy.retry_pressure.v1",
+      issue: "High retry pressure detected",
+      recommendation: "Lower retry frequency and prioritize manual inspection for repeated failures",
+      suggested_action: {
+        action_type: "REVIEW_APPROVAL",
+        target: "dispatch_queue",
+        parameters: { attempt_no: highRetry.attempt_no, affected: highRetry.count },
+      },
+    });
+  }
+
+  if (traceGap.missing_receipt > 0 || traceGap.missing_evidence > 0) {
+    suggestions.push({
+      rule_id: "policy.trace_gap.v1",
+      issue: "Trace gaps detected in operation chain",
+      recommendation: "Enforce receipt/evidence backfill before SLA closeout",
+      suggested_action: {
+        action_type: "COLLECT_RECEIPT",
+        target: "execution_trace",
+        parameters: {
+          missing_receipt: traceGap.missing_receipt,
+          missing_evidence: traceGap.missing_evidence,
+        },
+      },
+    });
+  }
+  return suggestions;
+}

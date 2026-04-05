@@ -55,6 +55,7 @@ export type ProgramCreateInput = {
   crop_code: "corn" | "tomato";
   goal_quality: "low" | "medium" | "high";
   goal_yield: "low" | "medium" | "high";
+  constraints_notes?: string;
 };
 
 export async function createProgram(input: ProgramCreateInput): Promise<{ ok: boolean; program_id: string; fact_id: string }> {
@@ -78,7 +79,7 @@ export async function createProgram(input: ProgramCreateInput): Promise<{ ok: bo
       manual_approval_required_for: [],
       allow_night_irrigation: false,
       max_irrigation_rounds_per_day: 3,
-      notes: "",
+      notes: String(input.constraints_notes ?? ""),
       max_irrigation_mm_per_day: null,
     },
     budget: {
