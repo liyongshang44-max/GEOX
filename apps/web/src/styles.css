@@ -6,6 +6,8 @@
 @import "./styles/program.css";
 @import "./styles/field.css";
 @import "./styles/operation.css";
+@import "./styles/onboarding.css";
+@import "./styles/device.css";
 
 /* GEOX/apps/web/src/styles.css */
 :root{

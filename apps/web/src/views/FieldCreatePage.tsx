@@ -67,6 +67,10 @@ export default function FieldCreatePage(): React.ReactElement {
           <div className="sectionTitle">新建田块</div>
           <div className="sectionDesc">边界可后续补充：即使暂无 GeoJSON 也可先完成创建并继续开局流程。</div>
         </div>
+        <div className="decisionItemStatic onboardingHintCard" style={{ marginBottom: 10 }}>
+          <div className="onboardingHintTitle">创建后下一步</div>
+          <div className="onboardingHintDesc">系统将自动跳转到田块详情，你可以继续绑定设备并初始化经营方案。</div>
+        </div>
         <form className="decisionList" onSubmit={onSubmit}>
           <label className="decisionItemStatic">
             <div className="decisionItemTitle">田块名称</div>

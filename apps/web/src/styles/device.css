@@ -1,0 +1,22 @@
+.deviceStatusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.deviceStateCard {
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.deviceStateTitle {
+  color: #475467;
+  font-size: 12px;
+}
+
+.deviceStateValue {
+  font-weight: 700;
+  margin-top: 4px;
+}

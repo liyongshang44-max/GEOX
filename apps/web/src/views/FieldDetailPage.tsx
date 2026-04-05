@@ -147,12 +147,13 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
         {(searchParams.get("created") === "1" || !hasCurrentPlan) ? (
-          <div className="decisionItemStatic" style={{ marginTop: 12 }}>
-            <div className="decisionItemTitle">这块田还没有经营方案</div>
-            <div className="decisionItemMeta">创建经营方案后，系统才能根据目标生成建议与作业。</div>
-            <div style={{ marginTop: 8 }}>
+          <div className="decisionItemStatic onboardingHintCard fieldInitBanner" style={{ marginTop: 12 }}>
+            <div className="onboardingHintTitle">尚未完成初始化经营</div>
+            <div className="onboardingHintDesc">这块田还没有经营方案。创建经营方案后，系统才能根据目标生成建议与作业。</div>
+            <div className="onboardingActions">
               <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>初始化经营</Link>
-              <Link className="btn" style={{ marginLeft: 8 }} to="/fields">返回田块列表</Link>
+              <Link className="btn" to="/devices">去绑定设备</Link>
+              <Link className="btn" to="/fields">返回田块列表</Link>
             </div>
           </div>
         ) : null}
