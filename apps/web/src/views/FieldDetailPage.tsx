@@ -110,6 +110,10 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasTelemetry = deviceOptions.some((item) => item.field_id === fieldId && Number(item.last_telemetry_ts_ms ?? 0) > 0);
   const hasRecommendations = String(model?.currentStatus?.latestSuggestion ?? "").trim() !== "" && !String(model?.currentStatus?.latestSuggestion ?? "").includes("暂无");
   const hasOperations = Boolean(model?.currentTask || (model?.timeline ?? []).some((item) => item.type === "operation"));
+  const riskEvents = (model?.timeline ?? []).filter((item) => item.type === "alert").slice(0, 3);
+  const recommendationEvents = (model?.timeline ?? []).filter((item) => item.type === "recommendation").slice(0, 3);
+  const recentOperationEvents = (model?.timeline ?? []).filter((item) => item.type === "operation").slice(0, 5);
+  const hasInitializedProgram = hasCurrentPlan;
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
     {
@@ -190,6 +194,28 @@ export default function FieldDetailPage(): React.ReactElement {
           ))}
         </div>
       </section>
+      <section className="card detailHeroCard fieldBattleSection" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">当前状态区</div>
+        <div className="detailSectionLead">先看当前经营是否完成初始化，再确认设备、遥测与执行状态。</div>
+        <div className="fieldBattleMetrics">
+          <div className="fieldBattleMetric"><span>当前状态</span><strong>{headerStatusLabel}</strong></div>
+          <div className="fieldBattleMetric"><span>当前作物</span><strong>{model?.currentCropText || "--"}</strong></div>
+          <div className="fieldBattleMetric"><span>当前经营方案</span><strong>{currentPlanText}</strong></div>
+          <div className="fieldBattleMetric"><span>设备在线</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
+          <div className="fieldBattleMetric"><span>最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
+          <div className="fieldBattleMetric"><span>当前执行</span><strong>{model?.currentTask ? `${model.currentTask.action} · ${model.currentTask.status}` : "暂无执行任务"}</strong></div>
+        </div>
+        {!hasInitializedProgram ? (
+          <div className="decisionItemStatic onboardingHintCard fieldInitBanner" style={{ marginTop: 10 }}>
+            <div className="onboardingHintTitle">尚未初始化经营方案</div>
+            <div className="onboardingHintDesc">请先创建经营方案，再进入建议→作业→验收闭环。</div>
+            <div className="onboardingActions">
+              <Link className="btn primary" to={`/programs/create?field_id=${encodeURIComponent(fieldId)}`}>立即初始化经营</Link>
+              <Link className="btn" to="/programs">查看已有方案</Link>
+            </div>
+          </div>
+        ) : null}
+      </section>
       {!hasBoundDevice ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
           <div className="sectionTitle">接入并绑定设备</div>
@@ -197,6 +223,36 @@ export default function FieldDetailPage(): React.ReactElement {
           <div style={{ marginTop: 8 }}><Link className="btn" to="/devices">去设备中心绑定</Link></div>
         </section>
       ) : null}
+      <section className="card detailHeroCard fieldBattleSection" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">当前风险与建议区</div>
+        <div className="detailSectionLead">聚焦这块田当前最需要关注的风险，以及系统建议的下一步动作。</div>
+        <div className="decisionList" style={{ marginTop: 8 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">风险结论</div>
+            <div className="decisionItemMeta">{model?.statusReason || "当前未发现高优先风险"}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">最新建议</div>
+            <div className="decisionItemMeta">{model?.currentStatus?.latestSuggestion || "暂无建议"}</div>
+          </div>
+          {riskEvents.length ? riskEvents.map((item) => (
+            <div key={item.id} className="decisionItemStatic">
+              <div className="decisionItemTitle">风险事件</div>
+              <div className="decisionItemMeta">{item.time} · {item.label}</div>
+            </div>
+          )) : <div className="decisionItemStatic">当前暂无风险事件。</div>}
+          {recommendationEvents.length ? recommendationEvents.map((item) => (
+            <div key={item.id} className="decisionItemStatic">
+              <div className="decisionItemTitle">建议事件</div>
+              <div className="decisionItemMeta">{item.time} · {item.label}</div>
+            </div>
+          )) : null}
+        </div>
+        <div className="operationsSummaryActions">
+          <Link className="btn" to="/agronomy/recommendations">查看建议中心</Link>
+          <Link className="btn" to="/operations">转为作业</Link>
+        </div>
+      </section>
       {hasBoundDevice && !hasTelemetry ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
           <div className="sectionTitle">等待首条数据</div>
@@ -262,7 +318,7 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
-            <div className="sectionTitle">最近作业与结果</div>
+            <div className="sectionTitle">最近作业与验收区</div>
             <div className="detailSectionLead">先看当前正在执行什么，再看最近一次结果和验收状态。</div>
           </div>
           {model?.currentTask ? (
@@ -272,6 +328,16 @@ export default function FieldDetailPage(): React.ReactElement {
             </div>
           ) : <div className="decisionItemStatic">暂无执行任务</div>}
           {model?.currentTask?.operationPlanId ? <div className="operationsSummaryActions"><Link className="btn" to={operationHref}>查看作业详情 →</Link></div> : null}
+          {recentOperationEvents.length ? (
+            <div className="decisionList" style={{ marginTop: 8 }}>
+              {recentOperationEvents.map((item) => (
+                <div key={item.id} className="decisionItemStatic">
+                  <div className="decisionItemTitle">最近动作</div>
+                  <div className="decisionItemMeta">{item.time} · {item.label}</div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
 
         <section className="card detailHeroCard">
@@ -286,10 +352,10 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="card detailHeroCard">
         <div className="demoCardTopRow">
           <div>
-            <div className="sectionTitle">现场地图 / 轨迹</div>
-            <div className="detailSectionLead">{showMockMap ? "当前真实 geo telemetry 尚未进入，页面先使用演示轨迹承接设备路径、作业点与热区表达。" : "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。"}</div>
+            <div className="sectionTitle">GIS 与轨迹区</div>
+            <div className="detailSectionLead">{showMockMap ? "当前真实 geo telemetry 尚未进入，地图仅展示示意图，帮助理解经营上下文。" : "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。"}</div>
           </div>
-          {showMockMap ? <span className="traceChip">当前为演示轨迹</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
+          {showMockMap ? <span className="traceChip fieldDemoChip">示意图（非实时轨迹）</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
         </div>
         {!hasGeometry ? (
           <div className="decisionItemStatic">边界尚未补充，可先完成设备与方案初始化。</div>
@@ -306,7 +372,7 @@ export default function FieldDetailPage(): React.ReactElement {
               onSelectObject={setSelectedMapObject}
             />
             <div className="traceChipRow" style={{ marginTop: 12 }}>
-              {showMockMap ? (<><span className="traceChip">演示设备路径</span><span className="traceChip">演示作业定位点</span><span className="traceChip">演示热区</span></>) : (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>)}
+              {showMockMap ? (<><span className="traceChip fieldDemoChip">示意图：设备路径</span><span className="traceChip fieldDemoChip">示意图：作业定位点</span><span className="traceChip fieldDemoChip">示意图：热区</span></>) : (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>)}
             </div>
           </>
         )}
@@ -345,6 +411,21 @@ export default function FieldDetailPage(): React.ReactElement {
             </div>
           ) : <div className="decisionItemStatic">点击地图中的对象后，这里会展示它对应的业务含义。</div>}
         </section>
+      </section>
+      <section className="card detailHeroCard fieldBattleSection">
+        <div className="sectionTitle">相关方案与设备区</div>
+        <div className="detailSectionLead">围绕当前田块，集中查看经营方案与设备连接关系。</div>
+        <div className="fieldBattleMetrics">
+          <div className="fieldBattleMetric"><span>经营方案</span><strong>{hasCurrentPlan ? currentPlanText : "未初始化"}</strong></div>
+          <div className="fieldBattleMetric"><span>设备绑定</span><strong>{hasBoundDevice ? "已绑定" : "未绑定"}</strong></div>
+          <div className="fieldBattleMetric"><span>设备在线</span><strong>{hasOnlineDevice ? "在线" : "离线/未知"}</strong></div>
+          <div className="fieldBattleMetric"><span>首条遥测</span><strong>{hasTelemetry ? "已接收" : "未接收"}</strong></div>
+        </div>
+        <div className="operationsSummaryActions">
+          <Link className="btn" to="/programs">查看方案列表</Link>
+          <Link className="btn" to={hasCurrentPlan ? programHref : `/programs/create?field_id=${encodeURIComponent(fieldId)}`}>{hasCurrentPlan ? "查看当前方案" : "创建经营方案"}</Link>
+          <Link className="btn" to="/devices">查看设备中心</Link>
+        </div>
       </section>
     </div>
   );
