@@ -154,6 +154,8 @@ export type OperationDetailPageVm = {
     chemicalCostLabel: string;
     totalCostLabel: string;
   };
+  pageSections?: Array<{ key: string; title: string }>;
+  nextStepHint?: string;
 };
 
 function toText(v: unknown, fallback = "-"): string {
@@ -722,6 +724,19 @@ export function buildOperationDetailViewModel(args?: {
   const customerViewFallback = customerViewFallbackByStage(customerViewStage);
   const customerRiskLevel = String(safeDetail?.customer_view?.risk_level ?? customerViewFallback.riskLevel).toLowerCase();
   const normalizedCustomerRiskLevel: "low" | "medium" | "high" = customerRiskLevel === "high" ? "high" : customerRiskLevel === "medium" ? "medium" : customerViewFallback.riskLevel;
+  const pageSections = [
+    { key: "header", title: "作业头部" },
+    { key: "decision", title: "决策依据" },
+    { key: "execution", title: "执行过程" },
+    { key: "evidence", title: "证据与验收" },
+    { key: "impact", title: "价值影响" },
+    { key: "audit", title: "审计附录" },
+  ];
+  const nextStepHint = !receipt
+    ? "缺少证据：建议刷新状态或查看设备/回执。"
+    : acceptanceStatus === "PENDING"
+      ? "验收待完成：请继续跟进约束校验。"
+      : "作业闭环已完成，可进入复盘。";
 
   return {
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
@@ -852,5 +867,7 @@ export function buildOperationDetailViewModel(args?: {
       riskLevelLabel: mapRiskLevelLabel(normalizedCustomerRiskLevel),
     },
     cost,
+    pageSections,
+    nextStepHint,
   };
 }

@@ -13,6 +13,7 @@ import ExportJobsPage from "../views/ExportJobsPage";
 import CommercialDashboardPage from "../views/CommercialDashboardPage";
 import DevToolsPage from "../views/DevToolsPage";
 import FieldsPage from "../views/FieldsPage";
+import FieldCreatePage from "../views/FieldCreatePage";
 import FieldDetailPage from "../views/FieldDetailPage";
 import DevicesPage from "../views/DevicesPage";
 import DeviceDetailPage from "../views/DeviceDetailPage";
@@ -26,21 +27,21 @@ import SettingsPage from "../views/SettingsPage";
 import ProgramListPage from "../views/ProgramListPage";
 import ProgramDetailPage from "../views/ProgramDetailPage";
 import ProgramNewPage from "../views/ProgramNewPage";
+import ProgramCreatePage from "../views/ProgramCreatePage";
 import HumanAssignmentsPage from "../views/HumanAssignmentsPage";
 import HumanAssignmentDetailPage from "../views/HumanAssignmentDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
 import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
-
-type BreadcrumbItem = {
-  label: string;
-  to?: string;
-};
+import AppShell from "../components/layout/AppShell";
+import AppNav from "../components/layout/AppNav";
+import AppBreadcrumb, { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "总览";
-  if (pathname.startsWith("/delivery/export-jobs")) return "证据中心";
+  if (pathname.startsWith("/delivery/export-jobs")) return "报告中心";
   if (pathname === "/fields") return "田块与 GIS";
+  if (pathname === "/fields/new") return "新建田块";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备中心";
   if (pathname === "/devices/onboarding") return "设备接入向导";
@@ -50,6 +51,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
   if (pathname.startsWith("/human-assignments")) return "人工执行";
   if (pathname === "/programs") return "经营方案";
+  if (pathname === "/programs/create") return "初始化经营";
   if (pathname === "/programs/new") return "新建经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
@@ -64,6 +66,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "一眼查看经营方案运行态、待执行动作、证据状态与风险摘要。";
   if (pathname.startsWith("/delivery/export-jobs")) return "统一查看证据导出、回执追踪与完整性提示。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行最小产品化管理。";
+  if (pathname === "/fields/new") return "创建田块并开始开局链路。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
@@ -73,6 +76,7 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
   if (pathname.startsWith("/human-assignments")) return "按状态处理人工任务，完成接单、执行与提交。";
   if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
+  if (pathname === "/programs/create") return "通过模板快速初始化经营方案。";
   if (pathname === "/programs/new") return "创建新的经营方案，补齐 field/season/crop 上下文。";
   if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "查看农业建议、证据引用、规则命中与审批前状态。";
@@ -85,8 +89,9 @@ function leadForPath(pathname: string): string {
 
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "总览" }];
-  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
+  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "报告" }, { label: "报告详情" }];
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
+  if (pathname === "/fields/new") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "新建田块" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心" }];
   if (pathname === "/devices/onboarding") return [{ label: "总览", to: "/dashboard" }, { label: "设备中心", to: "/devices" }, { label: "设备接入向导" }];
@@ -96,6 +101,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/human-assignments/")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
   if (pathname.startsWith("/human-assignments")) return [{ label: "总览", to: "/dashboard" }, { label: "人工执行" }];
   if (pathname === "/programs") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案" }];
+  if (pathname === "/programs/create") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "初始化经营" }];
   if (pathname === "/programs/new") return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "新建" }];
   if (pathname.startsWith("/programs/")) return [{ label: "总览", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
   if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "总览", to: "/dashboard" }, { label: "农业建议" }];
@@ -105,17 +111,16 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/dev")) return [{ label: "总览", to: "/dashboard" }, { label: "研发工具" }];
   return [{ label: "总览", to: "/dashboard" }, { label: "控制台" }];
 }
+type BreadcrumbItem = AppBreadcrumbItem;
 
-function SidebarLink({ to, label }: { to: string; label: string }): React.ReactElement {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => `sideLink ${isActive ? "active" : ""}`}
-      end={to === "/" || to === "/dashboard"}
-    >
-      {label}
-    </NavLink>
-  );
+function primaryActionForPath(pathname: string): { label: string; to: string } {
+  if (pathname === "/" || pathname === "/dashboard") return { label: "新建田块", to: "/fields/new" };
+  if (pathname.startsWith("/fields")) return { label: "新建田块", to: "/fields/new" };
+  if (pathname.startsWith("/operations")) return { label: "查看待处理建议", to: "/agronomy/recommendations" };
+  if (pathname.startsWith("/programs")) return { label: "初始化经营", to: "/programs/create" };
+  if (pathname.startsWith("/delivery/export-jobs")) return { label: "查看最近作业", to: "/operations" };
+  if (pathname.startsWith("/devices")) return { label: "接入设备", to: "/devices/onboarding" };
+  return { label: "返回总览", to: "/dashboard" };
 }
 
 function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: () => void }): React.ReactElement {
@@ -124,6 +129,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   const pageTitle = titleForPath(pathname);
   const pageLead = leadForPath(pathname);
   const crumbs = breadcrumbsForPath(pathname);
+  const primaryAction = primaryActionForPath(pathname);
   const [session, setSession] = React.useState<AuthMe | null>(null);
 
     React.useEffect(() => {
@@ -131,69 +137,31 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   }, [location.pathname]);
 
   return (
-    <div className="consoleShell">
-      <aside className="sidebar card">
-        <div className="sidebarBrand">
-          <div className="brandMark">G</div>
-          <div>
-            <div className="brandName">GEOX</div>
-            <div className="brandSub">农业运营控制台</div>
-          </div>
-        </div>
-
-        <div className="sideGroupTitle">业务导航</div>
-        <nav className="sideNav">
-          <SidebarLink to="/dashboard" label="监控台" />
-          <SidebarLink to="/fields" label="田块与 GIS" />
-          <SidebarLink to="/devices" label="设备中心" />
-          <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/operations" label="作业中心" />
-          <SidebarLink to="/human-assignments" label="人工执行" />
-          <SidebarLink to="/programs" label="经营方案" />
-          <SidebarLink to="/agronomy/recommendations" label="农业建议" />
-          <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/delivery/export-jobs" label="证据中心" />
-          <SidebarLink to="/settings" label="系统设置" />
-        </nav>
-
-        {expert ? (
-          <>
-            <div className="sideGroupTitle">研发工具</div>
-            <nav className="sideNav">
-              <SidebarLink to="/dev" label="研发工具首页" />
-            </nav>
-          </>
-        ) : null}
-      </aside>
-
-      <main className="consoleMain">
+    <AppShell
+      nav={<AppNav expert={expert} />}
+      header={(
         <header className="consoleHeader card">
           <div>
             <div className="eyebrow">GEOX / 远程农业运营控制台</div>
-            <div className="breadcrumbBar">
-              {crumbs.map((crumb, index) => (
-                <React.Fragment key={`${crumb.label}_${index}`}>
-                  {crumb.to ? <NavLink className="breadcrumbLink" to={crumb.to}>{crumb.label}</NavLink> : <span className="breadcrumbCurrent">{crumb.label}</span>}
-                  {index < crumbs.length - 1 ? <span className="breadcrumbSep">/</span> : null}
-                </React.Fragment>
-              ))}
-            </div>
+            <AppBreadcrumb items={crumbs} />
             <h1 className="pageTitle">{pageTitle}</h1>
             <div className="pageLead">{pageLead}</div>
           </div>
           <div className="headerActions">
+            <NavLink className="btn primary" to={primaryAction.to}>{primaryAction.label}</NavLink>
             <div className="pill">{session?.role === "operator" ? "操作员" : session?.role === "admin" ? "管理员" : "未识别会话"}</div>
             {expert ? <NavLink className="btn" to="/dev">研发工具</NavLink> : null}
             <button className="btn" onClick={onToggleExpert}>{expert ? "研发模式：开启" : "研发模式：关闭"}</button>
           </div>
         </header>
-
-        <div className="consoleContent">
-          <Routes>
+      )}
+    >
+      <Routes>
             <Route path="/" element={<CommercialDashboardPage expert={expert} />} />
             <Route path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />
             <Route path="/delivery/export-jobs" element={<ExportJobsPage />} />
             <Route path="/fields" element={<FieldsPage />} />
+            <Route path="/fields/new" element={<FieldCreatePage />} />
             <Route path="/fields/:fieldId" element={<FieldDetailPage />} />
             <Route path="/devices" element={<DevicesPage />} />
             <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
@@ -203,6 +171,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/human-assignments" element={<HumanAssignmentsPage />} />
             <Route path="/human-assignments/:assignmentId" element={<HumanAssignmentDetailPage />} />
             <Route path="/programs" element={<ProgramListPage />} />
+            <Route path="/programs/create" element={<ProgramCreatePage />} />
             <Route path="/programs/new" element={<ProgramNewPage />} />
             <Route path="/programs/:programId" element={<ProgramDetailPage />} />
             <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />
@@ -228,10 +197,8 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/admin/import" element={<AdminImportPage />} />
             <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
             <Route path="/control/approvals" element={<ApprovalRequestsPage />} />
-          </Routes>
-        </div>
-      </main>
-    </div>
+      </Routes>
+    </AppShell>
   );
 }
 

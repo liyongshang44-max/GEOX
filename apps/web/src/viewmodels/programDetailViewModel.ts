@@ -80,6 +80,11 @@ export type ProgramConsoleViewModel = {
     latestRecommendationLabel: string;
     latestEffectVerdictLabel: string;
   };
+  goalCard: { objective: string; stageGoal: string; expectedWindow: string; deviationHint: string };
+  progressCard: { stage: string; latestAction: string; currentTask: string; deviation: string };
+  strategyCard: { crop: string; stage: string; primaryRule: string; recommendation: string };
+  impactCard: { latestResult: string; evidenceAt: string; impactSummary: string; nextStep: string };
+  returnPath: string;
   timeline: Array<{
     ts: number;
     label: string;
@@ -450,6 +455,9 @@ export function buildProgramDetailViewModel(args: {
     ?? latestOperation?.effect_verdict
     ?? latestOperation?.actual_effect?.verdict
   );
+  const deviationText = activeRules.some((rule) => rule.priorityLabel === "高")
+    ? "当前存在高优先级偏差，建议优先处理。"
+    : "当前未出现明显偏差，可继续按策略推进。";
 
   return {
     title: `${displayTitle}` ,
@@ -518,6 +526,31 @@ export function buildProgramDetailViewModel(args: {
       latestRecommendationLabel,
       latestEffectVerdictLabel,
     },
+    goalCard: {
+      objective: `${cropName}阶段目标：${stageGoal}`,
+      stageGoal,
+      expectedWindow: mapProgramStage({ ops, controlPlane, detail }) === "执行中" ? "当前处于执行窗口" : "当前处于决策/准备窗口",
+      deviationHint: deviationText,
+    },
+    progressCard: {
+      stage: mapProgramStage({ ops, controlPlane, detail }),
+      latestAction: latestTimelineItem ? `${formatDateTime(latestTimelineItem.ts)} ${latestTimelineItem.label}` : "暂无最近动作",
+      currentTask: currentTask || "暂无执行任务",
+      deviation: deviationText,
+    },
+    strategyCard: {
+      crop: cropName,
+      stage: cropStageDisplayLabel(cropStage),
+      primaryRule: primaryRuleLabel,
+      recommendation: latestRecommendationLabel,
+    },
+    impactCard: {
+      latestResult: latestEffectVerdictLabel,
+      evidenceAt: formatDateTime(latestEvidenceRaw?.occurred_at || latestEvidenceRaw?.execution_finished_at, "暂无证据时间"),
+      impactSummary: latestEvidenceVm?.statusLabel || "最近影响为空",
+      nextStep: latestEvidenceVm ? "继续观察下一轮执行与效果变化。" : "请先生成执行并回传证据。",
+    },
+    returnPath: "/programs",
     timeline,
   };
 }
