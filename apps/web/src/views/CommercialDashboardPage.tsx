@@ -508,10 +508,6 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     return "/operations?status=pending&priority=general_reminder&from=today_priority";
   };
 
-  const acceptanceTasks = d.evidences
-    .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
-    .slice(0, 4);
-
   const latestMetrics = (smartRecommendations.latest as any)?.normalized_metrics ?? {};
   const fieldCount = Number(d.overview.fieldCount ?? 0);
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
@@ -593,9 +589,10 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       />
 
       <EvidenceOutcome
-        acceptanceTasks={acceptanceTasks}
+        evidenceItems={d.evidences}
         smartRecommendations={smartRecommendations}
         latestMetrics={latestMetrics}
+        loadError={error}
       />
     </div>
   );
