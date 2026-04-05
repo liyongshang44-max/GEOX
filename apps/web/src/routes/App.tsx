@@ -32,15 +32,13 @@ import HumanAssignmentDetailPage from "../views/HumanAssignmentDetailPage";
 import { fetchAuthMe, type AuthMe } from "../api";
 import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
-
-type BreadcrumbItem = {
-  label: string;
-  to?: string;
-};
+import AppShell from "../components/layout/AppShell";
+import AppNav from "../components/layout/AppNav";
+import AppBreadcrumb, { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "总览";
-  if (pathname.startsWith("/delivery/export-jobs")) return "证据中心";
+  if (pathname.startsWith("/delivery/export-jobs")) return "报告中心";
   if (pathname === "/fields") return "田块与 GIS";
   if (pathname === "/fields/new") return "新建田块";
   if (pathname.startsWith("/fields/")) return "田块详情";
@@ -88,7 +86,7 @@ function leadForPath(pathname: string): string {
 
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "总览" }];
-  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "证据中心" }];
+  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "总览", to: "/dashboard" }, { label: "报告" }, { label: "报告详情" }];
   if (pathname === "/fields") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS" }];
   if (pathname === "/fields/new") return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "新建田块" }];
   if (pathname.startsWith("/fields/")) return [{ label: "总览", to: "/dashboard" }, { label: "田块与 GIS", to: "/fields" }, { label: "田块详情" }];
@@ -109,17 +107,16 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/dev")) return [{ label: "总览", to: "/dashboard" }, { label: "研发工具" }];
   return [{ label: "总览", to: "/dashboard" }, { label: "控制台" }];
 }
+type BreadcrumbItem = AppBreadcrumbItem;
 
-function SidebarLink({ to, label }: { to: string; label: string }): React.ReactElement {
-  return (
-    <NavLink
-      to={to}
-      className={({ isActive }) => `sideLink ${isActive ? "active" : ""}`}
-      end={to === "/" || to === "/dashboard"}
-    >
-      {label}
-    </NavLink>
-  );
+function primaryActionForPath(pathname: string): { label: string; to: string } {
+  if (pathname === "/" || pathname === "/dashboard") return { label: "新建田块", to: "/fields/new" };
+  if (pathname.startsWith("/fields")) return { label: "新建田块", to: "/fields/new" };
+  if (pathname.startsWith("/operations")) return { label: "查看待处理建议", to: "/agronomy/recommendations" };
+  if (pathname.startsWith("/programs")) return { label: "创建经营方案", to: "/programs/new" };
+  if (pathname.startsWith("/delivery/export-jobs")) return { label: "查看最近作业", to: "/operations" };
+  if (pathname.startsWith("/devices")) return { label: "接入设备", to: "/devices/onboarding" };
+  return { label: "返回总览", to: "/dashboard" };
 }
 
 function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: () => void }): React.ReactElement {
@@ -128,6 +125,7 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   const pageTitle = titleForPath(pathname);
   const pageLead = leadForPath(pathname);
   const crumbs = breadcrumbsForPath(pathname);
+  const primaryAction = primaryActionForPath(pathname);
   const [session, setSession] = React.useState<AuthMe | null>(null);
 
     React.useEffect(() => {
@@ -135,69 +133,26 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
   }, [location.pathname]);
 
   return (
-    <div className="consoleShell">
-      <aside className="sidebar card">
-        <div className="sidebarBrand">
-          <div className="brandMark">G</div>
-          <div>
-            <div className="brandName">GEOX</div>
-            <div className="brandSub">农业运营控制台</div>
-          </div>
-        </div>
-
-        <div className="sideGroupTitle">业务导航</div>
-        <nav className="sideNav">
-          <SidebarLink to="/dashboard" label="总览" />
-          <SidebarLink to="/fields" label="田块" />
-          <SidebarLink to="/operations" label="作业" />
-          <SidebarLink to="/programs" label="方案" />
-          <SidebarLink to="/delivery/export-jobs" label="报告" />
-          <SidebarLink to="/devices" label="设备" />
-        </nav>
-
-        <div className="sideGroupTitle">运营扩展</div>
-        <nav className="sideNav">
-          <SidebarLink to="/devices/onboarding" label="设备接入向导" />
-          <SidebarLink to="/human-assignments" label="人工执行" />
-          <SidebarLink to="/agronomy/recommendations" label="农业建议" />
-          <SidebarLink to="/alerts" label="告警中心" />
-          <SidebarLink to="/settings" label="系统设置" />
-        </nav>
-
-        {expert ? (
-          <>
-            <div className="sideGroupTitle">研发工具</div>
-            <nav className="sideNav">
-              <SidebarLink to="/dev" label="研发工具首页" />
-            </nav>
-          </>
-        ) : null}
-      </aside>
-
-      <main className="consoleMain">
+    <AppShell
+      nav={<AppNav expert={expert} />}
+      header={(
         <header className="consoleHeader card">
           <div>
             <div className="eyebrow">GEOX / 远程农业运营控制台</div>
-            <div className="breadcrumbBar">
-              {crumbs.map((crumb, index) => (
-                <React.Fragment key={`${crumb.label}_${index}`}>
-                  {crumb.to ? <NavLink className="breadcrumbLink" to={crumb.to}>{crumb.label}</NavLink> : <span className="breadcrumbCurrent">{crumb.label}</span>}
-                  {index < crumbs.length - 1 ? <span className="breadcrumbSep">/</span> : null}
-                </React.Fragment>
-              ))}
-            </div>
+            <AppBreadcrumb items={crumbs} />
             <h1 className="pageTitle">{pageTitle}</h1>
             <div className="pageLead">{pageLead}</div>
           </div>
           <div className="headerActions">
+            <NavLink className="btn primary" to={primaryAction.to}>{primaryAction.label}</NavLink>
             <div className="pill">{session?.role === "operator" ? "操作员" : session?.role === "admin" ? "管理员" : "未识别会话"}</div>
             {expert ? <NavLink className="btn" to="/dev">研发工具</NavLink> : null}
             <button className="btn" onClick={onToggleExpert}>{expert ? "研发模式：开启" : "研发模式：关闭"}</button>
           </div>
         </header>
-
-        <div className="consoleContent">
-          <Routes>
+      )}
+    >
+      <Routes>
             <Route path="/" element={<CommercialDashboardPage expert={expert} />} />
             <Route path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />
             <Route path="/delivery/export-jobs" element={<ExportJobsPage />} />
@@ -237,10 +192,8 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
             <Route path="/admin/import" element={<AdminImportPage />} />
             <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
             <Route path="/control/approvals" element={<ApprovalRequestsPage />} />
-          </Routes>
-        </div>
-      </main>
-    </div>
+      </Routes>
+    </AppShell>
   );
 }
 
