@@ -20,9 +20,9 @@ function fieldLabel(item: any): string {
 
 function stageLabel(item: any): string {
   const status = String(item?.status || "").toUpperCase();
-  if (status.includes("FAILED") || status.includes("ERROR")) return "偏差风险";
+  if (status.includes("FAILED") || status.includes("ERROR")) return "偏差已出现";
   if (status.includes("PENDING") || status.includes("APPROVAL")) return "待推进";
-  return "推进中";
+  return "稳定推进";
 }
 
 function objectiveLabel(item: any): string {
@@ -79,7 +79,7 @@ export default function ProgramListPage(): React.ReactElement {
 
               <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">关联田块</span><strong>{fieldLabel(p)}</strong></div>
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">阶段偏差</span><strong>{stageLabel(p) === "偏差风险" ? "存在偏差，需处理" : "暂无明显偏差"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">阶段偏差</span><strong>{stageLabel(p) === "偏差已出现" ? "存在偏差，需处理" : "暂无明显偏差"}</strong></div>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近影响</span><strong>{impactLabel(p)}</strong></div>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近更新</span><strong><RelativeTime value={p?.updated_at || p?.updated_ts_ms} /></strong></div>
               </div>

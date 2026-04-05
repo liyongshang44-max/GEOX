@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import ErrorState from "../components/common/ErrorState";
 import EmptyState from "../components/common/EmptyState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
@@ -15,6 +15,7 @@ function tone(status: "ok" | "risk" | "error" | "running"): string {
 
 export default function ProgramDetailPage(): React.ReactElement {
   const { programId = "" } = useParams();
+  const [searchParams] = useSearchParams();
   const { loading, error, viewModel, reload } = useProgramDetail(programId);
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
@@ -73,6 +74,7 @@ export default function ProgramDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">目标</div><div className="decisionItemMeta">{viewModel.goalCard.objective}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">阶段目标</div><div className="decisionItemMeta">{viewModel.goalCard.stageGoal}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">当前窗口</div><div className="decisionItemMeta">{viewModel.goalCard.expectedWindow}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">目标偏差</div><div className="decisionItemMeta">{viewModel.goalCard.deviationHint}</div></div>
           </div>
         </article>
 
@@ -109,6 +111,11 @@ export default function ProgramDetailPage(): React.ReactElement {
       </section>
 
       <section className="card detailHeroCard" style={{ marginTop: 12 }}>
+        {searchParams.get("created") === "1" ? (
+          <div className="programReturnBanner">
+            Program 已创建成功。建议按“方案页 → 田块页 → 作业页”路径持续推进经营闭环。
+          </div>
+        ) : null}
         <div className="sectionTitle">返回路径</div>
         <div className="operationsSummaryActions" style={{ marginTop: 8 }}>
           <Link className="btn" to={fieldHref}>查看关联田块</Link>
