@@ -1,7 +1,7 @@
 import React from "react";
 import { useSession } from "../auth/useSession";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchDevices, type DeviceListItem } from "../lib/api";
+import { useDevicesListQuery } from "../features/devices/queries/useDevicesListQuery";
 import { bindDeviceToField } from "../api/devices";
 import StatusBadge from "../components/common/StatusBadge";
 import EmptyState from "../components/common/EmptyState";
@@ -12,33 +12,34 @@ import { normalizeStatusWord } from "../lib/statusVocabulary";
 export default function DevicesPage(): React.ReactElement {
   const navigate = useNavigate();
   const { token, setToken } = useSession();
-  const [items, setItems] = React.useState<DeviceListItem[]>([]);
   const [status, setStatus] = React.useState<string>("正在准备设备中心...");
-  const [busy, setBusy] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [onlineFilter, setOnlineFilter] = React.useState<"ALL" | "ONLINE" | "OFFLINE">("ALL");
   const [boundFilter, setBoundFilter] = React.useState<"ALL" | "BOUND" | "UNBOUND">("ALL");
   const [receiptFilter, setReceiptFilter] = React.useState<"ALL" | "HAS" | "NONE">("ALL");
   const [bindForm, setBindForm] = React.useState({ device_id: "", field_id: "" });
   const [bindMsg, setBindMsg] = React.useState("");
 
+  const {
+    data: items = [],
+    isFetching: busy,
+    isError,
+    error,
+    refetch,
+  } = useDevicesListQuery(token);
+
   async function refresh(): Promise<void> {
-    setBusy(true);
-    setError(null);
     setStatus("正在读取设备列表...");
-    try {
-      const nextItems = await fetchDevices(token);
-      setItems(nextItems);
-      setStatus(`已加载 ${nextItems.length} 台设备。`);
-    } catch (e: any) {
-      setError("设备列表加载失败，请稍后重试");
-      setStatus(`读取失败：${e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
+    const res = await refetch();
+    if (res.error) {
+      setStatus(`读取失败：${(res.error as Error)?.message || String(res.error)}`);
+      return;
     }
+    setStatus(`已加载 ${res.data?.length ?? 0} 台设备。`);
   }
 
-  React.useEffect(() => { void refresh(); }, []);
+  React.useEffect(() => {
+    setStatus(busy ? "正在读取设备列表..." : `已加载 ${items.length} 台设备。`);
+  }, [busy, items.length]);
 
   const filtered = items.filter((item) => {
     if (onlineFilter !== "ALL") {
@@ -91,7 +92,7 @@ export default function DevicesPage(): React.ReactElement {
         </div>
       </section>
 
-      {error ? <ErrorState title="设备中心加载失败" message={error} onRetry={() => void refresh()} technical={status} /> : null}
+      {isError ? <ErrorState title="设备中心加载失败" message={(error as Error)?.message || "设备列表加载失败，请稍后重试"} onRetry={() => void refresh()} technical={status} /> : null}
 
       <div className="summaryGrid">
         <div className="metricCard card"><div className="metricLabel">设备总数</div><div className="metricValue">{items.length}</div><div className="metricHint">当前租户已注册设备</div></div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
 
 export function useOperationDetail(operationPlanId: string): {
@@ -7,40 +8,29 @@ export function useOperationDetail(operationPlanId: string): {
   detail: OperationDetailResponse | null;
   reload: () => Promise<void>;
 } {
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const [detail, setDetail] = React.useState<OperationDetailResponse | null>(null);
-
-  const load = React.useCallback(async () => {
-    const id = decodeURIComponent(operationPlanId || "").trim();
-    if (!id) {
-      setError("缺少 operation_plan_id");
-      setDetail(null);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
+  const id = decodeURIComponent(operationPlanId || "").trim();
+  const query = useQuery({
+    queryKey: ["operations", "detail", id],
+    queryFn: async () => {
+      if (!id) {
+        throw new Error("缺少 operation_plan_id");
+      }
       const item = await fetchOperationDetail(id);
       if (!item) {
-        setDetail(null);
-        setError("未找到该作业详情");
-        return;
+        throw new Error("未找到该作业详情");
       }
-      setDetail(item);
-    } catch {
-      setDetail(null);
-      setError("作业详情加载失败，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
-  }, [operationPlanId]);
+      return item;
+    },
+  });
 
-  React.useEffect(() => {
-    void load();
-  }, [load]);
+  const reload = React.useCallback(async () => {
+    await query.refetch();
+  }, [query]);
 
-  return { loading, error, detail, reload: load };
+  return {
+    loading: query.isLoading,
+    error: query.error ? String((query.error as Error).message || "作业详情加载失败，请稍后重试") : null,
+    detail: query.data ?? null,
+    reload,
+  };
 }
