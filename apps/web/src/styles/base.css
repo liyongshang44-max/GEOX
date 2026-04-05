@@ -1,9 +1,10 @@
 :root{
+  /* Apple-style neutral surfaces */
   --color-bg-canvas: #f5f5f7;
   --color-bg-subtle: #f8fafc;
   --color-bg-surface: #ffffff;
   --color-bg-elevated: #ffffff;
-  --color-bg-overlay: rgba(255,255,255,0.75);
+  --color-bg-overlay: rgba(255,255,255,0.72);
 
   --color-text-primary: #101828;
   --color-text-secondary: #475467;
@@ -16,6 +17,7 @@
   --color-border-strong: #98a2b3;
   --color-border-accent: rgba(15, 23, 42, 0.12);
 
+  /* semantic status tokens */
   --color-status-normal-bg: #ecfdf3;
   --color-status-normal-fg: #067647;
   --color-status-normal-border: #abefc6;
@@ -48,22 +50,33 @@
   --space-7: 28px;
   --space-8: 32px;
 
+  /* radius tokens: detail pages only允许使用这些等级 */
   --radius-sm: 8px;
   --radius-md: 10px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-pill: 999px;
 
+  /* Apple style prefers subtle, low-noise depth */
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
-  --shadow-md: 0 10px 30px rgba(0,0,0,0.08);
-  --shadow-inset-soft: 0 0 0 2px rgba(16, 24, 40, 0.04) inset;
+  --shadow-md: 0 6px 18px rgba(16, 24, 40, 0.08);
+  --shadow-inset-soft: 0 0 0 1px rgba(16, 24, 40, 0.06) inset;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 180ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
 
   --bg: var(--color-bg-canvas);
   --panel: var(--color-bg-surface);
   --text: var(--color-text-primary);
   --muted: var(--color-text-secondary);
   --border: var(--color-border-accent);
-  --shadow: var(--shadow-md);
+  --shadow: var(--shadow-sm);
   --radius: 14px;
 
   --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -90,10 +103,19 @@ button,input,select,textarea{font-family:inherit}
   background: var(--color-bg-surface);
   cursor: pointer;
   font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  transition: background-color var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard);
 }
 .btn.primary{ background:var(--color-text-emphasis); color:var(--color-text-inverse); border-color:var(--color-text-emphasis); }
 .btn.secondary{ background:var(--color-bg-surface); color:var(--color-text-emphasis); border-color:var(--color-border-strong); }
 .btn.weak{ background:transparent; color:var(--muted); border-color:transparent; }
+
+.btn:hover,
+.btn:focus-visible {
+  box-shadow: var(--shadow-sm);
+}
 
 .input,
 .select{
@@ -110,6 +132,7 @@ button,input,select,textarea{font-family:inherit}
   border-radius: var(--radius-pill);
   padding: 2px var(--space-2);
   font-size: 12px;
+  font-weight: var(--font-weight-medium);
   border: 1px solid var(--color-border-default);
   color: var(--color-text-secondary);
   background: var(--color-bg-subtle);

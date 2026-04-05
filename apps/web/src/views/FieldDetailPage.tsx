@@ -13,9 +13,9 @@ import { apiRequestOptional } from "../api/client";
 import { bindDeviceToField } from "../api/devices";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  ok: { color: "#067647", bg: "#ecfdf3", border: "#abefc6" },
-  risk: { color: "#b54708", bg: "#fffaeb", border: "#fedf89" },
-  error: { color: "#b42318", bg: "#fef3f2", border: "#fecdca" },
+  ok: { color: "var(--color-status-normal-fg)", bg: "var(--color-status-normal-bg)", border: "var(--color-status-normal-border)" },
+  risk: { color: "var(--color-status-risk-fg)", bg: "var(--color-status-risk-bg)", border: "var(--color-status-risk-border)" },
+  error: { color: "var(--color-status-failed-fg)", bg: "var(--color-status-failed-bg)", border: "var(--color-status-failed-border)" },
 };
 
 function collectPairs(raw: any, out: Array<[number, number]>): void {

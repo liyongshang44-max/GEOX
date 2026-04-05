@@ -288,7 +288,8 @@
 
 .detailHeroCardV3 {
   border: 1px solid var(--color-border-accent);
-  background: linear-gradient(180deg, var(--color-bg-surface) 0%, var(--color-bg-subtle) 100%);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-sm);
 }
 .detailSummaryGridV3 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -491,31 +492,31 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: var(--font-weight-semibold);
   border: 1px solid transparent;
 }
 .statusPill-danger {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fca5a5;
+  background: var(--color-status-failed-bg);
+  color: var(--color-status-failed-fg);
+  border-color: var(--color-status-failed-border);
 }
 .statusPill-warning {
-  background: #fff7ed;
-  color: #b45309;
-  border-color: #fdba74;
+  background: var(--color-status-partial-bg);
+  color: var(--color-status-partial-fg);
+  border-color: var(--color-status-partial-border);
 }
 .statusPill-pending {
-  background: #fffbeb;
-  color: #92400e;
-  border-color: #fcd34d;
+  background: var(--color-status-risk-bg);
+  color: var(--color-status-risk-fg);
+  border-color: var(--color-status-risk-border);
 }
 .operationWarningBlock {
   margin-top: 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 .operationWarningActions {
   margin-top: 10px;
@@ -524,40 +525,40 @@
   flex-wrap: wrap;
 }
 .operationWarningBlock.danger {
-  background: #fff1f2;
-  border: 1px solid #fda4af;
-  color: #9f1239;
+  background: var(--color-status-failed-bg);
+  border: 1px solid var(--color-status-failed-border);
+  color: var(--color-status-failed-fg);
 }
 .operationWarningBlock.warning {
-  background: #fff7ed;
-  border: 1px solid #fdba74;
-  color: #9a3412;
+  background: var(--color-status-partial-bg);
+  border: 1px solid var(--color-status-partial-border);
+  color: var(--color-status-partial-fg);
 }
 .operationWarningBlock.pending {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #854d0e;
+  background: var(--color-status-risk-bg);
+  border: 1px solid var(--color-status-risk-border);
+  color: var(--color-status-risk-fg);
 }
 .btn.danger {
-  border-color: #f43f5e;
-  background: #e11d48;
-  color: #fff;
+  border-color: var(--color-status-failed-border);
+  background: var(--color-status-failed-bg);
+  color: var(--color-status-failed-fg);
 }
 .btn.warning {
-  border-color: #fb923c;
-  background: #fff7ed;
-  color: #9a3412;
+  border-color: var(--color-status-partial-border);
+  background: var(--color-status-partial-bg);
+  color: var(--color-status-partial-fg);
 }
 .btn.pending {
-  border-color: #facc15;
-  background: #fffbeb;
-  color: #854d0e;
+  border-color: var(--color-status-risk-border);
+  background: var(--color-status-risk-bg);
+  color: var(--color-status-risk-fg);
 }
 .operationFoldModule {
   margin-top: 10px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 12px;
-  background: #fff;
+  border: 1px solid var(--color-border-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
   overflow: hidden;
 }
 .operationFoldModule > summary {
@@ -566,7 +567,7 @@
   padding: 10px 12px;
 }
 .operationFoldBody {
-  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  border-top: 1px solid var(--color-border-subtle);
   padding: 10px;
 }
 @media (max-width: 1100px) {
