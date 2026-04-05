@@ -1,1 +1,24 @@
+.card{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.sectionTitle { font-size: 18px; font-weight: 700; }
+.sectionDesc,
+.detailSectionLead,
+.pageLead,
+.demoHeroSubTitle,
+.muted { color: var(--muted); }
+
 .metricCard .metricValue { font-size: 30px; font-weight: 700; }
+.operationsSummaryMetric,
+.decisionItemStatic,
+.infoCard {
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}

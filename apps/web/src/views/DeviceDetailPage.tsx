@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useSession } from "../auth/useSession";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   bindDeviceToField,
   fetchDeviceControlPlane,
@@ -29,6 +29,7 @@ import {
 import StatusBadge from "../components/common/StatusBadge";
 import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
+import { normalizeStatusWord } from "../lib/statusVocabulary";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
@@ -58,6 +59,7 @@ async function resolveBoundFieldFromFields(token: string, deviceId: string): Pro
 }
 
 export default function DeviceDetailPage(): React.ReactElement {
+  const navigate = useNavigate();
   const { deviceId } = useParams();
   const { token, setToken } = useSession();
   const [detail, setDetail] = React.useState<DeviceDetail | null>(null);
@@ -129,7 +131,13 @@ export default function DeviceDetailPage(): React.ReactElement {
   async function handleBindField(): Promise<void> {
     if (!deviceId || !bindFieldId.trim()) return;
     setBusy(true); setStatus(`正在绑定到田块 ${bindFieldId} ...`);
-    try { await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() }); await refresh(); setStatus(`设备已绑定到田块：${bindFieldId}`); }
+    try {
+      await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() });
+      await refresh();
+      const offline = String(statusObj?.status ?? hero?.status?.code ?? "").toUpperCase() !== "ONLINE";
+      setStatus(`设备已绑定到田块：${bindFieldId}${offline ? "；当前设备离线，建议先校验在线状态" : ""}`);
+      navigate(`/fields/${encodeURIComponent(bindFieldId.trim())}`);
+    }
     catch (e: any) { setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
 
@@ -138,7 +146,9 @@ export default function DeviceDetailPage(): React.ReactElement {
   const boundFieldId = resolvedBoundField.field_id || deviceListItem?.field_id || (detail as any)?.device?.field_id || null;
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
   const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
-  const recentLatest = latest[0]; const statusLabel = hero?.status?.label || statusObj?.status || "-";
+  const recentLatest = latest[0]; const statusLabel = normalizeStatusWord(hero?.status?.label || statusObj?.status || "-");
+  const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
+  const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
 
@@ -153,8 +163,8 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="demoMetricHint">{summaryLead}</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <span className="traceChip traceChipLive">{statusLabel}</span>
-            <Link className="btn" to="/devices">返回设备列表</Link>
+            <span className={`statusWord ${statusLabel === "在线" ? "online" : "offline"}`}>{statusLabel}</span>
+            <Link className="btn secondary" to="/devices">返回设备列表</Link>
             <button className="btn" onClick={() => void refresh()} disabled={busy}>刷新</button>
           </div>
         </div>
@@ -168,6 +178,17 @@ export default function DeviceDetailPage(): React.ReactElement {
           <Link className="btn" to={fieldHref}>查看绑定田块</Link>
           <Link className="btn" to="/operations">查看作业中心</Link>
         </div>
+        <div className="deviceStatusGrid" style={{ marginTop: 12 }}>
+          <div className="deviceStateCard"><div className="deviceStateTitle">在线状态</div><div className="deviceStateValue">{statusLabel}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">绑定状态</div><div className="deviceStateValue">{boundFieldId ? "已完成" : "待处理"}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">首条数据状态</div><div className="deviceStateValue">{firstDataLabel}</div></div>
+        </div>
+        {statusLabel === "离线" ? (
+          <div className="operationsSummaryActions" style={{ marginTop: 8 }}>
+            <Link className="btn secondary" to="/devices/onboarding">离线排查入口</Link>
+            <Link className="btn weak" to="/operations">查看最近作业</Link>
+          </div>
+        ) : null}
       </section>
 
       {error ? <ErrorState title="设备详情暂不可用" message={error} technical={status} onRetry={() => void refresh()} /> : null}
