@@ -340,6 +340,7 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           { type: "INVALID_EXECUTION" as const, count: invalidExecutionCount },
           { type: "PENDING_ACCEPTANCE" as const, count: pendingAcceptanceCount },
           { type: "APPROVAL_REQUIRED" as const, count: approvalRequiredCount },
+          { type: "GENERAL_REMINDER" as const, count: Math.max(runningTaskCount, delayedTaskCount) },
         ];
         const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
         const weeklyOperationIds = (operationStates ?? [])

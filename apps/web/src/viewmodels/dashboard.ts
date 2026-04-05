@@ -71,7 +71,7 @@ export type DashboardVm = {
     humidity: "%";
   };
   todayActions: Array<{
-    type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED";
+    type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED" | "GENERAL_REMINDER";
     count: number;
   }>;
   agronomyRecommendations: Array<{
