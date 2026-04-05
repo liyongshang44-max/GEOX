@@ -26,16 +26,17 @@ export default function AppNav({ expert }: { expert: boolean }): React.ReactElem
 
       <div className="sideGroupTitle">业务导航</div>
       <nav className="sideNav">
-        <SidebarLink to="/dashboard" label="总览" />
+        <SidebarLink to="/dashboard" label="监控台" />
         <SidebarLink to="/fields" label="田块" />
-        <SidebarLink to="/operations" label="作业" />
-        <SidebarLink to="/programs" label="方案" />
-        <SidebarLink to="/delivery/export-jobs" label="报告" />
         <SidebarLink to="/devices" label="设备" />
+        <SidebarLink to="/operations" label="作业" />
+        <SidebarLink to="/programs" label="经营方案" />
+        <SidebarLink to="/audit-export" label="证据中心" />
       </nav>
 
-      <div className="sideGroupTitle">运营扩展</div>
+      <div className="sideGroupTitle">二级入口</div>
       <nav className="sideNav">
+        <SidebarLink to="/delivery/export-jobs" label="导出报告" />
         <SidebarLink to="/devices/onboarding" label="设备接入向导" />
         <SidebarLink to="/human-assignments" label="人工执行" />
         <SidebarLink to="/agronomy/recommendations" label="农业建议" />
