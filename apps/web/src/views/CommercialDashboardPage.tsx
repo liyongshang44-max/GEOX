@@ -241,9 +241,13 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     const fieldCreated = Number(d.overview.fieldCount ?? 0) > 0;
     const boundDevice = Number(deviceSummary.online + deviceSummary.offline) > 0;
     const onlineDevice = Number(deviceSummary.online) > 0;
-    const firstData = smartRecommendations.latest != null;
-    const hasRecommendation = d.decisions.pendingRecommendationCount > 0;
-    const hasOperation = Number(d.overview.todayExecutionCount ?? 0) > 0;
+    const firstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
+    const hasRecommendation = d.decisions.pendingRecommendationCount > 0 || smartRecommendations.latest != null;
+    const hasOperation =
+      Number(d.overview.todayExecutionCount ?? 0) > 0
+      || Number(d.overview.pendingAcceptanceCount ?? 0) > 0
+      || Number(d.execution.runningTaskCount ?? 0) > 0
+      || Number(d.execution.invalidExecutionCount ?? 0) > 0;
     return [
       {
         key: "field",
@@ -255,40 +259,50 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       {
         key: "bind",
         label: "是否已绑定设备",
-        status: boundDevice ? "已完成" : "待完成",
-        actionLabel: boundDevice ? "查看设备" : "去绑定设备",
-        to: "/devices",
+        status: boundDevice ? "已完成" : (fieldCreated ? "待完成" : "待前置完成"),
+        actionLabel: boundDevice ? "查看设备" : (fieldCreated ? "去绑定设备" : "先新建田块"),
+        to: fieldCreated ? "/devices" : "/fields/new",
       },
       {
         key: "online",
         label: "设备是否在线",
-        status: onlineDevice ? "已完成" : "需要处理",
-        actionLabel: "查看设备状态",
-        to: "/devices",
+        status: onlineDevice ? "已完成" : (boundDevice ? "需要处理" : "待前置完成"),
+        actionLabel: boundDevice ? "查看设备状态" : "先绑定设备",
+        to: boundDevice ? "/devices" : "/devices",
       },
       {
         key: "first_data",
         label: "是否收到首条数据",
-        status: firstData ? "已完成" : "等待数据",
-        actionLabel: firstData ? "查看田块状态" : "查看接入说明",
-        to: firstData ? "/fields" : "/devices/onboarding",
+        status: firstData ? "已完成" : (onlineDevice ? "等待数据" : "待前置完成"),
+        actionLabel: firstData ? "查看田块状态" : (onlineDevice ? "查看接入说明" : "先恢复在线"),
+        to: firstData ? "/fields" : (onlineDevice ? "/devices/onboarding" : "/devices"),
       },
       {
         key: "rec",
         label: "是否已有建议",
-        status: hasRecommendation ? "已完成" : "等待数据",
-        actionLabel: "刷新评估",
+        status: hasRecommendation ? "已完成" : (firstData ? "待完成" : "待前置完成"),
+        actionLabel: hasRecommendation ? "查看建议" : (firstData ? "刷新评估" : "先等待首条数据"),
         to: "/agronomy/recommendations",
       },
       {
         key: "op",
         label: "是否已有作业",
-        status: hasOperation ? "已完成" : "待完成",
-        actionLabel: "查看作业",
-        to: "/operations",
+        status: hasOperation ? "已完成" : (hasRecommendation ? "待完成" : "待前置完成"),
+        actionLabel: hasOperation ? "查看作业" : (hasRecommendation ? "创建/查看作业" : "先完成建议评估"),
+        to: hasRecommendation ? "/operations" : "/agronomy/recommendations",
       },
     ];
-  }, [d.decisions.pendingRecommendationCount, d.overview.fieldCount, d.overview.todayExecutionCount, deviceSummary.offline, deviceSummary.online, smartRecommendations.latest]);
+  }, [
+    d.decisions.pendingRecommendationCount,
+    d.execution.invalidExecutionCount,
+    d.execution.runningTaskCount,
+    d.overview.fieldCount,
+    d.overview.pendingAcceptanceCount,
+    d.overview.todayExecutionCount,
+    deviceSummary.offline,
+    deviceSummary.online,
+    smartRecommendations.latest,
+  ]);
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
   const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;

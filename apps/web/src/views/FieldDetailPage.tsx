@@ -112,11 +112,31 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasOperations = Boolean(model?.currentTask || (model?.timeline ?? []).some((item) => item.type === "operation"));
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
-    { label: "是否已绑定设备", status: hasBoundDevice ? "已完成" : "待完成", action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : <Link to="/devices">去绑定设备</Link> },
-    { label: "设备是否在线", status: hasOnlineDevice ? "已完成" : "需要处理", action: <Link to="/devices">查看设备状态</Link> },
-    { label: "是否收到首条数据", status: hasTelemetry ? "已完成" : "等待数据", action: hasTelemetry ? <Link to="/fields">查看田块状态</Link> : <Link to="/devices/onboarding">查看接入说明</Link> },
-    { label: "是否已有建议", status: hasRecommendations ? "已完成" : "等待数据", action: <Link to="/agronomy/recommendations">刷新评估</Link> },
-    { label: "是否已有作业", status: hasOperations ? "已完成" : "待完成", action: <Link to="/operations">查看作业</Link> },
+    {
+      label: "是否已绑定设备",
+      status: hasBoundDevice ? "已完成" : (Boolean(fieldId) ? "待完成" : "待前置完成"),
+      action: hasBoundDevice ? <Link to="/devices">查看已绑定设备</Link> : (Boolean(fieldId) ? <Link to="/devices">去绑定设备</Link> : <Link to="/fields/new">先新建田块</Link>),
+    },
+    {
+      label: "设备是否在线",
+      status: hasOnlineDevice ? "已完成" : (hasBoundDevice ? "需要处理" : "待前置完成"),
+      action: hasBoundDevice ? <Link to="/devices">查看设备状态</Link> : <Link to="/devices">先绑定设备</Link>,
+    },
+    {
+      label: "是否收到首条数据",
+      status: hasTelemetry ? "已完成" : (hasOnlineDevice ? "等待数据" : "待前置完成"),
+      action: hasTelemetry ? <Link to="/fields">查看田块状态</Link> : (hasOnlineDevice ? <Link to="/devices/onboarding">查看接入说明</Link> : <Link to="/devices">先恢复在线</Link>),
+    },
+    {
+      label: "是否已有建议",
+      status: hasRecommendations ? "已完成" : (hasTelemetry ? "待完成" : "待前置完成"),
+      action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link>,
+    },
+    {
+      label: "是否已有作业",
+      status: hasOperations ? "已完成" : (hasRecommendations ? "待完成" : "待前置完成"),
+      action: hasOperations ? <Link to="/operations">查看作业</Link> : (hasRecommendations ? <Link to="/operations">创建/查看作业</Link> : <Link to="/agronomy/recommendations">先完成建议评估</Link>),
+    },
   ];
 
   return (
