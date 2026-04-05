@@ -45,6 +45,294 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
   };
 }
 
+function EmptyStateGuide({
+  fieldCount,
+  deviceCount,
+  hasFirstData,
+}: {
+  fieldCount: number;
+  deviceCount: number;
+  hasFirstData: boolean;
+}): React.ReactElement | null {
+  if (fieldCount < 1) {
+    return (
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">空态引导：无田块</div>
+        <div className="decisionItemMeta">先建田块，再接入设备。</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+          <Link className="btn primary" to="/fields/new">新建田块</Link>
+          <Link className="btn" to="/fields">查看田块列表</Link>
+        </div>
+      </section>
+    );
+  }
+
+  if (deviceCount < 1) {
+    return (
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">空态引导：无设备</div>
+        <div className="decisionItemMeta">绑定设备，开启监测。</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+          <Link className="btn primary" to="/devices/onboarding">去绑定设备</Link>
+          <Link className="btn" to="/devices">设备中心</Link>
+        </div>
+      </section>
+    );
+  }
+
+  if (!hasFirstData) {
+    return (
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">空态引导：无首条数据</div>
+        <div className="decisionItemMeta">设备已接入，等待首条回传。</div>
+        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+          <Link className="btn primary" to="/devices">查看设备状态</Link>
+          <Link className="btn" to="/devices/onboarding">接入说明</Link>
+        </div>
+      </section>
+    );
+  }
+
+  return null;
+}
+
+function OverviewMetrics({
+  expert,
+  sla,
+  totalRevenue,
+  fieldCount,
+  riskFieldCount,
+  todayExecutionCount,
+}: {
+  expert: boolean;
+  sla: SlaSummary;
+  totalRevenue: number;
+  fieldCount: number;
+  riskFieldCount: number;
+  todayExecutionCount: number;
+}): React.ReactElement {
+  return (
+    <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
+      {expert ? (
+        <article className="operationsSummaryMetric card">
+          <span className="operationsSummaryLabel">模式</span>
+          <strong>研发模式</strong>
+        </article>
+      ) : null}
+      <article className="operationsSummaryMetric card">
+        <span className="operationsSummaryLabel">作业成功率</span>
+        <strong>{Math.round((sla.success_rate || 0) * 100)}%</strong>
+      </article>
+      <article className="operationsSummaryMetric card">
+        <span className="operationsSummaryLabel">无效执行率</span>
+        <strong>{Math.round((sla.invalid_execution_rate || 0) * 100)}%</strong>
+      </article>
+      <article className="operationsSummaryMetric card">
+        <span className="operationsSummaryLabel">风险田块</span>
+        <strong>{riskFieldCount} / {fieldCount}</strong>
+      </article>
+      <article className="operationsSummaryMetric card">
+        <span className="operationsSummaryLabel">今日执行</span>
+        <strong>{todayExecutionCount} 次</strong>
+      </article>
+      <article className="operationsSummaryMetric card">
+        <span className="operationsSummaryLabel">累计费用</span>
+        <strong>¥{totalRevenue.toFixed(2)}</strong>
+      </article>
+    </section>
+  );
+}
+
+function TodayPriorityList({
+  todayActions,
+  todayActionHref,
+  todayActionLabel,
+}: {
+  todayActions: Array<{ type: string; count: number }>;
+  todayActionHref: (type: string) => string;
+  todayActionLabel: (type: string, count: number) => string;
+}): React.ReactElement {
+  return (
+    <section className="card" style={{ marginBottom: 12 }}>
+      <div className="sectionTitle">行动优先信息</div>
+      <div className="decisionItemMeta">先清阻断，再推执行。</div>
+      <div className="decisionList" style={{ marginTop: 8 }}>
+        {todayActions.map((item, idx) => (
+          <Link key={`${item.type}_${idx}`} to={todayActionHref(item.type)} className="decisionItemLink">
+            <div className="decisionItemTitle">{idx + 1}. {todayActionLabel(item.type, item.count)}</div>
+            <div className="decisionItemMeta">立即处理</div>
+          </Link>
+        ))}
+        {!todayActions.length ? <EmptyBlock text="今日暂无高优先动作" /> : null}
+      </div>
+      <div style={{ marginTop: 8 }}>
+        <Link className="btn primary" to="/operations?status=pending">进入作业队列</Link>
+      </div>
+    </section>
+  );
+}
+
+function FieldRuntimePanel({
+  fieldCount,
+  normalFieldCount,
+  riskFieldCount,
+  deviceSummary,
+}: {
+  fieldCount: number;
+  normalFieldCount: number;
+  riskFieldCount: number;
+  deviceSummary: { online: number; offline: number; busy: number; low_battery: number };
+}): React.ReactElement {
+  return (
+    <section className="card" style={{ marginBottom: 12 }}>
+      <div className="sectionTitle">FieldRuntimePanel</div>
+      <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+        <article className="operationsSummaryMetric">
+          <span className="operationsSummaryLabel">地块状态</span>
+          <strong>正常 {normalFieldCount} · 风险 {riskFieldCount}</strong>
+        </article>
+        <article className="operationsSummaryMetric">
+          <span className="operationsSummaryLabel">总地块</span>
+          <strong>{fieldCount} 个</strong>
+        </article>
+        <article className="operationsSummaryMetric">
+          <span className="operationsSummaryLabel">设备在线/离线</span>
+          <strong>{deviceSummary.online} / {deviceSummary.offline}</strong>
+        </article>
+        <article className="operationsSummaryMetric">
+          <span className="operationsSummaryLabel">设备忙碌/低电</span>
+          <strong>{deviceSummary.busy} / {deviceSummary.low_battery}</strong>
+        </article>
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+        <Link className="btn primary" to="/fields">查看田块详情</Link>
+        <Link className="btn" to="/devices">查看设备详情</Link>
+      </div>
+    </section>
+  );
+}
+
+function DecisionOperationQueue({
+  topActions,
+  runTopAction,
+  executingActionId,
+  executeFeedback,
+  runningActions,
+}: {
+  topActions: DashboardTopActionItem[];
+  runTopAction: (item: DashboardTopActionItem) => Promise<void>;
+  executingActionId: string | null;
+  executeFeedback: { tone: "success" | "warning" | "neutral"; text: string; operationId?: string } | null;
+  runningActions: Array<{ id: string; href?: string; actionLabel: string; statusLabel?: string; finalStatus: string; occurredAtLabel: string }>;
+}): React.ReactElement {
+  return (
+    <section className="card" style={{ marginBottom: 12 }}>
+      <div className="sectionTitle">DecisionOperationQueue</div>
+      <div className="decisionItemMeta">短链路：决策 → 执行。</div>
+      {executeFeedback ? (
+        <div className={`muted ${executeFeedback.tone === "success" ? "traceChipLive" : executeFeedback.tone === "warning" ? "traceChipWarn" : ""}`} style={{ marginTop: 8, padding: 8 }}>
+          {executeFeedback.text}
+          {executeFeedback.operationId ? (
+            <span style={{ marginLeft: 8 }}>
+              <Link to={`/operations?operation_plan_id=${encodeURIComponent(executeFeedback.operationId)}`}>查看作业详情</Link>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+      <div className="decisionList" style={{ marginTop: 8 }}>
+        {topActions.map((item) => (
+          <div key={item.operation_id} className="decisionItemStatic">
+            <div className="decisionItemTitle">{item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
+            <div className="decisionItemMeta">{item.reason}</div>
+            <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
+              {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
+            </button>
+            <div style={{ marginTop: 8 }}>
+              <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`}>跳转作业详情</Link>
+            </div>
+          </div>
+        ))}
+        {!topActions.length ? <EmptyBlock text="暂无可执行动作" /> : null}
+      </div>
+      <details style={{ marginTop: 10 }}>
+        <summary>历史执行摘要（折叠）</summary>
+        <div className="decisionList" style={{ marginTop: 8 }}>
+          {runningActions.slice(0, 4).map((a) => (
+            <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
+              <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
+              <div className="decisionItemMeta">{buildOperationSummary(a.statusLabel || a.finalStatus, a.actionLabel)}</div>
+              <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
+            </Link>
+          ))}
+          {!runningActions.length ? <EmptyBlock text="暂无执行历史" /> : null}
+        </div>
+      </details>
+      <div style={{ marginTop: 8 }}>
+        <Link className="btn primary" to="/operations">查看全部作业</Link>
+      </div>
+    </section>
+  );
+}
+
+function EvidenceResultPanel({
+  acceptanceTasks,
+  smartRecommendations,
+  latestMetrics,
+}: {
+  acceptanceTasks: any[];
+  smartRecommendations: {
+    todayCount: number;
+    latest: (DashboardRecommendationItem & {
+      normalized_metrics?: { soil_moisture: number | null; temperature: number | null; humidity: number | null };
+    }) | null;
+  };
+  latestMetrics: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null };
+}): React.ReactElement {
+  return (
+    <section className="card" style={{ marginBottom: 12 }}>
+      <div className="sectionTitle">EvidenceResultPanel</div>
+      <div className="decisionItemMeta">证据先过，再进验收。</div>
+      <div className="decisionList" style={{ marginTop: 8 }}>
+        {acceptanceTasks.map((e: any, i: number) => {
+          const card = e?.card || {};
+          return (
+            <Link key={e?.id || i} to={e?.href || card?.href || "/delivery/export-jobs"} className="decisionItemLink">
+              <div className="decisionItemTitle">{mapFieldDisplayName(e?.fieldName, e?.fieldName)}</div>
+              <div className="decisionItemMeta">{card?.constraintCheckLabel || "待验收"} · {card?.waterLabel || "--"}</div>
+            </Link>
+          );
+        })}
+        {acceptanceTasks.length === 0 ? <EmptyBlock text="当前没有待验收任务" /> : null}
+      </div>
+      <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+        <Link className="btn primary" to="/operations?status=done_unaccepted">进入证据验收</Link>
+        <Link className="btn" to="/evidence">查看证据详情</Link>
+      </div>
+      <details style={{ marginTop: 10 }}>
+        <summary>诊断信息（折叠）</summary>
+        <div className="decisionList" style={{ marginTop: 8 }}>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">今日自动建议</div>
+            <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">soil_moisture</div>
+            <div className="decisionItemMeta">{latestMetrics.soil_moisture == null ? "--" : `${Number(latestMetrics.soil_moisture).toFixed(1)}%`}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">temperature</div>
+            <div className="decisionItemMeta">{latestMetrics.temperature == null ? "--" : `${Number(latestMetrics.temperature).toFixed(1)}°C`}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">humidity</div>
+            <div className="decisionItemMeta">{latestMetrics.humidity == null ? "--" : `${Number(latestMetrics.humidity).toFixed(1)}%`}</div>
+          </div>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export default function CommercialDashboardPage({ expert = false }: { expert?: boolean }): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
@@ -70,24 +358,9 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   });
   const [totalRevenue, setTotalRevenue] = React.useState(0);
   const [topActions, setTopActions] = React.useState<DashboardTopActionItem[]>([]);
-  const [trendSummary, setTrendSummary] = React.useState<{ risk: string; effect: string }>({ risk: "NO_DATA", effect: "NO_DATA" });
-  const [opsHealth, setOpsHealth] = React.useState<{
-    failure_distribution: Record<string, number>;
-    retry_distribution: Array<{ attempt_no: number; count: number }>;
-    trace_gap_count: { missing_receipt: number; missing_evidence: number };
-  }>({ failure_distribution: {}, retry_distribution: [], trace_gap_count: { missing_receipt: 0, missing_evidence: 0 } });
   const [deviceSummary, setDeviceSummary] = React.useState({ online: 0, offline: 0, busy: 0, low_battery: 0 });
-  const [opsDefinition, setOpsDefinition] = React.useState({
-    failure_definition: "--",
-    retry_definition: "--",
-    trace_gap_definition: "--",
-    time_window: "7d",
-  });
-  const [customerReport, setCustomerReport] = React.useState<any>(null);
-  const [policySuggestions, setPolicySuggestions] = React.useState<Array<{ rule_id: string; issue: string; recommendation: string; suggested_action?: { action_type: string; target: string; parameters: any } }>>([]);
   const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
   const [executeFeedback, setExecuteFeedback] = React.useState<{ tone: "success" | "warning" | "neutral"; text: string; operationId?: string } | null>(null);
-
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
     todayCount: number;
     latest: (DashboardRecommendationItem & {
@@ -110,30 +383,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     void fetchDashboardOverviewV2().then((res) => {
       if (!mounted || !res) return;
       setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
-      setTrendSummary({
-        risk: String(res.risk_trend ?? "NO_DATA"),
-        effect: String(res.effect_trend ?? "NO_DATA"),
-      });
-      setOpsHealth({
-        failure_distribution: res.ops_health?.failure_distribution ?? {},
-        retry_distribution: Array.isArray(res.ops_health?.retry_distribution) ? res.ops_health?.retry_distribution : [],
-        trace_gap_count: res.ops_health?.trace_gap_count ?? { missing_receipt: 0, missing_evidence: 0 },
-      });
       setDeviceSummary(res.device_status_summary ?? { online: 0, offline: 0, busy: 0, low_battery: 0 });
-      setOpsDefinition(res.ops_definition ?? {
-        failure_definition: "--",
-        retry_definition: "--",
-        trace_gap_definition: "--",
-        time_window: "7d",
-      });
-      setCustomerReport(res.customer_report_v1 ?? null);
-      setPolicySuggestions(Array.isArray(res.policy_suggestion_v1) ? res.policy_suggestion_v1 : []);
     });
     return () => {
       mounted = false;
     };
   }, []);
-
 
   React.useEffect(() => {
     let mounted = true;
@@ -187,34 +442,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     };
   }, []);
 
-
   const runningActions = d.actions.filter((x) => x.finalStatus === "pending" || x.finalStatus === "running");
-  const invalidExecutionTasks = d.actions.filter((x) => x.finalStatus === "invalid");
-  const pendingApprovals = d.risks.filter((item) => item.startsWith("APPROVAL|")).map((item) => item.replace("APPROVAL|", ""));
-  const riskAlerts = d.riskItems;
-  const acceptanceTasks = d.evidences
-    .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
-    .slice(0, 4);
-
-  const overviewPendingAcceptanceCount = Math.max(d.overview.pendingAcceptanceCount, acceptanceTasks.length);
-  const riskLevelCount = riskAlerts.reduce(
-    (acc, item) => {
-      if (item.level === "HIGH") acc.high += 1;
-      else if (item.level === "LOW") acc.low += 1;
-      else acc.medium += 1;
-      return acc;
-    },
-    { high: 0, medium: 0, low: 0 },
-  );
-  const riskSourceCount = riskAlerts.reduce(
-    (acc, item) => {
-      acc[item.source] += 1;
-      return acc;
-    },
-    { 干旱: 0, 病害: 0, 执行缺失: 0 },
-  );
-  const impactFieldCount = new Set(riskAlerts.map((item) => item.fieldId).filter(Boolean)).size || riskAlerts.length;
-
   const priorityOrder: Record<string, number> = {
     INVALID_EXECUTION: 0,
     PENDING_ACCEPTANCE: 1,
@@ -231,104 +459,16 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     if (type === "PENDING_ACCEPTANCE") return "/operations?status=done_unaccepted";
     return "/agronomy/recommendations";
   };
-  const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
-  const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
-  const agronomyValue = d.agronomyValue;
-  const shouldShowOnboarding = Number(d.overview.fieldCount ?? 0) < 1 || Number(deviceSummary.online + deviceSummary.offline) < 1;
-  const hasFieldButNoData = Number(d.overview.fieldCount ?? 0) > 0 && Number(deviceSummary.online + deviceSummary.offline) > 0 && smartRecommendations.latest == null;
-  const hasDataButNoRecommendation = Number(d.overview.fieldCount ?? 0) > 0 && smartRecommendations.latest != null && d.decisions.pendingRecommendationCount < 1;
-  const initChecklist = React.useMemo(() => {
-    const fieldCreated = Number(d.overview.fieldCount ?? 0) > 0;
-    const boundDevice = Number(deviceSummary.online + deviceSummary.offline) > 0;
-    const onlineDevice = Number(deviceSummary.online) > 0;
-    const firstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
-    const hasRecommendation = d.decisions.pendingRecommendationCount > 0 || smartRecommendations.latest != null;
-    const hasOperation =
-      Number(d.overview.todayExecutionCount ?? 0) > 0
-      || Number(d.overview.pendingAcceptanceCount ?? 0) > 0
-      || Number(d.execution.runningTaskCount ?? 0) > 0
-      || Number(d.execution.invalidExecutionCount ?? 0) > 0;
-    return [
-      {
-        key: "field",
-        label: "田块是否已创建",
-        status: fieldCreated ? "已完成" : "待完成",
-        actionLabel: fieldCreated ? "查看田块" : "新建田块",
-        to: fieldCreated ? "/fields" : "/fields/new",
-      },
-      {
-        key: "bind",
-        label: "是否已绑定设备",
-        status: boundDevice ? "已完成" : (fieldCreated ? "待完成" : "待前置完成"),
-        actionLabel: boundDevice ? "查看设备" : (fieldCreated ? "去绑定设备" : "先新建田块"),
-        to: fieldCreated ? "/devices" : "/fields/new",
-      },
-      {
-        key: "online",
-        label: "设备是否在线",
-        status: onlineDevice ? "已完成" : (boundDevice ? "需要处理" : "待前置完成"),
-        actionLabel: boundDevice ? "查看设备状态" : "先绑定设备",
-        to: boundDevice ? "/devices" : "/devices",
-      },
-      {
-        key: "first_data",
-        label: "是否收到首条数据",
-        status: firstData ? "已完成" : (onlineDevice ? "等待数据" : "待前置完成"),
-        actionLabel: firstData ? "查看田块状态" : (onlineDevice ? "查看接入说明" : "先恢复在线"),
-        to: firstData ? "/fields" : (onlineDevice ? "/devices/onboarding" : "/devices"),
-      },
-      {
-        key: "rec",
-        label: "是否已有建议",
-        status: hasRecommendation ? "已完成" : (firstData ? "待完成" : "待前置完成"),
-        actionLabel: hasRecommendation ? "查看建议" : (firstData ? "刷新评估" : "先等待首条数据"),
-        to: "/agronomy/recommendations",
-      },
-      {
-        key: "op",
-        label: "是否已有作业",
-        status: hasOperation ? "已完成" : (hasRecommendation ? "待完成" : "待前置完成"),
-        actionLabel: hasOperation ? "查看作业" : (hasRecommendation ? "创建/查看作业" : "先完成建议评估"),
-        to: hasRecommendation ? "/operations" : "/agronomy/recommendations",
-      },
-    ];
-  }, [
-    d.decisions.pendingRecommendationCount,
-    d.execution.invalidExecutionCount,
-    d.execution.runningTaskCount,
-    d.overview.fieldCount,
-    d.overview.pendingAcceptanceCount,
-    d.overview.todayExecutionCount,
-    deviceSummary.offline,
-    deviceSummary.online,
-    smartRecommendations.latest,
-  ]);
-  const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
-  const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
-  const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;
-  const recommendationFailedCount = agronomyValue.verdictCounts.FAILED;
-  const recommendationNoDataCount = agronomyValue.verdictCounts.NO_DATA;
-  const recommendationSuccessRateLabel = `${Math.round(agronomyValue.successRate * 100)}%`;
+
+  const acceptanceTasks = d.evidences
+    .filter((e) => e.hasReceipt && e.acceptanceVerdict !== "PASS")
+    .slice(0, 4);
 
   const latestMetrics = (smartRecommendations.latest as any)?.normalized_metrics ?? {};
-  const soilMoisture = latestMetrics?.soil_moisture;
-  const temperature = latestMetrics?.temperature;
-  const humidity = latestMetrics?.humidity;
-  const jumpTargets = {
-    decisions: "/operations?status=pending",
-    execution: "/operations?status=running",
-    acceptance: "/operations?status=done_unaccepted",
-  } as const;
-  const toMinuteLabel = (ms: number): string => {
-    const mins = Math.round(Math.max(0, ms) / 60000);
-    return `${mins}分钟`;
-  };
+  const fieldCount = Number(d.overview.fieldCount ?? 0);
+  const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
+  const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
 
-  const onCardClick = (to: string) => (evt: React.MouseEvent<HTMLElement>) => {
-    const target = evt.target as HTMLElement | null;
-    if (target?.closest("a")) return;
-    navigate(to);
-  };
   const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
     if (!item.execution_ready || !item.execution_plan) return;
     setExecutingActionId(item.operation_id);
@@ -348,16 +488,15 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
           operationId: item.operation_id,
         });
       } else {
-        const fallback = res?.fallback_state?.generated ? `，已生成 fallback: ${res?.fallback_action ?? res?.fallback_state?.fallback_plan?.action_type ?? "-"}` : "";
         setExecuteFeedback({
           tone: "warning",
-          text: `执行未完成：${res?.error ?? "UNKNOWN_ERROR"}${fallback}`,
+          text: `执行未完成：${res?.error ?? "UNKNOWN_ERROR"}`,
           operationId: item.operation_id,
         });
       }
-      void fetchDashboardOverviewV2().then((res) => {
-        if (!res) return;
-        setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
+      void fetchDashboardOverviewV2().then((res2) => {
+        if (!res2) return;
+        setTopActions(Array.isArray(res2.top_actions) ? res2.top_actions.slice(0, 3) : []);
       });
     } finally {
       setExecutingActionId(null);
@@ -367,602 +506,48 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   return (
     <div className="productPage demoDashboardPage">
       {error ? <ErrorState title="页面加载失败" message="系统暂时无法获取当前数据，请稍后重试。" onRetry={() => window.location.reload()} secondaryText="返回总览" onSecondary={() => navigate("/dashboard")} /> : null}
-      <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
-        {expert ? (
-          <article className="operationsSummaryMetric card">
-            <span className="operationsSummaryLabel">模式</span>
-            <strong>研发模式</strong>
-          </article>
-        ) : null}
-        <article className="operationsSummaryMetric card">
-          <span className="operationsSummaryLabel">成功率</span>
-          <strong>{Math.round((sla.success_rate || 0) * 100)}%</strong>
-        </article>
-        <article className="operationsSummaryMetric card">
-          <span className="operationsSummaryLabel">执行无效率</span>
-          <strong>{Math.round((sla.invalid_execution_rate || 0) * 100)}%</strong>
-        </article>
-        <article className="operationsSummaryMetric card">
-          <span className="operationsSummaryLabel">累计作业费用</span>
-          <strong>¥{totalRevenue.toFixed(2)}</strong>
-        </article>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">客户四问（经营视角）</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">哪块地有风险</span>
-            <strong>{riskAlerts.length > 0 ? `${riskAlerts[0].fieldId || riskAlerts[0].title}（共${riskAlerts.length}项）` : "当前无高优先风险地块"}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">哪些操作带来收益</span>
-            <strong>{agronomyValue.verdictCounts.SUCCESS > 0 ? `SUCCESS 操作 ${agronomyValue.verdictCounts.SUCCESS} 项` : "暂无可确认收益操作"}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">哪些执行失败</span>
-            <strong>{Math.max(invalidExecutionTasks.length, d.execution.invalidExecutionCount)} 项无效/失败执行</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">SLA 总览</span>
-            <strong>执行成功率 {Math.round((sla.success_rate || 0) * 100)}% · 验收时长 {toMinuteLabel(sla.avg_acceptance_time_ms || 0)}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">待决策（审批）</span>
-            <strong>{d.decisions.pendingApprovalCount} 项待审批</strong>
-          </article>
-        </div>
-        {!riskAlerts.length ? (
-          <div className="decisionItemStatic" style={{ marginTop: 8 }}>
-            <div className="decisionItemTitle">当前风险为空</div>
-            <div className="decisionItemMeta">暂未发现高优先风险田块，系统将持续监测并在异常时提醒。</div>
-          </div>
-        ) : null}
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        {shouldShowOnboarding ? (
-          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
-            <div className="decisionItemTitle">开始配置你的第一块田</div>
-            <div className="decisionItemMeta">先创建田块、接入设备并初始化经营方案，系统才能生成建议与作业。</div>
-            <div className="decisionList" style={{ marginTop: 8 }}>
-              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(d.overview.fieldCount ?? 0) > 0 ? "✅" : "⚪"} 田块已创建</span><Link to={Number(d.overview.fieldCount ?? 0) > 0 ? "/fields" : "/fields/new"}>{Number(d.overview.fieldCount ?? 0) > 0 ? "查看田块" : "去创建"}</Link></div>
-              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "✅" : "⚪"} 设备已接入</span><Link to={Number(deviceSummary.online + deviceSummary.offline) > 0 ? "/devices" : "/devices/onboarding"}>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "查看设备" : "查看接入说明"}</Link></div>
-              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.decisions.pendingRecommendationCount > 0 ? "✅" : "⚪"} 系统建议已生成</span><Link to="/agronomy/recommendations">{d.decisions.pendingRecommendationCount > 0 ? "查看建议" : "刷新评估"}</Link></div>
-              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.overview.todayExecutionCount > 0 ? "✅" : "⚪"} 作业链路已开始</span><Link to="/operations">{d.overview.todayExecutionCount > 0 ? "查看作业" : "查看推荐动作"}</Link></div>
-            </div>
-            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-              <Link className="btn primary" to="/fields/new">新建田块</Link>
-              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
-              <Link className="btn" to="/programs/create">初始化经营</Link>
-            </div>
-          </div>
-        ) : null}
-        {(shouldShowOnboarding || hasFieldButNoData || hasDataButNoRecommendation) ? (
-          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
-            <div className="decisionItemTitle">初始化检查卡</div>
-            <div className="decisionList" style={{ marginTop: 8 }}>
-              {initChecklist.map((item) => (
-                <div key={item.key} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-                  <div>{item.label} · <strong>{item.status}</strong></div>
-                  <Link to={item.to}>{item.actionLabel}</Link>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-        {hasFieldButNoData ? (
-          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
-            <div className="decisionItemTitle">等待首条数据</div>
-            <div className="decisionItemMeta">已存在田块，但还没有可用于评估的首条遥测数据。</div>
-            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-              <Link className="btn" to="/devices">查看设备状态</Link>
-              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
-            </div>
-          </div>
-        ) : null}
-        {hasDataButNoRecommendation ? (
-          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
-            <div className="decisionItemTitle">当前暂无建议</div>
-            <div className="decisionItemMeta">系统将在数据更新后重新评估。</div>
-            <div style={{ marginTop: 8 }}>
-              <Link className="btn" to="/agronomy/recommendations">刷新评估</Link>
-            </div>
-          </div>
-        ) : null}
-        <div className="sectionTitle">全链路操作引导</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 1 决策</span><strong>查看 Top Actions / 客户报告</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 2 执行</span><strong>点击「一键执行」生成任务</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 3 回执</span><strong>进入作业详情查看 attempt/trace/fallback</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 4 复盘</span><strong>回到报告与策略建议闭环</strong></article>
-        </div>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">Top 3 优先动作（后端排序）</div>
-        {executeFeedback ? (
-          <div className={`muted ${executeFeedback.tone === "success" ? "traceChipLive" : executeFeedback.tone === "warning" ? "traceChipWarn" : ""}`} style={{ marginTop: 8, padding: 8 }}>
-            {executeFeedback.text}
-            {executeFeedback.operationId ? (
-              <span style={{ marginLeft: 8 }}>
-                <Link to={`/operations?operation_plan_id=${encodeURIComponent(executeFeedback.operationId)}`}>查看作业详情</Link>
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-        <div className="decisionList" style={{ marginTop: 10 }}>
-          {topActions.map((item) => (
-            <div key={item.operation_id} className="decisionItemStatic">
-              <div className="decisionItemTitle">{item.priority_bucket} · {item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
-              <div className="decisionItemMeta">{item.reason}</div>
-              <div className="muted" style={{ marginTop: 4 }}>{item.recommended_next_action.source} / {item.recommended_next_action.action_type}</div>
-              <div className="muted" style={{ marginTop: 4 }}>
-                {item.execution_ready ? "可执行" : `阻断：${(item.execution_blockers ?? []).join(",") || "未知"}`}
-              </div>
-              <div className="muted" style={{ marginTop: 4 }}>
-                trace: {item.execution_trace?.status ?? "PENDING"} · retry {item.execution_plan?.failure_strategy?.max_retries ?? 0}
-              </div>
-              <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
-                {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
-              </button>
-              <div style={{ marginTop: 8 }}>
-                <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`}>进入该作业全链路详情</Link>
-              </div>
-            </div>
-          ))}
-          {!topActions.length ? <EmptyBlock text="暂无可执行动作，默认建议：CHECK_FIELD_STATUS" /> : null}
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">趋势摘要</div>
-            <div className="decisionItemMeta">风险趋势 {trendSummary.risk} · 效果趋势 {trendSummary.effect}</div>
-          </div>
-        </div>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">运维健康面板（后端口径）</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">设备在线/离线</span>
-            <strong>{deviceSummary.online} / {deviceSummary.offline}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">设备忙碌/低电量</span>
-            <strong>{deviceSummary.busy} / {deviceSummary.low_battery}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">Trace 缺口（回执）</span>
-            <strong>{opsHealth.trace_gap_count.missing_receipt}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">Trace 缺口（证据）</span>
-            <strong>{opsHealth.trace_gap_count.missing_evidence}</strong>
-          </article>
-        </div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">Top失败原因</span>
-            <strong>
-              {Object.entries(opsHealth.failure_distribution)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 3)
-                .map(([k, v]) => `${k}:${v}`)
-                .join(" | ") || "--"}
-            </strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">Retry分布</span>
-            <strong>
-              {opsHealth.retry_distribution.map((x) => `#${x.attempt_no}:${x.count}`).join(" | ") || "--"}
-            </strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">口径窗口</span>
-            <strong>{opsDefinition.time_window}</strong>
-          </article>
-        </div>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">客户报告（可签约结构）</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">报告版本</span>
-            <strong>{String(customerReport?.report_meta?.version ?? "--")}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">租户</span>
-            <strong>{String(customerReport?.report_meta?.tenant_id ?? "--")}</strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">数据窗口</span>
-            <strong>
-              {customerReport?.report_meta?.data_window
-                ? `${new Date(customerReport.report_meta.data_window.start).toLocaleDateString()} ~ ${new Date(customerReport.report_meta.data_window.end).toLocaleDateString()}`
-                : "--"}
-            </strong>
-          </article>
-          <article className="operationsSummaryMetric">
-            <span className="operationsSummaryLabel">生成时间</span>
-            <strong>{customerReport?.report_meta?.generated_at ? new Date(customerReport.report_meta.generated_at).toLocaleString() : "--"}</strong>
-          </article>
-        </div>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">策略优化建议（可执行）</div>
-        <div className="decisionList" style={{ marginTop: 10 }}>
-          {policySuggestions.map((item) => (
-            <div key={item.rule_id} className="decisionItemStatic">
-              <div className="decisionItemTitle">{item.rule_id}</div>
-              <div className="decisionItemMeta">{item.issue}</div>
-              <div className="muted" style={{ marginTop: 4 }}>{item.recommendation}</div>
-              <div className="muted" style={{ marginTop: 4 }}>
-                action: {String(item.suggested_action?.action_type ?? "--")} / target: {String(item.suggested_action?.target ?? "--")}
-              </div>
-            </div>
-          ))}
-          {!policySuggestions.length ? <EmptyBlock text="暂无策略建议" /> : null}
-        </div>
-      </section>
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">农学效果总览</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">本周建议数</span><strong>{weeklyRecommendationCount}</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">SUCCESS</span><strong>{recommendationSuccessCount}</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">PARTIAL</span><strong>{recommendationDeviationCount}</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">FAILED</span><strong>{recommendationFailedCount}</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">NO_DATA</span><strong>{recommendationNoDataCount}</strong></article>
-          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">成功率（success / total）</span><strong>{recommendationSuccessRateLabel}</strong></article>
-        </div>
-      </section>
 
-      <section className="dashboardDecisionBoard">
-        <article className="card decisionColumn success">
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">① 地块状态</div>
-              <div className="sectionDesc">先判断今天地块整体是否“正常 / 风险 / 需关注”。</div>
-            </div>
-            <div className="decisionCount">{d.overview.fieldCount}</div>
-          </div>
-          <div className="decisionList">
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">正常地块</div>
-              <div className="decisionItemMeta">{d.overview.normalFieldCount} 个</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">风险地块</div>
-              <div className="decisionItemMeta">{d.overview.riskFieldCount} 个</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">需关注</div>
-              <div className="decisionItemMeta">{Math.max(0, d.overview.fieldCount - d.overview.normalFieldCount - d.overview.riskFieldCount)} 个</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">地块总数</div>
-              <div className="decisionItemMeta">{d.overview.fieldCount} 个地块</div>
-            </div>
-          </div>
-        </article>
+      <OverviewMetrics
+        expert={expert}
+        sla={sla}
+        totalRevenue={totalRevenue}
+        fieldCount={fieldCount}
+        riskFieldCount={d.overview.riskFieldCount}
+        todayExecutionCount={d.overview.todayExecutionCount}
+      />
 
-        <article className="card decisionColumn danger">
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">② 风险告警</div>
-              <div className="sectionDesc">按严重程度展示，优先处理高风险。</div>
-            </div>
-            <div className="decisionCount">{riskAlerts.length}</div>
-          </div>
-          <div className="decisionList">
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">风险等级（高 / 中 / 低）</div>
-              <div className="decisionItemMeta">{riskLevelCount.high} / {riskLevelCount.medium} / {riskLevelCount.low}</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">风险来源（干旱 / 病害 / 执行缺失）</div>
-              <div className="decisionItemMeta">{riskSourceCount.干旱} / {riskSourceCount.病害} / {riskSourceCount.执行缺失}</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">影响范围</div>
-              <div className="decisionItemMeta">影响 {impactFieldCount} 个地块</div>
-            </div>
-            {riskAlerts.slice(0, 2).map((risk) => (
-              <div key={risk.id} className="decisionItemStatic">
-                <div className="decisionItemTitle">{risk.title}</div>
-                <div className="decisionItemMeta">{risk.source} · {risk.level}</div>
-              </div>
-            ))}
-            {riskAlerts.length === 0 ? <EmptyBlock text="当前没有高优先级风险告警" /> : null}
-          </div>
-        </article>
+      <TodayPriorityList
+        todayActions={todayActions}
+        todayActionHref={todayActionHref}
+        todayActionLabel={todayActionLabel}
+      />
 
-        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.decisions)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.decisions); }}>
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">③ 待审批建议</div>
-              <div className="sectionDesc">明确有哪些建议等待决策。</div>
-            </div>
-            <Link to={jumpTargets.decisions} className="decisionCount">{d.decisions.pendingRecommendationCount + d.decisions.pendingApprovalCount}</Link>
-          </div>
-          <div className="decisionList">
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">待审批建议</div>
-              <div className="decisionItemMeta">建议 {d.decisions.pendingRecommendationCount} 条 · 审批 {d.decisions.pendingApprovalCount} 条</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">指标变化</div>
-              <div className="decisionItemMeta">{indicatorChangeLabel}</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">风险变化</div>
-              <div className="decisionItemMeta">{riskChangeLabel}</div>
-            </div>
-            {pendingApprovals.slice(0, 4).map((item, idx) => (
-              <Link key={`approval_${idx}`} to="/agronomy/recommendations" className="decisionItemLink">
-                <div className="decisionItemTitle">建议待审批</div>
-                <div className="decisionItemMeta">{item}</div>
-              </Link>
-            ))}
-            {pendingApprovals.length === 0 && d.decisions.pendingRecommendationCount === 0 ? <EmptyBlock text="当前没有待审批建议" /> : null}
-          </div>
-        </article>
+      <EmptyStateGuide
+        fieldCount={fieldCount}
+        deviceCount={deviceCount}
+        hasFirstData={hasFirstData}
+      />
 
-        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.execution)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.execution); }}>
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">④ 执行中任务</div>
-              <div className="sectionDesc">现在正在跑的作业，谁在执行、卡在哪。</div>
-            </div>
-            <Link to={jumpTargets.execution} className="decisionCount">{d.execution.runningTaskCount}</Link>
-          </div>
-          <div className="decisionList">
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">执行中任务数</div>
-              <div className="decisionItemMeta">{d.execution.runningTaskCount} 项</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">人工执行 vs 设备执行</div>
-              <div className="decisionItemMeta">{d.execution.humanExecutionCount} / {d.execution.deviceExecutionCount}</div>
-            </div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">延迟任务</div>
-              <div className="decisionItemMeta">{d.execution.delayedTaskCount} 项</div>
-            </div>
-            {runningActions.slice(0, 4).map((a) => (
-              <Link key={a.id} to={a.href || "/operations"} className="decisionItemLink">
-                <div className="decisionItemTitle">{mapOperationActionLabel(a.actionLabel)}</div>
-                <div className="decisionItemMeta">{buildOperationSummary(a.statusLabel || a.finalStatus, a.actionLabel)}</div>
-                <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
-              </Link>
-            ))}
-            {runningActions.length === 0 ? <EmptyBlock text="当前没有执行中的任务" /> : null}
-          </div>
-        </article>
+      <FieldRuntimePanel
+        fieldCount={fieldCount}
+        normalFieldCount={d.overview.normalFieldCount}
+        riskFieldCount={d.overview.riskFieldCount}
+        deviceSummary={deviceSummary}
+      />
 
-        <article className="card decisionColumn warning" role="button" tabIndex={0} onClick={onCardClick(jumpTargets.acceptance)} onKeyDown={(evt) => { if (evt.key === "Enter" || evt.key === " ") navigate(jumpTargets.acceptance); }}>
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">⑤ 待验收任务</div>
-              <div className="sectionDesc">核心商业点：receipt 存在且 acceptance != PASS。</div>
-            </div>
-            <Link to={jumpTargets.acceptance} className="decisionCount">{overviewPendingAcceptanceCount}</Link>
-          </div>
-          <div className="decisionList">
-            {acceptanceTasks.map((e: any, i: number) => {
-              const card = e?.card || {};
-              return (
-                <Link key={e?.id || i} to={e?.href || card?.href || "/delivery/export-jobs"} className="decisionItemLink">
-                  <div className="decisionItemTitle">{mapFieldDisplayName(e?.fieldName, e?.fieldName)}</div>
-                  <div className="decisionItemMeta">{card?.constraintCheckLabel || "待验收"} · {card?.waterLabel || "--"}</div>
-                </Link>
-              );
-            })}
-            {acceptanceTasks.length === 0 ? <EmptyBlock text="当前没有待验收任务" /> : null}
-          </div>
-        </article>
+      <DecisionOperationQueue
+        topActions={topActions}
+        runTopAction={runTopAction}
+        executingActionId={executingActionId}
+        executeFeedback={executeFeedback}
+        runningActions={runningActions}
+      />
 
-        <article className="card decisionColumn danger">
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">⑥ 无效执行任务</div>
-              <div className="sectionDesc">已执行但证据无效，禁止进入验收。</div>
-            </div>
-            <div className="decisionCount">{Math.max(d.execution.invalidExecutionCount, invalidExecutionTasks.length)}</div>
-          </div>
-          <div className="decisionList">
-            {invalidExecutionTasks.slice(0, 4).map((item) => (
-              <Link key={item.id} to={item.href || "/operations"} className="decisionItemLink">
-                <div className="decisionItemTitle">{mapOperationActionLabel(item.actionLabel)}</div>
-                <div className="decisionItemMeta">⚠️ 执行无效：未提供证据，无法完成验收</div>
-              </Link>
-            ))}
-            {invalidExecutionTasks.length === 0 ? <EmptyBlock text="当前没有无效执行任务" /> : null}
-          </div>
-        </article>
-
-        <article className="card decisionColumn">
-          <div className="decisionHeader">
-            <div>
-              <div className="sectionTitle">⑦ 今日关键动作</div>
-              <div className="sectionDesc">按任务清单推进，不再只给提示。</div>
-            </div>
-            <div className="decisionCount">{todayActions.length}</div>
-          </div>
-          <div className="decisionList">
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">今日必须处理：</div>
-            </div>
-            {todayActions.map((item, idx) => (
-              <Link key={`${item.type}_${idx}`} to={todayActionHref(item.type)} className="decisionItemLink">
-                <div className="decisionItemTitle">{idx + 1}. {todayActionLabel(item.type, item.count)}</div>
-              </Link>
-            ))}
-            {!todayActions.length ? <EmptyBlock text="当前没有需要立即处理的动作" /> : null}
-          </div>
-        </article>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">最近作业效果</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">✔ 有效作业</div>
-            <div className="decisionItemMeta">{d.operationEffect.validCount}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">⚠️ 偏差作业</div>
-            <div className="decisionItemMeta">{d.operationEffect.deviationCount}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">❌ 无效执行</div>
-            <div className="decisionItemMeta">{d.operationEffect.invalidCount}</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">指标单位标准化</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">soil_moisture</div>
-            <div className="decisionItemMeta">{d.metricUnits.soil_moisture}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">temperature</div>
-            <div className="decisionItemMeta">{d.metricUnits.temperature}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">humidity</div>
-            <div className="decisionItemMeta">{d.metricUnits.humidity}</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">智能建议</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">今日自动生成</div>
-            <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">最近一条</div>
-            <div className="decisionItemMeta">
-              {smartRecommendations.latest
-                ? `${smartRecommendations.latest.title || "建议灌溉"} / 地块 ${smartRecommendations.latest.field?.field_id || "-"}`
-                : "暂无自动建议"}
-            </div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">soil_moisture（%）</div>
-            <div className="decisionItemMeta">{soilMoisture == null ? "--" : `${Number(soilMoisture).toFixed(1)}%`}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">temperature（°C）</div>
-            <div className="decisionItemMeta">{temperature == null ? "--" : `${Number(temperature).toFixed(1)}°C`}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">humidity（%）</div>
-            <div className="decisionItemMeta">{humidity == null ? "--" : `${Number(humidity).toFixed(1)}%`}</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">农学建议</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          {d.agronomyRecommendations.map((item, idx) => (
-            <div key={`${item.fieldLabel}_${item.actionLabel}_${idx}`} className="decisionItemStatic">
-              <div className="decisionItemTitle">{item.fieldLabel}</div>
-              <div className="decisionItemMeta">
-                {item.cropLabel} / {item.cropStageLabel} · {item.actionLabel} · 优先级 {item.priorityLabel}
-              </div>
-              <div className="muted" style={{ marginTop: 4 }}>{item.summary}</div>
-            </div>
-          ))}
-          {d.agronomyRecommendations.length === 0 ? <EmptyBlock text="暂无最近农学建议" /> : null}
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">当前阶段分布</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          {d.cropStageDistribution.map((item, idx) => (
-            <div key={`${item.cropLabel}_${item.cropStageLabel}_${idx}`} className="decisionItemStatic">
-              <div className="decisionItemTitle">{item.cropLabel}｜{item.cropStageLabel}</div>
-              <div className="decisionItemMeta">{item.fieldCount}块地</div>
-            </div>
-          ))}
-          {d.cropStageDistribution.length === 0 ? <EmptyBlock text="暂无阶段分布数据" /> : null}
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">效果反馈摘要</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">有效建议</div>
-            <div className="decisionItemMeta">{d.effectSummary.effectiveCount}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">部分有效</div>
-            <div className="decisionItemMeta">{d.effectSummary.partialCount}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">无效建议</div>
-            <div className="decisionItemMeta">{d.effectSummary.ineffectiveCount}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">无数据</div>
-            <div className="decisionItemMeta">{d.effectSummary.noDataCount}</div>
-          </div>
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">Top规则</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          {agronomyValue.topRules.length
-            ? agronomyValue.topRules.map((item) => (
-              <div key={`top_rule_${item.ruleId}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">{item.ruleId}</div>
-                <div className="decisionItemMeta">success_rate {Math.round(item.successRate * 100)}% · 触发 {item.triggerCount} 次</div>
-              </div>
-            ))
-            : <EmptyBlock text="暂无规则表现数据" />}
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">风险提示</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          {agronomyValue.riskRules.length
-            ? agronomyValue.riskRules.map((item) => (
-              <div key={`risk_rule_${item.ruleId}`} className="decisionItemStatic">
-                <div className="decisionItemTitle">⚠️ {item.ruleId}</div>
-                <div className="decisionItemMeta">高频触发 {item.triggerCount} 次，但 success_rate 仅 {Math.round(item.successRate * 100)}%</div>
-              </div>
-            ))
-            : <EmptyBlock text="暂无高频低成功率规则" />}
-        </div>
-      </section>
-
-      <section className="card" style={{ marginTop: 16 }}>
-        <div className="sectionTitle">本周服务质量</div>
-        <div className="decisionList" style={{ marginTop: 12 }}>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">作业成功率</div>
-            <div className="decisionItemMeta">{Math.round((sla.success_rate || 0) * 100)}%</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">无效执行率</div>
-            <div className="decisionItemMeta">{Math.round((sla.invalid_execution_rate || 0) * 100)}%</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">平均执行时长</div>
-            <div className="decisionItemMeta">{toMinuteLabel(sla.avg_execution_time_ms)}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">平均验收时长</div>
-            <div className="decisionItemMeta">{toMinuteLabel(sla.avg_acceptance_time_ms)}</div>
-          </div>
-        </div>
-      </section>
+      <EvidenceResultPanel
+        acceptanceTasks={acceptanceTasks}
+        smartRecommendations={smartRecommendations}
+        latestMetrics={latestMetrics}
+      />
     </div>
   );
 }
