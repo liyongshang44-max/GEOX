@@ -517,6 +517,12 @@
   padding: 10px 12px;
   font-weight: 600;
 }
+.operationWarningActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .operationWarningBlock.danger {
   background: #fff1f2;
   border: 1px solid #fda4af;
@@ -530,6 +536,21 @@
 .operationWarningBlock.pending {
   background: #fffbeb;
   border: 1px solid #fcd34d;
+  color: #854d0e;
+}
+.btn.danger {
+  border-color: #f43f5e;
+  background: #e11d48;
+  color: #fff;
+}
+.btn.warning {
+  border-color: #fb923c;
+  background: #fff7ed;
+  color: #9a3412;
+}
+.btn.pending {
+  border-color: #facc15;
+  background: #fffbeb;
   color: #854d0e;
 }
 .operationFoldModule {

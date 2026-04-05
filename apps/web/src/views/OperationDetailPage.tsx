@@ -125,10 +125,10 @@ export default function OperationDetailPage(): React.ReactElement {
       kind: step.key,
       label: step.label,
       status: matched ? matched.status : "PENDING",
-      occurredAtLabel: matched?.occurredAtLabel || "--",
-      actorLabel: matched?.actorLabel || "--",
-      summary: matched?.summary || "等待状态推进",
-      storySummary: matched?.storySummary || "等待状态推进",
+      occurredAtLabel: matched?.occurredAtLabel || "未发生",
+      actorLabel: matched?.actorLabel || "未发生",
+      summary: matched?.summary || "未发生",
+      storySummary: matched?.storySummary || "未发生",
     };
   }).map((item, idx) => ({ ...item, id: `${item.id}-${idx}` }));
 
@@ -176,9 +176,35 @@ export default function OperationDetailPage(): React.ReactElement {
                 {isEvidenceMissing ? <StatusPill tone="warning">证据缺失</StatusPill> : null}
                 {isPendingAcceptance ? <StatusPill tone="pending">待验收</StatusPill> : null}
               </div>
-              {isInvalidExecution ? <div className="operationWarningBlock danger">⚠️ 当前执行结果被判定为无效，请补充正式证据或重新执行。</div> : null}
-              {isEvidenceMissing ? <div className="operationWarningBlock warning">⚠️ 证据链不完整，暂不能完成闭环验收。</div> : null}
-              {isPendingAcceptance ? <div className="operationWarningBlock pending">⚠️ 已进入验收前状态，请尽快完成验收结论。</div> : null}
+              {isInvalidExecution ? (
+                <div className="operationWarningBlock danger">
+                  <div>⚠️ 当前执行结果被判定为无效，请补充正式证据或重新执行。</div>
+                  <div className="operationWarningActions">
+                    <button className="btn danger" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
+                      {executing ? "执行中..." : "立即重试执行"}
+                    </button>
+                    <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+                  </div>
+                </div>
+              ) : null}
+              {isEvidenceMissing ? (
+                <div className="operationWarningBlock warning">
+                  <div>⚠️ 证据链不完整，暂不能完成闭环验收。</div>
+                  <div className="operationWarningActions">
+                    <Link className="btn warning" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>去补证据</Link>
+                    <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+                  </div>
+                </div>
+              ) : null}
+              {isPendingAcceptance ? (
+                <div className="operationWarningBlock pending">
+                  <div>⚠️ 已进入验收前状态，请尽快完成验收结论。</div>
+                  <div className="operationWarningActions">
+                    <Link className="btn pending" to="/operations?status=done_unaccepted">去验收</Link>
+                    <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>查看证据</Link>
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -261,6 +287,9 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{model.acceptance.statusLabel}</strong></div>
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据完整性</span><strong>{isEvidenceMissing ? "缺失" : "完整"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据包状态</span><strong>{model.evidenceExport.bundleStatusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据缺失项</span><strong>{model.acceptance.missingEvidenceLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收摘要</span><strong>{model.acceptance.summary}</strong></div>
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下一步</span><strong>{model.nextStepHint || "按时间线逐项推进"}</strong></div>
           </div>
           <div className="operationAsideActions">
@@ -268,12 +297,21 @@ export default function OperationDetailPage(): React.ReactElement {
               {executing ? "执行中..." : "一键执行"}
             </button>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+            <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
           </div>
         </aside>
       </section>
 
       <section className="card operationEvidenceMain" style={{ marginTop: 12 }}>
-        <div className="sectionTitle">证据与验收</div>
+        <div className="sectionTitle">证据与验收（整合）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收状态</span><strong>{model.acceptance.statusLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据包状态</span><strong>{model.evidenceExport.bundleStatusLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">正式证据</span><strong>{model.evidenceExport.formalEvidenceCount}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">调试证据</span><strong>{model.evidenceExport.debugEvidenceCount}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">缺失项</span><strong>{model.acceptance.missingEvidenceLabel}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收摘要</span><strong>{model.acceptance.summary}</strong></div>
+        </div>
         {model.receiptEvidence ? (
           <div className="demoContentGrid" style={{ marginTop: 10 }}>
             <ReceiptEvidenceCard data={model.receiptEvidence} actionLabel={actionLabel} executorTypeLabel={model.execution.executorTypeLabel} finalStatus={model.finalStatus} />
@@ -284,10 +322,16 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="detailSectionLead" style={{ marginTop: 8 }}>当前缺少完整证据，请先补齐回执后再验收。</div>
             <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn" onClick={() => void reload()}>刷新状态</button>
+              <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>去证据中心</Link>
             </div>
           </>
         )}
-        {acceptanceVerdict === "PENDING" ? <div className="detailSectionLead" style={{ marginTop: 8 }}>验收尚未完成，请继续跟进证据完整性与约束结果。</div> : null}
+        {acceptanceVerdict === "PENDING" ? (
+          <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div className="detailSectionLead">验收尚未完成，请继续跟进证据完整性与约束结果。</div>
+            <Link className="btn pending" to="/operations?status=done_unaccepted">快速进入验收</Link>
+          </div>
+        ) : null}
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>
