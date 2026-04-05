@@ -15,6 +15,30 @@ const COPY = {
   backToList: "返回作业列表",
 };
 
+const TIMELINE_ORDER = [
+  { key: "RECOMMENDATION", label: "建议产生" },
+  { key: "APPROVAL_REQUEST", label: "审批请求" },
+  { key: "APPROVAL_RESULT", label: "审批结果" },
+  { key: "DISPATCH", label: "作业下发" },
+  { key: "ACK", label: "ACK" },
+  { key: "EXECUTING", label: "执行中" },
+  { key: "RECEIPT", label: "回执" },
+  { key: "ACCEPTANCE", label: "验收" },
+] as const;
+
+function StatusPill({ tone, children }: { tone: "danger" | "warning" | "pending"; children: React.ReactNode }): React.ReactElement {
+  return <span className={`statusPill statusPill-${tone}`}>{children}</span>;
+}
+
+function CollapsibleModule({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }): React.ReactElement {
+  return (
+    <details className="operationFoldModule" open={defaultOpen}>
+      <summary>{title}</summary>
+      <div className="operationFoldBody">{children}</div>
+    </details>
+  );
+}
+
 function formatMaybeNumber(value: unknown): string {
   const n = Number(value ?? NaN);
   if (!Number.isFinite(n)) return "--";
@@ -79,10 +103,38 @@ export default function OperationDetailPage(): React.ReactElement {
     }
   };
 
-  const timelineItems = (model.timeline ?? []).map((item) => ({
+  const mappedTimeline = (model.timeline ?? []).map((item) => ({
     ...item,
     label: item.label || toBusinessTimelineLabel(item.kind),
+    normKind: String(item.kind ?? "").toUpperCase(),
   }));
+  const timelineItems = TIMELINE_ORDER.map((step, idx) => {
+    const matched = mappedTimeline.find((item) => {
+      if (step.key === "RECOMMENDATION") return item.normKind.includes("RECOMMENDATION");
+      if (step.key === "APPROVAL_REQUEST") return item.normKind.includes("APPROVAL_REQUEST");
+      if (step.key === "APPROVAL_RESULT") return item.normKind.includes("APPROVAL") && !item.normKind.includes("REQUEST");
+      if (step.key === "DISPATCH") return item.normKind.includes("PLAN") || item.normKind.includes("DISPATCH");
+      if (step.key === "ACK") return item.normKind.includes("ACK");
+      if (step.key === "EXECUTING") return item.normKind.includes("TASK");
+      if (step.key === "RECEIPT") return item.normKind.includes("RECEIPT");
+      if (step.key === "ACCEPTANCE") return item.normKind.includes("ACCEPT");
+      return false;
+    });
+    return {
+      id: matched?.id || `fixed-${step.key}`,
+      kind: step.key,
+      label: step.label,
+      status: matched ? matched.status : "PENDING",
+      occurredAtLabel: matched?.occurredAtLabel || "--",
+      actorLabel: matched?.actorLabel || "--",
+      summary: matched?.summary || "等待状态推进",
+      storySummary: matched?.storySummary || "等待状态推进",
+    };
+  }).map((item, idx) => ({ ...item, id: `${item.id}-${idx}` }));
+
+  const isInvalidExecution = String(model.execution.finalStatus ?? model.finalStatus ?? "").toUpperCase() === "INVALID_EXECUTION";
+  const isEvidenceMissing = Boolean(traceGap?.missing_evidence) || !model.receiptEvidence;
+  const isPendingAcceptance = acceptanceVerdict === "PENDING";
 
   return (
     <div className="demoDashboardPage operationPageClosure">
@@ -96,8 +148,6 @@ export default function OperationDetailPage(): React.ReactElement {
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <span className="traceChip traceChipLive">{topStatusLabel}</span>
             <Link className="btn" to="/operations">{COPY.backToList}</Link>
-            {notExecutedYet ? <Link className="btn" to="/agronomy/recommendations">返回待处理建议</Link> : null}
-            {notExecutedYet ? <Link className="btn" to={`/fields/${encodeURIComponent(String((detail as any)?.field_id ?? model.fieldLabel ?? ""))}`}>查看田块</Link> : null}
             <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
           </div>
         </div>
@@ -109,38 +159,117 @@ export default function OperationDetailPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="card" style={{ marginTop: 12 }}>
-        <div className="sectionTitle">决策依据</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.recommendationBasis.ruleId || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{model.recommendationBasis.cropStage || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.recommendationBasis.reasonCodesLabel || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议摘要</span><strong>{model.recommendation.summary}</strong></div>
-        </div>
-      </section>
+      <section className="operationDetailTwoColumn">
+        <div className="operationTimelineColumn">
+          <section className="card">
+            <div className="sectionTitle">执行时间线</div>
+            <div className="operationTimelineWrap" style={{ marginTop: 10 }}>
+              <OperationStoryTimeline items={timelineItems} />
+            </div>
+          </section>
 
-      <section className="card" style={{ marginTop: 12 }}>
-        <div className="sectionTitle">执行过程</div>
-        {notExecutedYet ? (
-          <div className="decisionItemStatic" style={{ marginTop: 10 }}>
-            尚未执行。下一步：先确认设备在线与审批状态，然后点击“一键执行”发起任务。
+          {(isInvalidExecution || isEvidenceMissing || isPendingAcceptance) ? (
+            <section className="card operationAlertCard">
+              <div className="sectionTitle">重点状态提醒</div>
+              <div className="operationStatusPills">
+                {isInvalidExecution ? <StatusPill tone="danger">执行无效</StatusPill> : null}
+                {isEvidenceMissing ? <StatusPill tone="warning">证据缺失</StatusPill> : null}
+                {isPendingAcceptance ? <StatusPill tone="pending">待验收</StatusPill> : null}
+              </div>
+              {isInvalidExecution ? <div className="operationWarningBlock danger">⚠️ 当前执行结果被判定为无效，请补充正式证据或重新执行。</div> : null}
+              {isEvidenceMissing ? <div className="operationWarningBlock warning">⚠️ 证据链不完整，暂不能完成闭环验收。</div> : null}
+              {isPendingAcceptance ? <div className="operationWarningBlock pending">⚠️ 已进入验收前状态，请尽快完成验收结论。</div> : null}
+            </section>
+          ) : null}
+
+          <section className="card" style={{ marginTop: 12 }}>
+            <div className="sectionTitle">执行过程</div>
+            {notExecutedYet ? (
+              <div className="decisionItemStatic" style={{ marginTop: 10 }}>
+                尚未执行。下一步：先确认设备在线与审批状态，然后点击“一键执行”发起任务。
+              </div>
+            ) : null}
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行模式</span><strong>{model.execution.executionModeLabel}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行器</span><strong>{model.execution.executorLabel}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Task ID</span><strong>{executionTrace?.task_id || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : "否"}</strong></div>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
+                {executing ? "执行中..." : "一键执行"}
+              </button>
+              {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
+            </div>
+          </section>
+
+          <section className="card" style={{ marginTop: 12 }}>
+            <div className="sectionTitle">闭环信息（可折叠）</div>
+            <CollapsibleModule title="建议依据" defaultOpen>
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.recommendationBasis.ruleId || "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{model.recommendationBasis.cropStage || "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.recommendationBasis.reasonCodesLabel || "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议摘要</span><strong>{model.recommendation.summary}</strong></div>
+              </div>
+            </CollapsibleModule>
+            <CollapsibleModule title="审批内容">
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.approval.requestId}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批结论</span><strong>{model.approval.decisionLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批人</span><strong>{model.approval.actorLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批时间</span><strong>{model.approval.decidedAtLabel}</strong></div>
+              </div>
+            </CollapsibleModule>
+            <CollapsibleModule title="调度参数">
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行模式</span><strong>{model.execution.executionModeLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行主体</span><strong>{model.execution.executorLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备 ID</span><strong>{model.execution.deviceId || "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下发时间</span><strong>{model.execution.dispatchedAtLabel}</strong></div>
+              </div>
+            </CollapsibleModule>
+            <CollapsibleModule title="执行回执">
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">ACK 状态</span><strong>{model.execution.ackStatusLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">ACK 时间</span><strong>{model.execution.ackedAtLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行进度</span><strong>{model.execution.progressLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最终状态</span><strong>{model.execution.finalStatusLabel}</strong></div>
+              </div>
+            </CollapsibleModule>
+            <CollapsibleModule title="验收结果">
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收状态</span><strong>{model.acceptance.statusLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">缺失项</span><strong>{model.acceptance.missingEvidenceLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收摘要</span><strong>{model.acceptance.summary}</strong></div>
+              </div>
+            </CollapsibleModule>
+            <CollapsibleModule title="证据下载">
+              <div className="operationsSummaryGrid">
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">包状态</span><strong>{model.evidenceExport.bundleStatusLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近导出</span><strong>{model.evidenceExport.latestExportedAtLabel}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">正式证据</span><strong>{model.evidenceExport.formalEvidenceCount}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">调试证据</span><strong>{model.evidenceExport.debugEvidenceCount}</strong></div>
+              </div>
+            </CollapsibleModule>
+          </section>
+        </div>
+
+        <aside className="operationDetailAside card">
+          <div className="sectionTitle">Detail Aside</div>
+          <div className="operationAsideBody">
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{model.acceptance.statusLabel}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">证据完整性</span><strong>{isEvidenceMissing ? "缺失" : "完整"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下一步</span><strong>{model.nextStepHint || "按时间线逐项推进"}</strong></div>
           </div>
-        ) : null}
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行模式</span><strong>{model.execution.executionModeLabel}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行器</span><strong>{model.execution.executorLabel}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Task ID</span><strong>{executionTrace?.task_id || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : "否"}</strong></div>
-        </div>
-        <div style={{ marginTop: 10 }}>
-          <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
-            {executing ? "执行中..." : "一键执行"}
-          </button>
-          {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
-        </div>
-        <div className="operationTimelineWrap" style={{ marginTop: 10 }}>
-          <OperationStoryTimeline items={timelineItems} />
-        </div>
+          <div className="operationAsideActions">
+            <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
+              {executing ? "执行中..." : "一键执行"}
+            </button>
+            <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
+          </div>
+        </aside>
       </section>
 
       <section className="card operationEvidenceMain" style={{ marginTop: 12 }}>
@@ -155,8 +284,6 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="detailSectionLead" style={{ marginTop: 8 }}>当前缺少完整证据，请先补齐回执后再验收。</div>
             <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn" onClick={() => void reload()}>刷新状态</button>
-              <Link className="btn" to="/devices">查看设备</Link>
-              <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>查看回执</Link>
             </div>
           </>
         )}
