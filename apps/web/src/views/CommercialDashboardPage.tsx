@@ -147,21 +147,37 @@ function TodayPriorityList({
   todayActions,
   todayActionHref,
   todayActionLabel,
+  todayActionRiskLevel,
+  todayActionReason,
+  todayActionSuggestion,
+  todayActionCTA,
+  todayActionEntryLabel,
 }: {
   todayActions: Array<{ type: string; count: number }>;
   todayActionHref: (type: string) => string;
   todayActionLabel: (type: string, count: number) => string;
+  todayActionRiskLevel: (type: string) => string;
+  todayActionReason: (type: string, count: number) => string;
+  todayActionSuggestion: (type: string, count: number) => string;
+  todayActionCTA: (type: string) => string;
+  todayActionEntryLabel: (type: string) => string;
 }): React.ReactElement {
   return (
     <section className="card" style={{ marginBottom: 12 }}>
       <div className="sectionTitle">行动优先信息</div>
-      <div className="decisionItemMeta">先清阻断，再推执行。</div>
+      <div className="decisionItemMeta">固定优先级：阻断 &gt; 待验收 &gt; 待审批 &gt; 一般提醒。</div>
       <div className="decisionList" style={{ marginTop: 8 }}>
         {todayActions.map((item, idx) => (
-          <Link key={`${item.type}_${idx}`} to={todayActionHref(item.type)} className="decisionItemLink">
+          <div key={`${item.type}_${idx}`} className="decisionItemStatic">
             <div className="decisionItemTitle">{idx + 1}. {todayActionLabel(item.type, item.count)}</div>
-            <div className="decisionItemMeta">立即处理</div>
-          </Link>
+            <div className="decisionItemMeta">风险等级：{todayActionRiskLevel(item.type)}</div>
+            <div className="decisionItemMeta">原因摘要：{todayActionReason(item.type, item.count)}</div>
+            <div className="decisionItemMeta">建议动作：{todayActionSuggestion(item.type, item.count)}</div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <Link className="btn" to={todayActionHref(item.type)}>{todayActionCTA(item.type)}</Link>
+              <Link to={todayActionHref(item.type)}>跳转入口：{todayActionEntryLabel(item.type)}</Link>
+            </div>
+          </div>
         ))}
         {!todayActions.length ? <EmptyBlock text="今日暂无高优先动作" /> : null}
       </div>
@@ -447,17 +463,49 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     INVALID_EXECUTION: 0,
     PENDING_ACCEPTANCE: 1,
     APPROVAL_REQUIRED: 2,
+    GENERAL_REMINDER: 3,
   };
   const todayActions = [...(d.todayActions ?? [])].sort((a, b) => (priorityOrder[a.type] ?? 99) - (priorityOrder[b.type] ?? 99));
   const todayActionLabel = (type: string, count: number): string => {
     if (type === "INVALID_EXECUTION") return `修复无效执行（${count}项）`;
     if (type === "PENDING_ACCEPTANCE") return `完成验收（${count}项）`;
+    if (type === "GENERAL_REMINDER") return `关注一般提醒（${count}项）`;
     return `审批建议（${count}项）`;
   };
+  const todayActionRiskLevel = (type: string): string => {
+    if (type === "INVALID_EXECUTION") return "高";
+    if (type === "PENDING_ACCEPTANCE") return "中";
+    if (type === "APPROVAL_REQUIRED") return "中";
+    return "低";
+  };
+  const todayActionReason = (type: string, count: number): string => {
+    if (type === "INVALID_EXECUTION") return `存在 ${count} 项阻断问题，已影响执行闭环。`;
+    if (type === "PENDING_ACCEPTANCE") return `已有 ${count} 项执行结果等待验收结论。`;
+    if (type === "APPROVAL_REQUIRED") return `当前累计 ${count} 项建议待人工审批。`;
+    return `当前有 ${count} 项一般提醒，建议排队跟进。`;
+  };
+  const todayActionSuggestion = (type: string, count: number): string => {
+    if (type === "INVALID_EXECUTION") return `优先排查并补齐阻断项（${count}项）。`;
+    if (type === "PENDING_ACCEPTANCE") return `核对证据与约束后完成验收（${count}项）。`;
+    if (type === "APPROVAL_REQUIRED") return `按业务优先顺序完成审批（${count}项）。`;
+    return `检查提醒并安排处理节奏（${count}项）。`;
+  };
+  const todayActionCTA = (type: string): string => {
+    if (type === "PENDING_ACCEPTANCE") return "去验收";
+    if (type === "APPROVAL_REQUIRED") return "去审批";
+    return "去处理";
+  };
+  const todayActionEntryLabel = (type: string): string => {
+    if (type === "INVALID_EXECUTION") return "作业列表-阻断";
+    if (type === "PENDING_ACCEPTANCE") return "作业列表-待验收";
+    if (type === "APPROVAL_REQUIRED") return "建议列表-待审批";
+    return "作业列表-一般提醒";
+  };
   const todayActionHref = (type: string): string => {
-    if (type === "INVALID_EXECUTION") return "/operations?status=invalid_execution";
-    if (type === "PENDING_ACCEPTANCE") return "/operations?status=done_unaccepted";
-    return "/agronomy/recommendations";
+    if (type === "INVALID_EXECUTION") return "/operations?status=invalid_execution&priority=blocked&from=today_priority";
+    if (type === "PENDING_ACCEPTANCE") return "/operations?status=done_unaccepted&priority=pending_acceptance&from=today_priority";
+    if (type === "APPROVAL_REQUIRED") return "/agronomy/recommendations?status=pending&priority=pending_approval&from=today_priority";
+    return "/operations?status=pending&priority=general_reminder&from=today_priority";
   };
 
   const acceptanceTasks = d.evidences
@@ -520,6 +568,11 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         todayActions={todayActions}
         todayActionHref={todayActionHref}
         todayActionLabel={todayActionLabel}
+        todayActionRiskLevel={todayActionRiskLevel}
+        todayActionReason={todayActionReason}
+        todayActionSuggestion={todayActionSuggestion}
+        todayActionCTA={todayActionCTA}
+        todayActionEntryLabel={todayActionEntryLabel}
       />
 
       <EmptyStateGuide
