@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchOperationStates } from "../api";
+import { useOperationsListQuery } from "../features/operations/queries/useOperationsListQuery";
 import { RelativeTime } from "../components/RelativeTime";
 import EmptyState from "../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
@@ -26,20 +26,11 @@ function groupOf(item: any): GroupKey {
 }
 
 export default function OperationsPage(): React.ReactElement {
-  const [items, setItems] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
 
   const reload = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetchOperationStates({ limit: 200 });
-      setItems(Array.isArray(res.items) ? res.items : []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  React.useEffect(() => { void reload(); }, [reload]);
+    await refetch();
+  }, [refetch]);
 
   const grouped = React.useMemo(() => {
     const base: Record<GroupKey, any[]> = { TODO: [], PENDING_ACCEPTANCE: [], DONE_OR_EXCEPTION: [] };
