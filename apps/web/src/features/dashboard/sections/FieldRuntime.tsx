@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import SectionCard from "./SectionCard";
+import { EmptyGuide, SectionCard } from "../../../shared/ui";
 
 function EmptyStateGuide({
   fieldCount,
@@ -13,40 +13,19 @@ function EmptyStateGuide({
 }): React.ReactElement | null {
   if (fieldCount < 1) {
     return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无田块</div>
-        <div className="decisionItemMeta">先建田块，再接入设备。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/fields/new">新建田块</Link>
-          <Link className="btn" to="/fields">查看田块列表</Link>
-        </div>
-      </section>
+      <EmptyGuide title="空态引导：无田块" message="先建田块，再接入设备。" actionLabel="新建田块" actionTo="/fields/new" />
     );
   }
 
   if (deviceCount < 1) {
     return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无设备</div>
-        <div className="decisionItemMeta">绑定设备，开启监测。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/devices/onboarding">去绑定设备</Link>
-          <Link className="btn" to="/devices">设备中心</Link>
-        </div>
-      </section>
+      <EmptyGuide title="空态引导：无设备" message="绑定设备，开启监测。" actionLabel="去绑定设备" actionTo="/devices/onboarding" />
     );
   }
 
   if (!hasFirstData) {
     return (
-      <section className="card" style={{ marginBottom: 12 }}>
-        <div className="sectionTitle">空态引导：无首条数据</div>
-        <div className="decisionItemMeta">设备已接入，等待首条回传。</div>
-        <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
-          <Link className="btn primary" to="/devices">查看设备状态</Link>
-          <Link className="btn" to="/devices/onboarding">接入说明</Link>
-        </div>
-      </section>
+      <EmptyGuide title="空态引导：无首条数据" message="设备已接入，等待首条回传。" actionLabel="查看设备状态" actionTo="/devices" />
     );
   }
 

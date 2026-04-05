@@ -1,6 +1,6 @@
 import React from "react";
 import type { SlaSummary } from "../../../api/dashboard";
-import SectionCard from "./SectionCard";
+import { SectionCard } from "../../../shared/ui";
 
 export default function OverviewMetrics({
   expert,

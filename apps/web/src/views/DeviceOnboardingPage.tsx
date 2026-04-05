@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
+import { PageHeader, SectionCard, Stepper } from "../shared/ui";
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
@@ -152,18 +153,16 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   }
 
   const completed = isStepDone("first_telemetry", onboarding, localBoundFieldId);
+  const activeStep = stepFlow.find((step) => !isStepDone(step, onboarding, localBoundFieldId));
 
   return (
     <div className="consolePage">
-      <section className="hero card compactHero">
-        <div>
-          <div className="eyebrow">Devices · Onboarding</div>
-          <h2 className="heroTitle">设备接入向导</h2>
-          <p className="heroText">按步骤执行“注册设备 → 凭据确认 → 绑定田块 → telemetry 校验”，每步独立操作与刷新，避免一次性批量提交。</p>
-        </div>
-      </section>
+      <PageHeader
+        title="设备接入向导"
+        description="按步骤执行“注册设备 → 凭据确认 → 绑定田块 → telemetry 校验”，每步独立操作与刷新，避免一次性批量提交。"
+      />
 
-      <section className="card sectionBlock">
+      <SectionCard title="基础信息">
         <div className="sectionHeader"><div><div className="sectionTitle">基础信息</div></div></div>
         <div className="contentGridTwo alignStart">
           <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
@@ -172,21 +171,18 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <label className="field">凭据 ID（可选）<input className="input" value={credentialId} onChange={(e) => setCredentialId(e.target.value)} placeholder="留空自动生成" /></label>
           <label className="field">绑定田块 field_id<input className="input" value={fieldId} onChange={(e) => setFieldId(e.target.value)} placeholder="例如 field_demo_001" /></label>
         </div>
-      </section>
+      </SectionCard>
 
-      <section className="card sectionBlock">
-        <div className="sectionHeader"><div><div className="sectionTitle">Stepper（步骤 key ↔ 后端状态字段）</div></div></div>
-        <div className="meta wrapMeta">
-          {stepFlow.map((step) => {
-            const done = isStepDone(step, onboarding, localBoundFieldId);
-            return (
-              <span key={step} className={done ? "statusBadge statusGood" : "statusBadge statusWarn"}>
-                {step} ↔ {STEP_STATUS_FIELD_MAP[step]}
-              </span>
-            );
-          })}
-        </div>
-      </section>
+      <SectionCard title="接入步骤">
+        <Stepper
+          items={stepFlow.map((step) => ({
+            key: step,
+            title: `${STEP_TITLES[step]}（${STEP_STATUS_FIELD_MAP[step]}）`,
+            done: isStepDone(step, onboarding, localBoundFieldId),
+            active: step === activeStep,
+          }))}
+        />
+      </SectionCard>
 
       {stepFlow.map((step, index) => {
         const done = isStepDone(step, onboarding, localBoundFieldId);

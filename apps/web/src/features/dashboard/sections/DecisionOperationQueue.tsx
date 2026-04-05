@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { DashboardTopActionItem } from "../../../api/dashboard";
 import { buildOperationSummary, mapOperationActionLabel } from "../../../lib/operationLabels";
-import SectionCard from "./SectionCard";
+import { SectionCard } from "../../../shared/ui";
 
 function EmptyBlock({ text }: { text: string }): React.ReactElement {
   return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
