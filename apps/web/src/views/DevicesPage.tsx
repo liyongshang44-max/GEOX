@@ -207,6 +207,7 @@ export default function DevicesPage(): React.ReactElement {
               <div className="meta wrapMeta">
                 <span>绑定地块：{item.field_id || "未绑定"}</span>
                 <span>最近心跳：{formatTimeOrFallback(item.last_heartbeat_ts_ms)}</span>
+                <span>首条数据：{item.last_telemetry_ts_ms || item.last_receipt_ts_ms ? "已收到" : "未收到（等待首条数据）"}</span>
                 <span>凭据状态：{item.last_credential_status || "未知"}</span>
                 <span>最近命令：{item.last_command_type || "-"}</span>
                 <span>最近回执：<StatusBadge status={item.last_receipt_status || "PENDING"} /></span>

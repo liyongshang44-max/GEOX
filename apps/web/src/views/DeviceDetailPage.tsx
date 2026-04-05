@@ -130,7 +130,13 @@ export default function DeviceDetailPage(): React.ReactElement {
   async function handleBindField(): Promise<void> {
     if (!deviceId || !bindFieldId.trim()) return;
     setBusy(true); setStatus(`正在绑定到田块 ${bindFieldId} ...`);
-    try { await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() }); await refresh(); setStatus(`设备已绑定到田块：${bindFieldId}`); navigate(`/fields/${encodeURIComponent(bindFieldId.trim())}`); }
+    try {
+      await bindDeviceToField(token, deviceId, { field_id: bindFieldId.trim() });
+      await refresh();
+      const offline = String(statusObj?.status ?? hero?.status?.code ?? "").toUpperCase() !== "ONLINE";
+      setStatus(`设备已绑定到田块：${bindFieldId}${offline ? "；当前设备离线，建议先校验在线状态" : ""}`);
+      navigate(`/fields/${encodeURIComponent(bindFieldId.trim())}`);
+    }
     catch (e: any) { setStatus(`绑定失败：${e?.bodyText || e?.message || String(e)}`); } finally { setBusy(false); }
   }
 
@@ -140,6 +146,8 @@ export default function DeviceDetailPage(): React.ReactElement {
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
   const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
   const recentLatest = latest[0]; const statusLabel = hero?.status?.label || statusObj?.status || "-";
+  const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
+  const firstDataLabel = firstDataReceived ? "已收到" : "未收到（等待首条数据）";
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
 
@@ -168,6 +176,11 @@ export default function DeviceDetailPage(): React.ReactElement {
         <div className="operationsSummaryActions">
           <Link className="btn" to={fieldHref}>查看绑定田块</Link>
           <Link className="btn" to="/operations">查看作业中心</Link>
+        </div>
+        <div className="deviceStatusGrid" style={{ marginTop: 12 }}>
+          <div className="deviceStateCard"><div className="deviceStateTitle">在线状态</div><div className="deviceStateValue">{String(statusLabel || "-").toUpperCase().includes("ONLINE") ? "在线" : "离线"}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">绑定状态</div><div className="deviceStateValue">{boundFieldId ? "已绑定" : "未绑定"}</div></div>
+          <div className="deviceStateCard"><div className="deviceStateTitle">首条数据状态</div><div className="deviceStateValue">{firstDataLabel}</div></div>
         </div>
       </section>
 
