@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
@@ -16,13 +16,13 @@ import {
 import { fetchOperationStates } from "../api";
 import { fetchOperationBilling, fetchOperationEvidencePack } from "../api/operations";
 import { executeOperationAction } from "../api/operations";
-import { useDashboard } from "../hooks/useDashboard";
-import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 import ErrorState from "../components/common/ErrorState";
-
-function EmptyBlock({ text }: { text: string }): React.ReactElement {
-  return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
-}
+import OverviewMetrics from "../features/dashboard/sections/OverviewMetrics";
+import TodayPriority from "../features/dashboard/sections/TodayPriority";
+import FieldRuntime from "../features/dashboard/sections/FieldRuntime";
+import DecisionOperationQueue from "../features/dashboard/sections/DecisionOperationQueue";
+import EvidenceOutcome from "../features/dashboard/sections/EvidenceOutcome";
+import { useDashboard } from "../hooks/useDashboard";
 
 function normalizePercentMetric(value: unknown): number | null {
   const n = Number(value);
@@ -564,7 +564,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         todayExecutionCount={d.overview.todayExecutionCount}
       />
 
-      <TodayPriorityList
+      <TodayPriority
         todayActions={todayActions}
         todayActionHref={todayActionHref}
         todayActionLabel={todayActionLabel}
@@ -575,17 +575,13 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         todayActionEntryLabel={todayActionEntryLabel}
       />
 
-      <EmptyStateGuide
-        fieldCount={fieldCount}
-        deviceCount={deviceCount}
-        hasFirstData={hasFirstData}
-      />
-
-      <FieldRuntimePanel
+      <FieldRuntime
         fieldCount={fieldCount}
         normalFieldCount={d.overview.normalFieldCount}
         riskFieldCount={d.overview.riskFieldCount}
         deviceSummary={deviceSummary}
+        deviceCount={deviceCount}
+        hasFirstData={hasFirstData}
       />
 
       <DecisionOperationQueue
@@ -596,7 +592,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         runningActions={runningActions}
       />
 
-      <EvidenceResultPanel
+      <EvidenceOutcome
         acceptanceTasks={acceptanceTasks}
         smartRecommendations={smartRecommendations}
         latestMetrics={latestMetrics}
