@@ -7,28 +7,34 @@ function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
 }
 
-type StepKey = "register_device" | "credential_ready" | "bind_field" | "first_telemetry";
+type StepKey = "register_device" | "credential_ready" | "connectivity_verified" | "bind_field" | "first_telemetry" | "onboarding_completed";
 type StepFeedback = { success: string; failure: string };
 
 const STEP_STATUS_FIELD_MAP: Record<StepKey, string> = {
   register_device: "registration_completed",
   credential_ready: "credential_ready",
+  connectivity_verified: "last_heartbeat_ts_ms / connection_alive（推导）",
   bind_field: "bound_field_id / field_id（后端字段）",
   first_telemetry: "first_telemetry_uploaded",
+  onboarding_completed: "registration_completed && credential_ready && bind_field && first_telemetry（推导）",
 };
 
 const STEP_TITLES: Record<StepKey, string> = {
   register_device: "步骤 1：注册设备",
   credential_ready: "步骤 2：确认凭据可用",
-  bind_field: "步骤 3：绑定田块",
-  first_telemetry: "步骤 4：首条 telemetry 校验",
+  connectivity_verified: "步骤 3：连通性验证",
+  bind_field: "步骤 4：绑定田块",
+  first_telemetry: "步骤 5：首条 telemetry 校验",
+  onboarding_completed: "步骤 6：接入完成",
 };
 
 const STEP_TROUBLESHOOTING: Record<StepKey, string> = {
   register_device: "检查 token 权限是否包含设备写入；确认 device_id 唯一且格式合法。",
   credential_ready: "若状态长期未就绪，请刷新后核对设备凭据状态是否 ACTIVE。",
+  connectivity_verified: "确认设备网络、Broker 地址、Client ID 与密钥；若持续离线，检查防火墙和 TLS 配置。",
   bind_field: "确认 field_id 存在且属于当前租户；若返回 404/501，表示绑定接口尚未上线。",
   first_telemetry: "确认设备已使用最新凭据连接 MQTT，并向 telemetry topic 发布 JSON 数据。",
+  onboarding_completed: "若仍未完成，请按顺序检查前 5 步是否全部通过，并刷新一次总状态。",
 };
 
 function readBindFieldId(onboarding: any): string {
@@ -36,8 +42,22 @@ function readBindFieldId(onboarding: any): string {
 }
 
 function isStepDone(step: StepKey, onboarding: any, localBoundFieldId: string): boolean {
+  if (step === "connectivity_verified") {
+    const heartbeatTs = Number(onboarding?.last_heartbeat_ts_ms ?? onboarding?.last_telemetry_ts_ms ?? 0);
+    if (!Number.isFinite(heartbeatTs) || heartbeatTs <= 0) return false;
+    return Date.now() - heartbeatTs <= 6 * 60 * 60 * 1000;
+  }
   if (step === "bind_field") {
     return Boolean(readBindFieldId(onboarding) || localBoundFieldId);
+  }
+  if (step === "onboarding_completed") {
+    return (
+      isStepDone("register_device", onboarding, localBoundFieldId)
+      && isStepDone("credential_ready", onboarding, localBoundFieldId)
+      && isStepDone("connectivity_verified", onboarding, localBoundFieldId)
+      && isStepDone("bind_field", onboarding, localBoundFieldId)
+      && isStepDone("first_telemetry", onboarding, localBoundFieldId)
+    );
   }
   return Boolean(onboarding?.[STEP_STATUS_FIELD_MAP[step]]);
 }
@@ -55,11 +75,13 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const [stepFeedback, setStepFeedback] = React.useState<Record<StepKey, StepFeedback>>({
     register_device: { success: "", failure: "" },
     credential_ready: { success: "", failure: "" },
+    connectivity_verified: { success: "", failure: "" },
     bind_field: { success: "", failure: "" },
     first_telemetry: { success: "", failure: "" },
+    onboarding_completed: { success: "", failure: "" },
   });
 
-  const stepFlow: StepKey[] = ["register_device", "credential_ready", "bind_field", "first_telemetry"];
+  const stepFlow: StepKey[] = ["register_device", "credential_ready", "connectivity_verified", "bind_field", "first_telemetry", "onboarding_completed"];
 
   const markStepSuccess = React.useCallback((step: StepKey, message: string): void => {
     setStepFeedback((prev) => ({ ...prev, [step]: { success: message, failure: "" } }));
@@ -151,7 +173,40 @@ export default function DeviceOnboardingPage(): React.ReactElement {
     }
   }
 
-  const completed = isStepDone("first_telemetry", onboarding, localBoundFieldId);
+  async function handleConnectivityStep(): Promise<void> {
+    setBusyStep("connectivity_verified");
+    try {
+      const next = await refreshOnboardingStatus("connectivity_verified", "连通性状态已刷新。");
+      const heartbeatTs = Number(next?.last_heartbeat_ts_ms ?? next?.last_telemetry_ts_ms ?? 0);
+      if (Number.isFinite(heartbeatTs) && heartbeatTs > 0 && Date.now() - heartbeatTs <= 6 * 60 * 60 * 1000) {
+        markStepSuccess("connectivity_verified", "检测到最近心跳/遥测，连通性验证通过。");
+      } else {
+        markStepFailure("connectivity_verified", "未检测到最近心跳，请检查设备连接后重试。");
+      }
+    } catch (e: any) {
+      markStepFailure("connectivity_verified", `连通性校验失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setBusyStep(null);
+    }
+  }
+
+  async function handleCompletionStep(): Promise<void> {
+    setBusyStep("onboarding_completed");
+    try {
+      const next = await refreshOnboardingStatus("onboarding_completed", "已刷新完成态。");
+      if (isStepDone("onboarding_completed", next, localBoundFieldId)) {
+        markStepSuccess("onboarding_completed", "6 步流程已全部完成。");
+      } else {
+        markStepFailure("onboarding_completed", "仍有未完成步骤，请先补齐前置步骤。");
+      }
+    } catch (e: any) {
+      markStepFailure("onboarding_completed", `完成态校验失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setBusyStep(null);
+    }
+  }
+
+  const completed = isStepDone("onboarding_completed", onboarding, localBoundFieldId);
   const activeStep = stepFlow.find((step) => !isStepDone(step, onboarding, localBoundFieldId));
 
   return (
@@ -191,8 +246,10 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         let stepAction: { label: string; onClick: () => void };
         if (step === "register_device") stepAction = { label: "下一步：执行注册动作", onClick: () => void handleRegisterStep() };
         else if (step === "credential_ready") stepAction = { label: "下一步：刷新凭据状态", onClick: () => void handleRefreshCredentialStep() };
+        else if (step === "connectivity_verified") stepAction = { label: "下一步：验证连通性", onClick: () => void handleConnectivityStep() };
         else if (step === "bind_field") stepAction = { label: "下一步：绑定田块", onClick: () => void handleBindFieldStep() };
-        else stepAction = { label: "下一步：刷新 telemetry 校验", onClick: () => void handleRefreshTelemetryStep() };
+        else if (step === "first_telemetry") stepAction = { label: "下一步：刷新 telemetry 校验", onClick: () => void handleRefreshTelemetryStep() };
+        else stepAction = { label: "下一步：确认接入完成", onClick: () => void handleCompletionStep() };
 
         return (
           <SectionCard key={step} title={STEP_TITLES[step]}>
