@@ -147,7 +147,7 @@ export default function OperationsPage(): React.ReactElement {
             </article>
           );
         })}
-        {!loading && !filteredItems.length ? <EmptyState title="当前没有匹配作业" description="请切换筛选条件或稍后刷新" /> : null}
+        {!loading && !filteredItems.length ? <EmptyState title="还没有作业记录" description="当系统生成建议并开始执行后，这里会展示相关作业与状态。" actionText="查看建议" onAction={() => { window.location.assign("/agronomy/recommendations"); }} secondaryActionText="返回总览" onSecondaryAction={() => { window.location.assign("/dashboard"); }} /> : null}
       </section>
     </div>
   );

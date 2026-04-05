@@ -18,8 +18,19 @@ export default function ProgramDetailPage(): React.ReactElement {
   const { text } = useLocale();
   const { programId = "" } = useParams();
   const { loading, error, viewModel, reload } = useProgramDetail(programId);
+  const errorText = String(error ?? "").toLowerCase();
+  const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
 
   if (loading && !viewModel) return <SectionSkeleton kind="detail" />;
+  if (permissionDenied) {
+    return (
+      <ErrorState
+        title="你没有权限查看此内容"
+        message="当前账号无法访问该对象或执行该动作，请联系管理员开通权限。"
+        onRetry={() => window.history.back()}
+      />
+    );
+  }
   if (error || !viewModel) {
     return (
       <ErrorState
@@ -141,6 +152,12 @@ export default function ProgramDetailPage(): React.ReactElement {
               <div className="decisionItemTitle">最近更新时间</div>
               <div className="decisionItemMeta">{viewModel.currentMetrics.updatedAtLabel}</div>
             </div>
+            {viewModel.currentMetrics.updatedAtLabel === "-" ? (
+              <div className="decisionItemStatic">
+                <div className="decisionItemTitle">当前阶段数据不足</div>
+                <div className="decisionItemMeta">系统尚未获取到足够指标，建议检查设备在线与数据上传。</div>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -278,7 +295,7 @@ export default function ProgramDetailPage(): React.ReactElement {
             <div className="sectionTitle">最近一次执行证据</div>
             <div className="detailSectionLead">证据是继续推进方案与否的最后判断依据。</div>
           </div>
-          {viewModel.latestEvidence ? <ReceiptEvidenceCard data={viewModel.latestEvidence} /> : <div className="decisionItemStatic">尚未初始化经营方案或暂无执行证据。</div>}
+          {viewModel.latestEvidence ? <ReceiptEvidenceCard data={viewModel.latestEvidence} /> : <div className="decisionItemStatic">最近影响为空：尚未初始化经营方案或暂无执行证据。</div>}
         </section>
       </div>
 

@@ -18,6 +18,7 @@ import { fetchOperationBilling, fetchOperationEvidencePack } from "../api/operat
 import { executeOperationAction } from "../api/operations";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
+import ErrorState from "../components/common/ErrorState";
 
 function EmptyBlock({ text }: { text: string }): React.ReactElement {
   return <div className="card muted" style={{ padding: 16 }}>{text}</div>;
@@ -299,7 +300,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
 
   return (
     <div className="productPage demoDashboardPage">
-      {error ? <EmptyBlock text="数据加载失败（overview）" /> : null}
+      {error ? <ErrorState title="页面加载失败" message="系统暂时无法获取当前数据，请稍后重试。" onRetry={() => window.location.reload()} secondaryText="返回总览" onSecondary={() => navigate("/dashboard")} /> : null}
       <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
         {expert ? (
           <article className="operationsSummaryMetric card">
@@ -344,6 +345,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
             <strong>{d.decisions.pendingApprovalCount} 项待审批</strong>
           </article>
         </div>
+        {!riskAlerts.length ? (
+          <div className="decisionItemStatic" style={{ marginTop: 8 }}>
+            <div className="decisionItemTitle">当前风险为空</div>
+            <div className="decisionItemMeta">暂未发现高优先风险田块，系统将持续监测并在异常时提醒。</div>
+          </div>
+        ) : null}
       </section>
       <section className="card" style={{ marginBottom: 12 }}>
         {shouldShowOnboarding ? (

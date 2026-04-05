@@ -68,6 +68,8 @@ export default function EvidenceCenterPage(): React.ReactElement {
                 <span>状态：{job.status?.label || "-"}</span>
                 <span>时间：{job.created_at_label || "-"}</span>
               </div>
+              {String(job.status?.code ?? "").toUpperCase().includes("RUN") ? <div className="muted" style={{ marginTop: 6 }}>证据包生成中，请稍后刷新。</div> : null}
+              {String(job.status?.code ?? "").toUpperCase().includes("FAIL") ? <div className="muted" style={{ marginTop: 6, color: "#b42318" }}>导出失败，请重试或检查作业证据完整性。</div> : null}
               <div style={{ marginTop: 8 }}>
                 {job.download?.available ? (
                   <button type="button" className="btn">下载</button>

@@ -92,7 +92,7 @@ export default function FieldDetailPage(): React.ReactElement {
   }, []);
 
   if (busy && !model) return <SectionSkeleton kind="detail" />;
-  if (!busy && !model) return <EmptyState title="田块信息暂不可用" description="当前未获取到田块详情，请稍后重试。" actionText="重试" onAction={() => void refresh()} />;
+  if (!busy && !model) return <EmptyState title="对象不存在或暂不可用" description="该田块可能尚未创建，或读模型尚未生成。" actionText="重新加载" onAction={() => void refresh()} secondaryActionText="返回田块列表" onSecondaryAction={() => { window.location.assign("/fields"); }} />;
 
   const statusStyle = STATUS_STYLE[model?.status || "ok"];
   const headerStatusLabel = model?.currentTask ? "进行中" : (model?.statusLabel || "正常");
@@ -148,10 +148,11 @@ export default function FieldDetailPage(): React.ReactElement {
         </div>
         {(searchParams.get("created") === "1" || !hasCurrentPlan) ? (
           <div className="decisionItemStatic" style={{ marginTop: 12 }}>
-            <div className="decisionItemTitle">田块未完成初始化</div>
-            <div className="decisionItemMeta">建议下一步：创建初始 Program，补齐经营上下文。</div>
+            <div className="decisionItemTitle">这块田还没有经营方案</div>
+            <div className="decisionItemMeta">创建经营方案后，系统才能根据目标生成建议与作业。</div>
             <div style={{ marginTop: 8 }}>
-              <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>创建经营方案</Link>
+              <Link className="btn primary" to={`/programs/new?field_id=${encodeURIComponent(fieldId)}`}>初始化经营</Link>
+              <Link className="btn" style={{ marginLeft: 8 }} to="/fields">返回田块列表</Link>
             </div>
           </div>
         ) : null}
@@ -182,6 +183,16 @@ export default function FieldDetailPage(): React.ReactElement {
           <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
             <Link className="btn" to="/devices">查看设备状态</Link>
             <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+          </div>
+        </section>
+      ) : null}
+      {hasBoundDevice && !hasOnlineDevice ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+          <div className="sectionTitle">设备当前离线</div>
+          <div className="detailSectionLead">系统暂时无法获取最新状态，建议先检查设备在线情况或等待恢复连接。</div>
+          <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+            <Link className="btn" to="/devices">查看设备状态</Link>
+            <Link className="btn" to={`/fields/${encodeURIComponent(fieldId)}`}>返回田块详情</Link>
           </div>
         </section>
       ) : null}

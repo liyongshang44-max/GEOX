@@ -99,10 +99,10 @@ export default function OperationDetailPage(): React.ReactElement {
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
   if (permissionDenied) {
-    return <ErrorState title="你没有查看此作业详情的权限" message="请联系管理员开通权限后重试。" onRetry={() => void reload()} />;
+    return <ErrorState title="你没有权限查看此内容" message="当前账号无法访问该对象或执行该动作，请联系管理员开通权限。" onRetry={() => window.history.back()} secondaryText="返回总览" onSecondary={() => window.location.assign("/dashboard")} />;
   }
   if (error || !detail) {
-    return <ErrorState title={COPY.detailUnavailable} message={error || COPY.operationNotFound} onRetry={() => void reload()} />;
+    return <ErrorState title="页面加载失败" message={error || COPY.operationNotFound} onRetry={() => void reload()} secondaryText="返回总览" onSecondary={() => window.location.assign("/dashboard")} />;
   }
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
@@ -323,13 +323,19 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
       {!model.receiptEvidence ? (
         <section className="card" style={{ marginTop: 12 }}>
-          <div className="sectionTitle">证据状态</div>
-          <div className="detailSectionLead">证据尚未回传。你可以刷新状态，或先去设备/回执页面检查链路。</div>
+          <div className="sectionTitle">证据尚未完整</div>
+          <div className="detailSectionLead">当前作业已有执行记录，但证据或回执尚未回传完整，暂时无法完成验收。</div>
           <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="btn" to={`/operations/${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>查看作业详情</Link>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
-            <Link className="btn" to="/devices">查看设备</Link>
-            <Link className="btn" to="/delivery/export-jobs">查看回执/证据</Link>
           </div>
+        </section>
+      ) : null}
+      {String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase() === "PENDING" ? (
+        <section className="card" style={{ marginTop: 12 }}>
+          <div className="sectionTitle">验收尚未完成</div>
+          <div className="detailSectionLead">当前作业还没有验收结论，建议继续跟进回执与证据完整性。</div>
+          <div style={{ marginTop: 8 }}><button className="btn" onClick={() => void reload()}>刷新状态</button></div>
         </section>
       ) : null}
       <section className="card" style={{ marginTop: 12 }}>

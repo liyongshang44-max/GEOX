@@ -104,7 +104,7 @@ export default function FieldsPage(): React.ReactElement {
               <div className="jobListAction">查看详情</div>
             </button>
           ))}
-          {!fields.length ? <EmptyState title="暂无田块" description="新系统请先创建第一块田。" actionText="新建田块" onAction={() => navigate("/fields/new")} /> : null}
+          {!fields.length ? <EmptyState title="还没有田块" description="先创建田块，系统才能开始记录状态、接入设备和生成经营方案。" actionText="新建田块" onAction={() => navigate("/fields/new")} secondaryActionText="查看接入说明" onSecondaryAction={() => navigate("/devices/onboarding")} /> : null}
         </div>
       </section>
     </div>
