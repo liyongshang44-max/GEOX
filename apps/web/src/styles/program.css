@@ -1,43 +1,43 @@
 /* program page specific rules gradually move here */
 
 .programCreateCard {
-  border: 1px solid #d0d5dd;
+  border: 1px solid var(--color-border-default);
 }
 
 .programTemplateHint {
-  border: 1px dashed #98a2b3;
-  background: #f8fafc;
-  padding: 10px;
-  border-radius: 10px;
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-bg-subtle);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
 }
 
 .programClosurePage .detailHeroCard {
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--color-border-default);
 }
 
 .programFixedGrid {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .programListCards {
-  margin-top: 12px;
+  margin-top: var(--space-3);
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .programBusinessCard {
-  border: 1px solid #e4e7ec;
+  border: 1px solid var(--color-border-default);
 }
 
 .programReturnBanner {
   margin-bottom: 10px;
   padding: 8px 10px;
-  border: 1px dashed #f79009;
+  border: 1px dashed var(--color-status-risk-fg);
   border-radius: 8px;
-  background: #fffaeb;
-  color: #b54708;
+  background: var(--color-status-risk-bg);
+  color: var(--color-status-risk-fg);
   font-size: 13px;
 }

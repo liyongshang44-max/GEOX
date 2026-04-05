@@ -4,14 +4,14 @@
 .consolePage {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .demoContentGrid,
 .summaryGrid,
 .summaryGrid4 {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .demoContentGrid,
@@ -23,5 +23,5 @@
 .detailHeroCard,
 .dashboardHeroV2,
 .operationsHeroCard {
-  margin-top: 12px;
+  margin-top: var(--space-3);
 }

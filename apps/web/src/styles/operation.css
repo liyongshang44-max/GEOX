@@ -2,16 +2,16 @@
 
 .operationStoryTimeline {
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .operationStoryItem {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--color-border-accent);
   border-radius: 12px;
-  background: #fff;
-  padding: 12px;
+  background: var(--color-bg-surface);
+  padding: var(--space-3);
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .operationStoryItem.isPending {
@@ -20,7 +20,7 @@
 
 .operationStoryItemHeader {
   display: flex;
-  gap: 10px;
+  gap: var(--space-2);
   align-items: flex-start;
 }
 
@@ -28,7 +28,7 @@
   min-width: 24px;
   height: 24px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -37,9 +37,9 @@
 }
 
 .operationStoryItem.isDone .operationStoryStep {
-  background: #111;
-  color: #fff;
-  border-color: #111;
+  background: var(--color-text-emphasis);
+  color: var(--color-text-inverse);
+  border-color: var(--color-text-emphasis);
 }
 
 .operationStoryLabel {
@@ -59,7 +59,7 @@
 .operationStorySummary {
   font-size: 13px;
   line-height: 1.5;
-  border-left: 2px solid rgba(0, 0, 0, 0.15);
+  border-left: 2px solid var(--color-border-accent);
   padding-left: 8px;
 }
 
@@ -85,8 +85,8 @@
 }
 
 .operationEvidenceMain {
-  border: 1px solid #d0d5dd;
-  box-shadow: 0 0 0 2px rgba(16, 24, 40, 0.04) inset;
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-inset-soft);
 }
 
 .operationTimelineWrap .operationStoryTimeline {

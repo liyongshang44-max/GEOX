@@ -1,1 +1,8 @@
-export const radius = { sm: 8, md: 12, lg: 14, xl: 20 };
+import { themeTokens } from "../shared/styles/tokens";
+
+export const radius = {
+  sm: themeTokens.radius.sm,
+  md: themeTokens.radius.md,
+  lg: themeTokens.radius.lg,
+  xl: themeTokens.radius.xxl,
+} as const;
