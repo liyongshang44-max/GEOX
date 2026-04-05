@@ -424,11 +424,109 @@
   font-size: 14px;
   color: #334155;
 }
+.operationDetailTwoColumn {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 12px;
+  align-items: start;
+}
+.operationDetailAside {
+  position: sticky;
+  top: 12px;
+}
+.operationAsideBody {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.operationAsideActions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.operationAlertCard {
+  margin-top: 12px;
+}
+.operationStatusPills {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.statusPill-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+.statusPill-warning {
+  background: #fff7ed;
+  color: #b45309;
+  border-color: #fdba74;
+}
+.statusPill-pending {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fcd34d;
+}
+.operationWarningBlock {
+  margin-top: 10px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+}
+.operationWarningBlock.danger {
+  background: #fff1f2;
+  border: 1px solid #fda4af;
+  color: #9f1239;
+}
+.operationWarningBlock.warning {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+.operationWarningBlock.pending {
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #854d0e;
+}
+.operationFoldModule {
+  margin-top: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+}
+.operationFoldModule > summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+.operationFoldBody {
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 10px;
+}
 @media (max-width: 1100px) {
   .dashboardDecisionBoard {
     grid-template-columns: 1fr;
   }
   .fieldTimelineItem {
     grid-template-columns: 64px 32px 1fr;
+  }
+  .operationDetailTwoColumn {
+    grid-template-columns: 1fr;
+  }
+  .operationDetailAside {
+    position: static;
   }
 }
