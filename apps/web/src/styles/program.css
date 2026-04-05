@@ -10,3 +10,24 @@
   padding: 10px;
   border-radius: 10px;
 }
+
+.programClosurePage .detailHeroCard {
+  border: 1px solid #e4e7ec;
+}
+
+.programFixedGrid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.programListCards {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.programBusinessCard {
+  border: 1px solid #e4e7ec;
+}

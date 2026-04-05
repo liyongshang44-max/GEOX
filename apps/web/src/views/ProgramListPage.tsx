@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchProgramPortfolio } from "../api";
@@ -6,63 +5,39 @@ import EmptyState from "../components/common/EmptyState";
 import { RelativeTime } from "../components/RelativeTime";
 
 function toText(v: unknown, fallback = ""): string {
-  if (typeof v === "string") {
-    const cleaned = v.trim();
-    return cleaned || fallback;
-  }
+  if (typeof v === "string") return v.trim() || fallback;
   if (typeof v === "number" && Number.isFinite(v)) return String(v);
   return fallback;
 }
 
 function planName(item: any): string {
-  const title = toText(item?.name || item?.title || item?.display_name || item?.program_name, "");
-  if (title) return title;
-  const programId = toText(item?.program_id, "");
-  if (programId) return programId;
-  const crop = toText(item?.crop_name || item?.crop_code, "");
-  return crop ? `${crop}经营方案` : "默认经营方案";
+  return toText(item?.name || item?.title || item?.program_name || item?.program_id, "经营方案");
 }
 
 function fieldLabel(item: any): string {
-  const raw = toText(item?.field_name || item?.field_label || item?.field_id, "");
-  if (!raw) return "未命名田块";
-  if (/^field_demo_/i.test(raw)) return `示范田 ${raw.replace(/^field_demo_/i, "")}`;
-  if (/^field_/i.test(raw)) return "未命名田块";
-  return raw;
+  return toText(item?.field_name || item?.field_id, "未绑定田块");
 }
 
-function riskLabel(item: any): "高风险" | "中风险" | "低风险" {
-  const risk = String(item?.current_risk_summary?.level || "LOW").toUpperCase();
-  if (risk === "HIGH") return "高风险";
-  if (risk === "MEDIUM") return "中风险";
-  return "低风险";
-}
-
-function stageLabel(item: any): "运行中" | "待决策" | "异常" {
+function stageLabel(item: any): string {
   const status = String(item?.status || "").toUpperCase();
-  const mode = String(item?.next_action_hint?.mode || item?.next_action_hint?.decision_mode || "").toUpperCase();
-  if (status.includes("FAILED") || status.includes("ERROR") || mode.includes("BLOCKED")) return "异常";
-  if (mode.includes("APPROVAL") || status.includes("PENDING")) return "待决策";
-  return "运行中";
+  if (status.includes("FAILED") || status.includes("ERROR")) return "偏差风险";
+  if (status.includes("PENDING") || status.includes("APPROVAL")) return "待推进";
+  return "推进中";
 }
 
-function nextSuggestion(item: any): string {
-  const hint = toText(item?.next_action_hint?.human_summary || item?.next_action_hint?.expected_effect, "");
-  return hint || "等待下一轮系统评估";
+function objectiveLabel(item: any): string {
+  const crop = toText(item?.crop_name || item?.crop_code, "作物目标");
+  const quality = toText(item?.goal_profile?.quality_priority, "稳定品质");
+  return `${crop} · 目标：${quality}`;
 }
 
-function tone(stage: string): "danger" | "warning" | "success" {
-  if (stage === "异常") return "danger";
-  if (stage === "待决策") return "warning";
-  return "success";
+function impactLabel(item: any): string {
+  return toText(item?.latest_effect_summary || item?.next_action_hint?.expected_effect || item?.next_action_hint?.human_summary, "最近影响待生成");
 }
 
 export default function ProgramListPage(): React.ReactElement {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [statusFilter, setStatusFilter] = React.useState("ALL");
-  const [fieldFilter, setFieldFilter] = React.useState("ALL");
-  const [riskFilter, setRiskFilter] = React.useState("ALL");
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -76,138 +51,58 @@ export default function ProgramListPage(): React.ReactElement {
 
   React.useEffect(() => { void reload(); }, [reload]);
 
-  const fieldOptions = React.useMemo(
-    () => Array.from(new Set(items.map((x) => fieldLabel(x)).filter(Boolean))),
-    [items],
-  );
-
-  const filtered = React.useMemo(() => {
-    return items.filter((x) => {
-      const stage = stageLabel(x);
-      const field = fieldLabel(x);
-      const risk = riskLabel(x);
-      if (statusFilter !== "ALL" && stage !== statusFilter) return false;
-      if (fieldFilter !== "ALL" && field !== fieldFilter) return false;
-      if (riskFilter !== "ALL" && risk !== riskFilter) return false;
-      return true;
-    });
-  }, [items, statusFilter, fieldFilter, riskFilter]);
-
-  const stats = React.useMemo(() => ({
-    total: filtered.length,
-    running: filtered.filter((x) => stageLabel(x) === "运行中").length,
-    waiting: filtered.filter((x) => stageLabel(x) === "待决策").length,
-    risk: filtered.filter((x) => riskLabel(x) === "高风险").length,
-  }), [filtered]);
-
-  const groups = React.useMemo(() => ({
-    danger: filtered.filter((x) => stageLabel(x) === "异常" || riskLabel(x) === "高风险"),
-    warning: filtered.filter((x) => stageLabel(x) === "待决策" && riskLabel(x) !== "高风险"),
-    success: filtered.filter((x) => stageLabel(x) === "运行中" && riskLabel(x) !== "高风险"),
-  }), [filtered]);
-
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage programClosurePage">
       <section className="card demoHero dashboardHeroV2">
         <div className="eyebrow">GEOX / 经营方案页</div>
-        <h1 className="demoHeroTitle">今天重点推进哪些方案</h1>
-        <p className="demoHeroSubTitle">
-          先看高风险和待决策方案，再看正在稳定运行的方案。这个页面不是方案档案，而是经营推进入口。
-        </p>
+        <h1 className="demoHeroTitle">经营方案列表</h1>
+        <p className="demoHeroSubTitle">这个页面只讲经营目标、阶段偏差与最近影响，不重复实时监控内容。</p>
         <div className="operationsSummaryActions">
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新方案</button>
-          <Link className="btn" to="/programs/create">初始化经营</Link>
-          <Link className="btn" to="/agronomy">查看农业建议</Link>
+          <Link className="btn primary" to="/programs/create">初始化经营方案</Link>
+          <Link className="btn" to="/dashboard">返回总览</Link>
         </div>
       </section>
 
-      <section className="summaryGrid4 demoSummaryGrid">
-        <article className="card demoMetricCard">
-          <div className="demoMetricLabel">经营方案总数</div>
-          <div className="demoMetricValue">{stats.total}</div>
-          <div className="demoMetricHint">当前筛选结果中的经营方案数量。</div>
-        </article>
-        <article className="card demoMetricCard">
-          <div className="demoMetricLabel">运行中</div>
-          <div className="demoMetricValue">{stats.running}</div>
-          <div className="demoMetricHint">已进入持续推进阶段的方案。</div>
-        </article>
-        <article className="card demoMetricCard">
-          <div className="demoMetricLabel">待决策</div>
-          <div className="demoMetricValue">{stats.waiting}</div>
-          <div className="demoMetricHint">建议优先进入人工判断或审批链。</div>
-        </article>
-        <article className="card demoMetricCard">
-          <div className="demoMetricLabel">高风险</div>
-          <div className="demoMetricValue">{stats.risk}</div>
-          <div className="demoMetricHint">需要今天优先盯住的方案。</div>
-        </article>
-      </section>
-
-      <section className="card detailHeroCard">
-        <div className="demoSectionHeader">
-          <div className="sectionTitle">筛选条件</div>
-          <div className="sectionDesc">按阶段、田块和风险锁定今天要推进的经营方案。</div>
-        </div>
-        <div className="toolbarFilters">
-          <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="ALL">阶段（全部）</option>
-            <option value="运行中">运行中</option>
-            <option value="待决策">待决策</option>
-            <option value="异常">异常</option>
-          </select>
-          <select className="select" value={fieldFilter} onChange={(e) => setFieldFilter(e.target.value)}>
-            <option value="ALL">田块（全部）</option>
-            {fieldOptions.map((f) => <option key={f} value={f}>{f}</option>)}
-          </select>
-          <select className="select" value={riskFilter} onChange={(e) => setRiskFilter(e.target.value)}>
-            <option value="ALL">风险等级（全部）</option>
-            <option value="高风险">高风险</option>
-            <option value="中风险">中风险</option>
-            <option value="低风险">低风险</option>
-          </select>
-        </div>
-      </section>
-
-      <section className="dashboardDecisionBoard">
-        {(["danger","warning","success"] as const).map((key) => {
-          const title = key === "danger" ? "必须推进" : key === "warning" ? "建议推进" : "稳定运行";
-          const subtitle = key === "danger" ? "高风险或异常方案，建议优先人工处理。" :
-            key === "warning" ? "待决策方案，适合今天继续推进。" :
-            "已稳定运行，可继续观察结果与证据。";
-          const list = groups[key];
+      <section className="programListCards">
+        {items.map((p) => {
+          const id = String(p?.program_id || p?.id || "");
           return (
-            <article key={key} className={`card decisionColumn ${key}`}>
-              <div className="decisionHeader">
+            <article key={id || JSON.stringify(p)} className="card programBusinessCard">
+              <div className="operationsSummaryTop">
                 <div>
-                  <div className="sectionTitle">{title}</div>
-                  <div className="sectionDesc">{subtitle}</div>
+                  <div className="operationsSummaryTitle">{planName(p)}</div>
+                  <div className="operationsSummaryLead">{objectiveLabel(p)}</div>
                 </div>
-                <div className="decisionCount">{list.length}</div>
+                <span className="traceChip">{stageLabel(p)}</span>
               </div>
-              <div className="decisionList">
-                {list.slice(0, 6).map((p) => (
-                  <Link key={String(p?.program_id || p?.id)} to={`/programs/${encodeURIComponent(String(p?.program_id || p?.id || ""))}`} className="decisionItemLink">
-                    <div className="decisionItemTitle">{planName(p)}</div>
-                    <div className="decisionItemMeta">
-                      田块：{fieldLabel(p)} · 阶段：{stageLabel(p)} · 状态：{riskLabel(p)}
-                    </div>
-                    <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-                      最近建议：{nextSuggestion(p)}
-                    </div>
-                    <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-                      目标偏离：{riskLabel(p) === "高风险" ? "已偏离，需处理" : "暂无明显偏离"} · 最近更新：<RelativeTime value={p?.updated_at || p?.updated_ts_ms} />
-                    </div>
-                  </Link>
-                ))}
-                {!loading && !list.length ? <div className="decisionItemStatic">当前没有对应方案</div> : null}
+
+              <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">关联田块</span><strong>{fieldLabel(p)}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">阶段偏差</span><strong>{stageLabel(p) === "偏差风险" ? "存在偏差，需处理" : "暂无明显偏差"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近影响</span><strong>{impactLabel(p)}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近更新</span><strong><RelativeTime value={p?.updated_at || p?.updated_ts_ms} /></strong></div>
+              </div>
+
+              <div className="operationsSummaryActions">
+                <Link className="btn" to={`/programs/${encodeURIComponent(id)}`}>查看经营方案页</Link>
+                <Link className="btn" to="/programs/create">新建方案</Link>
               </div>
             </article>
           );
         })}
       </section>
 
-      {!loading && !filtered.length ? <EmptyState title="尚未初始化经营方案" description="请先为田块创建 Program，系统才能进入经营推进。" actionText="初始化经营" onAction={() => window.location.assign("/programs/create")} /> : null}
+      {!loading && !items.length ? (
+        <EmptyState
+          title="还没有 Program"
+          description="先初始化经营方案，创建后可直接返回列表并进入详情页查看目标与偏差。"
+          actionText="初始化经营方案"
+          onAction={() => { window.location.assign("/programs/create"); }}
+          secondaryActionText="返回总览"
+          onSecondaryAction={() => { window.location.assign("/dashboard"); }}
+        />
+      ) : null}
     </div>
   );
 }
