@@ -7,12 +7,15 @@ import {
   fetchDashboardAssignments,
   getOverview,
   getRecentEvidence,
+  fetchDashboardOverviewV2,
   fetchSlaSummary,
+  type DashboardTopActionItem,
   type DashboardRecommendationItem,
   type SlaSummary,
 } from "../api/dashboard";
 import { fetchOperationStates } from "../api";
 import { fetchOperationBilling, fetchOperationEvidencePack } from "../api/operations";
+import { executeOperationAction } from "../api/operations";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 
@@ -41,7 +44,7 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
   };
 }
 
-export default function CommercialDashboardPage(): React.ReactElement {
+export default function CommercialDashboardPage({ expert = false }: { expert?: boolean }): React.ReactElement {
   const navigate = useNavigate();
   const api = React.useMemo(
     () => ({
@@ -65,6 +68,24 @@ export default function CommercialDashboardPage(): React.ReactElement {
     avg_acceptance_time_ms: 0,
   });
   const [totalRevenue, setTotalRevenue] = React.useState(0);
+  const [topActions, setTopActions] = React.useState<DashboardTopActionItem[]>([]);
+  const [trendSummary, setTrendSummary] = React.useState<{ risk: string; effect: string }>({ risk: "NO_DATA", effect: "NO_DATA" });
+  const [opsHealth, setOpsHealth] = React.useState<{
+    failure_distribution: Record<string, number>;
+    retry_distribution: Array<{ attempt_no: number; count: number }>;
+    trace_gap_count: { missing_receipt: number; missing_evidence: number };
+  }>({ failure_distribution: {}, retry_distribution: [], trace_gap_count: { missing_receipt: 0, missing_evidence: 0 } });
+  const [deviceSummary, setDeviceSummary] = React.useState({ online: 0, offline: 0, busy: 0, low_battery: 0 });
+  const [opsDefinition, setOpsDefinition] = React.useState({
+    failure_definition: "--",
+    retry_definition: "--",
+    trace_gap_definition: "--",
+    time_window: "7d",
+  });
+  const [customerReport, setCustomerReport] = React.useState<any>(null);
+  const [policySuggestions, setPolicySuggestions] = React.useState<Array<{ rule_id: string; issue: string; recommendation: string; suggested_action?: { action_type: string; target: string; parameters: any } }>>([]);
+  const [executingActionId, setExecutingActionId] = React.useState<string | null>(null);
+  const [executeFeedback, setExecuteFeedback] = React.useState<{ tone: "success" | "warning" | "neutral"; text: string; operationId?: string } | null>(null);
 
   const [smartRecommendations, setSmartRecommendations] = React.useState<{
     todayCount: number;
@@ -77,6 +98,35 @@ export default function CommercialDashboardPage(): React.ReactElement {
     let mounted = true;
     void fetchSlaSummary().then((summary) => {
       if (mounted) setSla(summary);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    void fetchDashboardOverviewV2().then((res) => {
+      if (!mounted || !res) return;
+      setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
+      setTrendSummary({
+        risk: String(res.risk_trend ?? "NO_DATA"),
+        effect: String(res.effect_trend ?? "NO_DATA"),
+      });
+      setOpsHealth({
+        failure_distribution: res.ops_health?.failure_distribution ?? {},
+        retry_distribution: Array.isArray(res.ops_health?.retry_distribution) ? res.ops_health?.retry_distribution : [],
+        trace_gap_count: res.ops_health?.trace_gap_count ?? { missing_receipt: 0, missing_evidence: 0 },
+      });
+      setDeviceSummary(res.device_status_summary ?? { online: 0, offline: 0, busy: 0, low_battery: 0 });
+      setOpsDefinition(res.ops_definition ?? {
+        failure_definition: "--",
+        retry_definition: "--",
+        trace_gap_definition: "--",
+        time_window: "7d",
+      });
+      setCustomerReport(res.customer_report_v1 ?? null);
+      setPolicySuggestions(Array.isArray(res.policy_suggestion_v1) ? res.policy_suggestion_v1 : []);
     });
     return () => {
       mounted = false;
@@ -183,6 +233,9 @@ export default function CommercialDashboardPage(): React.ReactElement {
   const indicatorChangeLabel = `高置信建议 ${d.decisions.pendingRecommendationCount} 条 · 今日执行 ${d.overview.todayExecutionCount} 次`;
   const riskChangeLabel = `高风险 ${riskLevelCount.high} 项 · 执行缺失 ${riskSourceCount.执行缺失} 项`;
   const agronomyValue = d.agronomyValue;
+  const shouldShowOnboarding = Number(d.overview.fieldCount ?? 0) < 1 || Number(deviceSummary.online + deviceSummary.offline) < 1;
+  const hasFieldButNoData = Number(d.overview.fieldCount ?? 0) > 0 && Number(deviceSummary.online + deviceSummary.offline) > 0 && smartRecommendations.latest == null;
+  const hasDataButNoRecommendation = Number(d.overview.fieldCount ?? 0) > 0 && smartRecommendations.latest != null && d.decisions.pendingRecommendationCount < 1;
   const weeklyRecommendationCount = agronomyValue.weeklyRecommendationCount;
   const recommendationSuccessCount = agronomyValue.verdictCounts.SUCCESS;
   const recommendationDeviationCount = agronomyValue.verdictCounts.PARTIAL;
@@ -209,11 +262,51 @@ export default function CommercialDashboardPage(): React.ReactElement {
     if (target?.closest("a")) return;
     navigate(to);
   };
+  const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
+    if (!item.execution_ready || !item.execution_plan) return;
+    setExecutingActionId(item.operation_id);
+    setExecuteFeedback(null);
+    try {
+      const res = await executeOperationAction({
+        tenant_id: String(item.tenant_id ?? ""),
+        project_id: String(item.project_id ?? ""),
+        group_id: String(item.group_id ?? ""),
+        operation_id: item.operation_id,
+        execution_plan: item.execution_plan,
+      });
+      if (res?.ok) {
+        setExecuteFeedback({
+          tone: "success",
+          text: res.idempotent ? `已复用执行任务 ${res.act_task_id ?? "-"}` : `已创建执行任务 ${res.act_task_id ?? "-"}`,
+          operationId: item.operation_id,
+        });
+      } else {
+        const fallback = res?.fallback_state?.generated ? `，已生成 fallback: ${res?.fallback_action ?? res?.fallback_state?.fallback_plan?.action_type ?? "-"}` : "";
+        setExecuteFeedback({
+          tone: "warning",
+          text: `执行未完成：${res?.error ?? "UNKNOWN_ERROR"}${fallback}`,
+          operationId: item.operation_id,
+        });
+      }
+      void fetchDashboardOverviewV2().then((res) => {
+        if (!res) return;
+        setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
+      });
+    } finally {
+      setExecutingActionId(null);
+    }
+  };
 
   return (
     <div className="productPage demoDashboardPage">
       {error ? <EmptyBlock text="数据加载失败（overview）" /> : null}
       <section className="operationsSummaryGrid" style={{ marginBottom: 12 }}>
+        {expert ? (
+          <article className="operationsSummaryMetric card">
+            <span className="operationsSummaryLabel">模式</span>
+            <strong>研发模式</strong>
+          </article>
+        ) : null}
         <article className="operationsSummaryMetric card">
           <span className="operationsSummaryLabel">成功率</span>
           <strong>{Math.round((sla.success_rate || 0) * 100)}%</strong>
@@ -226,6 +319,198 @@ export default function CommercialDashboardPage(): React.ReactElement {
           <span className="operationsSummaryLabel">累计作业费用</span>
           <strong>¥{totalRevenue.toFixed(2)}</strong>
         </article>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">客户四问（经营视角）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪块地有风险</span>
+            <strong>{riskAlerts.length > 0 ? `${riskAlerts[0].fieldId || riskAlerts[0].title}（共${riskAlerts.length}项）` : "当前无高优先风险地块"}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪些操作带来收益</span>
+            <strong>{agronomyValue.verdictCounts.SUCCESS > 0 ? `SUCCESS 操作 ${agronomyValue.verdictCounts.SUCCESS} 项` : "暂无可确认收益操作"}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">哪些执行失败</span>
+            <strong>{Math.max(invalidExecutionTasks.length, d.execution.invalidExecutionCount)} 项无效/失败执行</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">SLA 总览</span>
+            <strong>执行成功率 {Math.round((sla.success_rate || 0) * 100)}% · 验收时长 {toMinuteLabel(sla.avg_acceptance_time_ms || 0)}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">待决策（审批）</span>
+            <strong>{d.decisions.pendingApprovalCount} 项待审批</strong>
+          </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        {shouldShowOnboarding ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">开始配置你的第一块田</div>
+            <div className="decisionItemMeta">先创建田块、接入设备并初始化经营方案，系统才能生成建议与作业。</div>
+            <div className="decisionList" style={{ marginTop: 8 }}>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(d.overview.fieldCount ?? 0) > 0 ? "✅" : "⚪"} 田块已创建</span><Link to={Number(d.overview.fieldCount ?? 0) > 0 ? "/fields" : "/fields/new"}>{Number(d.overview.fieldCount ?? 0) > 0 ? "查看田块" : "去创建"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "✅" : "⚪"} 设备已接入</span><Link to={Number(deviceSummary.online + deviceSummary.offline) > 0 ? "/devices" : "/devices/onboarding"}>{Number(deviceSummary.online + deviceSummary.offline) > 0 ? "查看设备" : "查看接入说明"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.decisions.pendingRecommendationCount > 0 ? "✅" : "⚪"} 系统建议已生成</span><Link to="/agronomy/recommendations">{d.decisions.pendingRecommendationCount > 0 ? "查看建议" : "刷新评估"}</Link></div>
+              <div className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between" }}><span>{d.overview.todayExecutionCount > 0 ? "✅" : "⚪"} 作业链路已开始</span><Link to="/operations">{d.overview.todayExecutionCount > 0 ? "查看作业" : "查看推荐动作"}</Link></div>
+            </div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <Link className="btn primary" to="/fields/new">新建田块</Link>
+              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+            </div>
+          </div>
+        ) : null}
+        {hasFieldButNoData ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">等待首条数据</div>
+            <div className="decisionItemMeta">已存在田块，但还没有可用于评估的首条遥测数据。</div>
+            <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
+              <Link className="btn" to="/devices">查看设备状态</Link>
+              <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
+            </div>
+          </div>
+        ) : null}
+        {hasDataButNoRecommendation ? (
+          <div className="decisionItemStatic" style={{ marginBottom: 10 }}>
+            <div className="decisionItemTitle">当前暂无建议</div>
+            <div className="decisionItemMeta">系统将在数据更新后重新评估。</div>
+            <div style={{ marginTop: 8 }}>
+              <Link className="btn" to="/agronomy/recommendations">刷新评估</Link>
+            </div>
+          </div>
+        ) : null}
+        <div className="sectionTitle">全链路操作引导</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 1 决策</span><strong>查看 Top Actions / 客户报告</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 2 执行</span><strong>点击「一键执行」生成任务</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 3 回执</span><strong>进入作业详情查看 attempt/trace/fallback</strong></article>
+          <article className="operationsSummaryMetric"><span className="operationsSummaryLabel">Step 4 复盘</span><strong>回到报告与策略建议闭环</strong></article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">Top 3 优先动作（后端排序）</div>
+        {executeFeedback ? (
+          <div className={`muted ${executeFeedback.tone === "success" ? "traceChipLive" : executeFeedback.tone === "warning" ? "traceChipWarn" : ""}`} style={{ marginTop: 8, padding: 8 }}>
+            {executeFeedback.text}
+            {executeFeedback.operationId ? (
+              <span style={{ marginLeft: 8 }}>
+                <Link to={`/operations?operation_plan_id=${encodeURIComponent(executeFeedback.operationId)}`}>查看作业详情</Link>
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="decisionList" style={{ marginTop: 10 }}>
+          {topActions.map((item) => (
+            <div key={item.operation_id} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.priority_bucket} · {item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
+              <div className="decisionItemMeta">{item.reason}</div>
+              <div className="muted" style={{ marginTop: 4 }}>{item.recommended_next_action.source} / {item.recommended_next_action.action_type}</div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                {item.execution_ready ? "可执行" : `阻断：${(item.execution_blockers ?? []).join(",") || "未知"}`}
+              </div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                trace: {item.execution_trace?.status ?? "PENDING"} · retry {item.execution_plan?.failure_strategy?.max_retries ?? 0}
+              </div>
+              <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
+                {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
+              </button>
+              <div style={{ marginTop: 8 }}>
+                <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`}>进入该作业全链路详情</Link>
+              </div>
+            </div>
+          ))}
+          {!topActions.length ? <EmptyBlock text="暂无可执行动作，默认建议：CHECK_FIELD_STATUS" /> : null}
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">趋势摘要</div>
+            <div className="decisionItemMeta">风险趋势 {trendSummary.risk} · 效果趋势 {trendSummary.effect}</div>
+          </div>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">运维健康面板（后端口径）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">设备在线/离线</span>
+            <strong>{deviceSummary.online} / {deviceSummary.offline}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">设备忙碌/低电量</span>
+            <strong>{deviceSummary.busy} / {deviceSummary.low_battery}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Trace 缺口（回执）</span>
+            <strong>{opsHealth.trace_gap_count.missing_receipt}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Trace 缺口（证据）</span>
+            <strong>{opsHealth.trace_gap_count.missing_evidence}</strong>
+          </article>
+        </div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Top失败原因</span>
+            <strong>
+              {Object.entries(opsHealth.failure_distribution)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 3)
+                .map(([k, v]) => `${k}:${v}`)
+                .join(" | ") || "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">Retry分布</span>
+            <strong>
+              {opsHealth.retry_distribution.map((x) => `#${x.attempt_no}:${x.count}`).join(" | ") || "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">口径窗口</span>
+            <strong>{opsDefinition.time_window}</strong>
+          </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">客户报告（可签约结构）</div>
+        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">报告版本</span>
+            <strong>{String(customerReport?.report_meta?.version ?? "--")}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">租户</span>
+            <strong>{String(customerReport?.report_meta?.tenant_id ?? "--")}</strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">数据窗口</span>
+            <strong>
+              {customerReport?.report_meta?.data_window
+                ? `${new Date(customerReport.report_meta.data_window.start).toLocaleDateString()} ~ ${new Date(customerReport.report_meta.data_window.end).toLocaleDateString()}`
+                : "--"}
+            </strong>
+          </article>
+          <article className="operationsSummaryMetric">
+            <span className="operationsSummaryLabel">生成时间</span>
+            <strong>{customerReport?.report_meta?.generated_at ? new Date(customerReport.report_meta.generated_at).toLocaleString() : "--"}</strong>
+          </article>
+        </div>
+      </section>
+      <section className="card" style={{ marginBottom: 12 }}>
+        <div className="sectionTitle">策略优化建议（可执行）</div>
+        <div className="decisionList" style={{ marginTop: 10 }}>
+          {policySuggestions.map((item) => (
+            <div key={item.rule_id} className="decisionItemStatic">
+              <div className="decisionItemTitle">{item.rule_id}</div>
+              <div className="decisionItemMeta">{item.issue}</div>
+              <div className="muted" style={{ marginTop: 4 }}>{item.recommendation}</div>
+              <div className="muted" style={{ marginTop: 4 }}>
+                action: {String(item.suggested_action?.action_type ?? "--")} / target: {String(item.suggested_action?.target ?? "--")}
+              </div>
+            </div>
+          ))}
+          {!policySuggestions.length ? <EmptyBlock text="暂无策略建议" /> : null}
+        </div>
       </section>
       <section className="card" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">农学效果总览</div>

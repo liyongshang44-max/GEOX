@@ -24,10 +24,11 @@ export default function FieldsPage(): React.ReactElement {
         <div>
           <div className="eyebrow">Fields / GIS · Sprint F2</div>
           <h2 className="heroTitle">田块与 GIS</h2>
-          <p className="heroText">列表页只负责展示字段列表与进入详情页。</p>
+          <p className="heroText">支持开局创建田块并进入详情继续初始化。</p>
         </div>
         <div className="heroActions">
           <Link className="btn" to="/delivery/export-jobs">查看证据导出</Link>
+          <Link className="btn" to="/fields/new">新建田块</Link>
           <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新列表</button>
         </div>
       </section>
@@ -53,7 +54,7 @@ export default function FieldsPage(): React.ReactElement {
               <div className="jobListAction">查看详情</div>
             </button>
           ))}
-          {!fields.length ? <EmptyState title="暂无可展示田块" description="可在数据接入后刷新重试" /> : null}
+          {!fields.length ? <EmptyState title="暂无田块" description="新系统请先创建第一块田。" actionText="新建田块" onAction={() => navigate("/fields/new")} /> : null}
         </div>
       </section>
     </div>

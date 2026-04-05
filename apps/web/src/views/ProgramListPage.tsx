@@ -190,10 +190,13 @@ export default function ProgramListPage(): React.ReactElement {
                   <Link key={String(p?.program_id || p?.id)} to={`/programs/${encodeURIComponent(String(p?.program_id || p?.id || ""))}`} className="decisionItemLink">
                     <div className="decisionItemTitle">{planName(p)}</div>
                     <div className="decisionItemMeta">
-                      {fieldLabel(p)} · {riskLabel(p)} · {nextSuggestion(p)}
+                      田块：{fieldLabel(p)} · 阶段：{stageLabel(p)} · 状态：{riskLabel(p)}
                     </div>
                     <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-                      最近更新：<RelativeTime value={p?.updated_at || p?.updated_ts_ms} />
+                      最近建议：{nextSuggestion(p)}
+                    </div>
+                    <div className="decisionItemMeta" style={{ marginTop: 8 }}>
+                      目标偏离：{riskLabel(p) === "高风险" ? "已偏离，需处理" : "暂无明显偏离"} · 最近更新：<RelativeTime value={p?.updated_at || p?.updated_ts_ms} />
                     </div>
                   </Link>
                 ))}
@@ -204,7 +207,7 @@ export default function ProgramListPage(): React.ReactElement {
         })}
       </section>
 
-      {!loading && !filtered.length ? <EmptyState title="暂无可展示经营方案" description="请调整筛选条件或稍后刷新。" /> : null}
+      {!loading && !filtered.length ? <EmptyState title="尚未初始化经营方案" description="请先为田块创建 Program，系统才能进入经营推进。" actionText="创建经营方案" onAction={() => window.location.assign("/programs/new")} /> : null}
     </div>
   );
 }
