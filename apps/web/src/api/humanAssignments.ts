@@ -232,6 +232,7 @@ export async function submitWorkAssignment(
   assignmentId: string,
   body: {
     execution_time: { start_ts: number; end_ts: number };
+    execution_coverage: { kind: "field" | "point" | "manual"; ref: string };
     labor?: { duration_minutes?: number; worker_count?: number };
     resource_usage?: {
       fuel_l?: number;
