@@ -7,12 +7,13 @@ type MainNavItem = {
 };
 
 const MAIN_NAV_ITEMS: MainNavItem[] = [
-  { to: "/dashboard", label: "监控台" },
+  { to: "/dashboard", label: "平台控制台" },
   { to: "/fields", label: "田块" },
   { to: "/devices", label: "设备" },
   { to: "/operations", label: "作业" },
   { to: "/programs", label: "经营方案" },
   { to: "/audit-export", label: "证据中心" },
+  { to: "/skills/registry", label: "技能" },
 ];
 
 export default function SideNav(): React.ReactElement {
@@ -22,7 +23,7 @@ export default function SideNav(): React.ReactElement {
         <div className="newSideNavMark">G</div>
         <div>
           <div className="newSideNavName">GEOX</div>
-          <div className="newSideNavSub">农业运营控制台</div>
+          <div className="newSideNavSub">平台控制台</div>
         </div>
       </div>
       <nav className="newSideNavLinks" aria-label="主导航">

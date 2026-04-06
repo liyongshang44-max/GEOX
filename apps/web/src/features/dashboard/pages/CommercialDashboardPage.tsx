@@ -22,6 +22,9 @@ import TodayPriority from "../sections/TodayPriority";
 import FieldRuntime from "../sections/FieldRuntime";
 import DecisionOperationQueue from "../sections/DecisionOperationQueue";
 import EvidenceOutcome from "../sections/EvidenceOutcome";
+import SkillOverview from "../sections/SkillOverview";
+import SkillAffectedOperations from "../sections/SkillAffectedOperations";
+import MissingSkillCoverage from "../sections/MissingSkillCoverage";
 import DashboardPageContainer from "./DashboardPageContainer";
 import { useDashboard } from "../../../hooks/useDashboard";
 
@@ -272,8 +275,8 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         blocks={[
           {
             zone: "A",
-            title: "顶部总览",
-            description: "先接入统一假数据结构，后续可平滑切换真实接口。",
+            title: "平台总览",
+            description: "平台控制台主入口：统一承载运营与技能态势。",
             content: (
               <OverviewMetrics
                 expert={expert}
@@ -333,6 +336,24 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
                 loadError={error}
               />
             ),
+          },
+          {
+            zone: "F",
+            title: "技能概览",
+            description: "统一查看技能状态、版本与最新运行健康度。",
+            content: <SkillOverview />,
+          },
+          {
+            zone: "G",
+            title: "技能影响作业",
+            description: "按运行状态追踪技能对作业闭环的影响。",
+            content: <SkillAffectedOperations />,
+          },
+          {
+            zone: "H",
+            title: "缺失技能覆盖",
+            description: "识别未覆盖范围并引导补齐绑定策略。",
+            content: <MissingSkillCoverage />,
           },
         ]}
       />
