@@ -2,6 +2,8 @@ import type { Pool } from "pg";
 import type { AgronomyRuleSkill } from "./types";
 import { ruleSkills } from "./index";
 import { listFallbackSkillSwitches, type SkillSwitch } from "./runtime_config";
+import { appendSkillBindingFact } from "../../skill_registry/facts";
+import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../../../projections/skill_registry_read_v1";
 
 type ResolvedRuleSkill = AgronomyRuleSkill & { __priority: number };
 
@@ -10,16 +12,23 @@ export type SkillBindingRecord = {
   skill_id: string;
   version: string;
   tenant_id: string | null;
+  project_id: string | null;
+  group_id: string | null;
   crop_code: string | null;
   enabled: boolean;
   priority: number;
+  category: string | null;
+  scope_type: string | null;
+  rollout_mode: string | null;
+  trigger_stage: string | null;
+  bind_target: string | null;
+  device_type: string | null;
   updated_at: string;
 };
 
 export type SkillBindingSource = "tenant+crop" | "tenant+*" | "*+crop" | "global" | "fallback_config";
 
 let bindingsPool: Pool | null = null;
-let bindingsTableChecked = false;
 
 function normalizeScopeValue(input?: string): string | null {
   const normalized = typeof input === "string" ? input.trim() : "";
@@ -56,62 +65,75 @@ function pickBySkill(rows: Array<SkillBindingRecord & { source: SkillBindingSour
   return picked;
 }
 
-async function assertBindingsTableReady(): Promise<void> {
-  if (!bindingsPool || bindingsTableChecked) return;
-  const checked = await bindingsPool.query<{ reg: string | null }>("SELECT to_regclass('public.skill_rule_bindings') AS reg");
-  if (!checked.rows[0]?.reg) {
-    throw new Error("SKILL_RULE_BINDINGS_TABLE_MISSING: apply DB migration first");
-  }
-  bindingsTableChecked = true;
-}
-
 export function configureSkillBindingsPool(pool: Pool): void {
   bindingsPool = pool;
+}
+
+function toBindingRecord(row: any): SkillBindingRecord {
+  return {
+    id: String(row.fact_id ?? ""),
+    skill_id: String(row.skill_id ?? ""),
+    version: String(row.version ?? ""),
+    tenant_id: String(row.tenant_id ?? "") || null,
+    project_id: String(row.project_id ?? "") || null,
+    group_id: String(row.group_id ?? "") || null,
+    crop_code: String(row.crop_code ?? "") || null,
+    enabled: String(row.status ?? "").toUpperCase() === "ENABLED",
+    priority: Number.isFinite(Number(row.payload_json?.priority)) ? Number(row.payload_json?.priority) : 0,
+    category: String(row.category ?? "") || null,
+    scope_type: String(row.scope_type ?? "") || null,
+    rollout_mode: String(row.rollout_mode ?? "") || null,
+    trigger_stage: String(row.trigger_stage ?? "") || null,
+    bind_target: String(row.bind_target ?? "") || null,
+    device_type: String(row.device_type ?? "") || null,
+    updated_at: new Date(Number(row.updated_at_ts_ms ?? Date.now())).toISOString(),
+  };
 }
 
 export async function listSkillBindings(input?: {
   crop_code?: string;
   tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
   enabled_only?: boolean;
 }): Promise<SkillBindingRecord[]> {
-  if (!bindingsPool) {
+  if (!bindingsPool || !input?.tenant_id || !input?.project_id || !input?.group_id) {
     return listFallbackSkillSwitches(input).map((item, index) => ({
       id: `fallback_${index}`,
       skill_id: item.skill_id,
       version: item.version,
       tenant_id: item.scope?.tenant_id ?? null,
+      project_id: null,
+      group_id: null,
       crop_code: item.scope?.crop_code ?? null,
       enabled: item.enabled,
       priority: item.priority,
+      category: null,
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      trigger_stage: null,
+      bind_target: item.scope?.tenant_id ?? "*",
+      device_type: null,
       updated_at: new Date(0).toISOString(),
     }));
   }
 
-  await assertBindingsTableReady();
+  await projectSkillRegistryReadV1(bindingsPool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
 
-  const params: unknown[] = [];
-  const where: string[] = [];
-  if (input?.enabled_only) {
-    params.push(true);
-    where.push(`enabled = $${params.length}`);
-  }
-  if (typeof input?.tenant_id === "string" && input.tenant_id.trim()) {
-    params.push(input.tenant_id.trim());
-    where.push(`(tenant_id = $${params.length} OR tenant_id IS NULL)`);
-  }
-  if (typeof input?.crop_code === "string" && input.crop_code.trim()) {
-    params.push(input.crop_code.trim());
-    where.push(`(crop_code = $${params.length} OR crop_code IS NULL)`);
-  }
+  const rows = await querySkillRegistryReadV1(bindingsPool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    crop_code: input.crop_code,
+    fact_type: "skill_binding_v1",
+  });
 
-  const sql = `
-    SELECT id, skill_id, version, tenant_id, crop_code, enabled, priority, updated_at
-    FROM skill_rule_bindings
-    ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
-    ORDER BY updated_at DESC, skill_id ASC
-  `;
-  const rows = await bindingsPool.query<SkillBindingRecord>(sql, params);
-  return rows.rows;
+  const records = rows.map((row) => toBindingRecord(row));
+  return input.enabled_only ? records.filter((x) => x.enabled) : records;
 }
 
 export async function switchSkillBinding(input: {
@@ -119,61 +141,53 @@ export async function switchSkillBinding(input: {
   version: string;
   enabled: boolean;
   priority?: number;
-  scope?: { tenant_id?: string; crop_code?: string };
+  category?: string;
+  scope?: { tenant_id?: string; project_id?: string; group_id?: string; crop_code?: string; scope_type?: string; bind_target?: string; device_type?: string; trigger_stage?: string; rollout_mode?: string };
 }): Promise<SkillBindingRecord> {
-  if (!bindingsPool) {
-    throw new Error("SKILL_BINDINGS_DB_UNAVAILABLE");
-  }
-
-  await assertBindingsTableReady();
+  if (!bindingsPool) throw new Error("SKILL_BINDINGS_DB_UNAVAILABLE");
 
   const tenant_id = normalizeScopeValue(input.scope?.tenant_id);
-  const crop_code = normalizeScopeValue(input.scope?.crop_code);
-  const priority = Number.isFinite(Number(input.priority)) ? Number(input.priority) : 0;
+  const project_id = normalizeScopeValue(input.scope?.project_id);
+  const group_id = normalizeScopeValue(input.scope?.group_id);
+  if (!tenant_id || !project_id || !group_id) throw new Error("TENANT_TRIPLE_REQUIRED");
 
-  const client = await bindingsPool.connect();
-  try {
-    await client.query("BEGIN");
+  const appended = await appendSkillBindingFact(bindingsPool, {
+    tenant_id,
+    project_id,
+    group_id,
+    skill_id: input.skill_id,
+    version: input.version,
+    category: (input.category ?? "AGRONOMY") as any,
+    status: input.enabled ? "ENABLED" : "DISABLED",
+    scope_type: (input.scope?.scope_type ?? "TENANT") as any,
+    rollout_mode: (input.scope?.rollout_mode ?? "DIRECT") as any,
+    trigger_stage: (input.scope?.trigger_stage ?? "before_recommendation") as any,
+    bind_target: input.scope?.bind_target ?? tenant_id,
+    crop_code: input.scope?.crop_code ?? null,
+    device_type: (input.scope?.device_type ?? null) as any,
+    priority: Number.isFinite(Number(input.priority)) ? Number(input.priority) : 0,
+  });
 
-    if (input.enabled) {
-      await client.query(
-        `UPDATE skill_rule_bindings
-         SET enabled = false, updated_at = now()
-         WHERE skill_id = $1
-           AND COALESCE(tenant_id, '') = COALESCE($2, '')
-           AND COALESCE(crop_code, '') = COALESCE($3, '')
-           AND enabled = true`,
-        [input.skill_id, tenant_id, crop_code]
-      );
-    }
+  await projectSkillRegistryReadV1(bindingsPool, { tenant_id, project_id, group_id });
 
-    await client.query(
-      `INSERT INTO skill_rule_bindings (id, skill_id, version, crop_code, tenant_id, enabled, priority, updated_at)
-       VALUES (md5(random()::text || clock_timestamp()::text), $1, $2, $3, $4, $5, $6, now())
-       ON CONFLICT (skill_id, version, tenant_scope, crop_scope)
-       DO UPDATE SET enabled = EXCLUDED.enabled,
-                     priority = EXCLUDED.priority,
-                     updated_at = now()`,
-      [input.skill_id, input.version, crop_code, tenant_id, input.enabled, priority]
-    );
-
-    const selected = await client.query<SkillBindingRecord>(
-      `SELECT id, skill_id, version, tenant_id, crop_code, enabled, priority, updated_at
-       FROM skill_rule_bindings
-       WHERE skill_id = $1 AND version = $2
-         AND COALESCE(tenant_id, '') = COALESCE($3, '')
-         AND COALESCE(crop_code, '') = COALESCE($4, '')`,
-      [input.skill_id, input.version, tenant_id, crop_code]
-    );
-
-    await client.query("COMMIT");
-    return selected.rows[0];
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  return {
+    id: appended.fact_id,
+    skill_id: appended.payload.skill_id,
+    version: appended.payload.version,
+    tenant_id,
+    project_id,
+    group_id,
+    crop_code: appended.payload.crop_code ?? null,
+    enabled: appended.payload.status === "ENABLED",
+    priority: appended.payload.priority,
+    category: appended.payload.category,
+    scope_type: appended.payload.scope_type,
+    rollout_mode: appended.payload.rollout_mode,
+    trigger_stage: appended.payload.trigger_stage,
+    bind_target: appended.payload.bind_target,
+    device_type: appended.payload.device_type ?? null,
+    updated_at: appended.occurred_at,
+  };
 }
 
 function resolveFromFallback(input: { crop_code: string; tenant_id: string }): Array<SkillSwitch & { source: SkillBindingSource }> {
@@ -200,9 +214,17 @@ function resolveFromFallback(input: { crop_code: string; tenant_id: string }): A
       skill_id: item.skill_id,
       version: item.version,
       tenant_id: item.scope?.tenant_id ?? null,
+      project_id: null,
+      group_id: null,
       crop_code: item.scope?.crop_code ?? null,
       enabled: item.enabled,
       priority: item.priority,
+      category: null,
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      trigger_stage: null,
+      bind_target: item.scope?.tenant_id ?? "*",
+      device_type: null,
       updated_at: new Date(0).toISOString(),
       source,
     })));
@@ -224,60 +246,80 @@ function resolveFromFallback(input: { crop_code: string; tenant_id: string }): A
 export async function resolveRuleSkillBindings(input: {
   crop_code: string;
   tenant_id: string;
+  project_id?: string;
+  group_id?: string;
 }): Promise<Array<SkillBindingRecord & { source: SkillBindingSource }>> {
-  if (!bindingsPool) {
+  if (!bindingsPool || !input.project_id || !input.group_id) {
     return resolveFromFallback(input).map((item) => ({
       id: `fallback_${item.skill_id}_${item.version}`,
       skill_id: item.skill_id,
       version: item.version,
       tenant_id: item.scope?.tenant_id ?? null,
+      project_id: null,
+      group_id: null,
       crop_code: item.scope?.crop_code ?? null,
       enabled: item.enabled,
       priority: item.priority,
+      category: null,
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      trigger_stage: null,
+      bind_target: item.scope?.tenant_id ?? "*",
+      device_type: null,
       updated_at: new Date(0).toISOString(),
       source: item.source,
     }));
   }
 
-  try {
-    await assertBindingsTableReady();
-    const rows = await bindingsPool.query<SkillBindingRecord>(
-      `SELECT id, skill_id, version, tenant_id, crop_code, enabled, priority, updated_at
-       FROM skill_rule_bindings
-       WHERE enabled = true
-         AND (tenant_id = $1 OR tenant_id IS NULL)
-         AND (crop_code = $2 OR crop_code IS NULL)`,
-      [input.tenant_id, input.crop_code]
-    );
+  await projectSkillRegistryReadV1(bindingsPool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
 
-    const withSource = rows.rows
-      .map((row) => {
-        const source = resolveSource(input.tenant_id, input.crop_code, row);
-        return source ? { ...row, source } : null;
-      })
-      .filter((row): row is SkillBindingRecord & { source: SkillBindingSource } => Boolean(row));
+  const rows = await querySkillRegistryReadV1(bindingsPool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    fact_type: "skill_binding_v1",
+  });
 
-    for (const source of sourceOrder) {
-      const bucket = withSource.filter((row) => row.source === source);
-      const picked = pickBySkill(bucket);
-      if (picked.length > 0) return picked;
-    }
-  } catch (error) {
-    const fallback = resolveFromFallback(input);
-    if (fallback.length > 0) {
-      return fallback.map((item) => ({
-        id: `fallback_${item.skill_id}_${item.version}`,
-        skill_id: item.skill_id,
-        version: item.version,
-        tenant_id: item.scope?.tenant_id ?? null,
-        crop_code: item.scope?.crop_code ?? null,
-        enabled: item.enabled,
-        priority: item.priority,
-        updated_at: new Date(0).toISOString(),
-        source: item.source,
-      }));
-    }
-    throw error;
+  const withSource = rows
+    .map((row) => toBindingRecord(row))
+    .filter((row) => row.enabled)
+    .map((row) => {
+      const source = resolveSource(input.tenant_id, input.crop_code, row);
+      return source ? { ...row, source } : null;
+    })
+    .filter((row): row is SkillBindingRecord & { source: SkillBindingSource } => Boolean(row));
+
+  for (const source of sourceOrder) {
+    const bucket = withSource.filter((row) => row.source === source);
+    const picked = pickBySkill(bucket);
+    if (picked.length > 0) return picked;
+  }
+
+  const fallback = resolveFromFallback(input);
+  if (fallback.length > 0) {
+    return fallback.map((item) => ({
+      id: `fallback_${item.skill_id}_${item.version}`,
+      skill_id: item.skill_id,
+      version: item.version,
+      tenant_id: item.scope?.tenant_id ?? null,
+      project_id: null,
+      group_id: null,
+      crop_code: item.scope?.crop_code ?? null,
+      enabled: item.enabled,
+      priority: item.priority,
+      category: null,
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      trigger_stage: null,
+      bind_target: item.scope?.tenant_id ?? "*",
+      device_type: null,
+      updated_at: new Date(0).toISOString(),
+      source: item.source,
+    }));
   }
 
   throw new Error("NO_SKILL_BINDING_FOUND");
@@ -286,6 +328,8 @@ export async function resolveRuleSkillBindings(input: {
 export async function getRuleSkills(input: {
   crop_code: string;
   tenant_id: string;
+  project_id?: string;
+  group_id?: string;
 }): Promise<ResolvedRuleSkill[]> {
   const resolvedBindings = await resolveRuleSkillBindings(input);
   const resolved = resolvedBindings
