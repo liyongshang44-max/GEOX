@@ -10,9 +10,10 @@ export type TopBarProps = {
     label: string;
     to: string;
   };
+  onPrimaryActionClick?: () => void;
 };
 
-export default function TopBar({ breadcrumbs, title, lead, primaryAction }: TopBarProps): React.ReactElement {
+export default function TopBar({ breadcrumbs, title, lead, primaryAction, onPrimaryActionClick }: TopBarProps): React.ReactElement {
   return (
     <header className="newTopBar card">
       <div className="newTopBarLeft">
@@ -32,7 +33,7 @@ export default function TopBar({ breadcrumbs, title, lead, primaryAction }: TopB
         <button className="btn" type="button">告警</button>
         <button className="btn" type="button">租户切换</button>
         <button className="btn" type="button">用户菜单</button>
-        <NavLink className="btn primary" to={primaryAction.to}>{primaryAction.label}</NavLink>
+        <NavLink className="btn primary" to={primaryAction.to} onClick={onPrimaryActionClick}>{primaryAction.label}</NavLink>
       </div>
     </header>
   );

@@ -4,13 +4,13 @@ import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
-import RouteErrorBoundary from "./errors/RouteErrorBoundary";
-
-const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
-const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
-const DeviceDetailPage = React.lazy(() => import("../features/devices/pages/DeviceDetailPage"));
-const OperationsPage = React.lazy(() => import("../features/operations/pages/OperationsPage"));
-const OperationDetailPage = React.lazy(() => import("../features/operations/pages/OperationDetailPage"));
+import { renderDashboardRoutes } from "./routes/dashboardRoutes";
+import { renderFieldsRoutes } from "./routes/fieldsRoutes";
+import { renderDevicesRoutes } from "./routes/devicesRoutes";
+import { renderOperationsRoutes } from "./routes/operationsRoutes";
+import { renderProgramsRoutes } from "./routes/programsRoutes";
+import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
+import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
@@ -20,22 +20,8 @@ const AdminHealthPage = React.lazy(() => import("../views/AdminHealthPage"));
 const AdminImportPage = React.lazy(() => import("../views/AdminImportPage"));
 const AdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePage"));
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
-const ExportJobsPage = React.lazy(() => import("../views/ExportJobsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
-const FieldsPage = React.lazy(() => import("../views/FieldsPage"));
-const FieldCreatePage = React.lazy(() => import("../views/FieldCreatePage"));
-const FieldDetailPage = React.lazy(() => import("../views/FieldDetailPage"));
-const DeviceOnboardingPage = React.lazy(() => import("../views/DeviceOnboardingPage"));
-const AlertsPage = React.lazy(() => import("../views/AlertsPage"));
-const AuditExportPage = React.lazy(() => import("../views/AuditExportPage"));
-const AgronomyRecommendationsPage = React.lazy(() => import("../views/AgronomyRecommendationsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
-const ProgramListPage = React.lazy(() => import("../views/ProgramListPage"));
-const ProgramDetailPage = React.lazy(() => import("../views/ProgramDetailPage"));
-const ProgramNewPage = React.lazy(() => import("../views/ProgramNewPage"));
-const ProgramCreatePage = React.lazy(() => import("../views/ProgramCreatePage"));
-const HumanAssignmentsPage = React.lazy(() => import("../views/HumanAssignmentsPage"));
-const HumanAssignmentDetailPage = React.lazy(() => import("../views/HumanAssignmentDetailPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -136,6 +122,9 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
 function Shell({ expert }: { expert: boolean }): React.ReactElement {
   const location = useLocation();
   const pathname = location.pathname;
+  const primaryAction = primaryActionForPath(pathname);
+
+  usePageEnterEvent();
 
   return (
     <AppShell
@@ -143,31 +132,19 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
         breadcrumbs: breadcrumbsForPath(pathname),
         title: titleForPath(pathname),
         lead: leadForPath(pathname),
-        primaryAction: primaryActionForPath(pathname),
+        primaryAction,
+        onPrimaryActionClick: () => trackMainActionClick(pathname, primaryAction.label),
       }}
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
-          <Route path="/" element={<CommercialDashboardPage expert={expert} />} />
-          <Route path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />
-          <Route path="/delivery/export-jobs" element={<ExportJobsPage />} />
-          <Route path="/fields" element={<FieldsPage />} />
-          <Route path="/fields/new" element={<FieldCreatePage />} />
-          <Route path="/fields/:fieldId" element={<FieldDetailPage />} />
-          <Route path="/devices" element={<DevicesPage />} />
-          <Route path="/devices/onboarding" element={<DeviceOnboardingPage />} />
-          <Route path="/devices/:deviceId" element={<RouteErrorBoundary><DeviceDetailPage /></RouteErrorBoundary>} />
-          <Route path="/operations" element={<OperationsPage />} />
-          <Route path="/operations/:operationPlanId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />
-          <Route path="/human-assignments" element={<HumanAssignmentsPage />} />
-          <Route path="/human-assignments/:assignmentId" element={<HumanAssignmentDetailPage />} />
-          <Route path="/programs" element={<ProgramListPage />} />
-          <Route path="/programs/create" element={<ProgramCreatePage />} />
-          <Route path="/programs/new" element={<ProgramNewPage />} />
-          <Route path="/programs/:programId" element={<ProgramDetailPage />} />
-          <Route path="/agronomy/recommendations" element={<AgronomyRecommendationsPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/audit-export" element={<AuditExportPage />} />
+          {renderDashboardRoutes(expert)}
+          {renderEvidenceRoutes()}
+          {renderFieldsRoutes()}
+          {renderDevicesRoutes()}
+          {renderOperationsRoutes()}
+          {renderProgramsRoutes()}
+
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/dev" element={<DevToolsPage />} />
           <Route path="/legacy/judge/run" element={<JudgeRunPage />} />
