@@ -222,6 +222,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
   const actionType = String(operation?.task?.action_type ?? operation?.plan?.action_type ?? "未知动作");
   const parameterPayload = operation?.task?.parameters ?? operation?.task?.parameter_json ?? operation?.plan?.parameters ?? {};
   const windowLabel = formatWindow(Number(trajectory?.start_ts || 0), Number(trajectory?.end_ts || 0));
+  const fallbackContext = item.fallback_context ?? null;
 
   return (
     <div className="productPage">
@@ -248,10 +249,21 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         <div className="kv"><span className="k">到场截止</span><span className="v">{item.arrive_deadline_ts ? new Date(item.arrive_deadline_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
         <div className="kv"><span className="k">超时时间</span><span className="v">{item.expired_ts ? new Date(item.expired_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
         <div className="kv"><span className="k">超时原因</span><span className="v">{item.expired_reason || "-"}</span></div>
+        <div className="kv"><span className="k">来源</span><span className="v">{item.origin_type === "auto_fallback" ? "自动转人工" : "人工派发"}</span></div>
+        <div className="kv"><span className="k">失败原因</span><span className="v">{fallbackContext?.reason_message || fallbackContext?.reason_code || "-"}</span></div>
+        <div className="kv"><span className="k">失败重试</span><span className="v">{fallbackContext?.retry_count != null || fallbackContext?.max_retries != null ? `${fallbackContext?.retry_count ?? "-"} / ${fallbackContext?.max_retries ?? "-"}` : "-"}</span></div>
+        <div className="kv"><span className="k">设备状态</span><span className="v">{fallbackContext?.device?.status || "-"}</span></div>
+        <div className="kv"><span className="k">设备标识</span><span className="v">{fallbackContext?.device?.device_name || fallbackContext?.device?.device_id || "-"}</span></div>
         <div className="kv" style={{ alignItems: "flex-start" }}>
           <span className="k">操作参数</span>
           <pre className="v" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJsonText(parameterPayload)}</pre>
         </div>
+        {fallbackContext ? (
+          <div className="kv" style={{ alignItems: "flex-start" }}>
+            <span className="k">失败上下文</span>
+            <pre className="v" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJsonText(fallbackContext)}</pre>
+          </div>
+        ) : null}
       </section>
 
       <section className="card section" style={{ marginTop: 16 }}>

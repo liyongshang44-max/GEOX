@@ -118,6 +118,27 @@ export async function fetchOperationDetail(operationPlanId: string): Promise<Ope
   return res?.operation ?? res?.item ?? null;
 }
 
+export type OperationHandoffItem = {
+  operation_plan_id: string;
+  act_task_id: string;
+  source_dispatch_id?: string | null;
+  assignment_id: string;
+  assignment_status?: string | null;
+  executor_id?: string | null;
+  origin_type?: string | null;
+  origin_ref_id?: string | null;
+  fallback_context?: any;
+  created_ts_ms: number;
+  updated_ts_ms: number;
+};
+
+export async function fetchOperationHandoff(operationPlanId: string): Promise<OperationHandoffItem[]> {
+  const id = String(operationPlanId ?? "").trim();
+  if (!id) return [];
+  const res = await apiRequestOptional<{ ok?: boolean; items?: OperationHandoffItem[] }>(`/api/v1/operations/${encodeURIComponent(id)}/handoff`);
+  return Array.isArray(res?.items) ? res.items : [];
+}
+
 export async function fetchOperationEvidenceExport(operationPlanId: string): Promise<OperationEvidenceExportResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;

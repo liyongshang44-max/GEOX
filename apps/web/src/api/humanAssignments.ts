@@ -14,6 +14,22 @@ export type WorkAssignmentItem = {
   expired_reason?: string | null;
   dispatch_note?: string | null;
   priority?: number;
+  origin_type?: "manual" | "auto_fallback";
+  origin_ref_id?: string | null;
+  fallback_context?: {
+    reason_code?: string | null;
+    reason_message?: string | null;
+    dispatch_id?: string | null;
+    retry_count?: number | null;
+    max_retries?: number | null;
+    failed_at?: string | null;
+    device?: {
+      device_id?: string | null;
+      device_name?: string | null;
+      status?: string | null;
+      last_heartbeat_ts?: number | null;
+    } | null;
+  } | null;
   created_ts_ms: number;
   updated_ts_ms: number;
 };
@@ -124,6 +140,9 @@ export async function batchCreateWorkAssignments(body: {
     required_capabilities?: string[];
     dispatch_note?: string;
     priority?: number;
+    origin_type?: "manual" | "auto_fallback";
+    origin_ref_id?: string;
+    fallback_context?: Record<string, unknown>;
   }>;
 }): Promise<{ ok?: boolean; created?: any[]; errors?: any[] }> {
   return apiRequest<{ ok?: boolean; created?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-create", {

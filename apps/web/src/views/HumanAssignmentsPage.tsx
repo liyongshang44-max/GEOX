@@ -5,9 +5,11 @@ import {
   batchCancelWorkAssignments,
   fetchHumanExecutors,
   fetchWorkAssignments,
+  fetchWorkAssignmentSlaSummary,
   reassignWorkAssignment,
   type HumanExecutorItem,
   type WorkAssignmentItem,
+  type WorkAssignmentSlaSummary,
   type WorkAssignmentStatus
 } from "../api/humanAssignments";
 
@@ -56,17 +58,20 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   const [reassignTarget, setReassignTarget] = React.useState<WorkAssignmentItem | null>(null);
   const [reassignExecutorId, setReassignExecutorId] = React.useState("");
   const [reassignReason, setReassignReason] = React.useState("");
+  const [slaSummary, setSlaSummary] = React.useState<WorkAssignmentSlaSummary | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const [res, executorRows] = await Promise.all([
+      const [res, executorRows, summary] = await Promise.all([
         fetchWorkAssignments({ limit: 200 }),
         fetchHumanExecutors({ status: "ACTIVE", limit: 200 }),
+        fetchWorkAssignmentSlaSummary(),
       ]);
       setItems(Array.isArray(res.items) ? res.items : []);
       setExecutors(executorRows);
+      setSlaSummary(summary);
     } catch (err: any) {
       setError(String(err?.message ?? "加载失败"));
       setItems([]);
@@ -111,6 +116,8 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   React.useEffect(() => {
     void reload();
   }, [reload]);
+
+  const sourceLabel = (originType?: string): string => (String(originType ?? "manual").toLowerCase() === "auto_fallback" ? "自动转人工" : "人工派发");
 
   return (
     <div className="productPage">
@@ -157,6 +164,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>任务编号：{item.act_task_id}</span>
                         <span>执行人：{item.executor_id}</span>
                         <span>分配时间：{toTimeLabel(item.assigned_at)}</span>
+                        <span>来源：{sourceLabel(item.origin_type)}</span>
                         <span>最后更新时间：{toTimeLabel(Number(item.updated_ts_ms ?? 0))}</span>
                         <span>{toSlaLabel(item)}</span>
                       </div>
