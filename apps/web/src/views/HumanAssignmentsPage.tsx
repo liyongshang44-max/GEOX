@@ -1,7 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import EmptyState from "../components/common/EmptyState";
-import { fetchWorkAssignmentSlaSummary, fetchWorkAssignments, type WorkAssignmentItem, type WorkAssignmentSlaSummary, type WorkAssignmentStatus } from "../api/humanAssignments";
+import {
+  batchCancelWorkAssignments,
+  fetchHumanExecutors,
+  fetchWorkAssignments,
+  reassignWorkAssignment,
+  type HumanExecutorItem,
+  type WorkAssignmentItem,
+  type WorkAssignmentStatus
+} from "../api/humanAssignments";
 
 const STATUS_META: Array<{ code: WorkAssignmentStatus; label: string }> = [
   { code: "ASSIGNED", label: "待接单" },
@@ -43,16 +51,22 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string>("");
   const [items, setItems] = React.useState<WorkAssignmentItem[]>([]);
-  const [slaSummary, setSlaSummary] = React.useState<WorkAssignmentSlaSummary | null>(null);
+  const [executors, setExecutors] = React.useState<HumanExecutorItem[]>([]);
+  const [toast, setToast] = React.useState("");
+  const [reassignTarget, setReassignTarget] = React.useState<WorkAssignmentItem | null>(null);
+  const [reassignExecutorId, setReassignExecutorId] = React.useState("");
+  const [reassignReason, setReassignReason] = React.useState("");
 
   const reload = React.useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetchWorkAssignments({ limit: 200 });
+      const [res, executorRows] = await Promise.all([
+        fetchWorkAssignments({ limit: 200 }),
+        fetchHumanExecutors({ status: "ACTIVE", limit: 200 }),
+      ]);
       setItems(Array.isArray(res.items) ? res.items : []);
-      const summary = await fetchWorkAssignmentSlaSummary();
-      setSlaSummary(summary);
+      setExecutors(executorRows);
     } catch (err: any) {
       setError(String(err?.message ?? "加载失败"));
       setItems([]);
@@ -61,6 +75,38 @@ export default function HumanAssignmentsPage(): React.ReactElement {
       setLoading(false);
     }
   }, []);
+
+  const handleOpenReassign = (item: WorkAssignmentItem) => {
+    setReassignTarget(item);
+    setReassignExecutorId("");
+    setReassignReason("");
+  };
+
+  const handleDoReassign = async () => {
+    if (!reassignTarget || !reassignExecutorId) return;
+    try {
+      await reassignWorkAssignment(reassignTarget.assignment_id, {
+        executor_id: reassignExecutorId,
+        reason: reassignReason.trim() || "MANUAL_REASSIGN",
+      });
+      setToast(`改派成功：${reassignTarget.assignment_id}`);
+      setReassignTarget(null);
+      await reload();
+    } catch (err: any) {
+      setToast(`改派失败：${String(err?.message ?? "未知错误")}`);
+    }
+  };
+
+  const handleCancel = async (item: WorkAssignmentItem) => {
+    if (!globalThis.confirm(`确认撤单 ${item.assignment_id}？`)) return;
+    try {
+      await batchCancelWorkAssignments({ items: [{ assignment_id: item.assignment_id, note: "UI_CONFIRM_CANCEL" }] });
+      setToast(`撤单成功：${item.assignment_id}`);
+      await reload();
+    } catch (err: any) {
+      setToast(`撤单失败：${String(err?.message ?? "未知错误")}`);
+    }
+  };
 
   React.useEffect(() => {
     void reload();
@@ -78,6 +124,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
         </div>
         {error ? <div className="muted" style={{ marginTop: 10 }}>加载异常：{error}</div> : null}
+        {toast ? <div className="muted" style={{ marginTop: 10 }}>{toast}</div> : null}
       </section>
       {slaSummary ? (
         <section className="card section" style={{ marginTop: 16 }}>
@@ -114,7 +161,15 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>{toSlaLabel(item)}</span>
                       </div>
                     </div>
-                    <Link className="btn" to={`/human-assignments/${encodeURIComponent(item.assignment_id)}`}>进入详情</Link>
+                    <div className="row" style={{ gap: 8 }}>
+                      <Link className="btn" to={`/human-assignments/${encodeURIComponent(item.assignment_id)}`}>进入详情</Link>
+                      {["ASSIGNED", "ACCEPTED", "ARRIVED"].includes(item.status) ? (
+                        <>
+                          <button className="btn" onClick={() => handleOpenReassign(item)}>改派</button>
+                          <button className="btn" onClick={() => void handleCancel(item)}>撤单</button>
+                        </>
+                      ) : null}
+                    </div>
                   </article>
                 ))}
               </div>
@@ -124,6 +179,29 @@ export default function HumanAssignmentsPage(): React.ReactElement {
           </section>
         );
       })}
+
+      {reassignTarget ? (
+        <div className="card section" style={{ marginTop: 16 }}>
+          <div className="row" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+            <h3 className="h3" style={{ margin: 0 }}>改派执行人</h3>
+            <button className="btn" onClick={() => setReassignTarget(null)}>关闭</button>
+          </div>
+          <div className="meta">
+            <span>派单号：{reassignTarget.assignment_id}</span>
+            <span>当前执行人：{reassignTarget.executor_id}</span>
+          </div>
+          <div className="row" style={{ gap: 12, marginTop: 12, flexWrap: "wrap" }}>
+            <select className="input" value={reassignExecutorId} onChange={(e) => setReassignExecutorId(e.target.value)}>
+              <option value="">请选择新执行人</option>
+              {executors.map((x) => (
+                <option key={x.executor_id} value={x.executor_id}>{x.display_name}（{x.executor_id}）</option>
+              ))}
+            </select>
+            <input className="input" placeholder="改派原因" value={reassignReason} onChange={(e) => setReassignReason(e.target.value)} />
+            <button className="btn" onClick={() => void handleDoReassign()} disabled={!reassignExecutorId}>确认改派</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

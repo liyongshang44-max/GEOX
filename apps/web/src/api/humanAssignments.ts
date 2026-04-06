@@ -12,6 +12,8 @@ export type WorkAssignmentItem = {
   arrive_deadline_ts?: number | null;
   expired_ts?: number | null;
   expired_reason?: string | null;
+  dispatch_note?: string | null;
+  priority?: number;
   created_ts_ms: number;
   updated_ts_ms: number;
 };
@@ -49,6 +51,15 @@ export type HumanExecutorItem = {
   capabilities: string[];
   created_ts_ms: number;
   updated_ts_ms: number;
+};
+
+export type HumanExecutorAvailabilityItem = {
+  executor_id: string;
+  display_name: string;
+  team_id?: string | null;
+  capabilities: string[];
+  active_assignment_count: number;
+  available: boolean;
 };
 
 export async function fetchWorkAssignments(params?: {
@@ -91,6 +102,17 @@ export async function fetchHumanExecutors(params?: {
   return Array.isArray(res.items) ? res.items : [];
 }
 
+export async function fetchHumanExecutorAvailability(params?: {
+  team_id?: string;
+  capability?: string;
+  limit?: number;
+}): Promise<HumanExecutorAvailabilityItem[]> {
+  const res = await apiRequest<{ ok?: boolean; items?: HumanExecutorAvailabilityItem[] }>(
+    withQuery("/api/v1/human-executors/availability", params),
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
 export async function batchCreateWorkAssignments(body: {
   items: Array<{
     assignment_id: string;
@@ -100,6 +122,8 @@ export async function batchCreateWorkAssignments(body: {
     status?: WorkAssignmentStatus;
     sla?: { accept_deadline_ts?: string; arrive_deadline_ts?: string; accept_minutes?: number; arrive_minutes?: number };
     required_capabilities?: string[];
+    dispatch_note?: string;
+    priority?: number;
   }>;
 }): Promise<{ ok?: boolean; created?: any[]; errors?: any[] }> {
   return apiRequest<{ ok?: boolean; created?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-create", {
@@ -117,6 +141,17 @@ export async function batchReassignWorkAssignments(body: {
   }>;
 }): Promise<{ ok?: boolean; updated?: any[]; errors?: any[] }> {
   return apiRequest<{ ok?: boolean; updated?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-reassign", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function reassignWorkAssignment(assignmentId: string, body: {
+  executor_id: string;
+  reason?: string;
+  required_capabilities?: string[];
+}): Promise<{ ok?: boolean; updated?: any; error?: string }> {
+  return apiRequest<{ ok?: boolean; updated?: any; error?: string }>(`/api/v1/work-assignments/${encodeURIComponent(assignmentId)}/reassign`, {
     method: "POST",
     body: JSON.stringify(body),
   });
