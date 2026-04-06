@@ -65,7 +65,7 @@ type AppendedSkillBinding = {
     skill_id: string;
     version: string;
     crop_code?: string | null;
-    status: "ENABLED" | "DISABLED";
+    status: "ACTIVE" | "DISABLED";
     priority: number;
     category: string;
     scope_type: string;
@@ -90,7 +90,7 @@ export type SkillRegistryDeps<TSkill extends RegistryRuleSkill> = {
     skill_id: string;
     version: string;
     category: "AGRONOMY" | "OPS" | "CONTROL" | "OBSERVABILITY" | "DEVICE";
-    status: "ENABLED" | "DISABLED";
+    status: "ACTIVE" | "DISABLED";
     scope_type: "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM";
     rollout_mode: "DIRECT" | "CANARY" | "DRY_RUN";
     trigger_stage: "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
@@ -162,7 +162,7 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       project_id: String(row.project_id ?? "") || null,
       group_id: String(row.group_id ?? "") || null,
       crop_code: String(row.crop_code ?? "") || null,
-      enabled: String(row.status ?? "").toUpperCase() === "ENABLED",
+      enabled: ["ACTIVE", "ENABLED"].includes(String(row.status ?? "").toUpperCase()),
       priority: Number.isFinite(Number(row.payload_json?.priority)) ? Number(row.payload_json?.priority) : 0,
       category: String(row.category ?? "") || null,
       scope_type: String(row.scope_type ?? "") || null,
@@ -246,7 +246,7 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       skill_id: input.skill_id,
       version: input.version,
       category: (input.category ?? "AGRONOMY") as "AGRONOMY" | "OPS" | "CONTROL" | "OBSERVABILITY" | "DEVICE",
-      status: input.enabled ? "ENABLED" : "DISABLED",
+      status: input.enabled ? "ACTIVE" : "DISABLED",
       scope_type: (input.scope?.scope_type ?? "TENANT") as "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM",
       rollout_mode: (input.scope?.rollout_mode ?? "DIRECT") as "DIRECT" | "CANARY" | "DRY_RUN",
       trigger_stage: (input.scope?.trigger_stage ?? "before_recommendation") as "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance",
@@ -266,7 +266,7 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       project_id,
       group_id,
       crop_code: appended.payload.crop_code ?? null,
-      enabled: appended.payload.status === "ENABLED",
+      enabled: appended.payload.status === "ACTIVE",
       priority: appended.payload.priority,
       category: appended.payload.category,
       scope_type: appended.payload.scope_type,

@@ -102,7 +102,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
         id: String(row.fact_id),
         skill_id: String(row.skill_id),
         version: String(row.version),
-        enabled: String(row.status ?? "").toUpperCase() === "ENABLED",
+        enabled: ["ACTIVE", "ENABLED"].includes(String(row.status ?? "").toUpperCase()),
         priority: Number.isFinite(Number(row.payload_json?.priority)) ? Number(row.payload_json?.priority) : 0,
         category: row.category,
         status: row.status,

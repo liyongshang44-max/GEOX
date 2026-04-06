@@ -265,7 +265,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       skill_id,
       version,
       category: category as any,
-      status: boolLike(body.enabled, true) ? "ENABLED" : "DISABLED",
+      status: boolLike(body.enabled, true) ? "ACTIVE" : "DISABLED",
       scope_type: scope_type as any,
       rollout_mode: rollout_mode as any,
       trigger_stage: trigger_stage as any,
@@ -313,7 +313,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         crop_code: row.crop_code,
         device_type: row.device_type,
         priority: Number(row.payload_json?.priority ?? 0),
-        enabled: String(row.status ?? "").toUpperCase() === "ENABLED",
+        enabled: ["ACTIVE", "ENABLED"].includes(String(row.status ?? "").toUpperCase()),
         config_patch: row.payload_json?.config_patch ?? {},
         updated_at: row.occurred_at,
       })),
@@ -373,8 +373,8 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     const payload = latest.payload_json as SkillDefinitionFactPayload;
     const appended = await appendSkillDefinitionFact(pool, {
       ...payload,
-      status: "PAUSED",
+      status: "DISABLED",
     });
-    return reply.send({ ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "PAUSED" });
+    return reply.send({ ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "DISABLED" });
   });
 }

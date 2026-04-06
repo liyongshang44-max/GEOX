@@ -36,7 +36,7 @@ export default function SkillRegistryPage(): React.ReactElement {
         <div>
           <div className="eyebrow">Skills Registry</div>
           <h2 className="heroTitle">技能注册中心</h2>
-          <p className="heroText">按状态、版本、绑定范围追踪技能资产，并快速进入绑定和运行明细。</p>
+          <p className="heroText">按标准枚举状态（DRAFT/ACTIVE/DISABLED/DEPRECATED）、版本、绑定范围追踪技能资产，并快速进入绑定和运行明细。</p>
         </div>
       </section>
 
@@ -46,7 +46,7 @@ export default function SkillRegistryPage(): React.ReactElement {
         <div className="sectionHeader">
           <div>
             <div className="sectionTitle">技能列表</div>
-            <div className="sectionDesc">展示状态、当前版本、最新版本、绑定范围及最近运行概览。</div>
+            <div className="sectionDesc">展示标准状态枚举、当前版本、最新版本、绑定范围及最近运行概览。</div>
           </div>
         </div>
         {loading ? <div className="emptyState">加载中...</div> : null}

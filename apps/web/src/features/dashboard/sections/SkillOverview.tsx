@@ -22,7 +22,7 @@ export default function SkillOverview(): React.ReactElement {
   const latestVersionCount = items.filter((item) => item.current_version && item.latest_version && item.current_version === item.latest_version).length;
 
   return (
-    <SectionCard title="SkillOverview" subtitle="技能资产总体状态：状态、版本同步、最近运行健康度。">
+    <SectionCard title="SkillOverview" subtitle="技能资产总体状态（标准枚举）：ACTIVE/DISABLED、版本同步、最近运行健康度。">
       <div className="decisionList" style={{ marginTop: 8 }}>
         <div className="decisionItemStatic"><div className="decisionItemTitle">已注册技能</div><div className="decisionItemMeta">{items.length} 项</div></div>
         <div className="decisionItemStatic"><div className="decisionItemTitle">激活中</div><div className="decisionItemMeta">{activeCount} 项</div></div>

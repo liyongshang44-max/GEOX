@@ -39,7 +39,7 @@ export default function SkillBindingsPage(): React.ReactElement {
         <div>
           <div className="eyebrow">Skill Bindings</div>
           <h2 className="heroTitle">技能绑定视图</h2>
-          <p className="heroText">查看技能版本与绑定范围映射，识别默认策略和优先级冲突。</p>
+          <p className="heroText">查看技能版本与绑定范围映射（GLOBAL/TENANT/FIELD/DEVICE/PROGRAM），识别默认策略和优先级冲突。</p>
         </div>
       </section>
 
@@ -49,7 +49,7 @@ export default function SkillBindingsPage(): React.ReactElement {
         <div className="sectionHeader">
           <div>
             <div className="sectionTitle">绑定清单 {skillId ? `· ${skillId}` : ""}</div>
-            <div className="sectionDesc">展示状态、版本、作用域、目标对象、最近运行状态。</div>
+            <div className="sectionDesc">展示标准状态（ACTIVE/DISABLED）、版本、作用域、目标对象、最近运行状态。</div>
           </div>
         </div>
 
