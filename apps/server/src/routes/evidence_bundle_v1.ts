@@ -286,6 +286,21 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
     });
     const projected = projectOperationStateFromFacts(projectionFacts).find((x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId);
     const timeline = (projected?.timeline ?? []).map((x) => ({ ts: x.ts, type: x.type, label: x.label }));
+    const skillTrace = projected?.skill_trace ?? null;
+    const skillTraceSummary = {
+      stages: {
+        crop_skill: skillTrace?.crop_skill ?? null,
+        agronomy_skill: skillTrace?.agronomy_skill ?? null,
+        device_skill: skillTrace?.device_skill ?? null,
+        acceptance_skill: skillTrace?.acceptance_skill ?? null,
+      },
+      success_count: [
+        skillTrace?.crop_skill,
+        skillTrace?.agronomy_skill,
+        skillTrace?.device_skill,
+        skillTrace?.acceptance_skill,
+      ].filter((x) => String(x?.result_status ?? "").toUpperCase() === "SUCCESS").length,
+    };
 
     return reply.send({
       ok: true,
@@ -304,7 +319,8 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
           : null,
         artifacts: artifactItems,
         acceptance,
-        timeline
+        timeline,
+        skill_trace_summary: skillTraceSummary
       }
     });
   });

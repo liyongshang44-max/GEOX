@@ -10,6 +10,7 @@ import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
 import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -101,6 +102,83 @@ async function updateRulePerformance(params: {
       })
     ]
   );
+}
+
+async function hasSkillRunRecorded(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  triggerStage: string;
+}): Promise<boolean> {
+  const { pool, tenant, operationPlanId, triggerStage } = params;
+  const q = await pool.query(
+    `SELECT 1
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'skill_run_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (
+          (record_json::jsonb#>>'{payload,operation_id}') = $4
+          OR (record_json::jsonb#>>'{payload,operation_plan_id}') = $4
+        )
+        AND (record_json::jsonb#>>'{payload,trigger_stage}') = $5
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, triggerStage]
+  );
+  return Boolean(q.rows?.length);
+}
+
+async function ensureSkillRunFact(params: {
+  pool: Pool;
+  tenant: TenantTriple;
+  operationPlanId: string;
+  triggerStage: "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance";
+  category: "AGRONOMY" | "DEVICE";
+  bindTarget: string;
+  skillId: string;
+  version?: string | null;
+  resultStatus: "SUCCESS" | "FAILED";
+  errorCode?: string | null;
+  fieldId?: string | null;
+  deviceId?: string | null;
+}): Promise<void> {
+  const exists = await hasSkillRunRecorded({
+    pool: params.pool,
+    tenant: params.tenant,
+    operationPlanId: params.operationPlanId,
+    triggerStage: params.triggerStage,
+  });
+  if (exists) return;
+  await appendSkillRunFact(params.pool, {
+    tenant_id: params.tenant.tenant_id,
+    project_id: params.tenant.project_id,
+    group_id: params.tenant.group_id,
+    skill_id: params.skillId,
+    version: String(params.version ?? "v1"),
+    category: params.category,
+    status: "ACTIVE",
+    result_status: params.resultStatus,
+    trigger_stage: params.triggerStage,
+    scope_type: "PROGRAM",
+    rollout_mode: "DIRECT",
+    bind_target: params.bindTarget,
+    operation_id: params.operationPlanId,
+    operation_plan_id: params.operationPlanId,
+    field_id: params.fieldId ?? null,
+    device_id: params.deviceId ?? null,
+    input_digest: digestJson({
+      operation_plan_id: params.operationPlanId,
+      trigger_stage: params.triggerStage,
+      skill_id: params.skillId,
+    }),
+    output_digest: digestJson({
+      result_status: params.resultStatus,
+      error_code: params.errorCode ?? null,
+    }),
+    error_code: params.errorCode ?? null,
+    duration_ms: 0,
+  } as any);
 }
 
 function toText(v: unknown): string | null {
@@ -740,6 +818,43 @@ function buildEvidenceTimeline(state: any, approvalDecision: FactRow | null, fac
   return merged;
 }
 
+type SkillTraceEntry = { skill_id: string | null; version: string | null; run_id: string | null; result_status: string | null; error_code: string | null };
+function buildSkillTraceFromFacts(facts: FactRow[], operationPlanId: string, fallback?: any): {
+  crop_skill: SkillTraceEntry;
+  agronomy_skill: SkillTraceEntry;
+  device_skill: SkillTraceEntry;
+  acceptance_skill: SkillTraceEntry;
+} {
+  const emptyEntry = (): SkillTraceEntry => ({ skill_id: null, version: null, run_id: null, result_status: null, error_code: null });
+  const toEntry = (fact: FactRow | null | undefined): SkillTraceEntry => {
+    const payload = fact?.record_json?.payload ?? {};
+    return {
+      skill_id: toText(payload.skill_id),
+      version: toText(payload.version),
+      run_id: toText(payload.run_id),
+      result_status: toText(payload.result_status),
+      error_code: toText(payload.error_code),
+    };
+  };
+  const runs = facts.filter((row) => {
+    if (String(row.record_json?.type ?? "") !== "skill_run_v1") return false;
+    const payload = row.record_json?.payload ?? {};
+    return toText(payload.operation_id) === operationPlanId || toText(payload.operation_plan_id) === operationPlanId;
+  });
+  const latestByStage = (stages: string[]): FactRow | null => {
+    const matched = runs
+      .filter((row) => stages.includes(String(row.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase()))
+      .sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
+    return matched[matched.length - 1] ?? null;
+  };
+  return {
+    crop_skill: toEntry(latestByStage(["before_recommendation"])) || fallback?.crop_skill || emptyEntry(),
+    agronomy_skill: toEntry(latestByStage(["before_approval"])) || fallback?.agronomy_skill || emptyEntry(),
+    device_skill: toEntry(latestByStage(["before_dispatch"])) || fallback?.device_skill || emptyEntry(),
+    acceptance_skill: toEntry(latestByStage(["before_acceptance", "after_acceptance"])) || fallback?.acceptance_skill || emptyEntry(),
+  };
+}
+
 async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operationPlanId: string): Promise<FactRow[]> {
   const sql = `
     SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
@@ -814,6 +929,8 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   extra.push(...await q("action_execution_request_v1", "operation_id", operationPlanId));
   extra.push(...await q("action_execution_attempt_v1", "operation_id", operationPlanId));
   extra.push(...await q("acceptance_result_v1", "operation_plan_id", operationPlanId));
+  extra.push(...await q("skill_run_v1", "operation_id", operationPlanId));
+  extra.push(...await q("skill_run_v1", "operation_plan_id", operationPlanId));
   const all = [...rows, ...extra];
   all.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
   return all;
@@ -1147,6 +1264,69 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const receiptFact = [...facts].reverse().find((x) => ["ao_act_receipt_v0", "ao_act_receipt_v1"].includes(String(x.record_json?.type ?? ""))) ?? null;
     const normalizedReceipt = receiptFact ? normalizeReceiptEvidence(receiptFact, String(receiptFact.record_json?.type ?? "")) : null;
     const acceptance = [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === "acceptance_result_v1") ?? null;
+    if (rec) {
+      await ensureSkillRunFact({
+        pool,
+        tenant,
+        operationPlanId,
+        triggerStage: "before_recommendation",
+        category: "AGRONOMY",
+        bindTarget: "operation_recommendation",
+        skillId: toText(rec.record_json?.payload?.skill_id ?? rec.record_json?.payload?.crop_skill_id ?? state.skill_trace?.crop_skill?.skill_id) ?? "crop_skill_v1",
+        version: toText(rec.record_json?.payload?.skill_version ?? state.skill_trace?.crop_skill?.version) ?? "v1",
+        resultStatus: "SUCCESS",
+        fieldId: toText(state.field_id),
+        deviceId: toText(state.device_id),
+      });
+      await ensureSkillRunFact({
+        pool,
+        tenant,
+        operationPlanId,
+        triggerStage: "before_approval",
+        category: "AGRONOMY",
+        bindTarget: "operation_approval",
+        skillId: toText(rec.record_json?.payload?.agronomy_skill_id ?? rec.record_json?.payload?.rule_id ?? state.skill_trace?.agronomy_skill?.skill_id) ?? "agronomy_skill_v1",
+        version: toText(rec.record_json?.payload?.agronomy_skill_version ?? state.skill_trace?.agronomy_skill?.version) ?? "v1",
+        resultStatus: "SUCCESS",
+        fieldId: toText(state.field_id),
+        deviceId: toText(state.device_id),
+      });
+    }
+    if (task) {
+      await ensureSkillRunFact({
+        pool,
+        tenant,
+        operationPlanId,
+        triggerStage: "before_dispatch",
+        category: "DEVICE",
+        bindTarget: "operation_dispatch",
+        skillId: toText(task.record_json?.payload?.device_skill_id ?? state.skill_trace?.device_skill?.skill_id) ?? "device_dispatch_skill_v1",
+        version: toText(task.record_json?.payload?.device_skill_version ?? state.skill_trace?.device_skill?.version) ?? "v1",
+        resultStatus: normalizedReceipt && String(normalizedReceipt.receipt_status ?? "").toUpperCase().includes("FAIL") ? "FAILED" : "SUCCESS",
+        errorCode: normalizedReceipt && String(normalizedReceipt.receipt_status ?? "").toUpperCase().includes("FAIL") ? "DEVICE_EXEC_FAILED" : null,
+        fieldId: toText(state.field_id),
+        deviceId: toText(state.device_id),
+      });
+    }
+    if (acceptance || normalizedReceipt) {
+      const acceptanceVerdict = String(acceptance?.record_json?.payload?.verdict ?? "").toUpperCase();
+      await ensureSkillRunFact({
+        pool,
+        tenant,
+        operationPlanId,
+        triggerStage: "before_acceptance",
+        category: "AGRONOMY",
+        bindTarget: "operation_acceptance",
+        skillId: toText(acceptance?.record_json?.payload?.acceptance_skill_id ?? state.skill_trace?.acceptance_skill?.skill_id) ?? "acceptance_skill_v1",
+        version: toText(acceptance?.record_json?.payload?.acceptance_skill_version ?? state.skill_trace?.acceptance_skill?.version) ?? "v1",
+        resultStatus: acceptanceVerdict && acceptanceVerdict !== "PASS" ? "FAILED" : "SUCCESS",
+        errorCode: acceptanceVerdict && acceptanceVerdict !== "PASS" ? "ACCEPTANCE_NOT_PASS" : null,
+        fieldId: toText(state.field_id),
+        deviceId: toText(state.device_id),
+      });
+    }
+    const skillTraceFacts = await queryFactsForOperation(pool, tenant, operationPlanId);
+    const resolvedSkillTrace = buildSkillTraceFromFacts(skillTraceFacts, operationPlanId, state.skill_trace);
     const taskIdForBundle = toText(task?.record_json?.payload?.act_task_id ?? state.task_id ?? plan?.record_json?.payload?.act_task_id);
     const artifactQ = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
@@ -1597,6 +1777,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
+        skill_trace: resolvedSkillTrace,
         final_status: finalStatus,
         status_label: statusLabel(finalStatus),
         invalid_reason: invalidReason,

@@ -142,6 +142,12 @@ export type OperationDetailPageVm = {
     missingEvidenceLabel: string;
     summary: string;
   };
+  skillTrace: {
+    cropSkillRunId: string;
+    agronomySkillRunId: string;
+    deviceSkillRunId: string;
+    acceptanceSkillRunId: string;
+  };
   invalidReason: string;
   customerView: {
     summary: string;
@@ -859,6 +865,12 @@ export function buildOperationDetailViewModel(args?: {
             ? "已回传执行证据，等待最终验收结论。"
             : "等待设备回传执行证据。",
       ),
+    },
+    skillTrace: {
+      cropSkillRunId: toText(safeDetail?.skill_trace?.crop_skill?.run_id),
+      agronomySkillRunId: toText(safeDetail?.skill_trace?.agronomy_skill?.run_id),
+      deviceSkillRunId: toText(safeDetail?.skill_trace?.device_skill?.run_id),
+      acceptanceSkillRunId: toText(safeDetail?.skill_trace?.acceptance_skill?.run_id),
     },
     invalidReason: toText(safeDetail?.invalid_reason, ""),
     customerView: {
