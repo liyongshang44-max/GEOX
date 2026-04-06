@@ -26,7 +26,7 @@ export default function MissingSkillCoverage(): React.ReactElement {
   }, {});
 
   return (
-    <SectionCard title="MissingSkillCoverage" subtitle="识别缺失或未激活绑定，优先补齐覆盖盲区。">
+    <SectionCard title="MissingSkillCoverage" subtitle="识别缺失或未激活（ACTIVE）绑定，优先补齐覆盖盲区。">
       {!missing.length ? <div className="muted">当前未发现明显覆盖缺口。</div> : null}
       <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
         {Object.entries(grouped).map(([scope, count]) => (

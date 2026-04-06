@@ -2,14 +2,23 @@ import { randomUUID, createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 
-const SkillCategorySchema = z.enum(["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE"]);
-const SkillStatusSchema = z.enum(["DRAFT", "ACTIVE", "PAUSED", "DEPRECATED"]);
-const ScopeTypeSchema = z.enum(["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"]);
-const RolloutModeSchema = z.enum(["DIRECT", "CANARY", "DRY_RUN"]);
-const ResultStatusSchema = z.enum(["SUCCESS", "FAILED", "SKIPPED", "TIMEOUT"]);
-const TriggerStageSchema = z.enum(["before_recommendation", "before_approval", "before_dispatch", "before_acceptance", "after_acceptance"]);
-const DeviceTypeSchema = z.enum(["PUMP", "DRONE", "SENSOR", "HUMAN", "UNKNOWN"]);
-const BindingStatusSchema = z.enum(["ENABLED", "DISABLED"]);
+const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE"] as const;
+const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
+const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as const;
+const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
+const RESULT_STATUS_VALUES = ["SUCCESS", "FAILED", "SKIPPED", "TIMEOUT"] as const;
+const TRIGGER_STAGE_VALUES = ["before_recommendation", "before_approval", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
+const DEVICE_TYPE_VALUES = ["PUMP", "DRONE", "SENSOR", "HUMAN", "UNKNOWN"] as const;
+const BINDING_STATUS_VALUES = ["ACTIVE", "DISABLED"] as const;
+
+const SkillCategorySchema = z.enum(SKILL_CATEGORY_VALUES);
+const SkillStatusSchema = z.enum(SKILL_STATUS_VALUES);
+const ScopeTypeSchema = z.enum(SCOPE_TYPE_VALUES);
+const RolloutModeSchema = z.enum(ROLLOUT_MODE_VALUES);
+const ResultStatusSchema = z.enum(RESULT_STATUS_VALUES);
+const TriggerStageSchema = z.enum(TRIGGER_STAGE_VALUES);
+const DeviceTypeSchema = z.enum(DEVICE_TYPE_VALUES);
+const BindingStatusSchema = z.enum(BINDING_STATUS_VALUES);
 
 const TenantTripleSchema = z.object({
   tenant_id: z.string().min(1),
@@ -73,6 +82,109 @@ export type SkillDefinitionFactPayload = z.infer<typeof SkillDefinitionPayloadSc
 export type SkillBindingFactPayload = z.infer<typeof SkillBindingPayloadSchema>;
 export type SkillRunFactPayload = z.infer<typeof SkillRunPayloadSchema>;
 
+const SKILL_CATEGORY_COMPAT: Record<string, SkillDefinitionFactPayload["category"]> = {
+  AGRONOMY: "AGRONOMY",
+  OPS: "OPS",
+  OPERATION: "OPS",
+  CONTROL: "CONTROL",
+  OBSERVABILITY: "OBSERVABILITY",
+  DEVICE: "DEVICE",
+};
+
+const SKILL_STATUS_COMPAT: Record<string, SkillDefinitionFactPayload["status"]> = {
+  DRAFT: "DRAFT",
+  ACTIVE: "ACTIVE",
+  ENABLED: "ACTIVE",
+  PAUSED: "DISABLED",
+  DISABLED: "DISABLED",
+  DEPRECATED: "DEPRECATED",
+  ARCHIVED: "DEPRECATED",
+};
+
+const BINDING_STATUS_COMPAT: Record<string, SkillBindingFactPayload["status"]> = {
+  ACTIVE: "ACTIVE",
+  ENABLED: "ACTIVE",
+  DISABLED: "DISABLED",
+  PAUSED: "DISABLED",
+};
+
+const SCOPE_TYPE_COMPAT: Record<string, SkillDefinitionFactPayload["scope_type"]> = {
+  GLOBAL: "GLOBAL",
+  TENANT: "TENANT",
+  PROJECT: "PROGRAM",
+  GROUP: "PROGRAM",
+  PROGRAM: "PROGRAM",
+  CROP: "FIELD",
+  FIELD: "FIELD",
+  DEVICE: "DEVICE",
+};
+
+const ROLLOUT_MODE_COMPAT: Record<string, SkillDefinitionFactPayload["rollout_mode"]> = {
+  DIRECT: "DIRECT",
+  CANARY: "CANARY",
+  DRY_RUN: "DRY_RUN",
+  DRYRUN: "DRY_RUN",
+  SHADOW: "DRY_RUN",
+};
+
+const TRIGGER_STAGE_COMPAT: Record<string, SkillDefinitionFactPayload["trigger_stage"]> = {
+  before_recommendation: "before_recommendation",
+  BEFORE_RECOMMENDATION: "before_recommendation",
+  before_approval: "before_approval",
+  BEFORE_APPROVAL: "before_approval",
+  before_dispatch: "before_dispatch",
+  BEFORE_DISPATCH: "before_dispatch",
+  before_acceptance: "before_acceptance",
+  BEFORE_ACCEPTANCE: "before_acceptance",
+  after_acceptance: "after_acceptance",
+  AFTER_ACCEPTANCE: "after_acceptance",
+};
+
+const DEVICE_TYPE_COMPAT: Record<string, NonNullable<SkillDefinitionFactPayload["device_type"]>> = {
+  PUMP: "PUMP",
+  DRONE: "DRONE",
+  SENSOR: "SENSOR",
+  HUMAN: "HUMAN",
+  UNKNOWN: "UNKNOWN",
+};
+
+function compatEnum<T extends string>(value: unknown, compat: Record<string, T>): T | undefined {
+  if (typeof value !== "string") return undefined;
+  const key = value.trim();
+  if (!key) return undefined;
+  return compat[key] ?? compat[key.toUpperCase()];
+}
+
+function normalizeCategory(value: unknown): SkillDefinitionFactPayload["category"] {
+  return compatEnum(value, SKILL_CATEGORY_COMPAT) ?? "AGRONOMY";
+}
+
+function normalizeSkillStatus(value: unknown): SkillDefinitionFactPayload["status"] {
+  return compatEnum(value, SKILL_STATUS_COMPAT) ?? "DRAFT";
+}
+
+function normalizeBindingStatus(value: unknown): SkillBindingFactPayload["status"] {
+  return compatEnum(value, BINDING_STATUS_COMPAT) ?? "ACTIVE";
+}
+
+function normalizeScopeType(value: unknown): SkillDefinitionFactPayload["scope_type"] {
+  return compatEnum(value, SCOPE_TYPE_COMPAT) ?? "TENANT";
+}
+
+function normalizeRolloutMode(value: unknown): SkillDefinitionFactPayload["rollout_mode"] {
+  return compatEnum(value, ROLLOUT_MODE_COMPAT) ?? "DIRECT";
+}
+
+function normalizeTriggerStage(value: unknown): SkillDefinitionFactPayload["trigger_stage"] {
+  return compatEnum(value, TRIGGER_STAGE_COMPAT) ?? "before_dispatch";
+}
+
+function normalizeDeviceType(value: unknown): SkillDefinitionFactPayload["device_type"] | null | undefined {
+  if (value == null) return value as null | undefined;
+  const normalized = compatEnum(value, DEVICE_TYPE_COMPAT);
+  return normalized ?? "UNKNOWN";
+}
+
 async function appendFact(
   db: Pool | PoolClient,
   factType: "skill_definition_v1" | "skill_binding_v1" | "skill_run_v1",
@@ -97,6 +209,12 @@ export function digestJson(input: unknown): string {
 export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: SkillDefinitionFactPayload): Promise<{ fact_id: string; occurred_at: string; payload: SkillDefinitionFactPayload }> {
   const payload = SkillDefinitionPayloadSchema.parse({
     ...input,
+    category: normalizeCategory(input.category),
+    status: normalizeSkillStatus(input.status),
+    trigger_stage: normalizeTriggerStage(input.trigger_stage),
+    scope_type: normalizeScopeType(input.scope_type),
+    rollout_mode: normalizeRolloutMode(input.rollout_mode),
+    device_type: normalizeDeviceType(input.device_type),
     crop_code: input.crop_code?.trim().toLowerCase() || undefined,
   });
   const appended = await appendFact(db, "skill_definition_v1", payload);
@@ -107,7 +225,13 @@ export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<
   const payload = SkillBindingPayloadSchema.parse({
     ...input,
     binding_id: input.binding_id ?? randomUUID(),
+    category: normalizeCategory(input.category),
+    status: normalizeBindingStatus(input.status),
+    scope_type: normalizeScopeType(input.scope_type),
+    rollout_mode: normalizeRolloutMode(input.rollout_mode),
+    trigger_stage: normalizeTriggerStage(input.trigger_stage),
     crop_code: typeof input.crop_code === "string" ? input.crop_code.trim().toLowerCase() : input.crop_code,
+    device_type: normalizeDeviceType(input.device_type),
   });
   const appended = await appendFact(db, "skill_binding_v1", payload);
   return { ...appended, payload };
@@ -117,6 +241,11 @@ export async function appendSkillRunFact(db: Pool | PoolClient, input: Omit<Skil
   const payload = SkillRunPayloadSchema.parse({
     ...input,
     run_id: input.run_id ?? randomUUID(),
+    category: normalizeCategory(input.category),
+    status: normalizeSkillStatus(input.status),
+    trigger_stage: normalizeTriggerStage(input.trigger_stage),
+    scope_type: normalizeScopeType(input.scope_type),
+    rollout_mode: normalizeRolloutMode(input.rollout_mode),
   });
   const appended = await appendFact(db, "skill_run_v1", payload);
   return { ...appended, payload };
