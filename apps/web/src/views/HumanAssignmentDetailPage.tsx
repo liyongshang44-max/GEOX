@@ -9,6 +9,7 @@ import {
   submitWorkAssignment,
   type WorkAssignmentItem,
 } from "../api/humanAssignments";
+import { ApiError } from "../api/client";
 import { fetchTaskTrajectory, fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
 
 function formatWindow(startTs?: number, endTs?: number): string {
@@ -25,6 +26,28 @@ function safeJsonText(data: unknown): string {
   } catch {
     return "{}";
   }
+}
+
+
+function parseApiErrorCode(error: unknown): string {
+  if (!(error instanceof ApiError) || !error.bodyText) return "";
+  try {
+    const payload = JSON.parse(error.bodyText);
+    return String(payload?.error ?? "").trim().toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
+function getAssignmentFriendlyError(error: unknown, fallback: string): string {
+  const errorCode = parseApiErrorCode(error);
+  if (errorCode === "INVALID_STATUS_TRANSITION") {
+    return "当前任务状态已变化，请刷新后重试。";
+  }
+  if (errorCode === "CONFLICT") {
+    return "任务状态刚刚被其他人更新（例如已被他人接单），请刷新查看最新状态。";
+  }
+  return fallback;
 }
 
 export default function HumanAssignmentDetailPage(): React.ReactElement {
@@ -78,7 +101,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       setNotice("已接单");
       await reload();
     } catch (err: any) {
-      setError(String(err?.message ?? "接单失败"));
+      setError(getAssignmentFriendlyError(err, String(err?.message ?? "接单失败")));
     } finally {
       setSubmitting(false);
     }
@@ -93,7 +116,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       setNotice("已更新为执行中");
       await reload();
     } catch (err: any) {
-      setError(String(err?.message ?? "更新状态失败"));
+      setError(getAssignmentFriendlyError(err, String(err?.message ?? "更新状态失败")));
     } finally {
       setSubmitting(false);
     }
@@ -121,7 +144,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       setNotice("提交成功");
       await reload();
     } catch (err: any) {
-      setError(String(err?.message ?? "提交失败"));
+      setError(getAssignmentFriendlyError(err, String(err?.message ?? "提交失败")));
     } finally {
       setSubmitting(false);
     }
