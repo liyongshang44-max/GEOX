@@ -40,6 +40,7 @@ export default function AppNav({ expert }: { expert: boolean }): React.ReactElem
         <SidebarLink to="/devices/onboarding" label="设备接入向导" />
         <SidebarLink to="/human-assignments" label="人工执行" />
         <SidebarLink to="/dispatch-workbench" label="派单调度台" />
+        <SidebarLink to="/human-execution-analysis" label="人工执行分析" />
         <SidebarLink to="/agronomy/recommendations" label="农业建议" />
         <SidebarLink to="/alerts" label="告警中心" />
         <SidebarLink to="/settings" label="系统设置" />
