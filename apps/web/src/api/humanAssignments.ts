@@ -15,6 +15,29 @@ export type WorkAssignmentItem = {
   updated_ts_ms: number;
 };
 
+export type DispatchWorkbenchTaskItem = {
+  act_task_id: string;
+  field_id: string | null;
+  action_type: string | null;
+  skill_id: string | null;
+  required_capabilities: string[];
+  time_window_start_ts: number | null;
+  time_window_end_ts: number | null;
+  task_created_at: string;
+};
+
+export type HumanExecutorItem = {
+  executor_id: string;
+  executor_type: "human";
+  display_name: string;
+  phone?: string | null;
+  team_id?: string | null;
+  status: "ACTIVE" | "DISABLED";
+  capabilities: string[];
+  created_ts_ms: number;
+  updated_ts_ms: number;
+};
+
 export async function fetchWorkAssignments(params?: {
   executor_id?: string;
   act_task_id?: string;
@@ -30,6 +53,69 @@ export async function fetchWorkAssignmentDetail(assignmentId: string): Promise<W
   if (!id) return null;
   const res = await apiRequest<{ ok?: boolean; assignment?: WorkAssignmentItem }>(`/api/v1/work-assignments/${encodeURIComponent(id)}`);
   return res.assignment ?? null;
+}
+
+export async function fetchDispatchWorkbenchTasks(params?: {
+  field_id?: string;
+  required_capability?: string;
+  window_start_ts?: number;
+  window_end_ts?: number;
+  limit?: number;
+}): Promise<DispatchWorkbenchTaskItem[]> {
+  const res = await apiRequest<{ ok?: boolean; items?: DispatchWorkbenchTaskItem[] }>(
+    withQuery("/api/v1/human-executors/dispatch-workbench", params),
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchHumanExecutors(params?: {
+  status?: "ACTIVE" | "DISABLED";
+  limit?: number;
+}): Promise<HumanExecutorItem[]> {
+  const res = await apiRequest<{ ok?: boolean; items?: HumanExecutorItem[] }>(
+    withQuery("/api/v1/human-executors", params),
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function batchCreateWorkAssignments(body: {
+  items: Array<{
+    assignment_id: string;
+    act_task_id: string;
+    executor_id: string;
+    assigned_at?: string;
+    status?: WorkAssignmentStatus;
+    sla?: { accept_deadline_ts?: string; arrive_deadline_ts?: string; accept_minutes?: number; arrive_minutes?: number };
+    required_capabilities?: string[];
+  }>;
+}): Promise<{ ok?: boolean; created?: any[]; errors?: any[] }> {
+  return apiRequest<{ ok?: boolean; created?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-create", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function batchReassignWorkAssignments(body: {
+  items: Array<{
+    assignment_id: string;
+    executor_id: string;
+    note?: string;
+    required_capabilities?: string[];
+  }>;
+}): Promise<{ ok?: boolean; updated?: any[]; errors?: any[] }> {
+  return apiRequest<{ ok?: boolean; updated?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-reassign", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function batchCancelWorkAssignments(body: {
+  items: Array<{ assignment_id: string; note?: string }>;
+}): Promise<{ ok?: boolean; updated?: any[]; errors?: any[] }> {
+  return apiRequest<{ ok?: boolean; updated?: any[]; errors?: any[] }>("/api/v1/work-assignments/batch-cancel", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export async function acceptWorkAssignment(assignmentId: string): Promise<{ ok?: boolean; error?: string }> {

@@ -38,6 +38,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/operations")) return "作业";
   if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
   if (pathname.startsWith("/human-assignments")) return "人工执行";
+  if (pathname.startsWith("/dispatch-workbench")) return "派单调度台";
   if (pathname === "/programs") return "经营方案";
   if (pathname === "/programs/create") return "初始化经营";
   if (pathname === "/programs/new") return "新建经营方案";
@@ -63,6 +64,7 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
   if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
   if (pathname.startsWith("/human-assignments")) return "作为作业下的二级入口，按状态处理人工任务，完成接单、执行与提交。";
+  if (pathname.startsWith("/dispatch-workbench")) return "按地块/时间窗/技能筛选未分配任务，并基于执行人资质进行派单。";
   if (pathname === "/programs") return "按状态和风险筛选经营方案，快速判断优先级并进入详情。";
   if (pathname === "/programs/create") return "通过模板快速初始化经营方案。";
   if (pathname === "/programs/new") return "创建新的经营方案，补齐 field/season/crop 上下文。";
@@ -89,6 +91,7 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname.startsWith("/operations")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业" }];
   if (pathname.startsWith("/human-assignments/")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
   if (pathname.startsWith("/human-assignments")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行" }];
+  if (pathname.startsWith("/dispatch-workbench")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "派单调度台" }];
   if (pathname === "/programs") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案" }];
   if (pathname === "/programs/create") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "初始化经营" }];
   if (pathname === "/programs/new") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "新建" }];
@@ -111,6 +114,7 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
   if (pathname.startsWith("/operations")) return { label: "查看人工执行", to: "/human-assignments" };
   if (pathname.startsWith("/human-assignments/")) return { label: "返回人工执行列表", to: "/human-assignments" };
   if (pathname.startsWith("/human-assignments")) return { label: "返回作业列表", to: "/operations" };
+  if (pathname.startsWith("/dispatch-workbench")) return { label: "返回人工执行列表", to: "/human-assignments" };
   if (pathname.startsWith("/agronomy/recommendations")) return { label: "返回经营方案列表", to: "/programs" };
   if (pathname === "/programs/create" || pathname === "/programs/new" || pathname.startsWith("/programs/")) return { label: "返回经营方案列表", to: "/programs" };
   if (pathname.startsWith("/programs")) return { label: "初始化经营", to: "/programs/create" };

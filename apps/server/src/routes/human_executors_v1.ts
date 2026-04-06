@@ -48,6 +48,41 @@ function normalizeCapabilities(input: any): string[] {
   return Array.from(new Set(input.map((x) => String(x ?? "").trim()).filter(Boolean))).slice(0, 64);
 }
 
+function hasAllCapabilities(actual: string[], required: string[]): boolean {
+  if (!required.length) return true;
+  const set = new Set(actual.map((x) => String(x ?? "").trim()).filter(Boolean));
+  return required.every((cap) => set.has(cap));
+}
+
+async function resolveTaskRequiredCapabilities(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  act_task_id: string,
+  fallbackInput: any
+): Promise<string[]> {
+  const fallback = normalizeCapabilities(fallbackInput);
+  const taskQ = await pool.query(
+    `SELECT (record_json::jsonb) AS record_json
+     FROM facts
+     WHERE (record_json::jsonb->>'type') = 'ao_act_task_v0'
+       AND (record_json::jsonb#>>'{payload,act_task_id}') = $1
+       AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+       AND (record_json::jsonb#>>'{payload,project_id}') = $3
+       AND (record_json::jsonb#>>'{payload,group_id}') = $4
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1`,
+    [act_task_id, auth.tenant_id, auth.project_id, auth.group_id]
+  ).catch(() => ({ rows: [] as any[] }));
+  const payload: any = taskQ.rows?.[0]?.record_json?.payload ?? {};
+  const merged = [
+    ...fallback,
+    ...normalizeCapabilities(payload.required_capabilities),
+    ...normalizeCapabilities(payload.capabilities),
+    ...(isNonEmptyString(payload.skill_id) ? [String(payload.skill_id).trim()] : []),
+  ];
+  return normalizeCapabilities(merged);
+}
+
 function parsePgJson(v: any): any {
   if (v == null) return null;
   if (typeof v === "string") {
@@ -203,6 +238,34 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
     });
   }
   await ensureHumanExecutorRuntimePromise;
+}
+
+async function validateExecutorCapabilityMatch(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  executor_id: string,
+  requiredCapabilities: string[]
+): Promise<{ ok: true } | { ok: false; error: string; missing?: string[] }> {
+  const executorHumanQ = await pool.query(
+    `SELECT capabilities
+     FROM human_executor_index_v1
+     WHERE tenant_id = $1 AND executor_id = $2
+     LIMIT 1`,
+    [auth.tenant_id, executor_id]
+  );
+  if ((executorHumanQ.rowCount ?? 0) > 0) {
+    const capabilities = normalizeCapabilities(parsePgJson(executorHumanQ.rows?.[0]?.capabilities));
+    if (!hasAllCapabilities(capabilities, requiredCapabilities)) {
+      return { ok: false, error: "EXECUTOR_CAPABILITY_MISMATCH", missing: requiredCapabilities.filter((c) => !capabilities.includes(c)) };
+    }
+    return { ok: true };
+  }
+  const executorExistsQ = await pool.query(
+    `SELECT 1 AS ok FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+    [auth.tenant_id, executor_id]
+  );
+  if ((executorExistsQ.rowCount ?? 0) < 1) return { ok: false, error: "EXECUTOR_NOT_FOUND_IN_TENANT" };
+  return { ok: true };
 }
 
 export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) {
@@ -379,14 +442,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!ASSIGNMENT_STATUS.has(status as AssignmentStatus)) return badRequest(reply, "MISSING_OR_INVALID:status");
     if (Number.isNaN(Date.parse(assigned_at))) return badRequest(reply, "MISSING_OR_INVALID:assigned_at");
 
-    const executorExistsQ = await pool.query(
-      `SELECT 1 AS ok FROM human_executor_index_v1 WHERE tenant_id = $1 AND executor_id = $2
-       UNION ALL
-       SELECT 1 AS ok FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2
-       LIMIT 1`,
-      [auth.tenant_id, executor_id]
-    );
-    if ((executorExistsQ.rowCount ?? 0) < 1) return badRequest(reply, "EXECUTOR_NOT_FOUND_IN_TENANT");
+    const requiredCapabilities = await resolveTaskRequiredCapabilities(pool, auth, act_task_id, body.required_capabilities);
+    const capabilityCheck = await validateExecutorCapabilityMatch(pool, auth, executor_id, requiredCapabilities);
+    if (!capabilityCheck.ok) return badRequest(reply, capabilityCheck.error);
 
     const taskMetaQ = await pool.query(
       `SELECT (record_json::jsonb#>>'{payload,crop_code}') AS crop_code,
@@ -434,6 +492,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       assignment_id,
       act_task_id,
       executor_id,
+      required_capabilities: requiredCapabilities,
       assigned_at,
       status,
       accept_deadline_ts: acceptDeadlineIso,
@@ -442,6 +501,279 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     });
 
     return reply.send({ ok: true, fact_id, assignment: { assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, expired_reason: null } });
+  });
+
+  app.get("/api/v1/human-executors/dispatch-workbench", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+
+    const q: any = (req as any).query ?? {};
+    const limit = toPositiveInt(q.limit, 100, 1, 500);
+    const field_id = normalizeId(q.field_id);
+    const required_capability = isNonEmptyString(q.required_capability) ? String(q.required_capability).trim() : null;
+    const window_start_ts = Number(q.window_start_ts);
+    const window_end_ts = Number(q.window_end_ts);
+
+    const values: any[] = [auth.tenant_id, auth.project_id, auth.group_id];
+    const filters: string[] = [
+      "(f.record_json::jsonb#>>'{payload,tenant_id}') = $1",
+      "(f.record_json::jsonb#>>'{payload,project_id}') = $2",
+      "(f.record_json::jsonb#>>'{payload,group_id}') = $3",
+      "(f.record_json::jsonb->>'type') = 'ao_act_task_v0'",
+    ];
+    if (field_id) {
+      values.push(field_id);
+      filters.push(`(f.record_json::jsonb#>>'{payload,field_id}') = $${values.length}`);
+    }
+    if (required_capability) {
+      values.push(required_capability);
+      filters.push(`(
+        (f.record_json::jsonb#>>'{payload,skill_id}') = $${values.length}
+        OR (f.record_json::jsonb#>>'{payload,required_capabilities}') ILIKE '%' || $${values.length} || '%'
+        OR (f.record_json::jsonb#>>'{payload,capabilities}') ILIKE '%' || $${values.length} || '%'
+      )`);
+    }
+    if (Number.isFinite(window_start_ts)) {
+      values.push(Math.trunc(window_start_ts));
+      filters.push(`COALESCE((f.record_json::jsonb#>>'{payload,time_window,end_ts}')::bigint, 0) >= $${values.length}`);
+    }
+    if (Number.isFinite(window_end_ts)) {
+      values.push(Math.trunc(window_end_ts));
+      filters.push(`COALESCE((f.record_json::jsonb#>>'{payload,time_window,start_ts}')::bigint, 0) <= $${values.length}`);
+    }
+    values.push(limit);
+
+    const listQ = await pool.query(
+      `WITH latest_task AS (
+         SELECT DISTINCT ON ((f.record_json::jsonb#>>'{payload,act_task_id}'))
+           (f.record_json::jsonb#>>'{payload,act_task_id}') AS act_task_id,
+           (f.record_json::jsonb#>>'{payload,field_id}') AS field_id,
+           COALESCE((f.record_json::jsonb#>>'{payload,action_type}'), '') AS action_type,
+           (f.record_json::jsonb#>>'{payload,skill_id}') AS skill_id,
+           (f.record_json::jsonb#>'{payload,required_capabilities}') AS required_capabilities,
+           (f.record_json::jsonb#>'{payload,capabilities}') AS capabilities,
+           (f.record_json::jsonb#>>'{payload,time_window,start_ts}')::bigint AS time_window_start_ts,
+           (f.record_json::jsonb#>>'{payload,time_window,end_ts}')::bigint AS time_window_end_ts,
+           f.occurred_at
+         FROM facts f
+         WHERE ${filters.join(" AND ")}
+         ORDER BY (f.record_json::jsonb#>>'{payload,act_task_id}') ASC, f.occurred_at DESC, f.fact_id DESC
+       )
+       SELECT t.act_task_id, t.field_id, t.action_type, t.skill_id, t.required_capabilities, t.capabilities, t.time_window_start_ts, t.time_window_end_ts, t.occurred_at AS task_created_at
+       FROM latest_task t
+       LEFT JOIN work_assignment_index_v1 wa
+         ON wa.tenant_id = $1 AND wa.act_task_id = t.act_task_id AND wa.status IN ('ASSIGNED','ACCEPTED','ARRIVED')
+       WHERE wa.assignment_id IS NULL
+       ORDER BY t.occurred_at DESC, t.act_task_id ASC
+       LIMIT $${values.length}`,
+      values
+    );
+
+    return reply.send({
+      ok: true,
+      items: (listQ.rows ?? []).map((row: any) => {
+        const required = normalizeCapabilities(parsePgJson(row.required_capabilities));
+        const fallback = normalizeCapabilities(parsePgJson(row.capabilities));
+        const skill = isNonEmptyString(row.skill_id) ? [String(row.skill_id).trim()] : [];
+        return {
+          act_task_id: String(row.act_task_id ?? ""),
+          field_id: row.field_id ? String(row.field_id) : null,
+          action_type: row.action_type ? String(row.action_type) : null,
+          skill_id: row.skill_id ? String(row.skill_id) : null,
+          required_capabilities: normalizeCapabilities([...required, ...fallback, ...skill]),
+          time_window_start_ts: Number.isFinite(Number(row.time_window_start_ts)) ? Number(row.time_window_start_ts) : null,
+          time_window_end_ts: Number.isFinite(Number(row.time_window_end_ts)) ? Number(row.time_window_end_ts) : null,
+          task_created_at: row.task_created_at instanceof Date ? row.task_created_at.toISOString() : String(row.task_created_at ?? ""),
+        };
+      }),
+    });
+  });
+
+  app.post("/api/v1/work-assignments/batch-create", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+    const body: any = (req as any).body ?? {};
+    const items = Array.isArray(body.items) ? body.items.slice(0, 200) : [];
+    if (!items.length) return badRequest(reply, "MISSING_OR_INVALID:items");
+
+    const created: any[] = [];
+    const errors: any[] = [];
+    for (const item of items) {
+      const assignment_id = normalizeId(item?.assignment_id);
+      const act_task_id = normalizeId(item?.act_task_id);
+      const executor_id = normalizeId(item?.executor_id);
+      const status = String(item?.status ?? "ASSIGNED").trim().toUpperCase();
+      const assigned_at = isNonEmptyString(item?.assigned_at) ? String(item.assigned_at).trim() : new Date().toISOString();
+      if (!assignment_id || !act_task_id || !executor_id || !ASSIGNMENT_STATUS.has(status as AssignmentStatus) || Number.isNaN(Date.parse(assigned_at))) {
+        errors.push({ assignment_id: assignment_id ?? null, error: "MISSING_OR_INVALID:assignment_item" });
+        continue;
+      }
+      const requiredCapabilities = await resolveTaskRequiredCapabilities(pool, auth, act_task_id, item.required_capabilities);
+      const capabilityCheck = await validateExecutorCapabilityMatch(pool, auth, executor_id, requiredCapabilities);
+      if (!capabilityCheck.ok) {
+        errors.push({ assignment_id, executor_id, error: capabilityCheck.error, missing: capabilityCheck.missing ?? [] });
+        continue;
+      }
+      const fallbackSla = chooseSlaDefaults("", "");
+      const assignedAtMs = Date.parse(assigned_at);
+      const acceptDeadlineIso = isNonEmptyString(item?.sla?.accept_deadline_ts)
+        ? String(item.sla.accept_deadline_ts).trim()
+        : new Date(assignedAtMs + normalizeSlaMinutes(item?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000).toISOString();
+      const arriveDeadlineIso = isNonEmptyString(item?.sla?.arrive_deadline_ts)
+        ? String(item.sla.arrive_deadline_ts).trim()
+        : new Date(assignedAtMs + normalizeSlaMinutes(item?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000).toISOString();
+      if (Number.isNaN(Date.parse(acceptDeadlineIso)) || Number.isNaN(Date.parse(arriveDeadlineIso))) {
+        errors.push({ assignment_id, error: "MISSING_OR_INVALID:sla" });
+        continue;
+      }
+      const now = Date.now();
+      await pool.query(
+        `INSERT INTO work_assignment_index_v1
+         (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms)
+         VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7::timestamptz,$8::timestamptz,NULL,$9,$10)
+         ON CONFLICT (tenant_id, assignment_id)
+         DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_reason=EXCLUDED.expired_reason, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineIso, arriveDeadlineIso, now, now]
+      );
+      const audit_id = randomUUID();
+      await pool.query(
+        `INSERT INTO work_assignment_audit_v1
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
+        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, "BATCH_CREATE"]
+      );
+      const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
+        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, audit_id,
+      });
+      created.push({ assignment_id, fact_id });
+    }
+    return reply.send({ ok: errors.length < items.length, created, errors });
+  });
+
+  app.post("/api/v1/work-assignments/batch-reassign", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+    const body: any = (req as any).body ?? {};
+    const items = Array.isArray(body.items) ? body.items.slice(0, 200) : [];
+    if (!items.length) return badRequest(reply, "MISSING_OR_INVALID:items");
+
+    const updated: any[] = [];
+    const errors: any[] = [];
+    for (const item of items) {
+      const assignment_id = normalizeId(item?.assignment_id);
+      const executor_id = normalizeId(item?.executor_id);
+      const note = isNonEmptyString(item?.note) ? String(item.note).trim().slice(0, 512) : "BATCH_REASSIGN";
+      if (!assignment_id || !executor_id) {
+        errors.push({ assignment_id: assignment_id ?? null, error: "MISSING_OR_INVALID:assignment_id_or_executor_id" });
+        continue;
+      }
+      const existingQ = await pool.query(
+        `SELECT assignment_id, act_task_id, executor_id, status
+         FROM work_assignment_index_v1
+         WHERE tenant_id = $1 AND assignment_id = $2
+         LIMIT 1`,
+        [auth.tenant_id, assignment_id]
+      );
+      const row = existingQ.rows?.[0];
+      if (!row) {
+        errors.push({ assignment_id, error: "NOT_FOUND" });
+        continue;
+      }
+      const fromStatus = String(row.status ?? "") as AssignmentStatus;
+      if (["SUBMITTED", "CANCELLED", "EXPIRED"].includes(fromStatus)) {
+        errors.push({ assignment_id, error: "REASSIGN_NOT_ALLOWED_FOR_FINAL_STATUS", status: fromStatus });
+        continue;
+      }
+      const act_task_id = String(row.act_task_id ?? "");
+      const requiredCapabilities = await resolveTaskRequiredCapabilities(pool, auth, act_task_id, item.required_capabilities);
+      const capabilityCheck = await validateExecutorCapabilityMatch(pool, auth, executor_id, requiredCapabilities);
+      if (!capabilityCheck.ok) {
+        errors.push({ assignment_id, executor_id, error: capabilityCheck.error, missing: capabilityCheck.missing ?? [] });
+        continue;
+      }
+      await pool.query(
+        `UPDATE work_assignment_index_v1
+         SET executor_id = $3, updated_ts_ms = $4
+         WHERE tenant_id = $1 AND assignment_id = $2`,
+        [auth.tenant_id, assignment_id, executor_id, Date.now()]
+      );
+      const nowIso = new Date().toISOString();
+      const audit_id = randomUUID();
+      await pool.query(
+        `INSERT INTO work_assignment_audit_v1
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
+        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, fromStatus, nowIso, auth.actor_id, auth.token_id, note]
+      );
+      const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
+        assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, status: fromStatus, changed_at: nowIso, note, audit_id,
+      });
+      updated.push({ assignment_id, executor_id, fact_id });
+    }
+    return reply.send({ ok: errors.length < items.length, updated, errors });
+  });
+
+  app.post("/api/v1/work-assignments/batch-cancel", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+    const body: any = (req as any).body ?? {};
+    const items = Array.isArray(body.items) ? body.items.slice(0, 200) : [];
+    if (!items.length) return badRequest(reply, "MISSING_OR_INVALID:items");
+
+    const updated: any[] = [];
+    const errors: any[] = [];
+    for (const item of items) {
+      const assignment_id = normalizeId(item?.assignment_id);
+      const note = isNonEmptyString(item?.note) ? String(item.note).trim().slice(0, 512) : "BATCH_CANCEL";
+      if (!assignment_id) {
+        errors.push({ assignment_id: null, error: "MISSING_OR_INVALID:assignment_id" });
+        continue;
+      }
+      const existingQ = await pool.query(
+        `SELECT assignment_id, act_task_id, executor_id, status
+         FROM work_assignment_index_v1
+         WHERE tenant_id = $1 AND assignment_id = $2
+         LIMIT 1`,
+        [auth.tenant_id, assignment_id]
+      );
+      const row = existingQ.rows?.[0];
+      if (!row) {
+        errors.push({ assignment_id, error: "NOT_FOUND" });
+        continue;
+      }
+      const fromStatus = String(row.status ?? "") as AssignmentStatus;
+      if (!canTransitionAssignmentStatus(fromStatus, "CANCELLED")) {
+        errors.push({ assignment_id, error: "INVALID_STATUS_TRANSITION", from_status: fromStatus, to_status: "CANCELLED" });
+        continue;
+      }
+      const updateQ = await pool.query(
+        `UPDATE work_assignment_index_v1
+         SET status = 'CANCELLED', expired_reason = COALESCE(expired_reason, $4), updated_ts_ms = $3
+         WHERE tenant_id = $1 AND assignment_id = $2 AND status = $5`,
+        [auth.tenant_id, assignment_id, Date.now(), note, fromStatus]
+      );
+      if ((updateQ.rowCount ?? 0) < 1) {
+        errors.push({ assignment_id, error: "CONFLICT" });
+        continue;
+      }
+      const nowIso = new Date().toISOString();
+      const audit_id = randomUUID();
+      await pool.query(
+        `INSERT INTO work_assignment_audit_v1
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
+        [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id ?? ""), String(row.executor_id ?? ""), "CANCELLED", nowIso, auth.actor_id, auth.token_id, note]
+      );
+      const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
+        assignment_id, act_task_id: String(row.act_task_id ?? ""), executor_id: String(row.executor_id ?? ""), from_status: fromStatus, status: "CANCELLED", changed_at: nowIso, note, audit_id,
+      });
+      updated.push({ assignment_id, fact_id, status: "CANCELLED" });
+    }
+    return reply.send({ ok: errors.length < items.length, updated, errors });
   });
 
   app.get("/api/v1/work-assignments", async (req, reply) => {
