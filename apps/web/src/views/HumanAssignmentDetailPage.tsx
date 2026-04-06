@@ -262,8 +262,9 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         <div className="kv"><span className="k">超时时间</span><span className="v">{item.expired_ts ? new Date(item.expired_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
         <div className="kv"><span className="k">超时原因</span><span className="v">{item.expired_reason || "-"}</span></div>
         <div className="kv"><span className="k">来源</span><span className="v">{item.origin_type === "auto_fallback" ? "自动转人工" : "人工派发"}</span></div>
-        <div className="kv"><span className="k">失败原因</span><span className="v">{fallbackContext?.reason_message || fallbackContext?.reason_code || "-"}</span></div>
+        <div className="kv"><span className="k">转人工原因</span><span className="v">{fallbackContext?.reason_message || fallbackContext?.reason_code || "-"}</span></div>
         <div className="kv"><span className="k">失败重试</span><span className="v">{fallbackContext?.retry_count != null || fallbackContext?.max_retries != null ? `${fallbackContext?.retry_count ?? "-"} / ${fallbackContext?.max_retries ?? "-"}` : "-"}</span></div>
+        <div className="kv"><span className="k">触发条件</span><span className="v">{Array.isArray((fallbackContext as any)?.takeover_conditions) && (fallbackContext as any).takeover_conditions.length ? (fallbackContext as any).takeover_conditions.join(" / ") : "-"}</span></div>
         <div className="kv"><span className="k">设备状态</span><span className="v">{fallbackContext?.device?.status || "-"}</span></div>
         <div className="kv"><span className="k">设备标识</span><span className="v">{fallbackContext?.device?.device_name || fallbackContext?.device?.device_id || "-"}</span></div>
         <div className="kv" style={{ alignItems: "flex-start" }}>

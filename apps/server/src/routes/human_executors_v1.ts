@@ -232,15 +232,19 @@ function sanitizeFallbackContext(input: any): Record<string, any> | null {
   const retry_count = Number.isFinite(Number((input as any).retry_count)) ? Math.max(0, Math.trunc(Number((input as any).retry_count))) : null;
   const max_retries = Number.isFinite(Number((input as any).max_retries)) ? Math.max(0, Math.trunc(Number((input as any).max_retries))) : null;
   const failed_at = isNonEmptyString((input as any).failed_at) ? String((input as any).failed_at).trim().slice(0, 64) : null;
+  const takeover_conditions = Array.isArray((input as any).takeover_conditions)
+    ? Array.from(new Set((input as any).takeover_conditions.map((x: any) => String(x ?? "").trim().toUpperCase()).filter(Boolean))).slice(0, 8)
+    : null;
   const device = (input as any).device && typeof (input as any).device === "object" && !Array.isArray((input as any).device)
     ? {
       device_id: isNonEmptyString((input as any).device.device_id) ? String((input as any).device.device_id).trim().slice(0, 128) : null,
       device_name: isNonEmptyString((input as any).device.device_name) ? String((input as any).device.device_name).trim().slice(0, 256) : null,
       status: isNonEmptyString((input as any).device.status) ? String((input as any).device.status).trim().slice(0, 64) : null,
       last_heartbeat_ts: Number.isFinite(Number((input as any).device.last_heartbeat_ts)) ? Math.trunc(Number((input as any).device.last_heartbeat_ts)) : null,
+      adapter_type: isNonEmptyString((input as any).device.adapter_type) ? String((input as any).device.adapter_type).trim().slice(0, 64) : null,
     }
     : null;
-  const payload = { reason_code, reason_message, dispatch_id, retry_count, max_retries, failed_at, device };
+  const payload = { reason_code, reason_message, dispatch_id, retry_count, max_retries, failed_at, takeover_conditions, device };
   return Object.values(payload).some((x) => x != null) ? payload : null;
 }
 

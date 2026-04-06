@@ -111,6 +111,7 @@ test('filters by field/device/final_status', () => {
 test('timeline includes human assignment + receipt + acceptance nodes', () => {
   const out = projectOperationStateFromFacts([
     fact('operation_plan_v1', { operation_plan_id: 'op_h1', act_task_id: 'task_h1' }, '2026-03-19T20:00:00.000Z', 'p_h1'),
+    fact('ao_act_manual_fallback_v1', { act_task_id: 'task_h1', reason: 'DEVICE_REJECTED' }, '2026-03-19T20:00:30.000Z', 'mf_h1'),
     fact('work_assignment_upserted_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ASSIGNED', assigned_at: '2026-03-19T20:01:00.000Z' }, '2026-03-19T20:01:00.000Z', 'wa1'),
     fact('work_assignment_status_changed_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ACCEPTED', changed_at: '2026-03-19T20:02:00.000Z' }, '2026-03-19T20:02:00.000Z', 'wa2'),
     fact('work_assignment_status_changed_v1', { assignment_id: 'a_h1', act_task_id: 'task_h1', status: 'ARRIVED', changed_at: '2026-03-19T20:03:00.000Z' }, '2026-03-19T20:03:00.000Z', 'wa3'),
@@ -119,6 +120,7 @@ test('timeline includes human assignment + receipt + acceptance nodes', () => {
   ]);
   const types = out[0].timeline.map((x) => x.type);
   assert.ok(types.includes('ASSIGNMENT_CREATED'));
+  assert.ok(types.includes('DEVICE_FAILED_TO_HUMAN'));
   assert.ok(types.includes('ASSIGNMENT_ACCEPTED'));
   assert.ok(types.includes('ASSIGNMENT_ARRIVED'));
   assert.ok(types.includes('RECEIPT_SUBMITTED'));
