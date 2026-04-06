@@ -5,6 +5,7 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 
 type AssignmentStatus = "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
+type AssignmentTimeoutStatus = "ON_TRACK" | "AT_RISK" | "OVERDUE" | "NONE";
 type ExecutorStatus = "ACTIVE" | "DISABLED";
 type AssignmentOriginType = "manual" | "auto_fallback";
 
@@ -166,19 +167,52 @@ function toPositiveInt(raw: any, fallback: number, min: number, max: number): nu
 }
 
 function normalizeAssignmentResponse(row: any) {
+  const now = Date.now();
   const acceptDeadline = Number(row.accept_deadline_ts ?? NaN);
   const arriveDeadline = Number(row.arrive_deadline_ts ?? NaN);
   const expiredTs = Number(row.expired_ts ?? NaN);
+  const status = String(row.status ?? "") as AssignmentStatus;
+  const activeDeadline = status === "ASSIGNED"
+    ? acceptDeadline
+    : (status === "ACCEPTED" || status === "ARRIVED")
+      ? arriveDeadline
+      : Number.NaN;
+  const timeout_remaining_ms = Number.isFinite(activeDeadline) ? Math.trunc(activeDeadline - now) : null;
+  const timeout_status: AssignmentTimeoutStatus = status === "EXPIRED" || (status === "CANCELLED" && (String(row.expired_reason ?? "") === "ACCEPT_TIMEOUT" || String(row.expired_reason ?? "") === "ARRIVE_TIMEOUT"))
+    ? "OVERDUE"
+    : !Number.isFinite(activeDeadline)
+      ? "NONE"
+    : timeout_remaining_ms == null || timeout_remaining_ms < 0
+      ? "OVERDUE"
+      : timeout_remaining_ms <= 15 * 60_000
+        ? "AT_RISK"
+        : "ON_TRACK";
+  const sla_stage = status === "ASSIGNED"
+    ? "ACCEPT"
+    : (status === "ACCEPTED" || status === "ARRIVED")
+      ? "ARRIVE"
+      : "NONE";
+  const sla_indicator = status === "EXPIRED" || (status === "CANCELLED" && (String(row.expired_reason ?? "") === "ACCEPT_TIMEOUT" || String(row.expired_reason ?? "") === "ARRIVE_TIMEOUT"))
+    ? "BREACHED"
+    : timeout_status === "AT_RISK"
+      ? "AT_RISK"
+      : timeout_status === "ON_TRACK"
+        ? "ON_TRACK"
+        : "NONE";
   return {
     assignment_id: String(row.assignment_id ?? ""),
     act_task_id: String(row.act_task_id ?? ""),
     executor_id: String(row.executor_id ?? ""),
     assigned_at: row.assigned_at instanceof Date ? row.assigned_at.toISOString() : String(row.assigned_at ?? ""),
-    status: String(row.status ?? "") as AssignmentStatus,
+    status,
     accept_deadline_ts: Number.isFinite(acceptDeadline) ? acceptDeadline : null,
     arrive_deadline_ts: Number.isFinite(arriveDeadline) ? arriveDeadline : null,
     expired_ts: Number.isFinite(expiredTs) ? expiredTs : null,
     expired_reason: row.expired_reason ? String(row.expired_reason) : null,
+    timeout_status,
+    timeout_remaining_ms,
+    sla_stage,
+    sla_indicator,
     dispatch_note: row.dispatch_note ? String(row.dispatch_note) : null,
     origin_type: String(row.origin_type ?? "manual"),
     origin_ref_id: row.origin_ref_id ? String(row.origin_ref_id) : null,
@@ -1191,9 +1225,13 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const limit = toPositiveInt(q.limit, 50, 1, 200);
     const offset = toPositiveInt(q.offset, 0, 0, 10_000);
     const status = isNonEmptyString(q.status) ? String(q.status).trim().toUpperCase() : null;
+    const timeout_status = isNonEmptyString(q.timeout_status) ? String(q.timeout_status).trim().toUpperCase() : null;
     const executor_id = normalizeId(q.executor_id);
     const act_task_id = normalizeId(q.act_task_id);
     if (status && !ASSIGNMENT_STATUS.has(status as AssignmentStatus)) return badRequest(reply, "MISSING_OR_INVALID:status");
+    if (timeout_status && !new Set<AssignmentTimeoutStatus>(["ON_TRACK", "AT_RISK", "OVERDUE", "NONE"]).has(timeout_status as AssignmentTimeoutStatus)) {
+      return badRequest(reply, "MISSING_OR_INVALID:timeout_status");
+    }
 
     const values: any[] = [auth.tenant_id];
     const filters: string[] = ["tenant_id = $1"];
@@ -1209,10 +1247,42 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       values.push(act_task_id);
       filters.push(`act_task_id = $${values.length}`);
     }
+    if (timeout_status === "ON_TRACK") {
+      filters.push(`(
+        (status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts >= $${values.length + 1} + 900000)
+        OR
+        ((status = 'ACCEPTED' OR status = 'ARRIVED') AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts >= $${values.length + 1} + 900000)
+      )`);
+      values.push(Date.now());
+    } else if (timeout_status === "AT_RISK") {
+      filters.push(`(
+        (status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts >= $${values.length + 1} AND accept_deadline_ts < $${values.length + 1} + 900000)
+        OR
+        ((status = 'ACCEPTED' OR status = 'ARRIVED') AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts >= $${values.length + 1} AND arrive_deadline_ts < $${values.length + 1} + 900000)
+      )`);
+      values.push(Date.now());
+    } else if (timeout_status === "OVERDUE") {
+      filters.push(`(
+        (status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts < $${values.length + 1})
+        OR
+        ((status = 'ACCEPTED' OR status = 'ARRIVED') AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts < $${values.length + 1})
+        OR
+        (status = 'EXPIRED')
+        OR
+        (status = 'CANCELLED' AND COALESCE(expired_reason, '') IN ('ACCEPT_TIMEOUT','ARRIVE_TIMEOUT'))
+      )`);
+      values.push(Date.now());
+    } else if (timeout_status === "NONE") {
+      filters.push(`(
+        status IN ('SUBMITTED','CANCELLED','EXPIRED')
+        OR (status = 'ASSIGNED' AND accept_deadline_ts IS NULL)
+        OR ((status = 'ACCEPTED' OR status = 'ARRIVED') AND arrive_deadline_ts IS NULL)
+      )`);
+    }
     values.push(limit, offset);
 
     const listQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
+      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms
        , dispatch_note, priority, origin_type, origin_ref_id, fallback_context
        FROM work_assignment_index_v1
        WHERE ${filters.join(" AND ")}
@@ -1289,7 +1359,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const itemQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
+      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms
        , dispatch_note, priority, origin_type, origin_ref_id, fallback_context
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2

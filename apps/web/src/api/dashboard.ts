@@ -5,6 +5,15 @@ export type DashboardSummary = {
   online_device_count: number;
   open_alert_count: number;
   running_task_count: number;
+  timed_out_assignment_count?: number;
+  avg_assignment_accept_duration_ms?: number;
+  assignment_sla?: {
+    total_count: number;
+    accept_overdue_count: number;
+    arrive_overdue_count: number;
+    at_risk_count: number;
+    avg_remaining_ms: number;
+  };
 };
 
 export type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number };

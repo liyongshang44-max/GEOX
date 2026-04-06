@@ -12,6 +12,10 @@ export type WorkAssignmentItem = {
   arrive_deadline_ts?: number | null;
   expired_ts?: number | null;
   expired_reason?: string | null;
+  timeout_status?: "ON_TRACK" | "AT_RISK" | "OVERDUE" | "NONE";
+  timeout_remaining_ms?: number | null;
+  sla_stage?: "ACCEPT" | "ARRIVE" | "NONE";
+  sla_indicator?: "ON_TRACK" | "AT_RISK" | "BREACHED" | "NONE";
   dispatch_note?: string | null;
   priority?: number;
   origin_type?: "manual" | "auto_fallback";
@@ -82,6 +86,7 @@ export async function fetchWorkAssignments(params?: {
   executor_id?: string;
   act_task_id?: string;
   status?: WorkAssignmentStatus;
+  timeout_status?: "ON_TRACK" | "AT_RISK" | "OVERDUE" | "NONE";
   limit?: number;
   offset?: number;
 }): Promise<{ ok?: boolean; count?: number; items?: WorkAssignmentItem[] }> {
