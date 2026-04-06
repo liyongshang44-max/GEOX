@@ -136,12 +136,37 @@ export async function submitWorkAssignment(
   assignmentId: string,
   body: {
     execution_time: { start_ts: number; end_ts: number };
+    labor?: { duration_minutes?: number; worker_count?: number };
+    resource_usage?: {
+      fuel_l?: number;
+      electric_kwh?: number;
+      water_l?: number;
+      chemical_ml?: number;
+      consumables?: Array<{ name: string; amount: number; unit?: string }>;
+    };
+    exception?: { type: string; code?: string; detail?: string };
+    location_summary?: {
+      center?: { lat: number; lon: number };
+      path_points?: number;
+      distance_m?: number;
+      geohash?: string;
+      remark?: string;
+    };
+    evidence_meta?: Array<{
+      artifact_id?: string;
+      object_key?: string;
+      filename?: string;
+      category?: "before" | "during" | "after" | "anomaly" | "other";
+      mime_type?: string;
+      size_bytes?: number;
+      captured_at_ts?: number;
+    }>;
     observed_parameters?: Record<string, unknown>;
     logs_refs?: Array<{ kind: string; ref: string }>;
     status?: "executed" | "not_executed";
   },
-): Promise<{ ok?: boolean; status?: string; error?: string; detail?: any }> {
-  return apiRequest<{ ok?: boolean; status?: string; error?: string; detail?: any }>(`/api/v1/work-assignments/${encodeURIComponent(assignmentId)}/submit`, {
+): Promise<{ ok?: boolean; status?: string; error?: string; detail?: any; field_errors?: Array<{ field: string; code: string; message: string }> }> {
+  return apiRequest<{ ok?: boolean; status?: string; error?: string; detail?: any; field_errors?: Array<{ field: string; code: string; message: string }> }>(`/api/v1/work-assignments/${encodeURIComponent(assignmentId)}/submit`, {
     method: "POST",
     body: JSON.stringify(body),
   });

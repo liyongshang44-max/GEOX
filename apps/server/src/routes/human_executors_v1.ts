@@ -43,6 +43,54 @@ function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error });
 }
 
+type FieldValidationIssue = { field: string; code: string; message: string };
+
+function badFieldRequest(reply: any, issues: FieldValidationIssue[]) {
+  return reply.status(400).send({
+    ok: false,
+    error: "INVALID_RECEIPT_FIELDS",
+    field_errors: issues,
+  });
+}
+
+function asFiniteNumber(raw: any): number | null {
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+function readNonNegativeNumber(raw: any, field: string, issues: FieldValidationIssue[], opts?: { max?: number }): number | null | undefined {
+  if (raw == null || raw === "") return undefined;
+  const n = asFiniteNumber(raw);
+  if (n == null) {
+    issues.push({ field, code: "INVALID_NUMBER", message: `${field} must be a finite number` });
+    return null;
+  }
+  if (n < 0) {
+    issues.push({ field, code: "OUT_OF_RANGE", message: `${field} must be >= 0` });
+    return null;
+  }
+  if (opts?.max != null && n > opts.max) {
+    issues.push({ field, code: "OUT_OF_RANGE", message: `${field} must be <= ${opts.max}` });
+    return null;
+  }
+  return n;
+}
+
+function readNormalizedString(raw: any, field: string, issues: FieldValidationIssue[], opts?: { maxLength?: number; allowEmpty?: boolean }): string | null {
+  if (raw == null) return null;
+  const value = String(raw).trim();
+  if (!value.length) {
+    if (opts?.allowEmpty) return "";
+    issues.push({ field, code: "REQUIRED", message: `${field} is required` });
+    return null;
+  }
+  if (opts?.maxLength && value.length > opts.maxLength) {
+    issues.push({ field, code: "TOO_LONG", message: `${field} length must be <= ${opts.maxLength}` });
+    return null;
+  }
+  return value;
+}
+
 function normalizeCapabilities(input: any): string[] {
   if (!Array.isArray(input)) return [];
   return Array.from(new Set(input.map((x) => String(x ?? "").trim()).filter(Boolean))).slice(0, 64);
@@ -1027,6 +1075,80 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const end_ts = Number(body.execution_time?.end_ts ?? body.end_ts ?? now);
     if (!Number.isFinite(start_ts) || !Number.isFinite(end_ts) || start_ts > end_ts) return badRequest(reply, "EXECUTION_TIME_INVALID");
 
+    const issues: FieldValidationIssue[] = [];
+    const worker_count = readNonNegativeNumber(body.labor?.worker_count, "labor.worker_count", issues, { max: 2000 });
+    const duration_minutes_input = readNonNegativeNumber(body.labor?.duration_minutes, "labor.duration_minutes", issues, { max: 24 * 60 });
+    const duration_minutes = duration_minutes_input == null
+      ? null
+      : Math.trunc(duration_minutes_input ?? Math.max(1, Math.round((end_ts - start_ts) / 60000)));
+
+    const resource_usage = {
+      fuel_l: readNonNegativeNumber(body.resource_usage?.fuel_l, "resource_usage.fuel_l", issues, { max: 1_000_000 }),
+      electric_kwh: readNonNegativeNumber(body.resource_usage?.electric_kwh, "resource_usage.electric_kwh", issues, { max: 1_000_000 }),
+      water_l: readNonNegativeNumber(body.resource_usage?.water_l, "resource_usage.water_l", issues, { max: 1_000_000 }),
+      chemical_ml: readNonNegativeNumber(body.resource_usage?.chemical_ml, "resource_usage.chemical_ml", issues, { max: 1_000_000 }),
+      consumables: Array.isArray(body.resource_usage?.consumables)
+        ? body.resource_usage.consumables.slice(0, 32).map((item: any, idx: number) => {
+          const name = readNormalizedString(item?.name, `resource_usage.consumables[${idx}].name`, issues, { maxLength: 64 });
+          const amount = readNonNegativeNumber(item?.amount, `resource_usage.consumables[${idx}].amount`, issues, { max: 1_000_000 });
+          const unit = item?.unit == null ? undefined : String(item.unit).trim().slice(0, 16);
+          return { name, amount, unit };
+        }).filter((x: any) => x.name && x.amount != null).map((x: any) => ({ name: x.name as string, amount: Number(x.amount), unit: x.unit }))
+        : [],
+    };
+
+    const exception_type_raw = readNormalizedString(body.exception?.type ?? "NONE", "exception.type", issues, { maxLength: 32 });
+    const exception_type = (exception_type_raw ?? "NONE").toUpperCase();
+    const allowedExceptionTypes = new Set(["NONE", "WEATHER", "MACHINE", "MATERIAL_SHORTAGE", "SAFETY", "FIELD_BLOCKED", "OTHER"]);
+    if (!allowedExceptionTypes.has(exception_type)) {
+      issues.push({
+        field: "exception.type",
+        code: "INVALID_ENUM",
+        message: "exception.type must be one of NONE|WEATHER|MACHINE|MATERIAL_SHORTAGE|SAFETY|FIELD_BLOCKED|OTHER",
+      });
+    }
+    const exception_code = body.exception?.code == null ? undefined : readNormalizedString(body.exception?.code, "exception.code", issues, { maxLength: 64 });
+    const exception_detail = body.exception?.detail == null ? undefined : String(body.exception?.detail).slice(0, 2000);
+
+    const location_summary_raw: any = body.location_summary && typeof body.location_summary === "object" ? body.location_summary : {};
+    const center_lat_raw = location_summary_raw.center?.lat;
+    const center_lon_raw = location_summary_raw.center?.lon;
+    const center_lat_num = center_lat_raw == null || center_lat_raw === "" ? undefined : asFiniteNumber(center_lat_raw);
+    const center_lon_num = center_lon_raw == null || center_lon_raw === "" ? undefined : asFiniteNumber(center_lon_raw);
+    if (center_lat_num == null && center_lat_raw != null && center_lat_raw !== "") issues.push({ field: "location_summary.center.lat", code: "INVALID_NUMBER", message: "location_summary.center.lat must be a finite number" });
+    if (center_lon_num == null && center_lon_raw != null && center_lon_raw !== "") issues.push({ field: "location_summary.center.lon", code: "INVALID_NUMBER", message: "location_summary.center.lon must be a finite number" });
+    if (center_lat_num != null && (center_lat_num < -90 || center_lat_num > 90)) issues.push({ field: "location_summary.center.lat", code: "OUT_OF_RANGE", message: "location_summary.center.lat must be between -90 and 90" });
+    if (center_lon_num != null && (center_lon_num < -180 || center_lon_num > 180)) issues.push({ field: "location_summary.center.lon", code: "OUT_OF_RANGE", message: "location_summary.center.lon must be between -180 and 180" });
+    const path_points = readNonNegativeNumber(location_summary_raw.path_points, "location_summary.path_points", issues, { max: 1_000_000 });
+    const distance_m = readNonNegativeNumber(location_summary_raw.distance_m, "location_summary.distance_m", issues, { max: 10_000_000 });
+    const geohash = location_summary_raw.geohash == null ? undefined : readNormalizedString(location_summary_raw.geohash, "location_summary.geohash", issues, { maxLength: 32 });
+    const location_remark = location_summary_raw.remark == null ? undefined : String(location_summary_raw.remark).slice(0, 512);
+
+    const evidence_meta = Array.isArray(body.evidence_meta)
+      ? body.evidence_meta.slice(0, 50).map((item: any, idx: number) => {
+        const artifact_id = item?.artifact_id == null ? undefined : readNormalizedString(item.artifact_id, `evidence_meta[${idx}].artifact_id`, issues, { maxLength: 128 });
+        const object_key = item?.object_key == null ? undefined : readNormalizedString(item.object_key, `evidence_meta[${idx}].object_key`, issues, { maxLength: 512 });
+        const filename = item?.filename == null ? undefined : String(item.filename).slice(0, 255);
+        const category = item?.category == null ? undefined : String(item.category).trim().toLowerCase();
+        const mime_type = item?.mime_type == null ? undefined : String(item.mime_type).slice(0, 128);
+        const size_bytes = readNonNegativeNumber(item?.size_bytes, `evidence_meta[${idx}].size_bytes`, issues, { max: 1024 * 1024 * 1024 });
+        const captured_at_ts = readNonNegativeNumber(item?.captured_at_ts, `evidence_meta[${idx}].captured_at_ts`, issues, { max: 99_999_999_999_999 });
+        if (!artifact_id && !object_key) {
+          issues.push({
+            field: `evidence_meta[${idx}]`,
+            code: "MISSING_REFERENCE",
+            message: "artifact_id or object_key is required",
+          });
+        }
+        return { artifact_id, object_key, filename, category, mime_type, size_bytes: size_bytes ?? undefined, captured_at_ts: captured_at_ts ?? undefined };
+      })
+      : [];
+    if (body.evidence_meta != null && !Array.isArray(body.evidence_meta)) {
+      issues.push({ field: "evidence_meta", code: "INVALID_TYPE", message: "evidence_meta must be an array" });
+    }
+
+    if (issues.length > 0) return badFieldRequest(reply, issues);
+
     const delegatedPayload = {
       tenant_id: auth.tenant_id,
       project_id: auth.project_id,
@@ -1043,19 +1165,36 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         kind: String(body.execution_coverage?.kind ?? "field"),
         ref: String(body.execution_coverage?.ref ?? body.coverage_ref ?? "field_unknown"),
       },
-      resource_usage: {
-        fuel_l: body.resource_usage?.fuel_l ?? null,
-        electric_kwh: body.resource_usage?.electric_kwh ?? null,
-        water_l: body.resource_usage?.water_l ?? null,
-        chemical_ml: body.resource_usage?.chemical_ml ?? null,
+      labor: {
+        duration_minutes: duration_minutes ?? Math.max(1, Math.round((end_ts - start_ts) / 60000)),
+        worker_count: worker_count ?? 1,
       },
+      resource_usage,
+      exception: {
+        type: exception_type,
+        code: exception_code ?? undefined,
+        detail: exception_detail,
+      },
+      location_summary: {
+        center: center_lat_num != null && center_lon_num != null
+          ? { lat: center_lat_num, lon: center_lon_num }
+          : undefined,
+        path_points: path_points ?? undefined,
+        distance_m: distance_m ?? undefined,
+        geohash: geohash ?? undefined,
+        remark: location_remark,
+      },
+      evidence_meta,
       logs_refs: Array.isArray(body.logs_refs) && body.logs_refs.length > 0
         ? body.logs_refs
-        : [{ kind: "human_submission", ref: `work-assignment://${assignment_id}/${now}` }],
+        : evidence_meta
+          .map((item: { object_key?: string; artifact_id?: string }) => item.object_key ?? item.artifact_id ?? null)
+          .filter((v: string | null): v is string => Boolean(v))
+          .map((ref: string) => ({ kind: "artifact_object", ref })),
       status: String(body.status ?? "executed").trim().toLowerCase() === "not_executed" ? "not_executed" : "executed",
       constraint_check: {
-        violated: Boolean(body.constraint_check?.violated ?? false),
-        violations: Array.isArray(body.constraint_check?.violations) ? body.constraint_check.violations.map((x: any) => String(x)) : [],
+        violated: exception_type !== "NONE" || Boolean(body.constraint_check?.violated ?? false),
+        violations: Array.isArray(body.constraint_check?.violations) ? body.constraint_check.violations.map((x: any) => String(x)) : (exception_code ? [exception_code] : []),
       },
       observed_parameters: body.observed_parameters && typeof body.observed_parameters === "object" ? body.observed_parameters : {},
       meta: {
@@ -1066,6 +1205,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         submit_source: "api/v1/work-assignments/:assignmentId/submit",
       },
     };
+    if (!Array.isArray(delegatedPayload.logs_refs) || delegatedPayload.logs_refs.length < 1) {
+      delegatedPayload.logs_refs = [{ kind: "human_submission", ref: `work-assignment://${assignment_id}/${now}` }];
+    }
 
     const delegated = await app.inject({
       method: "POST",

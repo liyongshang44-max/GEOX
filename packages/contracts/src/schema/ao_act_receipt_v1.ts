@@ -13,18 +13,47 @@ export type AoActReceiptV1 = {
     };
     execution_coverage?: {
       kind: "field" | "point" | "manual";
+      ref?: string;
     };
     resource_usage?: {
       water_l?: number;
       electric_kwh?: number;
       chemical_ml?: number;
+      fuel_l?: number;
+      consumables?: Array<{ name: string; amount: number; unit?: string }>;
     };
-    logs_refs?: string[];
+    labor?: {
+      duration_minutes?: number;
+      worker_count?: number;
+    };
+    exception?: {
+      type?: string;
+      code?: string;
+      detail?: string;
+    };
+    location_summary?: {
+      center?: { lat: number; lon: number };
+      path_points?: number;
+      distance_m?: number;
+      geohash?: string;
+      remark?: string;
+    };
+    evidence_meta?: Array<{
+      artifact_id?: string;
+      object_key?: string;
+      filename?: string;
+      category?: string;
+      mime_type?: string;
+      size_bytes?: number;
+      captured_at_ts?: number;
+    }>;
+    logs_refs?: string[] | Array<{ kind: string; ref: string }>;
     evidence_refs?: string[];
     evidence_artifact_ids?: string[];
     constraint_check?: {
       violated: boolean;
       summary?: string;
     };
+    observed_parameters?: Record<string, unknown>;
   };
 };
