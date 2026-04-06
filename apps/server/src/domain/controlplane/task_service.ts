@@ -9,6 +9,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"; //
 import type { Pool } from "pg"; // Postgres pool typing.
 import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
 import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0"; // Reuse existing token/scope auth.
+import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
 
@@ -22,6 +23,8 @@ type OperationPlanStateReadModelRow = {
   receipt_status: string | null;
 }; // Canonical state-centric read model row for UI/backend convergence.
 
+type DispatchSlaInput = { accept_minutes?: number | null; arrive_minutes?: number | null };
+
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
 }
@@ -32,6 +35,74 @@ function parseJsonMaybe(v: any): any {
     try { return JSON.parse(v); } catch { return null; } // Best-effort parse.
   }
   return null; // Unknown shape => null.
+}
+
+function normalizeCapabilities(input: any): string[] {
+  if (!Array.isArray(input)) return [];
+  return Array.from(new Set(input.map((x) => String(x ?? "").trim()).filter(Boolean))).slice(0, 64);
+}
+
+function parseFiniteNumber(v: any): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function parseTaskLocation(taskPayload: any): { lat: number; lon: number } | null {
+  const sources = [
+    taskPayload?.meta?.location,
+    taskPayload?.location,
+    taskPayload?.meta?.geo_point,
+    taskPayload?.geo_point
+  ];
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    const lat = parseFiniteNumber((source as any).lat ?? (source as any).latitude);
+    const lon = parseFiniteNumber((source as any).lon ?? (source as any).lng ?? (source as any).longitude);
+    if (lat == null || lon == null) continue;
+    return { lat, lon };
+  }
+  return null;
+}
+
+async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Promise<DispatchExecutorResource[]> {
+  try {
+    const q = await pool.query(
+      `SELECT
+         h.executor_id,
+         h.capabilities,
+         h.status,
+         h.updated_ts_ms,
+         COALESCE(active.active_count, 0) AS active_load
+       FROM human_executor_index_v1 h
+       LEFT JOIN (
+         SELECT executor_id, COUNT(*)::int AS active_count
+         FROM work_assignment_index_v1
+         WHERE tenant_id = $1
+           AND status IN ('ASSIGNED','ACCEPTED','ARRIVED')
+         GROUP BY executor_id
+       ) active ON active.executor_id = h.executor_id
+       WHERE h.tenant_id = $1
+         AND h.status = 'ACTIVE'
+       ORDER BY h.updated_ts_ms DESC, h.executor_id ASC
+       LIMIT 500`,
+      [tenant.tenant_id]
+    );
+    return (q.rows ?? []).map((row: any) => ({
+      executor_id: String(row.executor_id ?? ""),
+      capabilities: normalizeCapabilities(parseJsonMaybe(row.capabilities)),
+      current_load: Number(row.active_load ?? 0),
+      status: String(row.status ?? "ACTIVE"),
+      location: null
+    })).filter((row) => row.executor_id);
+  } catch {
+    return [];
+  }
+}
+
+function parseDispatchSla(body: any): DispatchSlaInput {
+  const accept = parseFiniteNumber(body?.sla?.accept_minutes ?? body?.accept_minutes);
+  const arrive = parseFiniteNumber(body?.sla?.arrive_minutes ?? body?.arrive_minutes);
+  return { accept_minutes: accept, arrive_minutes: arrive };
 }
 
 // Host entrypoint default is http://127.0.0.1:3001; container-internal service calls remain http://server:3000.
@@ -1467,6 +1538,8 @@ async function createWorkAssignmentFallbackFact(input: {
   operation_plan_id: string | null;
   created_by: string;
   context: DispatchFallbackContext;
+  task_payload: any;
+  sla?: DispatchSlaInput;
 }): Promise<{ fallback_fact_id: string | null; assignment_fact_id: string | null; assignment_id: string | null; created: boolean }> {
   const existing = await loadLatestFactByTypeAndKey(input.pool, "ao_act_manual_fallback_v1", "payload,act_task_id", input.act_task_id, input.tenant);
   if (existing) {
@@ -1476,12 +1549,31 @@ async function createWorkAssignmentFallbackFact(input: {
 
   const assignment_id = `wa_fallback_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
   const assigned_at = new Date().toISOString();
-  const routing_key_parts = [
-    input.context.action_type ?? "action",
-    input.context.field_id ?? "field",
-    input.context.region ?? "region"
-  ].map((x) => String(x).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_"));
-  const executor_id = `manual_pool.${routing_key_parts.join(".")}`.slice(0, 120);
+  const routing_key_parts = [input.context.action_type ?? "action", input.context.field_id ?? "field", input.context.region ?? "region"]
+    .map((x) => String(x).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_"));
+  const manual_pool_executor_id = `manual_pool.${routing_key_parts.join(".")}`.slice(0, 120);
+  const executorResources = await listHumanExecutorResources(input.pool, input.tenant);
+  const decision = decideDispatchCandidates({
+    scope: { tenant_id: input.tenant.tenant_id, project_id: input.tenant.project_id },
+    task: {
+      act_task_id: input.act_task_id,
+      action_type: input.context.action_type,
+      field_id: input.context.field_id,
+      required_capabilities: normalizeCapabilities([
+        ...(Array.isArray(input.task_payload?.required_capabilities) ? input.task_payload.required_capabilities : []),
+        ...(Array.isArray(input.task_payload?.capabilities) ? input.task_payload.capabilities : []),
+        typeof input.task_payload?.skill_id === "string" ? input.task_payload.skill_id : ""
+      ]),
+      location: parseTaskLocation(input.task_payload)
+    },
+    executors: executorResources,
+    sla: { accept_minutes: input.sla?.accept_minutes ?? null, arrive_minutes: input.sla?.arrive_minutes ?? null }
+  });
+  const bestCandidate = decision.candidates.find((x) => x.priority > -999);
+  const executor_id = bestCandidate?.executor_id ?? manual_pool_executor_id;
+  const decisionExplain = bestCandidate
+    ? `${decision.explain}; selected=${executor_id}; priority=${bestCandidate.priority}; reasons=${bestCandidate.reasons.join(";")}`
+    : `${decision.explain}; selected=${manual_pool_executor_id}; fallback=no_candidate`;
 
   const assignment_fact_id = await insertFact(input.pool, "api/v1/ao-act/dispatches/state", {
     type: "work_assignment_upserted_v1",
@@ -1508,6 +1600,13 @@ async function createWorkAssignmentFallbackFact(input: {
         retry_exhausted: input.context.retry_exhausted,
         device_offline: input.context.device_offline
       },
+      dispatch_decision: {
+        selected_executor_id: executor_id,
+        candidate_count: decision.candidates.length,
+        top_candidates: decision.candidates.slice(0, 3),
+        explain: decisionExplain
+      },
+      explain: decisionExplain,
       created_by: input.created_by
     }
   });
@@ -1537,6 +1636,13 @@ async function createWorkAssignmentFallbackFact(input: {
         field_id: input.context.field_id,
         region: input.context.region
       },
+      dispatch_decision: {
+        selected_executor_id: executor_id,
+        candidate_count: decision.candidates.length,
+        top_candidates: decision.candidates.slice(0, 3),
+        explain: decisionExplain
+      },
+      explain: decisionExplain,
       created_by: input.created_by,
       created_at: assigned_at
     }
@@ -2411,7 +2517,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           act_task_id,
           operation_plan_id: operation_plan_id || null,
           created_by: String(auth.actor_id ?? "system/controlplane"),
-          context: fallbackContext
+          context: fallbackContext,
+          task_payload: taskFact.record_json?.payload ?? {},
+          sla: parseDispatchSla(body)
         });
         manual_fallback_fact_id = fallback.fallback_fact_id;
         work_assignment_fact_id = fallback.assignment_fact_id;
