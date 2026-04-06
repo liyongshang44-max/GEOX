@@ -133,7 +133,7 @@ async function ensureSkillRunFact(params: {
   pool: Pool;
   tenant: TenantTriple;
   operationPlanId: string;
-  triggerStage: "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance";
+  triggerStage: "before_recommendation" | "after_recommendation" | "before_dispatch" | "before_acceptance";
   category: "AGRONOMY" | "DEVICE";
   bindTarget: string;
   skillId: string;
@@ -159,6 +159,7 @@ async function ensureSkillRunFact(params: {
     category: params.category,
     status: "ACTIVE",
     result_status: params.resultStatus,
+    lifecycle_version: 2,
     trigger_stage: params.triggerStage,
     scope_type: "PROGRAM",
     rollout_mode: "DIRECT",
@@ -843,13 +844,17 @@ function buildSkillTraceFromFacts(facts: FactRow[], operationPlanId: string, fal
   });
   const latestByStage = (stages: string[]): FactRow | null => {
     const matched = runs
-      .filter((row) => stages.includes(String(row.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase()))
+      .filter((row) => {
+        const stage = String(row.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
+        const normalizedStage = stage === "before_approval" ? "after_recommendation" : stage;
+        return stages.includes(normalizedStage);
+      })
       .sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
     return matched[matched.length - 1] ?? null;
   };
   return {
     crop_skill: toEntry(latestByStage(["before_recommendation"])) || fallback?.crop_skill || emptyEntry(),
-    agronomy_skill: toEntry(latestByStage(["before_approval"])) || fallback?.agronomy_skill || emptyEntry(),
+    agronomy_skill: toEntry(latestByStage(["after_recommendation"])) || fallback?.agronomy_skill || emptyEntry(),
     device_skill: toEntry(latestByStage(["before_dispatch"])) || fallback?.device_skill || emptyEntry(),
     acceptance_skill: toEntry(latestByStage(["before_acceptance", "after_acceptance"])) || fallback?.acceptance_skill || emptyEntry(),
   };
@@ -1282,7 +1287,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         pool,
         tenant,
         operationPlanId,
-        triggerStage: "before_approval",
+        triggerStage: "after_recommendation",
         category: "AGRONOMY",
         bindTarget: "operation_approval",
         skillId: toText(rec.record_json?.payload?.agronomy_skill_id ?? rec.record_json?.payload?.rule_id ?? state.skill_trace?.agronomy_skill?.skill_id) ?? "agronomy_skill_v1",

@@ -27,6 +27,7 @@ type SkillRegistryReadRow = {
   device_id: string | null;
   input_digest: string | null;
   output_digest: string | null;
+  lifecycle_version: number | null;
   payload_json: any;
   occurred_at: string;
   updated_at_ts_ms: number;
@@ -42,6 +43,13 @@ function parseRecordJson(v: any): any {
 
 function str(v: unknown): string {
   return String(v ?? "").trim();
+}
+
+function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
+  const normalized = str(stage).toLowerCase();
+  if (!normalized) return null;
+  if (factType !== "skill_run_v1") return normalized;
+  return normalized === "before_approval" ? "after_recommendation" : normalized;
 }
 
 function selectLatest(rows: SkillRegistryReadRow[]): SkillRegistryReadRow[] {
@@ -94,6 +102,7 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
       device_id text NULL,
       input_digest text NULL,
       output_digest text NULL,
+      lifecycle_version integer NULL,
       payload_json jsonb NOT NULL,
       occurred_at timestamptz NOT NULL,
       updated_at_ts_ms bigint NOT NULL,
@@ -102,6 +111,7 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
   `);
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_skill_registry_read_v1_lookup ON skill_registry_read_v1 (tenant_id, project_id, group_id, category, status, crop_code, device_type, trigger_stage, bind_target, updated_at_ts_ms DESC)`);
+  await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS lifecycle_version integer NULL`);
 }
 
 export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
@@ -140,7 +150,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
       result_status: str(payload.result_status) || null,
       crop_code: str(payload.crop_code).toLowerCase() || null,
       device_type: str(payload.device_type) || null,
-      trigger_stage: str(payload.trigger_stage) || null,
+      trigger_stage: normalizeRunTriggerStage(factType, payload.trigger_stage),
       bind_target: str(payload.bind_target) || null,
       operation_id: str(payload.operation_id) || null,
       operation_plan_id: str(payload.operation_plan_id) || null,
@@ -148,6 +158,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
       device_id: str(payload.device_id) || null,
       input_digest: str(payload.input_digest) || null,
       output_digest: str(payload.output_digest) || null,
+      lifecycle_version: Number.isFinite(Number(payload.lifecycle_version)) ? Number(payload.lifecycle_version) : null,
       payload_json: payload,
       occurred_at: occurredAt,
       updated_at_ts_ms: Number.isFinite(ts) ? ts : 0,
@@ -165,11 +176,11 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
         `INSERT INTO skill_registry_read_v1 (
           tenant_id, project_id, group_id, fact_type, fact_id, skill_id, version, category, status, scope_type, rollout_mode, result_status,
           crop_code, device_type, trigger_stage, bind_target, operation_id, operation_plan_id, field_id, device_id,
-          input_digest, output_digest, payload_json, occurred_at, updated_at_ts_ms
+          input_digest, output_digest, lifecycle_version, payload_json, occurred_at, updated_at_ts_ms
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,
           $13,$14,$15,$16,$17,$18,$19,$20,
-          $21,$22,$23::jsonb,$24::timestamptz,$25
+          $21,$22,$23,$24::jsonb,$25::timestamptz,$26
         )
         ON CONFLICT (fact_id) DO UPDATE SET
           category = EXCLUDED.category,
@@ -187,13 +198,14 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
           device_id = EXCLUDED.device_id,
           input_digest = EXCLUDED.input_digest,
           output_digest = EXCLUDED.output_digest,
+          lifecycle_version = EXCLUDED.lifecycle_version,
           payload_json = EXCLUDED.payload_json,
           occurred_at = EXCLUDED.occurred_at,
           updated_at_ts_ms = EXCLUDED.updated_at_ts_ms`,
         [
           row.tenant_id, row.project_id, row.group_id, row.fact_type, row.fact_id, row.skill_id, row.version, row.category, row.status, row.scope_type, row.rollout_mode, row.result_status,
           row.crop_code, row.device_type, row.trigger_stage, row.bind_target, row.operation_id, row.operation_plan_id, row.field_id, row.device_id,
-          row.input_digest, row.output_digest, JSON.stringify(row.payload_json ?? {}), row.occurred_at, row.updated_at_ts_ms,
+          row.input_digest, row.output_digest, row.lifecycle_version, JSON.stringify(row.payload_json ?? {}), row.occurred_at, row.updated_at_ts_ms,
         ]
       );
     }

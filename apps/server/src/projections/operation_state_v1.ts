@@ -677,7 +677,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
         })) ?? emptySkillTraceNode(),
         agronomy_skill: mapSkillRun(latestSkillRun((runFact) => {
           const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
-          return stage === "before_approval";
+          return stage === "after_recommendation" || stage === "before_approval";
         })) ?? emptySkillTraceNode(),
         device_skill: mapSkillRun(latestSkillRun((runFact) => {
           const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
