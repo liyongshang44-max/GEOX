@@ -8,12 +8,28 @@ const STATUS_META: Array<{ code: WorkAssignmentStatus; label: string }> = [
   { code: "ACCEPTED", label: "已接单" },
   { code: "ARRIVED", label: "执行中" },
   { code: "SUBMITTED", label: "已提交" },
+  { code: "CANCELLED", label: "已取消" },
+  { code: "EXPIRED", label: "已超时" },
 ];
 
 function toTimeLabel(iso: string): string {
   const ts = Date.parse(String(iso ?? ""));
   if (!Number.isFinite(ts)) return "-";
   return new Date(ts).toLocaleString("zh-CN", { hour12: false });
+}
+
+function toSlaLabel(item: WorkAssignmentItem): string {
+  const now = Date.now();
+  if (item.status === "EXPIRED") return "已超时（未接单）";
+  if (item.status === "CANCELLED" && (item.expired_reason === "ARRIVE_TIMEOUT" || item.expired_reason === "ACCEPT_TIMEOUT")) return "已超时";
+  if (item.status === "ASSIGNED") {
+    const ts = Date.parse(String(item.accept_deadline_ts ?? ""));
+    if (!Number.isFinite(ts)) return "接单 SLA 未配置";
+    const leftMs = ts - now;
+    if (leftMs <= 0) return "已超时";
+    return `剩余接单时间 ${Math.ceil(leftMs / 60_000)} 分钟`;
+  }
+  return "-";
 }
 
 export default function HumanAssignmentsPage(): React.ReactElement {
@@ -71,6 +87,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>任务编号：{item.act_task_id}</span>
                         <span>执行人：{item.executor_id}</span>
                         <span>分配时间：{toTimeLabel(item.assigned_at)}</span>
+                        <span>{toSlaLabel(item)}</span>
                       </div>
                     </div>
                     <Link className="btn" to={`/human-assignments/${encodeURIComponent(item.assignment_id)}`}>进入详情</Link>

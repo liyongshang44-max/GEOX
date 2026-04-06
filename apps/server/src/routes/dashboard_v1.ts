@@ -180,6 +180,29 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       pool.query(`SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 ORDER BY raised_ts_ms DESC LIMIT 10`, [tenant_id]),
       pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1') AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 ORDER BY occurred_at DESC, fact_id DESC LIMIT 10`, [tenant_id, project_id, group_id]),
     ]); // Parallelize independent reads.
+    const [timedOutAssignmentCountQ, avgAcceptDurationQ] = await Promise.all([
+      pool.query(
+        `SELECT COUNT(*)::bigint AS count
+         FROM work_assignment_index_v1
+         WHERE tenant_id = $1
+           AND (status = 'EXPIRED' OR (status = 'CANCELLED' AND COALESCE(expired_reason, '') IN ('ARRIVE_TIMEOUT', 'ACCEPT_TIMEOUT')))`,
+        [tenant_id]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+      pool.query(
+        `WITH t AS (
+          SELECT tenant_id, assignment_id,
+                 MIN(CASE WHEN status = 'ASSIGNED' THEN EXTRACT(EPOCH FROM occurred_at) * 1000 END) AS assigned_ms,
+                 MIN(CASE WHEN status = 'ACCEPTED' THEN EXTRACT(EPOCH FROM occurred_at) * 1000 END) AS accepted_ms
+          FROM work_assignment_audit_v1
+          WHERE tenant_id = $1
+          GROUP BY tenant_id, assignment_id
+        )
+        SELECT COALESCE(AVG(accepted_ms - assigned_ms), 0)::bigint AS avg_ms
+        FROM t
+        WHERE assigned_ms IS NOT NULL AND accepted_ms IS NOT NULL AND accepted_ms >= assigned_ms`,
+        [tenant_id]
+      ).catch(() => ({ rows: [{ avg_ms: 0 }] })),
+    ]);
 
     let running_task_count = 0; // Default queue count when runtime table is absent.
     try {
@@ -215,6 +238,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         online_device_count: Number(onlineDeviceCountQ.rows?.[0]?.count ?? 0),
         open_alert_count: Number(openAlertCountQ.rows?.[0]?.count ?? 0),
         running_task_count,
+        timed_out_assignment_count: Number(timedOutAssignmentCountQ.rows?.[0]?.count ?? 0),
+        avg_assignment_accept_duration_ms: Number(avgAcceptDurationQ.rows?.[0]?.avg_ms ?? 0),
       },
       trend_series: bucketTelemetryRows(trendRowsQ.rows ?? [], from_ts_ms, to_ts_ms),
       latest_alerts,

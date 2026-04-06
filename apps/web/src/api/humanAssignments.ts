@@ -1,6 +1,6 @@
 import { apiRequest, withQuery } from "./client";
 
-export type WorkAssignmentStatus = "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED";
+export type WorkAssignmentStatus = "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
 
 export type WorkAssignmentItem = {
   assignment_id: string;
@@ -8,6 +8,9 @@ export type WorkAssignmentItem = {
   executor_id: string;
   assigned_at: string;
   status: WorkAssignmentStatus;
+  accept_deadline_ts?: string | null;
+  arrive_deadline_ts?: string | null;
+  expired_reason?: string | null;
   created_ts_ms: number;
   updated_ts_ms: number;
 };

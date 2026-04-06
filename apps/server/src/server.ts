@@ -27,7 +27,7 @@ import { registerControlApprovalRequestV1Routes } from "./routes/control_approva
 import { registerDeliveryEvidenceExportV1Routes } from "./routes/delivery_evidence_export_v1"; // Sprint 26: Evidence export API v1 (async jobs).
 import { registerTelemetryV1Routes } from "./routes/telemetry_v1"; // Sprint A1: Telemetry query routes (read-only).
 import { registerDevicesV1Routes } from "./routes/devices_v1"; // Sprint A2: Devices registration + credentials routes (P0).
-import { registerHumanExecutorV1Routes } from "./routes/human_executors_v1"; // Human executor/service team/work-assignment domain routes.
+import { registerHumanExecutorV1Routes, startAssignmentExpiryWorker } from "./routes/human_executors_v1"; // Human executor/service team/work-assignment domain routes.
 import { registerFieldsV1Routes } from "./routes/fields_v1"; // Sprint C1: Field/GIS + Device Binding routes.
 import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
 import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
@@ -1720,6 +1720,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // 端口
 
 startOfflineAlertWorker(pool); // Sprint C1: 启动离线告警后台扫描（DEVICE_OFFLINE）。
 startAlertNotificationWorker(pool); // Sprint C3: 启动告警通知分发后台任务（短信/邮件/企业微信/钉钉/WEBHOOK）。
+startAssignmentExpiryWorker(pool); // Human assignment: 启动派单 SLA 超时扫描器（自动 EXPIRED/CANCELLED）。
 
 app.listen({ port: PORT, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err); // 打印错误
