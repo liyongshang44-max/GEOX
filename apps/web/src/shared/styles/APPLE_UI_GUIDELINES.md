@@ -25,3 +25,12 @@
 ## Day-1 样板页
 - 监控台（Dashboard）
 - 设备接入向导（Device Onboarding）
+
+## 状态映射（统一）
+- success → `--state-success-*`（映射 normal）
+- info → `--state-info-*`（映射 pending）
+- warning → `--state-warning-*`（映射 risk）
+- danger → `--state-danger-*`（映射 failed，红色仅用于阻断/失败）
+
+## 组件最小规范
+- 参考：`shared/styles/COMPONENT_USAGE_MIN_SPEC.md`。
