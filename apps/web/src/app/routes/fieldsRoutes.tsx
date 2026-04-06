@@ -2,9 +2,9 @@ import React from "react";
 import { Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
-const FieldsPage = React.lazy(() => import("../../views/FieldsPage"));
-const FieldCreatePage = React.lazy(() => import("../../views/FieldCreatePage"));
-const FieldDetailPage = React.lazy(() => import("../../views/FieldDetailPage"));
+const FieldsPage = React.lazy(() => import("../../features/fields/pages/FieldsPage"));
+const FieldCreatePage = React.lazy(() => import("../../features/fields/pages/FieldCreatePage"));
+const FieldDetailPage = React.lazy(() => import("../../features/fields/pages/FieldDetailPage"));
 
 export function renderFieldsRoutes(): React.ReactElement[] {
   return [

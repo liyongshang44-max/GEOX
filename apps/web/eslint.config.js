@@ -18,4 +18,16 @@ export default [
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     },
   },
+
+  {
+    files: ["src/app/routes/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["../../views/*"],
+        },
+      ],
+    },
+  },
 ];
