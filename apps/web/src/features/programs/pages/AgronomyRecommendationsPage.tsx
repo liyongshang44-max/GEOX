@@ -1,5 +1,6 @@
 
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   fetchAgronomyRecommendationDetailControlPlane,
   fetchAgronomyRecommendationsControlPlane,
@@ -12,6 +13,23 @@ import { RelativeTime } from "../../../components/RelativeTime";
 
 type ListItem = any;
 type DetailItem = any;
+
+function toFieldId(value: any): string {
+  const direct = String(value?.field_id ?? "").trim();
+  if (direct) return direct;
+  return String(value?.technical_details?.field_id ?? value?.refs?.field_id ?? "").trim();
+}
+
+function buildSummaryFromItems(nextItems: ListItem[]): { total: number; pending: number; in_approval: number; receipted: number } {
+  return nextItems.reduce((acc, item) => {
+    const code = String(item?.status?.code || item?.status?.label || item?.status || "").toUpperCase();
+    acc.total += 1;
+    if (code.includes("APPROVAL") || code.includes("IN_APPROVAL")) acc.in_approval += 1;
+    else if (code.includes("RECEIPT") || code.includes("RECEIPTED") || code.includes("DONE") || code.includes("COMPLETED")) acc.receipted += 1;
+    else acc.pending += 1;
+    return acc;
+  }, { total: 0, pending: 0, in_approval: 0, receipted: 0 });
+}
 
 function shortId(value: string | null | undefined): string {
   const id = String(value ?? "").trim();
@@ -30,11 +48,23 @@ function StepChain({ steps }: { steps: Array<{ label: string; done: boolean }> }
 }
 
 export default function AgronomyRecommendationsPage(): React.ReactElement {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = React.useState<ListItem[]>([]);
   const [summary, setSummary] = React.useState<{ total: number; pending: number; in_approval: number; receipted: number }>({ total: 0, pending: 0, in_approval: 0, receipted: 0 });
   const [selected, setSelected] = React.useState<DetailItem | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>("");
+  const fieldIdFilter = React.useMemo(() => String(searchParams.get("field_id") ?? "").trim(), [searchParams]);
+
+  const visibleItems = React.useMemo(() => {
+    if (!fieldIdFilter) return items;
+    return items.filter((item) => toFieldId(item) === fieldIdFilter);
+  }, [items, fieldIdFilter]);
+
+  const visibleSummary = React.useMemo(() => {
+    if (!fieldIdFilter) return summary;
+    return buildSummaryFromItems(visibleItems);
+  }, [fieldIdFilter, summary, visibleItems]);
 
   async function refreshAndSelect(recommendationId?: string): Promise<void> {
     setLoading(true);
@@ -44,7 +74,8 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
       const nextItems = Array.isArray(res.items) ? res.items : [];
       setItems(nextItems);
       setSummary(res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 });
-      const targetId = recommendationId || nextItems?.[0]?.recommendation_id;
+      const candidates = fieldIdFilter ? nextItems.filter((item) => toFieldId(item) === fieldIdFilter) : nextItems;
+      const targetId = recommendationId || candidates?.[0]?.recommendation_id;
       if (targetId) {
         const detail = await fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: targetId });
         setSelected(detail.item);
@@ -58,7 +89,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
     }
   }
 
-  React.useEffect(() => { void refreshAndSelect(); }, []);
+  React.useEffect(() => { void refreshAndSelect(); }, [fieldIdFilter]);
 
   return (
     <div className="demoDashboardPage">
@@ -71,10 +102,10 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
       </section>
 
       <section className="summaryGrid4 demoSummaryGrid">
-        <article className="card demoMetricCard"><div className="demoMetricLabel">总建议</div><div className="demoMetricValue">{summary.total}</div><div className="demoMetricHint">当前查询范围内的建议总数。</div></article>
-        <article className="card demoMetricCard"><div className="demoMetricLabel">待处理</div><div className="demoMetricValue">{summary.pending}</div><div className="demoMetricHint">建议优先进入人工判断或审批链。</div></article>
-        <article className="card demoMetricCard"><div className="demoMetricLabel">审批中</div><div className="demoMetricValue">{summary.in_approval}</div><div className="demoMetricHint">已经进入审批流，等待进一步动作。</div></article>
-        <article className="card demoMetricCard"><div className="demoMetricLabel">已回执</div><div className="demoMetricValue">{summary.receipted}</div><div className="demoMetricHint">已有结果和执行回执的建议链。</div></article>
+        <article className="card demoMetricCard"><div className="demoMetricLabel">总建议</div><div className="demoMetricValue">{visibleSummary.total}</div><div className="demoMetricHint">当前查询范围内的建议总数。</div></article>
+        <article className="card demoMetricCard"><div className="demoMetricLabel">待处理</div><div className="demoMetricValue">{visibleSummary.pending}</div><div className="demoMetricHint">建议优先进入人工判断或审批链。</div></article>
+        <article className="card demoMetricCard"><div className="demoMetricLabel">审批中</div><div className="demoMetricValue">{visibleSummary.in_approval}</div><div className="demoMetricHint">已经进入审批流，等待进一步动作。</div></article>
+        <article className="card demoMetricCard"><div className="demoMetricLabel">已回执</div><div className="demoMetricValue">{visibleSummary.receipted}</div><div className="demoMetricHint">已有结果和执行回执的建议链。</div></article>
       </section>
 
       {loading ? <div className="muted">加载中…</div> : null}
@@ -86,9 +117,31 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
             <div className="sectionTitle">建议队列</div>
             <div className="detailSectionLead">左侧专门用于挑出今天要推进的建议，不需要先看技术细节。</div>
           </div>
-          {!loading && !items.length ? <EmptyState title="当前暂无农业建议" description="系统会在下一轮规则评估后补充建议" /> : null}
+          {fieldIdFilter ? (
+            <div className="card" style={{ marginBottom: 12, borderStyle: "dashed" }}>
+              <div className="decisionItemMeta" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                <span>当前仅展示田块 {fieldIdFilter} 的建议。</span>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    const next = new URLSearchParams(searchParams);
+                    next.delete("field_id");
+                    setSearchParams(next);
+                  }}
+                >
+                  查看全部建议
+                </button>
+              </div>
+            </div>
+          ) : null}
+          {!loading && !visibleItems.length ? (
+            <EmptyState
+              title={fieldIdFilter ? "该田块暂无建议" : "当前暂无农业建议"}
+              description={fieldIdFilter ? "可点击“查看全部建议”恢复全量列表" : "系统会在下一轮规则评估后补充建议"}
+            />
+          ) : null}
           <div className="demoList">
-            {items.map((item) => (
+            {visibleItems.map((item) => (
               <div key={item.recommendation_id} className="card demoInfoCard">
                 <button
                   className="btn"
