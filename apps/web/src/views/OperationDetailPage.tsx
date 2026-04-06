@@ -8,7 +8,7 @@ import OperationAcceptanceCard from "../components/operations/OperationAcceptanc
 import OperationStoryTimeline from "../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../viewmodels/operationDetailViewModel";
-import { executeOperationAction } from "../api/operations";
+import { executeOperationAction, fetchOperationHandoff, type OperationHandoffItem } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../lib/operationLabels";
 import { toBusinessTimelineLabel } from "../viewmodels/timelineLabels";
 
@@ -40,6 +40,12 @@ function formatMaybeNumber(value: unknown): string {
   const n = Number(value ?? NaN);
   if (!Number.isFinite(n)) return "--";
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+function toDateTimeLabel(ts?: number | null): string {
+  const n = Number(ts ?? NaN);
+  if (!Number.isFinite(n)) return "未知时间";
+  return new Date(n).toLocaleString("zh-CN", { hour12: false });
 }
 
 export default function OperationDetailPage(): React.ReactElement {
@@ -81,6 +87,7 @@ export default function OperationDetailPage(): React.ReactElement {
 
   const [executing, setExecuting] = React.useState(false);
   const [runFeedback, setRunFeedback] = React.useState<string>("");
+  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
     setExecuting(true);
@@ -133,6 +140,22 @@ export default function OperationDetailPage(): React.ReactElement {
   const isEvidenceMissing = Boolean(traceGap?.missing_evidence) || !model.receiptEvidence;
   const isPendingAcceptance = acceptanceVerdict === "PENDING";
 
+  React.useEffect(() => {
+    let alive = true;
+    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+      .then((rows) => {
+        if (!alive) return;
+        setHandoffItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHandoffItems([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [model.operationPlanId, operationPlanId]);
+
   return (
     <div className="demoDashboardPage operationPageClosure">
       <PageHeader
@@ -163,6 +186,26 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="operationTimelineWrap" style={{ marginTop: 10 }}>
               <OperationStoryTimeline items={timelineItems} />
             </div>
+          </SectionCard>
+          <SectionCard title="转人工节点">
+            {!handoffItems.length ? (
+              <div className="muted">暂无设备转人工交接记录。</div>
+            ) : (
+              <div className="list">
+                {handoffItems.map((item, idx) => (
+                  <article key={`${item.assignment_id}-${idx}`} className="item">
+                    <div className="title">{idx + 1}. 设备失败后人工接管</div>
+                    <div className="meta">
+                      <span>时间：{toDateTimeLabel(item.created_ts_ms)}</span>
+                      <span>dispatch：{item.source_dispatch_id || "-"}</span>
+                      <span>人工任务：{item.assignment_id}</span>
+                      <span>状态：{item.assignment_status || "-"}</span>
+                      <span>原因：{item.fallback_context?.reason_message || item.fallback_context?.reason_code || "-"}</span>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </SectionCard>
 
           {(isInvalidExecution || isEvidenceMissing || isPendingAcceptance) ? (

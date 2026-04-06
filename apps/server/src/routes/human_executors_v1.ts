@@ -6,9 +6,11 @@ import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_aut
 
 type AssignmentStatus = "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
 type ExecutorStatus = "ACTIVE" | "DISABLED";
+type AssignmentOriginType = "manual" | "auto_fallback";
 
 const ASSIGNMENT_STATUS = new Set<AssignmentStatus>(["ASSIGNED", "ACCEPTED", "ARRIVED", "SUBMITTED", "CANCELLED", "EXPIRED"]);
 const EXECUTOR_STATUS = new Set<ExecutorStatus>(["ACTIVE", "DISABLED"]);
+const ASSIGNMENT_ORIGIN_TYPES = new Set<AssignmentOriginType>(["manual", "auto_fallback"]);
 const ALLOW_SUBMIT_FROM_ACCEPTED = /^(1|true|yes|on)$/i.test(String(process.env.WORK_ASSIGNMENT_ALLOW_SUBMIT_FROM_ACCEPTED ?? ""));
 const SLA_DEFAULTS_FALLBACK = { accept_minutes: 30, arrive_minutes: 120 };
 const SLA_DEFAULTS_BY_CROP_JOB: Record<string, { accept_minutes: number; arrive_minutes: number }> = {
@@ -173,10 +175,34 @@ function normalizeAssignmentResponse(row: any) {
     expired_ts: Number.isFinite(expiredTs) ? expiredTs : null,
     expired_reason: row.expired_reason ? String(row.expired_reason) : null,
     dispatch_note: row.dispatch_note ? String(row.dispatch_note) : null,
+    origin_type: String(row.origin_type ?? "manual"),
+    origin_ref_id: row.origin_ref_id ? String(row.origin_ref_id) : null,
+    fallback_context: parsePgJson(row.fallback_context),
     priority: Number(row.priority ?? 5),
     created_ts_ms: Number(row.created_ts_ms ?? 0),
     updated_ts_ms: Number(row.updated_ts_ms ?? 0),
   };
+}
+
+function sanitizeFallbackContext(input: any): Record<string, any> | null {
+  if (input == null) return null;
+  if (typeof input !== "object" || Array.isArray(input)) return null;
+  const reason_code = isNonEmptyString((input as any).reason_code) ? String((input as any).reason_code).trim().slice(0, 128) : null;
+  const reason_message = isNonEmptyString((input as any).reason_message) ? String((input as any).reason_message).trim().slice(0, 1024) : null;
+  const dispatch_id = isNonEmptyString((input as any).dispatch_id) ? String((input as any).dispatch_id).trim().slice(0, 128) : null;
+  const retry_count = Number.isFinite(Number((input as any).retry_count)) ? Math.max(0, Math.trunc(Number((input as any).retry_count))) : null;
+  const max_retries = Number.isFinite(Number((input as any).max_retries)) ? Math.max(0, Math.trunc(Number((input as any).max_retries))) : null;
+  const failed_at = isNonEmptyString((input as any).failed_at) ? String((input as any).failed_at).trim().slice(0, 64) : null;
+  const device = (input as any).device && typeof (input as any).device === "object" && !Array.isArray((input as any).device)
+    ? {
+      device_id: isNonEmptyString((input as any).device.device_id) ? String((input as any).device.device_id).trim().slice(0, 128) : null,
+      device_name: isNonEmptyString((input as any).device.device_name) ? String((input as any).device.device_name).trim().slice(0, 256) : null,
+      status: isNonEmptyString((input as any).device.status) ? String((input as any).device.status).trim().slice(0, 64) : null,
+      last_heartbeat_ts: Number.isFinite(Number((input as any).device.last_heartbeat_ts)) ? Math.trunc(Number((input as any).device.last_heartbeat_ts)) : null,
+    }
+    : null;
+  const payload = { reason_code, reason_message, dispatch_id, retry_count, max_retries, failed_at, device };
+  return Object.values(payload).some((x) => x != null) ? payload : null;
 }
 
 function parseDeadlineTs(raw: any): number | null {
@@ -314,11 +340,31 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS dispatch_note TEXT NULL`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS priority SMALLINT NOT NULL DEFAULT 5`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS version_no BIGINT NOT NULL DEFAULT 0`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS origin_type TEXT NOT NULL DEFAULT 'manual'`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS origin_ref_id TEXT NULL`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS fallback_context JSONB NULL`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 DROP CONSTRAINT IF EXISTS work_assignment_status_ck`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD CONSTRAINT work_assignment_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 DROP CONSTRAINT IF EXISTS work_assignment_origin_type_ck`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD CONSTRAINT work_assignment_origin_type_ck CHECK (origin_type IN ('manual','auto_fallback'))`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_lookup_idx ON work_assignment_index_v1 (tenant_id, act_task_id, updated_ts_ms DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_transition_idx ON work_assignment_index_v1 (tenant_id, assignment_id, status)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_dispatch_idx ON work_assignment_index_v1 (tenant_id, status, priority, updated_ts_ms DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_origin_idx ON work_assignment_index_v1 (tenant_id, origin_type, created_ts_ms DESC)`);
+
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS operation_handoff_v1 (
+          tenant_id TEXT NOT NULL,
+          operation_plan_id TEXT NOT NULL,
+          act_task_id TEXT NOT NULL,
+          source_dispatch_id TEXT NULL,
+          assignment_id TEXT NOT NULL,
+          created_ts_ms BIGINT NOT NULL,
+          updated_ts_ms BIGINT NOT NULL,
+          PRIMARY KEY (tenant_id, operation_plan_id, assignment_id)
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS operation_handoff_v1_lookup_idx ON operation_handoff_v1 (tenant_id, operation_plan_id, created_ts_ms DESC)`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS work_assignment_reassign_log_v1 (
@@ -564,11 +610,15 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const executor_id = normalizeId(body.executor_id);
     const status = String(body.status ?? "ASSIGNED").trim().toUpperCase();
     const assigned_at = isNonEmptyString(body.assigned_at) ? String(body.assigned_at).trim() : new Date().toISOString();
+    const origin_type = String(body.origin_type ?? "manual").trim().toLowerCase();
+    const origin_ref_id = isNonEmptyString(body.origin_ref_id) ? String(body.origin_ref_id).trim().slice(0, 128) : null;
+    const fallback_context = sanitizeFallbackContext(body.fallback_context);
 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
     if (!act_task_id) return badRequest(reply, "MISSING_OR_INVALID:act_task_id");
     if (!executor_id) return badRequest(reply, "MISSING_OR_INVALID:executor_id");
     if (!ASSIGNMENT_STATUS.has(status as AssignmentStatus)) return badRequest(reply, "MISSING_OR_INVALID:status");
+    if (!ASSIGNMENT_ORIGIN_TYPES.has(origin_type as AssignmentOriginType)) return badRequest(reply, "MISSING_OR_INVALID:origin_type");
     if (Number.isNaN(Date.parse(assigned_at))) return badRequest(reply, "MISSING_OR_INVALID:assigned_at");
 
     const requiredCapabilities = await resolveTaskRequiredCapabilities(pool, auth, act_task_id, body.required_capabilities);
@@ -600,11 +650,11 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const now = Date.now();
     await pool.query(
       `INSERT INTO work_assignment_index_v1
-      (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms)
-       VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7,$8,NULL,NULL,$9,$10)
+      (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, origin_type, origin_ref_id, fallback_context, created_ts_ms, updated_ts_ms)
+       VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7,$8,NULL,NULL,$9,$10,$11::jsonb,$12,$13)
        ON CONFLICT (tenant_id, assignment_id)
-       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_ts=NULL, expired_reason=NULL, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-      [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineTs, arriveDeadlineTs, now, now]
+       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_ts=NULL, expired_reason=NULL, origin_type=EXCLUDED.origin_type, origin_ref_id=EXCLUDED.origin_ref_id, fallback_context=EXCLUDED.fallback_context, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+      [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineTs, arriveDeadlineTs, origin_type, origin_ref_id, JSON.stringify(fallback_context), now, now]
     );
 
     const audit_id = randomUUID();
@@ -624,10 +674,115 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       status,
       accept_deadline_ts: acceptDeadlineTs,
       arrive_deadline_ts: arriveDeadlineTs,
+      origin_type,
+      origin_ref_id,
+      fallback_context,
       audit_id,
     });
 
-    return reply.send({ ok: true, fact_id, assignment: { assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, expired_ts: null, expired_reason: null } });
+    return reply.send({ ok: true, fact_id, assignment: { assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, expired_ts: null, expired_reason: null, origin_type, origin_ref_id, fallback_context } });
+  });
+
+  app.post("/api/internal/work-assignments/auto-fallback", async (req, reply) => {
+    if ((req.query as any)?.__internal__ !== "true") return reply.status(403).send({ ok: false, error: "FORBIDDEN" });
+    await ensureHumanExecutorRuntime(pool);
+
+    const body: any = (req as any).body ?? {};
+    const tenant_id = normalizeId(body.tenant_id);
+    const project_id = normalizeId(body.project_id);
+    const group_id = normalizeId(body.group_id);
+    const actor_id = normalizeId(body.actor_id) ?? "system:auto_fallback";
+    if (!tenant_id || !project_id || !group_id) return badRequest(reply, "MISSING_OR_INVALID:tenant_scope");
+
+    const assignment_id = normalizeId(body.assignment_id) ?? `wa_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
+    const act_task_id = normalizeId(body.act_task_id);
+    const executor_id = normalizeId(body.executor_id);
+    const operation_plan_id = normalizeId(body.operation_plan_id ?? body.operation_id);
+    if (!act_task_id || !executor_id) return badRequest(reply, "MISSING_OR_INVALID:act_task_id_or_executor_id");
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OR_INVALID:operation_plan_id");
+    const assigned_at = isNonEmptyString(body.assigned_at) ? String(body.assigned_at).trim() : new Date().toISOString();
+    if (Number.isNaN(Date.parse(assigned_at))) return badRequest(reply, "MISSING_OR_INVALID:assigned_at");
+    const fallback_context = sanitizeFallbackContext(body.fallback_context ?? body.context ?? {});
+    const source_dispatch_id = normalizeId(body.source_dispatch_id ?? fallback_context?.dispatch_id);
+    const origin_ref_id = normalizeId(body.origin_ref_id ?? source_dispatch_id ?? operation_plan_id);
+    const requiredCapabilities = normalizeCapabilities(body.required_capabilities);
+
+    const fallbackSla = chooseSlaDefaults(String(body.crop_code ?? ""), String(body.job_type ?? body.action_type ?? ""));
+    const assignedAtMs = Date.parse(assigned_at);
+    const acceptDeadlineTs = parseDeadlineTs(body.accept_deadline_ts ?? body?.sla?.accept_deadline_ts)
+      ?? (assignedAtMs + normalizeSlaMinutes(body?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000);
+    const arriveDeadlineTs = parseDeadlineTs(body.arrive_deadline_ts ?? body?.sla?.arrive_deadline_ts)
+      ?? (assignedAtMs + normalizeSlaMinutes(body?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000);
+    if (!Number.isFinite(acceptDeadlineTs) || !Number.isFinite(arriveDeadlineTs)) return badRequest(reply, "MISSING_OR_INVALID:sla");
+
+    const now = Date.now();
+    await pool.query(
+      `INSERT INTO work_assignment_index_v1
+      (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, origin_type, origin_ref_id, fallback_context, created_ts_ms, updated_ts_ms)
+       VALUES ($1,$2,$3,$4,$5::timestamptz,'ASSIGNED',$6,$7,NULL,NULL,'auto_fallback',$8,$9::jsonb,$10,$11)
+       ON CONFLICT (tenant_id, assignment_id)
+       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_ts=NULL, expired_reason=NULL, origin_type=EXCLUDED.origin_type, origin_ref_id=EXCLUDED.origin_ref_id, fallback_context=EXCLUDED.fallback_context, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+      [tenant_id, assignment_id, act_task_id, executor_id, assigned_at, acceptDeadlineTs, arriveDeadlineTs, origin_ref_id, JSON.stringify(fallback_context), now, now]
+    );
+
+    await pool.query(
+      `INSERT INTO operation_handoff_v1
+       (tenant_id, operation_plan_id, act_task_id, source_dispatch_id, assignment_id, created_ts_ms, updated_ts_ms)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
+       ON CONFLICT (tenant_id, operation_plan_id, assignment_id)
+       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, source_dispatch_id=EXCLUDED.source_dispatch_id, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+      [tenant_id, operation_plan_id, act_task_id, source_dispatch_id, assignment_id, now, now]
+    );
+
+    const authLike: AoActAuthContextV0 = {
+      tenant_id,
+      project_id,
+      group_id,
+      actor_id,
+      token_id: "internal_auto_fallback",
+      role: "admin",
+      scopes: ["ao_act.task.write", "ao_act.index.read"],
+    };
+    const audit_id = randomUUID();
+    await pool.query(
+      `INSERT INTO work_assignment_audit_v1
+       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+      [tenant_id, audit_id, assignment_id, act_task_id, executor_id, "ASSIGNED", assigned_at, actor_id, "internal_auto_fallback", null, "ASSIGNED", "AUTO_FALLBACK_CREATE"]
+    );
+    const fact_id = await insertAuditFact(pool, "work_assignment_auto_fallback_created_v1", authLike, {
+      assignment_id,
+      act_task_id,
+      executor_id,
+      operation_plan_id,
+      source_dispatch_id,
+      required_capabilities: requiredCapabilities,
+      assigned_at,
+      status: "ASSIGNED",
+      origin_type: "auto_fallback",
+      origin_ref_id,
+      fallback_context,
+      accept_deadline_ts: acceptDeadlineTs,
+      arrive_deadline_ts: arriveDeadlineTs,
+      audit_id,
+    });
+
+    return reply.send({
+      ok: true,
+      fact_id,
+      assignment: {
+        assignment_id,
+        act_task_id,
+        executor_id,
+        status: "ASSIGNED",
+        origin_type: "auto_fallback",
+        origin_ref_id,
+        fallback_context,
+        accept_deadline_ts: acceptDeadlineTs,
+        arrive_deadline_ts: arriveDeadlineTs,
+      },
+      handoff: { operation_plan_id, source_dispatch_id, assignment_id },
+    });
   });
 
   app.get("/api/v1/human-executors/dispatch-workbench", async (req, reply) => {
@@ -788,8 +943,15 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const assigned_at = isNonEmptyString(item?.assigned_at) ? String(item.assigned_at).trim() : new Date().toISOString();
       const dispatch_note = isNonEmptyString(item?.dispatch_note) ? String(item.dispatch_note).trim().slice(0, 1024) : null;
       const priority = Math.max(1, Math.min(9, Math.trunc(Number(item?.priority ?? 5) || 5)));
+      const origin_type = String(item?.origin_type ?? "manual").trim().toLowerCase();
+      const origin_ref_id = isNonEmptyString(item?.origin_ref_id) ? String(item.origin_ref_id).trim().slice(0, 128) : null;
+      const fallback_context = sanitizeFallbackContext(item?.fallback_context);
       if (!assignment_id || !act_task_id || !executor_id || !ASSIGNMENT_STATUS.has(status as AssignmentStatus) || Number.isNaN(Date.parse(assigned_at))) {
         errors.push({ assignment_id: assignment_id ?? null, error: "MISSING_OR_INVALID:assignment_item" });
+        continue;
+      }
+      if (!ASSIGNMENT_ORIGIN_TYPES.has(origin_type as AssignmentOriginType)) {
+        errors.push({ assignment_id: assignment_id ?? null, error: "MISSING_OR_INVALID:origin_type" });
         continue;
       }
       const requiredCapabilities = await resolveTaskRequiredCapabilities(pool, auth, act_task_id, item.required_capabilities);
@@ -811,11 +973,11 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const now = Date.now();
       await pool.query(
         `INSERT INTO work_assignment_index_v1
-         (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, dispatch_note, priority, created_ts_ms, updated_ts_ms)
-         VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7::timestamptz,$8::timestamptz,NULL,$9,$10,$11,$12)
+         (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, dispatch_note, priority, origin_type, origin_ref_id, fallback_context, created_ts_ms, updated_ts_ms)
+         VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7,$8,NULL,$9,$10,$11,$12,$13::jsonb,$14,$15)
          ON CONFLICT (tenant_id, assignment_id)
-         DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_reason=EXCLUDED.expired_reason, dispatch_note=EXCLUDED.dispatch_note, priority=EXCLUDED.priority, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-        [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineIso, arriveDeadlineIso, dispatch_note, priority, now, now]
+         DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_reason=EXCLUDED.expired_reason, dispatch_note=EXCLUDED.dispatch_note, priority=EXCLUDED.priority, origin_type=EXCLUDED.origin_type, origin_ref_id=EXCLUDED.origin_ref_id, fallback_context=EXCLUDED.fallback_context, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineTs, arriveDeadlineTs, dispatch_note, priority, origin_type, origin_ref_id, JSON.stringify(fallback_context), now, now]
       );
       const audit_id = randomUUID();
       await pool.query(
@@ -825,7 +987,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, null, status, "BATCH_CREATE"]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
-        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, dispatch_note, priority, audit_id,
+        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, dispatch_note, priority, origin_type, origin_ref_id, fallback_context, audit_id,
       });
       created.push({ assignment_id, fact_id });
     }
@@ -1042,7 +1204,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const listQ = await pool.query(
       `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
-       , dispatch_note, priority
+       , dispatch_note, priority, origin_type, origin_ref_id, fallback_context
        FROM work_assignment_index_v1
        WHERE ${filters.join(" AND ")}
        ORDER BY updated_ts_ms DESC, assignment_id ASC
@@ -1119,7 +1281,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const itemQ = await pool.query(
       `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
-       , dispatch_note, priority
+       , dispatch_note, priority, origin_type, origin_ref_id, fallback_context
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -1128,6 +1290,43 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if ((itemQ.rowCount ?? 0) < 1) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     return reply.send({ ok: true, assignment: normalizeAssignmentResponse(itemQ.rows[0]) });
+  });
+
+  app.get("/api/v1/operations/:id/handoff", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+    const operation_plan_id = normalizeId((req.params as any)?.id);
+    if (!operation_plan_id) return badRequest(reply, "MISSING_OR_INVALID:operation_plan_id");
+
+    const listQ = await pool.query(
+      `SELECT h.operation_plan_id, h.act_task_id, h.source_dispatch_id, h.assignment_id, h.created_ts_ms,
+              a.origin_type, a.origin_ref_id, a.fallback_context, a.status, a.executor_id, a.updated_ts_ms
+       FROM operation_handoff_v1 h
+       LEFT JOIN work_assignment_index_v1 a
+         ON a.tenant_id = h.tenant_id AND a.assignment_id = h.assignment_id
+       WHERE h.tenant_id = $1 AND h.operation_plan_id = $2
+       ORDER BY h.created_ts_ms ASC, h.assignment_id ASC`,
+      [auth.tenant_id, operation_plan_id]
+    );
+
+    return reply.send({
+      ok: true,
+      operation_plan_id,
+      items: (listQ.rows ?? []).map((row: any) => ({
+        operation_plan_id: String(row.operation_plan_id ?? operation_plan_id),
+        act_task_id: String(row.act_task_id ?? ""),
+        source_dispatch_id: row.source_dispatch_id ? String(row.source_dispatch_id) : null,
+        assignment_id: String(row.assignment_id ?? ""),
+        assignment_status: row.status ? String(row.status) : null,
+        executor_id: row.executor_id ? String(row.executor_id) : null,
+        origin_type: row.origin_type ? String(row.origin_type) : "auto_fallback",
+        origin_ref_id: row.origin_ref_id ? String(row.origin_ref_id) : null,
+        fallback_context: parsePgJson(row.fallback_context),
+        created_ts_ms: Number(row.created_ts_ms ?? 0),
+        updated_ts_ms: Number(row.updated_ts_ms ?? row.created_ts_ms ?? 0),
+      })),
+    });
   });
 
   app.patch("/api/v1/work-assignments/:assignment_id/status", async (req, reply) => {
