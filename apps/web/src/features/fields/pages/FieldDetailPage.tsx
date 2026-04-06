@@ -106,6 +106,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
   const programHref = "/programs";
+  const recommendationsHref = `/agronomy/recommendations?field_id=${encodeURIComponent(fieldId)}&from=field_detail`;
   const hasBoundDevice = deviceOptions.some((item) => item.field_id === fieldId);
   const hasOnlineDevice = deviceOptions.some((item) => item.field_id === fieldId && String(item.connection_status).toUpperCase() === "ONLINE");
   const hasTelemetry = deviceOptions.some((item) => item.field_id === fieldId && Number(item.last_telemetry_ts_ms ?? 0) > 0);
@@ -135,12 +136,12 @@ export default function FieldDetailPage(): React.ReactElement {
     {
       label: "是否已有建议",
       status: hasRecommendations ? "已完成" : (hasTelemetry ? "待完成" : "待前置完成"),
-      action: hasRecommendations ? <Link to="/agronomy/recommendations">查看建议</Link> : <Link to="/agronomy/recommendations">刷新评估</Link>,
+      action: hasRecommendations ? <Link to={recommendationsHref}>查看建议</Link> : <Link to={recommendationsHref}>刷新评估</Link>,
     },
     {
       label: "是否已有作业",
       status: hasOperations ? "已完成" : (hasRecommendations ? "待完成" : "待前置完成"),
-      action: hasOperations ? <Link to="/operations">查看作业</Link> : (hasRecommendations ? <Link to="/operations">创建/查看作业</Link> : <Link to="/agronomy/recommendations">先完成建议评估</Link>),
+      action: hasOperations ? <Link to="/operations">查看作业</Link> : (hasRecommendations ? <Link to="/operations">创建/查看作业</Link> : <Link to={recommendationsHref}>先完成建议评估</Link>),
     },
   ];
 
@@ -261,7 +262,7 @@ export default function FieldDetailPage(): React.ReactElement {
           )) : null}
         </div>
         <div className="operationsSummaryActions">
-          <Link className="btn" to="/agronomy/recommendations">查看建议中心</Link>
+          <Link className="btn" to={recommendationsHref}>查看建议中心</Link>
           <Link className="btn" to="/operations">转为作业</Link>
         </div>
       </section>
