@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import EmptyState from "../components/common/EmptyState";
 import {
   batchCancelWorkAssignments,
@@ -50,6 +50,7 @@ function toSlaLabel(item: WorkAssignmentItem): string {
 }
 
 export default function HumanAssignmentsPage(): React.ReactElement {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string>("");
   const [items, setItems] = React.useState<WorkAssignmentItem[]>([]);
@@ -65,7 +66,12 @@ export default function HumanAssignmentsPage(): React.ReactElement {
     setError("");
     try {
       const [res, executorRows, summary] = await Promise.all([
-        fetchWorkAssignments({ limit: 200 }),
+        fetchWorkAssignments({
+          limit: 200,
+          act_task_id: searchParams.get("act_task_id") || undefined,
+          executor_id: searchParams.get("executor_id") || undefined,
+          status: (searchParams.get("status") as any) || undefined,
+        }),
         fetchHumanExecutors({ status: "ACTIVE", limit: 200 }),
         fetchWorkAssignmentSlaSummary(),
       ]);
@@ -79,7 +85,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [searchParams]);
 
   const handleOpenReassign = (item: WorkAssignmentItem) => {
     setReassignTarget(item);
