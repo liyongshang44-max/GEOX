@@ -52,7 +52,9 @@ function toDateTimeLabel(ts?: number | null): string {
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
-  const safeDetail = detail ?? null;
+  const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
+  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const model = React.useMemo(() => {
     try {
       return buildOperationDetailViewModel({ detail: safeDetail });
@@ -84,6 +86,22 @@ export default function OperationDetailPage(): React.ReactElement {
       alive = false;
     };
   }, [safeDetail, model.operationPlanId, operationPlanId]);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+      .then((rows) => {
+        if (!alive) return;
+        setHandoffItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHandoffItems([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [model.operationPlanId, operationPlanId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   const errorText = String(error ?? "").toLowerCase();
