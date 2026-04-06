@@ -10,6 +10,7 @@ import { buildOperationDetailViewModel } from "../viewmodels/operationDetailView
 import { executeOperationAction } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../lib/operationLabels";
 import { toBusinessTimelineLabel } from "../viewmodels/timelineLabels";
+import { DetailAside, StatusPill } from "../shared/ui";
 
 const COPY = {
   backToList: "返回作业列表",
@@ -25,10 +26,6 @@ const TIMELINE_ORDER = [
   { key: "RECEIPT", label: "回执" },
   { key: "ACCEPTANCE", label: "验收" },
 ] as const;
-
-function StatusPill({ tone, children }: { tone: "danger" | "warning" | "pending"; children: React.ReactNode }): React.ReactElement {
-  return <span className={`statusPill statusPill-${tone}`}>{children}</span>;
-}
 
 function CollapsibleModule({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }): React.ReactElement {
   return (
@@ -174,7 +171,7 @@ export default function OperationDetailPage(): React.ReactElement {
               <div className="operationStatusPills">
                 {isInvalidExecution ? <StatusPill tone="danger">执行无效</StatusPill> : null}
                 {isEvidenceMissing ? <StatusPill tone="warning">证据缺失</StatusPill> : null}
-                {isPendingAcceptance ? <StatusPill tone="pending">待验收</StatusPill> : null}
+                {isPendingAcceptance ? <StatusPill tone="info">待验收</StatusPill> : null}
               </div>
               {isInvalidExecution ? (
                 <div className="operationWarningBlock danger">
@@ -281,7 +278,7 @@ export default function OperationDetailPage(): React.ReactElement {
           </section>
         </div>
 
-        <aside className="operationDetailAside card">
+        <DetailAside title="Detail Aside">
           <div className="sectionTitle">Detail Aside</div>
           <div className="operationAsideBody">
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
@@ -299,7 +296,7 @@ export default function OperationDetailPage(): React.ReactElement {
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
             <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
           </div>
-        </aside>
+        </DetailAside>
       </section>
 
       <section className="card operationEvidenceMain" style={{ marginTop: 12 }}>
