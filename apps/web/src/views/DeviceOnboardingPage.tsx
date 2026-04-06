@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
-import { PageHeader, SectionCard, Stepper } from "../shared/ui";
+import { EmptyGuide, PageHeader, SectionCard, Stepper } from "../shared/ui";
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";

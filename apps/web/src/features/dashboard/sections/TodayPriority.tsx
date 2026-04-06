@@ -8,11 +8,11 @@ export default function TodayPriority({
   todayActions,
   todayActionHref,
   todayActionLabel,
-  todayActionRiskLevel,
-  todayActionReason,
-  todayActionSuggestion,
-  todayActionCTA,
-  todayActionEntryLabel,
+  todayActionRiskLevel = () => "中",
+  todayActionReason = () => "-",
+  todayActionSuggestion = () => "-",
+  todayActionCTA = () => "查看详情",
+  todayActionEntryLabel = () => "作业",
 }: {
   todayActions: Array<{ type: string; count: number }>;
   todayActionHref: (type: string) => string;
