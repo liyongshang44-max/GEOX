@@ -9,6 +9,7 @@ import {
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
+const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
 
 type SkillRow = {
   tenant_id: string;
@@ -74,7 +75,28 @@ function boolLike(v: unknown, dft: boolean): boolean {
   return dft;
 }
 
+function sendSkillsResponse(reply: any, payload: Record<string, unknown>) {
+  return reply.send({
+    api_contract_version: SKILLS_API_CONTRACT_VERSION,
+    ...payload,
+  });
+}
+
 export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/skills/registry", async (req, reply) => {
+    const query = (req as any).url?.includes("?") ? String((req as any).url).slice(String((req as any).url).indexOf("?")) : "";
+    const location = `/api/v1/skills${query}`;
+    return reply
+      .code(301)
+      .header("Location", location)
+      .send({
+        ok: true,
+        deprecated: true,
+        redirect_to: location,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
+  });
+
   app.get("/api/v1/skills", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -109,7 +131,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       updated_at: row.occurred_at,
     }));
 
-    return reply.send({ ok: true, items });
+    return sendSkillsResponse(reply, { ok: true, items });
   });
 
   app.get("/api/v1/skills/:skill_id", async (req, reply) => {
@@ -121,7 +143,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
 
     const params = req.params as { skill_id?: string };
     const skill_id = String(params.skill_id ?? "").trim();
-    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID" });
+    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     await projectSkillRegistryReadV1(pool, tenant);
     const readRows = await pool.query<SkillRow>(
@@ -137,7 +159,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     );
 
     const rows = readRows.rows ?? [];
-    if (!rows.length) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND" });
+    if (!rows.length) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     const defs = rows.filter((r) => r.fact_type === "skill_definition_v1");
     const bindings = rows.filter((r) => r.fact_type === "skill_binding_v1");
@@ -163,7 +185,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       bind_targets: Array.from(new Set(bindings.map((x) => x.bind_target).filter(Boolean))),
     };
 
-    return reply.send({
+    return sendSkillsResponse(reply, {
       ok: true,
       skill_id,
       definition: latestDef.payload_json,
@@ -215,7 +237,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     );
 
     const total = Number(countQ.rows?.[0]?.total ?? 0);
-    return reply.send({
+    return sendSkillsResponse(reply, {
       ok: true,
       page,
       page_size,
@@ -258,7 +280,12 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     const rollout_mode = String(body.rollout_mode ?? "DIRECT").trim().toUpperCase();
 
     if (!skill_id || !version || !category || !bind_target) {
-      return reply.code(400).send({ ok: false, error: "INVALID_BODY", message: "skill_id/version/category/bind_target are required" });
+      return reply.code(400).send({
+        ok: false,
+        error: "INVALID_BODY",
+        message: "skill_id/version/category/bind_target are required",
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
 
     const inserted = await appendSkillBindingFact(pool, {
@@ -278,7 +305,13 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       config_patch: asObject(body.config_patch) ?? undefined,
     } as any);
 
-    return reply.code(201).send({ ok: true, fact_id: inserted.fact_id, occurred_at: inserted.occurred_at, binding: inserted.payload });
+    return reply.code(201).send({
+      ok: true,
+      fact_id: inserted.fact_id,
+      occurred_at: inserted.occurred_at,
+      binding: inserted.payload,
+      api_contract_version: SKILLS_API_CONTRACT_VERSION,
+    });
   });
 
   app.get("/api/v1/skills/bindings", async (req, reply) => {
@@ -301,7 +334,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       fact_type: "skill_binding_v1",
     });
 
-    return reply.send({
+    return sendSkillsResponse(reply, {
       ok: true,
       items: rows.map((row) => ({
         binding_id: row.payload_json?.binding_id ?? row.fact_id,
@@ -329,7 +362,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const skill_id = String((req.params as any)?.skill_id ?? "").trim();
-    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID" });
+    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     await projectSkillRegistryReadV1(pool, tenant);
     const latestQ = await pool.query<SkillRow>(
@@ -341,14 +374,14 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       [tenant.tenant_id, tenant.project_id, tenant.group_id, skill_id],
     );
     const latest = latestQ.rows?.[0];
-    if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND" });
+    if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     const payload = latest.payload_json as SkillDefinitionFactPayload;
     const appended = await appendSkillDefinitionFact(pool, {
       ...payload,
       status: "ACTIVE",
     });
-    return reply.send({ ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "ACTIVE" });
+    return sendSkillsResponse(reply, { ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "ACTIVE" });
   });
 
   app.post("/api/v1/skills/:skill_id/disable", async (req, reply) => {
@@ -358,7 +391,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const skill_id = String((req.params as any)?.skill_id ?? "").trim();
-    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID" });
+    if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     await projectSkillRegistryReadV1(pool, tenant);
     const latestQ = await pool.query<SkillRow>(
@@ -370,13 +403,13 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       [tenant.tenant_id, tenant.project_id, tenant.group_id, skill_id],
     );
     const latest = latestQ.rows?.[0];
-    if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND" });
+    if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND", api_contract_version: SKILLS_API_CONTRACT_VERSION });
 
     const payload = latest.payload_json as SkillDefinitionFactPayload;
     const appended = await appendSkillDefinitionFact(pool, {
       ...payload,
       status: "DISABLED",
     });
-    return reply.send({ ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "DISABLED" });
+    return sendSkillsResponse(reply, { ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "DISABLED" });
   });
 }
