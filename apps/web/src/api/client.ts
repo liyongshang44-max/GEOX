@@ -1,6 +1,7 @@
 import { readSessionToken, readTenantContext } from "../auth/authStorage";
 
 const DEFAULT_API_BASE = "http://127.0.0.1:3001";
+const API_CONTRACT_VERSION = "2026-04-06";
 
 export const API_BASE_URL = String(
   (import.meta as any)?.env?.VITE_API_BASE_URL ??
@@ -105,6 +106,7 @@ export async function apiRequestWithPolicy<T>(
         ...init,
         headers: {
           ...baseHeaders,
+          "x-api-contract-version": API_CONTRACT_VERSION,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(tenant.tenant_id ? { "x-tenant-id": tenant.tenant_id } : {}),
           ...(tenant.project_id ? { "x-project-id": tenant.project_id } : {}),
