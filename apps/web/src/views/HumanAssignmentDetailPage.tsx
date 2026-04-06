@@ -53,10 +53,10 @@ function parseApiFieldErrors(error: unknown): Array<{ field: string; code: strin
 function getAssignmentFriendlyError(error: unknown, fallback: string): string {
   const errorCode = parseApiErrorCode(error);
   if (errorCode === "INVALID_STATUS_TRANSITION") {
-    return "任务状态已变化，请刷新";
+    return "任务状态已变化，正在刷新最新状态";
   }
   if (errorCode === "CONFLICT") {
-    return "任务状态已变化，请刷新";
+    return "任务状态已变化，正在刷新最新状态";
   }
   if (errorCode === "ASSIGNMENT_EXPIRED") {
     return "任务已超时，无法继续该动作";
@@ -111,6 +111,18 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
     }
   }, [assignmentId]);
 
+  const shouldForceRefreshForError = React.useCallback((err: unknown): boolean => {
+    const code = parseApiErrorCode(err);
+    return code === "INVALID_STATUS_TRANSITION" || code === "CONFLICT";
+  }, []);
+
+  const applyActionError = React.useCallback(async (err: unknown, fallback: string): Promise<void> => {
+    setError(getAssignmentFriendlyError(err, fallback));
+    if (shouldForceRefreshForError(err)) {
+      await reload();
+    }
+  }, [reload, shouldForceRefreshForError]);
+
   React.useEffect(() => {
     void reload();
   }, [reload]);
@@ -124,7 +136,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       setNotice("已接单");
       await reload();
     } catch (err: any) {
-      setError(getAssignmentFriendlyError(err, String(err?.message ?? "接单失败")));
+      await applyActionError(err, String(err?.message ?? "接单失败"));
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +151,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       setNotice("已更新为执行中");
       await reload();
     } catch (err: any) {
-      setError(getAssignmentFriendlyError(err, String(err?.message ?? "更新状态失败")));
+      await applyActionError(err, String(err?.message ?? "更新状态失败"));
     } finally {
       setSubmitting(false);
     }
@@ -207,7 +219,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
       await reload();
     } catch (err: any) {
       setFieldErrors(parseApiFieldErrors(err));
-      setError(getAssignmentFriendlyError(err, String(err?.message ?? "提交失败")));
+      await applyActionError(err, String(err?.message ?? "提交失败"));
     } finally {
       setSubmitting(false);
     }
