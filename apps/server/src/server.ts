@@ -40,6 +40,7 @@ import { registerControlPlaneV1Routes } from "./routes/controlplane_v1"; // Cont
 import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprint W1: unified audit/export overview.
 import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
 import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
+import { registerHumanOpsV1Routes, startHumanOpsKpiRefreshWorker } from "./routes/human_ops_v1"; // Human ops analytics routes + low-peak refresh worker.
 import { registerSlaV1Routes } from "./routes/sla_v1"; // SLA summary routes.
 import { registerBillingV1Routes } from "./routes/billing_v1"; // Billing v1 routes.
 import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
@@ -295,6 +296,7 @@ registerSkillRulesV1Routes(app, pool); // Stage 7: DB-driven runtime agronomy sk
 registerAuditExportV1Routes(app, pool); // Sprint W1: 注册审计与导出总表路由。
 registerAuthV1Routes(app); // Sprint R1: 注册 auth/me 路由。
 registerDashboardV1Routes(app, pool); // Sprint P2: 注册商业总览聚合路由。
+registerHumanOpsV1Routes(app, pool); // Human ops analytics endpoints (KPI/ranking/exceptions).
 registerSlaV1Routes(app, pool); // SLA: 注册服务质量汇总路由。
 registerBillingV1Routes(app, pool); // Billing: 注册作业结算路由。
 registerOpenApiV1Routes(app); // Sprint Docs1: 注册 OpenAPI JSON 导出路由。
@@ -1721,6 +1723,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // 端口
 startOfflineAlertWorker(pool); // Sprint C1: 启动离线告警后台扫描（DEVICE_OFFLINE）。
 startAlertNotificationWorker(pool); // Sprint C3: 启动告警通知分发后台任务（短信/邮件/企业微信/钉钉/WEBHOOK）。
 startAssignmentExpiryWorker(pool); // Human assignment: 启动派单 SLA 超时扫描器（自动 EXPIRED/CANCELLED）。
+startHumanOpsKpiRefreshWorker(pool); // Human ops analytics: 低峰定时刷新 KPI 聚合表。
 
 app.listen({ port: PORT, host: "0.0.0.0" }).catch((err) => {
   app.log.error(err); // 打印错误
