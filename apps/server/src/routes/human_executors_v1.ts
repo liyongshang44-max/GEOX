@@ -159,18 +159,31 @@ function toPositiveInt(raw: any, fallback: number, min: number, max: number): nu
 }
 
 function normalizeAssignmentResponse(row: any) {
+  const acceptDeadline = Number(row.accept_deadline_ts ?? NaN);
+  const arriveDeadline = Number(row.arrive_deadline_ts ?? NaN);
+  const expiredTs = Number(row.expired_ts ?? NaN);
   return {
     assignment_id: String(row.assignment_id ?? ""),
     act_task_id: String(row.act_task_id ?? ""),
     executor_id: String(row.executor_id ?? ""),
     assigned_at: row.assigned_at instanceof Date ? row.assigned_at.toISOString() : String(row.assigned_at ?? ""),
     status: String(row.status ?? "") as AssignmentStatus,
-    accept_deadline_ts: row.accept_deadline_ts instanceof Date ? row.accept_deadline_ts.toISOString() : (row.accept_deadline_ts ? String(row.accept_deadline_ts) : null),
-    arrive_deadline_ts: row.arrive_deadline_ts instanceof Date ? row.arrive_deadline_ts.toISOString() : (row.arrive_deadline_ts ? String(row.arrive_deadline_ts) : null),
+    accept_deadline_ts: Number.isFinite(acceptDeadline) ? acceptDeadline : null,
+    arrive_deadline_ts: Number.isFinite(arriveDeadline) ? arriveDeadline : null,
+    expired_ts: Number.isFinite(expiredTs) ? expiredTs : null,
     expired_reason: row.expired_reason ? String(row.expired_reason) : null,
     created_ts_ms: Number(row.created_ts_ms ?? 0),
     updated_ts_ms: Number(row.updated_ts_ms ?? 0),
   };
+}
+
+function parseDeadlineTs(raw: any): number | null {
+  if (raw == null || raw === "") return null;
+  const numeric = Number(raw);
+  if (Number.isFinite(numeric)) return Math.trunc(numeric);
+  const parsed = Date.parse(String(raw));
+  if (!Number.isFinite(parsed)) return null;
+  return parsed;
 }
 
 function normalizeSlaMinutes(raw: any, fallback: number): number {
@@ -251,8 +264,9 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
           executor_id TEXT NOT NULL,
           assigned_at TIMESTAMPTZ NOT NULL,
           status TEXT NOT NULL,
-          accept_deadline_ts TIMESTAMPTZ NULL,
-          arrive_deadline_ts TIMESTAMPTZ NULL,
+          accept_deadline_ts BIGINT NULL,
+          arrive_deadline_ts BIGINT NULL,
+          expired_ts BIGINT NULL,
           expired_reason TEXT NULL,
           version_no BIGINT NOT NULL DEFAULT 0,
           created_ts_ms BIGINT NOT NULL,
@@ -261,14 +275,45 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
           CONSTRAINT work_assignment_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))
         )
       `);
-      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS accept_deadline_ts TIMESTAMPTZ NULL`);
-      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS arrive_deadline_ts TIMESTAMPTZ NULL`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS accept_deadline_ts BIGINT NULL`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS arrive_deadline_ts BIGINT NULL`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS expired_ts BIGINT NULL`);
+      await pool.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name='work_assignment_index_v1'
+              AND column_name='accept_deadline_ts'
+              AND data_type='timestamp with time zone'
+          ) THEN
+            ALTER TABLE work_assignment_index_v1
+              ALTER COLUMN accept_deadline_ts TYPE BIGINT
+              USING CASE WHEN accept_deadline_ts IS NULL THEN NULL ELSE (EXTRACT(EPOCH FROM accept_deadline_ts) * 1000)::bigint END;
+          END IF;
+          IF EXISTS (
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_name='work_assignment_index_v1'
+              AND column_name='arrive_deadline_ts'
+              AND data_type='timestamp with time zone'
+          ) THEN
+            ALTER TABLE work_assignment_index_v1
+              ALTER COLUMN arrive_deadline_ts TYPE BIGINT
+              USING CASE WHEN arrive_deadline_ts IS NULL THEN NULL ELSE (EXTRACT(EPOCH FROM arrive_deadline_ts) * 1000)::bigint END;
+          END IF;
+        END
+        $$;
+      `);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS expired_reason TEXT NULL`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS version_no BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 DROP CONSTRAINT IF EXISTS work_assignment_status_ck`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD CONSTRAINT work_assignment_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_lookup_idx ON work_assignment_index_v1 (tenant_id, act_task_id, updated_ts_ms DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_transition_idx ON work_assignment_index_v1 (tenant_id, assignment_id, status)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_accept_deadline_idx ON work_assignment_index_v1 (tenant_id, status, accept_deadline_ts)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_arrive_deadline_idx ON work_assignment_index_v1 (tenant_id, status, arrive_deadline_ts)`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS work_assignment_audit_v1 (
@@ -523,22 +568,20 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const taskMeta = taskMetaQ.rows?.[0] ?? {};
     const fallbackSla = chooseSlaDefaults(String(taskMeta.crop_code ?? ""), String(taskMeta.job_type ?? ""));
     const assignedAtMs = Date.parse(assigned_at);
-    const acceptDeadlineIso = isNonEmptyString(body?.sla?.accept_deadline_ts)
-      ? String(body.sla.accept_deadline_ts).trim()
-      : new Date(assignedAtMs + normalizeSlaMinutes(body?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000).toISOString();
-    const arriveDeadlineIso = isNonEmptyString(body?.sla?.arrive_deadline_ts)
-      ? String(body.sla.arrive_deadline_ts).trim()
-      : new Date(assignedAtMs + normalizeSlaMinutes(body?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000).toISOString();
-    if (Number.isNaN(Date.parse(acceptDeadlineIso))) return badRequest(reply, "MISSING_OR_INVALID:accept_deadline_ts");
-    if (Number.isNaN(Date.parse(arriveDeadlineIso))) return badRequest(reply, "MISSING_OR_INVALID:arrive_deadline_ts");
+    const acceptDeadlineTs = parseDeadlineTs(body.accept_deadline_ts ?? body?.sla?.accept_deadline_ts)
+      ?? (assignedAtMs + normalizeSlaMinutes(body?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000);
+    const arriveDeadlineTs = parseDeadlineTs(body.arrive_deadline_ts ?? body?.sla?.arrive_deadline_ts)
+      ?? (assignedAtMs + normalizeSlaMinutes(body?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000);
+    if (!Number.isFinite(acceptDeadlineTs)) return badRequest(reply, "MISSING_OR_INVALID:accept_deadline_ts");
+    if (!Number.isFinite(arriveDeadlineTs)) return badRequest(reply, "MISSING_OR_INVALID:arrive_deadline_ts");
     const now = Date.now();
     await pool.query(
       `INSERT INTO work_assignment_index_v1
-      (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms)
-       VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7::timestamptz,$8::timestamptz,NULL,$9,$10)
+      (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms)
+       VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7,$8,NULL,NULL,$9,$10)
        ON CONFLICT (tenant_id, assignment_id)
-       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_reason=EXCLUDED.expired_reason, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-      [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineIso, arriveDeadlineIso, now, now]
+       DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_ts=NULL, expired_reason=NULL, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+      [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineTs, arriveDeadlineTs, now, now]
     );
 
     const audit_id = randomUUID();
@@ -556,12 +599,12 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       required_capabilities: requiredCapabilities,
       assigned_at,
       status,
-      accept_deadline_ts: acceptDeadlineIso,
-      arrive_deadline_ts: arriveDeadlineIso,
+      accept_deadline_ts: acceptDeadlineTs,
+      arrive_deadline_ts: arriveDeadlineTs,
       audit_id,
     });
 
-    return reply.send({ ok: true, fact_id, assignment: { assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, expired_reason: null } });
+    return reply.send({ ok: true, fact_id, assignment: { assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, expired_ts: null, expired_reason: null } });
   });
 
   app.get("/api/v1/human-executors/dispatch-workbench", async (req, reply) => {
@@ -679,24 +722,22 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       }
       const fallbackSla = chooseSlaDefaults("", "");
       const assignedAtMs = Date.parse(assigned_at);
-      const acceptDeadlineIso = isNonEmptyString(item?.sla?.accept_deadline_ts)
-        ? String(item.sla.accept_deadline_ts).trim()
-        : new Date(assignedAtMs + normalizeSlaMinutes(item?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000).toISOString();
-      const arriveDeadlineIso = isNonEmptyString(item?.sla?.arrive_deadline_ts)
-        ? String(item.sla.arrive_deadline_ts).trim()
-        : new Date(assignedAtMs + normalizeSlaMinutes(item?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000).toISOString();
-      if (Number.isNaN(Date.parse(acceptDeadlineIso)) || Number.isNaN(Date.parse(arriveDeadlineIso))) {
+      const acceptDeadlineTs = parseDeadlineTs(item?.accept_deadline_ts ?? item?.sla?.accept_deadline_ts)
+        ?? (assignedAtMs + normalizeSlaMinutes(item?.sla?.accept_minutes, fallbackSla.accept_minutes) * 60_000);
+      const arriveDeadlineTs = parseDeadlineTs(item?.arrive_deadline_ts ?? item?.sla?.arrive_deadline_ts)
+        ?? (assignedAtMs + normalizeSlaMinutes(item?.sla?.arrive_minutes, fallbackSla.arrive_minutes) * 60_000);
+      if (!Number.isFinite(acceptDeadlineTs) || !Number.isFinite(arriveDeadlineTs)) {
         errors.push({ assignment_id, error: "MISSING_OR_INVALID:sla" });
         continue;
       }
       const now = Date.now();
       await pool.query(
         `INSERT INTO work_assignment_index_v1
-         (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms)
-         VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7::timestamptz,$8::timestamptz,NULL,$9,$10)
+         (tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms)
+         VALUES ($1,$2,$3,$4,$5::timestamptz,$6,$7,$8,NULL,NULL,$9,$10)
          ON CONFLICT (tenant_id, assignment_id)
-         DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_reason=EXCLUDED.expired_reason, updated_ts_ms=EXCLUDED.updated_ts_ms`,
-        [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineIso, arriveDeadlineIso, now, now]
+         DO UPDATE SET act_task_id=EXCLUDED.act_task_id, executor_id=EXCLUDED.executor_id, assigned_at=EXCLUDED.assigned_at, status=EXCLUDED.status, accept_deadline_ts=EXCLUDED.accept_deadline_ts, arrive_deadline_ts=EXCLUDED.arrive_deadline_ts, expired_ts=NULL, expired_reason=NULL, updated_ts_ms=EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, assignment_id, act_task_id, executor_id, assigned_at, status, acceptDeadlineTs, arriveDeadlineTs, now, now]
       );
       const audit_id = randomUUID();
       await pool.query(
@@ -706,7 +747,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, null, status, "BATCH_CREATE"]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
-        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, audit_id,
+        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, audit_id,
       });
       created.push({ assignment_id, fact_id });
     }
@@ -813,7 +854,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       }
       const updateQ = await pool.query(
         `UPDATE work_assignment_index_v1
-         SET status = 'CANCELLED', expired_reason = COALESCE(expired_reason, $4), updated_ts_ms = $3, version_no = version_no + 1
+         SET status = 'CANCELLED', expired_reason = COALESCE(expired_reason, $4), expired_ts = COALESCE(expired_ts, $3), updated_ts_ms = $3, version_no = version_no + 1
          WHERE tenant_id = $1 AND assignment_id = $2 AND status = $5 AND version_no = $6`,
         [auth.tenant_id, assignment_id, Date.now(), note, fromStatus, Number(row.version_no ?? 0)]
       );
@@ -867,7 +908,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     values.push(limit, offset);
 
     const listQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
+      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms
        FROM work_assignment_index_v1
        WHERE ${filters.join(" AND ")}
        ORDER BY updated_ts_ms DESC, assignment_id ASC
@@ -882,6 +923,57 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     });
   });
 
+  app.get("/api/v1/work-assignments/sla-summary", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+
+    const q: any = (req as any).query ?? {};
+    const from_ts_ms = Number(q.from_ts_ms);
+    const to_ts_ms = Number(q.to_ts_ms);
+    const values: any[] = [auth.tenant_id];
+    const filters: string[] = ["tenant_id = $1"];
+    if (Number.isFinite(from_ts_ms)) {
+      values.push(Math.trunc(from_ts_ms));
+      filters.push(`created_ts_ms >= $${values.length}`);
+    }
+    if (Number.isFinite(to_ts_ms)) {
+      values.push(Math.trunc(to_ts_ms));
+      filters.push(`created_ts_ms <= $${values.length}`);
+    }
+
+    const summaryQ = await pool.query(
+      `SELECT
+          COUNT(*)::bigint AS total_count,
+          COUNT(*) FILTER (WHERE status = 'ASSIGNED')::bigint AS assigned_count,
+          COUNT(*) FILTER (WHERE status = 'ACCEPTED')::bigint AS accepted_count,
+          COUNT(*) FILTER (WHERE status = 'ARRIVED')::bigint AS arrived_count,
+          COUNT(*) FILTER (WHERE status = 'SUBMITTED')::bigint AS submitted_count,
+          COUNT(*) FILTER (WHERE status = 'EXPIRED')::bigint AS expired_count,
+          COUNT(*) FILTER (WHERE status = 'CANCELLED')::bigint AS cancelled_count,
+          COUNT(*) FILTER (WHERE expired_reason = 'ACCEPT_TIMEOUT')::bigint AS accept_timeout_count,
+          COUNT(*) FILTER (WHERE expired_reason = 'ARRIVE_TIMEOUT')::bigint AS arrive_timeout_count
+       FROM work_assignment_index_v1
+       WHERE ${filters.join(" AND ")}`,
+      values
+    );
+    const row: any = summaryQ.rows?.[0] ?? {};
+    return reply.send({
+      ok: true,
+      summary: {
+        total_count: Number(row.total_count ?? 0),
+        assigned_count: Number(row.assigned_count ?? 0),
+        accepted_count: Number(row.accepted_count ?? 0),
+        arrived_count: Number(row.arrived_count ?? 0),
+        submitted_count: Number(row.submitted_count ?? 0),
+        expired_count: Number(row.expired_count ?? 0),
+        cancelled_count: Number(row.cancelled_count ?? 0),
+        accept_timeout_count: Number(row.accept_timeout_count ?? 0),
+        arrive_timeout_count: Number(row.arrive_timeout_count ?? 0),
+      },
+    });
+  });
+
   app.get("/api/v1/work-assignments/:assignmentId", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -892,7 +984,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const itemQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_reason, created_ts_ms, updated_ts_ms
+      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, accept_deadline_ts, arrive_deadline_ts, expired_ts, expired_reason, created_ts_ms, updated_ts_ms
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -932,7 +1024,11 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const nowIso = new Date().toISOString();
     const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $5) ELSE NULL END, updated_ts_ms = $4, version_no = version_no + 1
+       SET status = $3,
+           expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $5) ELSE NULL END,
+           expired_ts = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_ts, $4) ELSE NULL END,
+           updated_ts_ms = $4,
+           version_no = version_no + 1
        WHERE tenant_id = $1 AND assignment_id = $2 AND status = $6 AND version_no = $7`,
       [auth.tenant_id, assignment_id, status, Date.now(), note, currentStatus, Number(row.version_no ?? 0)]
     );
@@ -967,7 +1063,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     reply: any,
     targetStatus: AssignmentStatus,
     scope: "ao_act.task.write" | "ao_act.receipt.write",
-    note: string
+    defaultNote: string
   ): Promise<any> {
     const auth = requireAoActScopeV0(req, reply, scope);
     if (!auth) return;
@@ -978,7 +1074,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const existingQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, status, version_no
+      `SELECT assignment_id, act_task_id, executor_id, status, accept_deadline_ts, arrive_deadline_ts, version_no
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -991,16 +1087,39 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!canTransitionAssignmentStatus(fromStatus, targetStatus)) {
       return statusTransitionError(reply, 400, "INVALID_STATUS_TRANSITION", { from: fromStatus, to: targetStatus, current: fromStatus });
     }
+    const now = Date.now();
+    const acceptDeadlineTs = Number(row.accept_deadline_ts ?? NaN);
+    const arriveDeadlineTs = Number(row.arrive_deadline_ts ?? NaN);
+    if (targetStatus === "ACCEPTED" && Number.isFinite(acceptDeadlineTs) && now > acceptDeadlineTs) {
+      return reply.status(400).send({
+        ok: false,
+        error: "ASSIGNMENT_EXPIRED",
+        detail: { stage: "accept", deadline_ts: acceptDeadlineTs, now_ts: now },
+      });
+    }
+    if (targetStatus === "ARRIVED" && Number.isFinite(arriveDeadlineTs) && now > arriveDeadlineTs) {
+      return reply.status(400).send({
+        ok: false,
+        error: "ASSIGNMENT_EXPIRED",
+        detail: { stage: "arrive", deadline_ts: arriveDeadlineTs, now_ts: now },
+      });
+    }
 
     const act_task_id = String(row.act_task_id ?? "");
     const executor_id = String(row.executor_id ?? "");
+    const noteFromBody = isNonEmptyString(req?.body?.note) ? String(req.body.note).trim().slice(0, 512) : null;
+    const note = noteFromBody || defaultNote;
     const nowIso = new Date().toISOString();
 
     const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $6) ELSE NULL END, updated_ts_ms = $5, version_no = version_no + 1
+       SET status = $3,
+           expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $6) ELSE NULL END,
+           expired_ts = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_ts, $5) ELSE NULL END,
+           updated_ts_ms = $5,
+           version_no = version_no + 1
        WHERE tenant_id = $1 AND assignment_id = $2 AND status = $4 AND version_no = $7`,
-      [auth.tenant_id, assignment_id, targetStatus, fromStatus, Date.now(), note, Number(row.version_no ?? 0)]
+      [auth.tenant_id, assignment_id, targetStatus, fromStatus, now, note, Number(row.version_no ?? 0)]
     );
     if ((updateQ.rowCount ?? 0) < 1) {
       return statusTransitionError(reply, 409, "CONFLICT", { from: fromStatus, to: targetStatus, current: fromStatus });
@@ -1034,6 +1153,10 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
   app.post("/api/v1/work-assignments/:assignmentId/arrive", async (req, reply) => {
     return transitionAssignmentStatus(req, reply, "ARRIVED", "ao_act.task.write", "ASSIGNMENT_ARRIVED_V1");
+  });
+
+  app.post("/api/v1/work-assignments/:assignmentId/cancel", async (req, reply) => {
+    return transitionAssignmentStatus(req, reply, "CANCELLED", "ao_act.task.write", "DISPATCHER_CANCELLED_V1");
   });
 
   app.post("/api/v1/work-assignments/:assignmentId/submit", async (req, reply) => {
@@ -1240,7 +1363,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const nowIso = new Date().toISOString();
     const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = 'SUBMITTED', expired_reason = NULL, updated_ts_ms = $4, version_no = version_no + 1
+       SET status = 'SUBMITTED', expired_reason = NULL, expired_ts = NULL, updated_ts_ms = $4, version_no = version_no + 1
        WHERE tenant_id = $1 AND assignment_id = $2 AND status = $3 AND version_no = $5`,
       [auth.tenant_id, assignment_id, fromStatus, Date.now(), Number(assignment.version_no ?? 0)]
     );
@@ -1315,13 +1438,13 @@ export function startAssignmentExpiryWorker(pool: Pool, opts?: Partial<Assignmen
       `SELECT tenant_id, assignment_id, act_task_id, executor_id, status, version_no
        FROM work_assignment_index_v1
        WHERE (
-         status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts < NOW()
+         status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts < $2
        ) OR (
-         status = 'ACCEPTED' AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts < NOW()
+         status = 'ACCEPTED' AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts < $2
        )
        ORDER BY updated_ts_ms ASC
        LIMIT $1`,
-      [batch_size]
+      [batch_size, Date.now()]
     );
     for (const row of q.rows ?? []) {
       const fromStatus = String(row.status ?? "") as AssignmentStatus;
@@ -1329,7 +1452,7 @@ export function startAssignmentExpiryWorker(pool: Pool, opts?: Partial<Assignmen
       const reason = fromStatus === "ASSIGNED" ? "ACCEPT_TIMEOUT" : "ARRIVE_TIMEOUT";
       const updateQ = await pool.query(
         `UPDATE work_assignment_index_v1
-         SET status = $3, expired_reason = $4, updated_ts_ms = $5, version_no = version_no + 1
+         SET status = $3, expired_reason = $4, expired_ts = COALESCE(expired_ts, $5), updated_ts_ms = $5, version_no = version_no + 1
          WHERE tenant_id = $1 AND assignment_id = $2 AND status = $6 AND version_no = $7`,
         [String(row.tenant_id), String(row.assignment_id), toStatus, reason, Date.now(), fromStatus, Number(row.version_no ?? 0)]
       );

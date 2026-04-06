@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import EmptyState from "../components/common/EmptyState";
-import { fetchWorkAssignments, type WorkAssignmentItem, type WorkAssignmentStatus } from "../api/humanAssignments";
+import { fetchWorkAssignmentSlaSummary, fetchWorkAssignments, type WorkAssignmentItem, type WorkAssignmentSlaSummary, type WorkAssignmentStatus } from "../api/humanAssignments";
 
 const STATUS_META: Array<{ code: WorkAssignmentStatus; label: string }> = [
   { code: "ASSIGNED", label: "待接单" },
@@ -12,8 +12,8 @@ const STATUS_META: Array<{ code: WorkAssignmentStatus; label: string }> = [
   { code: "EXPIRED", label: "已超时" },
 ];
 
-function toTimeLabel(iso: string): string {
-  const ts = Date.parse(String(iso ?? ""));
+function toTimeLabel(raw: string | number | null | undefined): string {
+  const ts = typeof raw === "number" ? raw : Date.parse(String(raw ?? ""));
   if (!Number.isFinite(ts)) return "-";
   return new Date(ts).toLocaleString("zh-CN", { hour12: false });
 }
@@ -23,11 +23,18 @@ function toSlaLabel(item: WorkAssignmentItem): string {
   if (item.status === "EXPIRED") return "已超时（未接单）";
   if (item.status === "CANCELLED" && (item.expired_reason === "ARRIVE_TIMEOUT" || item.expired_reason === "ACCEPT_TIMEOUT")) return "已超时";
   if (item.status === "ASSIGNED") {
-    const ts = Date.parse(String(item.accept_deadline_ts ?? ""));
+    const ts = Number(item.accept_deadline_ts ?? NaN);
     if (!Number.isFinite(ts)) return "接单 SLA 未配置";
     const leftMs = ts - now;
     if (leftMs <= 0) return "已超时";
     return `剩余接单时间 ${Math.ceil(leftMs / 60_000)} 分钟`;
+  }
+  if (item.status === "ACCEPTED" || item.status === "ARRIVED") {
+    const ts = Number(item.arrive_deadline_ts ?? NaN);
+    if (!Number.isFinite(ts)) return "到场 SLA 未配置";
+    const leftMs = ts - now;
+    if (leftMs <= 0) return "已超时";
+    return `剩余到场时间 ${Math.ceil(leftMs / 60_000)} 分钟`;
   }
   return "-";
 }
@@ -36,6 +43,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string>("");
   const [items, setItems] = React.useState<WorkAssignmentItem[]>([]);
+  const [slaSummary, setSlaSummary] = React.useState<WorkAssignmentSlaSummary | null>(null);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -43,9 +51,12 @@ export default function HumanAssignmentsPage(): React.ReactElement {
     try {
       const res = await fetchWorkAssignments({ limit: 200 });
       setItems(Array.isArray(res.items) ? res.items : []);
+      const summary = await fetchWorkAssignmentSlaSummary();
+      setSlaSummary(summary);
     } catch (err: any) {
       setError(String(err?.message ?? "加载失败"));
       setItems([]);
+      setSlaSummary(null);
     } finally {
       setLoading(false);
     }
@@ -68,6 +79,18 @@ export default function HumanAssignmentsPage(): React.ReactElement {
         </div>
         {error ? <div className="muted" style={{ marginTop: 10 }}>加载异常：{error}</div> : null}
       </section>
+      {slaSummary ? (
+        <section className="card section" style={{ marginTop: 16 }}>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <span className="pill">任务总量：{slaSummary.total_count}</span>
+            <span className="pill">超时(总)：{slaSummary.accept_timeout_count + slaSummary.arrive_timeout_count}</span>
+            <span className="pill">接单超时：{slaSummary.accept_timeout_count}</span>
+            <span className="pill">到场超时：{slaSummary.arrive_timeout_count}</span>
+            <span className="pill">已超时状态：{slaSummary.expired_count}</span>
+            <span className="pill">已取消状态：{slaSummary.cancelled_count}</span>
+          </div>
+        </section>
+      ) : null}
 
       {STATUS_META.map((group) => {
         const rows = items.filter((x) => x.status === group.code);
@@ -87,7 +110,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>任务编号：{item.act_task_id}</span>
                         <span>执行人：{item.executor_id}</span>
                         <span>分配时间：{toTimeLabel(item.assigned_at)}</span>
-                        <span>最后更新时间：{toTimeLabel(new Date(Number(item.updated_ts_ms ?? 0)).toISOString())}</span>
+                        <span>最后更新时间：{toTimeLabel(Number(item.updated_ts_ms ?? 0))}</span>
                         <span>{toSlaLabel(item)}</span>
                       </div>
                     </div>
