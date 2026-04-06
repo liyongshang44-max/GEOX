@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { HumanWorkReceiptV1Schema } from "@geox/contracts";
 
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 
@@ -108,6 +109,25 @@ function readNormalizedString(raw: any, field: string, issues: FieldValidationIs
 function normalizeCapabilities(input: any): string[] {
   if (!Array.isArray(input)) return [];
   return Array.from(new Set(input.map((x) => String(x ?? "").trim()).filter(Boolean))).slice(0, 64);
+}
+
+function toFieldPath(path: Array<string | number>): string {
+  if (!Array.isArray(path) || path.length < 1) return "payload";
+  let out = "";
+  for (const part of path) {
+    if (typeof part === "number") {
+      out += `[${part}]`;
+      continue;
+    }
+    if (!out) {
+      out = String(part);
+    } else if (/^\d+$/.test(String(part))) {
+      out += `[${part}]`;
+    } else {
+      out += `.${part}`;
+    }
+  }
+  return out;
 }
 
 function hasAllCapabilities(actual: string[], required: string[]): boolean {
@@ -1633,6 +1653,12 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const duration_minutes = duration_minutes_input == null
       ? null
       : Math.trunc(duration_minutes_input ?? Math.max(1, Math.round((end_ts - start_ts) / 60000)));
+    if (duration_minutes != null && duration_minutes < 1) {
+      issues.push({ field: "labor.duration_minutes", code: "OUT_OF_RANGE", message: "labor.duration_minutes must be >= 1" });
+    }
+    if (worker_count != null && worker_count < 1) {
+      issues.push({ field: "labor.worker_count", code: "OUT_OF_RANGE", message: "labor.worker_count must be >= 1" });
+    }
 
     const resource_usage = {
       fuel_l: readNonNegativeNumber(body.resource_usage?.fuel_l, "resource_usage.fuel_l", issues, { max: 1_000_000 }),
@@ -1661,6 +1687,24 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     }
     const exception_code = body.exception?.code == null ? undefined : readNormalizedString(body.exception?.code, "exception.code", issues, { maxLength: 64 });
     const exception_detail = body.exception?.detail == null ? undefined : String(body.exception?.detail).slice(0, 2000);
+    if (exception_type !== "NONE" && !exception_code) {
+      issues.push({
+        field: "exception.code",
+        code: "REQUIRED",
+        message: "exception.code is required when exception.type is not NONE",
+      });
+    }
+
+    const execution_coverage_kind = readNormalizedString(body.execution_coverage?.kind ?? "field", "execution_coverage.kind", issues, { maxLength: 32 });
+    const execution_coverage_ref = readNormalizedString(body.execution_coverage?.ref ?? body.coverage_ref, "execution_coverage.ref", issues, { maxLength: 256 });
+    const executionCoverageKind = String(execution_coverage_kind ?? "").toLowerCase();
+    if (execution_coverage_kind && !["field", "point", "manual"].includes(executionCoverageKind)) {
+      issues.push({
+        field: "execution_coverage.kind",
+        code: "INVALID_ENUM",
+        message: "execution_coverage.kind must be one of field|point|manual",
+      });
+    }
 
     const location_summary_raw: any = body.location_summary && typeof body.location_summary === "object" ? body.location_summary : {};
     const center_lat_raw = location_summary_raw.center?.lat;
@@ -1698,8 +1742,84 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (body.evidence_meta != null && !Array.isArray(body.evidence_meta)) {
       issues.push({ field: "evidence_meta", code: "INVALID_TYPE", message: "evidence_meta must be an array" });
     }
+    const logs_refs = Array.isArray(body.logs_refs) && body.logs_refs.length > 0
+      ? body.logs_refs
+      : evidence_meta
+        .map((item: { object_key?: string; artifact_id?: string }) => item.object_key ?? item.artifact_id ?? null)
+        .filter((v: string | null): v is string => Boolean(v))
+        .map((ref: string) => ({ kind: "artifact_object", ref }));
+
+    const resourceUsageHasNumeric =
+      resource_usage.fuel_l != null ||
+      resource_usage.electric_kwh != null ||
+      resource_usage.water_l != null ||
+      resource_usage.chemical_ml != null;
+    const resourceUsageHasConsumables = Array.isArray(resource_usage.consumables) && resource_usage.consumables.length > 0;
+    if (!resourceUsageHasNumeric && !resourceUsageHasConsumables) {
+      issues.push({
+        field: "resource_usage",
+        code: "REQUIRED",
+        message: "resource_usage requires at least one structured consumption field",
+      });
+    }
+    if (evidence_meta.length < 1 && logs_refs.length < 1) {
+      issues.push({
+        field: "evidence_meta",
+        code: "REQUIRED",
+        message: "at least one evidence reference is required",
+      });
+    }
 
     if (issues.length > 0) return badFieldRequest(reply, issues);
+
+    const humanReceipt = {
+      type: "human_work_receipt_v1" as const,
+      payload: {
+        assignment_id,
+        act_task_id,
+        operation_plan_id,
+        status: String(body.status ?? "executed").trim().toLowerCase() === "not_executed" ? "not_executed" : "executed",
+        execution_time: { start_ts, end_ts },
+        execution_coverage: {
+          kind: executionCoverageKind as "field" | "point" | "manual",
+          ref: String(execution_coverage_ref ?? ""),
+        },
+        labor: {
+          duration_minutes: duration_minutes ?? Math.max(1, Math.round((end_ts - start_ts) / 60000)),
+          worker_count: worker_count ?? 1,
+        },
+        resource_usage,
+        exception: {
+          type: exception_type,
+          code: exception_code ?? undefined,
+          detail: exception_detail,
+        },
+        location_summary: {
+          center: center_lat_num != null && center_lon_num != null
+            ? { lat: center_lat_num, lon: center_lon_num }
+            : undefined,
+          path_points: path_points ?? undefined,
+          distance_m: distance_m ?? undefined,
+          geohash: geohash ?? undefined,
+          remark: location_remark,
+        },
+        evidence_meta,
+        logs_refs,
+        observed_parameters: body.observed_parameters && typeof body.observed_parameters === "object" ? body.observed_parameters : {},
+        meta: {
+          ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+        },
+      },
+    };
+    const receiptParsed = HumanWorkReceiptV1Schema.safeParse(humanReceipt);
+    if (!receiptParsed.success) {
+      const zodIssues: FieldValidationIssue[] = receiptParsed.error.issues.map((issue) => ({
+        field: toFieldPath(issue.path),
+        code: issue.code === "custom" ? "INVALID_VALUE" : String(issue.code).toUpperCase(),
+        message: issue.message,
+      }));
+      return badFieldRequest(reply, zodIssues);
+    }
 
     const delegatedPayload = {
       tenant_id: auth.tenant_id,
@@ -1712,45 +1832,22 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         id: String(assignment.executor_id ?? ""),
         namespace: "human_executor_v1",
       },
-      execution_time: { start_ts, end_ts },
-      execution_coverage: {
-        kind: String(body.execution_coverage?.kind ?? "field"),
-        ref: String(body.execution_coverage?.ref ?? body.coverage_ref ?? "field_unknown"),
-      },
-      labor: {
-        duration_minutes: duration_minutes ?? Math.max(1, Math.round((end_ts - start_ts) / 60000)),
-        worker_count: worker_count ?? 1,
-      },
-      resource_usage,
-      exception: {
-        type: exception_type,
-        code: exception_code ?? undefined,
-        detail: exception_detail,
-      },
-      location_summary: {
-        center: center_lat_num != null && center_lon_num != null
-          ? { lat: center_lat_num, lon: center_lon_num }
-          : undefined,
-        path_points: path_points ?? undefined,
-        distance_m: distance_m ?? undefined,
-        geohash: geohash ?? undefined,
-        remark: location_remark,
-      },
-      evidence_meta,
-      logs_refs: Array.isArray(body.logs_refs) && body.logs_refs.length > 0
-        ? body.logs_refs
-        : evidence_meta
-          .map((item: { object_key?: string; artifact_id?: string }) => item.object_key ?? item.artifact_id ?? null)
-          .filter((v: string | null): v is string => Boolean(v))
-          .map((ref: string) => ({ kind: "artifact_object", ref })),
-      status: String(body.status ?? "executed").trim().toLowerCase() === "not_executed" ? "not_executed" : "executed",
+      execution_time: receiptParsed.data.payload.execution_time,
+      execution_coverage: receiptParsed.data.payload.execution_coverage,
+      labor: receiptParsed.data.payload.labor,
+      resource_usage: receiptParsed.data.payload.resource_usage,
+      exception: receiptParsed.data.payload.exception,
+      location_summary: receiptParsed.data.payload.location_summary,
+      evidence_meta: receiptParsed.data.payload.evidence_meta,
+      logs_refs: receiptParsed.data.payload.logs_refs,
+      status: receiptParsed.data.payload.status,
       constraint_check: {
         violated: exception_type !== "NONE" || Boolean(body.constraint_check?.violated ?? false),
         violations: Array.isArray(body.constraint_check?.violations) ? body.constraint_check.violations.map((x: any) => String(x)) : (exception_code ? [exception_code] : []),
       },
-      observed_parameters: body.observed_parameters && typeof body.observed_parameters === "object" ? body.observed_parameters : {},
+      observed_parameters: receiptParsed.data.payload.observed_parameters,
       meta: {
-        ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+        ...(receiptParsed.data.payload.meta ?? {}),
         assignment_id,
         idempotency_key: String(body.meta?.idempotency_key ?? `assignment_submit_${assignment_id}_${now}`),
         command_id: act_task_id,

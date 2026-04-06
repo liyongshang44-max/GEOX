@@ -73,16 +73,23 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
   const [item, setItem] = React.useState<WorkAssignmentItem | null>(null);
   const [trajectory, setTrajectory] = React.useState<any | null>(null);
   const [operation, setOperation] = React.useState<OperationDetailResponse | null>(null);
-  const [remark, setRemark] = React.useState<string>("");
+  const [note, setNote] = React.useState<string>("");
   const [files, setFiles] = React.useState<File[]>([]);
   const [photoCategoryByName, setPhotoCategoryByName] = React.useState<Record<string, "before" | "during" | "after" | "anomaly" | "other">>({});
   const [exceptionType, setExceptionType] = React.useState<string>("NONE");
   const [exceptionCode, setExceptionCode] = React.useState<string>("");
+  const [coverageKind, setCoverageKind] = React.useState<"field" | "point" | "manual">("field");
+  const [coverageRef, setCoverageRef] = React.useState<string>("");
+  const [durationMinutes, setDurationMinutes] = React.useState<number>(10);
   const [workerCount, setWorkerCount] = React.useState<number>(1);
   const [fuelLiters, setFuelLiters] = React.useState<string>("");
   const [electricKwh, setElectricKwh] = React.useState<string>("");
   const [waterLiters, setWaterLiters] = React.useState<string>("");
   const [chemicalMl, setChemicalMl] = React.useState<string>("");
+  const [consumableName, setConsumableName] = React.useState<string>("");
+  const [consumableAmount, setConsumableAmount] = React.useState<string>("");
+  const [consumableUnit, setConsumableUnit] = React.useState<string>("");
+  const [evidenceRefsText, setEvidenceRefsText] = React.useState<string>("");
   const [fieldErrors, setFieldErrors] = React.useState<Array<{ field: string; code: string; message: string }>>([]);
 
   const reload = React.useCallback(async () => {
@@ -127,6 +134,11 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
     void reload();
   }, [reload]);
 
+  React.useEffect(() => {
+    const fallbackRef = String(operation?.field_id ?? trajectory?.field_id ?? "").trim();
+    if (!coverageRef && fallbackRef) setCoverageRef(fallbackRef);
+  }, [coverageRef, operation?.field_id, trajectory?.field_id]);
+
   const handleAccept = async (): Promise<void> => {
     if (!item) return;
     setSubmitting(true);
@@ -165,6 +177,16 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
     setFieldErrors([]);
     const now = Date.now();
     try {
+      if (!coverageRef.trim()) {
+        setFieldErrors([{ field: "execution_coverage.ref", code: "REQUIRED", message: "覆盖范围引用不能为空" }]);
+        setError("请填写覆盖范围引用（如 field_id/网格编码）");
+        return;
+      }
+      if (exceptionType !== "NONE" && !exceptionCode.trim()) {
+        setFieldErrors([{ field: "exception.code", code: "REQUIRED", message: "存在异常时必须填写异常码" }]);
+        setError("存在异常时必须填写异常码");
+        return;
+      }
       const evidenceMeta = files.map((f, idx) => {
         const safeName = f.name.replace(/[^A-Za-z0-9._-]/g, "_");
         return {
@@ -181,38 +203,78 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         const n = Number(v);
         return Number.isFinite(n) ? n : undefined;
       };
+      const manualEvidenceRefs = evidenceRefsText
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .slice(0, 50)
+        .map((ref) => ({ kind: "manual_ref", ref }));
+      const consumableAmountNum = toMaybeNumber(consumableAmount);
+      if (consumableName.trim() && consumableAmountNum == null) {
+        setFieldErrors([{ field: "resource_usage.consumables[0].amount", code: "INVALID_NUMBER", message: "耗材数量必须是有效数字" }]);
+        setError("耗材数量必须是有效数字");
+        return;
+      }
+      const consumables = consumableName.trim() && consumableAmountNum != null
+        ? [{ name: consumableName.trim(), amount: consumableAmountNum, unit: consumableUnit.trim() || undefined }]
+        : [];
+      const structuredUsage = {
+        fuel_l: toMaybeNumber(fuelLiters),
+        electric_kwh: toMaybeNumber(electricKwh),
+        water_l: toMaybeNumber(waterLiters),
+        chemical_ml: toMaybeNumber(chemicalMl),
+        consumables,
+      };
+      const hasStructuredUsage =
+        structuredUsage.fuel_l != null ||
+        structuredUsage.electric_kwh != null ||
+        structuredUsage.water_l != null ||
+        structuredUsage.chemical_ml != null ||
+        structuredUsage.consumables.length > 0;
+      if (!hasStructuredUsage) {
+        setFieldErrors([{ field: "resource_usage", code: "REQUIRED", message: "请至少填写一项耗材/能耗字段" }]);
+        setError("请至少填写一项耗材/能耗字段，不能仅提交文本备注");
+        return;
+      }
+      if (evidenceMeta.length < 1 && manualEvidenceRefs.length < 1) {
+        setFieldErrors([{ field: "evidence_meta", code: "REQUIRED", message: "请至少上传一张图片或填写一条证据引用" }]);
+        setError("请至少上传一张图片或填写一条证据引用");
+        return;
+      }
       await submitWorkAssignment(item.assignment_id, {
         execution_time: {
           start_ts: Number(trajectory?.start_ts ?? now - 10 * 60 * 1000),
           end_ts: now,
         },
+        execution_coverage: {
+          kind: coverageKind,
+          ref: coverageRef.trim(),
+        },
         labor: {
-          duration_minutes: Math.max(1, Math.round((now - Number(trajectory?.start_ts ?? now - 10 * 60 * 1000)) / 60000)),
+          duration_minutes: Math.max(1, Math.round(durationMinutes)),
           worker_count: workerCount,
         },
-        resource_usage: {
-          fuel_l: toMaybeNumber(fuelLiters),
-          electric_kwh: toMaybeNumber(electricKwh),
-          water_l: toMaybeNumber(waterLiters),
-          chemical_ml: toMaybeNumber(chemicalMl),
-        },
+        resource_usage: structuredUsage,
         exception: {
           type: exceptionType,
           code: exceptionCode.trim() || undefined,
-          detail: remark.trim() || undefined,
+          detail: note.trim() || undefined,
         },
         location_summary: {
           geohash: String(trajectory?.geohash ?? ""),
           path_points: Array.isArray(trajectory?.points) ? trajectory.points.length : undefined,
           distance_m: Number(trajectory?.distance_m ?? 0) || undefined,
-          remark: remark.trim() || undefined,
+          remark: note.trim() || undefined,
         },
         evidence_meta: evidenceMeta,
         observed_parameters: {
-          remark,
+          note,
           uploaded_images: evidenceMeta.map((x) => ({ filename: x.filename, object_key: x.object_key, artifact_id: x.artifact_id, category: x.category })),
         },
-        logs_refs: evidenceMeta.map((x) => ({ kind: "artifact_object", ref: String(x.object_key) })),
+        logs_refs: [
+          ...evidenceMeta.map((x) => ({ kind: "artifact_object", ref: String(x.object_key) })),
+          ...manualEvidenceRefs,
+        ],
         status: "executed",
       });
       setNotice("提交成功");
@@ -318,6 +380,21 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         ))}
 
         <div className="row" style={{ marginTop: 12 }}>
+          <label style={{ minWidth: 80 }}>覆盖范围</label>
+          <select className="input" value={coverageKind} onChange={(e) => setCoverageKind(e.target.value as "field" | "point" | "manual")}>
+            <option value="field">田块</option>
+            <option value="point">点位</option>
+            <option value="manual">人工范围</option>
+          </select>
+          <input
+            className="input"
+            placeholder="覆盖范围引用（必填）"
+            value={coverageRef}
+            onChange={(e) => setCoverageRef(e.target.value)}
+          />
+        </div>
+
+        <div className="row" style={{ marginTop: 12 }}>
           <label style={{ minWidth: 80 }}>异常类型</label>
           <select className="input" value={exceptionType} onChange={(e) => setExceptionType(e.target.value)}>
             <option value="NONE">无异常</option>
@@ -337,8 +414,13 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         </div>
 
         <div className="row" style={{ marginTop: 12 }}>
-          <label style={{ minWidth: 80 }}>人力/耗材</label>
+          <label style={{ minWidth: 80 }}>工时/人力</label>
+          <input className="input" type="number" min={1} max={1440} value={durationMinutes} onChange={(e) => setDurationMinutes(Math.max(1, Number(e.target.value || 1)))} placeholder="工时(分钟)" />
           <input className="input" type="number" min={1} value={workerCount} onChange={(e) => setWorkerCount(Math.max(1, Number(e.target.value || 1)))} placeholder="人数" />
+        </div>
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <label style={{ minWidth: 80 }}>耗材/能耗</label>
           <input className="input" type="number" min={0} value={fuelLiters} onChange={(e) => setFuelLiters(e.target.value)} placeholder="燃油(L)" />
           <input className="input" type="number" min={0} value={electricKwh} onChange={(e) => setElectricKwh(e.target.value)} placeholder="电耗(kWh)" />
           <input className="input" type="number" min={0} value={waterLiters} onChange={(e) => setWaterLiters(e.target.value)} placeholder="水耗(L)" />
@@ -346,13 +428,31 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         </div>
 
         <div className="row" style={{ marginTop: 12, alignItems: "flex-start" }}>
-          <label style={{ minWidth: 80, marginTop: 8 }}>备注</label>
+          <label style={{ minWidth: 80, marginTop: 8 }}>耗材条目</label>
+          <input className="input" value={consumableName} onChange={(e) => setConsumableName(e.target.value)} placeholder="耗材名称（选填）" />
+          <input className="input" type="number" min={0} value={consumableAmount} onChange={(e) => setConsumableAmount(e.target.value)} placeholder="耗材数量" />
+          <input className="input" value={consumableUnit} onChange={(e) => setConsumableUnit(e.target.value)} placeholder="单位（袋/瓶/kg）" />
+        </div>
+
+        <div className="row" style={{ marginTop: 12, alignItems: "flex-start" }}>
+          <label style={{ minWidth: 80, marginTop: 8 }}>证据引用</label>
+          <textarea
+            className="input"
+            style={{ width: "100%", minHeight: 72 }}
+            value={evidenceRefsText}
+            onChange={(e) => setEvidenceRefsText(e.target.value)}
+            placeholder="每行一条引用（如 bucket://path/to/object 或外部证据ID）"
+          />
+        </div>
+
+        <div className="row" style={{ marginTop: 12, alignItems: "flex-start" }}>
+          <label style={{ minWidth: 80, marginTop: 8 }}>补充说明</label>
           <textarea
             className="input"
             style={{ width: "100%", minHeight: 96 }}
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-            placeholder="填写执行过程、异常情况、补充说明"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="补充说明（可选，不可替代结构化字段）"
           />
         </div>
 
