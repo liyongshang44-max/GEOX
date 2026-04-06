@@ -110,6 +110,7 @@ export type OperationDetailPageVm = {
     dispatchedChipLabel: string;
     ackChipLabel: string;
     finalChipLabel: string;
+    manualFallbackReasonLabel: string;
   };
   receiptEvidence?: ReceiptEvidenceVm;
   timeline: OperationStoryTimelineItemVm[];
@@ -687,6 +688,11 @@ export function buildOperationDetailViewModel(args?: {
       dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
       ackChipLabel: `确认状态：${ackStatusLabel}`,
       finalChipLabel: `最终结果：${finalStatusLabel}`,
+      manualFallbackReasonLabel: [
+        toText(safeDetail?.manual_fallback?.reason, ""),
+        toText(safeDetail?.manual_fallback?.reason_code, ""),
+        toText(safeDetail?.manual_fallback?.message, ""),
+      ].filter(Boolean).join(" / ") || "-",
     }
     : {
       executionModeLabel: "尚未执行",
@@ -706,6 +712,7 @@ export function buildOperationDetailViewModel(args?: {
       dispatchedChipLabel: "",
       ackChipLabel: "",
       finalChipLabel: "",
+      manualFallbackReasonLabel: "-",
     };
   const cost = safeDetail?.cost
     ? {

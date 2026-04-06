@@ -18,7 +18,8 @@ type TimelineType =
   | "EXECUTING"
   | "SUCCEEDED"
   | "FAILED"
-  | "INVALID_EXECUTION";
+  | "INVALID_EXECUTION"
+  | "MANUAL_FALLBACK";
 
 export type OperationTimelineItemV1 = {
   ts: number;
@@ -75,6 +76,19 @@ export type OperationStateV1 = {
   final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE" | "INVALID_EXECUTION";
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
+  manual_fallback?: {
+    reason_code: string | null;
+    reason: string | null;
+    message: string | null;
+    assignment_id: string | null;
+    created_at: string | null;
+    device_context: {
+      device_id: string | null;
+      adapter_type: string | null;
+      attempt_no: number | null;
+      max_retries: number | null;
+    };
+  } | null;
 };
 
 export type OperationProjectionFactRow = FactRow;
@@ -108,6 +122,7 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
       'decision_recommendation_v1','approval_request_v1','approval_decision_v1',
       'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
       'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1',
+      'ao_act_manual_fallback_v1',
       'evidence_artifact_v1','field_program_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
@@ -193,6 +208,7 @@ function timelineLabel(type: TimelineType): string {
   if (type === "EXECUTING") return "executing";
   if (type === "SUCCEEDED") return "execution success";
   if (type === "INVALID_EXECUTION") return "执行无效";
+  if (type === "MANUAL_FALLBACK") return "转人工处理";
   return "execution failed";
 }
 
@@ -269,6 +285,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
   );
   const acceptanceByTask = latestByKey(
     acceptanceFacts,
+    (r) => String(r.record_json?.payload?.act_task_id ?? "").trim(),
+  );
+  const manualFallbackByTask = latestByKey(
+    facts.filter((r) => r.record_json?.type === "ao_act_manual_fallback_v1"),
     (r) => String(r.record_json?.payload?.act_task_id ?? "").trim(),
   );
 
@@ -371,6 +391,11 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       const r = String(receipt.record_json?.payload?.status ?? "").toUpperCase();
       if (r.includes("FAIL") || r.includes("NOT_EXEC")) timeline.push({ ts, type: "FAILED", label: timelineLabel("FAILED") });
       if (r.includes("SUCCESS") || r.includes("EXECUTED")) timeline.push({ ts, type: "SUCCEEDED", label: timelineLabel("SUCCEEDED") });
+    }
+    const manualFallbackFact = task_id ? manualFallbackByTask.get(task_id) : undefined;
+    if (manualFallbackFact) {
+      const ts = toMs(manualFallbackFact.occurred_at);
+      timeline.push({ ts, type: "MANUAL_FALLBACK", label: timelineLabel("MANUAL_FALLBACK") });
     }
     const acceptanceFact = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
     const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};
@@ -555,7 +580,26 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       },
       final_status: finalStatusNormalized,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
-      timeline: fullTimeline
+      timeline: fullTimeline,
+      manual_fallback: manualFallbackFact
+        ? {
+          reason_code: String(manualFallbackFact.record_json?.payload?.reason_code ?? "").trim() || null,
+          reason: String(manualFallbackFact.record_json?.payload?.reason ?? "").trim() || null,
+          message: String(manualFallbackFact.record_json?.payload?.message ?? "").trim() || null,
+          assignment_id: String(manualFallbackFact.record_json?.payload?.assignment_id ?? "").trim() || null,
+          created_at: manualFallbackFact.occurred_at,
+          device_context: {
+            device_id: String(manualFallbackFact.record_json?.payload?.device_context?.device_id ?? "").trim() || null,
+            adapter_type: String(manualFallbackFact.record_json?.payload?.device_context?.adapter_type ?? "").trim() || null,
+            attempt_no: Number.isFinite(Number(manualFallbackFact.record_json?.payload?.device_context?.attempt_no))
+              ? Number(manualFallbackFact.record_json?.payload?.device_context?.attempt_no)
+              : null,
+            max_retries: Number.isFinite(Number(manualFallbackFact.record_json?.payload?.device_context?.max_retries))
+              ? Number(manualFallbackFact.record_json?.payload?.device_context?.max_retries)
+              : null,
+          }
+        }
+        : null
     });
   }
 

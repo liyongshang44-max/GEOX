@@ -217,6 +217,7 @@ export default function OperationDetailPage(): React.ReactElement {
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行器</span><strong>{model.execution.executorLabel}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Task ID</span><strong>{executionTrace?.task_id || "--"}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : "否"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">为何转人工</span><strong>{model.execution.manualFallbackReasonLabel}</strong></div>
             </div>
             <div style={{ marginTop: 10 }}>
               <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>

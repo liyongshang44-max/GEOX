@@ -44,6 +44,12 @@ export type OperationDetailResponse = {
   task?: any;
   dispatch?: any;
   receipt?: any;
+  manual_fallback?: {
+    reason_code?: string | null;
+    reason?: string | null;
+    message?: string | null;
+    assignment_id?: string | null;
+  } | null;
   timeline?: any[];
   agronomy?: {
     crop_code?: string | null;

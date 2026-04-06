@@ -1403,6 +1403,148 @@ function normalizeAdapterHint(raw: any): string | null {
   return v;
 }
 
+type DispatchFallbackContext = {
+  failure_code: string;
+  failure_reason: string;
+  failure_message: string | null;
+  retry_exhausted: boolean;
+  device_offline: boolean;
+  device_id: string | null;
+  adapter_type: string | null;
+  attempt_no: number | null;
+  max_retries: number | null;
+  field_id: string | null;
+  region: string | null;
+  action_type: string | null;
+};
+
+function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFallbackContext {
+  const failure_code = String(body?.failure_code ?? body?.error_code ?? "DISPATCH_FAILED").trim().toUpperCase();
+  const failure_reason = String(body?.failure_reason ?? body?.reason ?? failure_code).trim().toUpperCase();
+  const failure_message = typeof body?.failure_message === "string" && body.failure_message.trim()
+    ? body.failure_message.trim()
+    : null;
+  const attempt_no = Number.isFinite(Number(body?.attempt_no)) ? Number(body.attempt_no) : null;
+  const max_retries = Number.isFinite(Number(body?.max_retries)) ? Number(body.max_retries) : null;
+  const retry_exhausted = Boolean(body?.retry_exhausted) || (attempt_no != null && max_retries != null && attempt_no >= max_retries);
+  const device_offline = Boolean(body?.device_offline)
+    || failure_code.includes("OFFLINE")
+    || failure_reason.includes("OFFLINE");
+  const deviceContext = body?.device_context && typeof body.device_context === "object" ? body.device_context : {};
+  const taskMeta = taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {};
+  const field_id = String(taskPayload?.field_id ?? taskMeta?.field_id ?? "").trim() || null;
+  const region = String(taskPayload?.region ?? taskMeta?.region ?? taskMeta?.zone ?? "").trim() || null;
+  const action_type = String(taskPayload?.action_type ?? taskPayload?.task_type ?? "").trim() || null;
+  const device_id = String(body?.device_id ?? deviceContext?.device_id ?? taskMeta?.device_id ?? "").trim() || null;
+  const adapter_type = String(body?.adapter_type ?? deviceContext?.adapter_type ?? taskPayload?.adapter_type ?? "").trim() || null;
+  return {
+    failure_code,
+    failure_reason,
+    failure_message,
+    retry_exhausted,
+    device_offline,
+    device_id,
+    adapter_type,
+    attempt_no,
+    max_retries,
+    field_id,
+    region,
+    action_type
+  };
+}
+
+function shouldCreateManualFallbackAssignment(ctx: DispatchFallbackContext): boolean {
+  if (ctx.device_offline) return true;
+  if (ctx.retry_exhausted) return true;
+  if (ctx.failure_code === "FAILED" || ctx.failure_reason === "FAILED") return true;
+  return ctx.failure_code.includes("FAILED") || ctx.failure_reason.includes("FAILED");
+}
+
+async function createWorkAssignmentFallbackFact(input: {
+  pool: Pool;
+  tenant: TenantTriple;
+  act_task_id: string;
+  operation_plan_id: string | null;
+  created_by: string;
+  context: DispatchFallbackContext;
+}): Promise<{ fallback_fact_id: string | null; assignment_fact_id: string | null; assignment_id: string | null; created: boolean }> {
+  const existing = await loadLatestFactByTypeAndKey(input.pool, "ao_act_manual_fallback_v1", "payload,act_task_id", input.act_task_id, input.tenant);
+  if (existing) {
+    const assignmentId = String(existing.record_json?.payload?.assignment_id ?? "").trim() || null;
+    return { fallback_fact_id: existing.fact_id, assignment_fact_id: null, assignment_id: assignmentId, created: false };
+  }
+
+  const assignment_id = `wa_fallback_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
+  const assigned_at = new Date().toISOString();
+  const routing_key_parts = [
+    input.context.action_type ?? "action",
+    input.context.field_id ?? "field",
+    input.context.region ?? "region"
+  ].map((x) => String(x).trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "_"));
+  const executor_id = `manual_pool.${routing_key_parts.join(".")}`.slice(0, 120);
+
+  const assignment_fact_id = await insertFact(input.pool, "api/v1/ao-act/dispatches/state", {
+    type: "work_assignment_upserted_v1",
+    payload: {
+      tenant_id: input.tenant.tenant_id,
+      project_id: input.tenant.project_id,
+      group_id: input.tenant.group_id,
+      assignment_id,
+      act_task_id: input.act_task_id,
+      executor_id,
+      assigned_at,
+      status: "ASSIGNED",
+      source: "dispatch_fallback_auto_v1",
+      operation_plan_id: input.operation_plan_id,
+      routing_meta: {
+        action_type: input.context.action_type,
+        field_id: input.context.field_id,
+        region: input.context.region
+      },
+      failure_context: {
+        code: input.context.failure_code,
+        reason: input.context.failure_reason,
+        message: input.context.failure_message,
+        retry_exhausted: input.context.retry_exhausted,
+        device_offline: input.context.device_offline
+      },
+      created_by: input.created_by
+    }
+  });
+
+  const fallback_fact_id = await insertFact(input.pool, "api/v1/ao-act/dispatches/state", {
+    type: "ao_act_manual_fallback_v1",
+    payload: {
+      tenant_id: input.tenant.tenant_id,
+      project_id: input.tenant.project_id,
+      group_id: input.tenant.group_id,
+      act_task_id: input.act_task_id,
+      operation_plan_id: input.operation_plan_id,
+      assignment_id,
+      reason_code: input.context.failure_code,
+      reason: input.context.failure_reason,
+      message: input.context.failure_message,
+      retry_exhausted: input.context.retry_exhausted,
+      device_offline: input.context.device_offline,
+      device_context: {
+        device_id: input.context.device_id,
+        adapter_type: input.context.adapter_type,
+        attempt_no: input.context.attempt_no,
+        max_retries: input.context.max_retries
+      },
+      route_meta: {
+        action_type: input.context.action_type,
+        field_id: input.context.field_id,
+        region: input.context.region
+      },
+      created_by: input.created_by,
+      created_at: assigned_at
+    }
+  });
+
+  return { fallback_fact_id, assignment_fact_id, assignment_id, created: true };
+}
+
 function assertTenantFieldDeviceTriple(taskPayload: any): { ok: true } | { ok: false; reason: string } {
   if (!String(taskPayload?.tenant_id ?? "").trim()) return { ok: false, reason: "MISSING_TENANT_ID" };
   if (!String(taskPayload?.project_id ?? "").trim()) return { ok: false, reason: "MISSING_PROJECT_ID" };
@@ -2223,6 +2365,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     let operation_plan_transition_fact_id: string | null = null;
     let operation_plan_update_fact_id: string | null = null;
+    let manual_fallback_fact_id: string | null = null;
+    let work_assignment_fact_id: string | null = null;
+    let work_assignment_id: string | null = null;
+    let manual_fallback_created = false;
 
     if (operation_plan_id) {
       const operationPlan = await loadLatestFactByTypeAndKey(
@@ -2256,6 +2402,24 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       }
     }
 
+    if (state === "FAILED" && taskFact) {
+      const fallbackContext = parseDispatchFallbackContext(body, taskFact.record_json?.payload ?? {});
+      if (shouldCreateManualFallbackAssignment(fallbackContext)) {
+        const fallback = await createWorkAssignmentFallbackFact({
+          pool,
+          tenant,
+          act_task_id,
+          operation_plan_id: operation_plan_id || null,
+          created_by: String(auth.actor_id ?? "system/controlplane"),
+          context: fallbackContext
+        });
+        manual_fallback_fact_id = fallback.fallback_fact_id;
+        work_assignment_fact_id = fallback.assignment_fact_id;
+        work_assignment_id = fallback.assignment_id;
+        manual_fallback_created = fallback.created;
+      }
+    }
+
     return reply.send({
       ok: true,
       act_task_id,
@@ -2263,7 +2427,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       state,
       operation_plan_id: operation_plan_id || null,
       operation_plan_transition_fact_id,
-      operation_plan_update_fact_id
+      operation_plan_update_fact_id,
+      manual_fallback_fact_id,
+      work_assignment_fact_id,
+      work_assignment_id,
+      manual_fallback_created
     });
   });
   // GET /api/v1/ao-act/dispatches
