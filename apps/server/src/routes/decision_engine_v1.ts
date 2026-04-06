@@ -519,7 +519,8 @@ async function loadTaskFactByTaskId(pool: Pool, tenant: TenantTriple, act_task_i
 }
 
 
-async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: number): Promise<any[]> {
+async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: number, fieldId?: string): Promise<any[]> {
+  const normalizedFieldId = String(fieldId ?? "").trim();
   const res = await pool.query(
     `SELECT fact_id, occurred_at, record_json
      FROM facts
@@ -527,9 +528,13 @@ async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: numb
        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
        AND (record_json::jsonb#>>'{payload,project_id}') = $2
        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+       AND (
+         $5::text = ''
+         OR (record_json::jsonb#>>'{payload,field_id}') = $5
+       )
      ORDER BY occurred_at DESC, fact_id DESC
      LIMIT $4`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, limit, normalizedFieldId]
   );
   return (res.rows ?? []).map((row: any) => ({
     fact_id: String(row.fact_id),
@@ -688,8 +693,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: String(q.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const fieldId = String(q.field_id ?? "").trim();
     const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
-    const rows = await loadRecommendations(pool, tenant, limit);
+    const rows = await loadRecommendations(pool, tenant, limit, fieldId);
     const items = await Promise.all(rows.map(async (row) => normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant))));
     return reply.send({ ok: true, items, count: rows.length });
   });
@@ -723,8 +729,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: String(q.group_id ?? auth.group_id)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    const fieldId = String(q.field_id ?? "").trim();
     const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
-    const rows = await loadRecommendations(pool, tenant, limit);
+    const rows = await loadRecommendations(pool, tenant, limit, fieldId);
     const normalized = await Promise.all(rows.map(async (row) => {
       const item = normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant));
       const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
