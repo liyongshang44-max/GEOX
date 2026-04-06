@@ -1,17 +1,17 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { SectionCard, StatusPill } from "../../../shared/ui";
+import { EmptyGuide, SectionCard, StatusPill } from "../../../shared/ui";
 
 
 export default function TodayPriority({
   todayActions,
   todayActionHref,
   todayActionLabel,
-  todayActionRiskLevel,
-  todayActionReason,
-  todayActionSuggestion,
-  todayActionCTA,
-  todayActionEntryLabel,
+  todayActionRiskLevel = () => "中",
+  todayActionReason = () => "-",
+  todayActionSuggestion = () => "-",
+  todayActionCTA = () => "查看详情",
+  todayActionEntryLabel = () => "作业",
 }: {
   todayActions: Array<{ type: string; count: number }>;
   todayActionHref: (type: string) => string;
@@ -37,7 +37,7 @@ export default function TodayPriority({
             </div>
           </div>
         ))}
-        {!todayActions.length ? <EmptyGuide title="今日暂无高优先动作" description="当前没有需要立即处理的阻断项。" actions={[{ label: "进入作业队列", to: "/operations?status=pending", tone: "primary" }, { label: "查看全部作业", to: "/operations" }]} /> : null}
+        {!todayActions.length ? <EmptyGuide title="今日暂无高优先动作" message="当前没有需要立即处理的阻断项。" actionLabel="进入作业队列" actionTo="/operations?status=pending" /> : null}
       </div>
       <div style={{ marginTop: 8 }}>
         <Link className="btn primary" to="/operations?status=pending">进入作业队列</Link>

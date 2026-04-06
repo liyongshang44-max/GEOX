@@ -11,7 +11,6 @@ import { buildOperationDetailViewModel } from "../viewmodels/operationDetailView
 import { executeOperationAction } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../lib/operationLabels";
 import { toBusinessTimelineLabel } from "../viewmodels/timelineLabels";
-import { DetailAside, StatusPill } from "../shared/ui";
 
 const COPY = {
   backToList: "返回作业列表",

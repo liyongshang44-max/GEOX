@@ -1,7 +1,7 @@
 import React from "react";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
-import { PageHeader, SectionCard, Stepper } from "../shared/ui";
+import { EmptyGuide, PageHeader, SectionCard, Stepper } from "../shared/ui";
 
 function fmtTs(v: number | null | undefined): string {
   return typeof v === "number" && Number.isFinite(v) && v > 0 ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "-";
@@ -300,11 +300,9 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       {completed ? (
         <EmptyGuide
           title="✅ 接入完成"
-          description="首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。"
-          actions={[
-            { label: "跳转：设备详情", to: `/devices/${encodeURIComponent(deviceId.trim())}`, tone: "primary" },
-            { label: "跳转：监控台", to: "/dashboard" },
-          ]}
+          message="首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。"
+          actionLabel="跳转：设备详情"
+          actionTo={`/devices/${encodeURIComponent(deviceId.trim())}`}
         />
       ) : null}
     </div>
