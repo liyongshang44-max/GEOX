@@ -13,6 +13,30 @@ export type CapabilityResolution = {
   };
 };
 
+export type CapabilityResolutionFailure = {
+  code: "CAPABILITY_NOT_RESOLVED";
+  message: string;
+  reasons: string[];
+};
+
+export type CapabilityResolutionResult =
+  | { ok: true; resolution: CapabilityResolution }
+  | { ok: false; error: CapabilityResolutionFailure };
+
+export type CapabilityCompatibilityCheckResult =
+  | { ok: true; normalized_adapter: string; normalized_device_type: string }
+  | {
+      ok: false;
+      error: {
+        code: "CAPABILITY_COMPATIBILITY_MISMATCH";
+        message: string;
+        reasons: string[];
+        compatibility: CapabilityResolution["compatibility"];
+        normalized_adapter: string;
+        normalized_device_type: string;
+      };
+    };
+
 export type TelemetryInterpretation = {
   interpreted: {
     soil_moisture_pct: number | null;
@@ -145,6 +169,26 @@ export const deviceSkillRegistry: DeviceSkillDefinition[] = [
   soilSensorV1
 ];
 
+export function validateDeviceSkillCompatibilityMatrix(skills: DeviceSkillDefinition[] = deviceSkillRegistry): {
+  ok: true;
+} | {
+  ok: false;
+  errors: Array<{ skill_id: string; code: string; message: string }>;
+} {
+  const errors: Array<{ skill_id: string; code: string; message: string }> = [];
+  for (const skill of skills) {
+    const adapters = Array.isArray(skill.compatibility?.adapters) ? skill.compatibility.adapters : [];
+    const deviceTypes = Array.isArray(skill.compatibility?.device_types) ? skill.compatibility.device_types : [];
+    if (adapters.length === 0) {
+      errors.push({ skill_id: skill.skill_id, code: "MISSING_COMPATIBLE_ADAPTERS", message: "Skill compatibility.adapters must not be empty." });
+    }
+    if (deviceTypes.length === 0) {
+      errors.push({ skill_id: skill.skill_id, code: "MISSING_COMPATIBLE_DEVICE_TYPES", message: "Skill compatibility.device_types must not be empty." });
+    }
+  }
+  return errors.length ? { ok: false, errors } : { ok: true };
+}
+
 export function findDeviceSkill(skillId: string): DeviceSkillDefinition | null {
   const key = String(skillId ?? "").trim().toLowerCase();
   if (!key) return null;
@@ -166,4 +210,62 @@ export function resolveTaskCapabilityViaDeviceSkills(taskPayload: any): Capabili
     if (resolved) return resolved;
   }
   return null;
+}
+
+export function resolveTaskCapabilityViaDeviceSkillsResult(taskPayload: any): CapabilityResolutionResult {
+  const resolved = resolveTaskCapabilityViaDeviceSkills(taskPayload);
+  if (resolved) return { ok: true, resolution: resolved };
+  return {
+    ok: false,
+    error: {
+      code: "CAPABILITY_NOT_RESOLVED",
+      message: "No device skill matched the task payload.",
+      reasons: [
+        "no_skill_capability_match",
+        "provide skill_id or a supported action/task type",
+      ],
+    },
+  };
+}
+
+function normalizeAdapterType(adapterType: unknown): string {
+  const normalized = String(adapterType ?? "").trim().toLowerCase();
+  if (normalized === "mqtt_downlink_once_v1") return "mqtt";
+  return normalized;
+}
+
+function normalizeDeviceType(deviceType: unknown): string {
+  return String(deviceType ?? "").trim().toUpperCase();
+}
+
+export function checkCapabilityCompatibilityMatrix(input: {
+  capability: CapabilityResolution;
+  adapter_type: string | null | undefined;
+  device_type: string | null | undefined;
+}): CapabilityCompatibilityCheckResult {
+  const normalized_adapter = normalizeAdapterType(input.adapter_type);
+  const normalized_device_type = normalizeDeviceType(input.device_type);
+  const allowedAdapters = (input.capability.compatibility?.adapters ?? []).map((x) => normalizeAdapterType(x));
+  const allowedDeviceTypes = (input.capability.compatibility?.device_types ?? []).map((x) => normalizeDeviceType(x));
+  const reasons: string[] = [];
+  if (!normalized_adapter) reasons.push("missing_adapter_type");
+  if (!normalized_device_type) reasons.push("missing_device_type");
+  if (normalized_adapter && allowedAdapters.length > 0 && !allowedAdapters.includes(normalized_adapter)) {
+    reasons.push("adapter_not_compatible");
+  }
+  if (normalized_device_type && allowedDeviceTypes.length > 0 && !allowedDeviceTypes.includes(normalized_device_type)) {
+    reasons.push("device_type_not_compatible");
+  }
+  if (reasons.length === 0) return { ok: true, normalized_adapter, normalized_device_type };
+  return {
+    ok: false,
+    error: {
+      code: "CAPABILITY_COMPATIBILITY_MISMATCH",
+      message: "Skill compatibility matrix check failed.",
+      reasons,
+      compatibility: input.capability.compatibility,
+      normalized_adapter,
+      normalized_device_type,
+    },
+  };
 }
