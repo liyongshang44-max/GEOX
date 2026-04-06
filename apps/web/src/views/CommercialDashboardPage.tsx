@@ -519,6 +519,25 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
   const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
 
+  const overviewMockData = {
+    field_total: fieldCount,
+    device_online: Number(deviceSummary.online ?? 0),
+    device_offline: Number(deviceSummary.offline ?? 0),
+    pending_today: todayActions.reduce((sum, item) => sum + Number(item.count ?? 0), 0),
+    anomalies_24h: Number(d.overview.riskFieldCount ?? 0),
+    executing_ops: runningActions.length,
+  };
+  const todayPriorityItems = todayActions.map((item) => ({
+    type: item.type,
+    count: item.count,
+    riskLevel: todayActionRiskLevel(item.type),
+    reason: todayActionReason(item.type, item.count),
+    suggestedAction: todayActionSuggestion(item.type, item.count),
+    linkTarget: todayActionHref(item.type),
+    actionLabel: todayActionCTA(item.type),
+    entryLabel: todayActionEntryLabel(item.type),
+  }));
+
   const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
     if (!item.execution_ready || !item.execution_plan) return;
     setExecutingActionId(item.operation_id);
@@ -576,17 +595,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         fieldCount={fieldCount}
         riskFieldCount={d.overview.riskFieldCount}
         todayExecutionCount={d.overview.todayExecutionCount}
+        overviewMockData={overviewMockData}
       />
 
       <TodayPriority
-        todayActions={todayActions}
-        todayActionHref={todayActionHref}
+        todayPriorityItems={todayPriorityItems}
         todayActionLabel={todayActionLabel}
-        todayActionRiskLevel={todayActionRiskLevel}
-        todayActionReason={todayActionReason}
-        todayActionSuggestion={todayActionSuggestion}
-        todayActionCTA={todayActionCTA}
-        todayActionEntryLabel={todayActionEntryLabel}
       />
 
       <FieldRuntime

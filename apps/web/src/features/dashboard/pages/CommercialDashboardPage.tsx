@@ -22,6 +22,7 @@ import TodayPriority from "../sections/TodayPriority";
 import FieldRuntime from "../sections/FieldRuntime";
 import DecisionOperationQueue from "../sections/DecisionOperationQueue";
 import EvidenceOutcome from "../sections/EvidenceOutcome";
+import DashboardPageContainer from "./DashboardPageContainer";
 import { useDashboard } from "../../../hooks/useDashboard";
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -204,10 +205,30 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     return "/operations?status=pending&priority=general_reminder&from=today_priority";
   };
 
+  const todayPriorityItems = todayActions.map((item) => ({
+    type: item.type,
+    count: item.count,
+    riskLevel: todayActionRiskLevel(item.type),
+    reason: todayActionReason(item.type, item.count),
+    suggestedAction: todayActionSuggestion(item.type, item.count),
+    linkTarget: todayActionHref(item.type),
+    actionLabel: todayActionCTA(item.type),
+    entryLabel: todayActionEntryLabel(item.type),
+  }));
+
   const latestMetrics = (smartRecommendations.latest as any)?.normalized_metrics ?? {};
   const fieldCount = Number(d.overview.fieldCount ?? 0);
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
   const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
+
+  const overviewMockData = {
+    field_total: fieldCount,
+    device_online: Number(deviceSummary.online ?? 0),
+    device_offline: Number(deviceSummary.offline ?? 0),
+    pending_today: todayActions.reduce((sum, item) => sum + Number(item.count ?? 0), 0),
+    anomalies_24h: Number(d.overview.riskFieldCount ?? 0),
+    executing_ops: runningActions.length,
+  };
 
   const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
     if (!item.execution_ready || !item.execution_plan) return;
@@ -247,48 +268,73 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     <div className="productPage demoDashboardPage">
       {error ? <ErrorState title="页面加载失败" message="系统暂时无法获取当前数据，请稍后重试。" onRetry={() => window.location.reload()} secondaryText="返回总览" onSecondary={() => navigate("/dashboard")} /> : null}
 
-      <OverviewMetrics
-        expert={expert}
-        sla={sla}
-        totalRevenue={totalRevenue}
-        fieldCount={fieldCount}
-        riskFieldCount={d.overview.riskFieldCount}
-        todayExecutionCount={d.overview.todayExecutionCount}
-      />
-
-      <TodayPriority
-        todayActions={todayActions}
-        todayActionHref={todayActionHref}
-        todayActionLabel={todayActionLabel}
-        todayActionRiskLevel={todayActionRiskLevel}
-        todayActionReason={todayActionReason}
-        todayActionSuggestion={todayActionSuggestion}
-        todayActionCTA={todayActionCTA}
-        todayActionEntryLabel={todayActionEntryLabel}
-      />
-
-      <FieldRuntime
-        fieldCount={fieldCount}
-        normalFieldCount={d.overview.normalFieldCount}
-        riskFieldCount={d.overview.riskFieldCount}
-        deviceSummary={deviceSummary}
-        deviceCount={deviceCount}
-        hasFirstData={hasFirstData}
-      />
-
-      <DecisionOperationQueue
-        topActions={topActions}
-        runTopAction={runTopAction}
-        executingActionId={executingActionId}
-        executeFeedback={executeFeedback}
-        runningActions={runningActions}
-      />
-
-      <EvidenceOutcome
-        evidenceItems={d.evidences}
-        smartRecommendations={smartRecommendations}
-        latestMetrics={latestMetrics}
-        loadError={error}
+      <DashboardPageContainer
+        blocks={[
+          {
+            zone: "A",
+            title: "顶部总览",
+            description: "先接入统一假数据结构，后续可平滑切换真实接口。",
+            content: (
+              <OverviewMetrics
+                expert={expert}
+                sla={sla}
+                totalRevenue={totalRevenue}
+                fieldCount={fieldCount}
+                riskFieldCount={d.overview.riskFieldCount}
+                todayExecutionCount={d.overview.todayExecutionCount}
+                overviewMockData={overviewMockData}
+              />
+            ),
+          },
+          {
+            zone: "B",
+            title: "今日重点",
+            description: "统一 riskLevel/reason/suggestedAction/linkTarget 数据结构。",
+            content: <TodayPriority todayPriorityItems={todayPriorityItems} todayActionLabel={todayActionLabel} />,
+          },
+          {
+            zone: "C",
+            title: "田块与设备",
+            description: "关注地块风险与设备连通状态。",
+            content: (
+              <FieldRuntime
+                fieldCount={fieldCount}
+                normalFieldCount={d.overview.normalFieldCount}
+                riskFieldCount={d.overview.riskFieldCount}
+                deviceSummary={deviceSummary}
+                deviceCount={deviceCount}
+                hasFirstData={hasFirstData}
+              />
+            ),
+          },
+          {
+            zone: "D",
+            title: "决策执行队列",
+            description: "决策、执行、反馈闭环。",
+            content: (
+              <DecisionOperationQueue
+                topActions={topActions}
+                runTopAction={runTopAction}
+                executingActionId={executingActionId}
+                executeFeedback={executeFeedback}
+                runningActions={runningActions}
+              />
+            ),
+          },
+          {
+            zone: "E",
+            title: "证据与结果",
+            description: "验收状态分组与诊断指标。",
+            content: (
+              <EvidenceOutcome
+                evidenceItems={d.evidences}
+                smartRecommendations={smartRecommendations}
+                latestMetrics={latestMetrics}
+                loadError={error}
+              />
+            ),
+          },
+        ]}
       />
     </div>
   );

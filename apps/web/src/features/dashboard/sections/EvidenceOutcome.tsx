@@ -86,8 +86,8 @@ export default function EvidenceOutcomeSection({
     <SectionCard title="EvidenceOutcomeSection" subtitle="按验收状态分组管理，优先补齐异常与缺失证据。">
       {!evidenceItems.length ? (
         <EmptyState
-          title="暂无证据结果"
-          description="当前还没有可分组的证据项。建议先检查作业执行与回执回传状态。"
+          title="下一步：开启证据回传"
+          description="请先检查作业执行与回执回传状态，再进入验收流程。"
         />
       ) : (
         <div className="decisionList" style={{ marginTop: 8 }}>
@@ -100,7 +100,13 @@ export default function EvidenceOutcomeSection({
                   <div className="decisionItemTitle">{meta.title}</div>
                   <StatusPill tone={meta.tone}>{items.length} 项</StatusPill>
                 </div>
-                {!items.length ? <div className="muted" style={{ fontSize: 13 }}>当前分组暂无数据</div> : null}
+                {!items.length ? (
+                  <div className="muted" style={{ fontSize: 13 }}>
+                    该分组当前为空，可前往
+                    <Link to="/operations" style={{ marginLeft: 4 }}>作业列表</Link>
+                    补齐动作。
+                  </div>
+                ) : null}
                 {items.map((item) => {
                   const card = item?.card || {};
                   const detailHref = item?.href || "/operations";

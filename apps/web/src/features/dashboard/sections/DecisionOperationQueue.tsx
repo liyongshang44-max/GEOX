@@ -34,17 +34,22 @@ export default function DecisionOperationQueue({
       <div className="decisionList" style={{ marginTop: 8 }}>
         {topActions.map((item) => (
           <div key={item.operation_id} className="decisionItemStatic">
-            <div className="decisionItemTitle">{item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
-            <div className="decisionItemMeta">{item.reason}</div>
+            <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`} className="decisionItemLink">
+              <div className="decisionItemTitle">{item.action_type} · score {item.global_priority_score ?? item.priority_score}</div>
+              <div className="decisionItemMeta">{item.reason}</div>
+              <div className="decisionItemMeta">点击进入作业详情或执行页</div>
+            </Link>
             <button className="btn" type="button" disabled={!item.execution_ready || executingActionId === item.operation_id} onClick={() => { void runTopAction(item); }}>
               {executingActionId === item.operation_id ? "执行中..." : "一键执行"}
             </button>
-            <div style={{ marginTop: 8 }}>
-              <Link to={`/operations?operation_plan_id=${encodeURIComponent(item.operation_id)}`}>跳转作业详情</Link>
-            </div>
           </div>
         ))}
-        {!topActions.length ? <EmptyState title="暂无可执行动作" description="当前没有可直接触发的一键执行任务。" /> : null}
+        {!topActions.length ? (
+          <EmptyState
+            title="下一步：创建首个可执行动作"
+            description="请先进入作业列表筛选待处理项，再发起执行。"
+          />
+        ) : null}
       </div>
       <details style={{ marginTop: 10 }}>
         <summary>历史执行摘要（折叠）</summary>
@@ -56,7 +61,12 @@ export default function DecisionOperationQueue({
               <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
             </Link>
           ))}
-          {!runningActions.length ? <EmptyState title="暂无执行历史" description="历史执行记录为空，可先在作业页触发一次执行。" /> : null}
+          {!runningActions.length ? (
+            <EmptyState
+              title="下一步：补齐执行样本"
+              description="可先在作业页触发一次执行，系统将自动生成历史摘要。"
+            />
+          ) : null}
         </div>
       </details>
       <div style={{ marginTop: 8 }}>
