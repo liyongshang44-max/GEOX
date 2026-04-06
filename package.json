@@ -32,7 +32,8 @@
     "build:server": "pnpm --filter @geox/server build",
     "build:web": "pnpm --filter @geox/web build",
     "build:judge": "pnpm --filter @geox/judge build",
-    "acceptance:stage5": "pnpm --filter @geox/server test:agronomy:stage5 && pnpm --filter @geox/server test:stage5:frontend"
+    "acceptance:stage5": "pnpm --filter @geox/server test:agronomy:stage5 && pnpm --filter @geox/server test:stage5:frontend",
+    "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary"
   },
   "volta": {
     "node": "20.11.1"
