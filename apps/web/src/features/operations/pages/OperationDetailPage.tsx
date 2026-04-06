@@ -57,11 +57,35 @@ export default function OperationDetailPage(): React.ReactElement {
   const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const model = React.useMemo(() => {
     try {
-      return buildOperationDetailViewModel({ detail });
+      return buildOperationDetailViewModel({ detail: safeDetail });
     } catch {
       return buildOperationDetailViewModel({});
     }
-  }, [detail]);
+  }, [safeDetail]);
+
+  const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
+  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
+
+  React.useEffect(() => {
+    if (!safeDetail) {
+      setHandoffItems([]);
+      return;
+    }
+    let alive = true;
+    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+      .then((rows) => {
+        if (!alive) return;
+        setHandoffItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHandoffItems([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [safeDetail, model.operationPlanId, operationPlanId]);
 
   React.useEffect(() => {
     let alive = true;
@@ -91,18 +115,18 @@ export default function OperationDetailPage(): React.ReactElement {
 
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
-  const fieldSource = (detail as any)?.field_id || (detail as any)?.field_name || model.fieldLabel;
-  const deviceSource = (detail as any)?.task?.device_id || (detail as any)?.device_id || model.execution.deviceId || model.deviceLabel;
+  const fieldSource = (safeDetail as any)?.field_id || (safeDetail as any)?.field_name || model.fieldLabel;
+  const deviceSource = (safeDetail as any)?.task?.device_id || (safeDetail as any)?.device_id || model.execution.deviceId || model.deviceLabel;
   const fieldLabel = mapFieldDisplayName(fieldSource, model.fieldLabel);
   const deviceLabel = mapDeviceDisplayName(deviceSource, model.deviceLabel);
 
-  const executionPlan = (detail as any)?.execution_plan ?? null;
-  const executionReady = Boolean((detail as any)?.execution_ready);
-  const executionTrace = (detail as any)?.execution_trace ?? {};
-  const executionContext = (detail as any)?.execution_context ?? {};
-  const valueAttribution = (detail as any)?.value_attribution_v1 ?? null;
-  const traceGap = (detail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
-  const acceptanceVerdict = String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase();
+  const executionPlan = (safeDetail as any)?.execution_plan ?? null;
+  const executionReady = Boolean((safeDetail as any)?.execution_ready);
+  const executionTrace = (safeDetail as any)?.execution_trace ?? {};
+  const executionContext = (safeDetail as any)?.execution_context ?? {};
+  const valueAttribution = (safeDetail as any)?.value_attribution_v1 ?? null;
+  const traceGap = (safeDetail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
+  const acceptanceVerdict = String((safeDetail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase();
   const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
 
   const runFromDetail = async (): Promise<void> => {
@@ -249,7 +273,7 @@ export default function OperationDetailPage(): React.ReactElement {
             </section>
           ) : null}
 
-          <OperationSkillTraceCard trace={(detail as any)?.skill_trace ?? null} />
+          <OperationSkillTraceCard trace={(safeDetail as any)?.skill_trace ?? null} />
 
           <section className="card" style={{ marginTop: 12 }}>
             <div className="sectionTitle">执行过程</div>
@@ -396,8 +420,8 @@ export default function OperationDetailPage(): React.ReactElement {
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.technicalRefs.approvalRequestId}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作业计划编号</span><strong>{model.technicalRefs.operationPlanId}</strong></div>
           <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行任务编号</span><strong>{model.technicalRefs.actTaskId}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((detail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((detail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
+          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
         </div>
       </section>
     </div>
