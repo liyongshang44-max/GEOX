@@ -39,6 +39,16 @@ function parseApiErrorCode(error: unknown): string {
   }
 }
 
+function parseApiFieldErrors(error: unknown): Array<{ field: string; code: string; message: string }> {
+  if (!(error instanceof ApiError) || !error.bodyText) return [];
+  try {
+    const payload = JSON.parse(error.bodyText);
+    return Array.isArray(payload?.field_errors) ? payload.field_errors : [];
+  } catch {
+    return [];
+  }
+}
+
 function getAssignmentFriendlyError(error: unknown, fallback: string): string {
   const errorCode = parseApiErrorCode(error);
   if (errorCode === "INVALID_STATUS_TRANSITION") {
@@ -61,6 +71,15 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
   const [operation, setOperation] = React.useState<OperationDetailResponse | null>(null);
   const [remark, setRemark] = React.useState<string>("");
   const [files, setFiles] = React.useState<File[]>([]);
+  const [photoCategoryByName, setPhotoCategoryByName] = React.useState<Record<string, "before" | "during" | "after" | "anomaly" | "other">>({});
+  const [exceptionType, setExceptionType] = React.useState<string>("NONE");
+  const [exceptionCode, setExceptionCode] = React.useState<string>("");
+  const [workerCount, setWorkerCount] = React.useState<number>(1);
+  const [fuelLiters, setFuelLiters] = React.useState<string>("");
+  const [electricKwh, setElectricKwh] = React.useState<string>("");
+  const [waterLiters, setWaterLiters] = React.useState<string>("");
+  const [chemicalMl, setChemicalMl] = React.useState<string>("");
+  const [fieldErrors, setFieldErrors] = React.useState<Array<{ field: string; code: string; message: string }>>([]);
 
   const reload = React.useCallback(async () => {
     if (!assignmentId) return;
@@ -127,23 +146,63 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
     setSubmitting(true);
     setNotice("");
     setError("");
+    setFieldErrors([]);
     const now = Date.now();
     try {
+      const evidenceMeta = files.map((f, idx) => {
+        const safeName = f.name.replace(/[^A-Za-z0-9._-]/g, "_");
+        return {
+          artifact_id: `artifact_${assignmentId}_${now}_${idx}`,
+          object_key: `tenant/${item.assignment_id}/assignments/${item.assignment_id}/evidence/${now}_${idx}_${safeName}`,
+          filename: f.name,
+          category: photoCategoryByName[f.name] ?? "other",
+          mime_type: f.type || undefined,
+          size_bytes: Number(f.size ?? 0),
+          captured_at_ts: now,
+        };
+      });
+      const toMaybeNumber = (v: string): number | undefined => {
+        const n = Number(v);
+        return Number.isFinite(n) ? n : undefined;
+      };
       await submitWorkAssignment(item.assignment_id, {
         execution_time: {
           start_ts: Number(trajectory?.start_ts ?? now - 10 * 60 * 1000),
           end_ts: now,
         },
+        labor: {
+          duration_minutes: Math.max(1, Math.round((now - Number(trajectory?.start_ts ?? now - 10 * 60 * 1000)) / 60000)),
+          worker_count: workerCount,
+        },
+        resource_usage: {
+          fuel_l: toMaybeNumber(fuelLiters),
+          electric_kwh: toMaybeNumber(electricKwh),
+          water_l: toMaybeNumber(waterLiters),
+          chemical_ml: toMaybeNumber(chemicalMl),
+        },
+        exception: {
+          type: exceptionType,
+          code: exceptionCode.trim() || undefined,
+          detail: remark.trim() || undefined,
+        },
+        location_summary: {
+          geohash: String(trajectory?.geohash ?? ""),
+          path_points: Array.isArray(trajectory?.points) ? trajectory.points.length : undefined,
+          distance_m: Number(trajectory?.distance_m ?? 0) || undefined,
+          remark: remark.trim() || undefined,
+        },
+        evidence_meta: evidenceMeta,
         observed_parameters: {
           remark,
-          uploaded_images: files.map((f) => f.name),
+          uploaded_images: evidenceMeta.map((x) => ({ filename: x.filename, object_key: x.object_key, artifact_id: x.artifact_id, category: x.category })),
         },
-        logs_refs: files.map((f) => ({ kind: "image", ref: f.name })),
+        logs_refs: evidenceMeta.map((x) => ({ kind: "artifact_object", ref: String(x.object_key) })),
         status: "executed",
       });
       setNotice("提交成功");
       await reload();
     } catch (err: any) {
+      setFieldErrors(parseApiFieldErrors(err));
       setError(getAssignmentFriendlyError(err, String(err?.message ?? "提交失败")));
     } finally {
       setSubmitting(false);
@@ -194,11 +253,63 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
           <input
             type="file"
             multiple
-            onChange={(e) => setFiles(Array.from(e.target.files || []))}
+            onChange={(e) => {
+              const next = Array.from(e.target.files || []);
+              setFiles(next);
+              setPhotoCategoryByName((prev) => {
+                const merged: Record<string, "before" | "during" | "after" | "anomaly" | "other"> = {};
+                for (const f of next) merged[f.name] = prev[f.name] ?? "other";
+                return merged;
+              });
+            }}
           />
         </div>
         <div className="muted" style={{ marginTop: 6 }}>
           已选择：{files.length ? files.map((f) => f.name).join("，") : "未选择"}
+        </div>
+        {files.map((file) => (
+          <div className="row" key={file.name} style={{ marginTop: 6 }}>
+            <span style={{ minWidth: 180 }}>{file.name}</span>
+            <select
+              className="input"
+              value={photoCategoryByName[file.name] ?? "other"}
+              onChange={(e) => setPhotoCategoryByName((prev) => ({ ...prev, [file.name]: e.target.value as "before" | "during" | "after" | "anomaly" | "other" }))}
+            >
+              <option value="before">施工前</option>
+              <option value="during">施工中</option>
+              <option value="after">施工后</option>
+              <option value="anomaly">异常照片</option>
+              <option value="other">其他</option>
+            </select>
+          </div>
+        ))}
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <label style={{ minWidth: 80 }}>异常类型</label>
+          <select className="input" value={exceptionType} onChange={(e) => setExceptionType(e.target.value)}>
+            <option value="NONE">无异常</option>
+            <option value="WEATHER">天气</option>
+            <option value="MACHINE">设备异常</option>
+            <option value="MATERIAL_SHORTAGE">耗材不足</option>
+            <option value="SAFETY">安全风险</option>
+            <option value="FIELD_BLOCKED">地块阻塞</option>
+            <option value="OTHER">其他</option>
+          </select>
+          <input
+            className="input"
+            placeholder="异常码（可选）"
+            value={exceptionCode}
+            onChange={(e) => setExceptionCode(e.target.value)}
+          />
+        </div>
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <label style={{ minWidth: 80 }}>人力/耗材</label>
+          <input className="input" type="number" min={1} value={workerCount} onChange={(e) => setWorkerCount(Math.max(1, Number(e.target.value || 1)))} placeholder="人数" />
+          <input className="input" type="number" min={0} value={fuelLiters} onChange={(e) => setFuelLiters(e.target.value)} placeholder="燃油(L)" />
+          <input className="input" type="number" min={0} value={electricKwh} onChange={(e) => setElectricKwh(e.target.value)} placeholder="电耗(kWh)" />
+          <input className="input" type="number" min={0} value={waterLiters} onChange={(e) => setWaterLiters(e.target.value)} placeholder="水耗(L)" />
+          <input className="input" type="number" min={0} value={chemicalMl} onChange={(e) => setChemicalMl(e.target.value)} placeholder="药剂(ml)" />
         </div>
 
         <div className="row" style={{ marginTop: 12, alignItems: "flex-start" }}>
@@ -222,6 +333,11 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         </div>
         {notice ? <div className="muted" style={{ marginTop: 8 }}>{notice}</div> : null}
         {error ? <div className="muted" style={{ marginTop: 8 }}>异常：{error}</div> : null}
+        {fieldErrors.length ? (
+          <div className="muted" style={{ marginTop: 8 }}>
+            字段错误：{fieldErrors.map((x) => `${x.field}(${x.code})`).join("；")}
+          </div>
+        ) : null}
       </section>
     </div>
   );
