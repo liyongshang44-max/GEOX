@@ -1,0 +1,115 @@
+.newAppShell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.newAppMain {
+  min-width: 0;
+}
+
+.newAppContent {
+  margin-top: var(--space-3);
+}
+
+.newSideNav {
+  position: sticky;
+  top: var(--space-5);
+  padding: var(--space-3);
+}
+
+.newSideNavBrand {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.newSideNavMark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.newSideNavName {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.newSideNavSub {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.newSideNavLinks {
+  display: grid;
+  gap: 4px;
+}
+
+.newSideNavLink {
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.newSideNavLink.active {
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: 600;
+}
+
+.newTopBar {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+}
+
+.newTopBarLeft {
+  min-width: 0;
+}
+
+.newTopBarEyebrow {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.newTopBarBreadcrumbArea {
+  margin-top: 4px;
+  min-height: 24px;
+}
+
+.newTopBarActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.newTopBarSearch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.newTopBarSearchLabel {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.newTopBarSearch input {
+  border: 0;
+  outline: none;
+  width: 160px;
+  background: transparent;
+}
