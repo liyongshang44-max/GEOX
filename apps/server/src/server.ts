@@ -242,6 +242,10 @@ const TENANT_HEADERS = [
   "x-project-id",
   "x-group-id",
 ] as const; // 浏览器侧租户三元组请求头（必须允许跨域）。
+const API_CONTRACT_HEADERS = [
+  "x-api-contract-version",
+  "x-api-contract-required",
+] as const; // 合约协商请求头（version 必需；required 用于强约束协商）。
 
 const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 }); // 初始化服务（限制 body）
 
@@ -327,15 +331,20 @@ app.register(fastifyStatic, {
 
 
 app.addHook("onRequest", async (req, reply) => {
+  const allowHeaders = [
+    "Content-Type",
+    "Authorization",
+    ...API_CONTRACT_HEADERS,
+    ...TENANT_HEADERS,
+  ].join(", ");
+  const exposeHeaders = ["Content-Type", "x-api-contract-version"].join(", ");
+
   reply.header("Access-Control-Allow-Origin", req.headers.origin ?? "*"); // 允许任意来源（开发态）。
   reply.header("Vary", "Origin");
   reply.header("Access-Control-Allow-Credentials", "true");
   reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  reply.header(
-    "Access-Control-Allow-Headers",
-    ["Content-Type", "Authorization", ...TENANT_HEADERS].join(", "),
-  );
-  reply.header("Access-Control-Expose-Headers", "Content-Type");
+  reply.header("Access-Control-Allow-Headers", allowHeaders);
+  reply.header("Access-Control-Expose-Headers", exposeHeaders);
 
   if (req.method === "OPTIONS") return reply.code(204).send(); // 浏览器预检请求直接返回。
 });

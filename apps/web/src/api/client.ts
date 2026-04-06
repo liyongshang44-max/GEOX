@@ -98,20 +98,29 @@ export async function apiRequestWithPolicy<T>(
 
   const runner = (async () => {
     try {
-      const baseHeaders = init?.body instanceof FormData
-        ? { ...(init?.headers ?? {}) }
-        : { "Content-Type": "application/json", ...(init?.headers ?? {}) };
+      const headers = new Headers(init?.headers ?? undefined);
+      if (!(init?.body instanceof FormData) && !headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+      if (!headers.has("x-api-contract-version")) {
+        headers.set("x-api-contract-version", API_CONTRACT_VERSION);
+      }
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+      if (tenant.tenant_id && !headers.has("x-tenant-id")) {
+        headers.set("x-tenant-id", tenant.tenant_id);
+      }
+      if (tenant.project_id && !headers.has("x-project-id")) {
+        headers.set("x-project-id", tenant.project_id);
+      }
+      if (tenant.group_id && !headers.has("x-group-id")) {
+        headers.set("x-group-id", tenant.group_id);
+      }
 
       const response = await fetch(finalUrl, {
         ...init,
-        headers: {
-          ...baseHeaders,
-          "x-api-contract-version": API_CONTRACT_VERSION,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(tenant.tenant_id ? { "x-tenant-id": tenant.tenant_id } : {}),
-          ...(tenant.project_id ? { "x-project-id": tenant.project_id } : {}),
-          ...(tenant.group_id ? { "x-group-id": tenant.group_id } : {}),
-        },
+        headers,
       });
 
       const text = await response.text();
