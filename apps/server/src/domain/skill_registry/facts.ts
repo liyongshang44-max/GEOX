@@ -7,7 +7,7 @@ const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as con
 const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as const;
 const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
 const RESULT_STATUS_VALUES = ["SUCCESS", "FAILED", "SKIPPED", "TIMEOUT"] as const;
-const TRIGGER_STAGE_VALUES = ["before_recommendation", "before_approval", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
+const TRIGGER_STAGE_VALUES = ["before_recommendation", "after_recommendation", "before_approval", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
 const DEVICE_TYPE_VALUES = ["PUMP", "DRONE", "SENSOR", "HUMAN", "UNKNOWN"] as const;
 const BINDING_STATUS_VALUES = ["ACTIVE", "DISABLED"] as const;
 
@@ -59,6 +59,7 @@ const SkillBindingPayloadSchema = TenantTripleSchema.extend({
 
 const SkillRunPayloadSchema = TenantTripleSchema.extend({
   run_id: z.string().min(1),
+  lifecycle_version: z.number().int().positive().default(2),
   skill_id: z.string().min(1),
   version: z.string().min(1),
   category: SkillCategorySchema,
@@ -130,8 +131,10 @@ const ROLLOUT_MODE_COMPAT: Record<string, SkillDefinitionFactPayload["rollout_mo
 const TRIGGER_STAGE_COMPAT: Record<string, SkillDefinitionFactPayload["trigger_stage"]> = {
   before_recommendation: "before_recommendation",
   BEFORE_RECOMMENDATION: "before_recommendation",
-  before_approval: "before_approval",
-  BEFORE_APPROVAL: "before_approval",
+  after_recommendation: "after_recommendation",
+  AFTER_RECOMMENDATION: "after_recommendation",
+  before_approval: "after_recommendation",
+  BEFORE_APPROVAL: "after_recommendation",
   before_dispatch: "before_dispatch",
   BEFORE_DISPATCH: "before_dispatch",
   before_acceptance: "before_acceptance",
@@ -237,10 +240,18 @@ export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<
   return { ...appended, payload };
 }
 
-export async function appendSkillRunFact(db: Pool | PoolClient, input: Omit<SkillRunFactPayload, "run_id"> & { run_id?: string }): Promise<{ fact_id: string; occurred_at: string; payload: SkillRunFactPayload }> {
+export async function appendSkillRunFact(
+  db: Pool | PoolClient,
+  input: Omit<SkillRunFactPayload, "run_id" | "lifecycle_version"> & { run_id?: string; lifecycle_version?: number }
+): Promise<{ fact_id: string; occurred_at: string; payload: SkillRunFactPayload }> {
+  const requestedStage = String(input.trigger_stage ?? "").trim().toLowerCase();
+  if (requestedStage === "before_approval") {
+    throw new Error("INVALID_TRIGGER_STAGE: before_approval is deprecated for skill_run_v1 writes; use after_recommendation");
+  }
   const payload = SkillRunPayloadSchema.parse({
     ...input,
     run_id: input.run_id ?? randomUUID(),
+    lifecycle_version: Number.isFinite(Number((input as any).lifecycle_version)) ? Number((input as any).lifecycle_version) : 2,
     category: normalizeCategory(input.category),
     status: normalizeSkillStatus(input.status),
     trigger_stage: normalizeTriggerStage(input.trigger_stage),

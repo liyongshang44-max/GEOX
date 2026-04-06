@@ -126,3 +126,27 @@ test('timeline includes human assignment + receipt + acceptance nodes', () => {
   assert.ok(types.includes('RECEIPT_SUBMITTED'));
   assert.ok(types.includes('ACCEPTANCE_GENERATED'));
 });
+
+test('skill trace maps legacy before_approval to after_recommendation', () => {
+  const out = projectOperationStateFromFacts([
+    fact('operation_plan_v1', { operation_plan_id: 'op_skill_1', act_task_id: 'task_skill_1' }, '2026-03-19T20:00:00.000Z', 'p_skill_1'),
+    fact('skill_run_v1', {
+      run_id: 'run_legacy',
+      operation_plan_id: 'op_skill_1',
+      trigger_stage: 'before_approval',
+      skill_id: 'agronomy_legacy',
+      version: 'v1',
+      result_status: 'SUCCESS'
+    }, '2026-03-19T20:01:00.000Z', 'sr_legacy'),
+    fact('skill_run_v1', {
+      run_id: 'run_new',
+      operation_plan_id: 'op_skill_1',
+      trigger_stage: 'after_recommendation',
+      skill_id: 'agronomy_new',
+      version: 'v2',
+      result_status: 'SUCCESS'
+    }, '2026-03-19T20:02:00.000Z', 'sr_new')
+  ]);
+  assert.equal(out[0].skill_trace.agronomy_skill.skill_id, 'agronomy_new');
+  assert.equal(out[0].skill_trace.agronomy_skill.run_id, 'run_new');
+});

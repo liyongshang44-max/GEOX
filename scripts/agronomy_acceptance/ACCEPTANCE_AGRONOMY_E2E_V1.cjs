@@ -176,6 +176,25 @@ function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
   assert.strictEqual(planReadJson2.item?.plan?.record_json?.payload?.status, 'SUCCEEDED', 'plan status should be SUCCEEDED after uplink');
   assert.strictEqual(String(planReadJson2.item?.plan?.record_json?.payload?.act_task_id || ''), String(actTaskId), 'plan should bind to act_task_id'); // Operation plan must bind the task id after approval.
 
+  const operationDetail = await fetchJson(`${base}/api/v1/operations/${encodeURIComponent(subJson.operation_plan_id)}/detail?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, {
+    method: 'GET', token
+  });
+  const operationDetailJson = requireOk(operationDetail, 'operation detail skill hook chain');
+  const skillTrace = operationDetailJson?.operation?.skill_trace ?? {};
+  assert.ok(skillTrace?.crop_skill?.run_id, 'missing recommendation hook run_id');
+  assert.ok(skillTrace?.agronomy_skill?.run_id, 'missing approval hook run_id');
+  assert.ok(skillTrace?.device_skill?.run_id, 'missing dispatch hook run_id');
+  assert.ok(skillTrace?.acceptance_skill?.run_id, 'missing acceptance hook run_id');
+  const hookResultStatuses = [
+    String(skillTrace?.crop_skill?.result_status ?? '').toUpperCase(),
+    String(skillTrace?.agronomy_skill?.result_status ?? '').toUpperCase(),
+    String(skillTrace?.device_skill?.result_status ?? '').toUpperCase(),
+    String(skillTrace?.acceptance_skill?.result_status ?? '').toUpperCase()
+  ];
+  hookResultStatuses.forEach((status, index) => {
+    assert.ok(['SUCCESS', 'FAILED'].includes(status), `unexpected hook result_status[${index}] = ${status}`);
+  });
+
   const plansList = await fetchJson(`${base}/api/v1/operations/plans?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&limit=5`, { // List recent operation plans.
     method: 'GET', token // Use authenticated GET request.
   });

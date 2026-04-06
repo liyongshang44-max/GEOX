@@ -30,6 +30,7 @@ type SkillRow = {
   operation_id: string | null;
   field_id: string | null;
   device_id: string | null;
+  lifecycle_version: number | null;
   payload_json: any;
   occurred_at: string;
   updated_at_ts_ms: number;
@@ -229,6 +230,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         device_id: row.device_id,
         bind_target: row.bind_target,
         duration_ms: row.payload_json?.duration_ms ?? null,
+        lifecycle_version: row.lifecycle_version ?? row.payload_json?.lifecycle_version ?? null,
         error_code: row.payload_json?.error_code ?? null,
         occurred_at: row.occurred_at,
       })),

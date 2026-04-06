@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS skill_registry_read_v1 (
   device_id text NULL,
   input_digest text NULL,
   output_digest text NULL,
+  lifecycle_version integer NULL,
   payload_json jsonb NOT NULL,
   occurred_at timestamptz NOT NULL,
   updated_at_ts_ms bigint NOT NULL
