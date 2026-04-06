@@ -56,3 +56,21 @@ test("dispatch strategy contract: tenant/project config can override strategy se
   assert.ok(out.explain.includes("load_balance"));
   assert.ok(!out.explain.includes("nearest_distance"));
 });
+
+test("dispatch strategy contract: executor performance can improve ranking", () => {
+  resetDispatchStrategyConfig();
+  setDispatchStrategyConfig([
+    { tenant_id: "tenant-kpi", project_id: "project-kpi", strategies: ["executor_performance", "load_balance"] },
+  ]);
+  const out = decideDispatchCandidates({
+    scope: { tenant_id: "tenant-kpi", project_id: "project-kpi" },
+    task: { act_task_id: "task-kpi", required_capabilities: ["spray"] },
+    executors: [
+      { executor_id: "high_quality", capabilities: ["spray"], current_load: 2, performance_kpi: { score: 28 } },
+      { executor_id: "low_quality", capabilities: ["spray"], current_load: 1, performance_kpi: { score: -8 } },
+    ],
+    sla: {},
+  });
+  assert.equal(out.candidates[0]?.executor_id, "high_quality");
+  assert.ok(out.explain.includes("executor_performance"));
+});

@@ -17,6 +17,13 @@ export type DispatchExecutorResource = {
   current_load: number;
   location?: { lat: number; lon: number } | null;
   status?: string | null;
+  performance_kpi?: {
+    avg_accept_duration_ms?: number | null;
+    on_time_rate?: number | null;
+    first_pass_rate?: number | null;
+    abnormal_recurrence_rate?: number | null;
+    score?: number | null;
+  } | null;
 };
 
 export type DispatchSlaPolicy = {
@@ -54,7 +61,7 @@ export type DispatchStrategyConfigEntry = {
   strategies: string[];
 };
 
-const DEFAULT_STRATEGY_NAMES = ["skill_match", "nearest_distance", "load_balance"];
+const DEFAULT_STRATEGY_NAMES = ["skill_match", "nearest_distance", "load_balance", "executor_performance"];
 
 const defaultDispatchStrategyConfig: DispatchStrategyConfigEntry[] = [
   { tenant_id: "*", project_id: "*", strategies: DEFAULT_STRATEGY_NAMES },
@@ -163,10 +170,40 @@ export const loadBalanceStrategy: DispatchDecisionStrategy = {
   },
 };
 
+export const executorPerformanceStrategy: DispatchDecisionStrategy = {
+  name: "executor_performance",
+  evaluate(input) {
+    const candidates = input.executors.map((executor) => {
+      const score = Number(executor.performance_kpi?.score ?? 0);
+      const normalized = Number.isFinite(score) ? Math.max(-15, Math.min(30, Math.round(score))) : 0;
+      const onTime = Number(executor.performance_kpi?.on_time_rate ?? 0);
+      const firstPass = Number(executor.performance_kpi?.first_pass_rate ?? 0);
+      const recurrence = Number(executor.performance_kpi?.abnormal_recurrence_rate ?? 0);
+      const acceptMs = Number(executor.performance_kpi?.avg_accept_duration_ms ?? 0);
+      return {
+        executor_id: executor.executor_id,
+        priority: normalized,
+        reasons: [
+          `executor_performance:score=${normalized}`,
+          `executor_performance:on_time=${Number.isFinite(onTime) ? onTime.toFixed(2) : "na"}`,
+          `executor_performance:first_pass=${Number.isFinite(firstPass) ? firstPass.toFixed(2) : "na"}`,
+          `executor_performance:recurrence=${Number.isFinite(recurrence) ? recurrence.toFixed(2) : "na"}`,
+          `executor_performance:accept_ms=${Number.isFinite(acceptMs) ? Math.round(acceptMs) : "na"}`,
+        ],
+      };
+    });
+    return {
+      candidates,
+      explain: "executor_performance ranked by KPI feedback loop",
+    };
+  },
+};
+
 const builtInStrategies: Record<string, DispatchDecisionStrategy> = {
   [skillMatchStrategy.name]: skillMatchStrategy,
   [nearestDistanceStrategy.name]: nearestDistanceStrategy,
   [loadBalanceStrategy.name]: loadBalanceStrategy,
+  [executorPerformanceStrategy.name]: executorPerformanceStrategy,
 };
 
 export function composeDispatchDecisionStrategies(strategies: DispatchDecisionStrategy[]): DispatchDecisionStrategy {

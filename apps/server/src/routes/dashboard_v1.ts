@@ -4,7 +4,11 @@ import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_aut
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
 import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine";
-import { projectManualExecutionQualityV1, type ManualExecutionQualityDimension } from "../projections/manual_execution_quality_v1";
+import {
+  projectManualExecutionQualityV1,
+  listManualExecutionQualityTaskDetailsV1,
+  type ManualExecutionQualityDimension
+} from "../projections/manual_execution_quality_v1";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -999,7 +1003,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const to_ts_ms = parseWindowEnd(q);
     if (to_ts_ms <= from_ts_ms) return badRequest(reply, "INVALID_TIME_WINDOW");
     const dimensionRaw = String(q.dimension ?? "team").toLowerCase();
-    const dimension: ManualExecutionQualityDimension = dimensionRaw === "executor" ? "executor" : "team";
+    const dimension: ManualExecutionQualityDimension = dimensionRaw === "executor" ? "executor" : (dimensionRaw === "plot" || dimensionRaw === "field" ? "plot" : "team");
     const field_id = typeof q.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
     const action_type = typeof q.action_type === "string" && q.action_type.trim() ? q.action_type.trim().toUpperCase() : null;
 
@@ -1013,6 +1017,49 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       from_ts_ms,
       to_ts_ms,
     });
-    return reply.send({ ok: true, ...snapshot });
+    const kpi = {
+      avg_accept_duration_ms: snapshot.items.length ? Math.round(snapshot.items.reduce((sum, x) => sum + Number(x.avg_accept_duration_ms ?? 0), 0) / snapshot.items.length) : null,
+      on_time_rate: snapshot.items.length ? Number((snapshot.items.reduce((sum, x) => sum + Number(x.on_time_rate ?? 0), 0) / snapshot.items.length).toFixed(4)) : null,
+      first_pass_rate: snapshot.items.length ? Number((snapshot.items.reduce((sum, x) => sum + Number(x.first_pass_rate ?? 0), 0) / snapshot.items.length).toFixed(4)) : null,
+      abnormal_recurrence_rate: snapshot.items.length ? Number((snapshot.items.reduce((sum, x) => sum + Number(x.abnormal_recurrence_rate ?? 0), 0) / snapshot.items.length).toFixed(4)) : null,
+    };
+    return reply.send({
+      ok: true,
+      ...snapshot,
+      kpi,
+      analysis_page: {
+        title: "人工执行 KPI 分析",
+        dimensions: ["executor", "team", "plot"],
+        drilldown_endpoint: "/api/v1/dashboard/manual-execution-quality/tasks",
+      }
+    });
+  });
+
+  app.get("/api/v1/dashboard/manual-execution-quality/tasks", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const from_ts_ms = parseWindowStart(q);
+    const to_ts_ms = parseWindowEnd(q);
+    if (to_ts_ms <= from_ts_ms) return badRequest(reply, "INVALID_TIME_WINDOW");
+    const dimensionRaw = String(q.dimension ?? "team").toLowerCase();
+    const dimension: ManualExecutionQualityDimension = dimensionRaw === "executor" ? "executor" : (dimensionRaw === "plot" || dimensionRaw === "field" ? "plot" : "team");
+    const dimension_id = String(q.dimension_id ?? "").trim();
+    if (!dimension_id) return badRequest(reply, "MISSING_DIMENSION_ID");
+    const field_id = typeof q.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
+    const action_type = typeof q.action_type === "string" && q.action_type.trim() ? q.action_type.trim().toUpperCase() : null;
+    const details = await listManualExecutionQualityTaskDetailsV1(pool, {
+      tenant_id: String(auth.tenant_id ?? ""),
+      project_id: String(auth.project_id ?? ""),
+      group_id: String(auth.group_id ?? ""),
+      dimension,
+      dimension_id,
+      field_id,
+      action_type,
+      from_ts_ms,
+      to_ts_ms,
+      limit: parseLimit(q, 50, 300),
+    });
+    return reply.send({ ok: true, ...details });
   });
 } // End registration.
