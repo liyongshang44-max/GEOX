@@ -1,11 +1,9 @@
 import React from "react";
-import { Routes, Route, NavLink, useLocation } from "react-router-dom";
-import { fetchAuthMe, type AuthMe } from "../api";
-import { persistExpertMode, readExpertModeFromStorage } from "../lib/uiPrefs";
+import { Routes, Route, useLocation } from "react-router-dom";
+import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
-import AppShell from "../components/layout/AppShell";
-import AppNav from "../components/layout/AppNav";
-import AppBreadcrumb, { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
+import AppShell from "./AppShell";
+import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import RouteErrorBoundary from "./errors/RouteErrorBoundary";
 
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
@@ -135,34 +133,18 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
   return { label: "返回总览", to: "/dashboard" };
 }
 
-function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: () => void }): React.ReactElement {
+function Shell({ expert }: { expert: boolean }): React.ReactElement {
   const location = useLocation();
   const pathname = location.pathname;
-  const [session, setSession] = React.useState<AuthMe | null>(null);
-
-  React.useEffect(() => {
-    fetchAuthMe().then(setSession).catch(() => setSession(null));
-  }, [location.pathname]);
 
   return (
     <AppShell
-      nav={<AppNav expert={expert} />}
-      header={(
-        <header className="consoleHeader card">
-          <div>
-            <div className="eyebrow">GEOX / 远程农业运营控制台</div>
-            <AppBreadcrumb items={breadcrumbsForPath(pathname)} />
-            <h1 className="pageTitle">{titleForPath(pathname)}</h1>
-            <div className="pageLead">{leadForPath(pathname)}</div>
-          </div>
-          <div className="headerActions">
-            <NavLink className="btn primary" to={primaryActionForPath(pathname).to}>{primaryActionForPath(pathname).label}</NavLink>
-            <div className="pill">{session?.role === "operator" ? "操作员" : session?.role === "admin" ? "管理员" : "未识别会话"}</div>
-            {expert ? <NavLink className="btn" to="/dev">研发工具</NavLink> : null}
-            <button className="btn" onClick={onToggleExpert}>{expert ? "研发模式：开启" : "研发模式：关闭"}</button>
-          </div>
-        </header>
-      )}
+      topBar={{
+        breadcrumbs: breadcrumbsForPath(pathname),
+        title: titleForPath(pathname),
+        lead: leadForPath(pathname),
+        primaryAction: primaryActionForPath(pathname),
+      }}
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
@@ -211,19 +193,12 @@ function Shell({ expert, onToggleExpert }: { expert: boolean; onToggleExpert: ()
 }
 
 export default function App(): React.ReactElement {
-  const [expert, setExpert] = React.useState<boolean>(() => readExpertModeFromStorage());
+  const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
 
   return (
     <LocaleProvider>
       <div className="app appReset">
-        <Shell
-          expert={expert}
-          onToggleExpert={() => {
-            const next = !expert;
-            setExpert(next);
-            persistExpertMode(next);
-          }}
-        />
+        <Shell expert={expert} />
       </div>
     </LocaleProvider>
   );
