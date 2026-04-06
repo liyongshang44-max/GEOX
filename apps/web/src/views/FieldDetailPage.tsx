@@ -73,6 +73,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [deviceOptions, setDeviceOptions] = React.useState<Array<{ device_id: string; connection_status?: string; field_id?: string; last_telemetry_ts_ms?: number | null }>>([]);
   const [bindDeviceId, setBindDeviceId] = React.useState("");
   const [bindMessage, setBindMessage] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState<"overview" | "realtime" | "trajectory" | "config">("overview");
 
   React.useEffect(() => {
     let mounted = true;
@@ -184,6 +185,12 @@ export default function FieldDetailPage(): React.ReactElement {
         {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制信息</div> : null}
       </section>
       <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
+        <div className="toolbarFilters" style={{ marginBottom: 10 }}>
+          <button className={`btn ${activeTab === "overview" ? "primary" : ""}`} onClick={() => setActiveTab("overview")}>概览</button>
+          <button className={`btn ${activeTab === "realtime" ? "primary" : ""}`} onClick={() => setActiveTab("realtime")}>实时状态</button>
+          <button className={`btn ${activeTab === "trajectory" ? "primary" : ""}`} onClick={() => setActiveTab("trajectory")}>作业与轨迹</button>
+          <button className={`btn ${activeTab === "config" ? "primary" : ""}`} onClick={() => setActiveTab("config")}>经营配置</button>
+        </div>
         <div className="sectionTitle">首次数据可见性检查</div>
         <div className="decisionList" style={{ marginTop: 8 }}>
           {checklist.map((item) => (
@@ -194,6 +201,7 @@ export default function FieldDetailPage(): React.ReactElement {
           ))}
         </div>
       </section>
+      {activeTab === "overview" ? (
       <section className="card detailHeroCard fieldBattleSection" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">当前状态区</div>
         <div className="detailSectionLead">先看当前经营是否完成初始化，再确认设备、遥测与执行状态。</div>
@@ -216,13 +224,17 @@ export default function FieldDetailPage(): React.ReactElement {
           </div>
         ) : null}
       </section>
+      ) : null}
       {!hasBoundDevice ? (
+      activeTab === "config" ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
           <div className="sectionTitle">接入并绑定设备</div>
           <div className="detailSectionLead">当前田块还没有绑定设备，建议先完成接入与绑定。</div>
           <div style={{ marginTop: 8 }}><Link className="btn" to="/devices">去设备中心绑定</Link></div>
         </section>
+      ) : null
       ) : null}
+      {activeTab === "overview" ? (
       <section className="card detailHeroCard fieldBattleSection" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">当前风险与建议区</div>
         <div className="detailSectionLead">聚焦这块田当前最需要关注的风险，以及系统建议的下一步动作。</div>
@@ -253,7 +265,9 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to="/operations">转为作业</Link>
         </div>
       </section>
+      ) : null}
       {hasBoundDevice && !hasTelemetry ? (
+        activeTab === "realtime" ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
           <div className="sectionTitle">等待首条数据</div>
           <div className="detailSectionLead">设备已绑定，但还未收到首条遥测。可先检查设备在线状态与接入日志。</div>
@@ -262,8 +276,10 @@ export default function FieldDetailPage(): React.ReactElement {
             <Link className="btn" to="/devices/onboarding">查看接入说明</Link>
           </div>
         </section>
+        ) : null
       ) : null}
       {hasBoundDevice && !hasOnlineDevice ? (
+        activeTab === "realtime" ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
           <div className="sectionTitle">设备当前离线</div>
           <div className="detailSectionLead">系统暂时无法获取最新状态，建议先检查设备在线情况或等待恢复连接。</div>
@@ -272,8 +288,10 @@ export default function FieldDetailPage(): React.ReactElement {
             <Link className="btn" to={`/fields/${encodeURIComponent(fieldId)}`}>返回田块详情</Link>
           </div>
         </section>
+        ) : null
       ) : null}
 
+      {activeTab === "config" ? (
       <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">从田块绑定设备</div>
         <div className="sectionDesc">支持从田块详情直接完成设备绑定；若设备离线，仍允许绑定并提示先校验在线状态。</div>
@@ -312,9 +330,11 @@ export default function FieldDetailPage(): React.ReactElement {
         </div>
         {bindMessage ? <div className="metaText" style={{ marginTop: 8 }}>{bindMessage}</div> : null}
       </section>
+      ) : null}
 
       {error ? <ErrorState title="田块详情暂不可用" message={error} technical={technical || undefined} onRetry={() => void refresh()} /> : null}
 
+      {activeTab === "realtime" ? (
       <section className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
@@ -348,7 +368,9 @@ export default function FieldDetailPage(): React.ReactElement {
           {model?.latestEvidence?.href ? <Link to={model.latestEvidence.href} style={{ textDecoration: "none", color: "inherit" }}><ReceiptEvidenceCard data={model.latestEvidence} /></Link> : (model?.latestEvidence ? <ReceiptEvidenceCard data={model.latestEvidence} /> : <div className="decisionItemStatic">暂无执行证据</div>)}
         </section>
       </section>
+      ) : null}
 
+      {activeTab === "trajectory" ? (
       <section className="card detailHeroCard">
         <div className="demoCardTopRow">
           <div>
@@ -377,7 +399,9 @@ export default function FieldDetailPage(): React.ReactElement {
           </>
         )}
       </section>
+      ) : null}
 
+      {activeTab === "trajectory" ? (
       <section className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
@@ -412,6 +436,8 @@ export default function FieldDetailPage(): React.ReactElement {
           ) : <div className="decisionItemStatic">点击地图中的对象后，这里会展示它对应的业务含义。</div>}
         </section>
       </section>
+      ) : null}
+      {activeTab === "config" ? (
       <section className="card detailHeroCard fieldBattleSection">
         <div className="sectionTitle">相关方案与设备区</div>
         <div className="detailSectionLead">围绕当前田块，集中查看经营方案与设备连接关系。</div>
@@ -427,6 +453,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to="/devices">查看设备中心</Link>
         </div>
       </section>
+      ) : null}
     </div>
   );
 }
