@@ -4,6 +4,7 @@ import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_aut
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
 import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine";
+import { projectManualExecutionQualityV1, type ManualExecutionQualityDimension } from "../projections/manual_execution_quality_v1";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -966,5 +967,30 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
 
     const items = [...highItems, ...mediumItems, ...lowItems].slice(0, limit);
     return reply.send({ ok: true, items });
+  });
+
+  app.get("/api/v1/dashboard/manual-execution-quality", async (req, reply) => { // Manual execution quality analysis with auditable projection snapshot.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const from_ts_ms = parseWindowStart(q);
+    const to_ts_ms = parseWindowEnd(q);
+    if (to_ts_ms <= from_ts_ms) return badRequest(reply, "INVALID_TIME_WINDOW");
+    const dimensionRaw = String(q.dimension ?? "team").toLowerCase();
+    const dimension: ManualExecutionQualityDimension = dimensionRaw === "executor" ? "executor" : "team";
+    const field_id = typeof q.field_id === "string" && q.field_id.trim() ? q.field_id.trim() : null;
+    const action_type = typeof q.action_type === "string" && q.action_type.trim() ? q.action_type.trim().toUpperCase() : null;
+
+    const snapshot = await projectManualExecutionQualityV1(pool, {
+      tenant_id: String(auth.tenant_id ?? ""),
+      project_id: String(auth.project_id ?? ""),
+      group_id: String(auth.group_id ?? ""),
+      dimension,
+      field_id,
+      action_type,
+      from_ts_ms,
+      to_ts_ms,
+    });
+    return reply.send({ ok: true, ...snapshot });
   });
 } // End registration.

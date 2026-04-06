@@ -58,6 +58,42 @@ export type DashboardAssignmentItem = {
   status: "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
   assigned_at: string;
 };
+export type ManualExecutionQualityItem = {
+  dimension: "team" | "executor";
+  dimension_id: string;
+  dimension_name: string;
+  total_assignments: number;
+  submitted_count: number;
+  on_time_count: number;
+  on_time_rate: number | null;
+  first_pass_count: number;
+  first_pass_rate: number | null;
+  receipt_complete_count: number;
+  receipt_completeness_rate: number | null;
+  abnormal_count: number;
+  closed_loop_count: number;
+  avg_abnormal_closed_loop_ms: number | null;
+  overdue_consecutive_streak: number;
+  missing_receipt_rate: number | null;
+  alerts: string[];
+};
+export type ManualExecutionQualityResponse = {
+  ok?: boolean;
+  generated_at_ms: number;
+  query: {
+    dimension: "team" | "executor";
+    field_id?: string | null;
+    action_type?: string | null;
+    from_ts_ms: number;
+    to_ts_ms: number;
+  };
+  threshold: {
+    overdue_streak_n: number;
+    missing_receipt_rate: number;
+  };
+  items: ManualExecutionQualityItem[];
+  alerts: Array<{ level: "WARN" | "CRITICAL"; dimension: "team" | "executor"; dimension_id: string; message: string }>;
+};
 
 export type DashboardOverview = {
   window: { from_ts_ms: number; to_ts_ms: number };
@@ -261,6 +297,26 @@ export async function fetchDashboardAssignments(limit = 100): Promise<DashboardA
   );
   const list = res?.items ?? [];
   return Array.isArray(list) ? list : [];
+}
+
+export async function fetchManualExecutionQuality(params?: {
+  dimension?: "team" | "executor";
+  field_id?: string;
+  action_type?: string;
+  from_ts_ms?: number;
+  to_ts_ms?: number;
+}): Promise<ManualExecutionQualityResponse> {
+  const res = await safe(
+    apiRequest<ManualExecutionQualityResponse>(withQuery("/api/v1/dashboard/manual-execution-quality", params)),
+    {
+      generated_at_ms: Date.now(),
+      query: { dimension: params?.dimension ?? "team", from_ts_ms: Number(params?.from_ts_ms ?? 0), to_ts_ms: Number(params?.to_ts_ms ?? Date.now()) },
+      threshold: { overdue_streak_n: 3, missing_receipt_rate: 0.2 },
+      items: [],
+      alerts: [],
+    } as ManualExecutionQualityResponse,
+  );
+  return res;
 }
 
 export async function getOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{
