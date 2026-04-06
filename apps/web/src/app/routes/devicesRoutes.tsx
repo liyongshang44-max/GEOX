@@ -4,7 +4,7 @@ import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
 const DevicesPage = React.lazy(() => import("../../features/devices/pages/DevicesPage"));
 const DeviceDetailPage = React.lazy(() => import("../../features/devices/pages/DeviceDetailPage"));
-const DeviceOnboardingPage = React.lazy(() => import("../../views/DeviceOnboardingPage"));
+const DeviceOnboardingPage = React.lazy(() => import("../../features/devices/pages/DeviceOnboardingPage"));
 
 export function renderDevicesRoutes(): React.ReactElement[] {
   return [

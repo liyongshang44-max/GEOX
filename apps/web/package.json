@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0 --port 5173",
     "build": "vite build --config vite.config.ts",
-    "typecheck": "pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json"
+    "typecheck": "pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json",
+    "lint": "pnpm run lint:views-boundary --dir apps/web",
+    "lint:views-boundary": "node ./scripts/check-views-boundary.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",

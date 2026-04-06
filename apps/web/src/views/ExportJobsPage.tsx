@@ -1,3 +1,1 @@
-import EvidenceCenterPage from "./EvidenceCenterPage";
-
-export default EvidenceCenterPage;
+export { default } from "../features/evidence/pages/ExportJobsPage";

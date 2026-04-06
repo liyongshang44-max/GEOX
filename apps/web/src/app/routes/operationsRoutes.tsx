@@ -4,12 +4,12 @@ import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
 const OperationsPage = React.lazy(() => import("../../features/operations/pages/OperationsPage"));
 const OperationDetailPage = React.lazy(() => import("../../features/operations/pages/OperationDetailPage"));
-const HumanAssignmentsPage = React.lazy(() => import("../../views/HumanAssignmentsPage"));
-const HumanAssignmentDetailPage = React.lazy(() => import("../../views/HumanAssignmentDetailPage"));
-const DispatchWorkbenchPage = React.lazy(() => import("../../views/DispatchWorkbenchPage"));
-const AlertsPage = React.lazy(() => import("../../views/AlertsPage"));
-const ManualExecutionAnalysisPage = React.lazy(() => import("../../views/ManualExecutionAnalysisPage"));
-const HumanOpsAnalyticsPage = React.lazy(() => import("../../views/HumanOpsAnalyticsPage"));
+const HumanAssignmentsPage = React.lazy(() => import("../../features/operations/pages/HumanAssignmentsPage"));
+const HumanAssignmentDetailPage = React.lazy(() => import("../../features/operations/pages/HumanAssignmentDetailPage"));
+const DispatchWorkbenchPage = React.lazy(() => import("../../features/operations/pages/DispatchWorkbenchPage"));
+const AlertsPage = React.lazy(() => import("../../features/operations/pages/AlertsPage"));
+const ManualExecutionAnalysisPage = React.lazy(() => import("../../features/operations/pages/ManualExecutionAnalysisPage"));
+const HumanOpsAnalyticsPage = React.lazy(() => import("../../features/operations/pages/HumanOpsAnalyticsPage"));
 
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [
