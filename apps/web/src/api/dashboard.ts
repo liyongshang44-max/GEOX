@@ -68,10 +68,11 @@ export type DashboardAssignmentItem = {
   assigned_at: string;
 };
 export type ManualExecutionQualityItem = {
-  dimension: "team" | "executor";
+  dimension: "team" | "executor" | "plot";
   dimension_id: string;
   dimension_name: string;
   total_assignments: number;
+  avg_accept_duration_ms: number | null;
   submitted_count: number;
   on_time_count: number;
   on_time_rate: number | null;
@@ -84,13 +85,14 @@ export type ManualExecutionQualityItem = {
   avg_abnormal_closed_loop_ms: number | null;
   overdue_consecutive_streak: number;
   missing_receipt_rate: number | null;
+  abnormal_recurrence_rate: number | null;
   alerts: string[];
 };
 export type ManualExecutionQualityResponse = {
   ok?: boolean;
   generated_at_ms: number;
   query: {
-    dimension: "team" | "executor";
+    dimension: "team" | "executor" | "plot";
     field_id?: string | null;
     action_type?: string | null;
     from_ts_ms: number;
@@ -101,7 +103,23 @@ export type ManualExecutionQualityResponse = {
     missing_receipt_rate: number;
   };
   items: ManualExecutionQualityItem[];
-  alerts: Array<{ level: "WARN" | "CRITICAL"; dimension: "team" | "executor"; dimension_id: string; message: string }>;
+  alerts: Array<{ level: "WARN" | "CRITICAL"; dimension: "team" | "executor" | "plot"; dimension_id: string; message: string }>;
+};
+export type ManualExecutionTaskDetail = {
+  assignment_id: string;
+  act_task_id: string;
+  executor_id: string;
+  team_id: string | null;
+  field_id: string | null;
+  action_type: string | null;
+  status: string;
+  assigned_at_ms: number | null;
+  accepted_at_ms: number | null;
+  submitted_at_ms: number | null;
+  accept_duration_ms: number | null;
+  on_time: boolean;
+  first_pass: boolean;
+  abnormal: boolean;
 };
 
 export type DashboardOverview = {
@@ -309,7 +327,7 @@ export async function fetchDashboardAssignments(limit = 100): Promise<DashboardA
 }
 
 export async function fetchManualExecutionQuality(params?: {
-  dimension?: "team" | "executor";
+  dimension?: "team" | "executor" | "plot";
   field_id?: string;
   action_type?: string;
   from_ts_ms?: number;
@@ -326,6 +344,29 @@ export async function fetchManualExecutionQuality(params?: {
     } as ManualExecutionQualityResponse,
   );
   return res;
+}
+
+export async function fetchManualExecutionQualityTasks(params: {
+  dimension: "team" | "executor" | "plot";
+  dimension_id: string;
+  field_id?: string;
+  action_type?: string;
+  from_ts_ms?: number;
+  to_ts_ms?: number;
+  limit?: number;
+}): Promise<{ generated_at_ms: number; dimension: "team" | "executor" | "plot"; dimension_id: string; items: ManualExecutionTaskDetail[] }> {
+  const res = await safe(
+    apiRequest<{ generated_at_ms: number; dimension: "team" | "executor" | "plot"; dimension_id: string; items?: ManualExecutionTaskDetail[] }>(
+      withQuery("/api/v1/dashboard/manual-execution-quality/tasks", params)
+    ),
+    { generated_at_ms: Date.now(), dimension: params.dimension, dimension_id: params.dimension_id, items: [] as ManualExecutionTaskDetail[] }
+  );
+  return {
+    generated_at_ms: Number(res.generated_at_ms ?? Date.now()),
+    dimension: res.dimension,
+    dimension_id: String(res.dimension_id ?? params.dimension_id),
+    items: Array.isArray(res.items) ? res.items : [],
+  };
 }
 
 export async function getOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{

@@ -72,7 +72,11 @@ async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Pro
          h.capabilities,
          h.status,
          h.updated_ts_ms,
-         COALESCE(active.active_count, 0) AS active_load
+         COALESCE(active.active_count, 0) AS active_load,
+         kpi.avg_accept_duration_ms,
+         kpi.on_time_rate,
+         kpi.first_pass_rate,
+         kpi.abnormal_recurrence_rate
        FROM human_executor_index_v1 h
        LEFT JOIN (
          SELECT executor_id, COUNT(*)::int AS active_count
@@ -81,17 +85,42 @@ async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Pro
            AND status IN ('ASSIGNED','ACCEPTED','ARRIVED')
          GROUP BY executor_id
        ) active ON active.executor_id = h.executor_id
+       LEFT JOIN LATERAL (
+         SELECT avg_accept_duration_ms, on_time_rate, first_pass_rate, abnormal_recurrence_rate
+         FROM manual_execution_quality_projection_v1 m
+         WHERE m.tenant_id = h.tenant_id
+           AND m.project_id = $2
+           AND m.group_id = $3
+           AND m.dimension = 'executor'
+           AND m.dimension_id = h.executor_id
+         ORDER BY m.updated_ts_ms DESC
+         LIMIT 1
+       ) kpi ON TRUE
        WHERE h.tenant_id = $1
          AND h.status = 'ACTIVE'
        ORDER BY h.updated_ts_ms DESC, h.executor_id ASC
        LIMIT 500`,
-      [tenant.tenant_id]
+      [tenant.tenant_id, tenant.project_id, tenant.group_id]
     );
     return (q.rows ?? []).map((row: any) => ({
       executor_id: String(row.executor_id ?? ""),
       capabilities: normalizeCapabilities(parseJsonMaybe(row.capabilities)),
       current_load: Number(row.active_load ?? 0),
       status: String(row.status ?? "ACTIVE"),
+      performance_kpi: {
+        avg_accept_duration_ms: Number.isFinite(Number(row.avg_accept_duration_ms)) ? Number(row.avg_accept_duration_ms) : null,
+        on_time_rate: Number.isFinite(Number(row.on_time_rate)) ? Number(row.on_time_rate) : null,
+        first_pass_rate: Number.isFinite(Number(row.first_pass_rate)) ? Number(row.first_pass_rate) : null,
+        abnormal_recurrence_rate: Number.isFinite(Number(row.abnormal_recurrence_rate)) ? Number(row.abnormal_recurrence_rate) : null,
+        score: (() => {
+          const onTime = Number(row.on_time_rate ?? 0);
+          const firstPass = Number(row.first_pass_rate ?? 0);
+          const recurrence = Number(row.abnormal_recurrence_rate ?? 0);
+          const acceptMs = Number(row.avg_accept_duration_ms ?? 0);
+          const acceptScore = Number.isFinite(acceptMs) && acceptMs > 0 ? Math.max(0, 1 - Math.min(acceptMs, 3_600_000) / 3_600_000) : 0;
+          return Number((((onTime * 0.4) + (firstPass * 0.3) + (acceptScore * 0.2) + ((1 - recurrence) * 0.1)) * 30).toFixed(2));
+        })(),
+      },
       location: null
     })).filter((row) => row.executor_id);
   } catch {

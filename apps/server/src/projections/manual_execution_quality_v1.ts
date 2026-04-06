@@ -3,7 +3,7 @@ import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
 
-export type ManualExecutionQualityDimension = "team" | "executor";
+export type ManualExecutionQualityDimension = "team" | "executor" | "plot";
 
 export type ManualExecutionQualityQuery = {
   tenant_id: string;
@@ -21,6 +21,7 @@ export type ManualExecutionQualityItem = {
   dimension_id: string;
   dimension_name: string;
   total_assignments: number;
+  avg_accept_duration_ms: number | null;
   submitted_count: number;
   on_time_count: number;
   on_time_rate: number | null;
@@ -33,6 +34,7 @@ export type ManualExecutionQualityItem = {
   avg_abnormal_closed_loop_ms: number | null;
   overdue_consecutive_streak: number;
   missing_receipt_rate: number | null;
+  abnormal_recurrence_rate: number | null;
   alerts: string[];
 };
 
@@ -45,6 +47,23 @@ export type ManualExecutionQualitySnapshot = {
   };
   items: ManualExecutionQualityItem[];
   alerts: Array<{ level: "WARN" | "CRITICAL"; dimension: ManualExecutionQualityDimension; dimension_id: string; message: string }>;
+};
+
+export type ManualExecutionTaskDetail = {
+  assignment_id: string;
+  act_task_id: string;
+  executor_id: string;
+  team_id: string | null;
+  field_id: string | null;
+  action_type: string | null;
+  status: string;
+  assigned_at_ms: number | null;
+  accepted_at_ms: number | null;
+  submitted_at_ms: number | null;
+  accept_duration_ms: number | null;
+  on_time: boolean;
+  first_pass: boolean;
+  abnormal: boolean;
 };
 
 const DEFAULT_THRESHOLD = {
@@ -96,6 +115,7 @@ export async function ensureManualExecutionQualityProjectionV1(db: DbConn): Prom
           from_ts_ms BIGINT NOT NULL,
           to_ts_ms BIGINT NOT NULL,
           total_assignments BIGINT NOT NULL,
+          avg_accept_duration_ms BIGINT NULL,
           submitted_count BIGINT NOT NULL,
           on_time_count BIGINT NOT NULL,
           on_time_rate DOUBLE PRECISION NULL,
@@ -108,6 +128,7 @@ export async function ensureManualExecutionQualityProjectionV1(db: DbConn): Prom
           avg_abnormal_closed_loop_ms BIGINT NULL,
           overdue_consecutive_streak INTEGER NOT NULL,
           missing_receipt_rate DOUBLE PRECISION NULL,
+          abnormal_recurrence_rate DOUBLE PRECISION NULL,
           alerts JSONB NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms BIGINT NOT NULL,
           PRIMARY KEY (tenant_id, project_id, group_id, dimension, dimension_id, from_ts_ms, to_ts_ms, field_id, action_type)
@@ -214,12 +235,14 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
   ]);
 
   const submitAtByAssignment = new Map<string, number>();
+  const acceptedAtByAssignment = new Map<string, number>();
   const abnormalAtByAssignment = new Map<string, number>();
   for (const row of auditQ.rows ?? []) {
     const assignmentId = String(row.assignment_id ?? "");
     const status = String(row.status ?? "").toUpperCase();
     const occurredMs = toMs(row.occurred_at);
     if (!assignmentId || !occurredMs) continue;
+    if (status === "ACCEPTED" && !acceptedAtByAssignment.has(assignmentId)) acceptedAtByAssignment.set(assignmentId, occurredMs);
     if (status === "SUBMITTED" && !submitAtByAssignment.has(assignmentId)) submitAtByAssignment.set(assignmentId, occurredMs);
     if ((status === "EXPIRED" || status === "CANCELLED") && !abnormalAtByAssignment.has(assignmentId)) abnormalAtByAssignment.set(assignmentId, occurredMs);
   }
@@ -233,11 +256,25 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
   const taskAssignCount = new Map<string, number>();
   for (const row of taskAssignmentCountQ.rows ?? []) taskAssignCount.set(String(row.act_task_id ?? ""), Number(row.assignment_count ?? 0));
 
-  const groups = new Map<string, { item: ManualExecutionQualityItem; overdueFlags: Array<{ ts: number; overdue: boolean }> }>();
+  const groups = new Map<string, {
+    item: ManualExecutionQualityItem;
+    overdueFlags: Array<{ ts: number; overdue: boolean }>;
+    acceptDurationSum: number;
+    acceptDurationCount: number;
+    abnormalEventKeys: string[];
+  }>();
   const now = Date.now();
   for (const assignment of assignments) {
-    const dimensionId = query.dimension === "team" ? assignment.team_id : assignment.executor_id;
-    const dimensionName = query.dimension === "team" ? assignment.team_id : assignment.executor_name;
+    const dimensionId = query.dimension === "team"
+      ? assignment.team_id
+      : query.dimension === "plot"
+        ? (assignment.field_id ?? "UNASSIGNED_PLOT")
+        : assignment.executor_id;
+    const dimensionName = query.dimension === "team"
+      ? assignment.team_id
+      : query.dimension === "plot"
+        ? (assignment.field_id ?? "未绑定地块")
+        : assignment.executor_name;
     const key = `${query.dimension}:${dimensionId}`;
     if (!groups.has(key)) {
       groups.set(key, {
@@ -246,6 +283,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
           dimension_id: dimensionId,
           dimension_name: dimensionName,
           total_assignments: 0,
+          avg_accept_duration_ms: null,
           submitted_count: 0,
           on_time_count: 0,
           on_time_rate: null,
@@ -258,9 +296,13 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
           avg_abnormal_closed_loop_ms: null,
           overdue_consecutive_streak: 0,
           missing_receipt_rate: null,
+          abnormal_recurrence_rate: null,
           alerts: [],
         },
         overdueFlags: [],
+        acceptDurationSum: 0,
+        acceptDurationCount: 0,
+        abnormalEventKeys: [],
       });
     }
     const holder = groups.get(key)!;
@@ -268,8 +310,13 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
     item.total_assignments += 1;
 
     const submitMs = submitAtByAssignment.get(assignment.assignment_id) ?? null;
+    const acceptMs = acceptedAtByAssignment.get(assignment.assignment_id) ?? null;
     const isSubmitted = assignment.status === "SUBMITTED" || !!submitMs;
     if (isSubmitted) item.submitted_count += 1;
+    if (assignment.assigned_at_ms && acceptMs && acceptMs >= assignment.assigned_at_ms) {
+      holder.acceptDurationSum += (acceptMs - assignment.assigned_at_ms);
+      holder.acceptDurationCount += 1;
+    }
 
     const receiptPayload = receiptByTaskId.get(assignment.act_task_id) ?? null;
     if (receiptPayload && isReceiptComplete(receiptPayload)) item.receipt_complete_count += 1;
@@ -284,6 +331,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
 
     if (overdue) {
       item.abnormal_count += 1;
+      holder.abnormalEventKeys.push(`${assignment.field_id ?? "NA"}|${assignment.action_type ?? "NA"}`);
       const anomalyTs = abnormalAtByAssignment.get(assignment.assignment_id) ?? assignment.arrive_deadline_ms ?? assignment.assigned_at_ms ?? now;
       if (submitMs && submitMs >= anomalyTs) {
         const prev = Number(item.avg_abnormal_closed_loop_ms ?? 0);
@@ -299,12 +347,22 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
   const output: ManualExecutionQualityItem[] = [];
   const alerts: ManualExecutionQualitySnapshot["alerts"] = [];
 
-  for (const { item, overdueFlags } of groups.values()) {
+  for (const { item, overdueFlags, acceptDurationSum, acceptDurationCount, abnormalEventKeys } of groups.values()) {
+    if (acceptDurationCount > 0) item.avg_accept_duration_ms = Math.round(acceptDurationSum / acceptDurationCount);
     item.on_time_rate = toRate(item.on_time_count, item.submitted_count);
     item.first_pass_rate = toRate(item.first_pass_count, item.submitted_count);
     item.receipt_completeness_rate = toRate(item.receipt_complete_count, item.total_assignments);
     const missingReceiptRate = toRate(Math.max(0, item.total_assignments - item.receipt_complete_count), item.total_assignments);
     item.missing_receipt_rate = missingReceiptRate;
+    {
+      let recurring = 0;
+      const seen = new Set<string>();
+      for (const key of abnormalEventKeys) {
+        if (seen.has(key)) recurring += 1;
+        seen.add(key);
+      }
+      item.abnormal_recurrence_rate = toRate(recurring, Math.max(1, abnormalEventKeys.length));
+    }
 
     let streak = 0;
     let maxStreak = 0;
@@ -339,16 +397,17 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
     await db.query(
         `INSERT INTO manual_execution_quality_projection_v1 (
           tenant_id, project_id, group_id, dimension, dimension_id, dimension_name, field_id, action_type,
-          from_ts_ms, to_ts_ms, total_assignments, submitted_count, on_time_count, on_time_rate,
+          from_ts_ms, to_ts_ms, total_assignments, avg_accept_duration_ms, submitted_count, on_time_count, on_time_rate,
           first_pass_count, first_pass_rate, receipt_complete_count, receipt_completeness_rate,
           abnormal_count, closed_loop_count, avg_abnormal_closed_loop_ms, overdue_consecutive_streak,
-          missing_receipt_rate, alerts, updated_ts_ms
+          missing_receipt_rate, abnormal_recurrence_rate, alerts, updated_ts_ms
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24::jsonb,$25)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26::jsonb,$27)
         ON CONFLICT (tenant_id, project_id, group_id, dimension, dimension_id, from_ts_ms, to_ts_ms, field_id, action_type)
         DO UPDATE SET
           dimension_name = EXCLUDED.dimension_name,
           total_assignments = EXCLUDED.total_assignments,
+          avg_accept_duration_ms = EXCLUDED.avg_accept_duration_ms,
           submitted_count = EXCLUDED.submitted_count,
           on_time_count = EXCLUDED.on_time_count,
           on_time_rate = EXCLUDED.on_time_rate,
@@ -361,6 +420,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
           avg_abnormal_closed_loop_ms = EXCLUDED.avg_abnormal_closed_loop_ms,
           overdue_consecutive_streak = EXCLUDED.overdue_consecutive_streak,
           missing_receipt_rate = EXCLUDED.missing_receipt_rate,
+          abnormal_recurrence_rate = EXCLUDED.abnormal_recurrence_rate,
           alerts = EXCLUDED.alerts,
           updated_ts_ms = EXCLUDED.updated_ts_ms`,
         [
@@ -375,6 +435,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
           query.from_ts_ms,
           query.to_ts_ms,
           item.total_assignments,
+          item.avg_accept_duration_ms,
           item.submitted_count,
           item.on_time_count,
           item.on_time_rate,
@@ -387,6 +448,7 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
           item.avg_abnormal_closed_loop_ms,
           item.overdue_consecutive_streak,
           item.missing_receipt_rate,
+          item.abnormal_recurrence_rate,
           JSON.stringify(item.alerts),
           generatedAtMs,
         ]
@@ -417,5 +479,95 @@ export async function projectManualExecutionQualityV1(db: DbConn, query: ManualE
     threshold: DEFAULT_THRESHOLD,
     items: output.sort((a, b) => b.total_assignments - a.total_assignments),
     alerts,
+  };
+}
+
+export async function listManualExecutionQualityTaskDetailsV1(
+  db: DbConn,
+  query: ManualExecutionQualityQuery & { dimension_id: string; limit?: number }
+): Promise<{ generated_at_ms: number; dimension: ManualExecutionQualityDimension; dimension_id: string; items: ManualExecutionTaskDetail[] }> {
+  const snapshot = await projectManualExecutionQualityV1(db, query);
+  const assignmentQ = await db.query(
+    `SELECT
+      a.assignment_id, a.act_task_id, a.executor_id, a.status, a.assigned_at, a.arrive_deadline_ts,
+      h.team_id,
+      t.record_json AS task_record_json
+    FROM work_assignment_index_v1 a
+    LEFT JOIN human_executor_index_v1 h ON h.tenant_id = a.tenant_id AND h.executor_id = a.executor_id
+    LEFT JOIN LATERAL (
+      SELECT (f.record_json::jsonb) AS record_json
+      FROM facts f
+      WHERE (f.record_json::jsonb->>'type') = 'ao_act_task_v0'
+        AND (f.record_json::jsonb#>>'{payload,tenant_id}') = a.tenant_id
+        AND (f.record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (f.record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (f.record_json::jsonb#>>'{payload,act_task_id}') = a.act_task_id
+      ORDER BY f.occurred_at DESC, f.fact_id DESC
+      LIMIT 1
+    ) t ON TRUE
+    WHERE a.tenant_id = $1
+      AND a.assigned_at >= to_timestamp($4::double precision / 1000.0)
+      AND a.assigned_at <= to_timestamp($5::double precision / 1000.0)
+    ORDER BY a.assigned_at DESC
+    LIMIT $6`,
+    [query.tenant_id, query.project_id, query.group_id, query.from_ts_ms, query.to_ts_ms, Math.max(1, Math.min(Number(query.limit ?? 50), 300))]
+  );
+  const assignmentIds = (assignmentQ.rows ?? []).map((row: any) => String(row.assignment_id ?? "")).filter(Boolean);
+  const actTaskIds = Array.from(new Set((assignmentQ.rows ?? []).map((row: any) => String(row.act_task_id ?? "")).filter(Boolean)));
+  const [auditQ, taskAssignmentCountQ] = await Promise.all([
+    db.query(`SELECT assignment_id, status, occurred_at FROM work_assignment_audit_v1 WHERE tenant_id = $1 AND assignment_id = ANY($2::text[]) ORDER BY occurred_at ASC`, [query.tenant_id, assignmentIds]),
+    db.query(`SELECT act_task_id, COUNT(*)::bigint AS assignment_count FROM work_assignment_index_v1 WHERE tenant_id = $1 AND act_task_id = ANY($2::text[]) GROUP BY act_task_id`, [query.tenant_id, actTaskIds]),
+  ]);
+  const acceptedAtByAssignment = new Map<string, number>();
+  const submitAtByAssignment = new Map<string, number>();
+  for (const row of auditQ.rows ?? []) {
+    const assignmentId = String(row.assignment_id ?? "");
+    const status = String(row.status ?? "").toUpperCase();
+    const occurredMs = toMs(row.occurred_at);
+    if (!assignmentId || !occurredMs) continue;
+    if (status === "ACCEPTED" && !acceptedAtByAssignment.has(assignmentId)) acceptedAtByAssignment.set(assignmentId, occurredMs);
+    if (status === "SUBMITTED" && !submitAtByAssignment.has(assignmentId)) submitAtByAssignment.set(assignmentId, occurredMs);
+  }
+  const taskAssignCount = new Map<string, number>();
+  for (const row of taskAssignmentCountQ.rows ?? []) taskAssignCount.set(String(row.act_task_id ?? ""), Number(row.assignment_count ?? 0));
+
+  const items: ManualExecutionTaskDetail[] = (assignmentQ.rows ?? []).map((row: any) => {
+    const payload = parseJsonMaybe(row.task_record_json)?.payload ?? {};
+    const assignmentId = String(row.assignment_id ?? "");
+    const assignedAtMs = toMs(row.assigned_at);
+    const acceptedAtMs = acceptedAtByAssignment.get(assignmentId) ?? null;
+    const submittedAtMs = submitAtByAssignment.get(assignmentId) ?? null;
+    const arriveDeadlineMs = toMs(row.arrive_deadline_ts);
+    const fieldId = payload?.field_id ? String(payload.field_id) : null;
+    const teamId = row.team_id ? String(row.team_id) : null;
+    const executorId = String(row.executor_id ?? "");
+    const abnormal = ["EXPIRED", "CANCELLED"].includes(String(row.status ?? "").toUpperCase());
+    const onTime = !!(submittedAtMs && (!arriveDeadlineMs || submittedAtMs <= arriveDeadlineMs) && !abnormal);
+    return {
+      assignment_id: assignmentId,
+      act_task_id: String(row.act_task_id ?? ""),
+      executor_id: executorId,
+      team_id: teamId,
+      field_id: fieldId,
+      action_type: payload?.action_type ? String(payload.action_type).toUpperCase() : null,
+      status: String(row.status ?? "").toUpperCase(),
+      assigned_at_ms: assignedAtMs,
+      accepted_at_ms: acceptedAtMs,
+      submitted_at_ms: submittedAtMs,
+      accept_duration_ms: assignedAtMs && acceptedAtMs && acceptedAtMs >= assignedAtMs ? acceptedAtMs - assignedAtMs : null,
+      on_time: onTime,
+      first_pass: (taskAssignCount.get(String(row.act_task_id ?? "")) ?? 1) <= 1 && !!submittedAtMs,
+      abnormal,
+    };
+  }).filter((x) => x.assignment_id && x.act_task_id).filter((x) => x && (
+    query.dimension === "team" ? x.team_id === query.dimension_id :
+      query.dimension === "plot" ? (x.field_id ?? "UNASSIGNED_PLOT") === query.dimension_id :
+        x.executor_id === query.dimension_id
+  ));
+  return {
+    generated_at_ms: snapshot.generated_at_ms,
+    dimension: query.dimension,
+    dimension_id: query.dimension_id,
+    items,
   };
 }
