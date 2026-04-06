@@ -1478,8 +1478,11 @@ type DispatchFallbackContext = {
   failure_code: string;
   failure_reason: string;
   failure_message: string | null;
+  takeover_reason: string;
+  takeover_conditions: string[];
   retry_exhausted: boolean;
   device_offline: boolean;
+  device_rejected: boolean;
   device_id: string | null;
   adapter_type: string | null;
   attempt_no: number | null;
@@ -1494,6 +1497,8 @@ function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFall
   const failure_reason = String(body?.failure_reason ?? body?.reason ?? failure_code).trim().toUpperCase();
   const failure_message = typeof body?.failure_message === "string" && body.failure_message.trim()
     ? body.failure_message.trim()
+    : (typeof body?.message === "string" && body.message.trim())
+      ? body.message.trim()
     : null;
   const attempt_no = Number.isFinite(Number(body?.attempt_no)) ? Number(body.attempt_no) : null;
   const max_retries = Number.isFinite(Number(body?.max_retries)) ? Number(body.max_retries) : null;
@@ -1501,6 +1506,8 @@ function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFall
   const device_offline = Boolean(body?.device_offline)
     || failure_code.includes("OFFLINE")
     || failure_reason.includes("OFFLINE");
+  const device_rejected = Boolean(body?.device_rejected)
+    || ["REJECTED", "DENIED", "REFUSED", "NACK"].some((token) => failure_code.includes(token) || failure_reason.includes(token));
   const deviceContext = body?.device_context && typeof body.device_context === "object" ? body.device_context : {};
   const taskMeta = taskPayload?.meta && typeof taskPayload.meta === "object" ? taskPayload.meta : {};
   const field_id = String(taskPayload?.field_id ?? taskMeta?.field_id ?? "").trim() || null;
@@ -1508,12 +1515,27 @@ function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFall
   const action_type = String(taskPayload?.action_type ?? taskPayload?.task_type ?? "").trim() || null;
   const device_id = String(body?.device_id ?? deviceContext?.device_id ?? taskMeta?.device_id ?? "").trim() || null;
   const adapter_type = String(body?.adapter_type ?? deviceContext?.adapter_type ?? taskPayload?.adapter_type ?? "").trim() || null;
+  const takeover_conditions: string[] = [];
+  if (device_offline) takeover_conditions.push("DEVICE_OFFLINE");
+  if (retry_exhausted) takeover_conditions.push("RETRY_EXHAUSTED");
+  if (device_rejected) takeover_conditions.push("DEVICE_REJECTED");
+  if (!takeover_conditions.length && (failure_code.includes("FAILED") || failure_reason.includes("FAILED"))) takeover_conditions.push("DISPATCH_FAILED");
+  const takeover_reason = failure_message
+    ?? ({
+      DEVICE_OFFLINE: "设备离线，自动转人工执行",
+      RETRY_EXHAUSTED: "设备重试超限，自动转人工执行",
+      DEVICE_REJECTED: "设备拒绝执行，自动转人工执行",
+      DISPATCH_FAILED: "设备下发失败，自动转人工执行"
+    } as Record<string, string>)[takeover_conditions[0] ?? "DISPATCH_FAILED"];
   return {
     failure_code,
     failure_reason,
     failure_message,
+    takeover_reason,
+    takeover_conditions,
     retry_exhausted,
     device_offline,
+    device_rejected,
     device_id,
     adapter_type,
     attempt_no,
@@ -1527,6 +1549,7 @@ function parseDispatchFallbackContext(body: any, taskPayload: any): DispatchFall
 function shouldCreateManualFallbackAssignment(ctx: DispatchFallbackContext): boolean {
   if (ctx.device_offline) return true;
   if (ctx.retry_exhausted) return true;
+  if (ctx.device_rejected) return true;
   if (ctx.failure_code === "FAILED" || ctx.failure_reason === "FAILED") return true;
   return ctx.failure_code.includes("FAILED") || ctx.failure_reason.includes("FAILED");
 }
@@ -1593,12 +1616,30 @@ async function createWorkAssignmentFallbackFact(input: {
         field_id: input.context.field_id,
         region: input.context.region
       },
+      fallback_context: {
+        reason_code: input.context.failure_code,
+        reason_message: input.context.takeover_reason,
+        dispatch_id: null,
+        retry_count: input.context.attempt_no,
+        max_retries: input.context.max_retries,
+        failed_at: assigned_at,
+        takeover_conditions: input.context.takeover_conditions,
+        device: {
+          device_id: input.context.device_id,
+          device_name: input.context.device_id,
+          status: input.context.device_rejected ? "REJECTED" : (input.context.device_offline ? "OFFLINE" : null),
+          adapter_type: input.context.adapter_type
+        }
+      },
       failure_context: {
         code: input.context.failure_code,
         reason: input.context.failure_reason,
         message: input.context.failure_message,
+        takeover_reason: input.context.takeover_reason,
+        takeover_conditions: input.context.takeover_conditions,
         retry_exhausted: input.context.retry_exhausted,
-        device_offline: input.context.device_offline
+        device_offline: input.context.device_offline,
+        device_rejected: input.context.device_rejected
       },
       dispatch_decision: {
         selected_executor_id: executor_id,
@@ -1622,9 +1663,12 @@ async function createWorkAssignmentFallbackFact(input: {
       assignment_id,
       reason_code: input.context.failure_code,
       reason: input.context.failure_reason,
-      message: input.context.failure_message,
+      message: input.context.takeover_reason,
+      raw_message: input.context.failure_message,
+      takeover_conditions: input.context.takeover_conditions,
       retry_exhausted: input.context.retry_exhausted,
       device_offline: input.context.device_offline,
+      device_rejected: input.context.device_rejected,
       device_context: {
         device_id: input.context.device_id,
         adapter_type: input.context.adapter_type,

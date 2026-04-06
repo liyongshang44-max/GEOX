@@ -27,11 +27,13 @@ export type WorkAssignmentItem = {
     retry_count?: number | null;
     max_retries?: number | null;
     failed_at?: string | null;
+    takeover_conditions?: string[] | null;
     device?: {
       device_id?: string | null;
       device_name?: string | null;
       status?: string | null;
       last_heartbeat_ts?: number | null;
+      adapter_type?: string | null;
     } | null;
   } | null;
   created_ts_ms: number;

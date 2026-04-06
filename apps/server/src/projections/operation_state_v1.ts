@@ -15,6 +15,7 @@ type TimelineType =
   | "APPROVAL_DECIDED"
   | "TASK_CREATED"
   | "DEVICE_ACK"
+  | "DEVICE_FAILED_TO_HUMAN"
   | "EXECUTING"
   | "SUCCEEDED"
   | "FAILED"
@@ -205,6 +206,7 @@ function timelineLabel(type: TimelineType): string {
   if (type === "APPROVAL_DECIDED") return "approval decided";
   if (type === "TASK_CREATED") return "task created";
   if (type === "DEVICE_ACK") return "device ack";
+  if (type === "DEVICE_FAILED_TO_HUMAN") return "设备失败→人工接管";
   if (type === "EXECUTING") return "executing";
   if (type === "SUCCEEDED") return "execution success";
   if (type === "INVALID_EXECUTION") return "执行无效";
@@ -396,6 +398,15 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     if (manualFallbackFact) {
       const ts = toMs(manualFallbackFact.occurred_at);
       timeline.push({ ts, type: "MANUAL_FALLBACK", label: timelineLabel("MANUAL_FALLBACK") });
+      const firstAssignmentTs = assignmentFacts
+        .map((x) => toMs(x.record_json?.payload?.assigned_at ?? x.record_json?.payload?.changed_at ?? x.occurred_at))
+        .filter((x) => x > 0)
+        .sort((a, b) => a - b)[0];
+      timeline.push({
+        ts: firstAssignmentTs && firstAssignmentTs > ts ? firstAssignmentTs : ts,
+        type: "DEVICE_FAILED_TO_HUMAN",
+        label: timelineLabel("DEVICE_FAILED_TO_HUMAN")
+      });
     }
     const acceptanceFact = acceptanceByPlan.get(operation_plan_id) ?? (task_id ? acceptanceByTask.get(task_id) : undefined);
     const acceptanceFactPayload = acceptanceFact?.record_json?.payload ?? {};

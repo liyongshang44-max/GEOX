@@ -1296,7 +1296,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     ].filter((x) => x && x !== "-").join(" · ");
     const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => {
       const kind = String(item.type ?? "UNKNOWN");
-      const summary = kind === "MANUAL_FALLBACK" && fallbackReasonText
+      const summary = (kind === "MANUAL_FALLBACK" || kind === "DEVICE_FAILED_TO_HUMAN") && fallbackReasonText
         ? `为何转人工：${fallbackReasonText}`
         : (item.label || "");
       return {
