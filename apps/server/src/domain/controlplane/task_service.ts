@@ -10,7 +10,12 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
 import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0"; // Reuse existing token/scope auth.
 import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy";
-import { deviceSkillRegistry, resolveTaskCapabilityViaDeviceSkills } from "@geox/device-skills";
+import {
+  checkCapabilityCompatibilityMatrix,
+  deviceSkillRegistry,
+  resolveTaskCapabilityViaDeviceSkillsResult,
+  validateDeviceSkillCompatibilityMatrix
+} from "@geox/device-skills";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
 
@@ -28,6 +33,31 @@ type DispatchSlaInput = { accept_minutes?: number | null; arrive_minutes?: numbe
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 helper.
+}
+
+function capabilityError(reply: FastifyReply, input: {
+  stage: "approval" | "task_create" | "dispatch";
+  act_task_id?: string | null;
+  operation_plan_id?: string | null;
+  adapter_type?: string | null;
+  device_type?: string | null;
+  error: { code: string; message: string; reasons?: string[]; compatibility?: unknown };
+}) {
+  return reply.status(422).send({
+    ok: false,
+    error: "CAPABILITY_RESOLUTION_FAILED",
+    detail: {
+      stage: input.stage,
+      act_task_id: input.act_task_id ?? null,
+      operation_plan_id: input.operation_plan_id ?? null,
+      adapter_type: input.adapter_type ?? null,
+      device_type: input.device_type ?? null,
+      code: input.error.code,
+      message: input.error.message,
+      reasons: input.error.reasons ?? [],
+      compatibility: input.error.compatibility ?? null
+    }
+  });
 }
 
 function parseJsonMaybe(v: any): any {
@@ -1776,51 +1806,74 @@ function normalizeActionType(raw: any): string {
   return normalized;
 }
 
+function resolveDeviceType(input: any): string | null {
+  const candidates = [
+    input?.device_type,
+    input?.meta?.device_type,
+    input?.target?.device_type,
+    input?.target?.type
+  ];
+  for (const candidate of candidates) {
+    const value = String(candidate ?? "").trim();
+    if (value) return value.toUpperCase();
+  }
+  return null;
+}
+
 function toAoActAllowlistAction(actionType: string): string {
   const canonical = normalizeActionType(actionType);
   if (canonical === "irrigation.start") return "IRRIGATE";
   return canonical.toUpperCase();
 }
 
-function toTaskType(actionType: string): string {
-  return toAoActAllowlistAction(actionType);
-}
-
 type ParsedTaskCapability = {
-  capability: string | null;
+  capability: string;
   parameters: Record<string, unknown>;
   evidence_requirements: string[];
   explain: string | null;
+  compatibility: {
+    adapters: string[];
+    device_types: string[];
+    protocols: string[];
+  };
 };
 
-function parseTaskCapability(taskPayload: any): ParsedTaskCapability {
-  const resolved = resolveTaskCapabilityViaDeviceSkills(taskPayload);
-  if (resolved) {
-    return {
-      capability: resolved.capability,
-      parameters: resolved.parameters ?? {},
-      evidence_requirements: Array.isArray(resolved.evidence_requirements) ? resolved.evidence_requirements.map((x) => String(x)) : [],
-      explain: resolved.explain ?? null
+type ParsedTaskCapabilityResult =
+  | { ok: true; value: ParsedTaskCapability }
+  | {
+      ok: false;
+      error: {
+        code: "CAPABILITY_NOT_RESOLVED";
+        message: string;
+        reasons: string[];
+      };
     };
-  }
-  const action = normalizeActionType(resolveActionType(taskPayload));
-  if (action === "irrigation.start" || action === "irrigate") {
+
+function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
+  const resolved = resolveTaskCapabilityViaDeviceSkillsResult(taskPayload);
+  if (!resolved.ok) {
     return {
-      capability: "device.irrigation.valve.open",
-      parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {},
-      evidence_requirements: ["dispatch_ack", "water_delivery_receipt"],
-      explain: "fallback capability derived from action_type"
+      ok: false,
+      error: {
+        code: resolved.error.code,
+        message: resolved.error.message,
+        reasons: resolved.error.reasons
+      }
     };
   }
   return {
-    capability: null,
-    parameters: {},
-    evidence_requirements: [],
-    explain: null
+    ok: true,
+    value: {
+      capability: resolved.resolution.capability,
+      parameters: resolved.resolution.parameters ?? {},
+      evidence_requirements: Array.isArray(resolved.resolution.evidence_requirements) ? resolved.resolution.evidence_requirements.map((x) => String(x)) : [],
+      explain: resolved.resolution.explain ?? null,
+      compatibility: resolved.resolution.compatibility
+    }
   };
 }
 
-function adapterSupportsCapability(adapterType: string, capability: string | null): boolean {
+function adapterSupportsCapability(adapterType: string, capability: string): boolean {
   const adapter = String(adapterType ?? "").trim().toLowerCase();
   const c = String(capability ?? "").trim().toLowerCase();
   if (!adapter || !c) return false;
@@ -1829,22 +1882,6 @@ function adapterSupportsCapability(adapterType: string, capability: string | nul
     return ["mqtt", "irrigation_real", "irrigation_http_v1", "irrigation_simulator"].includes(normalizedAdapter);
   }
   return normalizedAdapter === "mqtt";
-}
-
-function adapterSupportsAction(adapterType: string, actionType: string): boolean {
-  const a = String(adapterType ?? "").trim().toLowerCase();
-  const action = normalizeActionType(actionType);
-  const taskType = toTaskType(actionType);
-  const normalized = String(actionType ?? "").trim().toUpperCase();
-  if (!a || !action) return false;
-  if (normalized === "FERTILIZE" || taskType === "FERTILIZE") return true;
-  const adapter = a === "mqtt_downlink_once_v1" ? "mqtt" : a; // Keep mqtt alias aligned with normalizeAdapterHint("mqtt").
-  if (adapter === "mqtt" && (action === "irrigate" || action === "irrigation.start" || taskType === "IRRIGATE")) return true; // Explicitly allow irrigation aliases.
-  if (adapter === "mqtt") return true;
-  if (adapter === "irrigation_real" || adapter === "irrigation_simulator" || adapter === "irrigation_http_v1") {
-    return action === "irrigation.start" || action === "irrigate" || taskType === "IRRIGATE";
-  }
-  return false;
 }
 
 function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true } | { ok: false; reason: string } {
@@ -1858,6 +1895,10 @@ function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true 
 }
 
 async function ensureDeviceSkillsRegistered(pool: Pool, tenant: TenantTriple): Promise<void> {
+  const matrixValidation = validateDeviceSkillCompatibilityMatrix(deviceSkillRegistry);
+  if (!matrixValidation.ok) {
+    throw new Error(`DEVICE_SKILL_COMPATIBILITY_MATRIX_INVALID:${JSON.stringify(matrixValidation.errors)}`);
+  }
   for (const skill of deviceSkillRegistry) {
     const existing = await pool.query(
       `SELECT 1
@@ -2089,7 +2130,17 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         ? String(operationPlan.record_json.payload.adapter_type)
         : String(proposal?.meta?.adapter_type ?? "");
       const resolvedProposalActionType = resolveActionType(proposal);
-      const parsedCapability = parseTaskCapability(proposal);
+      const parsedCapabilityResult = parseTaskCapability(proposal);
+      if (!parsedCapabilityResult.ok) {
+        return capabilityError(reply, {
+          stage: "approval",
+          operation_plan_id,
+          adapter_type: planAdapterType || null,
+          device_type: resolveDeviceType(proposal),
+          error: parsedCapabilityResult.error
+        });
+      }
+      const parsedCapability = parsedCapabilityResult.value;
       const aoActActionType = toAoActAllowlistAction(resolvedProposalActionType);
       const tripleValidation = assertTenantFieldDeviceTriple({
         tenant_id: tenant.tenant_id,
@@ -2099,10 +2150,20 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
       await ensureDeviceSkillsRegistered(pool, tenant);
+      const compatibilityCheck = checkCapabilityCompatibilityMatrix({
+        capability: {
+          capability: parsedCapability.capability,
+          parameters: parsedCapability.parameters,
+          evidence_requirements: parsedCapability.evidence_requirements,
+          explain: parsedCapability.explain ?? "",
+          compatibility: parsedCapability.compatibility
+        },
+        adapter_type: planAdapterType,
+        device_type: resolveDeviceType(proposal)
+      });
       const supportsCapability = adapterSupportsCapability(planAdapterType, parsedCapability.capability);
-      const supportsAction = adapterSupportsAction(planAdapterType, resolvedProposalActionType); // compatibility branch until migration complete.
-      if (!supportsCapability && !supportsAction) {
-        console.error("[ADAPTER_UNSUPPORTED_ACTION_APPROVAL]", JSON.stringify({
+      if (!supportsCapability || !compatibilityCheck.ok) {
+        console.error("[CAPABILITY_COMPATIBILITY_APPROVAL]", JSON.stringify({
           adapter_type: planAdapterType,
           capability: parsedCapability.capability,
           proposal_action_type: proposal?.action_type ?? null,
@@ -2110,7 +2171,19 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           resolved_action_type: resolvedProposalActionType,
           tenant
         }, null, 2));
-        return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+        return capabilityError(reply, {
+          stage: "approval",
+          operation_plan_id,
+          adapter_type: planAdapterType || null,
+          device_type: resolveDeviceType(proposal),
+          error: !compatibilityCheck.ok
+            ? compatibilityCheck.error
+            : {
+                code: "CAPABILITY_COMPATIBILITY_MISMATCH",
+                message: "Adapter does not support resolved capability.",
+                reasons: ["adapter_not_compatible"]
+              }
+        });
       }
       const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? "" } });
       if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
@@ -2287,15 +2360,35 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const adapterType = String(body?.adapter_type ?? operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
     const requestedActionType = resolveActionType(body);
-    const parsedCapability = parseTaskCapability(body);
+    const parsedCapabilityResult = parseTaskCapability(body);
+    if (!parsedCapabilityResult.ok) {
+      return capabilityError(reply, {
+        stage: "task_create",
+        operation_plan_id,
+        adapter_type: adapterType || null,
+        device_type: resolveDeviceType(body),
+        error: parsedCapabilityResult.error
+      });
+    }
+    const parsedCapability = parsedCapabilityResult.value;
     const aoActActionType = toAoActAllowlistAction(requestedActionType);
     const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
     await ensureDeviceSkillsRegistered(pool, tenant);
+    const matrixCheck = checkCapabilityCompatibilityMatrix({
+      capability: {
+        capability: parsedCapability.capability,
+        parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements,
+        explain: parsedCapability.explain ?? "",
+        compatibility: parsedCapability.compatibility
+      },
+      adapter_type: adapterType,
+      device_type: resolveDeviceType(body)
+    });
     const supportsCapability = adapterSupportsCapability(adapterType, parsedCapability.capability);
-    const supportsAction = adapterSupportsAction(adapterType, requestedActionType); // compatibility branch until migration complete.
-    if (!supportsCapability && !supportsAction) {
-      console.error("[ADAPTER_UNSUPPORTED_ACTION_TASK_CREATE]", JSON.stringify({
+    if (!supportsCapability || !matrixCheck.ok) {
+      console.error("[CAPABILITY_COMPATIBILITY_TASK_CREATE]", JSON.stringify({
         adapter_type: adapterType,
         capability: parsedCapability.capability,
         requested_action_type: body?.action_type ?? null,
@@ -2303,7 +2396,19 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         resolved_action_type: requestedActionType,
         tenant
       }, null, 2));
-      return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+      return capabilityError(reply, {
+        stage: "task_create",
+        operation_plan_id,
+        adapter_type: adapterType || null,
+        device_type: resolveDeviceType(body),
+        error: !matrixCheck.ok
+          ? matrixCheck.error
+          : {
+              code: "CAPABILITY_COMPATIBILITY_MISMATCH",
+              message: "Adapter does not support resolved capability.",
+              reasons: ["adapter_not_compatible"]
+            }
+      });
     }
     const adapterValidation = validateAdapterTask(adapterType, body);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
@@ -2449,10 +2554,30 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const adapterType = bodyAdapterHint || taskAdapterType || metaAdapterType;
     const actionType = resolveActionType(taskPayload);
     const canonicalDispatchActionType = normalizeActionType(actionType);
-    const parsedCapability = parseTaskCapability(taskPayload);
+    const parsedCapabilityResult = parseTaskCapability(taskPayload);
+    if (!parsedCapabilityResult.ok) {
+      return capabilityError(reply, {
+        stage: "dispatch",
+        act_task_id,
+        adapter_type: adapterType || null,
+        device_type: resolveDeviceType(taskPayload),
+        error: parsedCapabilityResult.error
+      });
+    }
+    const parsedCapability = parsedCapabilityResult.value;
     const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
     const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
-    const supportsResult = adapterSupportsAction(adapterType, supportsInput);
+    const matrixCheck = checkCapabilityCompatibilityMatrix({
+      capability: {
+        capability: parsedCapability.capability,
+        parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements,
+        explain: parsedCapability.explain ?? "",
+        compatibility: parsedCapability.compatibility
+      },
+      adapter_type: adapterType,
+      device_type: resolveDeviceType(taskPayload)
+    });
     const capabilitySupport = adapterSupportsCapability(adapterType, parsedCapability.capability);
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
     console.log("[dispatch-debug-server]", {
@@ -2463,13 +2588,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       capability: parsedCapability.capability,
       capability_parameters: parsedCapability.parameters,
       supports_input: supportsInput,
-      supports_result: supportsResult,
+      supports_result: null,
       supports_capability: capabilitySupport
     });
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!capabilitySupport && !supportsResult) {
-      console.error("[ADAPTER_UNSUPPORTED_ACTION_DISPATCH]", JSON.stringify({
+    if (!capabilitySupport || !matrixCheck.ok) {
+      console.error("[CAPABILITY_COMPATIBILITY_DISPATCH]", JSON.stringify({
         act_task_id,
         selected_adapter: selectedAdapter,
         capability: parsedCapability.capability,
@@ -2483,7 +2608,20 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         parameters: taskPayload?.parameters ?? null,
         task_payload: taskPayload
       }, null, 2));
-      return badRequest(reply, "ADAPTER_UNSUPPORTED_ACTION");
+      return capabilityError(reply, {
+        stage: "dispatch",
+        act_task_id,
+        operation_plan_id: String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim() || null,
+        adapter_type: adapterType || null,
+        device_type: resolveDeviceType(taskPayload),
+        error: !matrixCheck.ok
+          ? matrixCheck.error
+          : {
+              code: "CAPABILITY_COMPATIBILITY_MISMATCH",
+              message: "Adapter does not support resolved capability.",
+              reasons: ["adapter_not_compatible"]
+            }
+      });
     }
     const adapterValidation = validateAdapterTask(adapterType, taskPayload);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
