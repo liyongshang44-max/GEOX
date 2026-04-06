@@ -570,6 +570,30 @@
   border-top: 1px solid var(--color-border-subtle);
   padding: 10px;
 }
+.operationSkillTraceCard {
+  margin-top: 12px;
+}
+.operationSkillTraceList {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+.operationSkillTraceItem {
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  background: var(--color-bg-surface);
+}
+.operationSkillTraceItem.isWarning {
+  border-color: var(--color-status-partial-border);
+  background: var(--color-status-partial-bg);
+}
+.operationSkillTraceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 @media (max-width: 1100px) {
   .dashboardDecisionBoard {
     grid-template-columns: 1fr;

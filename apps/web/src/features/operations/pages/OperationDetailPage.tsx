@@ -5,6 +5,7 @@ import ErrorState from "../../../components/common/ErrorState";
 import SectionSkeleton from "../../../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../../../components/evidence/ReceiptEvidenceCard";
 import OperationAcceptanceCard from "../../../components/operations/OperationAcceptanceCard";
+import OperationSkillTraceCard from "../../../components/operations/OperationSkillTraceCard";
 import OperationStoryTimeline from "../../../components/operations/OperationStoryTimeline";
 import { useOperationDetail } from "../../../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../../../viewmodels/operationDetailViewModel";
@@ -247,6 +248,8 @@ export default function OperationDetailPage(): React.ReactElement {
               ) : null}
             </section>
           ) : null}
+
+          <OperationSkillTraceCard trace={(detail as any)?.skill_trace ?? null} />
 
           <section className="card" style={{ marginTop: 12 }}>
             <div className="sectionTitle">执行过程</div>
