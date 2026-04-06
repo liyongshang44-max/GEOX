@@ -179,6 +179,8 @@ export type WorkAssignmentAuditItem = {
   act_task_id: string;
   executor_id: string;
   status: WorkAssignmentStatus;
+  from_status?: WorkAssignmentStatus | null;
+  to_status?: WorkAssignmentStatus | null;
   occurred_at: string;
   actor_id?: string | null;
   token_id?: string | null;

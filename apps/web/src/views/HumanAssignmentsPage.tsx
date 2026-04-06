@@ -87,6 +87,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>任务编号：{item.act_task_id}</span>
                         <span>执行人：{item.executor_id}</span>
                         <span>分配时间：{toTimeLabel(item.assigned_at)}</span>
+                        <span>最后更新时间：{toTimeLabel(new Date(Number(item.updated_ts_ms ?? 0)).toISOString())}</span>
                         <span>{toSlaLabel(item)}</span>
                       </div>
                     </div>

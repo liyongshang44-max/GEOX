@@ -11,6 +11,7 @@ import {
 } from "../api/humanAssignments";
 import { ApiError } from "../api/client";
 import { fetchTaskTrajectory, fetchOperationDetail, type OperationDetailResponse } from "../api/operations";
+const ALLOW_SUBMIT_FROM_ACCEPTED = /^(1|true|yes|on)$/i.test(String((globalThis as any)?.__GEOX_CONFIG__?.WORK_ASSIGNMENT_ALLOW_SUBMIT_FROM_ACCEPTED ?? ""));
 
 function formatWindow(startTs?: number, endTs?: number): string {
   if (!startTs || !endTs) return "-";
@@ -52,10 +53,10 @@ function parseApiFieldErrors(error: unknown): Array<{ field: string; code: strin
 function getAssignmentFriendlyError(error: unknown, fallback: string): string {
   const errorCode = parseApiErrorCode(error);
   if (errorCode === "INVALID_STATUS_TRANSITION") {
-    return "当前任务状态已变化，请刷新后重试。";
+    return "任务状态已变化，请刷新";
   }
   if (errorCode === "CONFLICT") {
-    return "任务状态刚刚被其他人更新（例如已被他人接单），请刷新查看最新状态。";
+    return "任务状态已变化，请刷新";
   }
   return fallback;
 }
@@ -326,7 +327,7 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         <div className="row" style={{ marginTop: 12 }}>
           {item.status === "ASSIGNED" ? <button className="btn" onClick={() => void handleAccept()} disabled={submitting}>接单</button> : null}
           {item.status === "ACCEPTED" ? <button className="btn" onClick={() => void handleArrive()} disabled={submitting}>开始执行</button> : null}
-          {(item.status === "ACCEPTED" || item.status === "ARRIVED") ? (
+          {(item.status === "ARRIVED" || (item.status === "ACCEPTED" && ALLOW_SUBMIT_FROM_ACCEPTED)) ? (
             <button className="btn primary" onClick={() => void handleSubmit()} disabled={submitting}>提交</button>
           ) : null}
           <span className="pill">当前状态：{item.status}</span>
