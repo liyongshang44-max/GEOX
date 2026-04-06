@@ -110,6 +110,12 @@ function normalizeCapabilities(input: any): string[] {
   return Array.from(new Set(input.map((x) => String(x ?? "").trim()).filter(Boolean))).slice(0, 64);
 }
 
+function parseCapabilitiesQuery(raw: any): string[] {
+  if (Array.isArray(raw)) return normalizeCapabilities(raw);
+  if (!isNonEmptyString(raw)) return [];
+  return normalizeCapabilities(String(raw).split(","));
+}
+
 function hasAllCapabilities(actual: string[], required: string[]): boolean {
   if (!required.length) return true;
   const set = new Set(actual.map((x) => String(x ?? "").trim()).filter(Boolean));
@@ -283,6 +289,26 @@ async function insertAuditFact(pool: Pool, type: string, auth: AoActAuthContextV
     },
   ]);
   return fact_id;
+}
+
+async function insertDispatchActionAuditFact(
+  pool: Pool,
+  auth: AoActAuthContextV0,
+  payload: {
+    action: "BATCH_CREATE" | "REASSIGN" | "BATCH_REASSIGN" | "CANCEL" | "BATCH_CANCEL";
+    assignment_id: string;
+    act_task_id: string;
+    executor_id: string;
+    from_executor_id?: string | null;
+    from_status?: string | null;
+    to_status?: string | null;
+    note?: string | null;
+    required_capabilities?: string[];
+    reassign_log_id?: string | null;
+    audit_id?: string | null;
+  },
+): Promise<string> {
+  return insertAuditFact(pool, "work_assignment_dispatch_action_v1", auth, payload);
 }
 
 let ensureHumanExecutorRuntimePromise: Promise<void> | null = null;
@@ -968,6 +994,71 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     });
   });
 
+  app.get("/api/v1/human-executors/match", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    await ensureHumanExecutorRuntime(pool);
+
+    const q: any = (req as any).query ?? {};
+    const limit = toPositiveInt(q.limit, 100, 1, 500);
+    const team_id = normalizeId(q.team_id);
+    const requiredCapabilities = parseCapabilitiesQuery(q.required_capabilities);
+
+    const values: any[] = [auth.tenant_id];
+    const filters: string[] = ["e.tenant_id = $1", "e.status = 'ACTIVE'"];
+    if (team_id) {
+      values.push(team_id);
+      filters.push(`e.team_id = $${values.length}`);
+    }
+    values.push(limit);
+
+    const listQ = await pool.query(
+      `SELECT e.executor_id, e.display_name, e.team_id, e.capabilities, e.updated_ts_ms,
+              COALESCE(active.active_count, 0)::int AS active_count
+         FROM human_executor_index_v1 e
+         LEFT JOIN (
+           SELECT tenant_id, executor_id, COUNT(*)::bigint AS active_count
+             FROM work_assignment_index_v1
+            WHERE tenant_id = $1
+              AND status IN ('ASSIGNED','ACCEPTED','ARRIVED')
+            GROUP BY tenant_id, executor_id
+         ) active
+           ON active.tenant_id = e.tenant_id AND active.executor_id = e.executor_id
+        WHERE ${filters.join(" AND ")}
+        ORDER BY active_count ASC, e.updated_ts_ms DESC, e.executor_id ASC
+        LIMIT $${values.length}`,
+      values
+    );
+
+    const items = (listQ.rows ?? []).map((row: any) => {
+      const capabilities = normalizeCapabilities(parsePgJson(row.capabilities));
+      const missing = requiredCapabilities.filter((cap) => !capabilities.includes(cap));
+      const matchedCount = requiredCapabilities.length - missing.length;
+      const capability_match_ratio = requiredCapabilities.length ? (matchedCount / requiredCapabilities.length) : 1;
+      const teamMatched = !team_id || String(row.team_id ?? "") === team_id;
+      const loadPenalty = Math.min(1, Number(row.active_count ?? 0) / 10);
+      const recommendation_score = Number(((capability_match_ratio * 0.7) + (teamMatched ? 0.2 : 0) + ((1 - loadPenalty) * 0.1)).toFixed(4));
+      return {
+        executor_id: String(row.executor_id ?? ""),
+        display_name: String(row.display_name ?? ""),
+        team_id: row.team_id ? String(row.team_id) : null,
+        capabilities,
+        active_assignment_count: Number(row.active_count ?? 0),
+        available: Number(row.active_count ?? 0) < 5,
+        missing_capabilities: missing,
+        capability_match_ratio,
+        team_matched: teamMatched,
+        recommendation_score,
+      };
+    }).sort((a, b) => {
+      if (b.recommendation_score !== a.recommendation_score) return b.recommendation_score - a.recommendation_score;
+      if (a.active_assignment_count !== b.active_assignment_count) return a.active_assignment_count - b.active_assignment_count;
+      return a.executor_id.localeCompare(b.executor_id);
+    });
+
+    return reply.send({ ok: true, items });
+  });
+
   app.post("/api/v1/work-assignments/batch-create", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
@@ -1032,6 +1123,17 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
         assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, from_status: null, to_status: status, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, dispatch_note, priority, origin_type, origin_ref_id, fallback_context, audit_id,
       });
+      await insertDispatchActionAuditFact(pool, auth, {
+        action: "BATCH_CREATE",
+        assignment_id,
+        act_task_id,
+        executor_id,
+        from_status: null,
+        to_status: status,
+        note: dispatch_note,
+        required_capabilities: requiredCapabilities,
+        audit_id,
+      });
       created.push({ assignment_id, fact_id });
     }
     return reply.send({ ok: errors.length < items.length, created, errors });
@@ -1089,6 +1191,19 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
       assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, from_status: fromStatus, to_status: fromStatus, status: fromStatus, changed_at: nowIso, note: reason, audit_id,
     });
+    await insertDispatchActionAuditFact(pool, auth, {
+      action: "REASSIGN",
+      assignment_id,
+      act_task_id,
+      executor_id,
+      from_executor_id: String(row.executor_id ?? ""),
+      from_status: fromStatus,
+      to_status: fromStatus,
+      note: reason,
+      required_capabilities: requiredCapabilities,
+      reassign_log_id: log_id,
+      audit_id,
+    });
     return reply.send({ ok: true, updated: { assignment_id, executor_id, fact_id, reassign_log_id: log_id } });
   });
 
@@ -1141,6 +1256,13 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, assignment_id, executor_id, Date.now()]
       );
       const nowIso = new Date().toISOString();
+      const log_id = randomUUID();
+      await pool.query(
+        `INSERT INTO work_assignment_reassign_log_v1
+         (tenant_id, log_id, assignment_id, act_task_id, old_executor_id, new_executor_id, reason, actor_id, token_id, created_ts_ms)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+        [auth.tenant_id, log_id, assignment_id, act_task_id, String(row.executor_id ?? ""), executor_id, note, auth.actor_id, auth.token_id, Date.now()]
+      );
       const audit_id = randomUUID();
       await pool.query(
         `INSERT INTO work_assignment_audit_v1
@@ -1150,6 +1272,19 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
         assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, from_status: fromStatus, to_status: fromStatus, status: fromStatus, changed_at: nowIso, note, audit_id,
+      });
+      await insertDispatchActionAuditFact(pool, auth, {
+        action: "BATCH_REASSIGN",
+        assignment_id,
+        act_task_id,
+        executor_id,
+        from_executor_id: String(row.executor_id ?? ""),
+        from_status: fromStatus,
+        to_status: fromStatus,
+        note,
+        required_capabilities: requiredCapabilities,
+        reassign_log_id: log_id,
+        audit_id,
       });
       updated.push({ assignment_id, executor_id, fact_id });
     }
@@ -1210,6 +1345,16 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
         assignment_id, act_task_id: String(row.act_task_id ?? ""), executor_id: String(row.executor_id ?? ""), from_status: fromStatus, to_status: "CANCELLED", status: "CANCELLED", changed_at: nowIso, note, audit_id,
+      });
+      await insertDispatchActionAuditFact(pool, auth, {
+        action: "BATCH_CANCEL",
+        assignment_id,
+        act_task_id: String(row.act_task_id ?? ""),
+        executor_id: String(row.executor_id ?? ""),
+        from_status: fromStatus,
+        to_status: "CANCELLED",
+        note,
+        audit_id,
       });
       updated.push({ assignment_id, fact_id, status: "CANCELLED" });
     }
@@ -1468,6 +1613,18 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       note,
       audit_id,
     });
+    if (status === "CANCELLED") {
+      await insertDispatchActionAuditFact(pool, auth, {
+        action: "CANCEL",
+        assignment_id,
+        act_task_id: String(row.act_task_id),
+        executor_id: String(row.executor_id),
+        from_status: currentStatus,
+        to_status: "CANCELLED",
+        note,
+        audit_id,
+      });
+    }
 
     return reply.send({ ok: true, fact_id, assignment_id, status, changed_at: nowIso });
   });
@@ -1558,6 +1715,18 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       note,
       audit_id,
     });
+    if (targetStatus === "CANCELLED") {
+      await insertDispatchActionAuditFact(pool, auth, {
+        action: "CANCEL",
+        assignment_id,
+        act_task_id,
+        executor_id,
+        from_status: fromStatus,
+        to_status: targetStatus,
+        note,
+        audit_id,
+      });
+    }
 
     return reply.send({ ok: true, fact_id, assignment_id, act_task_id, executor_id, status: targetStatus, changed_at: nowIso });
   }
