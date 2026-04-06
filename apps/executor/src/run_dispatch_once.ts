@@ -137,7 +137,28 @@ function logExecutionEvent(task, adapter, status, startedAtMs) {
     };
     console.log(`EXECUTION_EVENT ${JSON.stringify(payload)}`);
 }
-async function writeDispatchState(args, task, state) {
+function normalizeDispatchError(error, adapterType) {
+    const raw = String(error?.message ?? error ?? "").trim();
+    const upper = raw.toUpperCase();
+    if (upper.includes("OFFLINE") || upper.includes("TIMEOUT") || upper.includes("ECONNREFUSED")) {
+        return { code: "DEVICE_OFFLINE", reason: "DEVICE_OFFLINE", message: raw || "device offline" };
+    }
+    if (upper.startsWith("ADAPTER_VALIDATE_FAILED")) {
+        return { code: "ADAPTER_VALIDATE_FAILED", reason: "ADAPTER_VALIDATE_FAILED", message: raw };
+    }
+    if (upper.startsWith("ADAPTER_UNSUPPORTED_ACTION")) {
+        return { code: "ADAPTER_UNSUPPORTED_ACTION", reason: "ADAPTER_UNSUPPORTED_ACTION", message: raw };
+    }
+    if (upper.includes("DISPATCH_ERROR")) {
+        return { code: "DISPATCH_EXEC_ERROR", reason: "DISPATCH_EXEC_ERROR", message: raw };
+    }
+    return {
+        code: "DISPATCH_FAILED",
+        reason: adapterType ? `DISPATCH_FAILED_${String(adapterType).toUpperCase()}` : "DISPATCH_FAILED",
+        message: raw || "dispatch failed"
+    };
+}
+async function writeDispatchState(args, task, state, extra = {}) {
     console.log(`INFO: writing dispatch state act_task_id=${task.act_task_id} state=${state}`);
     try {
         const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/dispatches/state`, args.token, {
@@ -148,7 +169,8 @@ async function writeDispatchState(args, task, state) {
                 group_id: task.group_id,
                 act_task_id: task.act_task_id,
                 command_id: task.command_id,
-                state
+                state,
+                ...extra
             })
         });
         if (!out?.ok)
@@ -347,13 +369,29 @@ async function runDispatchOnce(cliArgs) {
             const receiptStatus = String(execMeta?.receipt_status ?? (execution.status === "FAILED" ? "FAILED" : "ACKED")).toUpperCase();
             console.log(`INFO: adapter dispatch result act_task_id=${task.act_task_id} command_id=${task.command_id} receipt_status=${receiptStatus}`);
             if (execution.status === "FAILED" || receiptStatus === "FAILED") {
-                await appendReceiptV1(args, task, attemptNo, "FAILED", adapterTypeNormalized, String(execMeta?.receipt_code ?? execMeta?.reason ?? "DISPATCH_FAILED"), typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : undefined);
+                const normalizedError = normalizeDispatchError(execMeta?.reason ?? execMeta?.receipt_message ?? execMeta?.receipt_code ?? "DISPATCH_FAILED", adapterTypeNormalized);
+                await appendReceiptV1(args, task, attemptNo, "FAILED", adapterTypeNormalized, String(execMeta?.receipt_code ?? normalizedError.code), typeof execMeta?.receipt_message === "string" ? execMeta.receipt_message : normalizedError.message);
                 const postReceipt = await logPostReceiptPlanState(args, task, "write_failed_state");
                 if (postReceipt.status === "SUCCEEDED" || postReceipt.status === "FAILED") {
                     console.log(`WARN: skip failed state write act_task_id=${task.act_task_id} reason=plan_already_terminal`);
                 }
                 else {
-                    await writeDispatchState(args, task, "FAILED");
+                    await writeDispatchState(args, task, "FAILED", {
+                        failure_code: normalizedError.code,
+                        failure_reason: normalizedError.reason,
+                        failure_message: normalizedError.message,
+                        device_offline: normalizedError.code === "DEVICE_OFFLINE",
+                        attempt_no: attemptNo,
+                        max_retries: 3,
+                        retry_exhausted: attemptNo >= 3,
+                        adapter_type: adapterTypeNormalized,
+                        device_context: {
+                            device_id: task.device_id ?? null,
+                            adapter_type: adapterTypeNormalized,
+                            executor_id: args.executor_id,
+                            attempt_no: attemptNo
+                        }
+                    });
                 }
                 markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
                 executionStatus = "FAILED";
@@ -373,8 +411,25 @@ async function runDispatchOnce(cliArgs) {
         }
         catch (error) {
             const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
-            await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, "DISPATCH_ERROR", String(error?.message ?? error));
-            await writeDispatchState(args, task, "FAILED");
+            const normalizedError = normalizeDispatchError(error, adapterType);
+            console.log(`ERROR_CODE: act_task_id=${task.act_task_id} code=${normalizedError.code} reason=${normalizedError.reason}`);
+            await appendReceiptV1(args, task, attemptNo, "FAILED", adapterType, normalizedError.code, normalizedError.message);
+            await writeDispatchState(args, task, "FAILED", {
+                failure_code: normalizedError.code,
+                failure_reason: normalizedError.reason,
+                failure_message: normalizedError.message,
+                device_offline: normalizedError.code === "DEVICE_OFFLINE",
+                attempt_no: attemptNo,
+                max_retries: 3,
+                retry_exhausted: attemptNo >= 3,
+                adapter_type: adapterType,
+                device_context: {
+                    device_id: task.device_id ?? null,
+                    adapter_type: adapterType,
+                    executor_id: args.executor_id,
+                    attempt_no: attemptNo
+                }
+            });
             markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
             executionStatus = "FAILED";
             throw error;

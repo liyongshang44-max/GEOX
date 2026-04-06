@@ -791,6 +791,8 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   if (taskId) {
     extra.push(...await q("ao_act_task_v0", "act_task_id", taskId));
     extra.push(...await q("acceptance_result_v1", "act_task_id", taskId));
+    extra.push(...await q("ao_act_manual_fallback_v1", "act_task_id", taskId));
+    extra.push(...await q("work_assignment_upserted_v1", "act_task_id", taskId));
     const receiptByTask = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
          FROM facts
@@ -1287,15 +1289,26 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         : null,
     };
 
-    const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => ({
-      id: `${item.type}_${item.ts}_${idx}`,
-      kind: String(item.type ?? "UNKNOWN"),
-      label: item.label || statusLabel(item.type),
-      status: state.final_status,
-      occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
-      actor_label: null,
-      summary: item.label || ""
-    }));
+    const fallbackReasonText = [
+      toText((state as any)?.manual_fallback?.reason),
+      toText((state as any)?.manual_fallback?.reason_code),
+      toText((state as any)?.manual_fallback?.message),
+    ].filter((x) => x && x !== "-").join(" · ");
+    const timeline: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state.timeline ?? []).map((item, idx) => {
+      const kind = String(item.type ?? "UNKNOWN");
+      const summary = kind === "MANUAL_FALLBACK" && fallbackReasonText
+        ? `为何转人工：${fallbackReasonText}`
+        : (item.label || "");
+      return {
+        id: `${item.type}_${item.ts}_${idx}`,
+        kind,
+        label: item.label || statusLabel(item.type),
+        status: state.final_status,
+        occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
+        actor_label: null,
+        summary
+      };
+    });
     if (approvalDecision) {
       timeline.push({
         id: `approval_decision_${approvalDecision.fact_id}`,
@@ -1629,6 +1642,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           missing_evidence: Array.isArray(acceptanceForResponse.record_json?.payload?.missing_evidence) ? acceptanceForResponse.record_json.payload.missing_evidence : [],
           generated_at: toText(acceptanceForResponse.record_json?.payload?.generated_at ?? acceptanceForResponse.record_json?.payload?.evaluated_at ?? acceptanceForResponse.occurred_at)
         } : null,
+        manual_fallback: (state as any)?.manual_fallback ?? null,
         timeline,
         evidence_bundle: {
           artifacts,
