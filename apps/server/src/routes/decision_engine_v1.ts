@@ -724,8 +724,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
+    const fieldIdFilter = String(q.field_id ?? "").trim();
     const rows = await loadRecommendations(pool, tenant, limit);
-    const normalized = await Promise.all(rows.map(async (row) => {
+    const normalizedAll = await Promise.all(rows.map(async (row) => {
       const item = normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant));
       const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
       return {
@@ -760,6 +761,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         }
       };
     }));
+    const normalized = fieldIdFilter
+      ? normalizedAll.filter((item) => String(item?.field?.field_id ?? "").trim() === fieldIdFilter)
+      : normalizedAll;
 
     const summary = {
       total: normalized.length,

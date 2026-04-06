@@ -106,7 +106,9 @@ export default function FieldDetailPage(): React.ReactElement {
   const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
   const programHref = "/programs";
-  const recommendationsHref = `/agronomy/recommendations?field_id=${encodeURIComponent(fieldId)}&from=field_detail`;
+  const recommendationsHref = fieldId
+    ? `/agronomy/recommendations?field_id=${encodeURIComponent(fieldId)}&from=field_detail`
+    : "/agronomy/recommendations";
   const hasBoundDevice = deviceOptions.some((item) => item.field_id === fieldId);
   const hasOnlineDevice = deviceOptions.some((item) => item.field_id === fieldId && String(item.connection_status).toUpperCase() === "ONLINE");
   const hasTelemetry = deviceOptions.some((item) => item.field_id === fieldId && Number(item.last_telemetry_ts_ms ?? 0) > 0);

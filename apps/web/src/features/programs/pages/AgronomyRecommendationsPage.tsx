@@ -70,7 +70,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
     setLoading(true);
     setError("");
     try {
-      const res = await fetchAgronomyRecommendationsControlPlane({ limit: 50 });
+      const res = await fetchAgronomyRecommendationsControlPlane({ limit: 50, field_id: fieldIdFilter || undefined });
       const nextItems = Array.isArray(res.items) ? res.items : [];
       setItems(nextItems);
       setSummary(res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 });
