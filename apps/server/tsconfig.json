@@ -2,7 +2,9 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "rootDir": "../..",
@@ -12,18 +14,28 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "baseUrl": "../..",
     "paths": {
-      "@geox/contracts": ["packages/contracts/src/index.ts"],
-      "@geox/control-kernel": ["packages/control-kernel/src/index.ts"]
+      "@geox/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
+      "@geox/control-kernel": [
+        "packages/control-kernel/src/index.ts"
+      ],
+      "@geox/device-skills": [
+        "packages/device-skills/src/index.ts"
+      ]
     }
   },
   "include": [
     "src/**/*.ts",
     "../judge/src/**/*.ts",
     "../../packages/contracts/src/**/*.ts",
-    "../../packages/control-kernel/src/**/*.ts"
+    "../../packages/control-kernel/src/**/*.ts",
+    "../../packages/device-skills/src/**/*.ts"
   ],
   "exclude": [
     "dist",

@@ -10,6 +10,7 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
 import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0"; // Reuse existing token/scope auth.
 import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy";
+import { deviceSkillRegistry, resolveTaskCapabilityViaDeviceSkills } from "@geox/device-skills";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
 
@@ -1496,6 +1497,20 @@ function deriveDispatchTopic(tenant: TenantTriple, deviceId: string | null, body
   return `/device/${deviceId}/cmd`; // Real-device MQTT command topic.
 }
 
+function resolveExecutionTarget(input: {
+  tenant: TenantTriple;
+  body: any;
+  taskRecord: any;
+  capability: ParsedTaskCapability;
+}): { device_id: string | null; downlink_topic: string | null } {
+  const capabilityDeviceId = typeof input.capability.parameters?.valve_id === "string"
+    ? String(input.capability.parameters.valve_id).trim()
+    : "";
+  const device_id = capabilityDeviceId || deriveDispatchDeviceId(input.body, input.taskRecord);
+  const downlink_topic = deriveDispatchTopic(input.tenant, device_id, input.body);
+  return { device_id, downlink_topic };
+}
+
 function normalizeAdapterHint(raw: any): string | null {
   const v = typeof raw === "string" ? raw.trim() : "";
   if (!v) return null;
@@ -1771,6 +1786,51 @@ function toTaskType(actionType: string): string {
   return toAoActAllowlistAction(actionType);
 }
 
+type ParsedTaskCapability = {
+  capability: string | null;
+  parameters: Record<string, unknown>;
+  evidence_requirements: string[];
+  explain: string | null;
+};
+
+function parseTaskCapability(taskPayload: any): ParsedTaskCapability {
+  const resolved = resolveTaskCapabilityViaDeviceSkills(taskPayload);
+  if (resolved) {
+    return {
+      capability: resolved.capability,
+      parameters: resolved.parameters ?? {},
+      evidence_requirements: Array.isArray(resolved.evidence_requirements) ? resolved.evidence_requirements.map((x) => String(x)) : [],
+      explain: resolved.explain ?? null
+    };
+  }
+  const action = normalizeActionType(resolveActionType(taskPayload));
+  if (action === "irrigation.start" || action === "irrigate") {
+    return {
+      capability: "device.irrigation.valve.open",
+      parameters: (taskPayload?.parameters && typeof taskPayload.parameters === "object") ? taskPayload.parameters : {},
+      evidence_requirements: ["dispatch_ack", "water_delivery_receipt"],
+      explain: "fallback capability derived from action_type"
+    };
+  }
+  return {
+    capability: null,
+    parameters: {},
+    evidence_requirements: [],
+    explain: null
+  };
+}
+
+function adapterSupportsCapability(adapterType: string, capability: string | null): boolean {
+  const adapter = String(adapterType ?? "").trim().toLowerCase();
+  const c = String(capability ?? "").trim().toLowerCase();
+  if (!adapter || !c) return false;
+  const normalizedAdapter = adapter === "mqtt_downlink_once_v1" ? "mqtt" : adapter;
+  if (c === "device.irrigation.valve.open") {
+    return ["mqtt", "irrigation_real", "irrigation_http_v1", "irrigation_simulator"].includes(normalizedAdapter);
+  }
+  return normalizedAdapter === "mqtt";
+}
+
 function adapterSupportsAction(adapterType: string, actionType: string): boolean {
   const a = String(adapterType ?? "").trim().toLowerCase();
   const action = normalizeActionType(actionType);
@@ -1795,6 +1855,44 @@ function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true 
     return { ok: false, reason: "MISSING_DEVICE_ID" };
   }
   return { ok: true };
+}
+
+async function ensureDeviceSkillsRegistered(pool: Pool, tenant: TenantTriple): Promise<void> {
+  for (const skill of deviceSkillRegistry) {
+    const existing = await pool.query(
+      `SELECT 1
+         FROM facts
+        WHERE (record_json::jsonb->>'type') = 'skill_definition_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+          AND (record_json::jsonb#>>'{payload,project_id}') = $2
+          AND (record_json::jsonb#>>'{payload,group_id}') = $3
+          AND (record_json::jsonb#>>'{payload,skill_id}') = $4
+          AND (record_json::jsonb#>>'{payload,version}') = $5
+        LIMIT 1`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, skill.skill_id, skill.version]
+    );
+    if ((existing.rowCount ?? 0) > 0) continue;
+    await insertFact(pool, "system/device-skills/bootstrap", {
+      type: "skill_definition_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        skill_id: skill.skill_id,
+        version: skill.version,
+        display_name: skill.display_name,
+        category: "DEVICE",
+        status: "ACTIVE",
+        trigger_stage: skill.trigger_stage,
+        scope_type: "DEVICE",
+        rollout_mode: "DIRECT",
+        bind_target: "device:*",
+        input_schema_digest: `device-skill-input:${skill.skill_id}:${skill.version}`,
+        output_schema_digest: `device-skill-output:${skill.skill_id}:${skill.version}`,
+        compatibility: skill.compatibility
+      }
+    });
+  }
 }
 
 function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
@@ -1991,6 +2089,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         ? String(operationPlan.record_json.payload.adapter_type)
         : String(proposal?.meta?.adapter_type ?? "");
       const resolvedProposalActionType = resolveActionType(proposal);
+      const parsedCapability = parseTaskCapability(proposal);
       const aoActActionType = toAoActAllowlistAction(resolvedProposalActionType);
       const tripleValidation = assertTenantFieldDeviceTriple({
         tenant_id: tenant.tenant_id,
@@ -1999,9 +2098,13 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? proposal?.target ?? "" }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-      if (!adapterSupportsAction(planAdapterType, resolvedProposalActionType)) {
+      await ensureDeviceSkillsRegistered(pool, tenant);
+      const supportsCapability = adapterSupportsCapability(planAdapterType, parsedCapability.capability);
+      const supportsAction = adapterSupportsAction(planAdapterType, resolvedProposalActionType); // compatibility branch until migration complete.
+      if (!supportsCapability && !supportsAction) {
         console.error("[ADAPTER_UNSUPPORTED_ACTION_APPROVAL]", JSON.stringify({
           adapter_type: planAdapterType,
+          capability: parsedCapability.capability,
           proposal_action_type: proposal?.action_type ?? null,
           proposal_task_type: proposal?.task_type ?? null,
           resolved_action_type: resolvedProposalActionType,
@@ -2044,6 +2147,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         meta: {
           ...(proposal.meta ?? {}),
           task_type: String((proposal as any)?.task_type ?? resolvedProposalActionType ?? aoActActionType).trim() || aoActActionType,
+          capability: parsedCapability.capability,
+          capability_parameters: parsedCapability.parameters,
+          evidence_requirements: parsedCapability.evidence_requirements,
           adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
             ? String(operationPlan.record_json.payload.adapter_type)
             : (proposal?.meta?.adapter_type ?? null)
@@ -2181,12 +2287,17 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const adapterType = String(body?.adapter_type ?? operationPlan?.record_json?.payload?.adapter_type ?? body?.meta?.adapter_type ?? "").trim();
     const requestedActionType = resolveActionType(body);
+    const parsedCapability = parseTaskCapability(body);
     const aoActActionType = toAoActAllowlistAction(requestedActionType);
     const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!adapterSupportsAction(adapterType, requestedActionType)) {
+    await ensureDeviceSkillsRegistered(pool, tenant);
+    const supportsCapability = adapterSupportsCapability(adapterType, parsedCapability.capability);
+    const supportsAction = adapterSupportsAction(adapterType, requestedActionType); // compatibility branch until migration complete.
+    if (!supportsCapability && !supportsAction) {
       console.error("[ADAPTER_UNSUPPORTED_ACTION_TASK_CREATE]", JSON.stringify({
         adapter_type: adapterType,
+        capability: parsedCapability.capability,
         requested_action_type: body?.action_type ?? null,
         requested_task_type: body?.task_type ?? null,
         resolved_action_type: requestedActionType,
@@ -2201,7 +2312,10 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       action_type: aoActActionType,
       meta: {
         ...((body?.meta && typeof body.meta === "object") ? body.meta : {}),
-        task_type: String(body?.task_type ?? requestedActionType ?? aoActActionType).trim() || aoActActionType
+        task_type: String(body?.task_type ?? requestedActionType ?? aoActActionType).trim() || aoActActionType,
+        capability: parsedCapability.capability,
+        capability_parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements
       },
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
@@ -2324,6 +2438,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    await ensureDeviceSkillsRegistered(pool, tenant);
 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -2334,24 +2449,30 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const adapterType = bodyAdapterHint || taskAdapterType || metaAdapterType;
     const actionType = resolveActionType(taskPayload);
     const canonicalDispatchActionType = normalizeActionType(actionType);
+    const parsedCapability = parseTaskCapability(taskPayload);
     const selectedAdapter = String(adapterType).trim().toLowerCase() || "unknown";
     const supportsInput = String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? actionType ?? "").trim();
     const supportsResult = adapterSupportsAction(adapterType, supportsInput);
+    const capabilitySupport = adapterSupportsCapability(adapterType, parsedCapability.capability);
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
     console.log("[dispatch-debug-server]", {
       adapter_type: String(adapterType ?? ""),
       task_type: String(taskPayload?.task_type ?? ""),
       action_type: String(taskPayload?.action_type ?? ""),
       meta_task_type: String(taskPayload?.meta?.task_type ?? ""),
+      capability: parsedCapability.capability,
+      capability_parameters: parsedCapability.parameters,
       supports_input: supportsInput,
-      supports_result: supportsResult
+      supports_result: supportsResult,
+      supports_capability: capabilitySupport
     });
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!supportsResult) {
+    if (!capabilitySupport && !supportsResult) {
       console.error("[ADAPTER_UNSUPPORTED_ACTION_DISPATCH]", JSON.stringify({
         act_task_id,
         selected_adapter: selectedAdapter,
+        capability: parsedCapability.capability,
         action_type: taskPayload?.action_type ?? null,
         task_type: taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? null,
         canonical_action_type: canonicalDispatchActionType,
@@ -2415,8 +2536,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     } // Explicit idempotency: one open outbox item per task until receipt exists.
 
     const taskRecord = taskFact.record_json ?? {}; // Joined AO-ACT task record used to derive adapter hints.
-    const device_id = deriveDispatchDeviceId(body, taskRecord); // Prefer explicit device id; fallback to task meta.
-    const downlink_topic = deriveDispatchTopic(tenant, device_id, body); // Resolve MQTT topic once at queue time.
+    const target = resolveExecutionTarget({ tenant, body, taskRecord, capability: parsedCapability }); // capability -> target -> adapter.
+    const device_id = target.device_id;
+    const downlink_topic = target.downlink_topic;
     const dispatch_mode = String(body.dispatch_mode ?? "OUTBOX_ONLY").trim() || "OUTBOX_ONLY"; // Stable dispatch mode marker.
     const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
       ? String(operationPlan.record_json.payload.adapter_type)
@@ -2440,6 +2562,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         token_id: auth.token_id,
         dispatch_mode,
         adapter_hint,
+        capability: parsedCapability.capability,
+        capability_parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements,
         created_at_ts: Date.now()
       }
     });
@@ -2458,6 +2583,9 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         qos,
         retain,
         adapter_hint,
+        capability: parsedCapability.capability,
+        capability_parameters: parsedCapability.parameters,
+        evidence_requirements: parsedCapability.evidence_requirements,
         created_at_ts: Date.now()
       }
     });

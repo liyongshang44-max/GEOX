@@ -2,7 +2,7 @@ import { randomUUID, createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 
-const SkillCategorySchema = z.enum(["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY"]);
+const SkillCategorySchema = z.enum(["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE"]);
 const SkillStatusSchema = z.enum(["DRAFT", "ACTIVE", "PAUSED", "DEPRECATED"]);
 const ScopeTypeSchema = z.enum(["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"]);
 const RolloutModeSchema = z.enum(["DIRECT", "CANARY", "DRY_RUN"]);
