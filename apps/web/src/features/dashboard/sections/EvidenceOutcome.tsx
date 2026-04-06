@@ -98,7 +98,7 @@ export default function EvidenceOutcomeSection({
               <div key={groupKey} className="decisionItemStatic" style={{ padding: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div className="decisionItemTitle">{meta.title}</div>
-                  <StatusPill tone={meta.tone === "success" ? "success" : meta.tone === "warning" ? "warning" : "danger"}>{items.length} 项</StatusPill>
+                  <StatusPill tone={meta.tone}>{items.length} 项</StatusPill>
                 </div>
                 {!items.length ? <div className="muted" style={{ fontSize: 13 }}>当前分组暂无数据</div> : null}
                 {items.map((item) => {

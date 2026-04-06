@@ -2,7 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { DashboardTopActionItem } from "../../../api/dashboard";
 import { buildOperationSummary, mapOperationActionLabel } from "../../../lib/operationLabels";
-import { EmptyGuide, SectionCard } from "../../../shared/ui";
+import { SectionCard } from "../../../shared/ui";
+import EmptyState from "../../../components/common/EmptyState";
 
 
 export default function DecisionOperationQueue({
@@ -43,7 +44,7 @@ export default function DecisionOperationQueue({
             </div>
           </div>
         ))}
-        {!topActions.length ? <EmptyGuide title="暂无可执行动作" message="当前没有可直接触发的一键执行任务。" actionLabel="查看全部作业" actionTo="/operations" /> : null}
+        {!topActions.length ? <EmptyState title="暂无可执行动作" description="当前没有可直接触发的一键执行任务。" /> : null}
       </div>
       <details style={{ marginTop: 10 }}>
         <summary>历史执行摘要（折叠）</summary>
@@ -55,7 +56,7 @@ export default function DecisionOperationQueue({
               <div className="muted" style={{ fontSize: 12 }}>更新于 {a.occurredAtLabel}</div>
             </Link>
           ))}
-          {!runningActions.length ? <EmptyGuide title="暂无执行历史" message="历史执行记录为空，可先在作业页触发一次执行。" actionLabel="去作业页" actionTo="/operations" /> : null}
+          {!runningActions.length ? <EmptyState title="暂无执行历史" description="历史执行记录为空，可先在作业页触发一次执行。" /> : null}
         </div>
       </details>
       <div style={{ marginTop: 8 }}>

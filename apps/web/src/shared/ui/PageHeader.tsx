@@ -36,7 +36,7 @@ export default function PageHeader({
   return (
     <header className="card uiPageHeader">
       <div>
-        {eyebrow ? <div className="eyebrow">{eyebrow}</div> : null}
+        {eyebrow ? <div className="newTopBarEyebrow">{eyebrow}</div> : null}
         <h2 className="uiPageHeaderTitle">{title}</h2>
         {description ? <p className="uiPageHeaderDescription">{description}</p> : null}
       </div>
