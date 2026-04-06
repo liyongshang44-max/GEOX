@@ -50,7 +50,7 @@ function toSlaLabel(item: WorkAssignmentItem): string {
 }
 
 export default function HumanAssignmentsPage(): React.ReactElement {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string>("");
   const [items, setItems] = React.useState<WorkAssignmentItem[]>([]);
@@ -60,6 +60,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   const [reassignExecutorId, setReassignExecutorId] = React.useState("");
   const [reassignReason, setReassignReason] = React.useState("");
   const [slaSummary, setSlaSummary] = React.useState<WorkAssignmentSlaSummary | null>(null);
+  const [nowMs, setNowMs] = React.useState<number>(Date.now());
 
   const reload = React.useCallback(async () => {
     setLoading(true);
@@ -71,6 +72,7 @@ export default function HumanAssignmentsPage(): React.ReactElement {
           act_task_id: searchParams.get("act_task_id") || undefined,
           executor_id: searchParams.get("executor_id") || undefined,
           status: (searchParams.get("status") as any) || undefined,
+          timeout_status: (searchParams.get("timeout_status") as any) || undefined,
         }),
         fetchHumanExecutors({ status: "ACTIVE", limit: 200 }),
         fetchWorkAssignmentSlaSummary(),
@@ -122,8 +124,34 @@ export default function HumanAssignmentsPage(): React.ReactElement {
   React.useEffect(() => {
     void reload();
   }, [reload]);
+  React.useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const sourceLabel = (originType?: string): string => (String(originType ?? "manual").toLowerCase() === "auto_fallback" ? "自动转人工" : "人工派发");
+  const timeoutStatus = searchParams.get("timeout_status") || "";
+  const toDurationLabel = (ms: number | null | undefined): string => {
+    if (!Number.isFinite(Number(ms))) return "-";
+    const x = Number(ms);
+    if (x <= 0) return "00:00";
+    const totalSeconds = Math.floor(x / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+  const timeoutTag = (item: WorkAssignmentItem): string => {
+    if (item.sla_indicator === "BREACHED" || item.timeout_status === "OVERDUE") return "超时";
+    if (item.timeout_status === "AT_RISK") return "即将超时";
+    if (item.timeout_status === "ON_TRACK") return "SLA 正常";
+    return "无 SLA";
+  };
+  const resolveRemainingMs = (item: WorkAssignmentItem): number | null => {
+    if (item.status === "ASSIGNED" && Number.isFinite(Number(item.accept_deadline_ts))) return Number(item.accept_deadline_ts) - nowMs;
+    if ((item.status === "ACCEPTED" || item.status === "ARRIVED") && Number.isFinite(Number(item.arrive_deadline_ts))) return Number(item.arrive_deadline_ts) - nowMs;
+    return item.timeout_remaining_ms ?? null;
+  };
 
   return (
     <div className="productPage">
@@ -138,6 +166,30 @@ export default function HumanAssignmentsPage(): React.ReactElement {
         </div>
         {error ? <div className="muted" style={{ marginTop: 10 }}>加载异常：{error}</div> : null}
         {toast ? <div className="muted" style={{ marginTop: 10 }}>{toast}</div> : null}
+        <div className="row" style={{ marginTop: 10, gap: 8, flexWrap: "wrap" }}>
+          <span className="muted">超时筛选：</span>
+          {[
+            { key: "", label: "全部" },
+            { key: "OVERDUE", label: "仅超时" },
+            { key: "AT_RISK", label: "即将超时" },
+            { key: "ON_TRACK", label: "SLA 正常" },
+            { key: "NONE", label: "无 SLA" },
+          ].map((opt) => (
+            <button
+              key={opt.key || "all"}
+              className="btn"
+              style={{ opacity: timeoutStatus === opt.key ? 1 : 0.65 }}
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                if (opt.key) next.set("timeout_status", opt.key);
+                else next.delete("timeout_status");
+                setSearchParams(next, { replace: true });
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </section>
       {slaSummary ? (
         <section className="card section" style={{ marginTop: 16 }}>
@@ -172,6 +224,8 @@ export default function HumanAssignmentsPage(): React.ReactElement {
                         <span>分配时间：{toTimeLabel(item.assigned_at)}</span>
                         <span>来源：{sourceLabel(item.origin_type)}</span>
                         <span>最后更新时间：{toTimeLabel(Number(item.updated_ts_ms ?? 0))}</span>
+                        <span className="pill">{timeoutTag(item)}</span>
+                        <span>倒计时：{toDurationLabel(resolveRemainingMs(item))}</span>
                         <span>{toSlaLabel(item)}</span>
                       </div>
                     </div>

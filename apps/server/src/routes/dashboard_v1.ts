@@ -181,7 +181,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       pool.query(`SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 ORDER BY raised_ts_ms DESC LIMIT 10`, [tenant_id]),
       pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1') AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 ORDER BY occurred_at DESC, fact_id DESC LIMIT 10`, [tenant_id, project_id, group_id]),
     ]); // Parallelize independent reads.
-    const [timedOutAssignmentCountQ, avgAcceptDurationQ] = await Promise.all([
+    const [timedOutAssignmentCountQ, avgAcceptDurationQ, assignmentSlaQ] = await Promise.all([
       pool.query(
         `SELECT COUNT(*)::bigint AS count
          FROM work_assignment_index_v1
@@ -203,6 +203,21 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         WHERE assigned_ms IS NOT NULL AND accepted_ms IS NOT NULL AND accepted_ms >= assigned_ms`,
         [tenant_id]
       ).catch(() => ({ rows: [{ avg_ms: 0 }] })),
+      pool.query(
+        `SELECT
+           COUNT(*)::bigint AS total_count,
+           COUNT(*) FILTER (WHERE status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts < $2)::bigint AS accept_overdue_count,
+           COUNT(*) FILTER (WHERE status IN ('ACCEPTED','ARRIVED') AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts < $2)::bigint AS arrive_overdue_count,
+           COUNT(*) FILTER (WHERE (
+             (status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts >= $2 AND accept_deadline_ts < $2 + 900000)
+             OR
+             (status IN ('ACCEPTED','ARRIVED') AND arrive_deadline_ts IS NOT NULL AND arrive_deadline_ts >= $2 AND arrive_deadline_ts < $2 + 900000)
+           ))::bigint AS at_risk_count,
+           COALESCE(AVG(CASE WHEN status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL THEN accept_deadline_ts - $2 WHEN status IN ('ACCEPTED','ARRIVED') AND arrive_deadline_ts IS NOT NULL THEN arrive_deadline_ts - $2 END), 0)::bigint AS avg_remaining_ms
+         FROM work_assignment_index_v1
+         WHERE tenant_id = $1`,
+        [tenant_id, Date.now()]
+      ).catch(() => ({ rows: [{ total_count: 0, accept_overdue_count: 0, arrive_overdue_count: 0, at_risk_count: 0, avg_remaining_ms: 0 }] })),
     ]);
 
     let running_task_count = 0; // Default queue count when runtime table is absent.
@@ -241,6 +256,13 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         running_task_count,
         timed_out_assignment_count: Number(timedOutAssignmentCountQ.rows?.[0]?.count ?? 0),
         avg_assignment_accept_duration_ms: Number(avgAcceptDurationQ.rows?.[0]?.avg_ms ?? 0),
+        assignment_sla: {
+          total_count: Number(assignmentSlaQ.rows?.[0]?.total_count ?? 0),
+          accept_overdue_count: Number(assignmentSlaQ.rows?.[0]?.accept_overdue_count ?? 0),
+          arrive_overdue_count: Number(assignmentSlaQ.rows?.[0]?.arrive_overdue_count ?? 0),
+          at_risk_count: Number(assignmentSlaQ.rows?.[0]?.at_risk_count ?? 0),
+          avg_remaining_ms: Number(assignmentSlaQ.rows?.[0]?.avg_remaining_ms ?? 0),
+        },
       },
       trend_series: bucketTelemetryRows(trendRowsQ.rows ?? [], from_ts_ms, to_ts_ms),
       latest_alerts,
