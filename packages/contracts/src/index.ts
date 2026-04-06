@@ -34,9 +34,16 @@ export * from "./schema/cost_record_v1";
 export * from "./schema/sla_evaluation_v1";
 export * from "./schema/executor_adapter_v1";
 export * from "./schema/ao_act_receipt_v1";
-export * from "./schema/human_work_receipt_v1";
 export * from "./schema/evidence_artifact_v1";
 export * from "./schema/human_executor_v1";
+export {
+  HumanWorkReceiptExceptionTypeValuesV1,
+  type HumanWorkReceiptExceptionTypeV1,
+  HumanWorkReceiptV1Schema,
+  mapHumanWorkReceiptToAoActReceiptV1,
+  type HumanWorkReceiptV1,
+  type HumanWorkReceiptEvidenceRefV1,
+} from "./schema/human_work_receipt_v1";
 
 export {
   AcceptanceResultV1PayloadSchema,
