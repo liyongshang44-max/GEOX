@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { bindDeviceToField, fetchDeviceOnboardingStatus, registerDeviceOnboarding } from "../lib/api";
 import { PageHeader, SectionCard, Stepper } from "../shared/ui";
@@ -298,14 +299,13 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       </SectionCard>
 
       {completed ? (
-        <EmptyGuide
-          title="✅ 接入完成"
-          description="首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。"
-          actions={[
-            { label: "跳转：设备详情", to: `/devices/${encodeURIComponent(deviceId.trim())}`, tone: "primary" },
-            { label: "跳转：监控台", to: "/dashboard" },
-          ]}
-        />
+        <SectionCard title="✅ 接入完成">
+          <div className="metaText">首条 telemetry 校验完成。你可以继续查看设备详情或返回监控台。</div>
+          <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转：设备详情</Link>
+            <Link className="btn" to="/dashboard">跳转：监控台</Link>
+          </div>
+        </SectionCard>
       ) : null}
     </div>
   );

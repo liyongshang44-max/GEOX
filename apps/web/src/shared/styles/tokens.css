@@ -1,0 +1,102 @@
+:root {
+  /* Surface tokens */
+  --color-surface-primary: #f5f5f7;
+  --color-surface-secondary: #f8fafc;
+  --color-surface-card: #ffffff;
+  --color-border-primary: #d0d5dd;
+  --color-border-subtle: rgba(15, 23, 42, 0.05);
+  --color-border-strong: #98a2b3;
+  --color-border-accent: rgba(15, 23, 42, 0.12);
+
+  /* Text tokens */
+  --color-text-primary: #101828;
+  --color-text-secondary: #475467;
+  --color-text-weak: #64748b;
+  --color-text-emphasis: #0f172a;
+  --color-text-inverse: #ffffff;
+
+  /* Semantic status colors */
+  --color-status-normal-bg: #ecfdf3;
+  --color-status-normal-fg: #067647;
+  --color-status-normal-border: #abefc6;
+  --color-status-pending-bg: #eff8ff;
+  --color-status-pending-fg: #175cd3;
+  --color-status-pending-border: #b2ddff;
+  --color-status-risk-bg: #fffaeb;
+  --color-status-risk-fg: #b54708;
+  --color-status-risk-border: #fedf89;
+  --color-status-blocked-bg: #f4f3ff;
+  --color-status-blocked-fg: #5925dc;
+  --color-status-blocked-border: #d9d6fe;
+  --color-status-failed-bg: #fef3f2;
+  --color-status-failed-fg: #b42318;
+  --color-status-failed-border: #fecdca;
+  --color-status-partial-bg: #fff7ed;
+  --color-status-partial-fg: #c2410c;
+  --color-status-partial-border: #fdba74;
+  --color-status-data-bg: #f2f4f7;
+  --color-status-data-fg: #475467;
+  --color-status-data-border: #d0d5dd;
+
+  /* Tone mapping for UI states (StatusPill / Badge / inline alerts) */
+  --state-success-bg: var(--color-status-normal-bg);
+  --state-success-fg: var(--color-status-normal-fg);
+  --state-success-border: var(--color-status-normal-border);
+  --state-info-bg: var(--color-status-pending-bg);
+  --state-info-fg: var(--color-status-pending-fg);
+  --state-info-border: var(--color-status-pending-border);
+  --state-warning-bg: var(--color-status-risk-bg);
+  --state-warning-fg: var(--color-status-risk-fg);
+  --state-warning-border: var(--color-status-risk-border);
+  --state-danger-bg: var(--color-status-failed-bg);
+  --state-danger-fg: var(--color-status-failed-fg);
+  --state-danger-border: var(--color-status-failed-border);
+
+  /* Alert red is reserved for blocking/failure only. */
+  --alert-danger-bg: var(--state-danger-bg);
+  --alert-danger-fg: var(--state-danger-fg);
+  --alert-danger-border: var(--state-danger-border);
+
+  /* 8pt spacing scale */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-pill: 999px;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 6px 18px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+  --shadow-inset-soft: 0 0 0 1px rgba(16, 24, 40, 0.06) inset;
+
+  /* Backward-compatible aliases for existing pages */
+  --color-bg-canvas: var(--color-surface-primary);
+  --color-bg-subtle: var(--color-surface-secondary);
+  --color-bg-surface: var(--color-surface-card);
+  --color-bg-elevated: var(--color-surface-card);
+  --color-bg-overlay: rgba(255, 255, 255, 0.72);
+  --color-text-tertiary: var(--color-text-weak);
+  --color-border-default: var(--color-border-primary);
+  --color-muted: var(--color-text-secondary);
+
+  --bg: var(--color-surface-primary);
+  --panel: var(--color-surface-card);
+  --text: var(--color-text-primary);
+  --muted: var(--color-text-secondary);
+  --border: var(--color-border-accent);
+  --shadow: var(--shadow-sm);
+  --radius: 14px;
+}

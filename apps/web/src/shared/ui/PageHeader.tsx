@@ -1,10 +1,12 @@
 import React from "react";
 
 export default function PageHeader({
+  eyebrow,
   title,
   description,
   actions,
 }: {
+  eyebrow?: string;
   title: string;
   description?: string;
   actions?: React.ReactNode;
@@ -12,6 +14,7 @@ export default function PageHeader({
   return (
     <header className="card uiPageHeader">
       <div>
+        {eyebrow ? <div className="newTopBarEyebrow">{eyebrow}</div> : null}
         <h2 className="uiPageHeaderTitle">{title}</h2>
         {description ? <p className="uiPageHeaderDescription">{description}</p> : null}
       </div>

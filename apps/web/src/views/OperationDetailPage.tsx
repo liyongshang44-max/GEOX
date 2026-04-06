@@ -11,7 +11,6 @@ import { buildOperationDetailViewModel } from "../viewmodels/operationDetailView
 import { executeOperationAction } from "../api/operations";
 import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../lib/operationLabels";
 import { toBusinessTimelineLabel } from "../viewmodels/timelineLabels";
-import { DetailAside, StatusPill } from "../shared/ui";
 
 const COPY = {
   backToList: "返回作业列表",
@@ -140,11 +139,13 @@ export default function OperationDetailPage(): React.ReactElement {
         eyebrow="GEOX / 作业页收口"
         title={`${actionLabel} · ${fieldLabel}`}
         description={toBusinessExecutionNarrative(model.finalStatus)}
-        actions={[
-          { label: topStatusLabel },
-          { label: COPY.backToList, to: "/operations" },
-          { label: "刷新", onClick: () => void reload() },
-        ]}
+        actions={(
+          <>
+            <span className="statusWord">{topStatusLabel}</span>
+            <Link className="btn" to="/operations">{COPY.backToList}</Link>
+            <button className="btn" type="button" onClick={() => void reload()}>刷新</button>
+          </>
+        )}
       />
 
       <SectionCard title="作业关键信息">

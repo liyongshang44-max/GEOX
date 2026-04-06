@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   fetchDashboardRecommendations,
   fetchDashboardRecentExecutions,
@@ -23,6 +23,7 @@ import FieldRuntime from "../features/dashboard/sections/FieldRuntime";
 import DecisionOperationQueue from "../features/dashboard/sections/DecisionOperationQueue";
 import EvidenceOutcome from "../features/dashboard/sections/EvidenceOutcome";
 import { useDashboard } from "../hooks/useDashboard";
+import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 import { PageHeader } from "../shared/ui";
 
 function normalizePercentMetric(value: unknown): number | null {
@@ -44,6 +45,10 @@ function normalizeModelMetrics(metrics: any): { soil_moisture: number | null; te
     temperature: normalizeTemperatureMetric(metrics?.temperature),
     humidity: normalizePercentMetric(metrics?.humidity),
   };
+}
+
+function EmptyBlock({ text }: { text: string }): React.ReactElement {
+  return <div className="muted" style={{ fontSize: 13 }}>{text}</div>;
 }
 
 function EmptyStateGuide({
@@ -97,7 +102,7 @@ function EmptyStateGuide({
   return null;
 }
 
-function OverviewMetrics({
+function LegacyOverviewMetrics({
   expert,
   sla,
   totalRevenue,
@@ -229,7 +234,7 @@ function FieldRuntimePanel({
   );
 }
 
-function DecisionOperationQueue({
+function LegacyDecisionOperationQueue({
   topActions,
   runTopAction,
   executingActionId,
@@ -556,7 +561,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         eyebrow="Dashboard"
         title="监控台总览"
         description="统一监控田块、设备、作业与证据状态，优先处理阻断任务。"
-        actions={[{ label: "进入作业队列", to: "/operations?status=pending", tone: "primary" }, { label: "设备接入", to: "/devices/onboarding" }]}
+        actions={(
+          <>
+            <Link className="btn primary" to="/operations?status=pending">进入作业队列</Link>
+            <Link className="btn" to="/devices/onboarding">设备接入</Link>
+          </>
+        )}
       />
 
       <OverviewMetrics
