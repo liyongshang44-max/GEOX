@@ -55,7 +55,7 @@ export type DashboardOperationStateItem = {
 export type DashboardAssignmentItem = {
   assignment_id: string;
   act_task_id: string;
-  status: "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED";
+  status: "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
   assigned_at: string;
 };
 
