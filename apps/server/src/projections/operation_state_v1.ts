@@ -90,6 +90,36 @@ export type OperationStateV1 = {
       max_retries: number | null;
     };
   } | null;
+  skill_trace: {
+    crop_skill: {
+      skill_id: string | null;
+      version: string | null;
+      run_id: string | null;
+      result_status: string | null;
+      error_code: string | null;
+    };
+    agronomy_skill: {
+      skill_id: string | null;
+      version: string | null;
+      run_id: string | null;
+      result_status: string | null;
+      error_code: string | null;
+    };
+    device_skill: {
+      skill_id: string | null;
+      version: string | null;
+      run_id: string | null;
+      result_status: string | null;
+      error_code: string | null;
+    };
+    acceptance_skill: {
+      skill_id: string | null;
+      version: string | null;
+      run_id: string | null;
+      result_status: string | null;
+      error_code: string | null;
+    };
+  };
 };
 
 export type OperationProjectionFactRow = FactRow;
@@ -124,7 +154,7 @@ async function loadFacts(pool: Pool, tenant: TenantTriple): Promise<FactRow[]> {
       'operation_plan_v1','operation_plan_transition_v1','ao_act_task_v0','ao_act_receipt_v1','ao_act_receipt_v0',
       'acceptance_result_v1','work_assignment_upserted_v1','work_assignment_status_changed_v1','work_assignment_submitted_v1',
       'ao_act_manual_fallback_v1',
-      'evidence_artifact_v1','field_program_v1'
+      'evidence_artifact_v1','field_program_v1','skill_run_v1'
     )
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (
@@ -264,6 +294,23 @@ function normalizeAcceptanceVerdict(verdictRaw: unknown): "PASS" | "FAIL" | "PEN
 }
 
 export function projectOperationStateFromFacts(facts: OperationProjectionFactRow[]): OperationStateV1[] {
+  const emptySkillTraceNode = () => ({
+    skill_id: null as string | null,
+    version: null as string | null,
+    run_id: null as string | null,
+    result_status: null as string | null,
+    error_code: null as string | null,
+  });
+  const mapSkillRun = (row: FactRow | null | undefined) => {
+    const payload = row?.record_json?.payload ?? {};
+    return {
+      skill_id: String(payload.skill_id ?? "").trim() || null,
+      version: String(payload.version ?? "").trim() || null,
+      run_id: String(payload.run_id ?? "").trim() || null,
+      result_status: String(payload.result_status ?? "").trim() || null,
+      error_code: String(payload.error_code ?? "").trim() || null,
+    };
+  };
   const planFactsByOperationId = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_v1")) {
     const operationPlanId = String(row.record_json?.payload?.operation_plan_id ?? "").trim();
@@ -293,6 +340,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     facts.filter((r) => r.record_json?.type === "ao_act_manual_fallback_v1"),
     (r) => String(r.record_json?.payload?.act_task_id ?? "").trim(),
   );
+  const skillRuns = facts.filter((r) => String(r.record_json?.type ?? "") === "skill_run_v1");
 
   const transitionByPlan = new Map<string, FactRow[]>();
   for (const row of facts.filter((r) => r.record_json?.type === "operation_plan_transition_v1")) {
@@ -323,6 +371,17 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     if (!operation_plan_id) continue;
     if (states.some((s) => s.operation_id === operation_plan_id)) continue;
     const allPlanFacts = planFactsByOperationId.get(operation_plan_id) ?? [row];
+    const skillRunsForOperation = skillRuns.filter((runFact) => {
+      const p = runFact.record_json?.payload ?? {};
+      const opId = String(p.operation_id ?? "").trim();
+      const planId = String(p.operation_plan_id ?? "").trim();
+      return opId === operation_plan_id || planId === operation_plan_id;
+    });
+    const latestSkillRun = (predicate: (runFact: FactRow) => boolean): FactRow | null => {
+      const matched = skillRunsForOperation.filter(predicate);
+      if (!matched.length) return null;
+      return matched.sort((a, b) => toMs(a.occurred_at) - toMs(b.occurred_at))[matched.length - 1] ?? null;
+    };
 
     const recommendation_id = latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.recommendation_id ?? "").trim()) ?? null;
     const approval_request_id = latestNonEmpty(allPlanFacts, (planFact) => String(planFact.record_json?.payload?.approval_request_id ?? "").trim()) ?? null;
@@ -610,7 +669,25 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
               : null,
           }
         }
-        : null
+        : null,
+      skill_trace: {
+        crop_skill: mapSkillRun(latestSkillRun((runFact) => {
+          const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
+          return stage === "before_recommendation";
+        })) ?? emptySkillTraceNode(),
+        agronomy_skill: mapSkillRun(latestSkillRun((runFact) => {
+          const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
+          return stage === "before_approval";
+        })) ?? emptySkillTraceNode(),
+        device_skill: mapSkillRun(latestSkillRun((runFact) => {
+          const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
+          return stage === "before_dispatch";
+        })) ?? emptySkillTraceNode(),
+        acceptance_skill: mapSkillRun(latestSkillRun((runFact) => {
+          const stage = String(runFact.record_json?.payload?.trigger_stage ?? "").trim().toLowerCase();
+          return stage === "before_acceptance" || stage === "after_acceptance";
+        })) ?? emptySkillTraceNode(),
+      }
     });
   }
 

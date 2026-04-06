@@ -1,6 +1,19 @@
 import { apiRequest, apiRequestOptional, withQuery } from "./client";
 
 export type OperationStateTimelineItemV1 = { type: string; label: string; ts: number };
+export type OperationSkillTraceEntryV1 = {
+  skill_id: string | null;
+  version: string | null;
+  run_id: string | null;
+  result_status: string | null;
+  error_code: string | null;
+};
+export type OperationSkillTraceV1 = {
+  crop_skill: OperationSkillTraceEntryV1;
+  agronomy_skill: OperationSkillTraceEntryV1;
+  device_skill: OperationSkillTraceEntryV1;
+  acceptance_skill: OperationSkillTraceEntryV1;
+};
 export type OperationStateItemV1 = {
   operation_id: string;
   recommendation_id?: string | null;
@@ -17,6 +30,7 @@ export type OperationStateItemV1 = {
   final_status: string;
   last_event_ts: number;
   timeline: OperationStateTimelineItemV1[];
+  skill_trace?: OperationSkillTraceV1 | null;
 };
 
 export type ApprovalRequestItem = {
@@ -74,6 +88,7 @@ export type OperationDetailResponse = {
     missing_receipt: boolean;
     missing_evidence: boolean;
   };
+  skill_trace?: OperationSkillTraceV1 | null;
   fallback_state?: {
     generated: boolean;
     executable: boolean;

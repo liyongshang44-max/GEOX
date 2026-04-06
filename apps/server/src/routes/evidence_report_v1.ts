@@ -253,6 +253,20 @@ async function runEvidenceReportJob(pool: Pool, args: { job_id: string; operatio
         ? "执行无效，证据不满足正式验收要求"
         : toText(acceptance?.record_json?.payload?.summary ?? acceptance?.record_json?.payload?.missing_evidence),
     },
+    skill_trace_summary: {
+      stages: {
+        crop_skill: state.skill_trace?.crop_skill ?? null,
+        agronomy_skill: state.skill_trace?.agronomy_skill ?? null,
+        device_skill: state.skill_trace?.device_skill ?? null,
+        acceptance_skill: state.skill_trace?.acceptance_skill ?? null,
+      },
+      success_count: [
+        state.skill_trace?.crop_skill,
+        state.skill_trace?.agronomy_skill,
+        state.skill_trace?.device_skill,
+        state.skill_trace?.acceptance_skill,
+      ].filter((x) => String(x?.result_status ?? "").toUpperCase() === "SUCCESS").length,
+    },
     cost: {
       total: costBreakdown.total_cost,
       water: costBreakdown.water_cost,
