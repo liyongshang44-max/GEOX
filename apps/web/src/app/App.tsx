@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
@@ -170,8 +170,8 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           {renderProgramsRoutes()}
           {renderSkillsRoutes()}
 
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/dev" element={<DevToolsPage />} />
+          <Route path="/legacy/settings" element={<SettingsPage />} />
+          <Route path="/legacy/dev" element={<DevToolsPage />} />
           <Route path="/legacy/judge/run" element={<JudgeRunPage />} />
           <Route path="/legacy/judge/records" element={<JudgeRecordsPage />} />
           <Route path="/legacy/judge/config" element={<JudgeConfigPage />} />
@@ -180,14 +180,16 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/legacy/admin/import" element={<AdminImportPage />} />
           <Route path="/legacy/admin/acceptance" element={<AdminAcceptancePage />} />
           <Route path="/legacy/control/approvals" element={<ApprovalRequestsPage />} />
-          <Route path="/judge/run" element={<JudgeRunPage />} />
-          <Route path="/judge/records" element={<JudgeRecordsPage />} />
-          <Route path="/judge/config" element={<JudgeConfigPage />} />
-          <Route path="/sim/config" element={<SimConfigPage />} />
-          <Route path="/admin/healthz" element={<AdminHealthPage />} />
-          <Route path="/admin/import" element={<AdminImportPage />} />
-          <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
-          <Route path="/control/approvals" element={<ApprovalRequestsPage />} />
+          <Route path="/judge/run" element={<Navigate to="/legacy/judge/run" replace />} />
+          <Route path="/judge/records" element={<Navigate to="/legacy/judge/records" replace />} />
+          <Route path="/judge/config" element={<Navigate to="/legacy/judge/config" replace />} />
+          <Route path="/sim/config" element={<Navigate to="/legacy/sim/config" replace />} />
+          <Route path="/admin/healthz" element={<Navigate to="/legacy/admin/healthz" replace />} />
+          <Route path="/admin/import" element={<Navigate to="/legacy/admin/import" replace />} />
+          <Route path="/admin/acceptance" element={<Navigate to="/legacy/admin/acceptance" replace />} />
+          <Route path="/control/approvals" element={<Navigate to="/legacy/control/approvals" replace />} />
+          <Route path="/settings" element={<Navigate to="/legacy/settings" replace />} />
+          <Route path="/dev" element={<Navigate to="/legacy/dev" replace />} />
         </Routes>
       </React.Suspense>
     </AppShell>

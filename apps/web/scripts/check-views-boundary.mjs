@@ -21,4 +21,23 @@ if (offenders.length > 0) {
   process.exit(1);
 }
 
-console.log("✅ app/routes import boundary passed (no ../../views/* imports).");
+const appFile = path.join(repoRoot, "src/app/App.tsx");
+const appText = fs.readFileSync(appFile, "utf8");
+const legacyViewImportMatches = [...appText.matchAll(/const\s+(\w+)\s*=\s*React\.lazy\(\(\)\s*=>\s*import\(["']\.\.\/views\//g)];
+const legacyViewImportNames = new Set(legacyViewImportMatches.map((m) => m[1]));
+const nonLegacyLegacyViewRoutes = [];
+
+for (const match of appText.matchAll(/<Route\s+path=["']([^"']+)["']\s+element={<(\w+)/g)) {
+  const [, routePath, elementName] = match;
+  if (legacyViewImportNames.has(elementName) && !routePath.startsWith("/legacy/")) {
+    nonLegacyLegacyViewRoutes.push(`${routePath} -> ${elementName}`);
+  }
+}
+
+if (nonLegacyLegacyViewRoutes.length > 0) {
+  console.error("❌ Non-legacy routes cannot render src/views/* pages in src/app/App.tsx:");
+  for (const route of nonLegacyLegacyViewRoutes) console.error(` - ${route}`);
+  process.exit(1);
+}
+
+console.log("✅ views boundary passed (non-legacy routes do not render src/views/* pages).");
