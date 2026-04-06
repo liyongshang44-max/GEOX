@@ -27,6 +27,9 @@
       ],
       "@geox/device-skills": [
         "packages/device-skills/src/index.ts"
+      ],
+      "@geox/skill-registry": [
+        "packages/skill-registry/src/index.ts"
       ]
     }
   },
@@ -35,7 +38,8 @@
     "../judge/src/**/*.ts",
     "../../packages/contracts/src/**/*.ts",
     "../../packages/control-kernel/src/**/*.ts",
-    "../../packages/device-skills/src/**/*.ts"
+    "../../packages/device-skills/src/**/*.ts",
+    "../../packages/skill-registry/src/**/*.ts"
   ],
   "exclude": [
     "dist",
