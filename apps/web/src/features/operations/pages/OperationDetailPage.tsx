@@ -60,9 +60,34 @@ export default function OperationDetailPage(): React.ReactElement {
     }
   }, [detail]);
 
-  if (loading) return <SectionSkeleton kind="detail" />;
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
+
+  const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
+  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
+
+  React.useEffect(() => {
+    if (loading || permissionDenied || error || !detail) {
+      setHandoffItems([]);
+      return;
+    }
+    let alive = true;
+    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+      .then((rows) => {
+        if (!alive) return;
+        setHandoffItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHandoffItems([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [loading, permissionDenied, error, detail, model.operationPlanId, operationPlanId]);
+
+  if (loading) return <SectionSkeleton kind="detail" />;
   if (permissionDenied) {
     return <ErrorState title="你没有权限查看此内容" message="当前账号无法访问该对象或执行该动作，请联系管理员开通权限。" onRetry={() => window.history.back()} secondaryText="返回作业列表" onSecondary={() => window.location.assign("/operations")} />;
   }
@@ -85,10 +110,6 @@ export default function OperationDetailPage(): React.ReactElement {
   const traceGap = (detail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
   const acceptanceVerdict = String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase();
   const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
-
-  const [executing, setExecuting] = React.useState(false);
-  const [runFeedback, setRunFeedback] = React.useState<string>("");
-  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
     setExecuting(true);
@@ -140,22 +161,6 @@ export default function OperationDetailPage(): React.ReactElement {
   const isInvalidExecution = String(model.execution.finalStatus ?? model.finalStatus ?? "").toUpperCase() === "INVALID_EXECUTION";
   const isEvidenceMissing = Boolean(traceGap?.missing_evidence) || !model.receiptEvidence;
   const isPendingAcceptance = acceptanceVerdict === "PENDING";
-
-  React.useEffect(() => {
-    let alive = true;
-    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
-      .then((rows) => {
-        if (!alive) return;
-        setHandoffItems(rows);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setHandoffItems([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [model.operationPlanId, operationPlanId]);
 
   return (
     <div className="demoDashboardPage operationPageClosure">

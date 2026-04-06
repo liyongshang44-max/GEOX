@@ -8,7 +8,8 @@
     "build": "vite build --config vite.config.ts",
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json",
     "lint": "pnpm run lint:views-boundary --dir apps/web",
-    "lint:views-boundary": "node ./scripts/check-views-boundary.mjs"
+    "lint:views-boundary": "node ./scripts/check-views-boundary.mjs",
+    "lint:operation-detail-hooks": "pnpm exec eslint --max-warnings 0 src/features/operations/pages/OperationDetailPage.tsx"
   },
   "dependencies": {
     "react": "^18.3.1",
