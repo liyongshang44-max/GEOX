@@ -1,5 +1,7 @@
-import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { fetchFields, type FieldListItem } from "../api/fields";
+import { toUserErrorMessage } from "../shared/query/errors";
+import { queryKeys } from "../shared/query/keys";
 
 export function useFields(): {
   fields: FieldListItem[];
@@ -7,25 +9,23 @@ export function useFields(): {
   busy: boolean;
   refresh: () => Promise<void>;
 } {
-  const [fields, setFields] = React.useState<FieldListItem[]>([]);
-  const [status, setStatus] = React.useState<string>("");
-  const [busy, setBusy] = React.useState<boolean>(false);
+  const query = useQuery<FieldListItem[]>({
+    queryKey: queryKeys.fields.list(),
+    queryFn: fetchFields,
+  });
 
-  const refresh = React.useCallback(async () => {
-    setBusy(true);
-    setStatus("正在同步田块列表...");
-    try {
-      const nextFields = await fetchFields();
-      setFields(nextFields);
-      setStatus(`已加载 ${nextFields.length} 个田块。`);
-    } catch (e: any) {
-      setStatus(`读取失败：${e?.message || String(e)}`);
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const fields = query.data ?? [];
+  const busy = query.isLoading || query.isFetching;
 
-  React.useEffect(() => { void refresh(); }, [refresh]);
+  const status = query.isLoading
+    ? "正在同步田块列表..."
+    : query.isError
+      ? `读取失败：${toUserErrorMessage(query.error, "田块列表加载失败，请稍后重试。")}`
+      : `已加载 ${fields.length} 个田块。`;
+
+  const refresh = async (): Promise<void> => {
+    await query.refetch();
+  };
 
   return { fields, status, busy, refresh };
 }
