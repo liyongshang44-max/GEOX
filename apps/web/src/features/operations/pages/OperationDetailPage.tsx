@@ -52,6 +52,9 @@ function toDateTimeLabel(ts?: number | null): string {
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
+  const [executing, setExecuting] = React.useState(false);
+  const [runFeedback, setRunFeedback] = React.useState<string>("");
+  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const model = React.useMemo(() => {
     try {
       return buildOperationDetailViewModel({ detail });
@@ -59,6 +62,22 @@ export default function OperationDetailPage(): React.ReactElement {
       return buildOperationDetailViewModel({});
     }
   }, [detail]);
+
+  React.useEffect(() => {
+    let alive = true;
+    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+      .then((rows) => {
+        if (!alive) return;
+        setHandoffItems(rows);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setHandoffItems([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [model.operationPlanId, operationPlanId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   const errorText = String(error ?? "").toLowerCase();
@@ -86,9 +105,6 @@ export default function OperationDetailPage(): React.ReactElement {
   const acceptanceVerdict = String((detail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase();
   const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
 
-  const [executing, setExecuting] = React.useState(false);
-  const [runFeedback, setRunFeedback] = React.useState<string>("");
-  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
     setExecuting(true);
@@ -140,22 +156,6 @@ export default function OperationDetailPage(): React.ReactElement {
   const isInvalidExecution = String(model.execution.finalStatus ?? model.finalStatus ?? "").toUpperCase() === "INVALID_EXECUTION";
   const isEvidenceMissing = Boolean(traceGap?.missing_evidence) || !model.receiptEvidence;
   const isPendingAcceptance = acceptanceVerdict === "PENDING";
-
-  React.useEffect(() => {
-    let alive = true;
-    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
-      .then((rows) => {
-        if (!alive) return;
-        setHandoffItems(rows);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setHandoffItems([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [model.operationPlanId, operationPlanId]);
 
   return (
     <div className="demoDashboardPage operationPageClosure">
