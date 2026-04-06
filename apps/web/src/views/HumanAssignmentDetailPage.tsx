@@ -58,6 +58,9 @@ function getAssignmentFriendlyError(error: unknown, fallback: string): string {
   if (errorCode === "CONFLICT") {
     return "任务状态已变化，请刷新";
   }
+  if (errorCode === "ASSIGNMENT_EXPIRED") {
+    return "任务已超时，无法继续该动作";
+  }
   return fallback;
 }
 
@@ -241,6 +244,10 @@ export default function HumanAssignmentDetailPage(): React.ReactElement {
         <div className="kv"><span className="k">地块</span><span className="v">{fieldLabel}</span></div>
         <div className="kv"><span className="k">时间窗</span><span className="v">{windowLabel}</span></div>
         <div className="kv"><span className="k">动作类型</span><span className="v">{actionType}</span></div>
+        <div className="kv"><span className="k">接单截止</span><span className="v">{item.accept_deadline_ts ? new Date(item.accept_deadline_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
+        <div className="kv"><span className="k">到场截止</span><span className="v">{item.arrive_deadline_ts ? new Date(item.arrive_deadline_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
+        <div className="kv"><span className="k">超时时间</span><span className="v">{item.expired_ts ? new Date(item.expired_ts).toLocaleString("zh-CN", { hour12: false }) : "-"}</span></div>
+        <div className="kv"><span className="k">超时原因</span><span className="v">{item.expired_reason || "-"}</span></div>
         <div className="kv" style={{ alignItems: "flex-start" }}>
           <span className="k">操作参数</span>
           <pre className="v" style={{ margin: 0, whiteSpace: "pre-wrap" }}>{safeJsonText(parameterPayload)}</pre>

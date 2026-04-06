@@ -8,11 +8,24 @@ export type WorkAssignmentItem = {
   executor_id: string;
   assigned_at: string;
   status: WorkAssignmentStatus;
-  accept_deadline_ts?: string | null;
-  arrive_deadline_ts?: string | null;
+  accept_deadline_ts?: number | null;
+  arrive_deadline_ts?: number | null;
+  expired_ts?: number | null;
   expired_reason?: string | null;
   created_ts_ms: number;
   updated_ts_ms: number;
+};
+
+export type WorkAssignmentSlaSummary = {
+  total_count: number;
+  assigned_count: number;
+  accepted_count: number;
+  arrived_count: number;
+  submitted_count: number;
+  expired_count: number;
+  cancelled_count: number;
+  accept_timeout_count: number;
+  arrive_timeout_count: number;
 };
 
 export type DispatchWorkbenchTaskItem = {
@@ -130,6 +143,28 @@ export async function arriveWorkAssignment(assignmentId: string): Promise<{ ok?:
     method: "POST",
     body: JSON.stringify({}),
   });
+}
+
+export async function cancelWorkAssignment(assignmentId: string, note?: string): Promise<{ ok?: boolean; error?: string }> {
+  return apiRequest<{ ok?: boolean; error?: string }>(`/api/v1/work-assignments/${encodeURIComponent(assignmentId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export async function fetchWorkAssignmentSlaSummary(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<WorkAssignmentSlaSummary> {
+  const res = await apiRequest<{ ok?: boolean; summary?: WorkAssignmentSlaSummary }>(withQuery("/api/v1/work-assignments/sla-summary", params));
+  return res.summary ?? {
+    total_count: 0,
+    assigned_count: 0,
+    accepted_count: 0,
+    arrived_count: 0,
+    submitted_count: 0,
+    expired_count: 0,
+    cancelled_count: 0,
+    accept_timeout_count: 0,
+    arrive_timeout_count: 0,
+  };
 }
 
 export async function submitWorkAssignment(
