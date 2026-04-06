@@ -30,6 +30,7 @@ import StatusBadge from "../components/common/StatusBadge";
 import ErrorState from "../components/common/ErrorState";
 import { formatTimeOrFallback } from "../lib/presentation/time";
 import { normalizeStatusWord } from "../lib/statusVocabulary";
+import { ONBOARDING_TRACE_STORAGE_KEY, type OnboardingRecord } from "../features/devices/onboarding/mockFlow";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
@@ -79,6 +80,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
+  const [onboardingRecords, setOnboardingRecords] = React.useState<OnboardingRecord[]>([]);
 
   async function refresh(): Promise<void> {
     if (!deviceId) return;
@@ -142,6 +144,17 @@ export default function DeviceDetailPage(): React.ReactElement {
   }
 
   React.useEffect(() => { void refresh(); }, [deviceId]);
+  React.useEffect(() => {
+    if (!deviceId) return;
+    try {
+      const raw = localStorage.getItem(ONBOARDING_TRACE_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(parsed) ? parsed.filter((item: OnboardingRecord) => item.deviceId === deviceId) : [];
+      setOnboardingRecords(list);
+    } catch {
+      setOnboardingRecords([]);
+    }
+  }, [deviceId, status]);
 
   const boundFieldId = resolvedBoundField.field_id || deviceListItem?.field_id || (detail as any)?.device?.field_id || null;
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
@@ -149,6 +162,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const recentLatest = latest[0]; const statusLabel = normalizeStatusWord(hero?.status?.label || statusObj?.status || "-");
   const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
   const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
+  const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
 
@@ -215,6 +229,32 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">MQTT 客户端编号</div><div className="decisionItemMeta">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">遥测 / 心跳通道</div><div className="decisionItemMeta">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"} · {cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">下发 / 回执通道</div><div className="decisionItemMeta">{cpConnectivity?.downlink_topic || consoleView?.access_info?.downlink_topic || "-"} · {cpConnectivity?.receipt_topic || consoleView?.access_info?.receipt_topic || "-"}</div></div>
+          </div>
+        </section>
+
+        <section id="onboarding-records" className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">接入记录</div>
+            <div className="detailSectionLead">预留接入记录入口，并与 onboarding trace 数据关联，便于追溯每步执行结果。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">接入流程入口</div>
+              <div className="decisionItemMeta">可回到接入向导继续执行/复盘 6 步流程。</div>
+              <div className="operationsSummaryActions">
+                <Link className="btn" to={`/devices/onboarding?device_id=${encodeURIComponent(String(deviceId || ""))}`}>打开接入向导</Link>
+              </div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最近 trace</div>
+              <div className="decisionItemMeta">trace_id：{latestOnboardingTrace?.traceId || "-"}</div>
+              <div className="decisionItemMeta">步骤：{latestOnboardingTrace?.stepKey || "-"} · 状态：{latestOnboardingTrace?.nextState || "-"}</div>
+              <div className="decisionItemMeta">时间：{fmtTs(latestOnboardingTrace?.timestamp || null)}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">历史记录数</div>
+              <div className="decisionItemMeta">{onboardingRecords.length} 条（来源：local mock trace）</div>
+            </div>
           </div>
         </section>
       </section>
