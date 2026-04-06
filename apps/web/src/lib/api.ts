@@ -1003,6 +1003,7 @@ export async function fetchAgronomyRecommendationsControlPlane(params: {
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
+  field_id?: string;
   limit?: number;
   token?: string;
 }): Promise<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }> {
@@ -1011,6 +1012,7 @@ export async function fetchAgronomyRecommendationsControlPlane(params: {
     tenant_id: params.tenant_id,
     project_id: params.project_id,
     group_id: params.group_id,
+    field_id: params.field_id,
     limit: params.limit ?? 50,
   }), { headers: authHeaders(token) });
 }
