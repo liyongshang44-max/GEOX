@@ -1,6 +1,6 @@
 import React from "react";
 
-type ZoneKey = "A" | "B" | "C" | "D" | "E";
+type ZoneKey = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H";
 
 function DashboardZone({
   zone,

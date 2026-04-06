@@ -10,6 +10,7 @@ import { renderDevicesRoutes } from "./routes/devicesRoutes";
 import { renderOperationsRoutes } from "./routes/operationsRoutes";
 import { renderProgramsRoutes } from "./routes/programsRoutes";
 import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
+import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
@@ -26,7 +27,7 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
 function titleForPath(pathname: string): string {
-  if (pathname === "/" || pathname === "/dashboard") return "监控台";
+  if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
   if (pathname.startsWith("/delivery/export-jobs")) return "导出报告";
   if (pathname === "/fields") return "田块";
   if (pathname === "/fields/new") return "新建田块";
@@ -48,13 +49,16 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
   if (pathname.startsWith("/alerts")) return "告警中心";
   if (pathname.startsWith("/audit-export")) return "证据中心";
+  if (pathname.startsWith("/skills/registry")) return "技能注册中心";
+  if (pathname.startsWith("/skills/bindings")) return "技能绑定";
+  if (pathname.startsWith("/skills/runs")) return "技能运行";
   if (pathname.startsWith("/settings")) return "系统设置";
   if (pathname.startsWith("/dev")) return "研发工具";
   return "GEOX 控制台";
 }
 
 function leadForPath(pathname: string): string {
-  if (pathname === "/" || pathname === "/dashboard") return "统一监控田块、设备、作业与证据状态，快速定位异常。";
+  if (pathname === "/" || pathname === "/dashboard") return "以平台控制台为主入口，统一监控田块、设备、作业、技能与证据状态。";
   if (pathname.startsWith("/delivery/export-jobs")) return "作为证据中心下的二级模块，集中查看导出批次与回执状态。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行管理。";
   if (pathname === "/fields/new") return "创建田块并开始开局链路。";
@@ -76,6 +80,9 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/agronomy/recommendations")) return "作为经营方案下的二级入口，查看农业建议、证据引用与审批前状态。";
   if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
   if (pathname.startsWith("/audit-export")) return "统一管理证据导出、回执追踪与完整性校验。";
+  if (pathname.startsWith("/skills/registry")) return "集中管理技能状态、版本和覆盖范围。";
+  if (pathname.startsWith("/skills/bindings")) return "查看技能绑定策略、作用域与优先级。";
+  if (pathname.startsWith("/skills/runs")) return "按运行记录追踪技能执行结果与诊断信息。";
   if (pathname.startsWith("/settings")) return "查看当前会话、角色、令牌与最小门禁约束。";
   if (pathname.startsWith("/dev")) return "保留旧调试页作为 fallback，不参与商业演示主流程。";
   return "中文商业控制台外壳已建立，后续页面按产品信息架构持续收口。";
@@ -83,31 +90,34 @@ function leadForPath(pathname: string): string {
 
 type BreadcrumbItem = AppBreadcrumbItem;
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
-  if (pathname === "/" || pathname === "/dashboard") return [{ label: "监控台" }];
-  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "监控台", to: "/dashboard" }, { label: "证据中心", to: "/audit-export" }, { label: "导出报告" }];
-  if (pathname === "/fields") return [{ label: "监控台", to: "/dashboard" }, { label: "田块" }];
-  if (pathname === "/fields/new") return [{ label: "监控台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "新建田块" }];
-  if (pathname.startsWith("/fields/")) return [{ label: "监控台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "田块详情" }];
-  if (pathname === "/devices") return [{ label: "监控台", to: "/dashboard" }, { label: "设备" }];
-  if (pathname === "/devices/onboarding") return [{ label: "监控台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备接入向导" }];
-  if (pathname.startsWith("/devices/")) return [{ label: "监控台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备详情" }];
-  if (pathname.startsWith("/operations/")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "作业详情" }];
-  if (pathname.startsWith("/operations")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业" }];
-  if (pathname.startsWith("/human-assignments/")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
-  if (pathname.startsWith("/human-assignments")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行" }];
-  if (pathname.startsWith("/dispatch-workbench")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "派单调度台" }];
-  if (pathname.startsWith("/human-execution-analysis")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行分析" }];
-  if (pathname.startsWith("/human-ops-analytics")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工作业分析" }];
-  if (pathname === "/programs") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案" }];
-  if (pathname === "/programs/create") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "初始化经营" }];
-  if (pathname === "/programs/new") return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "新建" }];
-  if (pathname.startsWith("/programs/")) return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
-  if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "监控台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "农业建议" }];
-  if (pathname.startsWith("/alerts")) return [{ label: "监控台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "告警中心" }];
-  if (pathname.startsWith("/audit-export")) return [{ label: "监控台", to: "/dashboard" }, { label: "证据中心" }];
-  if (pathname.startsWith("/settings")) return [{ label: "监控台", to: "/dashboard" }, { label: "系统设置" }];
-  if (pathname.startsWith("/dev")) return [{ label: "监控台", to: "/dashboard" }, { label: "研发工具" }];
-  return [{ label: "监控台", to: "/dashboard" }, { label: "控制台" }];
+  if (pathname === "/" || pathname === "/dashboard") return [{ label: "平台控制台" }];
+  if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "证据中心", to: "/audit-export" }, { label: "导出报告" }];
+  if (pathname === "/fields") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块" }];
+  if (pathname === "/fields/new") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "新建田块" }];
+  if (pathname.startsWith("/fields/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "田块详情" }];
+  if (pathname === "/devices") return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备" }];
+  if (pathname === "/devices/onboarding") return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备接入向导" }];
+  if (pathname.startsWith("/devices/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备详情" }];
+  if (pathname.startsWith("/operations/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "作业详情" }];
+  if (pathname.startsWith("/operations")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业" }];
+  if (pathname.startsWith("/human-assignments/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
+  if (pathname.startsWith("/human-assignments")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行" }];
+  if (pathname.startsWith("/dispatch-workbench")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "派单调度台" }];
+  if (pathname.startsWith("/human-execution-analysis")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行分析" }];
+  if (pathname.startsWith("/human-ops-analytics")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工作业分析" }];
+  if (pathname === "/programs") return [{ label: "平台控制台", to: "/dashboard" }, { label: "经营方案" }];
+  if (pathname === "/programs/create") return [{ label: "平台控制台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "初始化经营" }];
+  if (pathname === "/programs/new") return [{ label: "平台控制台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "新建" }];
+  if (pathname.startsWith("/programs/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "经营方案详情" }];
+  if (pathname.startsWith("/agronomy/recommendations")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "经营方案", to: "/programs" }, { label: "农业建议" }];
+  if (pathname.startsWith("/alerts")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "告警中心" }];
+  if (pathname.startsWith("/audit-export")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "证据中心" }];
+  if (pathname.startsWith("/skills/registry")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "技能注册中心" }];
+  if (pathname.startsWith("/skills/bindings")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "技能注册中心", to: "/skills/registry" }, { label: "技能绑定" }];
+  if (pathname.startsWith("/skills/runs")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "技能注册中心", to: "/skills/registry" }, { label: "技能运行" }];
+  if (pathname.startsWith("/settings")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "系统设置" }];
+  if (pathname.startsWith("/dev")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "研发工具" }];
+  return [{ label: "平台控制台", to: "/dashboard" }, { label: "控制台" }];
 }
 
 function primaryActionForPath(pathname: string): { label: string; to: string } {
@@ -128,6 +138,8 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
   if (pathname.startsWith("/programs")) return { label: "初始化经营", to: "/programs/create" };
   if (pathname.startsWith("/delivery/export-jobs")) return { label: "返回证据中心", to: "/audit-export" };
   if (pathname.startsWith("/audit-export")) return { label: "查看导出报告", to: "/delivery/export-jobs" };
+  if (pathname.startsWith("/skills/runs/")) return { label: "返回技能注册中心", to: "/skills/registry" };
+  if (pathname.startsWith("/skills")) return { label: "查看技能注册中心", to: "/skills/registry" };
   return { label: "返回总览", to: "/dashboard" };
 }
 
@@ -156,6 +168,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           {renderDevicesRoutes()}
           {renderOperationsRoutes()}
           {renderProgramsRoutes()}
+          {renderSkillsRoutes()}
 
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/dev" element={<DevToolsPage />} />
