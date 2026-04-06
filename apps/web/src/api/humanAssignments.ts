@@ -82,6 +82,13 @@ export type HumanExecutorAvailabilityItem = {
   available: boolean;
 };
 
+export type DispatchExecutorMatchItem = HumanExecutorAvailabilityItem & {
+  missing_capabilities: string[];
+  capability_match_ratio: number;
+  team_matched: boolean;
+  recommendation_score: number;
+};
+
 export async function fetchWorkAssignments(params?: {
   executor_id?: string;
   act_task_id?: string;
@@ -130,6 +137,23 @@ export async function fetchHumanExecutorAvailability(params?: {
 }): Promise<HumanExecutorAvailabilityItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: HumanExecutorAvailabilityItem[] }>(
     withQuery("/api/v1/human-executors/availability", params),
+  );
+  return Array.isArray(res.items) ? res.items : [];
+}
+
+export async function fetchDispatchExecutorMatches(params?: {
+  team_id?: string;
+  required_capabilities?: string[];
+  limit?: number;
+}): Promise<DispatchExecutorMatchItem[]> {
+  const query: Record<string, string | number> = {};
+  if (params?.team_id) query.team_id = params.team_id;
+  if (typeof params?.limit === "number") query.limit = params.limit;
+  if (Array.isArray(params?.required_capabilities) && params.required_capabilities.length) {
+    query.required_capabilities = params.required_capabilities.join(",");
+  }
+  const res = await apiRequest<{ ok?: boolean; items?: DispatchExecutorMatchItem[] }>(
+    withQuery("/api/v1/human-executors/match", query),
   );
   return Array.isArray(res.items) ? res.items : [];
 }
