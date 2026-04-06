@@ -9,6 +9,7 @@ type ExecutorStatus = "ACTIVE" | "DISABLED";
 
 const ASSIGNMENT_STATUS = new Set<AssignmentStatus>(["ASSIGNED", "ACCEPTED", "ARRIVED", "SUBMITTED", "CANCELLED", "EXPIRED"]);
 const EXECUTOR_STATUS = new Set<ExecutorStatus>(["ACTIVE", "DISABLED"]);
+const ALLOW_SUBMIT_FROM_ACCEPTED = /^(1|true|yes|on)$/i.test(String(process.env.WORK_ASSIGNMENT_ALLOW_SUBMIT_FROM_ACCEPTED ?? ""));
 const SLA_DEFAULTS_FALLBACK = { accept_minutes: 30, arrive_minutes: 120 };
 const SLA_DEFAULTS_BY_CROP_JOB: Record<string, { accept_minutes: number; arrive_minutes: number }> = {
   "RICE:IRRIGATION": { accept_minutes: 20, arrive_minutes: 60 },
@@ -23,6 +24,7 @@ function canTransitionAssignmentStatus(fromStatus: AssignmentStatus, toStatus: A
   if (toStatus === "CANCELLED") return true;
   if (fromStatus === "ASSIGNED" && toStatus === "ACCEPTED") return true;
   if (fromStatus === "ACCEPTED" && toStatus === "ARRIVED") return true;
+  if (fromStatus === "ACCEPTED" && toStatus === "SUBMITTED" && ALLOW_SUBMIT_FROM_ACCEPTED) return true;
   if (fromStatus === "ARRIVED" && toStatus === "SUBMITTED") return true;
   return false;
 }
@@ -41,6 +43,10 @@ function normalizeId(v: any): string | null {
 
 function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error });
+}
+
+function statusTransitionError(reply: any, httpStatus: number, error: "INVALID_STATUS_TRANSITION" | "CONFLICT", detail: { from: string; to: string; current: string }) {
+  return reply.status(httpStatus).send({ ok: false, error, detail });
 }
 
 type FieldValidationIssue = { field: string; code: string; message: string };
@@ -248,6 +254,7 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
           accept_deadline_ts TIMESTAMPTZ NULL,
           arrive_deadline_ts TIMESTAMPTZ NULL,
           expired_reason TEXT NULL,
+          version_no BIGINT NOT NULL DEFAULT 0,
           created_ts_ms BIGINT NOT NULL,
           updated_ts_ms BIGINT NOT NULL,
           PRIMARY KEY (tenant_id, assignment_id),
@@ -257,9 +264,11 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS accept_deadline_ts TIMESTAMPTZ NULL`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS arrive_deadline_ts TIMESTAMPTZ NULL`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS expired_reason TEXT NULL`);
+      await pool.query(`ALTER TABLE work_assignment_index_v1 ADD COLUMN IF NOT EXISTS version_no BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 DROP CONSTRAINT IF EXISTS work_assignment_status_ck`);
       await pool.query(`ALTER TABLE work_assignment_index_v1 ADD CONSTRAINT work_assignment_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_lookup_idx ON work_assignment_index_v1 (tenant_id, act_task_id, updated_ts_ms DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_index_v1_transition_idx ON work_assignment_index_v1 (tenant_id, assignment_id, status)`);
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS work_assignment_audit_v1 (
@@ -272,6 +281,8 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
           occurred_at TIMESTAMPTZ NOT NULL,
           actor_id TEXT NULL,
           token_id TEXT NULL,
+          from_status TEXT NULL,
+          to_status TEXT NULL,
           note TEXT NULL,
           PRIMARY KEY (tenant_id, audit_id),
           CONSTRAINT work_assignment_audit_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))
@@ -279,6 +290,8 @@ async function ensureHumanExecutorRuntime(pool: Pool): Promise<void> {
       `);
       await pool.query(`ALTER TABLE work_assignment_audit_v1 DROP CONSTRAINT IF EXISTS work_assignment_audit_status_ck`);
       await pool.query(`ALTER TABLE work_assignment_audit_v1 ADD CONSTRAINT work_assignment_audit_status_ck CHECK (status IN ('ASSIGNED','ACCEPTED','ARRIVED','SUBMITTED','CANCELLED','EXPIRED'))`);
+      await pool.query(`ALTER TABLE work_assignment_audit_v1 ADD COLUMN IF NOT EXISTS from_status TEXT NULL`);
+      await pool.query(`ALTER TABLE work_assignment_audit_v1 ADD COLUMN IF NOT EXISTS to_status TEXT NULL`);
       await pool.query(`CREATE INDEX IF NOT EXISTS work_assignment_audit_v1_lookup_idx ON work_assignment_audit_v1 (tenant_id, assignment_id, occurred_at DESC)`);
     })().catch((err) => {
       ensureHumanExecutorRuntimePromise = null;
@@ -531,9 +544,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const audit_id = randomUUID();
     await pool.query(
       `INSERT INTO work_assignment_audit_v1
-       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-      [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, "CREATE_OR_UPSERT"]
+       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+      [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, null, status, "CREATE_OR_UPSERT"]
     );
 
     const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
@@ -688,9 +701,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const audit_id = randomUUID();
       await pool.query(
         `INSERT INTO work_assignment_audit_v1
-         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, "BATCH_CREATE"]
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, null, status, "BATCH_CREATE"]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
         assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineIso, arrive_deadline_ts: arriveDeadlineIso, audit_id,
@@ -719,7 +732,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         continue;
       }
       const existingQ = await pool.query(
-        `SELECT assignment_id, act_task_id, executor_id, status
+        `SELECT assignment_id, act_task_id, executor_id, status, version_no
          FROM work_assignment_index_v1
          WHERE tenant_id = $1 AND assignment_id = $2
          LIMIT 1`,
@@ -752,9 +765,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const audit_id = randomUUID();
       await pool.query(
         `INSERT INTO work_assignment_audit_v1
-         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, fromStatus, nowIso, auth.actor_id, auth.token_id, note]
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+        [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, fromStatus, nowIso, auth.actor_id, auth.token_id, fromStatus, fromStatus, note]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
         assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, status: fromStatus, changed_at: nowIso, note, audit_id,
@@ -800,9 +813,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       }
       const updateQ = await pool.query(
         `UPDATE work_assignment_index_v1
-         SET status = 'CANCELLED', expired_reason = COALESCE(expired_reason, $4), updated_ts_ms = $3
-         WHERE tenant_id = $1 AND assignment_id = $2 AND status = $5`,
-        [auth.tenant_id, assignment_id, Date.now(), note, fromStatus]
+         SET status = 'CANCELLED', expired_reason = COALESCE(expired_reason, $4), updated_ts_ms = $3, version_no = version_no + 1
+         WHERE tenant_id = $1 AND assignment_id = $2 AND status = $5 AND version_no = $6`,
+        [auth.tenant_id, assignment_id, Date.now(), note, fromStatus, Number(row.version_no ?? 0)]
       );
       if ((updateQ.rowCount ?? 0) < 1) {
         errors.push({ assignment_id, error: "CONFLICT" });
@@ -812,9 +825,9 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       const audit_id = randomUUID();
       await pool.query(
         `INSERT INTO work_assignment_audit_v1
-         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-        [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id ?? ""), String(row.executor_id ?? ""), "CANCELLED", nowIso, auth.actor_id, auth.token_id, note]
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+        [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id ?? ""), String(row.executor_id ?? ""), "CANCELLED", nowIso, auth.actor_id, auth.token_id, fromStatus, "CANCELLED", note]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
         assignment_id, act_task_id: String(row.act_task_id ?? ""), executor_id: String(row.executor_id ?? ""), from_status: fromStatus, status: "CANCELLED", changed_at: nowIso, note, audit_id,
@@ -905,30 +918,41 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const note = isNonEmptyString(body.note) ? String(body.note).trim().slice(0, 512) : null;
 
     const existingQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, assigned_at FROM work_assignment_index_v1 WHERE tenant_id = $1 AND assignment_id = $2 LIMIT 1`,
+      `SELECT assignment_id, act_task_id, executor_id, assigned_at, status, version_no FROM work_assignment_index_v1 WHERE tenant_id = $1 AND assignment_id = $2 LIMIT 1`,
       [auth.tenant_id, assignment_id]
     );
     const row = existingQ.rows?.[0];
     if (!row) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
+    const currentStatus = String(row.status ?? "") as AssignmentStatus;
+    if (!canTransitionAssignmentStatus(currentStatus, status as AssignmentStatus)) {
+      return statusTransitionError(reply, 400, "INVALID_STATUS_TRANSITION", { from: currentStatus, to: status, current: currentStatus });
+    }
+
     const nowIso = new Date().toISOString();
-    await pool.query(
-      `UPDATE work_assignment_index_v1 SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $5) ELSE NULL END, updated_ts_ms = $4 WHERE tenant_id = $1 AND assignment_id = $2`,
-      [auth.tenant_id, assignment_id, status, Date.now(), note]
+    const updateQ = await pool.query(
+      `UPDATE work_assignment_index_v1
+       SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $5) ELSE NULL END, updated_ts_ms = $4, version_no = version_no + 1
+       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $6 AND version_no = $7`,
+      [auth.tenant_id, assignment_id, status, Date.now(), note, currentStatus, Number(row.version_no ?? 0)]
     );
+    if ((updateQ.rowCount ?? 0) < 1) {
+      return statusTransitionError(reply, 409, "CONFLICT", { from: currentStatus, to: status, current: currentStatus });
+    }
 
     const audit_id = randomUUID();
     await pool.query(
       `INSERT INTO work_assignment_audit_v1
-       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-      [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id), String(row.executor_id), status, nowIso, auth.actor_id, auth.token_id, note]
+       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+      [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id), String(row.executor_id), status, nowIso, auth.actor_id, auth.token_id, currentStatus, status, note]
     );
 
     const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
       assignment_id,
       act_task_id: String(row.act_task_id),
       executor_id: String(row.executor_id),
+      from_status: currentStatus,
       status,
       changed_at: nowIso,
       note,
@@ -954,7 +978,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const existingQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, status
+      `SELECT assignment_id, act_task_id, executor_id, status, version_no
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -965,12 +989,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const fromStatus = String(row.status ?? "") as AssignmentStatus;
     if (!canTransitionAssignmentStatus(fromStatus, targetStatus)) {
-      return reply.status(409).send({
-        ok: false,
-        error: "INVALID_STATUS_TRANSITION",
-        from_status: fromStatus,
-        to_status: targetStatus,
-      });
+      return statusTransitionError(reply, 400, "INVALID_STATUS_TRANSITION", { from: fromStatus, to: targetStatus, current: fromStatus });
     }
 
     const act_task_id = String(row.act_task_id ?? "");
@@ -979,24 +998,20 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $6) ELSE NULL END, updated_ts_ms = $5
-       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $4`,
-      [auth.tenant_id, assignment_id, targetStatus, fromStatus, Date.now(), note]
+       SET status = $3, expired_reason = CASE WHEN $3 IN ('CANCELLED','EXPIRED') THEN COALESCE(expired_reason, $6) ELSE NULL END, updated_ts_ms = $5, version_no = version_no + 1
+       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $4 AND version_no = $7`,
+      [auth.tenant_id, assignment_id, targetStatus, fromStatus, Date.now(), note, Number(row.version_no ?? 0)]
     );
     if ((updateQ.rowCount ?? 0) < 1) {
-      return reply.status(409).send({
-        ok: false,
-        error: "CONFLICT",
-        message: "ASSIGNMENT_STATUS_CONCURRENTLY_UPDATED",
-      });
+      return statusTransitionError(reply, 409, "CONFLICT", { from: fromStatus, to: targetStatus, current: fromStatus });
     }
 
     const audit_id = randomUUID();
     await pool.query(
       `INSERT INTO work_assignment_audit_v1
-       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-      [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, targetStatus, nowIso, auth.actor_id, auth.token_id, note]
+       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+      [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, targetStatus, nowIso, auth.actor_id, auth.token_id, fromStatus, targetStatus, note]
     );
 
     const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
@@ -1032,7 +1047,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const existingQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id, status
+      `SELECT assignment_id, act_task_id, executor_id, status, version_no
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -1043,12 +1058,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const fromStatus = String(assignment.status ?? "") as AssignmentStatus;
     if (!canTransitionAssignmentStatus(fromStatus, "SUBMITTED")) {
-      return reply.status(409).send({
-        ok: false,
-        error: "INVALID_STATUS_TRANSITION",
-        from_status: fromStatus,
-        to_status: "SUBMITTED",
-      });
+      return statusTransitionError(reply, 400, "INVALID_STATUS_TRANSITION", { from: fromStatus, to: "SUBMITTED", current: fromStatus });
     }
 
     const act_task_id = String(assignment.act_task_id ?? "");
@@ -1230,24 +1240,20 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const nowIso = new Date().toISOString();
     const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = 'SUBMITTED', expired_reason = NULL, updated_ts_ms = $4
-       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $3`,
-      [auth.tenant_id, assignment_id, fromStatus, Date.now()]
+       SET status = 'SUBMITTED', expired_reason = NULL, updated_ts_ms = $4, version_no = version_no + 1
+       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $3 AND version_no = $5`,
+      [auth.tenant_id, assignment_id, fromStatus, Date.now(), Number(assignment.version_no ?? 0)]
     );
     if ((updateQ.rowCount ?? 0) < 1) {
-      return reply.status(409).send({
-        ok: false,
-        error: "CONFLICT",
-        message: "ASSIGNMENT_STATUS_CONCURRENTLY_UPDATED",
-      });
+      return statusTransitionError(reply, 409, "CONFLICT", { from: fromStatus, to: "SUBMITTED", current: fromStatus });
     }
 
     const audit_id = randomUUID();
     await pool.query(
       `INSERT INTO work_assignment_audit_v1
-       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-      [auth.tenant_id, audit_id, assignment_id, act_task_id, String(assignment.executor_id ?? ""), "SUBMITTED", nowIso, auth.actor_id, auth.token_id, `RECEIPT_FACT:${String(delegatedJson.fact_id ?? "")}`]
+       (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+      [auth.tenant_id, audit_id, assignment_id, act_task_id, String(assignment.executor_id ?? ""), "SUBMITTED", nowIso, auth.actor_id, auth.token_id, fromStatus, "SUBMITTED", `RECEIPT_FACT:${String(delegatedJson.fact_id ?? "")}`]
     );
 
     const fact_id = await insertAuditFact(pool, "work_assignment_submitted_v1", auth, {
@@ -1282,7 +1288,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const q = await pool.query(
-      `SELECT audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note
+      `SELECT audit_id, assignment_id, act_task_id, executor_id, status, from_status, to_status, occurred_at, actor_id, token_id, note
        FROM work_assignment_audit_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        ORDER BY occurred_at ASC, audit_id ASC`,
@@ -1306,7 +1312,7 @@ export function startAssignmentExpiryWorker(pool: Pool, opts?: Partial<Assignmen
     await ensureHumanExecutorRuntime(pool);
     const nowIso = new Date().toISOString();
     const q = await pool.query(
-      `SELECT tenant_id, assignment_id, act_task_id, executor_id, status
+      `SELECT tenant_id, assignment_id, act_task_id, executor_id, status, version_no
        FROM work_assignment_index_v1
        WHERE (
          status = 'ASSIGNED' AND accept_deadline_ts IS NOT NULL AND accept_deadline_ts < NOW()
@@ -1323,17 +1329,17 @@ export function startAssignmentExpiryWorker(pool: Pool, opts?: Partial<Assignmen
       const reason = fromStatus === "ASSIGNED" ? "ACCEPT_TIMEOUT" : "ARRIVE_TIMEOUT";
       const updateQ = await pool.query(
         `UPDATE work_assignment_index_v1
-         SET status = $3, expired_reason = $4, updated_ts_ms = $5
-         WHERE tenant_id = $1 AND assignment_id = $2 AND status = $6`,
-        [String(row.tenant_id), String(row.assignment_id), toStatus, reason, Date.now(), fromStatus]
+         SET status = $3, expired_reason = $4, updated_ts_ms = $5, version_no = version_no + 1
+         WHERE tenant_id = $1 AND assignment_id = $2 AND status = $6 AND version_no = $7`,
+        [String(row.tenant_id), String(row.assignment_id), toStatus, reason, Date.now(), fromStatus, Number(row.version_no ?? 0)]
       );
       if ((updateQ.rowCount ?? 0) < 1) continue;
       const audit_id = randomUUID();
       await pool.query(
         `INSERT INTO work_assignment_audit_v1
-         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, note)
-         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10)`,
-        [String(row.tenant_id), audit_id, String(row.assignment_id), String(row.act_task_id), String(row.executor_id), toStatus, nowIso, "system/assignment_expiry_worker", "system", reason]
+         (tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, occurred_at, actor_id, token_id, from_status, to_status, note)
+         VALUES ($1,$2,$3,$4,$5,$6,$7::timestamptz,$8,$9,$10,$11,$12)`,
+        [String(row.tenant_id), audit_id, String(row.assignment_id), String(row.act_task_id), String(row.executor_id), toStatus, nowIso, "system/assignment_expiry_worker", "system", fromStatus, toStatus, reason]
       );
       await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [
         randomUUID(),
