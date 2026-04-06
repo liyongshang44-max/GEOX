@@ -10,6 +10,16 @@ type ExecutorStatus = "ACTIVE" | "DISABLED";
 const ASSIGNMENT_STATUS = new Set<AssignmentStatus>(["ASSIGNED", "ACCEPTED", "ARRIVED", "SUBMITTED", "CANCELLED"]);
 const EXECUTOR_STATUS = new Set<ExecutorStatus>(["ACTIVE", "DISABLED"]);
 
+
+function canTransitionAssignmentStatus(fromStatus: AssignmentStatus, toStatus: AssignmentStatus): boolean {
+  if (fromStatus === "SUBMITTED") return false;
+  if (toStatus === "CANCELLED") return true;
+  if (fromStatus === "ASSIGNED" && toStatus === "ACCEPTED") return true;
+  if (fromStatus === "ACCEPTED" && toStatus === "ARRIVED") return true;
+  if (fromStatus === "ARRIVED" && toStatus === "SUBMITTED") return true;
+  return false;
+}
+
 function isNonEmptyString(v: any): v is string {
   return typeof v === "string" && v.trim().length > 0;
 }
@@ -513,16 +523,33 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     const row = existingQ.rows?.[0];
     if (!row) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
+    const fromStatus = String(row.status ?? "") as AssignmentStatus;
+    if (!canTransitionAssignmentStatus(fromStatus, targetStatus)) {
+      return reply.status(409).send({
+        ok: false,
+        error: "INVALID_STATUS_TRANSITION",
+        from_status: fromStatus,
+        to_status: targetStatus,
+      });
+    }
+
     const act_task_id = String(row.act_task_id ?? "");
     const executor_id = String(row.executor_id ?? "");
     const nowIso = new Date().toISOString();
 
-    await pool.query(
+    const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = $3, updated_ts_ms = $4
-       WHERE tenant_id = $1 AND assignment_id = $2`,
-      [auth.tenant_id, assignment_id, targetStatus, Date.now()]
+       SET status = $3, updated_ts_ms = $5
+       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $4`,
+      [auth.tenant_id, assignment_id, targetStatus, fromStatus, Date.now()]
     );
+    if ((updateQ.rowCount ?? 0) < 1) {
+      return reply.status(409).send({
+        ok: false,
+        error: "CONFLICT",
+        message: "ASSIGNMENT_STATUS_CONCURRENTLY_UPDATED",
+      });
+    }
 
     const audit_id = randomUUID();
     await pool.query(
@@ -536,6 +563,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       assignment_id,
       act_task_id,
       executor_id,
+      from_status: fromStatus,
       status: targetStatus,
       changed_at: nowIso,
       note,
@@ -564,7 +592,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     if (!assignment_id) return badRequest(reply, "MISSING_OR_INVALID:assignment_id");
 
     const existingQ = await pool.query(
-      `SELECT assignment_id, act_task_id, executor_id
+      `SELECT assignment_id, act_task_id, executor_id, status
        FROM work_assignment_index_v1
        WHERE tenant_id = $1 AND assignment_id = $2
        LIMIT 1`,
@@ -572,6 +600,16 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     );
     const assignment = existingQ.rows?.[0];
     if (!assignment) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const fromStatus = String(assignment.status ?? "") as AssignmentStatus;
+    if (!canTransitionAssignmentStatus(fromStatus, "SUBMITTED")) {
+      return reply.status(409).send({
+        ok: false,
+        error: "INVALID_STATUS_TRANSITION",
+        from_status: fromStatus,
+        to_status: "SUBMITTED",
+      });
+    }
 
     const act_task_id = String(assignment.act_task_id ?? "");
     const taskQ = await pool.query(
@@ -656,12 +694,19 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
     }
 
     const nowIso = new Date().toISOString();
-    await pool.query(
+    const updateQ = await pool.query(
       `UPDATE work_assignment_index_v1
-       SET status = 'SUBMITTED', updated_ts_ms = $3
-       WHERE tenant_id = $1 AND assignment_id = $2`,
-      [auth.tenant_id, assignment_id, Date.now()]
+       SET status = 'SUBMITTED', updated_ts_ms = $4
+       WHERE tenant_id = $1 AND assignment_id = $2 AND status = $3`,
+      [auth.tenant_id, assignment_id, fromStatus, Date.now()]
     );
+    if ((updateQ.rowCount ?? 0) < 1) {
+      return reply.status(409).send({
+        ok: false,
+        error: "CONFLICT",
+        message: "ASSIGNMENT_STATUS_CONCURRENTLY_UPDATED",
+      });
+    }
 
     const audit_id = randomUUID();
     await pool.query(
@@ -675,6 +720,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       assignment_id,
       act_task_id,
       executor_id: String(assignment.executor_id ?? ""),
+      from_status: fromStatus,
       status: "SUBMITTED",
       changed_at: nowIso,
       receipt_fact_id: String(delegatedJson.fact_id ?? ""),
