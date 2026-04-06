@@ -19,16 +19,21 @@ const SLA_DEFAULTS_BY_CROP_JOB: Record<string, { accept_minutes: number; arrive_
   "CORN:FERTILIZATION": { accept_minutes: 30, arrive_minutes: 120 },
   "DEFAULT:HARVEST": { accept_minutes: 60, arrive_minutes: 240 },
 };
+const ACCEPTED_ASSIGNMENT_TRANSITIONS: AssignmentStatus[] = ALLOW_SUBMIT_FROM_ACCEPTED
+  ? ["ARRIVED", "CANCELLED", "SUBMITTED"]
+  : ["ARRIVED", "CANCELLED"];
 
+const ASSIGNMENT_TRANSITIONS: Record<AssignmentStatus, Set<AssignmentStatus>> = {
+  ASSIGNED: new Set<AssignmentStatus>(["ACCEPTED", "CANCELLED"]),
+  ACCEPTED: new Set<AssignmentStatus>(ACCEPTED_ASSIGNMENT_TRANSITIONS),
+  ARRIVED: new Set<AssignmentStatus>(["SUBMITTED", "CANCELLED"]),
+  SUBMITTED: new Set<AssignmentStatus>([]),
+  CANCELLED: new Set<AssignmentStatus>([]),
+  EXPIRED: new Set<AssignmentStatus>([]),
+};
 
 function canTransitionAssignmentStatus(fromStatus: AssignmentStatus, toStatus: AssignmentStatus): boolean {
-  if (fromStatus === "SUBMITTED" || fromStatus === "CANCELLED" || fromStatus === "EXPIRED") return false;
-  if (toStatus === "CANCELLED") return true;
-  if (fromStatus === "ASSIGNED" && toStatus === "ACCEPTED") return true;
-  if (fromStatus === "ACCEPTED" && toStatus === "ARRIVED") return true;
-  if (fromStatus === "ACCEPTED" && toStatus === "SUBMITTED" && ALLOW_SUBMIT_FROM_ACCEPTED) return true;
-  if (fromStatus === "ARRIVED" && toStatus === "SUBMITTED") return true;
-  return false;
+  return ASSIGNMENT_TRANSITIONS[fromStatus]?.has(toStatus) ?? false;
 }
 
 function isNonEmptyString(v: any): v is string {
@@ -671,6 +676,8 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       executor_id,
       required_capabilities: requiredCapabilities,
       assigned_at,
+      from_status: null,
+      to_status: status,
       status,
       accept_deadline_ts: acceptDeadlineTs,
       arrive_deadline_ts: arriveDeadlineTs,
@@ -758,6 +765,8 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       source_dispatch_id,
       required_capabilities: requiredCapabilities,
       assigned_at,
+      from_status: null,
+      to_status: "ASSIGNED",
       status: "ASSIGNED",
       origin_type: "auto_fallback",
       origin_ref_id,
@@ -987,7 +996,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, status, assigned_at, auth.actor_id, auth.token_id, null, status, "BATCH_CREATE"]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
-        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, dispatch_note, priority, origin_type, origin_ref_id, fallback_context, audit_id,
+        assignment_id, act_task_id, executor_id, required_capabilities: requiredCapabilities, assigned_at, from_status: null, to_status: status, status, accept_deadline_ts: acceptDeadlineTs, arrive_deadline_ts: arriveDeadlineTs, dispatch_note, priority, origin_type, origin_ref_id, fallback_context, audit_id,
       });
       created.push({ assignment_id, fact_id });
     }
@@ -1044,7 +1053,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, fromStatus, nowIso, auth.actor_id, auth.token_id, fromStatus, fromStatus, reason]
     );
     const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
-      assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, status: fromStatus, changed_at: nowIso, note: reason, audit_id,
+      assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, from_status: fromStatus, to_status: fromStatus, status: fromStatus, changed_at: nowIso, note: reason, audit_id,
     });
     return reply.send({ ok: true, updated: { assignment_id, executor_id, fact_id, reassign_log_id: log_id } });
   });
@@ -1106,7 +1115,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, audit_id, assignment_id, act_task_id, executor_id, fromStatus, nowIso, auth.actor_id, auth.token_id, fromStatus, fromStatus, note]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_upserted_v1", auth, {
-        assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, status: fromStatus, changed_at: nowIso, note, audit_id,
+        assignment_id, act_task_id, executor_id, from_executor_id: String(row.executor_id ?? ""), required_capabilities: requiredCapabilities, from_status: fromStatus, to_status: fromStatus, status: fromStatus, changed_at: nowIso, note, audit_id,
       });
       updated.push({ assignment_id, executor_id, fact_id });
     }
@@ -1166,7 +1175,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
         [auth.tenant_id, audit_id, assignment_id, String(row.act_task_id ?? ""), String(row.executor_id ?? ""), "CANCELLED", nowIso, auth.actor_id, auth.token_id, fromStatus, "CANCELLED", note]
       );
       const fact_id = await insertAuditFact(pool, "work_assignment_status_changed_v1", auth, {
-        assignment_id, act_task_id: String(row.act_task_id ?? ""), executor_id: String(row.executor_id ?? ""), from_status: fromStatus, status: "CANCELLED", changed_at: nowIso, note, audit_id,
+        assignment_id, act_task_id: String(row.act_task_id ?? ""), executor_id: String(row.executor_id ?? ""), from_status: fromStatus, to_status: "CANCELLED", status: "CANCELLED", changed_at: nowIso, note, audit_id,
       });
       updated.push({ assignment_id, fact_id, status: "CANCELLED" });
     }
@@ -1383,6 +1392,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       act_task_id: String(row.act_task_id),
       executor_id: String(row.executor_id),
       from_status: currentStatus,
+      to_status: status,
       status,
       changed_at: nowIso,
       note,
@@ -1472,6 +1482,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       act_task_id,
       executor_id,
       from_status: fromStatus,
+      to_status: targetStatus,
       status: targetStatus,
       changed_at: nowIso,
       note,
@@ -1718,6 +1729,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       act_task_id,
       executor_id: String(assignment.executor_id ?? ""),
       from_status: fromStatus,
+      to_status: "SUBMITTED",
       status: "SUBMITTED",
       changed_at: nowIso,
       receipt_fact_id: String(delegatedJson.fact_id ?? ""),
@@ -1809,6 +1821,7 @@ export function startAssignmentExpiryWorker(pool: Pool, opts?: Partial<Assignmen
             act_task_id: String(row.act_task_id),
             executor_id: String(row.executor_id),
             from_status: fromStatus,
+            to_status: toStatus,
             status: toStatus,
             changed_at: nowIso,
             note: reason,
