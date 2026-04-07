@@ -4,6 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing
 import type { Pool } from "pg"; // Postgres pool typing
 import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
+import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine";
@@ -619,6 +620,25 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       if (body.execution_plan.safe_guard.requires_approval) {
         return reply.status(403).send({ ok: false, error: "REQUIRES_APPROVAL" });
       }
+      const skillCapabilityResolution = body.execution_plan.target.kind === "device"
+        ? resolveTaskCapabilityViaDeviceSkillsResult({
+          action_type: actionType,
+          task_type: actionType,
+          target: body.execution_plan.target,
+          parameters: body.execution_plan.parameters,
+          meta: {
+            task_type: actionType
+          }
+        })
+        : null;
+      if (skillCapabilityResolution && !skillCapabilityResolution.ok) {
+        return reply.status(400).send({
+          ok: false,
+          error: "DEVICE_CAPABILITY_UNSUPPORTED",
+          detail: skillCapabilityResolution.error
+        });
+      }
+      const normalizedDeviceCapabilityCheck = body.execution_plan.device_capability_check ?? { supported: true as const };
       if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
         return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
       }
@@ -742,7 +762,10 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
             execution_mode: body.execution_plan.execution_mode,
             idempotency_key: dedupeKey,
             failure_strategy: body.execution_plan.failure_strategy,
-            device_capability_check: body.execution_plan.device_capability_check ?? { supported: true },
+            device_capability_check: normalizedDeviceCapabilityCheck,
+            capability_resolution: skillCapabilityResolution?.ok
+              ? skillCapabilityResolution.resolution
+              : null,
             execution_context: {
               execution_key: executionKey,
               dedupe_key: dedupeKey,
