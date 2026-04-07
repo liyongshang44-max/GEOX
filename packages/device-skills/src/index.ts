@@ -1,5 +1,23 @@
-export type DeviceSkillCategory = "device";
+export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
+export type FertilityLevel = "low" | "medium" | "high" | "unknown";
+export type SalinityRiskLevel = "low" | "medium" | "high" | "unknown";
+export type RecommendationBias = "fertilize" | "wait" | "irrigate_first" | "inspect";
+
+export type FertilityInferenceResult = {
+  fertility_level: FertilityLevel;
+  recommendation_bias: RecommendationBias;
+  salinity_risk: SalinityRiskLevel;
+  confidence: number;
+  explanation_codes: string[];
+};
+
+export type DerivedSensingState = {
+  source: "device_observation_v1";
+  derived_sensing_state_v1: FertilityInferenceResult;
+  source_skill_id: string;
+  source_skill_version: string;
+};
 
 export type CapabilityResolution = {
   capability: string;
@@ -64,6 +82,7 @@ export type DeviceSkillDefinition = {
   };
   resolveCapability?: (input: { task_payload: any }) => CapabilityResolution | null;
   interpretTelemetry?: (input: { report: any; now_ms?: number }) => TelemetryInterpretation;
+  inferSensing?: (input: { device_observation_v1: any; now_ms?: number }) => DerivedSensingState | null;
 };
 
 function finite(input: unknown): number | null {
@@ -164,10 +183,164 @@ const soilSensorV1: DeviceSkillDefinition = {
   }
 };
 
+function extractObservationList(deviceObservation: any): any[] {
+  if (Array.isArray(deviceObservation)) return deviceObservation;
+  if (Array.isArray(deviceObservation?.observations)) return deviceObservation.observations;
+  if (Array.isArray(deviceObservation?.sources)) return deviceObservation.sources;
+  if (deviceObservation && typeof deviceObservation === "object") return [deviceObservation];
+  return [];
+}
+
+function firstFiniteFromObservation(observation: any, keys: string[]): number | null {
+  for (const key of keys) {
+    const n = finite(observation?.[key]);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+const fertilityInferenceV1: DeviceSkillDefinition = {
+  skill_id: "fertility_inference_v1",
+  version: "v1",
+  display_name: "Perception inference skill for fertility state",
+  category: "sensing_inference",
+  trigger_stage: "before_recommendation",
+  compatibility: {
+    adapters: ["mqtt", "http", "telemetry_gateway", "edge_aggregator"],
+    device_types: ["SENSOR", "GATEWAY", "EDGE_NODE", "IRRIGATION_CONTROLLER"],
+    protocols: ["mqtt", "http", "lorawan", "coap"]
+  },
+  inferSensing: ({ device_observation_v1 }) => {
+    const observations = extractObservationList(device_observation_v1);
+    if (observations.length === 0) {
+      return {
+        source: "device_observation_v1",
+        source_skill_id: "fertility_inference_v1",
+        source_skill_version: "v1",
+        derived_sensing_state_v1: {
+          fertility_level: "unknown",
+          recommendation_bias: "inspect",
+          salinity_risk: "unknown",
+          confidence: 0.2,
+          explanation_codes: ["no_device_observation"]
+        }
+      };
+    }
+
+    const soilMoistureSeries = observations
+      .map((x) => firstFiniteFromObservation(x, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]))
+      .filter((x): x is number => x != null);
+    const ecSeries = observations
+      .map((x) => firstFiniteFromObservation(x, ["ec_ds_m", "ec", "soil_ec_ds_m", "salinity_ec_ds_m"]))
+      .filter((x): x is number => x != null);
+    const fertilityIndexSeries = observations
+      .map((x) => firstFiniteFromObservation(x, ["fertility_index", "soil_fertility_index"]))
+      .filter((x): x is number => x != null);
+    const npkSeries = observations
+      .map((x) => {
+        const n = firstFiniteFromObservation(x, ["n", "nitrogen", "soil_n"]);
+        const p = firstFiniteFromObservation(x, ["p", "phosphorus", "soil_p"]);
+        const k = firstFiniteFromObservation(x, ["k", "potassium", "soil_k"]);
+        const values = [n, p, k].filter((v): v is number => v != null);
+        if (values.length === 0) return null;
+        return values.reduce((acc, cur) => acc + cur, 0) / values.length;
+      })
+      .filter((x): x is number => x != null);
+
+    const moisture = soilMoistureSeries.length ? soilMoistureSeries[soilMoistureSeries.length - 1] : null;
+    const ec = ecSeries.length ? ecSeries[ecSeries.length - 1] : null;
+    const fertilitySignal = fertilityIndexSeries.length
+      ? fertilityIndexSeries[fertilityIndexSeries.length - 1]
+      : (npkSeries.length ? npkSeries[npkSeries.length - 1] : null);
+
+    const salinity_risk: SalinityRiskLevel = ec == null
+      ? "unknown"
+      : ec >= 4
+        ? "high"
+        : ec >= 2
+          ? "medium"
+          : "low";
+
+    const fertility_level: FertilityLevel = fertilitySignal == null
+      ? "unknown"
+      : fertilitySignal < 40
+        ? "low"
+        : fertilitySignal >= 70
+          ? "high"
+          : "medium";
+
+    const observedSignalCount = [moisture, ec, fertilitySignal].filter((v) => v != null).length;
+    const confidence = Math.max(0.2, Math.min(0.95, Number((0.25 + observedSignalCount * 0.23).toFixed(2))));
+
+    const recommendation_bias: RecommendationBias = confidence < 0.35
+      ? "inspect"
+      : salinity_risk === "high" && (moisture == null || moisture < 40)
+        ? "irrigate_first"
+        : fertility_level === "low" && salinity_risk !== "high"
+          ? "fertilize"
+          : fertility_level === "unknown"
+            ? "inspect"
+            : "wait";
+
+    const explanation_codes: string[] = [];
+    if (observations.length > 1) explanation_codes.push("multisource_aggregated");
+    if (fertility_level === "low") explanation_codes.push("fertility_low_detected");
+    if (fertility_level === "unknown") explanation_codes.push("fertility_signal_missing");
+    if (salinity_risk === "high") explanation_codes.push("salinity_high_risk");
+    if (salinity_risk === "unknown") explanation_codes.push("salinity_signal_missing");
+    if (recommendation_bias === "irrigate_first") explanation_codes.push("irrigation_priority_due_to_salinity_or_dryness");
+    if (recommendation_bias === "fertilize") explanation_codes.push("fertilization_candidate");
+    if (recommendation_bias === "inspect") explanation_codes.push("manual_inspection_recommended");
+
+    return {
+      source: "device_observation_v1",
+      source_skill_id: "fertility_inference_v1",
+      source_skill_version: "v1",
+      derived_sensing_state_v1: {
+        fertility_level,
+        recommendation_bias,
+        salinity_risk,
+        confidence,
+        explanation_codes: explanation_codes.length ? explanation_codes : ["baseline_wait"]
+      }
+    };
+  }
+};
+
 export const deviceSkillRegistry: DeviceSkillDefinition[] = [
   irrigationValveV1,
-  soilSensorV1
+  soilSensorV1,
+  fertilityInferenceV1
 ];
+
+export function inferDerivedSensingStateViaDeviceSkills(input: {
+  device_observation_v1: any;
+  hinted_skill_id?: string | null;
+  now_ms?: number;
+}): DerivedSensingState | null {
+  const hintedSkillId = String(input.hinted_skill_id ?? "").trim();
+  if (hintedSkillId) {
+    const hintedSkill = findDeviceSkill(hintedSkillId);
+    if (hintedSkill?.inferSensing) {
+      const derived = hintedSkill.inferSensing({
+        device_observation_v1: input.device_observation_v1,
+        now_ms: input.now_ms
+      });
+      if (derived) return derived;
+    }
+  }
+
+  for (const skill of deviceSkillRegistry) {
+    if (!skill.inferSensing) continue;
+    const derived = skill.inferSensing({
+      device_observation_v1: input.device_observation_v1,
+      now_ms: input.now_ms
+    });
+    if (derived) return derived;
+  }
+
+  return null;
+}
 
 export function validateDeviceSkillCompatibilityMatrix(skills: DeviceSkillDefinition[] = deviceSkillRegistry): {
   ok: true;
