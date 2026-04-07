@@ -559,7 +559,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
           AND ts >= NOW() - INTERVAL '24 hours'
         GROUP BY metric, date_trunc('hour', ts)
         ORDER BY bucket_ts_ms ASC`,
-      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temp", "soil_temp_c"]]
+      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temperature", "soil_temp", "soil_temp_c"]]
     ) : { rows: [] as any[] }; // End projection query.
 
     const trendFactQ = trendProjectionQ.rows.length > 0 || boundDeviceIds.length === 0 ? { rows: [] as any[] } : await pool.query( // Fallback to raw facts when projection has not materialized yet.
@@ -575,14 +575,14 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
           AND ((record_json::jsonb #>> '{payload,ts_ms}')::bigint) >= $4
         GROUP BY (record_json::jsonb #>> '{payload,metric}'), (((record_json::jsonb #>> '{payload,ts_ms}')::bigint / 3600000) * 3600000)
         ORDER BY bucket_ts_ms ASC`,
-      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temp", "soil_temp_c"], Date.now() - 24 * 60 * 60 * 1000]
+      [auth.tenant_id, boundDeviceIds, ["soil_moisture", "soil_temperature", "soil_temp", "soil_temp_c"], Date.now() - 24 * 60 * 60 * 1000]
     ); // End fallback query.
 
     const trendRows = trendProjectionQ.rows.length > 0 ? trendProjectionQ.rows : trendFactQ.rows; // Pick projection first, facts second.
-    const normalizeMetric = (metric: string): string => metric === "soil_temp_c" ? "soil_temp" : metric; // Merge temp aliases into one commercial label.
+    const normalizeMetric = (metric: string): string => (metric === "soil_temp_c" || metric === "soil_temp") ? "soil_temperature" : metric; // Merge temp aliases into canonical soil_temperature.
     const sensor_trends = { // Minimal field sensor tab payload.
       soil_moisture: trendRows.filter((row: any) => String(row.metric) === 'soil_moisture').map((row: any) => ({ ts_ms: Number(row.bucket_ts_ms), value_num: row.avg_value_num == null ? null : Number(row.avg_value_num) })),
-      soil_temp: trendRows.filter((row: any) => normalizeMetric(String(row.metric)) === 'soil_temp').map((row: any) => ({ ts_ms: Number(row.bucket_ts_ms), value_num: row.avg_value_num == null ? null : Number(row.avg_value_num) })),
+      soil_temp: trendRows.filter((row: any) => normalizeMetric(String(row.metric)) === 'soil_temperature').map((row: any) => ({ ts_ms: Number(row.bucket_ts_ms), value_num: row.avg_value_num == null ? null : Number(row.avg_value_num) })),
     }; // End sensor trends.
 
     const recentAlertsQ = await pool.query( // Show field alerts plus alerts raised on bound devices.

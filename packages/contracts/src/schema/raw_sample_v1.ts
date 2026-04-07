@@ -1,6 +1,11 @@
 // ⚠️ DEPRECATED: legacy only, do not use in new flows
 import { z } from "zod";
-import { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1, isValidTelemetryUnitV1 } from "./telemetry_metric_catalog_v1";
+import {
+  TELEMETRY_METRIC_CATALOG_V1,
+  isTelemetryMetricNameV1,
+  isValidTelemetryUnitV1,
+  toCanonicalTelemetryMetricNameV1,
+} from "./telemetry_metric_catalog_v1";
 
 /**
  * RawSampleV1Schema
@@ -23,8 +28,10 @@ export const RawSampleV1Schema = z
       .default("device"),
   })
   .superRefine((v: any, ctx: any) => {
-    if (v.metric === "soil_ec" || v.metric === "soil_ec_bulk" || v.metric === "soil_ec_ds_m") {
-      const unit = v.unit ?? (v.metric === "soil_ec_ds_m" ? "dS/m" : v.unit);
+    const canonicalMetric = toCanonicalTelemetryMetricNameV1(String(v.metric ?? ""));
+
+    if (canonicalMetric === "soil_ec") {
+      const unit = v.unit ?? "dS/m";
       if (unit !== "dS/m") {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -34,27 +41,27 @@ export const RawSampleV1Schema = z
       }
     }
 
-    if (isTelemetryMetricNameV1(v.metric)) {
-      const metricName = v.metric as keyof typeof TELEMETRY_METRIC_CATALOG_V1;
+    if (isTelemetryMetricNameV1(canonicalMetric)) {
+      const metricName = canonicalMetric as keyof typeof TELEMETRY_METRIC_CATALOG_V1;
       const spec = TELEMETRY_METRIC_CATALOG_V1[metricName];
       if (typeof v.unit !== "string" || !v.unit.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Metric ${v.metric} requires unit ${spec.unit}`,
+          message: `Metric ${canonicalMetric} requires unit ${spec.unit}`,
           path: ["unit"],
         });
       } else if (!isValidTelemetryUnitV1(metricName, v.unit)) {
         const allowed = [spec.unit, ...(spec.aliases ?? [])].join("/");
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Metric ${v.metric} unit must be one of [${allowed}] (got: ${v.unit})`,
+          message: `Metric ${canonicalMetric} unit must be one of [${allowed}] (got: ${v.unit})`,
           path: ["unit"],
         });
       }
       if (typeof v.value === "number" && (v.value < spec.min || v.value > spec.max)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Metric ${v.metric} value out of range [${spec.min}, ${spec.max}] (got: ${v.value})`,
+          message: `Metric ${canonicalMetric} value out of range [${spec.min}, ${spec.max}] (got: ${v.value})`,
           path: ["value"],
         });
       }

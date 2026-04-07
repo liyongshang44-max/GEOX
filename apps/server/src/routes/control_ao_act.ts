@@ -138,7 +138,7 @@ function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
     const value = Number(row?.value_num ?? NaN);
     if (!Number.isFinite(value)) continue;
     if (metric === "soil_moisture" && out.soil_moisture == null) out.soil_moisture = value;
-    if (["temperature", "air_temperature", "soil_temp", "soil_temp_c"].includes(metric) && out.temperature == null) out.temperature = value;
+    if (["temperature", "air_temperature", "soil_temperature", "soil_temp", "soil_temp_c"].includes(metric) && out.temperature == null) out.temperature = value;
     if (["humidity", "air_humidity"].includes(metric) && out.humidity == null) out.humidity = value;
   }
   return out;
@@ -901,7 +901,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
               AND ts <= to_timestamp($4::double precision / 1000.0)
             ORDER BY ts DESC
             LIMIT 20`,
-          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], beforeTsMs]
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], beforeTsMs]
         ).catch(() => ({ rows: [] as any[] }));
         const afterQ = await pool.query(
           `SELECT metric, value_num, ts
@@ -913,7 +913,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
               AND ts <= to_timestamp($5::double precision / 1000.0)
             ORDER BY ts ASC
             LIMIT 100`,
-          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], receiptTsMs, afterWindowEndTsMs]
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], receiptTsMs, afterWindowEndTsMs]
         ).catch(() => ({ rows: [] as any[] }));
         beforeMetrics = buildEffectMetricSnapshot(beforeQ.rows ?? []);
         afterMetrics = buildEffectMetricSnapshot(afterQ.rows ?? []);

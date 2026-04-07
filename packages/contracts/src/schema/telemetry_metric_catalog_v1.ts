@@ -1,4 +1,11 @@
-export type TelemetryMetricNameV1 = "air_temperature" | "air_humidity" | "soil_moisture" | "light_lux";
+export type TelemetryMetricNameV1 =
+  | "air_temperature"
+  | "air_humidity"
+  | "soil_moisture"
+  | "light_lux"
+  | "soil_ec"
+  | "soil_ph"
+  | "soil_temperature";
 
 export type TelemetryMetricSpecV1 = {
   /** Canonical metric unit used across ingest, storage and downstream fusion. */
@@ -41,7 +48,42 @@ export const TELEMETRY_METRIC_CATALOG_V1: Record<TelemetryMetricNameV1, Telemetr
     max: 200000,
     description: "Ambient light intensity in lux",
   },
+  soil_ec: {
+    unit: "dS/m",
+    aliases: ["mS/cm"],
+    min: 0,
+    max: 20,
+    description: "Soil electrical conductivity in dS/m",
+  },
+  soil_ph: {
+    unit: "pH",
+    aliases: ["ph"],
+    min: 0,
+    max: 14,
+    description: "Soil acidity/alkalinity pH",
+  },
+  soil_temperature: {
+    unit: "°C",
+    aliases: ["C", "celsius"],
+    min: -40,
+    max: 85,
+    description: "Soil temperature in degrees Celsius",
+  },
 };
+
+export const TELEMETRY_METRIC_COMPAT_ALIASES_V1: Readonly<Record<string, TelemetryMetricNameV1>> = Object.freeze({
+  soil_temp: "soil_temperature",
+  soil_temp_c: "soil_temperature",
+  soil_ec_bulk: "soil_ec",
+  soil_ec_ds_m: "soil_ec",
+});
+
+export function toCanonicalTelemetryMetricNameV1(metric: string): string {
+  const normalized = metric.trim();
+  if (!normalized) return normalized;
+  if (isTelemetryMetricNameV1(normalized)) return normalized;
+  return TELEMETRY_METRIC_COMPAT_ALIASES_V1[normalized] ?? normalized;
+}
 
 export function isTelemetryMetricNameV1(v: unknown): v is TelemetryMetricNameV1 {
   return typeof v === "string" && Object.prototype.hasOwnProperty.call(TELEMETRY_METRIC_CATALOG_V1, v);

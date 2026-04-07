@@ -56,14 +56,20 @@ function computeTrendByCounts(values: number[]): TrendValue {
   return last > first ? "UP" : "DOWN";
 }
 
+function normalizeDashboardMetric(metric: string): string {
+  const normalized = String(metric ?? "").trim();
+  if (normalized === "soil_temp" || normalized === "soil_temp_c") return "soil_temperature";
+  return normalized;
+}
+
 function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): DashboardTrendSeries[] { // Convert raw telemetry rows into fixed buckets.
-  const metrics = ["soil_moisture", "soil_temp"]; // Blueprint default metrics.
+  const metrics = ["soil_moisture", "soil_temperature"]; // Blueprint default metrics.
   const spanMs = Math.max(60 * 60 * 1000, toTsMs - fromTsMs); // Guarantee positive span.
   const bucketMs = Math.max(60 * 60 * 1000, Math.floor(spanMs / 12)); // Roughly 12 buckets.
   const byMetric = new Map<string, Map<number, { sum: number; count: number }>>(); // Per-metric bucket accumulator.
   for (const metric of metrics) byMetric.set(metric, new Map<number, { sum: number; count: number }>()); // Seed metrics.
   for (const row of rows ?? []) { // Walk numeric telemetry rows.
-    const metric = String(row.metric ?? "").trim(); // Normalize metric.
+    const metric = normalizeDashboardMetric(row.metric); // Normalize metric.
     if (!byMetric.has(metric)) continue; // Ignore unrelated metrics.
     const tsMs = Number(row.ts_ms ?? 0); // Normalize timestamp.
     const valueNum = Number(row.value_num); // Normalize numeric value.
@@ -181,7 +187,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       pool.query(`SELECT COUNT(*)::bigint AS count FROM field_index_v1 WHERE tenant_id = $1`, [tenant_id]),
       pool.query(`SELECT COUNT(*)::bigint AS count FROM device_status_index_v1 WHERE tenant_id = $1 AND last_heartbeat_ts_ms IS NOT NULL AND last_heartbeat_ts_ms >= $2`, [tenant_id, onlineCutoffMs]),
       pool.query(`SELECT COUNT(*)::bigint AS count FROM alert_event_index_v1 WHERE tenant_id = $1 AND status IN ('OPEN','ACKED')`, [tenant_id]),
-      pool.query(`SELECT metric, (EXTRACT(EPOCH FROM ts) * 1000)::bigint AS ts_ms, value_num FROM telemetry_index_v1 WHERE tenant_id = $1 AND metric = ANY($2::text[]) AND value_num IS NOT NULL AND ts >= to_timestamp($3::double precision / 1000.0) AND ts <= to_timestamp($4::double precision / 1000.0) ORDER BY ts ASC LIMIT 5000`, [tenant_id, ["soil_moisture", "soil_temp"], from_ts_ms, to_ts_ms]),
+      pool.query(`SELECT metric, (EXTRACT(EPOCH FROM ts) * 1000)::bigint AS ts_ms, value_num FROM telemetry_index_v1 WHERE tenant_id = $1 AND metric = ANY($2::text[]) AND value_num IS NOT NULL AND ts >= to_timestamp($3::double precision / 1000.0) AND ts <= to_timestamp($4::double precision / 1000.0) ORDER BY ts ASC LIMIT 5000`, [tenant_id, ["soil_moisture", "soil_temperature", "soil_temp", "soil_temp_c"], from_ts_ms, to_ts_ms]),
       pool.query(`SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms FROM alert_event_index_v1 WHERE tenant_id = $1 ORDER BY raised_ts_ms DESC LIMIT 10`, [tenant_id]),
       pool.query(`SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json FROM facts WHERE (record_json::jsonb->>'type') IN ('ao_act_receipt_v0', 'ao_act_receipt_v1') AND (record_json::jsonb#>>'{payload,tenant_id}') = $1 AND (record_json::jsonb#>>'{payload,project_id}') = $2 AND (record_json::jsonb#>>'{payload,group_id}') = $3 ORDER BY occurred_at DESC, fact_id DESC LIMIT 10`, [tenant_id, project_id, group_id]),
     ]); // Parallelize independent reads.

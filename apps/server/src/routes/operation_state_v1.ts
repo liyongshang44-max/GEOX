@@ -251,7 +251,7 @@ function metricValueFromRows(rows: any[], names: string[]): number | undefined {
 function buildMetricsSnapshot(rows: any[]): OperationMetricsSnapshot {
   const normalized = Array.isArray(rows) ? rows : [];
   const soilMoisture = metricValueFromRows(normalized, ["soil_moisture"]);
-  const temperature = metricValueFromRows(normalized, ["temperature", "air_temperature", "soil_temp", "soil_temp_c"]);
+  const temperature = metricValueFromRows(normalized, ["temperature", "air_temperature", "soil_temperature", "soil_temp", "soil_temp_c"]);
   const humidity = metricValueFromRows(normalized, ["humidity", "air_humidity"]);
   const out: OperationMetricsSnapshot = {};
   if (soilMoisture !== undefined) out.soil_moisture = soilMoisture;
@@ -1416,7 +1416,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
             AND ts <= to_timestamp($4::double precision / 1000.0)
           ORDER BY ts DESC
           LIMIT 20`,
-        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], executionStartMs]
+        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], executionStartMs]
       ).catch(() => ({ rows: [] as any[] }));
       beforeMetrics = { ...beforeMetrics, ...buildMetricsSnapshot(beforeTelemetryQ.rows ?? []) };
     }
@@ -1440,7 +1440,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
             AND ts <= to_timestamp($5::double precision / 1000.0)
           ORDER BY ts ASC
           LIMIT 100`,
-        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temp", "soil_temp_c"], receiptMs, afterWindowEndMs]
+        [tenant.tenant_id, detailDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], receiptMs, afterWindowEndMs]
       ).catch(() => ({ rows: [] as any[] }));
       afterMetrics = { ...afterMetrics, ...buildMetricsSnapshot(afterTelemetryQ.rows ?? []) };
     }
