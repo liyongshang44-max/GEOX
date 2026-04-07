@@ -14,6 +14,8 @@ import type { Pool } from "pg"; // Postgres pool type.
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
+import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1";
+import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
   return typeof v === "string" && v.trim().length > 0; // True only when string has visible content.
@@ -791,6 +793,45 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }, // End summary.
     }); // End response.
   }); // End GET /api/v1/fields/:field_id.
+
+  app.get("/api/v1/fields/:field_id/sensing-read-models", async (req, reply) => { // Return field-level sensing read models for direct frontend consumption.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+
+    const fieldQ = await pool.query(
+      `SELECT 1
+         FROM field_index_v1
+        WHERE tenant_id = $1
+          AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    );
+    if (fieldQ.rowCount === 0) return notFound(reply);
+
+    const [sensing_overview, fertility_state] = await Promise.all([
+      refreshFieldSensingOverviewV1(pool, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        field_id,
+      }),
+      refreshFieldFertilityStateV1(pool, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        field_id,
+      }),
+    ]);
+
+    return reply.send({
+      ok: true,
+      field_id,
+      sensing_overview,
+      fertility_state,
+    });
+  });
 
   app.get("/api/v1/devices/:device_id/positions", async (req, reply) => { // Return normalized device_position_v1 list.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
