@@ -14,7 +14,6 @@ export default function SkillRegistryPage(): React.ReactElement {
   const [items, setItems] = React.useState<SkillRegistryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const bootstrappedRef = React.useRef(false);
 
   const load = React.useCallback(() => {
     let mounted = true;
@@ -52,8 +51,6 @@ export default function SkillRegistryPage(): React.ReactElement {
   }, []);
 
   React.useEffect(() => {
-    if (bootstrappedRef.current) return;
-    bootstrappedRef.current = true;
     return load();
   }, [load]);
 
