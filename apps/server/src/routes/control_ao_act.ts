@@ -7,6 +7,7 @@ import { z } from "zod"; // Runtime validation
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine";
+import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -135,22 +136,29 @@ type HardRulePrecheckV1 = {
   matched: boolean;
   reason_codes: string[];
   action_hints: Array<"irrigate_first" | "inspect">;
+  reason_details: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>;
 };
 
-function evaluateHardRulePrecheckV1(constraints: Record<string, unknown>): HardRulePrecheckV1 {
+function evaluateHardRulePrecheckV1(
+  constraints: Record<string, unknown>,
+  source: "request_constraints" | "field_fertility_state_v1" = "request_constraints"
+): HardRulePrecheckV1 {
   const moistureConstraint = String(constraints?.moisture_constraint ?? "").trim().toLowerCase();
   const salinityRisk = String(constraints?.salinity_risk ?? "").trim().toLowerCase();
   const reason_codes: string[] = [];
   const action_hints: Array<"irrigate_first" | "inspect"> = [];
+  const reason_details: HardRulePrecheckV1["reason_details"] = [];
   if (moistureConstraint === "dry") {
     reason_codes.push("hard_rule_moisture_constraint_dry");
     action_hints.push("irrigate_first");
+    reason_details.push({ code: "hard_rule_moisture_constraint_dry", action_hint: "irrigate_first", source });
   }
   if (salinityRisk === "high") {
     reason_codes.push("hard_rule_salinity_risk_high");
     action_hints.push("inspect");
+    reason_details.push({ code: "hard_rule_salinity_risk_high", action_hint: "inspect", source });
   }
-  return { matched: reason_codes.length > 0, reason_codes, action_hints };
+  return { matched: reason_codes.length > 0, reason_codes, action_hints, reason_details };
 }
 
 function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
@@ -492,7 +500,30 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
 
       // v0 冻结 0.2：constraints 中如果出现 string 值，则必须被 parameter_schema 作为 enum 定义，否则 reject。
       validateEnumStringValuesAgainstSchema(schemaKeys, body.constraints, "constraints");
-      const hardRulePrecheck = evaluateHardRulePrecheckV1(body.constraints);
+      const resolvedFieldId = String(body.field_id ?? body.meta?.field_id ?? "").trim();
+      let hardRuleConstraints: Record<string, unknown> = body.constraints;
+      let hardRuleSource: "request_constraints" | "field_fertility_state_v1" = "request_constraints";
+      if (resolvedFieldId) {
+        const fertilityState = await refreshFieldFertilityStateV1(pool, {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          field_id: resolvedFieldId,
+        });
+        hardRuleConstraints = {
+          ...body.constraints,
+          moisture_constraint:
+            fertilityState.recommendation_bias === "irrigate_first" || fertilityState.fertility_level === "LOW"
+              ? "dry"
+              : body.constraints?.moisture_constraint,
+          salinity_risk:
+            String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH"
+              ? "high"
+              : body.constraints?.salinity_risk,
+        };
+        hardRuleSource = "field_fertility_state_v1";
+      }
+      const hardRulePrecheck = evaluateHardRulePrecheckV1(hardRuleConstraints, hardRuleSource);
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
       const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)
@@ -516,7 +547,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           time_window: body.time_window,
           parameter_schema: body.parameter_schema,
           parameters: body.parameters,
-          constraints: body.constraints,
+          constraints: hardRuleConstraints,
           precheck: hardRulePrecheck,
           created_at_ts,
           meta: body.meta

@@ -11,6 +11,7 @@ import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_e
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
 import { evaluateHardRuleHintsV1 } from "../domain/decision_engine_v1";
 import { inferFertilityFromObservationAggregateV1 } from "../domain/sensing/fertility_inference_v1";
+import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 import {
   appendDerivedSensingStateV1,
   ensureDerivedSensingStateProjectionV1,
@@ -34,6 +35,7 @@ type RecommendationV1 = {
   recommendation_type: RecommendationTypeV1;
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
+  reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>;
   evidence_refs: string[];
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
@@ -48,6 +50,12 @@ type RecommendationV1 = {
   rule_performance_score?: number;
   rule_score?: number;
   rule_confidence?: "low" | "medium" | "high";
+};
+
+type HardRuleConstraintInputV1 = {
+  moisture_constraint?: string | null;
+  salinity_risk?: string | null;
+  source: "request_constraints" | "field_fertility_state_v1";
 };
 
 type RulePerformanceStats = {
@@ -134,7 +142,7 @@ function recommendationEvidenceFacts(telemetry: any, imageInput: any): Array<{ k
   ];
 }
 
-function buildRecommendations(body: any, telemetryInput: any, snapshotId: string): RecommendationV1[] {
+function buildRecommendations(body: any, telemetryInput: any, snapshotId: string, hardRuleInput?: HardRuleConstraintInputV1 | null): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
@@ -170,8 +178,9 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
     : { should_irrigate: false, reason: "soil_moisture_missing" };
   const moistureThreshold = 35;
   const hardRuleHints = evaluateHardRuleHintsV1({
-    moisture_constraint: body.moisture_constraint,
-    salinity_risk: body.salinity_risk
+    moisture_constraint: hardRuleInput?.moisture_constraint ?? body.moisture_constraint,
+    salinity_risk: hardRuleInput?.salinity_risk ?? body.salinity_risk,
+    source: hardRuleInput?.source ?? "request_constraints"
   });
   if (hardRuleHints.length > 0) {
     for (const hint of hardRuleHints) {
@@ -190,6 +199,7 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
           recommendation_type: "irrigation_recommendation_v1",
           status: "proposed",
           reason_codes: [hint.reason_code, "irrigate_first"],
+          reason_details: [{ code: hint.reason_code, action_hint: "irrigate_first", source: hint.source }],
           evidence_refs: ["constraint:moisture_constraint"],
           rule_hit: [{ rule_id: "hard_rule_moisture_constraint_dry_v1", matched: true, threshold: null, actual: null }],
           confidence: 0.95,
@@ -220,6 +230,7 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
           recommendation_type: "crop_health_alert_v1",
           status: "proposed",
           reason_codes: [hint.reason_code, "inspect"],
+          reason_details: [{ code: hint.reason_code, action_hint: "inspect", source: hint.source }],
           evidence_refs: ["constraint:salinity_risk"],
           rule_hit: [{ rule_id: "hard_rule_salinity_risk_high_v1", matched: true, threshold: null, actual: null }],
           confidence: 0.95,
@@ -1017,7 +1028,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       computed_at_ts_ms: derivedComputedAtTs,
       source: "decision_engine_v1"
     });
-    const recommendations = buildRecommendations(body, telemetry, snapshot_id);
+    const fertilityState = await refreshFieldFertilityStateV1(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      field_id: derivedFieldId,
+    });
+    const hardRuleInput: HardRuleConstraintInputV1 = {
+      moisture_constraint:
+        fertilityState.recommendation_bias === "irrigate_first" || fertilityState.fertility_level === "LOW"
+          ? "dry"
+          : null,
+      salinity_risk: String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH" ? "high" : null,
+      source: "field_fertility_state_v1"
+    };
+    const recommendations = buildRecommendations(body, telemetry, snapshot_id, hardRuleInput);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
