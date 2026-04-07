@@ -4,7 +4,12 @@ import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
 
-export const DERIVED_SENSING_STATE_TYPES_V1 = ["fertility_state", "salinity_risk_state"] as const;
+export const DERIVED_SENSING_STATE_TYPES_V1 = [
+  "fertility_state",
+  "salinity_risk_state",
+  "irrigation_need_state",
+  "sensor_quality_state",
+] as const;
 export type DerivedSensingStateTypeV1 = typeof DERIVED_SENSING_STATE_TYPES_V1[number];
 
 const FertilityStatePayloadSchema = z.object({
@@ -17,6 +22,16 @@ const SalinityRiskStatePayloadSchema = z.object({
   level: z.enum(["LOW", "MEDIUM", "HIGH"]),
   soil_moisture_pct: z.number().finite().optional(),
   canopy_temp_c: z.number().finite().optional(),
+}).passthrough();
+
+const IrrigationNeedStatePayloadSchema = z.object({
+  level: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  action_hint: z.string().trim().min(1).max(120).optional(),
+}).passthrough();
+
+const SensorQualityStatePayloadSchema = z.object({
+  level: z.enum(["GOOD", "FAIR", "POOR"]),
+  reason: z.string().trim().min(1).max(160).optional(),
 }).passthrough();
 
 export type DerivedSensingStateV1Input = {
@@ -62,7 +77,16 @@ function normalizeArray(values: string[]): string[] {
 
 function normalizeStatePayload(stateType: DerivedSensingStateTypeV1, payload: Record<string, any>): Record<string, any> {
   const source = (payload && typeof payload === "object") ? payload : {};
-  const levelCandidate = String(source.level ?? source.fertility_level ?? source.salinity_risk ?? source.risk ?? "").trim().toUpperCase();
+  const levelCandidate = String(
+    source.level
+      ?? source.fertility_level
+      ?? source.salinity_risk
+      ?? source.risk
+      ?? source.irrigation_need_level
+      ?? source.sensor_quality_level
+      ?? source.quality_level
+      ?? ""
+  ).trim().toUpperCase();
 
   if (stateType === "fertility_state") {
     const parsed = FertilityStatePayloadSchema.safeParse({
@@ -82,6 +106,29 @@ function normalizeStatePayload(stateType: DerivedSensingStateTypeV1, payload: Re
     });
     if (!parsed.success) {
       throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:salinity_risk_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
+    }
+    return parsed.data;
+  }
+
+  if (stateType === "irrigation_need_state") {
+    const parsed = IrrigationNeedStatePayloadSchema.safeParse({
+      ...source,
+      level: levelCandidate,
+      action_hint: source.action_hint ?? source.suggested_action ?? source.recommendation,
+    });
+    if (!parsed.success) {
+      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:irrigation_need_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
+    }
+    return parsed.data;
+  }
+
+  if (stateType === "sensor_quality_state") {
+    const parsed = SensorQualityStatePayloadSchema.safeParse({
+      ...source,
+      level: levelCandidate,
+    });
+    if (!parsed.success) {
+      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:sensor_quality_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
     }
     return parsed.data;
   }
