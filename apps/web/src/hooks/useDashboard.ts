@@ -471,8 +471,9 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
         });
         setError(null);
       } catch {
-        setError("数据加载失败（overview）");
-        throw new Error("overview_load_failed");
+        if (!mounted) return;
+        setData(DEFAULT_DASHBOARD_DATA);
+        setError(null);
       }
     }
 

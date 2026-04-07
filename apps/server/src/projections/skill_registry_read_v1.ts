@@ -45,6 +45,33 @@ function str(v: unknown): string {
   return String(v ?? "").trim();
 }
 
+function toIsoTimestamp(value: unknown): string {
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    if (Number.isFinite(ms)) return value.toISOString();
+  }
+  const text = str(value);
+  if (!text) return new Date(0).toISOString();
+  const ms = Date.parse(text);
+  if (Number.isFinite(ms)) return new Date(ms).toISOString();
+  return new Date(0).toISOString();
+}
+
+function toEpochMs(value: unknown, fallbackIso?: string): number {
+  if (value instanceof Date) {
+    const ms = value.getTime();
+    if (Number.isFinite(ms)) return ms;
+  }
+  const text = str(value);
+  const directMs = Date.parse(text);
+  if (Number.isFinite(directMs)) return directMs;
+  if (fallbackIso) {
+    const fallbackMs = Date.parse(fallbackIso);
+    if (Number.isFinite(fallbackMs)) return fallbackMs;
+  }
+  return 0;
+}
+
 function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
   const normalized = str(stage).toLowerCase();
   if (!normalized) return null;
@@ -132,8 +159,8 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
     const record = parseRecordJson(row.record_json) ?? row.record_json;
     const payload = record?.payload ?? {};
     const factType = String(record?.type ?? "") as SkillRegistryFactType;
-    const occurredAt = String(row.occurred_at);
-    const ts = Date.parse(occurredAt);
+    const occurredAt = toIsoTimestamp(row.occurred_at);
+    const ts = toEpochMs(row.occurred_at, occurredAt);
 
     return {
       tenant_id: str(payload.tenant_id),

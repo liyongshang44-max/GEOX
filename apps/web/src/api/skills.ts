@@ -158,9 +158,13 @@ export async function listSkillRegistry(input?: {
   scope?: SkillBindingScope;
   limit?: number;
 }): Promise<SkillRegistryItem[]> {
-  const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input));
-  const items = normalizeList<SkillRegistryItem>(res);
-  return items.map((item) => normalizeSkillRegistryItem(item));
+  try {
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input));
+    const items = normalizeList<SkillRegistryItem>(res);
+    return items.map((item) => normalizeSkillRegistryItem(item));
+  } catch {
+    return [];
+  }
 }
 
 export async function listSkillBindings(input?: {
@@ -170,9 +174,13 @@ export async function listSkillBindings(input?: {
   target_id?: string;
   limit?: number;
 }): Promise<SkillBindingItem[]> {
-  const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/bindings", input));
-  const items = normalizeList<SkillBindingItem>(res);
-  return items.map((item) => normalizeSkillBindingItem(item));
+  try {
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/bindings", input));
+    const items = normalizeList<SkillBindingItem>(res);
+    return items.map((item) => normalizeSkillBindingItem(item));
+  } catch {
+    return [];
+  }
 }
 
 export async function listSkillRuns(input?: {
@@ -181,15 +189,23 @@ export async function listSkillRuns(input?: {
   scope?: SkillBindingScope;
   limit?: number;
 }): Promise<SkillRunSummary[]> {
-  const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/runs", input));
-  const items = normalizeList<SkillRunSummary>(res);
-  return items.map((item) => normalizeSkillRunSummary(item));
+  try {
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/runs", input));
+    const items = normalizeList<SkillRunSummary>(res);
+    return items.map((item) => normalizeSkillRunSummary(item));
+  } catch {
+    return [];
+  }
 }
 
 export async function getSkillRunDetail(runId: string): Promise<SkillRunDetail | null> {
   const id = String(runId ?? "").trim();
   if (!id) return null;
-  const res = await apiRequestOptional<any>(`/api/v1/skills/runs/${encodeURIComponent(id)}`);
-  if (!res) return null;
-  return normalizeSkillRunSummary((res.item ?? res.run ?? res) as SkillRunDetail) as SkillRunDetail;
+  try {
+    const res = await apiRequestOptional<any>(`/api/v1/skills/runs/${encodeURIComponent(id)}`);
+    if (!res) return null;
+    return normalizeSkillRunSummary((res.item ?? res.run ?? res) as SkillRunDetail) as SkillRunDetail;
+  } catch {
+    return null;
+  }
 }

@@ -1,4 +1,5 @@
 import { apiRequest, apiRequestOptional, apiRequestWithPolicy, request, withQuery } from "./client";
+import { readStoredAoActToken } from "../lib/api";
 
 export type ProgramStateItemV1 = any;
 export type ProgramPortfolioItemV1 = any;
@@ -189,10 +190,95 @@ export async function fetchAgronomyRecommendations(params?: {
   group_id?: string;
   limit?: number;
 }): Promise<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }> {
+  const token = readStoredAoActToken();
   return apiRequest<{ ok: boolean; items: AgronomyRecommendationItemV1[]; count: number }>(withQuery('/api/v1/agronomy/recommendations', {
     tenant_id: params?.tenant_id,
     project_id: params?.project_id,
     group_id: params?.group_id,
     limit: params?.limit ?? 50,
-  }));
+  }), { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export async function fetchAgronomyRecommendationDetail(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+}): Promise<{ ok: boolean; item: AgronomyRecommendationItemV1 }> {
+  const token = readStoredAoActToken();
+  return apiRequest<{ ok: boolean; item: AgronomyRecommendationItemV1 }>(
+    withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}`, {
+      tenant_id: params.tenant_id,
+      project_id: params.project_id,
+      group_id: params.group_id,
+    }),
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export type AgronomyRecommendationControlPlaneListItem = any;
+export type AgronomyRecommendationControlPlaneDetailItem = any;
+
+export async function fetchAgronomyRecommendationsControlPlane(params?: {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  field_id?: string;
+  limit?: number;
+}): Promise<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }> {
+  const token = readStoredAoActToken();
+  return apiRequest<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }>(
+    withQuery("/api/v1/agronomy/recommendations/control-plane", {
+      tenant_id: params?.tenant_id,
+      project_id: params?.project_id,
+      group_id: params?.group_id,
+      field_id: params?.field_id,
+      limit: params?.limit ?? 50,
+    }),
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function fetchAgronomyRecommendationDetailControlPlane(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+}): Promise<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }> {
+  const token = readStoredAoActToken();
+  return apiRequest<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }>(
+    withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}/control-plane`, {
+      tenant_id: params.tenant_id,
+      project_id: params.project_id,
+      group_id: params.group_id,
+    }),
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+}
+
+export async function submitRecommendationApproval(params: {
+  recommendation_id: string;
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  rationale?: string;
+}): Promise<{ ok: boolean; recommendation_id: string; approval_request_id: string; operation_plan_id: string; operation_plan_fact_id: string }> {
+  const token = readStoredAoActToken();
+  return apiRequest<{ ok: boolean; recommendation_id: string; approval_request_id: string; operation_plan_id: string; operation_plan_fact_id: string }>(
+    withQuery(`/api/v1/recommendations/${encodeURIComponent(params.recommendation_id)}/submit-approval`, {
+      tenant_id: params.tenant_id,
+      project_id: params.project_id,
+      group_id: params.group_id,
+    }),
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        tenant_id: params.tenant_id,
+        project_id: params.project_id,
+        group_id: params.group_id,
+        rationale: params.rationale ?? "Submitted from recommendations console",
+      }),
+    }
+  );
 }
