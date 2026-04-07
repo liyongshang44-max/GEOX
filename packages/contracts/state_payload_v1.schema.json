@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "geox://schemas/apple_iii/state_payload_v1.schema.json",
+  "title": "State Payload V1",
+  "description": "Week-2 extension reserved minimal state payload.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["level", "explanation", "confidence", "ts"],
+  "properties": {
+    "level": { "type": "string", "minLength": 1 },
+    "explanation": { "type": "string", "minLength": 1 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "ts": { "type": "string", "minLength": 1 }
+  }
+}

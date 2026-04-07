@@ -75,11 +75,29 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
       : null,
     fertility: fertilityPayload
       ? {
-        status: toStringOrNull(fertilityPayload?.status ?? fertilityPayload?.state ?? fertilityPayload?.status_code),
-        explainCodes: toStringArray(fertilityPayload?.explain_codes ?? fertilityPayload?.reason_codes ?? fertilityPayload?.codes),
-        fertilityState: toStringOrNull(fertilityPayload?.fertility_state ?? fertilityPayload?.fertility_level),
+        status: toStringOrNull(
+          fertilityPayload?.status
+          ?? fertilityPayload?.state
+          ?? fertilityPayload?.status_code
+          ?? fertilityPayload?.level
+        ),
+        explainCodes: toStringArray(
+          fertilityPayload?.explain_codes
+          ?? fertilityPayload?.reason_codes
+          ?? fertilityPayload?.codes
+          ?? (fertilityPayload?.explanation ? [fertilityPayload.explanation] : [])
+        ),
+        fertilityState: toStringOrNull(
+          fertilityPayload?.fertility_state
+          ?? fertilityPayload?.fertility_level
+          ?? fertilityPayload?.level
+        ),
         salinityRisk: toStringOrNull(fertilityPayload?.salinity_risk),
-        confidence: toNumberOrNull(fertilityPayload?.confidence ?? readModel?.confidence ?? rawRecommendation?.confidence),
+        confidence: toNumberOrNull(
+          fertilityPayload?.confidence
+          ?? readModel?.confidence
+          ?? rawRecommendation?.confidence
+        ),
         recommendationBias: toStringOrNull(fertilityPayload?.recommendation_bias ?? readModel?.recommendation_bias),
       }
       : null,
