@@ -74,6 +74,8 @@ export const messages = {
     },
     program: {
       title: "经营方案详情",
+      spatialSummary: "空间摘要",
+      trajectorySummary: "轨迹摘要",
       status: "当前状态",
       updatedAt: "更新时间",
       currentIssue: "当前问题",
@@ -276,6 +278,8 @@ export const messages = {
     },
     program: {
       title: "Plan Detail",
+      spatialSummary: "Spatial Summary",
+      trajectorySummary: "Trajectory Summary",
       status: "Status",
       updatedAt: "Updated At",
       currentIssue: "Current Issue",
