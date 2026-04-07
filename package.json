@@ -34,7 +34,8 @@
     "build:judge": "pnpm --filter @geox/judge build",
     "acceptance:stage5": "pnpm --filter @geox/server test:agronomy:stage5 && pnpm --filter @geox/server test:stage5:frontend",
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
-    "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks"
+    "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
+    "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json"
   },
   "volta": {
     "node": "20.11.1"
