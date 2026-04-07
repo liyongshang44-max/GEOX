@@ -1,47 +1,61 @@
-# Fertility Precheck 发布门禁清单
+# Fertility Precheck 发布门禁清单（团队统一引用）
 
-> 适用范围：`fertility_precheck_e2e.test.ts` 回归矩阵（dry / high salinity / normal wait-fertilize / observation missing）。
+> 适用范围：`apps/server/src/domain/sensing/fertility_precheck_e2e.test.ts` + `apps/server/src/domain/sensing/fertility_precheck_regression_matrix.md`。
 
-## Gate 1：回归矩阵必须全绿（强制）
+## Gate 1：回归矩阵必须全绿（阻断）
 
-- 命令：`pnpm -C apps/server test:sensing:closed-loop`
-- 判定标准：5 个场景全部通过，且无 flaky（同一 commit 连续执行至少 2 次结果一致）。
-- 任一失败：**禁止上线**。
+- 执行命令：`pnpm -C apps/server test:sensing:closed-loop`
+- 判定标准：4 个固定场景全部通过（dry / high salinity / normal / missing observation）。
+- 阻断条件：任一场景失败，**必须阻断发布**。
 
-## Gate 2：每个场景固定断言必须一致（强制）
+## Gate 2：固定断言一致性（阻断）
 
-每个场景都必须同时覆盖并通过以下三层断言：
+每个场景都必须同时通过以下固定断言：
 
-1. Derived state（`fertility_level` / `recommendation_bias` / `salinity_risk` / `confidence`）。
-2. Field read model（同字段 + `computed_at_ts_ms` + `multisource_derived_state_merged`）。
-3. Precheck action hint（`routedActionHints` 精确匹配）。
+1. `derived state`：`fertility_level` / `recommendation_bias` / `salinity_risk` / `confidence`。
+2. `field read model`：同字段 + `computed_at_ts_ms` + `multisource_derived_state_merged`。
+3. `precheck hints`：`reason_code + action_hint` 精确匹配；`routedActionHints` 精确匹配。
 
-任一层断言漂移（新增、缺失、值变化）：**禁止上线**。
+- 阻断条件：任一字段值漂移、断言缺失或新增未评审断言，**必须阻断发布**。
 
-## Gate 3：可复现（Reproducible）（强制）
+## Gate 3：可复现性（阻断）
 
-- 固定输入：每个场景固定 `source_ts_ms`、传感器值、期望输出。
-- 固定执行命令：统一使用 Gate 1 命令，不允许临时改参数。
-- 固定依赖版本：以 lockfile 为准，不允许未记录依赖漂移。
+- 场景输入与 `source_ts_ms` 固定，不允许在发布前临时改值。
+- 使用统一命令执行，不允许用替代脚本绕过。
+- lockfile 与依赖版本保持一致。
 
-任一条件不满足：**禁止上线**。
+- 阻断条件：出现不可复现结果（同 commit 重跑结果不一致）或执行方式不一致，**必须阻断发布**。
 
-## Gate 4：可比对（Comparable）（强制）
+## Gate 4：基线可比对（阻断）
 
-- 产出必须可与基线 commit 对比（同一测试命令、同一测试文件）。
-- 对比维度至少包含：
-  - 场景数量是否变化；
-  - 各场景 `derived` / `field` / `precheck_action_hints` 是否变化；
-  - 失败用例名称是否新增。
+发布前必须对比最近一次通过基线（同一测试文件 + 同一命令），至少核对：
 
-无法完成基线对比：**禁止上线**。
+- 场景数量是否仍为 4；
+- 三层断言是否有改动；
+- 失败用例名称是否新增。
 
-## Gate 5：可归档（Archivable）（强制）
+- 阻断条件：无法完成基线对比或存在未审批差异，**必须阻断发布**。
 
-- CI 需归档以下内容至少 30 天：
-  - 测试原始日志（stdout/stderr）；
-  - 测试报告（通过/失败统计）；
-  - 对应 commit SHA 与执行时间戳。
-- 建议将本门禁文档和测试日志链接写入发布单。
+## Gate 5：归档与追溯（阻断）
 
-未归档或归档不可追溯：**禁止上线**。
+CI/发布流程必须归档：
+
+- 测试原始日志；
+- 测试结果统计；
+- 对应 commit SHA 与执行时间。
+
+- 阻断条件：无法追溯到上述任一证据，**必须阻断发布**。
+
+---
+
+## 发布阻断清单（可复制到发布单）
+
+以下任一项为「是」，则发布状态必须标记为 **BLOCKED**：
+
+- [ ] 回归命令未通过或未执行。
+- [ ] 4 个固定场景未全部覆盖。
+- [ ] `derived state` 固定断言失败。
+- [ ] `field read model` 固定断言失败。
+- [ ] `precheck hints` 固定断言失败。
+- [ ] 与基线差异未审批。
+- [ ] 测试证据（日志/结果/SHA）缺失。

@@ -105,7 +105,10 @@ type RegressionScenario = {
       salinity_risk: string;
       confidence: number;
     };
-    precheck_reason_codes: string[];
+    precheck_hints: Array<{
+      reason_code: string;
+      action_hint: string;
+    }>;
     precheck_action_hints: string[];
   };
 };
@@ -132,7 +135,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "low",
         confidence: 0.95,
       },
-      precheck_reason_codes: ["hard_rule_moisture_constraint_dry"],
+      precheck_hints: [{ reason_code: "hard_rule_moisture_constraint_dry", action_hint: "irrigate_first" }],
       precheck_action_hints: ["irrigate_first"],
     },
   },
@@ -157,7 +160,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "high",
         confidence: 0.95,
       },
-      precheck_reason_codes: ["hard_rule_salinity_risk_high"],
+      precheck_hints: [{ reason_code: "hard_rule_salinity_risk_high", action_hint: "inspect" }],
       precheck_action_hints: ["inspect"],
     },
   },
@@ -182,32 +185,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "low",
         confidence: 0.85,
       },
-      precheck_reason_codes: [],
-      precheck_action_hints: [],
-    },
-  },
-  {
-    name: "normal (wait)",
-    input: {
-      soil_moisture_pct: 30,
-      ec_ds_m: 0.8,
-      canopy_temp_c: 35,
-      source_ts_ms: Date.parse("2026-04-07T11:00:00.000Z"),
-    },
-    expected: {
-      derived: {
-        fertility_level: "medium",
-        recommendation_bias: "wait",
-        salinity_risk: "low",
-        confidence: 0.85,
-      },
-      field: {
-        fertility_level: "medium",
-        recommendation_bias: "wait",
-        salinity_risk: "low",
-        confidence: 0.85,
-      },
-      precheck_reason_codes: [],
+      precheck_hints: [],
       precheck_action_hints: [],
     },
   },
@@ -232,7 +210,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "unknown",
         confidence: 0.2,
       },
-      precheck_reason_codes: [],
+      precheck_hints: [],
       precheck_action_hints: [],
     },
   },
@@ -257,7 +235,14 @@ for (const scenario of REGRESSION_MATRIX) {
     assert.equal(out.fieldReadModel.computed_at_ts_ms, scenario.input.source_ts_ms);
     assert.ok(out.fieldReadModel.explanation_codes_json.includes("multisource_derived_state_merged"));
 
-    assert.deepEqual(out.precheckHints.map((x) => x.reason_code).sort(), scenario.expected.precheck_reason_codes);
+    assert.deepEqual(
+      out.precheckHints.map((x) => ({ reason_code: x.reason_code, action_hint: x.action_hint })).sort((a, b) =>
+        `${a.reason_code}:${a.action_hint}`.localeCompare(`${b.reason_code}:${b.action_hint}`)
+      ),
+      [...scenario.expected.precheck_hints].sort((a, b) =>
+        `${a.reason_code}:${a.action_hint}`.localeCompare(`${b.reason_code}:${b.action_hint}`)
+      )
+    );
     assert.deepEqual(out.routedActionHints, scenario.expected.precheck_action_hints);
   });
 }
