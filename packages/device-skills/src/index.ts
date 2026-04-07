@@ -133,6 +133,51 @@ const irrigationValveV1: DeviceSkillDefinition = {
   }
 };
 
+const fertilizerUnitV1: DeviceSkillDefinition = {
+  skill_id: "fertilizer_unit_v1",
+  version: "v1",
+  display_name: "Fertilizer unit dispense control",
+  category: "device",
+  trigger_stage: "before_dispatch",
+  compatibility: {
+    adapters: ["mqtt", "mqtt_downlink_once_v1", "fertigation_http_v1", "fertigation_simulator"],
+    device_types: ["FERTILIZER_UNIT", "FERTIGATION_CONTROLLER", "IRRIGATION_CONTROLLER"],
+    protocols: ["mqtt", "http"]
+  },
+  resolveCapability: ({ task_payload }) => {
+    const actionLike = String(task_payload?.action_type ?? task_payload?.task_type ?? task_payload?.meta?.task_type ?? "").trim().toLowerCase();
+    const compact = actionLike.replace(/[\s_-]+/g, ".");
+    if (!["fertilize", "fertilization.start", "start.fertilization", "fertilize.start"].includes(compact)) return null;
+
+    const parameters = task_payload?.parameters && typeof task_payload.parameters === "object" ? task_payload.parameters : {};
+    const fertilizer_id = String((parameters as any)?.fertilizer_id ?? task_payload?.meta?.fertilizer_id ?? "").trim() || null;
+    const zone_id = String((parameters as any)?.zone_id ?? task_payload?.meta?.zone_id ?? "").trim() || null;
+    const dosage_kg = finite((parameters as any)?.dosage_kg ?? (parameters as any)?.dosage ?? (parameters as any)?.amount_kg);
+    const duration_sec = finite((parameters as any)?.duration_sec ?? (parameters as any)?.duration_seconds ?? (parameters as any)?.duration);
+    const flow_lpm = finite((parameters as any)?.flow_lpm ?? (parameters as any)?.flow_rate_lpm);
+
+    return {
+      capability: "device.fertilization.dispense",
+      parameters: {
+        fertilizer_id,
+        zone_id,
+        dosage_kg,
+        duration_sec,
+        flow_lpm,
+        mode: dosage_kg != null ? "dosage" : (duration_sec != null ? "duration" : "default")
+      },
+      evidence_requirements: [
+        "dispatch_ack",
+        "fertilizer_unit_start_confirmation",
+        dosage_kg != null ? "dosage_delivery_observed" : "runtime_duration_observed",
+        "fertilizer_delivery_receipt"
+      ],
+      explain: `Dispense fertilizer${fertilizer_id ? ` ${fertilizer_id}` : ""}${zone_id ? ` to zone ${zone_id}` : ""} with ${dosage_kg != null ? `${dosage_kg}kg` : (duration_sec != null ? `${duration_sec}s` : "configured")} target.`,
+      compatibility: fertilizerUnitV1.compatibility
+    };
+  }
+};
+
 const soilSensorV1: DeviceSkillDefinition = {
   skill_id: "soil_sensor_v1",
   version: "v1",
@@ -269,6 +314,7 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
 
 export const deviceSkillRegistry: DeviceSkillDefinition[] = [
   irrigationValveV1,
+  fertilizerUnitV1,
   soilSensorV1,
   fertilityInferenceV1
 ];
