@@ -67,6 +67,14 @@ type TenantTripleV0 = { // Sprint 22: hard isolation scope triple used across AO
   group_id: string; // Group isolation field; MUST be present on token + request.
 }; // End TenantTripleV0.
 
+function isFeatureEnabledV0(envName: string, defaultEnabled: boolean): boolean {
+  const raw = String(process.env[envName] ?? "").trim().toLowerCase();
+  if (!raw) return defaultEnabled;
+  if (["1", "true", "yes", "on"].includes(raw)) return true;
+  if (["0", "false", "no", "off"].includes(raw)) return false;
+  return defaultEnabled;
+}
+
 function assertTenantFieldsPresentV0(input: any, label: string): TenantTripleV0 { // Parse + require tenant triple on inputs.
   const out = z // Use Zod for deterministic runtime validation.
     .object({
@@ -496,11 +504,19 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         };
         hardRuleSource = "field_fertility_state_v1";
       }
-      const hardRulePrecheck = evaluateAoActHardRulePrecheckV1({
-        scope: { tenant_id: tenant.tenant_id, project_id: tenant.project_id },
-        constraints: hardRuleConstraints,
-        source: hardRuleSource,
-      });
+      const enableAoActPrecheck = isFeatureEnabledV0("GEOX_ENABLE_AO_ACT_PRECHECK_V1", true);
+      const hardRulePrecheck = enableAoActPrecheck
+        ? evaluateAoActHardRulePrecheckV1({
+            scope: { tenant_id: tenant.tenant_id, project_id: tenant.project_id },
+            constraints: hardRuleConstraints,
+            source: hardRuleSource,
+          })
+        : {
+            action_hints: [] as string[],
+            reason_codes: [] as string[],
+            reason_details: [] as Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>,
+            source: hardRuleSource,
+          };
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
       const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)

@@ -72,6 +72,14 @@ function clamp01(x: number): number {
   return Math.max(0, Math.min(1, x));
 }
 
+function isFeatureEnabled(envName: string, defaultEnabled: boolean): boolean {
+  const raw = String(process.env[envName] ?? "").trim().toLowerCase();
+  if (!raw) return defaultEnabled;
+  if (["1", "true", "yes", "on"].includes(raw)) return true;
+  if (["0", "false", "no", "off"].includes(raw)) return false;
+  return defaultEnabled;
+}
+
 function parseJsonMaybe(v: any): any {
   if (v && typeof v === "object") return v;
   if (typeof v === "string") {
@@ -996,14 +1004,21 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: tenant.group_id,
       field_id: derivedFieldId,
     });
-    const hardRuleInput: HardRuleConstraintInputV1 = {
-      moisture_constraint:
-        fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
-          ? "dry"
-          : null,
-      salinity_risk: String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH" ? "high" : null,
-      source: "field_fertility_state_v1"
-    };
+    const enableRecommendationPrecheck = isFeatureEnabled("GEOX_ENABLE_RECOMMENDATION_PRECHECK_V1", true);
+    const hardRuleInput: HardRuleConstraintInputV1 = enableRecommendationPrecheck
+      ? {
+          moisture_constraint:
+            fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
+              ? "dry"
+              : null,
+          salinity_risk: String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH" ? "high" : null,
+          source: "field_fertility_state_v1"
+        }
+      : {
+          moisture_constraint: null,
+          salinity_risk: null,
+          source: "field_fertility_state_v1"
+        };
     const recommendations = buildRecommendations(body, telemetry, snapshot_id, hardRuleInput);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
