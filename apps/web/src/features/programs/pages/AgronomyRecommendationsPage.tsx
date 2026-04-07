@@ -199,7 +199,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                     </div>
                     <div className="decisionItemMeta">{item.reason_summary || "-"}</div>
                     {sensingV1 ? (
-                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.status || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.status || "--"} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
                     ) : null}
                     {fertilityV1 ? (
                       <div className="decisionItemMeta">field_fertility_state_v1 · 状态：{fertilityV1.status || fertilityV1.fertilityState || "--"} · 解释码：{fertilityV1.explainCodes.join(" / ") || "--"}</div>
@@ -267,7 +267,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               {sensingV1 ? (
                 <div className="decisionItemStatic">
                   <div className="decisionItemTitle">field_sensing_overview_v1</div>
-                  <div className="decisionItemMeta">状态：{sensingV1.status || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                  <div className="decisionItemMeta">状态：{sensingV1.status || "--"} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
                 </div>
               ) : null}
               {fertilityV1 ? (

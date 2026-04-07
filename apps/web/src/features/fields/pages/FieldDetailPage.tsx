@@ -240,6 +240,7 @@ export default function FieldDetailPage(): React.ReactElement {
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">field_sensing_overview_v1</div>
               <div className="decisionItemMeta">状态：{sensingV1.status || "--"}</div>
+              <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
               <div className="decisionItemMeta">解释码：{sensingV1.explainCodes.length ? sensingV1.explainCodes.join(" / ") : "--"}</div>
             </div>
           ) : null}
