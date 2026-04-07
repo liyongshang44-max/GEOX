@@ -708,6 +708,12 @@
   background: var(--color-status-risk-bg);
 }
 
+.emptyStateCard {
+  border-style: dashed;
+  border-color: var(--color-border-emphasis);
+  background: var(--color-bg-subtle);
+}
+
 .decisionItemTitle {
   font-size: 14px;
   font-weight: var(--font-weight-semibold);

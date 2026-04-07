@@ -54,6 +54,29 @@ const RECOMMENDATION_BIAS_LABELS: Record<string, string> = {
   inspect: "优先巡检",
 };
 
+const SALINITY_RISK_LABELS: Record<string, string> = {
+  low: "低风险",
+  medium: "中风险",
+  high: "高风险",
+  unknown: "未知",
+};
+
+function toMs(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return Math.round(value);
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  const num = Number(text);
+  if (Number.isFinite(num) && num > 0) return Math.round(num);
+  const parsed = Date.parse(text);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function formatUpdatedAt(value: unknown): string {
+  const ms = toMs(value);
+  if (!ms) return "暂无更新时间";
+  return new Date(ms).toLocaleString();
+}
+
 export function toReadableStatusLabel(status: string | null | undefined): string {
   const raw = normalizeStatus(status);
   if (!raw) return "--";
@@ -73,17 +96,45 @@ export function toReadableRecommendationBias(bias: string | null | undefined): s
   return RECOMMENDATION_BIAS_LABELS[key] ?? key;
 }
 
+export function toReadableSalinityRisk(risk: string | null | undefined): string {
+  const key = String(risk ?? "").trim().toLowerCase();
+  if (!key) return "暂无数据";
+  return SALINITY_RISK_LABELS[key] ?? key;
+}
+
+export function toReadableConfidence(confidence: number | null | undefined): string {
+  if (confidence == null || !Number.isFinite(Number(confidence))) return "暂无数据";
+  return `${Math.round(Number(confidence) * 100)}%`;
+}
+
+export function resolveStateTone(status: string | null | undefined): "normal" | "warning" | "stale" | "empty" {
+  const raw = normalizeStatus(status);
+  if (!raw || raw === "NO_DATA" || raw === "UNKNOWN") return "empty";
+  if (raw === "STALE") return "stale";
+  if (["WARNING", "WARN", "RISK", "ALERT", "FAILED", "ERROR"].includes(raw)) return "warning";
+  return "normal";
+}
+
 export function shouldShowRecommendationBiasWarning(bias: string | null | undefined): boolean {
   return Boolean(String(bias ?? "").trim());
 }
 
-function pickFact(readModel: any, key: "field_sensing_overview_v1" | "field_fertility_state_v1"): any {
+function pickFact(readModel: any, key: "field_sensing_overview_v1" | "field_fertility_state_v1"): { payload: any; updatedAtMs: number | null } {
   const direct = readModel?.[key];
-  if (direct && typeof direct === "object") return direct;
+  if (direct && typeof direct === "object") {
+    return {
+      payload: direct,
+      updatedAtMs: toMs((direct as any)?.updated_ts_ms ?? (direct as any)?.updated_at ?? (direct as any)?.computed_at_ts_ms),
+    };
+  }
   const inFacts = Array.isArray(readModel?.facts)
     ? readModel.facts.find((fact: any) => String(fact?.fact_type ?? fact?.type ?? "").toLowerCase() === key)
     : null;
-  return inFacts?.payload ?? inFacts ?? null;
+  const payload = inFacts?.payload ?? inFacts ?? null;
+  return {
+    payload,
+    updatedAtMs: toMs(inFacts?.updated_ts_ms ?? inFacts?.updated_at ?? payload?.updated_ts_ms ?? payload?.updated_at ?? payload?.computed_at_ts_ms),
+  };
 }
 
 export type ParsedFieldReadModelV1 = {
@@ -93,6 +144,9 @@ export type ParsedFieldReadModelV1 = {
     explainCodes: string[];
     explainCodeLabels: string[];
     sensorQuality: string | null;
+    updatedAtMs: number | null;
+    updatedAtLabel: string;
+    tone: "normal" | "warning" | "stale" | "empty";
     soilMoisture: number | null;
     soilTemperature: number | null;
     soilEc: number | null;
@@ -106,9 +160,14 @@ export type ParsedFieldReadModelV1 = {
     fertilityState: string | null;
     fertilityStateLabel: string;
     salinityRisk: string | null;
+    salinityRiskLabel: string;
     confidence: number | null;
+    confidenceLabel: string;
     recommendationBias: string | null;
     recommendationBiasLabel: string;
+    updatedAtMs: number | null;
+    updatedAtLabel: string;
+    tone: "normal" | "warning" | "stale" | "empty";
   } | null;
 };
 
@@ -120,8 +179,8 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
   const legacyFertility = readModel?.fertility_state ?? readModel?.fertility ?? readModel;
   const enableLegacyFallback = Boolean(options?.enableLegacyFallback);
 
-  const sensingPayload = sensingFact ?? (enableLegacyFallback ? legacySensing : null) ?? null;
-  const fertilityPayload = fertilityFact ?? (enableLegacyFallback ? legacyFertility : null) ?? null;
+  const sensingPayload = sensingFact.payload ?? (enableLegacyFallback ? legacySensing : null) ?? null;
+  const fertilityPayload = fertilityFact.payload ?? (enableLegacyFallback ? legacyFertility : null) ?? null;
 
   return {
     sensing: sensingPayload
@@ -139,6 +198,9 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
             ?? sensingPayload?.quality_level
             ?? sensingPayload?.quality
           ),
+          updatedAtMs: toMs(sensingPayload?.updated_ts_ms ?? sensingPayload?.updated_at ?? sensingPayload?.computed_at_ts_ms ?? sensingFact.updatedAtMs),
+          updatedAtLabel: formatUpdatedAt(sensingPayload?.updated_ts_ms ?? sensingPayload?.updated_at ?? sensingPayload?.computed_at_ts_ms ?? sensingFact.updatedAtMs),
+          tone: resolveStateTone(status),
           soilMoisture: toNumberOrNull(sensingPayload?.soil_moisture),
           soilTemperature: toNumberOrNull(sensingPayload?.soil_temperature ?? sensingPayload?.soil_temp),
           soilEc: toNumberOrNull(sensingPayload?.soil_ec),
@@ -166,6 +228,16 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
           ?? fertilityPayload?.level
         );
         const recommendationBias = toStringOrNull(fertilityPayload?.recommendation_bias ?? readModel?.recommendation_bias);
+        const salinityRisk = toStringOrNull(fertilityPayload?.salinity_risk);
+        const confidence = toNumberOrNull(
+          fertilityPayload?.confidence
+          ?? readModel?.confidence
+          ?? rawRecommendation?.confidence
+        );
+        const updatedAtRaw = fertilityPayload?.updated_ts_ms
+          ?? fertilityPayload?.updated_at
+          ?? fertilityPayload?.computed_at_ts_ms
+          ?? fertilityFact.updatedAtMs;
         return {
           status,
           statusLabel: toReadableStatusLabel(status),
@@ -173,14 +245,15 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
           explainCodeLabels: toReadableExplanationCodes(explainCodes),
           fertilityState,
           fertilityStateLabel: toReadableStatusLabel(fertilityState),
-          salinityRisk: toStringOrNull(fertilityPayload?.salinity_risk),
-          confidence: toNumberOrNull(
-            fertilityPayload?.confidence
-            ?? readModel?.confidence
-            ?? rawRecommendation?.confidence
-          ),
+          salinityRisk,
+          salinityRiskLabel: toReadableSalinityRisk(salinityRisk),
+          confidence,
+          confidenceLabel: toReadableConfidence(confidence),
           recommendationBias,
           recommendationBiasLabel: toReadableRecommendationBias(recommendationBias),
+          updatedAtMs: toMs(updatedAtRaw),
+          updatedAtLabel: formatUpdatedAt(updatedAtRaw),
+          tone: resolveStateTone(status),
         };
       })()
       : null,
