@@ -9,6 +9,7 @@ import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills"
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine";
 import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1";
+import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
@@ -540,14 +541,10 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         });
         hardRuleConstraints = {
           ...body.constraints,
-          moisture_constraint:
-            fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
-              ? "dry"
-              : body.constraints?.moisture_constraint,
-          salinity_risk:
-            String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH"
-              ? "high"
-              : body.constraints?.salinity_risk,
+          ...deriveFertilityPrecheckConstraintsV1({
+            fertilityState,
+            baseConstraints: body.constraints,
+          })
         };
         hardRuleSource = "field_fertility_state_v1";
       }

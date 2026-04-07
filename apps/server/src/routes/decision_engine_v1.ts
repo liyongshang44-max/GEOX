@@ -6,6 +6,7 @@ import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
 import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
+import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
@@ -1007,11 +1008,13 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const enableRecommendationPrecheck = isFeatureEnabled("GEOX_ENABLE_RECOMMENDATION_PRECHECK_V1", true);
     const hardRuleInput: HardRuleConstraintInputV1 = enableRecommendationPrecheck
       ? {
-          moisture_constraint:
-            fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
-              ? "dry"
-              : null,
-          salinity_risk: String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH" ? "high" : null,
+          ...deriveFertilityPrecheckConstraintsV1({
+            fertilityState,
+            baseConstraints: {
+              moisture_constraint: null,
+              salinity_risk: null,
+            }
+          }),
           source: "field_fertility_state_v1"
         }
       : {
