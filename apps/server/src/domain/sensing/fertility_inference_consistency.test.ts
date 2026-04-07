@@ -31,11 +31,11 @@ function runBoth(input: { soil_moisture_pct?: number | null; ec_ds_m?: number | 
   };
 }
 
-test("fertility inference: route and skill outputs are identical for dry/high-ec input", () => {
-  const { route, skill } = runBoth({ soil_moisture_pct: 18, ec_ds_m: 3.1, canopy_temp_c: 33 });
+test("fertility inference: route and skill outputs are identical for dry input", () => {
+  const { route, skill } = runBoth({ soil_moisture_pct: 18, ec_ds_m: 1.4, canopy_temp_c: 28 });
   assert.deepEqual(skill, route);
   assert.equal(route.recommendation_bias, "irrigate_first");
-  assert.equal(route.salinity_risk, "high");
+  assert.equal(route.salinity_risk, "low");
 });
 
 test("fertility inference: route and skill outputs are identical for high salinity input", () => {
