@@ -703,6 +703,11 @@
   background: var(--color-bg-subtle);
 }
 
+.staleStateCard {
+  border-color: var(--color-status-risk-border);
+  background: var(--color-status-risk-bg);
+}
+
 .decisionItemTitle {
   font-size: 14px;
   font-weight: var(--font-weight-semibold);

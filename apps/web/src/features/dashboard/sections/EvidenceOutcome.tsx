@@ -52,28 +52,32 @@ export default function EvidenceOutcomeSection({
     todayCount: number;
     latest: (DashboardRecommendationItem & {
       normalized_read_model?: {
-        soil_moisture: number | null;
-        soil_temperature: number | null;
-        soil_ec: number | null;
-        soil_ph: number | null;
-        fertility_state: string | null;
-        salinity_risk: string | null;
-        confidence: number | null;
-        recommendation_bias: string | null;
-        last_updated: string | number | null;
+        sensing_status?: string | null;
+        sensing_freshness?: string | null;
+        soil_moisture?: number | null;
+        soil_temperature?: number | null;
+        soil_ec?: number | null;
+        soil_ph?: number | null;
+        fertility_state?: string | null;
+        fertility_freshness?: string | null;
+        salinity_risk?: string | null;
+        confidence?: number | null;
+        recommendation_bias?: string | null;
+        last_updated?: string | number | null;
+        source_label?: string;
       };
     }) | null;
   };
   latestReadModel: {
-    soil_moisture?: number | null;
-    soil_temperature?: number | null;
-    soil_ec?: number | null;
-    soil_ph?: number | null;
+    sensing_status?: string | null;
+    sensing_freshness?: string | null;
     fertility_state?: string | null;
+    fertility_freshness?: string | null;
     salinity_risk?: string | null;
     confidence?: number | null;
     recommendation_bias?: string | null;
     last_updated?: string | number | null;
+    source_label?: string;
   };
   loadError?: string | null;
 }): React.ReactElement {
@@ -164,33 +168,19 @@ export default function EvidenceOutcomeSection({
             <div className="decisionItemTitle">今日自动建议</div>
             <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
           </div>
-          {latestReadModel.soil_moisture != null ? (
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">soil_moisture</div>
-              <div className="decisionItemMeta">{Number(latestReadModel.soil_moisture).toFixed(1)}%</div>
+          <div className={`decisionItemStatic ${latestReadModel.sensing_freshness === "stale" ? "staleStateCard" : ""}`}>
+            <div className="decisionItemTitle">field_sensing_overview_v1</div>
+            <div className="decisionItemMeta">
+              状态：{latestReadModel.sensing_status ?? "--"} · 新鲜度：{latestReadModel.sensing_freshness ?? "--"}
+              {latestReadModel.sensing_freshness === "stale" ? "（数据已过期，请优先核查现场连通性）" : ""}
             </div>
-          ) : null}
-          {latestReadModel.soil_temperature != null ? (
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">soil_temperature</div>
-              <div className="decisionItemMeta">{Number(latestReadModel.soil_temperature).toFixed(1)}°C</div>
+          </div>
+          <div className={`decisionItemStatic ${latestReadModel.fertility_freshness === "stale" ? "staleStateCard" : ""}`}>
+            <div className="decisionItemTitle">field_fertility_state_v1</div>
+            <div className="decisionItemMeta">
+              状态：{latestReadModel.fertility_state ?? "--"} · 新鲜度：{latestReadModel.fertility_freshness ?? "--"}
+              {latestReadModel.fertility_freshness === "stale" ? "（状态过期，建议人工复核）" : ""}
             </div>
-          ) : null}
-          {latestReadModel.soil_ec != null ? (
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">soil_ec</div>
-              <div className="decisionItemMeta">{Number(latestReadModel.soil_ec).toFixed(2)} dS/m</div>
-            </div>
-          ) : null}
-          {latestReadModel.soil_ph != null ? (
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">soil_ph</div>
-              <div className="decisionItemMeta">{Number(latestReadModel.soil_ph).toFixed(2)}</div>
-            </div>
-          ) : null}
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">fertility_state</div>
-            <div className="decisionItemMeta">{latestReadModel.fertility_state ?? "--"}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">salinity_risk</div>
@@ -203,6 +193,10 @@ export default function EvidenceOutcomeSection({
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">last_updated</div>
             <div className="decisionItemMeta">{latestReadModel.last_updated == null ? "--" : String(latestReadModel.last_updated)}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">source</div>
+            <div className="decisionItemMeta">{latestReadModel.source_label ?? "field_sensing_overview_v1 + field_fertility_state_v1"}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">recommendation_bias</div>

@@ -8,7 +8,9 @@ import {
   getOverview,
   getRecentEvidence,
   fetchDashboardOverviewV2,
+  fetchDashboardFieldSensingSummary,
   fetchSlaSummary,
+  type DashboardFieldSensingSummary,
   type DashboardTopActionItem,
   type DashboardRecommendationItem,
   type SlaSummary,
@@ -36,28 +38,27 @@ function normalizeNumericMetric(value: unknown): number | null {
 }
 
 function normalizeReadModel(recommendation: any): {
-  soil_moisture: number | null;
-  soil_temperature: number | null;
-  soil_ec: number | null;
-  soil_ph: number | null;
+  sensing_status: string | null;
+  sensing_freshness: string | null;
   fertility_state: string | null;
+  fertility_freshness: string | null;
   salinity_risk: string | null;
   confidence: number | null;
   recommendation_bias: string | null;
   last_updated: string | number | null;
+  source_label: string;
 } {
-  const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_LEGACY_FALLBACK ?? "0") === "1";
-  const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback });
+  const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback: false });
   return {
-    soil_moisture: normalizeNumericMetric(parsed.sensing?.soilMoisture),
-    soil_temperature: normalizeNumericMetric(parsed.sensing?.soilTemperature),
-    soil_ec: normalizeNumericMetric(parsed.sensing?.soilEc),
-    soil_ph: normalizeNumericMetric(parsed.sensing?.soilPh),
+    sensing_status: parsed.sensing?.status ?? null,
+    sensing_freshness: parsed.sensing?.sensorQuality ?? null,
     fertility_state: parsed.fertility?.fertilityState ?? parsed.fertility?.status ?? null,
+    fertility_freshness: parsed.fertility?.status ?? null,
     salinity_risk: parsed.fertility?.salinityRisk ?? null,
     confidence: normalizeNumericMetric(parsed.fertility?.confidence),
     recommendation_bias: parsed.fertility?.recommendationBias ?? null,
     last_updated: recommendation?.updated_ts_ms ?? null,
+    source_label: "field_sensing_overview_v1 + field_fertility_state_v1",
   };
 }
 
@@ -95,6 +96,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       normalized_read_model?: ReturnType<typeof normalizeReadModel>;
     }) | null;
   }>({ todayCount: 0, latest: null });
+  const [latestFieldSensingSummary, setLatestFieldSensingSummary] = React.useState<DashboardFieldSensingSummary | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
@@ -105,6 +107,25 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       mounted = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const fieldId = String(smartRecommendations.latest?.field?.field_id ?? "").trim();
+    if (!fieldId) {
+      setLatestFieldSensingSummary(null);
+      return () => { mounted = false; };
+    }
+    void fetchDashboardFieldSensingSummary(fieldId)
+      .then((res) => {
+        if (mounted) setLatestFieldSensingSummary(res);
+      })
+      .catch(() => {
+        if (mounted) setLatestFieldSensingSummary(null);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [smartRecommendations.latest?.field?.field_id]);
 
   React.useEffect(() => {
     let mounted = true;
@@ -231,7 +252,26 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     entryLabel: todayActionEntryLabel(item.type),
   }));
 
-  const latestReadModel = (smartRecommendations.latest as any)?.normalized_read_model ?? {};
+  const latestReadModel = React.useMemo(() => {
+    const sensingOverview = latestFieldSensingSummary?.sensing_overview;
+    const fertilityState = latestFieldSensingSummary?.fertility_state;
+    if (sensingOverview || fertilityState) {
+      const synthesized = {
+        updated_ts_ms: (fertilityState as any)?.updated_ts_ms ?? (sensingOverview as any)?.updated_ts_ms ?? null,
+        read_model: {
+          field_sensing_overview_v1: sensingOverview,
+          field_fertility_state_v1: fertilityState,
+        },
+      };
+      const normalized = normalizeReadModel(synthesized);
+      return {
+        ...normalized,
+        sensing_freshness: String(latestFieldSensingSummary?.freshness?.sensing_overview ?? normalized.sensing_freshness ?? "").trim() || null,
+        fertility_freshness: String(latestFieldSensingSummary?.freshness?.fertility_state ?? normalized.fertility_freshness ?? "").trim() || null,
+      };
+    }
+    return (smartRecommendations.latest as any)?.normalized_read_model ?? {};
+  }, [latestFieldSensingSummary, smartRecommendations.latest]);
   const fieldCount = Number(d.overview.fieldCount ?? 0);
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
   const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
