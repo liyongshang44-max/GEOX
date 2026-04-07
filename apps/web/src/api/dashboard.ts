@@ -257,7 +257,22 @@ async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
 }
 
 export async function fetchDashboardOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<DashboardOverview> {
-  return apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params));
+  return safe(
+    apiRequest<DashboardOverview>(withQuery("/api/v1/dashboard/overview", params)),
+    {
+      window: { from_ts_ms: Number(params?.from_ts_ms ?? 0), to_ts_ms: Number(params?.to_ts_ms ?? Date.now()) },
+      summary: {
+        field_count: 0,
+        online_device_count: 0,
+        open_alert_count: 0,
+        running_task_count: 0,
+      },
+      trend_series: [],
+      latest_alerts: [],
+      latest_receipts: [],
+      quick_actions: [],
+    } as DashboardOverview,
+  );
 }
 
 export async function fetchDashboardControlPlane(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{ ok: boolean; item: DashboardControlPlaneItem }> {
