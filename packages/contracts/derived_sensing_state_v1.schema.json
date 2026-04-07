@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "derived_sensing_state_v1.schema.json",
+  "title": "derived_sensing_state_v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "schema_version",
+    "tenant_id",
+    "project_id",
+    "group_id",
+    "field_id",
+    "device_id",
+    "state_key",
+    "state_value",
+    "confidence",
+    "quality_flags",
+    "explanation_codes",
+    "observed_window_start",
+    "observed_window_end",
+    "derived_at"
+  ],
+  "properties": {
+    "type": { "const": "derived_sensing_state_v1" },
+    "schema_version": { "const": "1.0.0" },
+    "tenant_id": { "type": "string", "minLength": 1 },
+    "project_id": { "type": "string", "minLength": 1 },
+    "group_id": { "type": "string", "minLength": 1 },
+    "field_id": { "type": "string", "minLength": 1 },
+    "device_id": { "type": "string", "minLength": 1 },
+    "state_key": { "type": "string", "minLength": 1 },
+    "state_value": { "type": "number" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "quality_flags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["OK", "LOW_CONFIDENCE", "DATA_GAP", "STALE_INPUT", "MODEL_FALLBACK"]
+      }
+    },
+    "explanation_codes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "observed_window_start": { "type": "string", "format": "date-time" },
+    "observed_window_end": { "type": "string", "format": "date-time" },
+    "derived_at": { "type": "string", "format": "date-time" }
+  }
+}

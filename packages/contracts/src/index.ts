@@ -12,6 +12,8 @@ export * from "./schema/control_verdict_v0"; // 导出 ControlVerdict v0：供 k
 export * from "./schema/canopy_frame_v1";
 export * from "./schema/agronomy_observation_v1";
 export * from "./schema/agronomy_inference_result_v1";
+export * from "./schema/device_observation_v1";
+export * from "./schema/derived_sensing_state_v1";
 export * from "./schema/telemetry_metric_catalog_v1";
 export * from "./schema/agronomy_decision_context_v1";
 export * from "./schema/agronomy_recommendation_v1";

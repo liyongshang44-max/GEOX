@@ -1,0 +1,17 @@
+{
+  "type": "derived_sensing_state_v1",
+  "schema_version": "1.0.0",
+  "tenant_id": "tenant_demo",
+  "project_id": "project_alpha",
+  "group_id": "group_north",
+  "field_id": "field_001",
+  "device_id": "sensor_station_01",
+  "state_key": "irrigation_stress_index",
+  "state_value": 0.62,
+  "confidence": 0.88,
+  "quality_flags": ["OK"],
+  "explanation_codes": ["FUSED_FROM_SOIL_AND_WEATHER"],
+  "observed_window_start": "2026-04-07T09:00:00Z",
+  "observed_window_end": "2026-04-07T10:00:00Z",
+  "derived_at": "2026-04-07T10:00:06Z"
+}
