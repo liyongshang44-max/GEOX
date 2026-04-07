@@ -54,6 +54,21 @@ export type DashboardRecommendationReadModel = {
   recommendation_bias?: string | null;
   last_updated?: string | number | null;
 };
+
+export type DashboardFieldSensingSummary = {
+  ok?: boolean;
+  field_id?: string;
+  sensing_overview?: Record<string, unknown> | null;
+  fertility_state?: Record<string, unknown> | null;
+  freshness?: {
+    sensing_overview?: string | null;
+    fertility_state?: string | null;
+  };
+  status?: {
+    sensing_overview?: string | null;
+    fertility_state?: string | null;
+  };
+};
 export type DashboardRecommendationItem = {
   recommendation_id: string;
   title?: string;
@@ -333,6 +348,16 @@ export async function fetchDashboardRecommendations(limit = 50): Promise<Dashboa
   );
   const list = res?.items ?? [];
   return Array.isArray(list) ? list : [];
+}
+
+export async function fetchDashboardFieldSensingSummary(fieldId: string): Promise<DashboardFieldSensingSummary | null> {
+  const normalizedFieldId = String(fieldId ?? "").trim();
+  if (!normalizedFieldId) return null;
+  const res = await safe(
+    apiRequest<DashboardFieldSensingSummary>(`/api/v1/dashboard/fields/${encodeURIComponent(normalizedFieldId)}/sensing-summary`),
+    null,
+  );
+  return res ?? null;
 }
 
 export async function fetchDashboardOperationStates(limit = 100): Promise<DashboardOperationStateItem[]> {
