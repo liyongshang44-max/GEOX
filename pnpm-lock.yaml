@@ -101,6 +101,12 @@ importers:
       '@geox/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@geox/device-skills':
+        specifier: workspace:*
+        version: link:../../packages/device-skills
+      '@geox/skill-registry':
+        specifier: workspace:*
+        version: link:../../packages/skill-registry
       fastify:
         specifier: ^4.28.1
         version: 4.29.1
@@ -207,6 +213,18 @@ importers:
         specifier: ^5.4.21
         version: 5.4.21(@types/node@20.19.33)
 
+  packages/acceptance-skills:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/agronomy-skills:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/contracts:
     dependencies:
       zod:
@@ -247,10 +265,28 @@ importers:
         specifier: workspace:^
         version: link:../contracts
 
+  packages/crop-skills:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
+  packages/device-skills:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
+        version: 5.9.3
+
   packages/guardrails:
     dependencies:
       typescript:
         specifier: ^5.4.5
+        version: 5.9.3
+
+  packages/skill-registry:
+    devDependencies:
+      typescript:
+        specifier: ^5.3.0
         version: 5.9.3
 
 packages:
