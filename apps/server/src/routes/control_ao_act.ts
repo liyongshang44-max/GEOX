@@ -361,6 +361,53 @@ async function writeAoActAuthzAuditFactV0(
   await pool.query("INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)", [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]);
 }
 
+async function ensureFertilizerUnitSkillRegisteredV1(
+  pool: Pool,
+  tenant: TenantTripleV0
+): Promise<void> {
+  const existing = await pool.query(
+    `SELECT 1
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'skill_definition_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (record_json::jsonb#>>'{payload,skill_id}') = 'fertilizer_unit_v1'
+        AND (record_json::jsonb#>>'{payload,version}') = 'v1'
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id]
+  );
+  if ((existing.rowCount ?? 0) > 0) return;
+  const record_json = {
+    type: "skill_definition_v1",
+    payload: {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      skill_id: "fertilizer_unit_v1",
+      version: "v1",
+      display_name: "Fertilizer unit dispense control",
+      category: "DEVICE",
+      status: "ACTIVE",
+      trigger_stage: "before_dispatch",
+      scope_type: "DEVICE",
+      rollout_mode: "DIRECT",
+      bind_target: "device:*",
+      input_schema_digest: "device-skill-input:fertilizer_unit_v1:v1",
+      output_schema_digest: "device-skill-output:fertilizer_unit_v1:v1",
+      compatibility: {
+        adapters: ["mqtt", "mqtt_downlink_once_v1", "fertigation_http_v1", "fertigation_simulator"],
+        device_types: ["FERTILIZER_UNIT", "FERTIGATION_CONTROLLER", "IRRIGATION_CONTROLLER"],
+        protocols: ["mqtt", "http"]
+      }
+    }
+  };
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [randomUUID(), FACT_SOURCE_AO_ACT_V0, record_json]
+  );
+}
+
 
 async function assertAllDeviceRefsExistAndMatchTenantV0(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
@@ -615,6 +662,9 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       const requiresDeviceSkillResolution = body.execution_plan.target.kind === "device" || actionType === "FERTILIZE";
       if (actionType === "FERTILIZE" && body.execution_plan.target.kind !== "device") {
         return reply.status(400).send({ ok: false, error: "FERTILIZE_REQUIRES_DEVICE_TARGET" });
+      }
+      if (actionType === "FERTILIZE") {
+        await ensureFertilizerUnitSkillRegisteredV1(pool, tenant);
       }
       const skillCapabilityResolution = requiresDeviceSkillResolution
         ? resolveTaskCapabilityViaDeviceSkillsResult({
