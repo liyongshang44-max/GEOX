@@ -28,6 +28,25 @@ export type DeviceObservationV1Input =
   | null
   | undefined;
 
+const EXPLANATION_CODES_V1 = {
+  SKILL: "SENSING_SKILL_FERTILITY_INFERENCE_V1",
+  NO_DEVICE_OBSERVATION: "NO_DEVICE_OBSERVATION",
+  MISSING_SOIL_MOISTURE: "MISSING_SOIL_MOISTURE",
+  LOW_SOIL_MOISTURE: "LOW_SOIL_MOISTURE",
+  ADEQUATE_SOIL_MOISTURE: "ADEQUATE_SOIL_MOISTURE",
+  HIGH_EC: "HIGH_EC",
+  MODERATE_EC: "MODERATE_EC",
+  LOW_EC: "LOW_EC",
+  MISSING_EC: "MISSING_EC",
+  MISSING_CANOPY_TEMP: "MISSING_CANOPY_TEMP",
+  HEAT_STRESS_SIGNAL: "HEAT_STRESS_SIGNAL",
+  ELEVATED_CANOPY_TEMP: "ELEVATED_CANOPY_TEMP",
+  RULE_MOISTURE_LOW_IRRIGATE_FIRST: "RULE_MOISTURE_LOW_IRRIGATE_FIRST",
+  RULE_SALINITY_HIGH_INSPECT: "RULE_SALINITY_HIGH_INSPECT",
+  RULE_EC_TEMP_AVAILABLE_FERTILIZE: "RULE_EC_TEMP_AVAILABLE_FERTILIZE",
+  RULE_EC_TEMP_AVAILABILITY_WAIT: "RULE_EC_TEMP_AVAILABILITY_WAIT",
+} as const satisfies Record<string, FertilityInferenceExplanationCodeV1>;
+
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);
 }
@@ -88,10 +107,10 @@ export function inferFertilityFromObservationAggregateV1(input: SensingObservati
   const ec = isFiniteNumber(input.ec_ds_m) ? input.ec_ds_m : null;
   const canopyTemp = isFiniteNumber(input.canopy_temp_c) ? input.canopy_temp_c : null;
 
-  const explanationCodes: FertilityInferenceExplanationCodeV1[] = ["SENSING_SKILL_FERTILITY_INFERENCE_V1"];
+  const explanationCodes: FertilityInferenceExplanationCodeV1[] = [EXPLANATION_CODES_V1.SKILL];
 
   if (moisture == null && ec == null && canopyTemp == null) {
-    explanationCodes.push("NO_DEVICE_OBSERVATION");
+    explanationCodes.push(EXPLANATION_CODES_V1.NO_DEVICE_OBSERVATION);
     return {
       fertility_level: "unknown",
       recommendation_bias: "inspect",
@@ -110,9 +129,9 @@ export function inferFertilityFromObservationAggregateV1(input: SensingObservati
           ? "medium"
           : "high";
 
-  if (moisture == null) explanationCodes.push("MISSING_SOIL_MOISTURE");
-  else if (moisture < 22) explanationCodes.push("LOW_SOIL_MOISTURE");
-  else explanationCodes.push("ADEQUATE_SOIL_MOISTURE");
+  if (moisture == null) explanationCodes.push(EXPLANATION_CODES_V1.MISSING_SOIL_MOISTURE);
+  else if (moisture < 22) explanationCodes.push(EXPLANATION_CODES_V1.LOW_SOIL_MOISTURE);
+  else explanationCodes.push(EXPLANATION_CODES_V1.ADEQUATE_SOIL_MOISTURE);
 
   const salinityRisk: SalinityRiskV1 =
     ec == null
@@ -123,22 +142,22 @@ export function inferFertilityFromObservationAggregateV1(input: SensingObservati
           ? "medium"
           : "low";
 
-  if (ec != null && ec >= 2.8) explanationCodes.push("HIGH_EC");
-  else if (ec != null && ec >= 2.0) explanationCodes.push("MODERATE_EC");
-  else if (ec != null) explanationCodes.push("LOW_EC");
-  else explanationCodes.push("MISSING_EC");
+  if (ec != null && ec >= 2.8) explanationCodes.push(EXPLANATION_CODES_V1.HIGH_EC);
+  else if (ec != null && ec >= 2.0) explanationCodes.push(EXPLANATION_CODES_V1.MODERATE_EC);
+  else if (ec != null) explanationCodes.push(EXPLANATION_CODES_V1.LOW_EC);
+  else explanationCodes.push(EXPLANATION_CODES_V1.MISSING_EC);
 
-  if (canopyTemp == null) explanationCodes.push("MISSING_CANOPY_TEMP");
-  else if (canopyTemp >= 32) explanationCodes.push("HEAT_STRESS_SIGNAL");
-  else if (canopyTemp >= 30) explanationCodes.push("ELEVATED_CANOPY_TEMP");
+  if (canopyTemp == null) explanationCodes.push(EXPLANATION_CODES_V1.MISSING_CANOPY_TEMP);
+  else if (canopyTemp >= 32) explanationCodes.push(EXPLANATION_CODES_V1.HEAT_STRESS_SIGNAL);
+  else if (canopyTemp >= 30) explanationCodes.push(EXPLANATION_CODES_V1.ELEVATED_CANOPY_TEMP);
 
   let recommendationBias: RecommendationBiasV1;
   if (moisture != null && moisture < 22) {
     recommendationBias = "irrigate_first";
-    explanationCodes.push("RULE_MOISTURE_LOW_IRRIGATE_FIRST");
+    explanationCodes.push(EXPLANATION_CODES_V1.RULE_MOISTURE_LOW_IRRIGATE_FIRST);
   } else if (salinityRisk === "high") {
     recommendationBias = "inspect";
-    explanationCodes.push("RULE_SALINITY_HIGH_INSPECT");
+    explanationCodes.push(EXPLANATION_CODES_V1.RULE_SALINITY_HIGH_INSPECT);
   } else {
     const ecAvailable = ec != null;
     const tempAvailable = canopyTemp != null;
@@ -147,10 +166,10 @@ export function inferFertilityFromObservationAggregateV1(input: SensingObservati
 
     if (ecAvailable && tempAvailable && favorableEc && favorableTemp) {
       recommendationBias = "fertilize";
-      explanationCodes.push("RULE_EC_TEMP_AVAILABLE_FERTILIZE");
+      explanationCodes.push(EXPLANATION_CODES_V1.RULE_EC_TEMP_AVAILABLE_FERTILIZE);
     } else {
       recommendationBias = "wait";
-      explanationCodes.push("RULE_EC_TEMP_AVAILABILITY_WAIT");
+      explanationCodes.push(EXPLANATION_CODES_V1.RULE_EC_TEMP_AVAILABILITY_WAIT);
     }
   }
 
