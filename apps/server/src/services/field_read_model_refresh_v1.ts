@@ -20,12 +20,20 @@ type RefreshStats = {
   last_failure_ts_ms: number | null;
 };
 
+type RefreshTracking = {
+  last_success_ts_ms: number | null;
+  refresh_fail_count: number;
+  refresh_duration_ms: number | null;
+  attempts: number;
+};
+
 type RefreshOutput<T> = {
   payload: T | null;
   status: RefreshStatus;
   freshness: Freshness;
   refreshed_ts_ms: number | null;
   refresh_metrics: RefreshStats & { attempts: number };
+  refresh_tracking: RefreshTracking;
 };
 
 const RETRY_LIMIT = 2;
@@ -54,7 +62,24 @@ function fertilityFreshnessFromComputedAt(computed_at_ts_ms: number | null, nowM
   return nowMs - computed_at_ts_ms <= FERTILITY_STALE_WINDOW_MS ? "fresh" : "stale";
 }
 
-async function refreshWithFallback<T>(params: {
+function buildRefreshTracking(metrics: RefreshStats, attempts: number): RefreshTracking {
+  return {
+    last_success_ts_ms: metrics.last_success_ts_ms,
+    refresh_fail_count: metrics.refresh_fail_total,
+    refresh_duration_ms: metrics.last_duration_ms,
+    attempts,
+  };
+}
+
+function withProjectionStatus<T extends object>(payload: T, status: RefreshStatus, freshness: Freshness): T & { status: RefreshStatus; freshness: Freshness } {
+  return {
+    ...payload,
+    status,
+    freshness,
+  };
+}
+
+async function refreshWithFallback<T extends object>(params: {
   key: string;
   refresher: () => Promise<T>;
   resolveFreshness: (payload: T, nowMs: number) => Freshness;
@@ -77,11 +102,12 @@ async function refreshWithFallback<T>(params: {
       const freshness = params.resolveFreshness(payload, nowMs);
       if (!params.hasData(payload)) {
         return {
-          payload,
+          payload: withProjectionStatus(payload, "no_data", freshness),
           status: "no_data",
           freshness,
           refreshed_ts_ms: null,
           refresh_metrics: { ...metrics, attempts },
+          refresh_tracking: buildRefreshTracking(metrics, attempts),
         };
       }
       snapshotStore.set(params.key, {
@@ -91,11 +117,12 @@ async function refreshWithFallback<T>(params: {
       });
       metrics.last_success_ts_ms = nowMs;
       return {
-        payload,
+        payload: withProjectionStatus(payload, "ok", freshness),
         status: "ok",
         freshness,
         refreshed_ts_ms: nowMs,
         refresh_metrics: { ...metrics, attempts },
+        refresh_tracking: buildRefreshTracking(metrics, attempts),
       };
     } catch (error) {
       lastError = error;
@@ -108,11 +135,12 @@ async function refreshWithFallback<T>(params: {
   const fallback = snapshotStore.get(params.key) as SnapshotEntry<T> | undefined;
   if (fallback) {
     return {
-      payload: fallback.payload,
+      payload: withProjectionStatus(fallback.payload, "fallback_stale", "stale"),
       status: "fallback_stale",
       freshness: "stale",
       refreshed_ts_ms: fallback.refreshed_ts_ms,
       refresh_metrics: { ...metrics, attempts },
+      refresh_tracking: buildRefreshTracking(metrics, attempts),
     };
   }
 
@@ -123,6 +151,7 @@ async function refreshWithFallback<T>(params: {
     freshness: "unknown",
     refreshed_ts_ms: null,
     refresh_metrics: { ...metrics, attempts },
+    refresh_tracking: buildRefreshTracking(metrics, attempts),
   };
 }
 
