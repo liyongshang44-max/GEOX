@@ -11,6 +11,7 @@ import SectionSkeleton from "../../../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../../../components/evidence/ReceiptEvidenceCard";
 import { apiRequestOptional } from "../../../api/client";
 import { bindDeviceToField } from "../../../api/devices";
+import { shouldShowRecommendationBiasWarning } from "../../../lib/fieldReadModelV1";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   ok: { color: "var(--color-status-normal-fg)", bg: "var(--color-status-normal-bg)", border: "var(--color-status-normal-border)" },
@@ -122,7 +123,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const sensingV1 = enableReadModelV1 ? fieldReadModelV1?.sensing : null;
   const fertilityV1 = enableReadModelV1 ? fieldReadModelV1?.fertility : null;
   const recommendationBias = fertilityV1?.recommendationBias ?? null;
-  const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
+  const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
     {
@@ -239,24 +240,24 @@ export default function FieldDetailPage(): React.ReactElement {
           {sensingV1 ? (
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">field_sensing_overview_v1</div>
-              <div className="decisionItemMeta">状态：{sensingV1.status || "--"}</div>
+              <div className="decisionItemMeta">状态：{sensingV1.statusLabel}</div>
               <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
-              <div className="decisionItemMeta">解释码：{sensingV1.explainCodes.length ? sensingV1.explainCodes.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">解释码：{sensingV1.explainCodeLabels.length ? sensingV1.explainCodeLabels.join(" / ") : "--"}</div>
             </div>
           ) : null}
           {fertilityV1 ? (
             <div className="decisionItemStatic" style={{ marginTop: 8 }}>
               <div className="decisionItemTitle">field_fertility_state_v1</div>
-              <div className="decisionItemMeta">状态：{fertilityV1.status || fertilityV1.fertilityState || "--"}</div>
-              <div className="decisionItemMeta">解释码：{fertilityV1.explainCodes.length ? fertilityV1.explainCodes.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">recommendation_bias：{recommendationBias || "--"}</div>
+              <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel}</div>
+              <div className="decisionItemMeta">解释码：{fertilityV1.explainCodeLabels.length ? fertilityV1.explainCodeLabels.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
             </div>
           ) : null}
           {showBiasWarning ? (
             <div className="decisionItemStatic" style={{ marginTop: 8, borderColor: "var(--color-status-risk-border)", background: "var(--color-status-risk-bg)" }}>
               <div className="decisionItemTitle">⚠️ 当前建议偏置提示</div>
               <div className="decisionItemMeta">
-                recommendation_bias = <strong>{recommendationBias}</strong>，建议优先人工复核现场并谨慎推进自动动作。
+                recommendation_bias = <strong>{fertilityV1?.recommendationBiasLabel}</strong>，建议优先人工复核现场并谨慎推进自动动作。
               </div>
             </div>
           ) : null}

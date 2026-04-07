@@ -12,7 +12,7 @@ import ErrorState from "../../../components/common/ErrorState";
 import EmptyState from "../../../components/common/EmptyState";
 import StatusBadge from "../../../components/common/StatusBadge";
 import { RelativeTime } from "../../../components/RelativeTime";
-import { parseFieldReadModelV1 } from "../../../lib/fieldReadModelV1";
+import { parseFieldReadModelV1, shouldShowRecommendationBiasWarning } from "../../../lib/fieldReadModelV1";
 
 type ListItem = any;
 type DetailItem = any;
@@ -169,7 +169,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                 const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
                 const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
                 const recommendationBias = fertilityV1?.recommendationBias ?? null;
-                const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
+                const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
                 return (
               <div key={item.recommendation_id} className="card demoInfoCard">
                 <button
@@ -199,14 +199,14 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                     </div>
                     <div className="decisionItemMeta">{item.reason_summary || "-"}</div>
                     {sensingV1 ? (
-                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.status || "--"} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
                     ) : null}
                     {fertilityV1 ? (
-                      <div className="decisionItemMeta">field_fertility_state_v1 · 状态：{fertilityV1.status || fertilityV1.fertilityState || "--"} · 解释码：{fertilityV1.explainCodes.join(" / ") || "--"}</div>
+                      <div className="decisionItemMeta">field_fertility_state_v1 · 状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel} · 解释码：{fertilityV1.explainCodeLabels.join(" / ") || "--"}</div>
                     ) : null}
                     {showBiasWarning ? (
                       <div className="decisionItemMeta" style={{ color: "var(--color-status-risk-fg)", fontWeight: 700 }}>
-                        ⚠️ recommendation_bias={recommendationBias}，请优先人工检查与复核。
+                        ⚠️ recommendation_bias={fertilityV1?.recommendationBiasLabel}，建议优先人工复核现场并谨慎推进自动动作。
                       </div>
                     ) : null}
                     <StepChain steps={Array.isArray(item?.progress?.steps) ? item.progress.steps : []} />
@@ -248,7 +248,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
               const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
               const recommendationBias = fertilityV1?.recommendationBias ?? null;
-              const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
+              const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
               return (
             <div className="decisionList">
               <div className="decisionItemStatic">
@@ -267,20 +267,20 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               {sensingV1 ? (
                 <div className="decisionItemStatic">
                   <div className="decisionItemTitle">field_sensing_overview_v1</div>
-                  <div className="decisionItemMeta">状态：{sensingV1.status || "--"} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                  <div className="decisionItemMeta">状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
                 </div>
               ) : null}
               {fertilityV1 ? (
                 <div className="decisionItemStatic">
                   <div className="decisionItemTitle">field_fertility_state_v1</div>
-                  <div className="decisionItemMeta">状态：{fertilityV1.status || fertilityV1.fertilityState || "--"} · 解释码：{fertilityV1.explainCodes.join(" / ") || "--"}</div>
-                  <div className="decisionItemMeta">recommendation_bias：{recommendationBias || "--"}</div>
+                  <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel} · 解释码：{fertilityV1.explainCodeLabels.join(" / ") || "--"}</div>
+                  <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
                 </div>
               ) : null}
               {showBiasWarning ? (
                 <div className="decisionItemStatic" style={{ borderColor: "var(--color-status-risk-border)", background: "var(--color-status-risk-bg)" }}>
                   <div className="decisionItemTitle">⚠️ 偏置提示</div>
-                  <div className="decisionItemMeta">recommendation_bias={recommendationBias}，建议先人工巡检再推进执行。</div>
+                  <div className="decisionItemMeta">recommendation_bias={fertilityV1?.recommendationBiasLabel}，建议优先人工复核现场并谨慎推进自动动作。</div>
                 </div>
               ) : null}
               <details className="traceDetails">
