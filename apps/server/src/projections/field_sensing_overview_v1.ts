@@ -29,6 +29,9 @@ type FieldSensingOverviewV1 = {
   freshness: "fresh" | "stale" | "unknown";
   confidence: number | null;
   soil_indicators_json: SoilIndicatorItem[];
+  irrigation_need_level: "LOW" | "MEDIUM" | "HIGH" | null;
+  sensor_quality_level: "GOOD" | "FAIR" | "POOR" | null;
+  irrigation_action_hint: string | null;
   explanation_codes_json: string[];
   updated_ts_ms: number;
 };
@@ -78,6 +81,18 @@ function normalizeCodes(values: string[]): string[] {
   return Array.from(new Set(values.map((x) => String(x || "").trim()).filter(Boolean)));
 }
 
+function coerceLevel<T extends string>(v: unknown, allowed: readonly T[]): T | null {
+  const normalized = String(v ?? "").trim().toUpperCase();
+  return (allowed as readonly string[]).includes(normalized) ? normalized as T : null;
+}
+
+function extractLatestDerivedState(rows: any[], stateType: string): any | null {
+  const target = rows
+    .filter((row) => String(row.state_type ?? "") === stateType)
+    .sort((a, b) => Number(b.computed_at_ts_ms ?? 0) - Number(a.computed_at_ts_ms ?? 0))[0];
+  return target?.payload_json && typeof target.payload_json === "object" ? target.payload_json : null;
+}
+
 export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promise<void> {
   if (!ensurePromise) {
     ensurePromise = (async () => {
@@ -91,11 +106,17 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
           freshness text NOT NULL,
           confidence double precision NULL,
           soil_indicators_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+          irrigation_need_level text NULL,
+          sensor_quality_level text NULL,
+          irrigation_action_hint text NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
           PRIMARY KEY (tenant_id, field_id)
         )`
       );
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_need_level text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS sensor_quality_level text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_action_hint text NULL`);
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_sensing_overview_v1_scope ON field_sensing_overview_v1 (tenant_id, project_id, group_id, field_id)`);
     })().catch((err) => {
       ensurePromise = null;
@@ -186,6 +207,23 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     globalExplanations.push(...picked.explanations);
   }
 
+  const derivedRows = await db.query(
+    `SELECT state_type, payload_json, computed_at_ts_ms
+       FROM derived_sensing_state_index_v1
+      WHERE tenant_id = $1
+        AND field_id = $2
+        AND ($3::text IS NULL OR project_id = $3)
+        AND ($4::text IS NULL OR group_id = $4)
+        AND state_type = ANY($5::text[])`,
+    [params.tenant_id, params.field_id, params.project_id ?? null, params.group_id ?? null, ["irrigation_need_state", "sensor_quality_state"]]
+  );
+  const irrigationPayload = extractLatestDerivedState(derivedRows.rows ?? [], "irrigation_need_state");
+  const qualityPayload = extractLatestDerivedState(derivedRows.rows ?? [], "sensor_quality_state");
+  const irrigationNeedLevel = coerceLevel(irrigationPayload?.level ?? irrigationPayload?.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const);
+  const sensorQualityLevel = coerceLevel(qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level, ["GOOD", "FAIR", "POOR"] as const);
+  const irrigationActionHintRaw = irrigationPayload?.action_hint ?? irrigationPayload?.suggested_action ?? irrigationPayload?.recommendation;
+  const irrigationActionHint = String(irrigationActionHintRaw ?? "").trim() || null;
+
   const observedAtTsMs = items.length
     ? Math.max(...items.map((x) => Number(x.observed_at_ts_ms ?? 0)))
     : null;
@@ -202,14 +240,17 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     freshness: classifyFreshness(observedAtTsMs, nowMs),
     confidence,
     soil_indicators_json: items.sort((a, b) => a.metric.localeCompare(b.metric)),
+    irrigation_need_level: irrigationNeedLevel,
+    sensor_quality_level: sensorQualityLevel,
+    irrigation_action_hint: irrigationActionHint,
     explanation_codes_json: normalizeCodes(globalExplanations),
     updated_ts_ms: nowMs,
   };
 
   const upsert = await db.query(
     `INSERT INTO field_sensing_overview_v1
-      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, explanation_codes_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10)
+      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, irrigation_action_hint, explanation_codes_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -218,6 +259,9 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       freshness = EXCLUDED.freshness,
       confidence = EXCLUDED.confidence,
       soil_indicators_json = EXCLUDED.soil_indicators_json,
+      irrigation_need_level = EXCLUDED.irrigation_need_level,
+      sensor_quality_level = EXCLUDED.sensor_quality_level,
+      irrigation_action_hint = EXCLUDED.irrigation_action_hint,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
      RETURNING *`,
@@ -230,6 +274,9 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       overview.freshness,
       overview.confidence,
       JSON.stringify(overview.soil_indicators_json),
+      overview.irrigation_need_level,
+      overview.sensor_quality_level,
+      overview.irrigation_action_hint,
       JSON.stringify(overview.explanation_codes_json),
       overview.updated_ts_ms,
     ]
@@ -245,6 +292,9 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     freshness: String(row.freshness) as "fresh" | "stale" | "unknown",
     confidence: row.confidence == null ? null : Number(row.confidence),
     soil_indicators_json: Array.isArray(row.soil_indicators_json) ? row.soil_indicators_json as SoilIndicatorItem[] : [],
+    irrigation_need_level: coerceLevel(row.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const),
+    sensor_quality_level: coerceLevel(row.sensor_quality_level, ["GOOD", "FAIR", "POOR"] as const),
+    irrigation_action_hint: String(row.irrigation_action_hint ?? "").trim() || null,
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
   };
