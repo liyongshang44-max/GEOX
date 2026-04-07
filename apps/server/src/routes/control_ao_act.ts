@@ -8,6 +8,7 @@ import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills"
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine";
+import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
@@ -132,35 +133,6 @@ type EffectMetricSnapshot = {
   temperature?: number;
   humidity?: number;
 };
-
-type HardRulePrecheckV1 = {
-  matched: boolean;
-  reason_codes: string[];
-  action_hints: Array<"irrigate_first" | "inspect">;
-  reason_details: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>;
-};
-
-function evaluateHardRulePrecheckV1(
-  constraints: Record<string, unknown>,
-  source: "request_constraints" | "field_fertility_state_v1" = "request_constraints"
-): HardRulePrecheckV1 {
-  const moistureConstraint = String(constraints?.moisture_constraint ?? "").trim().toLowerCase();
-  const salinityRisk = String(constraints?.salinity_risk ?? "").trim().toLowerCase();
-  const reason_codes: string[] = [];
-  const action_hints: Array<"irrigate_first" | "inspect"> = [];
-  const reason_details: HardRulePrecheckV1["reason_details"] = [];
-  if (moistureConstraint === "dry") {
-    reason_codes.push("hard_rule_moisture_constraint_dry");
-    action_hints.push("irrigate_first");
-    reason_details.push({ code: "hard_rule_moisture_constraint_dry", action_hint: "irrigate_first", source });
-  }
-  if (salinityRisk === "high") {
-    reason_codes.push("hard_rule_salinity_risk_high");
-    action_hints.push("inspect");
-    reason_details.push({ code: "hard_rule_salinity_risk_high", action_hint: "inspect", source });
-  }
-  return { matched: reason_codes.length > 0, reason_codes, action_hints, reason_details };
-}
 
 function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
   const out: EffectMetricSnapshot = {};
@@ -524,7 +496,11 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         };
         hardRuleSource = "field_fertility_state_v1";
       }
-      const hardRulePrecheck = evaluateHardRulePrecheckV1(hardRuleConstraints, hardRuleSource);
+      const hardRulePrecheck = evaluateAoActHardRulePrecheckV1({
+        scope: { tenant_id: tenant.tenant_id, project_id: tenant.project_id },
+        constraints: hardRuleConstraints,
+        source: hardRuleSource,
+      });
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
       const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)
