@@ -25,6 +25,7 @@ import EvidenceOutcome from "../features/dashboard/sections/EvidenceOutcome";
 import { useDashboard } from "../hooks/useDashboard";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 import { PageHeader } from "../shared/ui";
+import { parseFieldReadModelV1 } from "../lib/fieldReadModelV1";
 
 function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
@@ -43,19 +44,18 @@ function normalizeReadModel(recommendation: any): {
   recommendation_bias: string | null;
   last_updated: string | number | null;
 } {
-  const readModel = recommendation?.read_model ?? recommendation?.sensing_summary ?? recommendation?.aggregated_result ?? {};
-  const sensing = readModel?.sensing_overview ?? readModel?.sensing ?? readModel;
-  const fertility = readModel?.fertility_state ?? readModel?.fertility ?? readModel;
+  const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_LEGACY_FALLBACK ?? "0") === "1";
+  const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback });
   return {
-    soil_moisture: normalizeNumericMetric(sensing?.soil_moisture),
-    soil_temperature: normalizeNumericMetric(sensing?.soil_temperature ?? sensing?.soil_temp),
-    soil_ec: normalizeNumericMetric(sensing?.soil_ec),
-    soil_ph: normalizeNumericMetric(sensing?.soil_ph),
-    fertility_state: fertility?.fertility_state ?? fertility?.fertility_level ?? null,
-    salinity_risk: fertility?.salinity_risk ?? null,
-    confidence: normalizeNumericMetric(fertility?.confidence ?? readModel?.confidence ?? recommendation?.confidence),
-    recommendation_bias: fertility?.recommendation_bias ?? readModel?.recommendation_bias ?? null,
-    last_updated: readModel?.last_updated ?? readModel?.updated_at ?? readModel?.updated_ts_ms ?? recommendation?.updated_ts_ms ?? null,
+    soil_moisture: normalizeNumericMetric(parsed.sensing?.soilMoisture),
+    soil_temperature: normalizeNumericMetric(parsed.sensing?.soilTemperature),
+    soil_ec: normalizeNumericMetric(parsed.sensing?.soilEc),
+    soil_ph: normalizeNumericMetric(parsed.sensing?.soilPh),
+    fertility_state: parsed.fertility?.fertilityState ?? parsed.fertility?.status ?? null,
+    salinity_risk: parsed.fertility?.salinityRisk ?? null,
+    confidence: normalizeNumericMetric(parsed.fertility?.confidence),
+    recommendation_bias: parsed.fertility?.recommendationBias ?? null,
+    last_updated: recommendation?.updated_ts_ms ?? null,
   };
 }
 
