@@ -10,6 +10,13 @@ export type SensingObservationAggregateV1 = {
   source_ids?: string[];
 };
 
+export type DeviceObservationV1Input =
+  | Array<Record<string, unknown>>
+  | { observations?: Array<Record<string, unknown>>; sources?: Array<Record<string, unknown>> }
+  | Record<string, unknown>
+  | null
+  | undefined;
+
 export type FertilityInferenceV1Result = {
   fertility_level: FertilityLevelV1;
   recommendation_bias: RecommendationBiasV1;
@@ -24,6 +31,53 @@ function isFiniteNumber(v: unknown): v is number {
 
 function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
+}
+
+function toFiniteNumber(input: unknown): number | null {
+  if (typeof input === "number" && Number.isFinite(input)) return input;
+  const n = Number(input);
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractObservationList(deviceObservation: DeviceObservationV1Input): Array<Record<string, unknown>> {
+  if (Array.isArray(deviceObservation)) return deviceObservation;
+  if (Array.isArray(deviceObservation?.observations)) return deviceObservation.observations;
+  if (Array.isArray(deviceObservation?.sources)) return deviceObservation.sources;
+  if (deviceObservation && typeof deviceObservation === "object") return [deviceObservation];
+  return [];
+}
+
+function firstFiniteFromObservation(observation: Record<string, unknown>, keys: string[]): number | null {
+  for (const key of keys) {
+    const n = toFiniteNumber(observation[key]);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+export function inferFertilityFromDeviceObservationV1(deviceObservation: DeviceObservationV1Input): FertilityInferenceV1Result {
+  const observations = extractObservationList(deviceObservation);
+
+  const soilMoistureSeries = observations
+    .map((x) => firstFiniteFromObservation(x, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]))
+    .filter((x): x is number => x != null);
+  const ecSeries = observations
+    .map((x) => firstFiniteFromObservation(x, ["ec_ds_m", "ec", "soil_ec_ds_m", "salinity_ec_ds_m"]))
+    .filter((x): x is number => x != null);
+  const canopyTempSeries = observations
+    .map((x) => firstFiniteFromObservation(x, ["canopy_temp_c", "canopy_temp", "temperature_c", "temp_c"]))
+    .filter((x): x is number => x != null);
+
+  const moisture = soilMoistureSeries.length ? soilMoistureSeries[soilMoistureSeries.length - 1] : null;
+  const ec = ecSeries.length ? ecSeries[ecSeries.length - 1] : null;
+  const canopyTemp = canopyTempSeries.length ? canopyTempSeries[canopyTempSeries.length - 1] : null;
+
+  return inferFertilityFromObservationAggregateV1({
+    soil_moisture_pct: moisture,
+    ec_ds_m: ec,
+    canopy_temp_c: canopyTemp,
+    observation_count: observations.length,
+  });
 }
 
 export function inferFertilityFromObservationAggregateV1(input: SensingObservationAggregateV1): FertilityInferenceV1Result {
