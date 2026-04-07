@@ -158,13 +158,9 @@ export async function listSkillRegistry(input?: {
   scope?: SkillBindingScope;
   limit?: number;
 }): Promise<SkillRegistryItem[]> {
-  try {
-    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input));
-    const items = normalizeList<SkillRegistryItem>(res);
-    return items.map((item) => normalizeSkillRegistryItem(item));
-  } catch {
-    return [];
-  }
+  const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+  const items = normalizeList<SkillRegistryItem>(res);
+  return items.map((item) => normalizeSkillRegistryItem(item));
 }
 
 export async function listSkillBindings(input?: {
@@ -175,7 +171,7 @@ export async function listSkillBindings(input?: {
   limit?: number;
 }): Promise<SkillBindingItem[]> {
   try {
-    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/bindings", input));
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/bindings", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
     const items = normalizeList<SkillBindingItem>(res);
     return items.map((item) => normalizeSkillBindingItem(item));
   } catch {
@@ -190,7 +186,7 @@ export async function listSkillRuns(input?: {
   limit?: number;
 }): Promise<SkillRunSummary[]> {
   try {
-    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/runs", input));
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/runs", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
     const items = normalizeList<SkillRunSummary>(res);
     return items.map((item) => normalizeSkillRunSummary(item));
   } catch {
@@ -202,7 +198,7 @@ export async function getSkillRunDetail(runId: string): Promise<SkillRunDetail |
   const id = String(runId ?? "").trim();
   if (!id) return null;
   try {
-    const res = await apiRequestOptional<any>(`/api/v1/skills/runs/${encodeURIComponent(id)}`);
+    const res = await apiRequestOptional<any>(`/api/v1/skills/runs/${encodeURIComponent(id)}`, undefined, { timeoutMs: 5000, dedupe: true, silent: true });
     if (!res) return null;
     return normalizeSkillRunSummary((res.item ?? res.run ?? res) as SkillRunDetail) as SkillRunDetail;
   } catch {
