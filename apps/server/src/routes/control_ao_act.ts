@@ -34,6 +34,19 @@ const ACTION_EXECUTION_ALLOWLIST_V1 = [
   "PROMOTE_ACCEPTANCE",
   "RETRY_EXECUTION"
 ] as const;
+const ACTION_SKILL_PROFILE_V1: Record<string, {
+  required_parameter_keys: string[];
+  expected_evidence_requirements: string[];
+}> = {
+  IRRIGATE: {
+    required_parameter_keys: ["duration_sec"],
+    expected_evidence_requirements: ["dispatch_ack", "valve_open_confirmation", "water_delivery_receipt"]
+  },
+  FERTILIZE: {
+    required_parameter_keys: ["chemical_ml"],
+    expected_evidence_requirements: ["dispatch_ack", "fertilizer_dispense_confirmation", "execution_receipt"]
+  }
+};
 
 const FORBID_KEYS_V0 = new Set<string>([
   "problem_state_id",
@@ -245,6 +258,14 @@ function normalizeRecordJson(v: unknown): any { // Normalize record_json returne
   }
   return v; // For json/jsonb, pg already returns object.
 } // End normalizeRecordJson.
+
+function resolveExpectedEvidenceRequirementsV1(actionType: string, capabilityResolution: any): string[] {
+  const fromCapability = Array.isArray(capabilityResolution?.resolution?.evidence_requirements)
+    ? capabilityResolution.resolution.evidence_requirements.map((x: unknown) => String(x)).filter((x: string) => x.length > 0)
+    : [];
+  if (fromCapability.length > 0) return fromCapability;
+  return ACTION_SKILL_PROFILE_V1[actionType]?.expected_evidence_requirements ?? [];
+}
 
 async function findAoActTaskByActTaskId(
   pool: Pool, // Postgres pool used to query the append-only facts ledger.
@@ -656,11 +677,23 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       if (body.execution_plan.safe_guard.requires_approval) {
         return reply.status(403).send({ ok: false, error: "REQUIRES_APPROVAL" });
       }
-      const requiresDeviceSkillResolution = body.execution_plan.target.kind === "device" || actionType === "FERTILIZE";
-      if (actionType === "FERTILIZE" && body.execution_plan.target.kind !== "device") {
-        return reply.status(400).send({ ok: false, error: "FERTILIZE_REQUIRES_DEVICE_TARGET" });
+      const actionSkillProfile = ACTION_SKILL_PROFILE_V1[actionType];
+      const requiresDeviceSkillResolution = body.execution_plan.target.kind === "device" || Boolean(actionSkillProfile);
+      if (actionSkillProfile && body.execution_plan.target.kind !== "device") {
+        return reply.status(400).send({ ok: false, error: "ACTION_REQUIRES_DEVICE_TARGET" });
       }
-      if (actionType === "FERTILIZE") {
+      if (actionSkillProfile) {
+        const hasRequiredParameter = actionSkillProfile.required_parameter_keys
+          .some((k) => body.execution_plan.parameters[k] !== undefined && body.execution_plan.parameters[k] !== null);
+        if (!hasRequiredParameter) {
+          return reply.status(400).send({
+            ok: false,
+            error: "DEVICE_ACTION_MISSING_PARAMETERS",
+            required_any_of: actionSkillProfile.required_parameter_keys
+          });
+        }
+      }
+      if (actionType === "FERTILIZE" && requiresDeviceSkillResolution) {
         await ensureFertilizerUnitSkillRegisteredV1(pool, tenant);
       }
       const skillCapabilityResolution = requiresDeviceSkillResolution
@@ -676,12 +709,15 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         })
         : null;
       if (requiresDeviceSkillResolution && skillCapabilityResolution && !skillCapabilityResolution.ok) {
+        const reasonSet = new Set((skillCapabilityResolution.error?.reasons ?? []).map((x) => String(x)));
+        const unsupportedAction = reasonSet.has("no_skill_capability_match");
         return reply.status(400).send({
           ok: false,
-          error: "DEVICE_CAPABILITY_UNSUPPORTED",
+          error: unsupportedAction ? "DEVICE_ACTION_TYPE_UNSUPPORTED" : "DEVICE_CAPABILITY_UNSUPPORTED",
           detail: skillCapabilityResolution.error
         });
       }
+      const expectedEvidenceRequirements = resolveExpectedEvidenceRequirementsV1(actionType, skillCapabilityResolution);
       const normalizedDeviceCapabilityCheck = body.execution_plan.device_capability_check ?? { supported: true as const };
       if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
         return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
@@ -810,6 +846,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
             capability_resolution: skillCapabilityResolution?.ok
               ? skillCapabilityResolution.resolution
               : null,
+            expected_evidence_requirements: expectedEvidenceRequirements,
             execution_context: {
               execution_key: executionKey,
               dedupe_key: dedupeKey,
@@ -971,6 +1008,14 @@ if (body.execution_time.start_ts > body.execution_time.end_ts) {
       
 const task = await findAoActTaskByActTaskId(pool, body.act_task_id, tenant);
 if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+const taskActionType = String(task?.payload?.action_type ?? "").trim().toUpperCase();
+const expectedEvidenceRequirements = Array.isArray(task?.payload?.meta?.expected_evidence_requirements)
+  ? (task.payload.meta.expected_evidence_requirements as unknown[]).map((x) => String(x)).filter((x) => x.length > 0)
+  : resolveExpectedEvidenceRequirementsV1(taskActionType, null);
+const providedEvidenceKinds = (Array.isArray(body.logs_refs) ? body.logs_refs : [])
+  .map((x) => String(x?.kind ?? "").trim())
+  .filter((x) => x.length > 0);
+const missingEvidenceRequirements = expectedEvidenceRequirements.filter((reqItem) => !providedEvidenceKinds.includes(reqItem));
 
 // Sprint 21: device_refs are pointer-only. Validate existence only; never parse referenced content.
 if (Array.isArray((body as any).device_refs) && (body as any).device_refs.length > 0) {
@@ -1068,7 +1113,12 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           created_at_ts,
           meta: {
             ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
-            command_id: commandId
+            command_id: commandId,
+            evidence_trace: {
+              expected_requirements: expectedEvidenceRequirements,
+              provided_kinds: providedEvidenceKinds,
+              missing_requirements: missingEvidenceRequirements
+            }
           }
         }
       };

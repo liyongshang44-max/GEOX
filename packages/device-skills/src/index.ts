@@ -151,18 +151,26 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
 
     const parameters = task_payload?.parameters && typeof task_payload.parameters === "object" ? task_payload.parameters : {};
     const device_target = String(task_payload?.target?.ref ?? task_payload?.meta?.device_target ?? task_payload?.meta?.device_id ?? "").trim() || null;
+    const chemical_ml = finite((parameters as any)?.chemical_ml ?? (parameters as any)?.dose_ml ?? (parameters as any)?.amount_ml);
+    const duration_sec = finite((parameters as any)?.duration_sec ?? (parameters as any)?.duration_seconds ?? (parameters as any)?.duration);
+    const flow_lpm = finite((parameters as any)?.flow_lpm ?? (parameters as any)?.flow_rate_lpm);
 
     return {
       capability: "device.fertilization.dispense",
       parameters: {
-        ...parameters,
-        device_target
+        task_type: "FERTILIZE",
+        action_type: "FERTILIZE",
+        device_id: device_target,
+        chemical_ml,
+        duration_sec,
+        flow_lpm
       },
       evidence_requirements: [
         "dispatch_ack",
+        "fertilizer_dispense_confirmation",
         "execution_receipt"
       ],
-      explain: `Fertilizer execute passthrough${device_target ? ` on ${device_target}` : ""}.`,
+      explain: `Dispense fertilizer${device_target ? ` on ${device_target}` : ""}${chemical_ml != null ? ` with ${chemical_ml}ml` : ""}.`,
       compatibility: fertilizerUnitV1.compatibility
     };
   }
