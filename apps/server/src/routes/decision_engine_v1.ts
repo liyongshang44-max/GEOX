@@ -1036,7 +1036,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     });
     const hardRuleInput: HardRuleConstraintInputV1 = {
       moisture_constraint:
-        fertilityState.recommendation_bias === "irrigate_first" || fertilityState.fertility_level === "LOW"
+        fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
           ? "dry"
           : null,
       salinity_risk: String(fertilityState.salinity_risk ?? "").trim().toUpperCase() === "HIGH" ? "high" : null,
