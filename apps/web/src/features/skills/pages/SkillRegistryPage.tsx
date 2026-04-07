@@ -14,6 +14,7 @@ export default function SkillRegistryPage(): React.ReactElement {
   const [items, setItems] = React.useState<SkillRegistryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const bootstrappedRef = React.useRef(false);
 
   const load = React.useCallback(() => {
     let mounted = true;
@@ -32,8 +33,14 @@ export default function SkillRegistryPage(): React.ReactElement {
       })
       .catch((e: any) => {
         if (!mounted) return;
+        const raw = String(e?.message ?? "读取失败");
+        const normalized = /failed to fetch|err_empty_response|networkerror|fetch/i.test(raw)
+          ? "后端服务不可用（127.0.0.1:3001），请先启动 server 再重试。"
+          : /request timeout|api 408/i.test(raw)
+            ? "请求超时，请确认后端服务健康后重试。"
+            : raw;
         setItems([]);
-        setError(String(e?.message ?? "读取失败"));
+        setError(normalized);
       })
       .finally(() => {
         if (timeoutId) clearTimeout(timeoutId);
@@ -45,6 +52,8 @@ export default function SkillRegistryPage(): React.ReactElement {
   }, []);
 
   React.useEffect(() => {
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
     return load();
   }, [load]);
 
