@@ -13,7 +13,7 @@ function indexOfOrThrow(pattern: string): number {
 }
 
 test('useOperationDetail two-phase path keeps hooks before loading guard', () => {
-  const hookUseState = indexOfOrThrow('const [executing, setExecuting] = React.useState(false);');
+  const hookUseState = indexOfOrThrow('const [isExecuting, setIsExecuting] = React.useState(false);');
   const hookUseEffect = indexOfOrThrow('React.useEffect(() => {');
   const loadingGuard = indexOfOrThrow('if (loading) return <SectionSkeleton kind="detail" />;');
 
@@ -22,7 +22,7 @@ test('useOperationDetail two-phase path keeps hooks before loading guard', () =>
 });
 
 test('error=true path is also guarded after hook declarations', () => {
-  const hookUseState = indexOfOrThrow('const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);');
+  const hookUseState = indexOfOrThrow('const [manualHandoffItems, setManualHandoffItems] = React.useState<OperationHandoffItem[]>([]);');
   const errorGuard = indexOfOrThrow('if (error || !detail) {');
 
   assert.ok(hookUseState < errorGuard, 'all hooks must be declared before error guard');
