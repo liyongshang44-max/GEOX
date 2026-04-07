@@ -238,19 +238,23 @@ export default function FieldDetailPage(): React.ReactElement {
         <section className="card detailHeroCard" style={{ marginBottom: 12, borderColor: showBiasWarning ? "var(--color-status-risk-border)" : undefined }}>
           <div className="sectionTitle">监测/肥力读模型（V1）</div>
           {sensingV1 ? (
-            <div className="decisionItemStatic">
+            <div className={`decisionItemStatic ${sensingV1.tone === "stale" ? "staleStateCard" : sensingV1.tone === "empty" ? "emptyStateCard" : ""}`}>
               <div className="decisionItemTitle">field_sensing_overview_v1</div>
               <div className="decisionItemMeta">状态：{sensingV1.statusLabel}</div>
               <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
+              <div className="decisionItemMeta">updated_at：{sensingV1.updatedAtLabel}</div>
               <div className="decisionItemMeta">解释码：{sensingV1.explainCodeLabels.length ? sensingV1.explainCodeLabels.join(" / ") : "--"}</div>
             </div>
           ) : null}
           {fertilityV1 ? (
-            <div className="decisionItemStatic" style={{ marginTop: 8 }}>
+            <div className={`decisionItemStatic ${fertilityV1.tone === "stale" ? "staleStateCard" : fertilityV1.tone === "empty" ? "emptyStateCard" : ""}`} style={{ marginTop: 8 }}>
               <div className="decisionItemTitle">field_fertility_state_v1</div>
               <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel}</div>
               <div className="decisionItemMeta">解释码：{fertilityV1.explainCodeLabels.length ? fertilityV1.explainCodeLabels.join(" / ") : "--"}</div>
               <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
+              <div className="decisionItemMeta">salinity_risk：{fertilityV1.salinityRiskLabel}</div>
+              <div className="decisionItemMeta">confidence：{fertilityV1.confidenceLabel}</div>
+              <div className="decisionItemMeta">updated_at：{fertilityV1.updatedAtLabel}</div>
             </div>
           ) : null}
           {showBiasWarning ? (

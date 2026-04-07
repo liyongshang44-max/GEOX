@@ -199,10 +199,10 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                     </div>
                     <div className="decisionItemMeta">{item.reason_summary || "-"}</div>
                     {sensingV1 ? (
-                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
+                      <div className={`decisionItemMeta ${sensingV1.tone === "stale" ? "staleStateCard" : sensingV1.tone === "empty" ? "emptyStateCard" : ""}`}>field_sensing_overview_v1 · 状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · updated_at：{sensingV1.updatedAtLabel} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
                     ) : null}
                     {fertilityV1 ? (
-                      <div className="decisionItemMeta">field_fertility_state_v1 · 状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel} · 解释码：{fertilityV1.explainCodeLabels.join(" / ") || "--"}</div>
+                      <div className={`decisionItemMeta ${fertilityV1.tone === "stale" ? "staleStateCard" : fertilityV1.tone === "empty" ? "emptyStateCard" : ""}`}>field_fertility_state_v1 · 状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel} · salinity_risk：{fertilityV1.salinityRiskLabel} · confidence：{fertilityV1.confidenceLabel} · updated_at：{fertilityV1.updatedAtLabel} · 解释码：{fertilityV1.explainCodeLabels.join(" / ") || "--"}</div>
                     ) : null}
                     {showBiasWarning ? (
                       <div className="decisionItemMeta" style={{ color: "var(--color-status-risk-fg)", fontWeight: 700 }}>
@@ -265,16 +265,17 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                 <div className="decisionItemMeta">审批：{selected?.pipeline?.approval?.status?.label || "-"} · 执行：{selected?.pipeline?.execution?.status?.label || "-"}</div>
               </div>
               {sensingV1 ? (
-                <div className="decisionItemStatic">
+                <div className={`decisionItemStatic ${sensingV1.tone === "stale" ? "staleStateCard" : sensingV1.tone === "empty" ? "emptyStateCard" : ""}`}>
                   <div className="decisionItemTitle">field_sensing_overview_v1</div>
-                  <div className="decisionItemMeta">状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
+                  <div className="decisionItemMeta">状态：{sensingV1.statusLabel} · 数据可信度/质量：{sensingV1.sensorQuality || "--"} · updated_at：{sensingV1.updatedAtLabel} · 解释码：{sensingV1.explainCodeLabels.join(" / ") || "--"}</div>
                 </div>
               ) : null}
               {fertilityV1 ? (
-                <div className="decisionItemStatic">
+                <div className={`decisionItemStatic ${fertilityV1.tone === "stale" ? "staleStateCard" : fertilityV1.tone === "empty" ? "emptyStateCard" : ""}`}>
                   <div className="decisionItemTitle">field_fertility_state_v1</div>
                   <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel} · 解释码：{fertilityV1.explainCodeLabels.join(" / ") || "--"}</div>
                   <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
+                  <div className="decisionItemMeta">salinity_risk：{fertilityV1.salinityRiskLabel} · confidence：{fertilityV1.confidenceLabel} · updated_at：{fertilityV1.updatedAtLabel}</div>
                 </div>
               ) : null}
               {showBiasWarning ? (

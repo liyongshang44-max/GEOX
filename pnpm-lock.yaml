@@ -272,6 +272,10 @@ importers:
         version: 5.9.3
 
   packages/device-skills:
+    dependencies:
+      '@geox/contracts':
+        specifier: workspace:*
+        version: link:../contracts
     devDependencies:
       typescript:
         specifier: ^5.3.0

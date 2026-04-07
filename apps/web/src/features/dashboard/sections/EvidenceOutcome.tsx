@@ -23,6 +23,13 @@ type EvidenceItem = {
 
 type GroupKey = "PASS" | "PENDING_ACCEPTANCE" | "EXECUTION_EXCEPTION" | "EVIDENCE_MISSING";
 
+function freshnessTone(value: string | null | undefined): "" | "staleStateCard" | "emptyStateCard" {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw || raw === "no_data" || raw === "unknown") return "emptyStateCard";
+  if (raw === "stale") return "staleStateCard";
+  return "";
+}
+
 function classifyGroup(item: EvidenceItem): GroupKey {
   const verdict = String(item?.acceptanceVerdict ?? "").toUpperCase();
   const tone = String(item?.card?.statusTone ?? "").toLowerCase();
@@ -168,14 +175,14 @@ export default function EvidenceOutcomeSection({
             <div className="decisionItemTitle">今日自动建议</div>
             <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
           </div>
-          <div className={`decisionItemStatic ${latestReadModel.sensing_freshness === "stale" ? "staleStateCard" : ""}`}>
+          <div className={`decisionItemStatic ${freshnessTone(latestReadModel.sensing_freshness)}`}>
             <div className="decisionItemTitle">field_sensing_overview_v1</div>
             <div className="decisionItemMeta">
               状态：{latestReadModel.sensing_status ?? "--"} · 新鲜度：{latestReadModel.sensing_freshness ?? "--"}
               {latestReadModel.sensing_freshness === "stale" ? "（数据已过期，请优先核查现场连通性）" : ""}
             </div>
           </div>
-          <div className={`decisionItemStatic ${latestReadModel.fertility_freshness === "stale" ? "staleStateCard" : ""}`}>
+          <div className={`decisionItemStatic ${freshnessTone(latestReadModel.fertility_freshness)}`}>
             <div className="decisionItemTitle">field_fertility_state_v1</div>
             <div className="decisionItemMeta">
               状态：{latestReadModel.fertility_state ?? "--"} · 新鲜度：{latestReadModel.fertility_freshness ?? "--"}
@@ -188,7 +195,7 @@ export default function EvidenceOutcomeSection({
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">confidence</div>
-            <div className="decisionItemMeta">{latestReadModel.confidence == null ? "--" : Number(latestReadModel.confidence).toFixed(2)}</div>
+            <div className="decisionItemMeta">{latestReadModel.confidence == null ? "暂无数据" : `${Math.round(Number(latestReadModel.confidence) * 100)}%`}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">last_updated</div>

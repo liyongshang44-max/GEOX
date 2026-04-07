@@ -29,7 +29,7 @@ import SkillAffectedOperations from "../sections/SkillAffectedOperations";
 import MissingSkillCoverage from "../sections/MissingSkillCoverage";
 import DashboardPageContainer from "./DashboardPageContainer";
 import { useDashboard } from "../../../hooks/useDashboard";
-import { parseFieldReadModelV1 } from "../../../lib/fieldReadModelV1";
+import { parseFieldReadModelV1, toReadableRecommendationBias, toReadableSalinityRisk, toReadableStatusLabel } from "../../../lib/fieldReadModelV1";
 
 function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
@@ -50,14 +50,14 @@ function normalizeReadModel(recommendation: any): {
 } {
   const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback: false });
   return {
-    sensing_status: parsed.sensing?.status ?? null,
+    sensing_status: toReadableStatusLabel(parsed.sensing?.status ?? null),
     sensing_freshness: parsed.sensing?.sensorQuality ?? null,
-    fertility_state: parsed.fertility?.fertilityState ?? parsed.fertility?.status ?? null,
-    fertility_freshness: parsed.fertility?.status ?? null,
-    salinity_risk: parsed.fertility?.salinityRisk ?? null,
+    fertility_state: toReadableStatusLabel(parsed.fertility?.fertilityState ?? parsed.fertility?.status ?? null),
+    fertility_freshness: parsed.fertility?.statusLabel ?? null,
+    salinity_risk: parsed.fertility?.salinityRiskLabel ?? toReadableSalinityRisk(parsed.fertility?.salinityRisk),
     confidence: normalizeNumericMetric(parsed.fertility?.confidence),
-    recommendation_bias: parsed.fertility?.recommendationBias ?? null,
-    last_updated: recommendation?.updated_ts_ms ?? null,
+    recommendation_bias: toReadableRecommendationBias(parsed.fertility?.recommendationBias),
+    last_updated: parsed.fertility?.updatedAtMs ?? parsed.sensing?.updatedAtMs ?? recommendation?.updated_ts_ms ?? null,
     source_label: "field_sensing_overview_v1 + field_fertility_state_v1",
   };
 }
