@@ -236,7 +236,6 @@ export default function FieldDetailPage(): React.ReactElement {
       {activeTab === "overview" && (sensingV1 || fertilityV1) ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12, borderColor: showBiasWarning ? "var(--color-status-risk-border)" : undefined }}>
           <div className="sectionTitle">监测/肥力读模型（V1）</div>
-          {!enableReadModelV1 ? <div className="detailSectionLead">已关闭 V1 接口，当前使用旧接口兼容数据。</div> : null}
           {sensingV1 ? (
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">field_sensing_overview_v1</div>

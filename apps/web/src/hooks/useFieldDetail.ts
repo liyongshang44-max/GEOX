@@ -191,6 +191,7 @@ export function useFieldDetail(params: {
   const [state, setState] = React.useState<FieldDetailState>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [technical, setTechnical] = React.useState<string | null>(null);
+  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
 
   const refresh = React.useCallback(async () => {
     setBusy(true);
@@ -251,7 +252,9 @@ export function useFieldDetail(params: {
         cpPromise,
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
-        Promise.resolve().then(() => fetchAgronomyRecommendationsControlPlane({ field_id: fieldId, limit: 8 })),
+        enableReadModelV1
+          ? Promise.resolve().then(() => fetchAgronomyRecommendationsControlPlane({ field_id: fieldId, limit: 8 }))
+          : Promise.resolve({ ok: true, summary: { total: 0, pending: 0, in_approval: 0, receipted: 0 }, items: [] as any[] }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
           apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
@@ -279,7 +282,7 @@ export function useFieldDetail(params: {
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
       const cp = cpRes.status === "fulfilled" ? cpRes.value : null;
-      const latestReadModelRec = recommendationsCp[0] ?? recommendations[0] ?? null;
+      const latestReadModelRec = enableReadModelV1 ? (recommendationsCp[0] ?? recommendations[0] ?? null) : null;
       const fieldReadModelV1 = latestReadModelRec ? parseFieldReadModelV1(latestReadModelRec) : null;
 
       const overview = buildFieldOverviewVm({
@@ -318,7 +321,7 @@ export function useFieldDetail(params: {
     } finally {
       setBusy(false);
     }
-  }, [fieldId, lang]);
+  }, [enableReadModelV1, fieldId, lang]);
 
   React.useEffect(() => {
     void refresh();
