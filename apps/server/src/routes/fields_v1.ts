@@ -833,6 +833,10 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
         sensing_overview: refreshed.sensing_overview.refresh_metrics,
         fertility_state: refreshed.fertility_state.refresh_metrics,
       },
+      refresh_tracking: {
+        sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        fertility_state: refreshed.fertility_state.refresh_tracking,
+      },
     });
   });
 
