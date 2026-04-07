@@ -18,6 +18,18 @@ function mustEnv(name, fallback = '') {
   return value;
 }
 
+function loadDefaultAoActToken() {
+  const tokenFile = path.resolve('config/auth/ao_act_tokens_v0.json');
+  try {
+    const raw = fs.readFileSync(tokenFile, 'utf8');
+    const parsed = JSON.parse(raw);
+    const firstToken = Array.isArray(parsed?.tokens) ? parsed.tokens.find((x) => typeof x?.token === 'string' && x.token.trim()) : null;
+    return firstToken?.token ? String(firstToken.token).trim() : '';
+  } catch {
+    return '';
+  }
+}
+
 async function fetchJson(url, options = {}) {
   const method = options.method || 'GET';
   const headers = { ...(options.headers || {}) };
@@ -80,8 +92,8 @@ async function publishTelemetryBatch(mqttUrl, tenant_id, device_id, credential, 
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const mqttUrl = env('MQTT_URL', env('GEOX_MQTT_URL', 'mqtt://127.0.0.1:1883'));
-  const token = mustEnv('AO_ACT_TOKEN');
-  const databaseUrl = mustEnv('DATABASE_URL');
+  const token = mustEnv('AO_ACT_TOKEN', loadDefaultAoActToken());
+  const databaseUrl = mustEnv('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');

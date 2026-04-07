@@ -44,6 +44,7 @@ export type ApiRequestPolicyOptions = {
   allowedStatuses?: number[];
   dedupe?: boolean;
   silent?: boolean;
+  timeoutMs?: number;
 };
 
 export type RequestOptions = {
@@ -94,6 +95,7 @@ function buildRequestKey(url: string, init?: RequestInit): string {
 }
 
 const inflightRequests = new Map<string, Promise<ApiRequestResult<any>>>();
+const DEFAULT_API_TIMEOUT_MS = 12000;
 
 export async function apiRequestWithPolicy<T>(
   path: string,
@@ -130,10 +132,27 @@ export async function apiRequestWithPolicy<T>(
         headers.set("x-group-id", tenant.group_id);
       }
 
-      const response = await fetch(finalUrl, {
-        ...init,
-        headers,
-      });
+      const timeoutMs = Number.isFinite(Number(options?.timeoutMs)) ? Math.max(1000, Number(options?.timeoutMs)) : DEFAULT_API_TIMEOUT_MS;
+      const timeoutController = new AbortController();
+      const externalSignal = init?.signal;
+      const abortByExternalSignal = () => timeoutController.abort();
+      if (externalSignal) {
+        if (externalSignal.aborted) timeoutController.abort();
+        else externalSignal.addEventListener("abort", abortByExternalSignal, { once: true });
+      }
+      const timer = setTimeout(() => timeoutController.abort(), timeoutMs);
+
+      let response: Response;
+      try {
+        response = await fetch(finalUrl, {
+          ...init,
+          headers,
+          signal: timeoutController.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+        if (externalSignal) externalSignal.removeEventListener("abort", abortByExternalSignal);
+      }
 
       const text = await response.text();
       if (!response.ok) {
@@ -148,7 +167,11 @@ export async function apiRequestWithPolicy<T>(
       } catch {
         throw new ApiError(response.status, `Invalid JSON response: ${text.slice(0, 300)}`, finalUrl);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        const timeoutMs = Number.isFinite(Number(options?.timeoutMs)) ? Math.max(1000, Number(options?.timeoutMs)) : DEFAULT_API_TIMEOUT_MS;
+        throw new ApiError(408, `Request timeout after ${timeoutMs}ms`, finalUrl);
+      }
       if (!options?.silent) {
         // no-op: reserved hook for future centralized logging
       }
@@ -176,6 +199,7 @@ export async function apiRequestOptional<T>(
     allowedStatuses,
     dedupe: options?.dedupe,
     silent: options?.silent,
+    timeoutMs: options?.timeoutMs,
   });
   return res.ok ? res.data : null;
 }
