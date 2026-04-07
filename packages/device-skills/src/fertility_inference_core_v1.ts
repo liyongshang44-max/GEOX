@@ -1,10 +1,12 @@
 import type {
+  FertilityInferenceExplanationCodeV1,
   FertilityInferenceV1Result,
   FertilityLevelV1,
   RecommendationBiasV1,
   SalinityRiskV1,
 } from "@geox/contracts";
 export type {
+  FertilityInferenceExplanationCodeV1,
   FertilityInferenceV1Result,
   FertilityLevelV1,
   RecommendationBiasV1,
@@ -86,7 +88,7 @@ export function inferFertilityFromObservationAggregateV1(input: SensingObservati
   const ec = isFiniteNumber(input.ec_ds_m) ? input.ec_ds_m : null;
   const canopyTemp = isFiniteNumber(input.canopy_temp_c) ? input.canopy_temp_c : null;
 
-  const explanationCodes: string[] = ["SENSING_SKILL_FERTILITY_INFERENCE_V1"];
+  const explanationCodes: FertilityInferenceExplanationCodeV1[] = ["SENSING_SKILL_FERTILITY_INFERENCE_V1"];
 
   if (moisture == null && ec == null && canopyTemp == null) {
     explanationCodes.push("NO_DEVICE_OBSERVATION");
