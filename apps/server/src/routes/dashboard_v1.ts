@@ -147,6 +147,10 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         sensing_overview: refreshed.sensing_overview.refresh_tracking,
         fertility_state: refreshed.fertility_state.refresh_tracking,
       },
+      refresh_state: {
+        sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        fertility_state: refreshed.fertility_state.refresh_tracking,
+      },
     });
   });
 
