@@ -52,9 +52,7 @@ function toDateTimeLabel(ts?: number | null): string {
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
-  const [executing, setExecuting] = React.useState(false);
-  const [runFeedback, setRunFeedback] = React.useState<string>("");
-  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
+  const safeDetail = detail ?? {};
   const model = React.useMemo(() => {
     try {
       return buildOperationDetailViewModel({ detail: safeDetail });
@@ -62,46 +60,6 @@ export default function OperationDetailPage(): React.ReactElement {
       return buildOperationDetailViewModel({});
     }
   }, [safeDetail]);
-
-  const [executing, setExecuting] = React.useState(false);
-  const [runFeedback, setRunFeedback] = React.useState<string>("");
-  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
-
-  React.useEffect(() => {
-    if (!safeDetail) {
-      setHandoffItems([]);
-      return;
-    }
-    let alive = true;
-    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
-      .then((rows) => {
-        if (!alive) return;
-        setHandoffItems(rows);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setHandoffItems([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [safeDetail, model.operationPlanId, operationPlanId]);
-
-  React.useEffect(() => {
-    let alive = true;
-    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
-      .then((rows) => {
-        if (!alive) return;
-        setHandoffItems(rows);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setHandoffItems([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [model.operationPlanId, operationPlanId]);
 
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
