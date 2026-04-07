@@ -21,9 +21,9 @@ type RefreshStats = {
 };
 
 type RefreshTracking = {
-  last_success_ts_ms: number | null;
-  refresh_fail_count: number;
-  refresh_duration_ms: number | null;
+  last_success_ts: number | null;
+  failure_count: number;
+  latency_ms: number | null;
   attempts: number;
 };
 
@@ -64,9 +64,9 @@ function fertilityFreshnessFromComputedAt(computed_at_ts_ms: number | null, nowM
 
 function buildRefreshTracking(metrics: RefreshStats, attempts: number): RefreshTracking {
   return {
-    last_success_ts_ms: metrics.last_success_ts_ms,
-    refresh_fail_count: metrics.refresh_fail_total,
-    refresh_duration_ms: metrics.last_duration_ms,
+    last_success_ts: metrics.last_success_ts_ms,
+    failure_count: metrics.refresh_fail_total,
+    latency_ms: metrics.last_duration_ms,
     attempts,
   };
 }
