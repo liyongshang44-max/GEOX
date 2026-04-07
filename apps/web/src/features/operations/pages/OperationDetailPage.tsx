@@ -107,23 +107,23 @@ export default function OperationDetailPage(): React.ReactElement {
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
 
   const [isExecuting, setIsExecuting] = React.useState(false);
-  const [runFeedback, setRunFeedback] = React.useState<string>("");
-  const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
+  const [executionFeedback, setExecutionFeedback] = React.useState<string>("");
+  const [manualHandoffItems, setManualHandoffItems] = React.useState<OperationHandoffItem[]>([]);
 
   React.useEffect(() => {
     if (loading || permissionDenied || error || !detail) {
-      setHandoffItems([]);
+      setManualHandoffItems([]);
       return;
     }
     let alive = true;
     void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
       .then((rows) => {
         if (!alive) return;
-        setHandoffItems(rows);
+        setManualHandoffItems(rows);
       })
       .catch(() => {
         if (!alive) return;
-        setHandoffItems([]);
+        setManualHandoffItems([]);
       });
     return () => {
       alive = false;
@@ -156,7 +156,7 @@ export default function OperationDetailPage(): React.ReactElement {
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
     setIsExecuting(true);
-    setRunFeedback("");
+    setExecutionFeedback("");
     try {
       const res = await executeOperationAction({
         tenant_id: String(executionContext?.tenant_id ?? ""),
@@ -165,7 +165,7 @@ export default function OperationDetailPage(): React.ReactElement {
         operation_id: String(model.operationPlanId || operationPlanId),
         execution_plan: executionPlan,
       });
-      setRunFeedback(res?.ok ? `已触发执行任务 ${res.act_task_id ?? "-"}` : `执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
+      setExecutionFeedback(res?.ok ? `已触发执行任务 ${res.act_task_id ?? "-"}` : `执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
       await reload();
     } finally {
       setIsExecuting(false);
@@ -237,11 +237,11 @@ export default function OperationDetailPage(): React.ReactElement {
             </div>
           </SectionCard>
           <SectionCard title="转人工节点">
-            {!handoffItems.length ? (
+            {!manualHandoffItems.length ? (
               <div className="muted">暂无设备转人工交接记录。</div>
             ) : (
               <div className="list">
-                {handoffItems.map((item, idx) => (
+                {manualHandoffItems.map((item, idx) => (
                   <article key={`${item.assignment_id}-${idx}`} className="item">
                     <div className="title">{idx + 1}. 设备失败后人工接管</div>
                     <div className="meta">
@@ -317,7 +317,7 @@ export default function OperationDetailPage(): React.ReactElement {
               <button className="btn" type="button" disabled={!executionReady || isExecuting} onClick={() => { void runFromDetail(); }}>
                 {isExecuting ? "执行中..." : "一键执行"}
               </button>
-              {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
+              {executionFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{executionFeedback}</span> : null}
             </div>
           </section>
 
