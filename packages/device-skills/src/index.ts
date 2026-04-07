@@ -147,29 +147,22 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
   resolveCapability: ({ task_payload }) => {
     const actionLike = String(task_payload?.action_type ?? task_payload?.task_type ?? task_payload?.meta?.task_type ?? "").trim().toLowerCase();
     const compact = actionLike.replace(/[\s_-]+/g, ".");
-    if (!["fertilize", "fertilization.start", "start.fertilization", "fertilize.start"].includes(compact)) return null;
+    if (!["fertilize", "fertilization.start", "start.fertilization", "fertilize.start", "apply.fertilizer", "fertilizer.apply"].includes(compact)) return null;
 
     const parameters = task_payload?.parameters && typeof task_payload.parameters === "object" ? task_payload.parameters : {};
-    const dose_kg = finite((parameters as any)?.dose_kg ?? (parameters as any)?.dosage_kg ?? (parameters as any)?.dosage ?? (parameters as any)?.amount_kg);
-    const duration_sec = finite((parameters as any)?.duration_sec ?? (parameters as any)?.duration_seconds ?? (parameters as any)?.duration);
     const device_target = String(task_payload?.target?.ref ?? task_payload?.meta?.device_target ?? task_payload?.meta?.device_id ?? "").trim() || null;
-
-    if (!device_target || (dose_kg == null && duration_sec == null)) return null;
 
     return {
       capability: "device.fertilization.dispense",
       parameters: {
-        device_target,
-        dose_kg,
-        duration_sec,
-        mode: dose_kg != null ? "dose" : "duration"
+        ...parameters,
+        device_target
       },
       evidence_requirements: [
         "dispatch_ack",
-        "execution_receipt",
-        dose_kg != null ? "dosage_delivery_observed" : "runtime_duration_observed"
+        "execution_receipt"
       ],
-      explain: `Dispense fertilizer on ${device_target} with ${dose_kg != null ? `${dose_kg}kg` : `${duration_sec}s`} target.`,
+      explain: `Fertilizer execute passthrough${device_target ? ` on ${device_target}` : ""}.`,
       compatibility: fertilizerUnitV1.compatibility
     };
   }
