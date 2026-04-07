@@ -1,6 +1,15 @@
-export type FertilityLevelV1 = "low" | "medium" | "high" | "unknown";
-export type SalinityRiskV1 = "low" | "medium" | "high" | "unknown";
-export type RecommendationBiasV1 = "fertilize" | "wait" | "irrigate_first" | "inspect";
+import type {
+  FertilityInferenceV1Result,
+  FertilityLevelV1,
+  RecommendationBiasV1,
+  SalinityRiskV1,
+} from "@geox/contracts";
+export type {
+  FertilityInferenceV1Result,
+  FertilityLevelV1,
+  RecommendationBiasV1,
+  SalinityRiskV1,
+} from "@geox/contracts";
 
 export type SensingObservationAggregateV1 = {
   soil_moisture_pct?: number | null;
@@ -16,14 +25,6 @@ export type DeviceObservationV1Input =
   | Record<string, unknown>
   | null
   | undefined;
-
-export type FertilityInferenceV1Result = {
-  fertility_level: FertilityLevelV1;
-  recommendation_bias: RecommendationBiasV1;
-  salinity_risk: SalinityRiskV1;
-  confidence: number;
-  explanation_codes: string[];
-};
 
 function isFiniteNumber(v: unknown): v is number {
   return typeof v === "number" && Number.isFinite(v);

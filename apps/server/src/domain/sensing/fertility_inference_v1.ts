@@ -1,11 +1,13 @@
 import {
   inferFertilityFromObservationAggregateV1 as inferFertilityCoreV1,
-  type FertilityInferenceV1Result,
-  type FertilityLevelV1,
-  type RecommendationBiasV1,
-  type SalinityRiskV1,
   type SensingObservationAggregateV1,
 } from "@geox/device-skills";
+import type {
+  FertilityInferenceV1Result,
+  FertilityLevelV1,
+  RecommendationBiasV1,
+  SalinityRiskV1,
+} from "@geox/contracts";
 
 export type {
   FertilityInferenceV1Result,

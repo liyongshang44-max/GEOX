@@ -1,18 +1,18 @@
+import type {
+  FertilityInferenceV1Result,
+  FertilityLevelV1,
+  RecommendationBiasV1,
+  SalinityRiskV1,
+} from "@geox/contracts";
 import { inferFertilityFromDeviceObservationV1 } from "./fertility_inference_core_v1";
 
 export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
-export type FertilityLevel = "low" | "medium" | "high" | "unknown";
-export type SalinityRiskLevel = "low" | "medium" | "high" | "unknown";
-export type RecommendationBias = "fertilize" | "wait" | "irrigate_first" | "inspect";
+export type FertilityLevel = FertilityLevelV1;
+export type SalinityRiskLevel = SalinityRiskV1;
+export type RecommendationBias = RecommendationBiasV1;
 
-export type FertilityInferenceResult = {
-  fertility_level: FertilityLevel;
-  recommendation_bias: RecommendationBias;
-  salinity_risk: SalinityRiskLevel;
-  confidence: number;
-  explanation_codes: string[];
-};
+export type FertilityInferenceResult = FertilityInferenceV1Result;
 
 export type DerivedSensingState = {
   source: "device_observation_v1";
