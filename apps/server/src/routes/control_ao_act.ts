@@ -131,6 +131,28 @@ type EffectMetricSnapshot = {
   humidity?: number;
 };
 
+type HardRulePrecheckV1 = {
+  matched: boolean;
+  reason_codes: string[];
+  action_hints: Array<"irrigate_first" | "inspect">;
+};
+
+function evaluateHardRulePrecheckV1(constraints: Record<string, unknown>): HardRulePrecheckV1 {
+  const moistureConstraint = String(constraints?.moisture_constraint ?? "").trim().toLowerCase();
+  const salinityRisk = String(constraints?.salinity_risk ?? "").trim().toLowerCase();
+  const reason_codes: string[] = [];
+  const action_hints: Array<"irrigate_first" | "inspect"> = [];
+  if (moistureConstraint === "dry") {
+    reason_codes.push("hard_rule_moisture_constraint_dry");
+    action_hints.push("irrigate_first");
+  }
+  if (salinityRisk === "high") {
+    reason_codes.push("hard_rule_salinity_risk_high");
+    action_hints.push("inspect");
+  }
+  return { matched: reason_codes.length > 0, reason_codes, action_hints };
+}
+
 function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
   const out: EffectMetricSnapshot = {};
   for (const row of rows ?? []) {
@@ -470,6 +492,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
 
       // v0 冻结 0.2：constraints 中如果出现 string 值，则必须被 parameter_schema 作为 enum 定义，否则 reject。
       validateEnumStringValuesAgainstSchema(schemaKeys, body.constraints, "constraints");
+      const hardRulePrecheck = evaluateHardRulePrecheckV1(body.constraints);
 
       const act_task_id = `act_${randomUUID().replace(/-/g, "")}`; // Deterministic format is not required; uniqueness is.
       const created_at_ts = Date.now(); // Audit timestamp (fact occurred_at is authoritative)
@@ -494,6 +517,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           parameter_schema: body.parameter_schema,
           parameters: body.parameters,
           constraints: body.constraints,
+          precheck: hardRulePrecheck,
           created_at_ts,
           meta: body.meta
         }
@@ -513,7 +537,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         act_task_id
       });
 
-      return reply.send({ ok: true, fact_id, act_task_id });
+      return reply.send({ ok: true, fact_id, act_task_id, precheck: hardRulePrecheck });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }

@@ -9,6 +9,7 @@ import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
+import { evaluateHardRuleHintsV1 } from "../domain/decision_engine_v1";
 import {
   appendDerivedSensingStateV1,
   ensureDerivedSensingStateProjectionV1,
@@ -167,6 +168,75 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
     })
     : { should_irrigate: false, reason: "soil_moisture_missing" };
   const moistureThreshold = 35;
+  const hardRuleHints = evaluateHardRuleHintsV1({
+    moisture_constraint: body.moisture_constraint,
+    salinity_risk: body.salinity_risk
+  });
+  if (hardRuleHints.length > 0) {
+    for (const hint of hardRuleHints) {
+      if (hint.action_hint === "irrigate_first") {
+        out.push({
+          recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+          snapshot_id: snapshotId,
+          field_id,
+          season_id,
+          device_id,
+          crop_code,
+          crop_stage: resolvedCropStage,
+          rule_id: "hard_rule_moisture_constraint_dry_v1",
+          expected_effect: { soil_moisture: 8 },
+          program_id,
+          recommendation_type: "irrigation_recommendation_v1",
+          status: "proposed",
+          reason_codes: [hint.reason_code, "irrigate_first"],
+          evidence_refs: ["constraint:moisture_constraint"],
+          rule_hit: [{ rule_id: "hard_rule_moisture_constraint_dry_v1", matched: true, threshold: null, actual: null }],
+          confidence: 0.95,
+          suggested_action: {
+            action_type: "irrigation.start",
+            summary: "命中硬规则 moisture_constraint=dry，建议优先灌溉。",
+            parameters: {
+              trigger: { moisture_constraint: "dry" },
+              priority: "high"
+            }
+          },
+          created_ts: now,
+          model_version: "decision_engine_v1"
+        });
+      }
+      if (hint.action_hint === "inspect") {
+        out.push({
+          recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+          snapshot_id: snapshotId,
+          field_id,
+          season_id,
+          device_id,
+          crop_code,
+          crop_stage: resolvedCropStage,
+          rule_id: "hard_rule_salinity_risk_high_v1",
+          expected_effect: null,
+          program_id,
+          recommendation_type: "crop_health_alert_v1",
+          status: "proposed",
+          reason_codes: [hint.reason_code, "inspect"],
+          evidence_refs: ["constraint:salinity_risk"],
+          rule_hit: [{ rule_id: "hard_rule_salinity_risk_high_v1", matched: true, threshold: null, actual: null }],
+          confidence: 0.95,
+          suggested_action: {
+            action_type: "inspection.start",
+            summary: "命中硬规则 salinity_risk=high，建议先人工巡检。",
+            parameters: {
+              trigger: { salinity_risk: "high" },
+              priority: "high"
+            }
+          },
+          created_ts: now,
+          model_version: "decision_engine_v1"
+        });
+      }
+    }
+    return out;
+  }
 
   const irrigationNeed = irrigationEval.should_irrigate || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
   if (irrigationNeed) {

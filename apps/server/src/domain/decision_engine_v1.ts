@@ -15,6 +15,37 @@ export type IrrigationDecisionV1 = {
   crop_name: string | null;
 };
 
+export type HardRuleActionHintV1 = "irrigate_first" | "inspect";
+
+export type HardRuleMatchV1 = {
+  action_hint: HardRuleActionHintV1;
+  reason_code: string;
+};
+
+export function evaluateHardRuleHintsV1(input: {
+  moisture_constraint?: string | null;
+  salinity_risk?: string | null;
+}): HardRuleMatchV1[] {
+  const moistureConstraint = String(input.moisture_constraint ?? "").trim().toLowerCase();
+  const salinityRisk = String(input.salinity_risk ?? "").trim().toLowerCase();
+  const out: HardRuleMatchV1[] = [];
+
+  if (moistureConstraint === "dry") {
+    out.push({
+      action_hint: "irrigate_first",
+      reason_code: "hard_rule_moisture_constraint_dry"
+    });
+  }
+  if (salinityRisk === "high") {
+    out.push({
+      action_hint: "inspect",
+      reason_code: "hard_rule_salinity_risk_high"
+    });
+  }
+
+  return out;
+}
+
 export function evaluateIrrigationDecisionV1(input: DecisionEngineInputV1): IrrigationDecisionV1 {
   const crop = getCropProfile(input.crop_code);
   const agronomy = evaluateAgronomy({
