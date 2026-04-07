@@ -1,0 +1,32 @@
+[
+  {
+    "ts": 1767166658000,
+    "sensorId": "sensor_soil_001",
+    "groupId": "G_DEMO_30S",
+    "metric": "soil_ec",
+    "value": 1.42,
+    "unit": "dS/m",
+    "quality": "ok",
+    "source": "device"
+  },
+  {
+    "ts": 1767166658000,
+    "sensorId": "sensor_soil_001",
+    "groupId": "G_DEMO_30S",
+    "metric": "soil_ph",
+    "value": 6.8,
+    "unit": "pH",
+    "quality": "ok",
+    "source": "device"
+  },
+  {
+    "ts": 1767166658000,
+    "sensorId": "sensor_soil_001",
+    "groupId": "G_DEMO_30S",
+    "metric": "soil_temperature",
+    "value": 21.6,
+    "unit": "°C",
+    "quality": "ok",
+    "source": "device"
+  }
+]

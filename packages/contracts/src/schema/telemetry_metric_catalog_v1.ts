@@ -50,27 +50,28 @@ export const TELEMETRY_METRIC_CATALOG_V1: Record<TelemetryMetricNameV1, Telemetr
   },
   soil_ec: {
     unit: "dS/m",
-    aliases: ["mS/cm"],
+    aliases: ["mS/cm", "ds/m"],
     min: 0,
     max: 20,
-    description: "Soil electrical conductivity in dS/m",
+    description: "Soil electrical conductivity (salinity proxy) in dS/m",
   },
   soil_ph: {
     unit: "pH",
-    aliases: ["ph"],
+    aliases: ["ph", "PH"],
     min: 0,
     max: 14,
-    description: "Soil acidity/alkalinity pH",
+    description: "Soil acidity/alkalinity index",
   },
   soil_temperature: {
     unit: "°C",
-    aliases: ["C", "celsius"],
+    aliases: ["C", "celsius", "℃"],
     min: -40,
     max: 85,
     description: "Soil temperature in degrees Celsius",
   },
 };
 
+// Backward compatibility map: ingest accepts legacy metric keys, storage should persist canonical keys.
 export const TELEMETRY_METRIC_COMPAT_ALIASES_V1: Readonly<Record<string, TelemetryMetricNameV1>> = Object.freeze({
   soil_temp: "soil_temperature",
   soil_temp_c: "soil_temperature",
