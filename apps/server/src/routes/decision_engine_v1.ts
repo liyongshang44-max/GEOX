@@ -10,6 +10,7 @@ import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
 import { evaluateHardRuleHintsV1 } from "../domain/decision_engine_v1";
+import { inferFertilityFromObservationAggregateV1 } from "../domain/sensing/fertility_inference_v1";
 import {
   appendDerivedSensingStateV1,
   ensureDerivedSensingStateProjectionV1,
@@ -970,24 +971,32 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const snapshot_id = `snap_${tenant.tenant_id}_${requestedDeviceId}_${snapshot.updated_ts_ms}`;
     const derivedFieldId = String(body.field_id ?? snapshot.field_id ?? "").trim();
     if (!derivedFieldId) return badRequest(reply, "MISSING_FIELD_ID");
-    const fertilityState = telemetry.soil_moisture_pct < 22 ? "LOW" : telemetry.soil_moisture_pct < 35 ? "MEDIUM" : "HIGH";
-    const salinityRiskState = telemetry.soil_moisture_pct < 20 && telemetry.canopy_temp_c >= 32 ? "HIGH" : telemetry.canopy_temp_c >= 30 ? "MEDIUM" : "LOW";
+    const fertilityInference = inferFertilityFromObservationAggregateV1({
+      soil_moisture_pct: telemetry.soil_moisture_pct,
+      canopy_temp_c: telemetry.canopy_temp_c,
+      ec_ds_m: Number.isFinite(Number(body.ec_ds_m)) ? Number(body.ec_ds_m) : null,
+      observation_count: 1,
+      source_ids: [requestedDeviceId],
+    });
+    const derivedComputedAtTs = Date.now();
     await appendDerivedSensingStateV1(pool, {
       ...tenant,
       field_id: derivedFieldId,
       state_type: "fertility_state",
       payload: {
-        level: fertilityState,
+        level: fertilityInference.fertility_level,
+        fertility_level: fertilityInference.fertility_level,
+        recommendation_bias: fertilityInference.recommendation_bias,
+        salinity_risk: fertilityInference.salinity_risk,
+        confidence: fertilityInference.confidence,
         soil_moisture_pct: telemetry.soil_moisture_pct,
-        canopy_temp_c: telemetry.canopy_temp_c
+        canopy_temp_c: telemetry.canopy_temp_c,
+        ec_ds_m: Number.isFinite(Number(body.ec_ds_m)) ? Number(body.ec_ds_m) : null,
       },
-      confidence: 0.72,
-      explanation_codes: [
-        "RULE_SOIL_MOISTURE_FERTILITY_PROXY_V1",
-        telemetry.soil_moisture_pct < 22 ? "LOW_SOIL_MOISTURE" : "ADEQUATE_SOIL_MOISTURE"
-      ],
+      confidence: fertilityInference.confidence,
+      explanation_codes: fertilityInference.explanation_codes,
       source_device_ids: [requestedDeviceId],
-      computed_at_ts_ms: Date.now(),
+      computed_at_ts_ms: derivedComputedAtTs,
       source: "decision_engine_v1"
     });
     await appendDerivedSensingStateV1(pool, {
@@ -995,17 +1004,17 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       field_id: derivedFieldId,
       state_type: "salinity_risk_state",
       payload: {
-        level: salinityRiskState,
+        level: fertilityInference.salinity_risk,
+        salinity_risk: fertilityInference.salinity_risk,
+        recommendation_bias: fertilityInference.recommendation_bias,
         soil_moisture_pct: telemetry.soil_moisture_pct,
-        canopy_temp_c: telemetry.canopy_temp_c
+        canopy_temp_c: telemetry.canopy_temp_c,
+        ec_ds_m: Number.isFinite(Number(body.ec_ds_m)) ? Number(body.ec_ds_m) : null,
       },
-      confidence: 0.68,
-      explanation_codes: [
-        "RULE_HEAT_DRYNESS_SALINITY_PROXY_V1",
-        salinityRiskState === "HIGH" ? "HEAT_AND_DRYNESS_COMBINED" : "NO_HIGH_RISK_SIGNAL"
-      ],
+      confidence: fertilityInference.confidence,
+      explanation_codes: fertilityInference.explanation_codes,
       source_device_ids: [requestedDeviceId],
-      computed_at_ts_ms: Date.now(),
+      computed_at_ts_ms: derivedComputedAtTs,
       source: "decision_engine_v1"
     });
     const recommendations = buildRecommendations(body, telemetry, snapshot_id);
