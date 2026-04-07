@@ -43,6 +43,17 @@ export type DashboardEvidenceItem = {
 export type DashboardRecentExecutionItem = { id: string; operation_plan_id: string; field_id: string | null; status: string; updated_ts_ms: number; href: string };
 export type DashboardAcceptanceRiskItem = { id: string; field_id?: string | null; title: string; level: string; occurred_at?: string | null };
 export type DashboardPendingActionItem = { id: string; key: string; label: string; status?: string | null; to?: string | null };
+export type DashboardRecommendationReadModel = {
+  soil_moisture?: number | null;
+  soil_temperature?: number | null;
+  soil_ec?: number | null;
+  soil_ph?: number | null;
+  fertility_state?: string | null;
+  salinity_risk?: string | null;
+  confidence?: number | null;
+  recommendation_bias?: string | null;
+  last_updated?: string | number | null;
+};
 export type DashboardRecommendationItem = {
   recommendation_id: string;
   title?: string;
@@ -52,6 +63,7 @@ export type DashboardRecommendationItem = {
   updated_ts_ms?: number;
   field?: { field_id?: string | null; field_name?: string | null };
   linked_refs?: { approval_request_id?: string | null; receipt_fact_id?: string | null };
+  read_model?: DashboardRecommendationReadModel | null;
 };
 export type DashboardOperationStateItem = {
   operation_id: string;
