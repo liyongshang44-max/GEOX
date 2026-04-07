@@ -52,14 +52,14 @@ function toDateTimeLabel(ts?: number | null): string {
 export default function OperationDetailPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
-  const safeDetail = detail ?? {};
   const model = React.useMemo(() => {
+    const viewDetail = detail ?? {};
     try {
-      return buildOperationDetailViewModel({ detail: safeDetail });
+      return buildOperationDetailViewModel({ detail: viewDetail });
     } catch {
       return buildOperationDetailViewModel({});
     }
-  }, [safeDetail]);
+  }, [detail]);
 
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
@@ -95,6 +95,7 @@ export default function OperationDetailPage(): React.ReactElement {
   if (error || !detail) {
     return <ErrorState title="页面加载失败" message={error || "未找到对应作业"} onRetry={() => void reload()} secondaryText="返回作业列表" onSecondary={() => window.location.assign("/operations")} />;
   }
+  const safeDetail = detail ?? {};
 
   const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
   const actionLabel = mapOperationActionLabel(model.actionLabel);
