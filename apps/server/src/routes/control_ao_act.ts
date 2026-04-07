@@ -596,18 +596,23 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       if (body.execution_plan.safe_guard.requires_approval) {
         return reply.status(403).send({ ok: false, error: "REQUIRES_APPROVAL" });
       }
-      const skillCapabilityResolution = body.execution_plan.target.kind === "device"
+      const requiresDeviceSkillResolution = body.execution_plan.target.kind === "device" || actionType === "FERTILIZE";
+      if (actionType === "FERTILIZE" && body.execution_plan.target.kind !== "device") {
+        return reply.status(400).send({ ok: false, error: "FERTILIZE_REQUIRES_DEVICE_TARGET" });
+      }
+      const skillCapabilityResolution = requiresDeviceSkillResolution
         ? resolveTaskCapabilityViaDeviceSkillsResult({
           action_type: actionType,
           task_type: actionType,
           target: body.execution_plan.target,
           parameters: body.execution_plan.parameters,
           meta: {
-            task_type: actionType
+            task_type: actionType,
+            device_target: body.execution_plan.target.ref,
           }
         })
         : null;
-      if (skillCapabilityResolution && !skillCapabilityResolution.ok) {
+      if (requiresDeviceSkillResolution && skillCapabilityResolution && !skillCapabilityResolution.ok) {
         return reply.status(400).send({
           ok: false,
           error: "DEVICE_CAPABILITY_UNSUPPORTED",

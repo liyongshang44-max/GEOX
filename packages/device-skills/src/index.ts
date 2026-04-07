@@ -150,29 +150,26 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
     if (!["fertilize", "fertilization.start", "start.fertilization", "fertilize.start"].includes(compact)) return null;
 
     const parameters = task_payload?.parameters && typeof task_payload.parameters === "object" ? task_payload.parameters : {};
-    const fertilizer_id = String((parameters as any)?.fertilizer_id ?? task_payload?.meta?.fertilizer_id ?? "").trim() || null;
-    const zone_id = String((parameters as any)?.zone_id ?? task_payload?.meta?.zone_id ?? "").trim() || null;
-    const dosage_kg = finite((parameters as any)?.dosage_kg ?? (parameters as any)?.dosage ?? (parameters as any)?.amount_kg);
+    const dose_kg = finite((parameters as any)?.dose_kg ?? (parameters as any)?.dosage_kg ?? (parameters as any)?.dosage ?? (parameters as any)?.amount_kg);
     const duration_sec = finite((parameters as any)?.duration_sec ?? (parameters as any)?.duration_seconds ?? (parameters as any)?.duration);
-    const flow_lpm = finite((parameters as any)?.flow_lpm ?? (parameters as any)?.flow_rate_lpm);
+    const device_target = String(task_payload?.target?.ref ?? task_payload?.meta?.device_target ?? task_payload?.meta?.device_id ?? "").trim() || null;
+
+    if (!device_target || (dose_kg == null && duration_sec == null)) return null;
 
     return {
       capability: "device.fertilization.dispense",
       parameters: {
-        fertilizer_id,
-        zone_id,
-        dosage_kg,
+        device_target,
+        dose_kg,
         duration_sec,
-        flow_lpm,
-        mode: dosage_kg != null ? "dosage" : (duration_sec != null ? "duration" : "default")
+        mode: dose_kg != null ? "dose" : "duration"
       },
       evidence_requirements: [
         "dispatch_ack",
-        "fertilizer_unit_start_confirmation",
-        dosage_kg != null ? "dosage_delivery_observed" : "runtime_duration_observed",
-        "fertilizer_delivery_receipt"
+        "execution_receipt",
+        dose_kg != null ? "dosage_delivery_observed" : "runtime_duration_observed"
       ],
-      explain: `Dispense fertilizer${fertilizer_id ? ` ${fertilizer_id}` : ""}${zone_id ? ` to zone ${zone_id}` : ""} with ${dosage_kg != null ? `${dosage_kg}kg` : (duration_sec != null ? `${duration_sec}s` : "configured")} target.`,
+      explain: `Dispense fertilizer on ${device_target} with ${dose_kg != null ? `${dose_kg}kg` : `${duration_sec}s`} target.`,
       compatibility: fertilizerUnitV1.compatibility
     };
   }
