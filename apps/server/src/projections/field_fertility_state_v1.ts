@@ -17,6 +17,15 @@ type FieldFertilityStateV1 = {
   updated_ts_ms: number;
 };
 
+type DerivedStateProjectionRowV1 = {
+  payload_json?: Record<string, any> | null;
+  state_type: string;
+  confidence?: number | null;
+  explanation_codes_json?: string[] | null;
+  source_device_ids_json?: string[] | null;
+  computed_at_ts_ms?: number | null;
+};
+
 let ensurePromise: Promise<void> | null = null;
 
 function asTextOrNull(v: unknown): string | null {
@@ -45,6 +54,76 @@ function extractPayloadValue(payload: Record<string, any>, keys: string[]): stri
     if (value) return value;
   }
   return null;
+}
+
+export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStateProjectionRowV1[], context: {
+  tenant_id: string;
+  project_id?: string | null;
+  group_id?: string | null;
+  field_id: string;
+  now_ms?: number;
+}): FieldFertilityStateV1 {
+  const nowMs = Number.isFinite(context.now_ms) ? Number(context.now_ms) : Date.now();
+
+  let fertilityLevel: string | null = null;
+  let salinityRisk: string | null = null;
+  let recommendationBias: string | null = null;
+  let confidence: number | null = null;
+  let computedAtTsMs: number | null = null;
+  const explanationCodes: string[] = [];
+  const sourceDeviceIds: string[] = [];
+
+  for (const row of rows ?? []) {
+    const payload = (row.payload_json && typeof row.payload_json === "object") ? row.payload_json as Record<string, any> : {};
+    const rowConfidence = clampConfidence(row.confidence);
+    const rowComputedAt = Number(row.computed_at_ts_ms ?? 0);
+
+    if (String(row.state_type) === "fertility_state") {
+      fertilityLevel = extractPayloadValue(payload, ["fertility_level", "fertility_state", "level"]);
+      recommendationBias = extractPayloadValue(payload, ["recommendation_bias", "bias"]);
+      if (!salinityRisk) salinityRisk = extractPayloadValue(payload, ["salinity_risk", "salinity_risk_state"]);
+    }
+
+    if (String(row.state_type) === "salinity_risk_state") {
+      salinityRisk = extractPayloadValue(payload, ["salinity_risk", "salinity_risk_state", "risk"]);
+      if (!recommendationBias) {
+        recommendationBias = extractPayloadValue(payload, ["recommendation_bias", "bias"]);
+      }
+    }
+
+    if (computedAtTsMs == null || rowComputedAt > computedAtTsMs) {
+      computedAtTsMs = rowComputedAt;
+    }
+    if (rowConfidence != null) {
+      confidence = confidence == null ? rowConfidence : Math.max(confidence, rowConfidence);
+    }
+
+    if (Array.isArray(row.explanation_codes_json)) {
+      explanationCodes.push(...row.explanation_codes_json.map((x: unknown) => String(x)));
+    }
+    if (Array.isArray(row.source_device_ids_json)) {
+      sourceDeviceIds.push(...row.source_device_ids_json.map((x: unknown) => String(x)));
+    }
+  }
+
+  if ((rows?.length ?? 0) > 1) {
+    explanationCodes.push("multisource_derived_state_merged");
+  }
+
+  return {
+    tenant_id: context.tenant_id,
+    project_id: context.project_id ?? null,
+    group_id: context.group_id ?? null,
+    field_id: context.field_id,
+    fertility_level: fertilityLevel,
+    salinity_risk: salinityRisk,
+    recommendation_bias: recommendationBias,
+    confidence,
+    computed_at_ts_ms: computedAtTsMs,
+    explanation_codes_json: normalizeCodes(explanationCodes),
+    source_device_ids_json: normalizeCodes(sourceDeviceIds),
+    updated_ts_ms: nowMs,
+  };
 }
 
 export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise<void> {
@@ -108,65 +187,13 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
     [params.tenant_id, params.field_id, params.project_id ?? null, params.group_id ?? null, ["fertility_state", "salinity_risk_state"]]
   );
 
-  let fertilityLevel: string | null = null;
-  let salinityRisk: string | null = null;
-  let recommendationBias: string | null = null;
-  let confidence: number | null = null;
-  let computedAtTsMs: number | null = null;
-  const explanationCodes: string[] = [];
-  const sourceDeviceIds: string[] = [];
-
-  for (const row of latestStates.rows ?? []) {
-    const payload = (row.payload_json && typeof row.payload_json === "object") ? row.payload_json as Record<string, any> : {};
-    const rowConfidence = clampConfidence(row.confidence);
-    const rowComputedAt = Number(row.computed_at_ts_ms ?? 0);
-
-    if (String(row.state_type) === "fertility_state") {
-      fertilityLevel = extractPayloadValue(payload, ["fertility_level", "fertility_state", "level"]);
-      recommendationBias = extractPayloadValue(payload, ["recommendation_bias", "bias"]);
-      if (!salinityRisk) salinityRisk = extractPayloadValue(payload, ["salinity_risk", "salinity_risk_state"]);
-    }
-
-    if (String(row.state_type) === "salinity_risk_state") {
-      salinityRisk = extractPayloadValue(payload, ["salinity_risk", "salinity_risk_state", "risk"]);
-      if (!recommendationBias) {
-        recommendationBias = extractPayloadValue(payload, ["recommendation_bias", "bias"]);
-      }
-    }
-
-    if (computedAtTsMs == null || rowComputedAt > computedAtTsMs) {
-      computedAtTsMs = rowComputedAt;
-    }
-    if (rowConfidence != null) {
-      confidence = confidence == null ? rowConfidence : Math.max(confidence, rowConfidence);
-    }
-
-    if (Array.isArray(row.explanation_codes_json)) {
-      explanationCodes.push(...row.explanation_codes_json.map((x: unknown) => String(x)));
-    }
-    if (Array.isArray(row.source_device_ids_json)) {
-      sourceDeviceIds.push(...row.source_device_ids_json.map((x: unknown) => String(x)));
-    }
-  }
-
-  if ((latestStates.rows?.length ?? 0) > 1) {
-    explanationCodes.push("multisource_derived_state_merged");
-  }
-
-  const state: FieldFertilityStateV1 = {
+  const state = composeFieldFertilityStateFromDerivedRowsV1(latestStates.rows ?? [], {
     tenant_id: params.tenant_id,
     project_id: params.project_id ?? null,
     group_id: params.group_id ?? null,
     field_id: params.field_id,
-    fertility_level: fertilityLevel,
-    salinity_risk: salinityRisk,
-    recommendation_bias: recommendationBias,
-    confidence,
-    computed_at_ts_ms: computedAtTsMs,
-    explanation_codes_json: normalizeCodes(explanationCodes),
-    source_device_ids_json: normalizeCodes(sourceDeviceIds),
-    updated_ts_ms: nowMs,
-  };
+    now_ms: nowMs,
+  });
 
   const upsert = await db.query(
     `INSERT INTO field_fertility_state_v1

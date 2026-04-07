@@ -9,7 +9,7 @@ import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
-import { evaluateHardRuleHintsV1 } from "../domain/decision_engine_v1";
+import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1";
 import { inferFertilityFromObservationAggregateV1 } from "../domain/sensing/fertility_inference_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 import {
@@ -184,68 +184,30 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
   });
   if (hardRuleHints.length > 0) {
     for (const hint of hardRuleHints) {
-      if (hint.action_hint === "irrigate_first") {
-        out.push({
-          recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
-          snapshot_id: snapshotId,
-          field_id,
-          season_id,
-          device_id,
-          crop_code,
-          crop_stage: resolvedCropStage,
-          rule_id: "hard_rule_moisture_constraint_dry_v1",
-          expected_effect: { soil_moisture: 8 },
-          program_id,
-          recommendation_type: "irrigation_recommendation_v1",
-          status: "proposed",
-          reason_codes: [hint.reason_code, "irrigate_first"],
-          reason_details: [{ code: hint.reason_code, action_hint: "irrigate_first", source: hint.source }],
-          evidence_refs: ["constraint:moisture_constraint"],
-          rule_hit: [{ rule_id: "hard_rule_moisture_constraint_dry_v1", matched: true, threshold: null, actual: null }],
-          confidence: 0.95,
-          suggested_action: {
-            action_type: "irrigation.start",
-            summary: "命中硬规则 moisture_constraint=dry，建议优先灌溉。",
-            parameters: {
-              trigger: { moisture_constraint: "dry" },
-              priority: "high"
-            }
-          },
-          created_ts: now,
-          model_version: "decision_engine_v1"
-        });
-      }
-      if (hint.action_hint === "inspect") {
-        out.push({
-          recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
-          snapshot_id: snapshotId,
-          field_id,
-          season_id,
-          device_id,
-          crop_code,
-          crop_stage: resolvedCropStage,
-          rule_id: "hard_rule_salinity_risk_high_v1",
-          expected_effect: null,
-          program_id,
-          recommendation_type: "crop_health_alert_v1",
-          status: "proposed",
-          reason_codes: [hint.reason_code, "inspect"],
-          reason_details: [{ code: hint.reason_code, action_hint: "inspect", source: hint.source }],
-          evidence_refs: ["constraint:salinity_risk"],
-          rule_hit: [{ rule_id: "hard_rule_salinity_risk_high_v1", matched: true, threshold: null, actual: null }],
-          confidence: 0.95,
-          suggested_action: {
-            action_type: "inspection.start",
-            summary: "命中硬规则 salinity_risk=high，建议先人工巡检。",
-            parameters: {
-              trigger: { salinity_risk: "high" },
-              priority: "high"
-            }
-          },
-          created_ts: now,
-          model_version: "decision_engine_v1"
-        });
-      }
+      const blueprint = getHardRuleRecommendationBlueprintV1(hint.action_hint);
+      if (!blueprint) continue;
+      out.push({
+        recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+        snapshot_id: snapshotId,
+        field_id,
+        season_id,
+        device_id,
+        crop_code,
+        crop_stage: resolvedCropStage,
+        rule_id: blueprint.rule_id,
+        expected_effect: blueprint.expected_effect,
+        program_id,
+        recommendation_type: blueprint.recommendation_type,
+        status: "proposed",
+        reason_codes: [hint.reason_code, ...blueprint.reason_codes_suffix],
+        reason_details: [{ code: hint.reason_code, action_hint: hint.action_hint, source: hint.source }],
+        evidence_refs: blueprint.evidence_refs,
+        rule_hit: [{ rule_id: blueprint.rule_id, matched: true, threshold: null, actual: null }],
+        confidence: blueprint.confidence,
+        suggested_action: blueprint.suggested_action,
+        created_ts: now,
+        model_version: "decision_engine_v1"
+      });
     }
     return out;
   }
