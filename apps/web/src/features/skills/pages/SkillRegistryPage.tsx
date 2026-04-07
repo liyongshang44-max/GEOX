@@ -13,8 +13,11 @@ export default function SkillRegistryPage(): React.ReactElement {
   const [items, setItems] = React.useState<SkillRegistryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const loadedRef = React.useRef(false);
 
   React.useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
     let mounted = true;
     void listSkillRegistry({ limit: 100 }).then((res) => {
       if (!mounted) return;
