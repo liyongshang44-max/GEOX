@@ -1,0 +1,43 @@
+{
+  "release_version": "<release_version>",
+  "generated_at": "<generated_at_iso8601>",
+  "matrix": [
+    {
+      "id": "OBS_NONE",
+      "passed": false,
+      "evidence": "<artifact_link>",
+      "notes": "<notes>"
+    },
+    {
+      "id": "LOW_MOISTURE",
+      "passed": false,
+      "evidence": "<artifact_link>",
+      "notes": "<notes>"
+    },
+    {
+      "id": "HIGH_SALINITY",
+      "passed": false,
+      "evidence": "<artifact_link>",
+      "notes": "<notes>"
+    },
+    {
+      "id": "MULTI_DEVICE_CONFLICT",
+      "passed": false,
+      "evidence": "<artifact_link>",
+      "notes": "<notes>"
+    },
+    {
+      "id": "STALE_READ_MODEL",
+      "passed": false,
+      "evidence": "<artifact_link>",
+      "notes": "<notes>"
+    }
+  ],
+  "rollback_triggers": [
+    {
+      "id": "RB-01",
+      "condition": "read model stale ratio > 20% for 3 consecutive 5-minute windows",
+      "action": "rollback"
+    }
+  ]
+}
