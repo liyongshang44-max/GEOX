@@ -69,7 +69,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [lang] = React.useState<FieldLang>(() => (getUiLocale() === "en" ? "en" : "zh"));
   const labels = FIELD_TEXT[lang];
   const [selectedMapObject, setSelectedMapObject] = React.useState<any | null>(null);
-  const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, refresh } = useFieldDetail({ fieldId, lang });
+  const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, fieldReadModelV1, refresh } = useFieldDetail({ fieldId, lang });
   const [deviceOptions, setDeviceOptions] = React.useState<Array<{ device_id: string; connection_status?: string; field_id?: string; last_telemetry_ts_ms?: number | null }>>([]);
   const [bindDeviceId, setBindDeviceId] = React.useState("");
   const [bindMessage, setBindMessage] = React.useState("");
@@ -118,6 +118,11 @@ export default function FieldDetailPage(): React.ReactElement {
   const recommendationEvents = (model?.timeline ?? []).filter((item) => item.type === "recommendation").slice(0, 3);
   const recentOperationEvents = (model?.timeline ?? []).filter((item) => item.type === "operation").slice(0, 5);
   const hasInitializedProgram = hasCurrentPlan;
+  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
+  const sensingV1 = enableReadModelV1 ? fieldReadModelV1?.sensing : null;
+  const fertilityV1 = enableReadModelV1 ? fieldReadModelV1?.fertility : null;
+  const recommendationBias = fertilityV1?.recommendationBias ?? null;
+  const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
     {
@@ -227,6 +232,35 @@ export default function FieldDetailPage(): React.ReactElement {
           </div>
         ) : null}
       </section>
+      ) : null}
+      {activeTab === "overview" && (sensingV1 || fertilityV1) ? (
+        <section className="card detailHeroCard" style={{ marginBottom: 12, borderColor: showBiasWarning ? "var(--color-status-risk-border)" : undefined }}>
+          <div className="sectionTitle">监测/肥力读模型（V1）</div>
+          {!enableReadModelV1 ? <div className="detailSectionLead">已关闭 V1 接口，当前使用旧接口兼容数据。</div> : null}
+          {sensingV1 ? (
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">field_sensing_overview_v1</div>
+              <div className="decisionItemMeta">状态：{sensingV1.status || "--"}</div>
+              <div className="decisionItemMeta">解释码：{sensingV1.explainCodes.length ? sensingV1.explainCodes.join(" / ") : "--"}</div>
+            </div>
+          ) : null}
+          {fertilityV1 ? (
+            <div className="decisionItemStatic" style={{ marginTop: 8 }}>
+              <div className="decisionItemTitle">field_fertility_state_v1</div>
+              <div className="decisionItemMeta">状态：{fertilityV1.status || fertilityV1.fertilityState || "--"}</div>
+              <div className="decisionItemMeta">解释码：{fertilityV1.explainCodes.length ? fertilityV1.explainCodes.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">recommendation_bias：{recommendationBias || "--"}</div>
+            </div>
+          ) : null}
+          {showBiasWarning ? (
+            <div className="decisionItemStatic" style={{ marginTop: 8, borderColor: "var(--color-status-risk-border)", background: "var(--color-status-risk-bg)" }}>
+              <div className="decisionItemTitle">⚠️ 当前建议偏置提示</div>
+              <div className="decisionItemMeta">
+                recommendation_bias = <strong>{recommendationBias}</strong>，建议优先人工复核现场并谨慎推进自动动作。
+              </div>
+            </div>
+          ) : null}
+        </section>
       ) : null}
       {!hasBoundDevice ? (
       activeTab === "config" ? (
