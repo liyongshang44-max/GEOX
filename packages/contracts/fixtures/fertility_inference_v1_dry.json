@@ -1,0 +1,12 @@
+{
+  "fertility_level": "low",
+  "recommendation_bias": "irrigate_first",
+  "salinity_risk": "medium",
+  "confidence": 0.92,
+  "explanation_codes": [
+    "SENSING_SKILL_FERTILITY_INFERENCE_V1",
+    "LOW_SOIL_MOISTURE",
+    "MODERATE_EC",
+    "RULE_MOISTURE_LOW_IRRIGATE_FIRST"
+  ]
+}

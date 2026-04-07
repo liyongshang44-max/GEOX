@@ -1,0 +1,12 @@
+{
+  "fertility_level": "medium",
+  "recommendation_bias": "inspect",
+  "salinity_risk": "high",
+  "confidence": 0.9,
+  "explanation_codes": [
+    "SENSING_SKILL_FERTILITY_INFERENCE_V1",
+    "ADEQUATE_SOIL_MOISTURE",
+    "HIGH_EC",
+    "RULE_SALINITY_HIGH_INSPECT"
+  ]
+}

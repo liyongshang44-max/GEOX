@@ -14,6 +14,7 @@ export * from "./schema/agronomy_observation_v1";
 export * from "./schema/agronomy_inference_result_v1";
 export * from "./schema/device_observation_v1";
 export * from "./schema/derived_sensing_state_v1";
+export * from "./schema/fertility_inference_v1";
 export * from "./schema/telemetry_metric_catalog_v1";
 export * from "./schema/agronomy_decision_context_v1";
 export * from "./schema/agronomy_recommendation_v1";
