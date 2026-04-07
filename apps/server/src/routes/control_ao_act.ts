@@ -48,6 +48,16 @@ const ACTION_SKILL_PROFILE_V1: Record<string, {
   }
 };
 
+type DeviceActionValidationResultV1 =
+  | { ok: true }
+  | {
+      ok: false;
+      error: "DEVICE_ACTION_MISSING_PARAMETERS" | "DEVICE_ACTION_TYPE_MISMATCH";
+      required_any_of?: string[];
+      expected_action_type?: string;
+      resolved_action_type?: string;
+    };
+
 const FORBID_KEYS_V0 = new Set<string>([
   "problem_state_id",
   "lifecycle_state",
@@ -265,6 +275,50 @@ function resolveExpectedEvidenceRequirementsV1(actionType: string, capabilityRes
     : [];
   if (fromCapability.length > 0) return fromCapability;
   return ACTION_SKILL_PROFILE_V1[actionType]?.expected_evidence_requirements ?? [];
+}
+
+export function validateDeviceActionRequirementsV1(input: {
+  action_type: string;
+  execution_parameters: Record<string, unknown>;
+  capability_resolution: any | null;
+}): DeviceActionValidationResultV1 {
+  const actionType = String(input.action_type ?? "").trim().toUpperCase();
+  const profile = ACTION_SKILL_PROFILE_V1[actionType];
+  if (!profile) return { ok: true };
+
+  const resolvedParameters = input.capability_resolution?.ok
+    && input.capability_resolution?.resolution?.parameters
+    && typeof input.capability_resolution.resolution.parameters === "object"
+    ? (input.capability_resolution.resolution.parameters as Record<string, unknown>)
+    : {};
+  const resolvedActionType = String(
+    resolvedParameters.action_type
+    ?? resolvedParameters.task_type
+    ?? ""
+  ).trim().toUpperCase();
+
+  if (resolvedActionType && resolvedActionType !== actionType) {
+    return {
+      ok: false,
+      error: "DEVICE_ACTION_TYPE_MISMATCH",
+      expected_action_type: actionType,
+      resolved_action_type: resolvedActionType
+    };
+  }
+
+  const hasRequiredParameter = profile.required_parameter_keys.some((k) =>
+    resolvedParameters[k] !== undefined && resolvedParameters[k] !== null
+  ) || profile.required_parameter_keys.some((k) =>
+    input.execution_parameters[k] !== undefined && input.execution_parameters[k] !== null
+  );
+  if (!hasRequiredParameter) {
+    return {
+      ok: false,
+      error: "DEVICE_ACTION_MISSING_PARAMETERS",
+      required_any_of: profile.required_parameter_keys
+    };
+  }
+  return { ok: true };
 }
 
 async function findAoActTaskByActTaskId(
@@ -682,17 +736,6 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       if (actionSkillProfile && body.execution_plan.target.kind !== "device") {
         return reply.status(400).send({ ok: false, error: "ACTION_REQUIRES_DEVICE_TARGET" });
       }
-      if (actionSkillProfile) {
-        const hasRequiredParameter = actionSkillProfile.required_parameter_keys
-          .some((k) => body.execution_plan.parameters[k] !== undefined && body.execution_plan.parameters[k] !== null);
-        if (!hasRequiredParameter) {
-          return reply.status(400).send({
-            ok: false,
-            error: "DEVICE_ACTION_MISSING_PARAMETERS",
-            required_any_of: actionSkillProfile.required_parameter_keys
-          });
-        }
-      }
       if (actionType === "FERTILIZE" && requiresDeviceSkillResolution) {
         await ensureFertilizerUnitSkillRegisteredV1(pool, tenant);
       }
@@ -716,6 +759,14 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           error: unsupportedAction ? "DEVICE_ACTION_TYPE_UNSUPPORTED" : "DEVICE_CAPABILITY_UNSUPPORTED",
           detail: skillCapabilityResolution.error
         });
+      }
+      const deviceActionValidation = validateDeviceActionRequirementsV1({
+        action_type: actionType,
+        execution_parameters: body.execution_plan.parameters,
+        capability_resolution: skillCapabilityResolution
+      });
+      if (!deviceActionValidation.ok) {
+        return reply.status(400).send(deviceActionValidation);
       }
       const expectedEvidenceRequirements = resolveExpectedEvidenceRequirementsV1(actionType, skillCapabilityResolution);
       const normalizedDeviceCapabilityCheck = body.execution_plan.device_capability_check ?? { supported: true as const };
@@ -926,7 +977,13 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           }
         }]
       );
-      return reply.send({ ok: true, act_task_id, idempotent: false });
+      return reply.send({
+        ok: true,
+        act_task_id,
+        idempotent: false,
+        expected_evidence_requirements: expectedEvidenceRequirements,
+        capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null
+      });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }
@@ -1154,7 +1211,16 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
       const planPayload = latestPlan?.payload ?? {};
       const currentStatus = String(planPayload.status ?? "").trim().toUpperCase();
       if (currentStatus === "SUCCEEDED" || currentStatus === "FAILED") {
-        return reply.send({ ok: true, fact_id, terminal_deduped: true });
+        return reply.send({
+          ok: true,
+          fact_id,
+          terminal_deduped: true,
+          evidence_trace: {
+            expected_requirements: expectedEvidenceRequirements,
+            provided_kinds: providedEvidenceKinds,
+            missing_requirements: missingEvidenceRequirements
+          }
+        });
       }
 
       const receiptStatus = String(body.status ?? "").toLowerCase();
@@ -1202,7 +1268,17 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
         }]
       );
 
-      return reply.send({ ok: true, fact_id, operation_plan_transition_fact_id: transitionFactId, operation_plan_fact_id: planFactId });
+      return reply.send({
+        ok: true,
+        fact_id,
+        operation_plan_transition_fact_id: transitionFactId,
+        operation_plan_fact_id: planFactId,
+        evidence_trace: {
+          expected_requirements: expectedEvidenceRequirements,
+          provided_kinds: providedEvidenceKinds,
+          missing_requirements: missingEvidenceRequirements
+        }
+      });
     } catch (e: any) {
       const msg = String(e?.message ?? "BAD_REQUEST"); // Normalize error message.
       if (msg === "NOT_FOUND") return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Enforce non-enumerable cross-tenant failure.
