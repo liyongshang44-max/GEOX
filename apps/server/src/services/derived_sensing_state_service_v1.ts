@@ -34,6 +34,13 @@ const SensorQualityStatePayloadSchema = z.object({
   reason: z.string().trim().min(1).max(160).optional(),
 }).passthrough();
 
+const DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1: Record<DerivedSensingStateTypeV1, z.ZodTypeAny> = {
+  fertility_state: FertilityStatePayloadSchema,
+  salinity_risk_state: SalinityRiskStatePayloadSchema,
+  irrigation_need_state: IrrigationNeedStatePayloadSchema,
+  sensor_quality_state: SensorQualityStatePayloadSchema,
+};
+
 export type DerivedSensingStateV1Input = {
   tenant_id: string;
   project_id: string | null;
@@ -88,52 +95,22 @@ function normalizeStatePayload(stateType: DerivedSensingStateTypeV1, payload: Re
       ?? ""
   ).trim().toUpperCase();
 
-  if (stateType === "fertility_state") {
-    const parsed = FertilityStatePayloadSchema.safeParse({
-      ...source,
-      level: levelCandidate,
-    });
-    if (!parsed.success) {
-      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:fertility_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
-    }
-    return parsed.data;
-  }
-
-  if (stateType === "salinity_risk_state") {
-    const parsed = SalinityRiskStatePayloadSchema.safeParse({
-      ...source,
-      level: levelCandidate,
-    });
-    if (!parsed.success) {
-      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:salinity_risk_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
-    }
-    return parsed.data;
-  }
-
-  if (stateType === "irrigation_need_state") {
-    const parsed = IrrigationNeedStatePayloadSchema.safeParse({
+  const normalizedPayload = stateType === "irrigation_need_state"
+    ? {
       ...source,
       level: levelCandidate,
       action_hint: source.action_hint ?? source.suggested_action ?? source.recommendation,
-    });
-    if (!parsed.success) {
-      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:irrigation_need_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
     }
-    return parsed.data;
-  }
-
-  if (stateType === "sensor_quality_state") {
-    const parsed = SensorQualityStatePayloadSchema.safeParse({
+    : {
       ...source,
       level: levelCandidate,
-    });
-    if (!parsed.success) {
-      throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:sensor_quality_state:${parsed.error.issues.map((x) => x.message).join("|")}`);
-    }
-    return parsed.data;
+    };
+  const schema = DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1[stateType];
+  const parsed = schema.safeParse(normalizedPayload);
+  if (!parsed.success) {
+    throw new Error(`DERIVED_SENSING_STATE_PAYLOAD_CONTRACT_VIOLATION:${stateType}:${parsed.error.issues.map((x) => x.message).join("|")}`);
   }
-
-  throw new Error(`UNSUPPORTED_STATE_TYPE:${stateType}`);
+  return parsed.data;
 }
 
 export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise<void> {

@@ -29,6 +29,7 @@ export type ParsedFieldReadModelV1 = {
   sensing: {
     status: string | null;
     explainCodes: string[];
+    sensorQuality: string | null;
     soilMoisture: number | null;
     soilTemperature: number | null;
     soilEc: number | null;
@@ -60,6 +61,12 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
       ? {
         status: toStringOrNull(sensingPayload?.status ?? sensingPayload?.state ?? sensingPayload?.status_code),
         explainCodes: toStringArray(sensingPayload?.explain_codes ?? sensingPayload?.reason_codes ?? sensingPayload?.codes),
+        sensorQuality: toStringOrNull(
+          sensingPayload?.sensor_quality_level
+          ?? sensingPayload?.sensor_quality
+          ?? sensingPayload?.quality_level
+          ?? sensingPayload?.quality
+        ),
         soilMoisture: toNumberOrNull(sensingPayload?.soil_moisture),
         soilTemperature: toNumberOrNull(sensingPayload?.soil_temperature ?? sensingPayload?.soil_temp),
         soilEc: toNumberOrNull(sensingPayload?.soil_ec),
