@@ -7,6 +7,7 @@ import { Pool } from "pg"; // Postgres client pool to write ledger + projection.
 import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
+import { appendDeviceObservationV1, ensureDeviceObservationProjectionV1 } from "../../server/src/services/device_observation_v1"; // raw_telemetry_v1 -> normalize -> device_observation_v1 writer.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -73,6 +74,42 @@ function seenRecently(key: string, ttlMs: number): boolean { // Deduplicate repe
   return false; // Caller should emit log.
 } // End helper.
 
+function normalizeMetric(metricRaw: string): { metric: string; unit: string | null } { // Normalize metric naming/unit so business readers consume stable semantics.
+  const metric = String(metricRaw || "").trim().toLowerCase();
+  if (metric === "soil_temp") return { metric: "soil_temperature", unit: "celsius" };
+  if (metric === "soil_temperature") return { metric: "soil_temperature", unit: "celsius" };
+  if (metric === "air_temp") return { metric: "air_temperature", unit: "celsius" };
+  if (metric === "soil_moisture" || metric === "humidity") return { metric: metric === "humidity" ? "air_humidity" : "soil_moisture", unit: "percent" };
+  return { metric, unit: null };
+} // End helper.
+
+function toQualityFlags(value: unknown): string[] { // Derive basic quality flags for normalized observation.
+  if (value == null) return ["missing_value"];
+  if (typeof value === "number" && !Number.isFinite(value)) return ["not_finite"];
+  return ["ok"];
+} // End helper.
+
+async function resolveTelemetryObservationFieldId(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string): Promise<string | null> { // Attach latest field dimension for observation indexing.
+  try {
+    const q = await clientConn.query(
+      `SELECT field_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+      [tenant_id, device_id]
+    );
+    if ((q.rows ?? []).length < 1) return null;
+    const field_id = q.rows[0]?.field_id;
+    return typeof field_id === "string" && field_id.trim().length > 0 ? field_id.trim() : null;
+  } catch {
+    return null;
+  }
+} // End helper.
+
+/**
+ * Data-layer contract:
+ * raw_telemetry_v1 is ingress-only evidence for audit/replay and must not be consumed
+ * directly by dashboard/agronomy business pipelines.
+ * Business reads should consume normalized device_observation_v1 only.
+ */
+
 async function main() { // Main bootstrap for telemetry + heartbeat ingest.
   const databaseUrl = resolveDatabaseUrl(); // Resolve Postgres connection string.
   if (!databaseUrl) throw new Error("DATABASE_URL_NOT_CONFIGURED"); // Require database before starting.
@@ -83,6 +120,14 @@ async function main() { // Main bootstrap for telemetry + heartbeat ingest.
   const once = process.argv.includes("--once"); // One-shot mode for smoke tests.
 
   const pool = new Pool({ connectionString: databaseUrl }); // Create Postgres pool.
+  {
+    const setupConn = await pool.connect();
+    try {
+      await ensureDeviceObservationProjectionV1(setupConn);
+    } finally {
+      setupConn.release();
+    }
+  }
   const client = mqtt.connect(mqttUrl); // Connect to MQTT broker.
   let ready = false; // Gate message handling until subscribe callback succeeds.
 
@@ -245,6 +290,23 @@ record = { // Telemetry record.
 
       let projInserted = false; // Whether a projection row was inserted (telemetry) or updated (heartbeat).
       if (parsed.kind === "telemetry") { // Telemetry projection path.
+        const normalized = normalizeMetric(String((p as any).metric ?? "")); // Step-1 normalize: raw_telemetry_v1 -> normalize.
+        const quality_flags = toQualityFlags((p as any).value); // Normalize quality flags.
+        const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Attach field dimension when bound.
+        await appendDeviceObservationV1(clientConn, { // Step-2 write normalized business observation: normalize -> device_observation_v1.
+          tenant_id: parsed.tenant_id,
+          project_id: null,
+          group_id: null,
+          device_id: parsed.device_id,
+          field_id,
+          metric: normalized.metric,
+          value: (p as any).value,
+          unit: normalized.unit,
+          quality_flags,
+          confidence: quality_flags.includes("ok") ? 1 : 0,
+          observed_at_ts_ms: p.ts_ms,
+          source_fact_id: fact_id,
+        });
         const projRes = await clientConn.query(
           `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
            VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
