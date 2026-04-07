@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { DashboardRecommendationItem } from "../../../api/dashboard";
 import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
+import { resolveFreshnessTone, toneCardClass, toneHintText } from "../../../lib/fieldReadModelV1";
 import { mapFieldDisplayName } from "../../../lib/operationLabels";
 import { SectionCard, StatusPill } from "../../../shared/ui";
 
@@ -22,13 +23,6 @@ type EvidenceItem = {
 };
 
 type GroupKey = "PASS" | "PENDING_ACCEPTANCE" | "EXECUTION_EXCEPTION" | "EVIDENCE_MISSING";
-
-function freshnessTone(value: string | null | undefined): "" | "staleStateCard" | "emptyStateCard" {
-  const raw = String(value ?? "").trim().toLowerCase();
-  if (!raw || raw === "no_data" || raw === "unknown") return "emptyStateCard";
-  if (raw === "stale") return "staleStateCard";
-  return "";
-}
 
 function classifyGroup(item: EvidenceItem): GroupKey {
   const verdict = String(item?.acceptanceVerdict ?? "").toUpperCase();
@@ -175,18 +169,26 @@ export default function EvidenceOutcomeSection({
             <div className="decisionItemTitle">今日自动建议</div>
             <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
           </div>
-          <div className={`decisionItemStatic ${freshnessTone(latestReadModel.sensing_freshness)}`}>
+          <div className={`decisionItemStatic ${toneCardClass(resolveFreshnessTone(latestReadModel.sensing_freshness))}`}>
             <div className="decisionItemTitle">field_sensing_overview_v1</div>
             <div className="decisionItemMeta">
               状态：{latestReadModel.sensing_status ?? "--"} · 新鲜度：{latestReadModel.sensing_freshness ?? "--"}
-              {latestReadModel.sensing_freshness === "stale" ? "（数据已过期，请优先核查现场连通性）" : ""}
+              {toneHintText(resolveFreshnessTone(latestReadModel.sensing_freshness)) ? `（${toneHintText(resolveFreshnessTone(latestReadModel.sensing_freshness))}）` : ""}
             </div>
           </div>
-          <div className={`decisionItemStatic ${freshnessTone(latestReadModel.fertility_freshness)}`}>
+          <div className={`decisionItemStatic ${toneCardClass(resolveFreshnessTone(latestReadModel.fertility_freshness))}`}>
             <div className="decisionItemTitle">field_fertility_state_v1</div>
             <div className="decisionItemMeta">
               状态：{latestReadModel.fertility_state ?? "--"} · 新鲜度：{latestReadModel.fertility_freshness ?? "--"}
-              {latestReadModel.fertility_freshness === "stale" ? "（状态过期，建议人工复核）" : ""}
+              {toneHintText(resolveFreshnessTone(latestReadModel.fertility_freshness)) ? `（${toneHintText(resolveFreshnessTone(latestReadModel.fertility_freshness))}）` : ""}
+            </div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">recommendation_bias</div>
+            <div className="decisionItemMeta">
+              <StatusPill tone={latestReadModel.recommendation_bias ? "warning" : "neutral"}>
+                {latestReadModel.recommendation_bias ?? "无偏置提示"}
+              </StatusPill>
             </div>
           </div>
           <div className="decisionItemStatic">
@@ -198,20 +200,12 @@ export default function EvidenceOutcomeSection({
             <div className="decisionItemMeta">{latestReadModel.confidence == null ? "暂无数据" : `${Math.round(Number(latestReadModel.confidence) * 100)}%`}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">last_updated</div>
+            <div className="decisionItemTitle">updated_at</div>
             <div className="decisionItemMeta">{latestReadModel.last_updated == null ? "--" : String(latestReadModel.last_updated)}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">source</div>
             <div className="decisionItemMeta">{latestReadModel.source_label ?? "field_sensing_overview_v1 + field_fertility_state_v1"}</div>
-          </div>
-          <div className="decisionItemStatic">
-            <div className="decisionItemTitle">recommendation_bias</div>
-            <div className="decisionItemMeta">
-              <StatusPill tone={latestReadModel.recommendation_bias ? "warning" : "neutral"}>
-                {latestReadModel.recommendation_bias ?? "无偏置提示"}
-              </StatusPill>
-            </div>
           </div>
         </div>
       </details>
