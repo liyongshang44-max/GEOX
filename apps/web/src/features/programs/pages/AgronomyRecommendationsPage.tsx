@@ -2,14 +2,17 @@
 import React from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  fetchAgronomyRecommendationDetail,
   fetchAgronomyRecommendationDetailControlPlane,
+  fetchAgronomyRecommendations,
   fetchAgronomyRecommendationsControlPlane,
   submitRecommendationApproval,
-} from "../../../lib/api";
+} from "../../../api/programs";
 import ErrorState from "../../../components/common/ErrorState";
 import EmptyState from "../../../components/common/EmptyState";
 import StatusBadge from "../../../components/common/StatusBadge";
 import { RelativeTime } from "../../../components/RelativeTime";
+import { parseFieldReadModelV1 } from "../../../lib/fieldReadModelV1";
 
 type ListItem = any;
 type DetailItem = any;
@@ -55,6 +58,8 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>("");
   const fieldIdFilter = React.useMemo(() => String(searchParams.get("field_id") ?? "").trim(), [searchParams]);
+  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
+  const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_LEGACY_AGRONOMY_FALLBACK ?? "1") !== "0";
 
   const visibleItems = React.useMemo(() => {
     if (!fieldIdFilter) return items;
@@ -70,15 +75,32 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
     setLoading(true);
     setError("");
     try {
-      const res = await fetchAgronomyRecommendationsControlPlane({ limit: 50, field_id: fieldIdFilter || undefined });
-      const nextItems = Array.isArray(res.items) ? res.items : [];
+      let nextItems: ListItem[] = [];
+      let nextSummary = { total: 0, pending: 0, in_approval: 0, receipted: 0 };
+      try {
+        const res = await fetchAgronomyRecommendationsControlPlane({ limit: 50, field_id: fieldIdFilter || undefined });
+        nextItems = Array.isArray(res.items) ? res.items : [];
+        nextSummary = res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 };
+      } catch (cpError) {
+        if (!enableLegacyFallback) throw cpError;
+        const legacyRes = await fetchAgronomyRecommendations({ limit: 50 });
+        const legacyItems = Array.isArray(legacyRes.items) ? legacyRes.items : [];
+        nextItems = fieldIdFilter ? legacyItems.filter((item) => toFieldId(item) === fieldIdFilter) : legacyItems;
+        nextSummary = buildSummaryFromItems(nextItems);
+      }
       setItems(nextItems);
-      setSummary(res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 });
+      setSummary(nextSummary);
       const candidates = fieldIdFilter ? nextItems.filter((item) => toFieldId(item) === fieldIdFilter) : nextItems;
       const targetId = recommendationId || candidates?.[0]?.recommendation_id;
       if (targetId) {
-        const detail = await fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: targetId });
-        setSelected(detail.item);
+        try {
+          const detail = await fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: targetId });
+          setSelected(detail.item);
+        } catch (cpDetailError) {
+          if (!enableLegacyFallback) throw cpDetailError;
+          const legacyDetail = await fetchAgronomyRecommendationDetail({ recommendation_id: targetId });
+          setSelected(legacyDetail.item);
+        }
       } else {
         setSelected(null);
       }
@@ -142,6 +164,13 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
           ) : null}
           <div className="demoList">
             {visibleItems.map((item) => (
+              (() => {
+                const parsedReadModel = parseFieldReadModelV1(item);
+                const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
+                const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
+                const recommendationBias = fertilityV1?.recommendationBias ?? null;
+                const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
+                return (
               <div key={item.recommendation_id} className="card demoInfoCard">
                 <button
                   className="btn"
@@ -149,7 +178,15 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                   onClick={() => {
                     fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: item.recommendation_id })
                       .then((res) => setSelected(res.item))
-                      .catch((e: any) => setError(String(e?.message ?? e)));
+                      .catch(async () => {
+                        if (!enableLegacyFallback) return;
+                        try {
+                          const legacy = await fetchAgronomyRecommendationDetail({ recommendation_id: item.recommendation_id });
+                          setSelected(legacy.item);
+                        } catch (e: any) {
+                          setError(String(e?.message ?? e));
+                        }
+                      });
                   }}
                 >
                   <div style={{ display: "grid", gap: 8, width: "100%" }}>
@@ -161,6 +198,17 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                       <StatusBadge status={item?.status?.code || item?.status?.label || "PENDING"} />
                     </div>
                     <div className="decisionItemMeta">{item.reason_summary || "-"}</div>
+                    {sensingV1 ? (
+                      <div className="decisionItemMeta">field_sensing_overview_v1 · 状态：{sensingV1.status || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                    ) : null}
+                    {fertilityV1 ? (
+                      <div className="decisionItemMeta">field_fertility_state_v1 · 状态：{fertilityV1.status || fertilityV1.fertilityState || "--"} · 解释码：{fertilityV1.explainCodes.join(" / ") || "--"}</div>
+                    ) : null}
+                    {showBiasWarning ? (
+                      <div className="decisionItemMeta" style={{ color: "var(--color-status-risk-fg)", fontWeight: 700 }}>
+                        ⚠️ recommendation_bias={recommendationBias}，请优先人工检查与复核。
+                      </div>
+                    ) : null}
                     <StepChain steps={Array.isArray(item?.progress?.steps) ? item.progress.steps : []} />
                     <div className="decisionItemMeta">
                       证据数 {item.evidence_count ?? 0} · 规则数 {item.rule_count ?? 0} · 置信度 {item.confidence ?? "-"} · 更新时间 <RelativeTime value={item.updated_ts_ms || item.updated_at} />
@@ -182,6 +230,8 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                   </div>
                 ) : null}
               </div>
+                );
+              })()
             ))}
           </div>
         </section>
@@ -193,6 +243,13 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
           </div>
 
           {!selected ? <EmptyState title="请选择左侧建议" description="可查看建议原因、链路状态与关联审批信息" /> : (
+            (() => {
+              const parsedReadModel = parseFieldReadModelV1(selected);
+              const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
+              const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
+              const recommendationBias = fertilityV1?.recommendationBias ?? null;
+              const showBiasWarning = recommendationBias === "irrigate_first" || recommendationBias === "inspect";
+              return (
             <div className="decisionList">
               <div className="decisionItemStatic">
                 <div className="decisionItemTitle">建议动作</div>
@@ -207,6 +264,25 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                 <div className="decisionItemTitle">当前链路状态</div>
                 <div className="decisionItemMeta">审批：{selected?.pipeline?.approval?.status?.label || "-"} · 执行：{selected?.pipeline?.execution?.status?.label || "-"}</div>
               </div>
+              {sensingV1 ? (
+                <div className="decisionItemStatic">
+                  <div className="decisionItemTitle">field_sensing_overview_v1</div>
+                  <div className="decisionItemMeta">状态：{sensingV1.status || "--"} · 解释码：{sensingV1.explainCodes.join(" / ") || "--"}</div>
+                </div>
+              ) : null}
+              {fertilityV1 ? (
+                <div className="decisionItemStatic">
+                  <div className="decisionItemTitle">field_fertility_state_v1</div>
+                  <div className="decisionItemMeta">状态：{fertilityV1.status || fertilityV1.fertilityState || "--"} · 解释码：{fertilityV1.explainCodes.join(" / ") || "--"}</div>
+                  <div className="decisionItemMeta">recommendation_bias：{recommendationBias || "--"}</div>
+                </div>
+              ) : null}
+              {showBiasWarning ? (
+                <div className="decisionItemStatic" style={{ borderColor: "var(--color-status-risk-border)", background: "var(--color-status-risk-bg)" }}>
+                  <div className="decisionItemTitle">⚠️ 偏置提示</div>
+                  <div className="decisionItemMeta">recommendation_bias={recommendationBias}，建议先人工巡检再推进执行。</div>
+                </div>
+              ) : null}
               <details className="traceDetails">
                 <summary>技术折叠区</summary>
                 <div className="traceGrid">
@@ -218,6 +294,8 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                 </div>
               </details>
             </div>
+              );
+            })()
           )}
         </section>
       </section>
