@@ -513,7 +513,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         hardRuleConstraints = {
           ...body.constraints,
           moisture_constraint:
-            fertilityState.recommendation_bias === "irrigate_first" || fertilityState.fertility_level === "LOW"
+            fertilityState.recommendation_bias === "irrigate_first" || String(fertilityState.fertility_level ?? "").trim().toLowerCase() === "low"
               ? "dry"
               : body.constraints?.moisture_constraint,
           salinity_risk:

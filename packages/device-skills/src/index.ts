@@ -1,3 +1,5 @@
+import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_core_v1";
+
 export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
 export type FertilityLevel = "low" | "medium" | "high" | "unknown";
@@ -233,75 +235,33 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
     const ecSeries = observations
       .map((x) => firstFiniteFromObservation(x, ["ec_ds_m", "ec", "soil_ec_ds_m", "salinity_ec_ds_m"]))
       .filter((x): x is number => x != null);
-    const fertilityIndexSeries = observations
-      .map((x) => firstFiniteFromObservation(x, ["fertility_index", "soil_fertility_index"]))
-      .filter((x): x is number => x != null);
-    const npkSeries = observations
-      .map((x) => {
-        const n = firstFiniteFromObservation(x, ["n", "nitrogen", "soil_n"]);
-        const p = firstFiniteFromObservation(x, ["p", "phosphorus", "soil_p"]);
-        const k = firstFiniteFromObservation(x, ["k", "potassium", "soil_k"]);
-        const values = [n, p, k].filter((v): v is number => v != null);
-        if (values.length === 0) return null;
-        return values.reduce((acc, cur) => acc + cur, 0) / values.length;
-      })
+    const canopyTempSeries = observations
+      .map((x) => firstFiniteFromObservation(x, ["canopy_temp_c", "canopy_temp", "temperature_c", "temp_c"]))
       .filter((x): x is number => x != null);
 
     const moisture = soilMoistureSeries.length ? soilMoistureSeries[soilMoistureSeries.length - 1] : null;
     const ec = ecSeries.length ? ecSeries[ecSeries.length - 1] : null;
-    const fertilitySignal = fertilityIndexSeries.length
-      ? fertilityIndexSeries[fertilityIndexSeries.length - 1]
-      : (npkSeries.length ? npkSeries[npkSeries.length - 1] : null);
+    const canopyTemp = canopyTempSeries.length ? canopyTempSeries[canopyTempSeries.length - 1] : null;
 
-    const salinity_risk: SalinityRiskLevel = ec == null
-      ? "unknown"
-      : ec >= 4
-        ? "high"
-        : ec >= 2
-          ? "medium"
-          : "low";
-
-    const fertility_level: FertilityLevel = fertilitySignal == null
-      ? "unknown"
-      : fertilitySignal < 40
-        ? "low"
-        : fertilitySignal >= 70
-          ? "high"
-          : "medium";
-
-    const observedSignalCount = [moisture, ec, fertilitySignal].filter((v) => v != null).length;
-    const confidence = Math.max(0.2, Math.min(0.95, Number((0.25 + observedSignalCount * 0.23).toFixed(2))));
-
-    const recommendation_bias: RecommendationBias = confidence < 0.35
-      ? "inspect"
-      : salinity_risk === "high" && (moisture == null || moisture < 40)
-        ? "irrigate_first"
-        : fertility_level === "low" && salinity_risk !== "high"
-          ? "fertilize"
-          : fertility_level === "unknown"
-            ? "inspect"
-            : "wait";
-
-    const explanation_codes: string[] = [];
-    if (observations.length > 1) explanation_codes.push("multisource_aggregated");
-    if (fertility_level === "low") explanation_codes.push("fertility_low_detected");
-    if (fertility_level === "unknown") explanation_codes.push("fertility_signal_missing");
-    if (salinity_risk === "high") explanation_codes.push("salinity_high_risk");
-    if (salinity_risk === "unknown") explanation_codes.push("salinity_signal_missing");
-    if (recommendation_bias === "irrigate_first") explanation_codes.push("irrigation_priority_due_to_salinity_or_dryness");
-    if (recommendation_bias === "fertilize") explanation_codes.push("fertilization_candidate");
-    if (recommendation_bias === "inspect") explanation_codes.push("manual_inspection_recommended");
+    const inferred = inferFertilityFromObservationAggregateV1({
+      soil_moisture_pct: moisture,
+      ec_ds_m: ec,
+      canopy_temp_c: canopyTemp,
+      observation_count: observations.length,
+    });
 
     return {
       source: "device_observation_v1",
       source_skill_id: "fertility_inference_v1",
       source_skill_version: "v1",
       derived_sensing_state_v1: {
-        fertility_level,
-        recommendation_bias,
-        salinity_risk,
-        confidence,
-        explanation_codes: explanation_codes.length ? explanation_codes : ["baseline_wait"]
+        fertility_level: inferred.fertility_level,
+        recommendation_bias: inferred.recommendation_bias,
+        salinity_risk: inferred.salinity_risk,
+        confidence: inferred.confidence,
+        explanation_codes: observations.length > 1
+          ? Array.from(new Set([...inferred.explanation_codes, "MULTISOURCE_AGGREGATED"]))
+          : inferred.explanation_codes
       }
     };
   }
@@ -442,3 +402,5 @@ export function checkCapabilityCompatibilityMatrix(input: {
     },
   };
 }
+
+export * from "./fertility_inference_core_v1";
