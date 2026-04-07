@@ -9,6 +9,18 @@ export const API_BASE_URL = String(
   DEFAULT_API_BASE
 ).replace(/\/+$/, "");
 
+function readAoActFallbackToken(): string {
+  try {
+    const local = localStorage.getItem("geox_ao_act_token");
+    if (typeof local === "string" && local.trim()) return local.trim();
+  } catch {}
+  try {
+    const session = sessionStorage.getItem("geox_ao_act_token");
+    if (typeof session === "string" && session.trim()) return session.trim();
+  } catch {}
+  return "";
+}
+
 export const OPTIONAL_API_STATUSES = [404, 422] as const;
 
 export class ApiError extends Error {
@@ -88,7 +100,7 @@ export async function apiRequestWithPolicy<T>(
   init?: RequestInit,
   options?: ApiRequestPolicyOptions,
 ): Promise<ApiRequestResult<T>> {
-  const token = readSessionToken();
+  const token = readSessionToken() || readAoActFallbackToken();
   const tenant = readTenantContext();
   const finalUrl = resolveUrl(path);
   const key = buildRequestKey(finalUrl, init);
