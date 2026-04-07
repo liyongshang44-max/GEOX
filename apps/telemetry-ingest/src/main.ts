@@ -7,7 +7,7 @@ import { Pool } from "pg"; // Postgres client pool to write ledger + projection.
 import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
-import { appendDeviceObservationV1, ensureDeviceObservationProjectionV1 } from "../../server/src/services/device_observation_v1"; // raw_telemetry_v1 -> normalize -> device_observation_v1 writer.
+import { ensureDeviceObservationProjectionV1, writeDeviceObservationFactV1 } from "../../server/src/services/device_observation_service_v1"; // raw_telemetry_v1 -> normalize(metric/unit/name) -> quality/confidence -> device_observation_v1 writer.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -83,10 +83,10 @@ function normalizeMetric(metricRaw: string): { metric: string; unit: string | nu
   return { metric, unit: null };
 } // End helper.
 
-function toQualityFlags(value: unknown): string[] { // Derive basic quality flags for normalized observation.
-  if (value == null) return ["missing_value"];
-  if (typeof value === "number" && !Number.isFinite(value)) return ["not_finite"];
-  return ["ok"];
+function toQualityFlags(value: unknown): string[] { // Derive basic quality flags for normalized observation contract.
+  if (value == null) return ["MISSING_CONTEXT"];
+  if (typeof value === "number" && !Number.isFinite(value)) return ["OUTLIER"];
+  return ["OK"];
 } // End helper.
 
 async function resolveTelemetryObservationFieldId(clientConn: import("pg").PoolClient, tenant_id: string, device_id: string): Promise<string | null> { // Attach latest field dimension for observation indexing.
@@ -290,10 +290,10 @@ record = { // Telemetry record.
 
       let projInserted = false; // Whether a projection row was inserted (telemetry) or updated (heartbeat).
       if (parsed.kind === "telemetry") { // Telemetry projection path.
-        const normalized = normalizeMetric(String((p as any).metric ?? "")); // Step-1 normalize: raw_telemetry_v1 -> normalize.
-        const quality_flags = toQualityFlags((p as any).value); // Normalize quality flags.
+        const normalized = normalizeMetric(String((p as any).metric ?? "")); // Step-1 normalize(metric/unit/name): raw_telemetry_v1 -> normalize(metric/unit/name).
+        const quality_flags = toQualityFlags((p as any).value); // Step-2 derive quality flags for contract quality_flags.
         const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Attach field dimension when bound.
-        await appendDeviceObservationV1(clientConn, { // Step-2 write normalized business observation: normalize -> device_observation_v1.
+        await writeDeviceObservationFactV1(clientConn, { // Step-3 write normalized business observation: quality/confidence -> device_observation_v1.
           tenant_id: parsed.tenant_id,
           project_id: null,
           group_id: null,
@@ -303,7 +303,7 @@ record = { // Telemetry record.
           value: (p as any).value,
           unit: normalized.unit,
           quality_flags,
-          confidence: quality_flags.includes("ok") ? 1 : 0,
+          confidence: quality_flags.includes("OK") ? 1 : 0,
           observed_at_ts_ms: p.ts_ms,
           source_fact_id: fact_id,
         });

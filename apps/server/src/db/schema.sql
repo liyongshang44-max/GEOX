@@ -54,3 +54,12 @@ CREATE TABLE IF NOT EXISTS skill_registry_read_v1 (
 
 CREATE INDEX IF NOT EXISTS idx_skill_registry_read_v1_lookup
 ON skill_registry_read_v1 (tenant_id, project_id, group_id, category, status, crop_code, device_type, trigger_stage, bind_target, updated_at_ts_ms DESC);
+
+-- Device observation read-model indexes (safe no-op when projection table has not been created yet).
+DO $$
+BEGIN
+  IF to_regclass('public.device_observation_index_v1') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_tenant_field_time
+      ON device_observation_index_v1 (tenant_id, field_id, observed_at_ts_ms DESC);
+  END IF;
+END $$;
