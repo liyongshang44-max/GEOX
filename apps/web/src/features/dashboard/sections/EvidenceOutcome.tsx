@@ -44,17 +44,37 @@ const GROUP_META: Record<GroupKey, { title: string; tone: "success" | "warning" 
 export default function EvidenceOutcomeSection({
   evidenceItems,
   smartRecommendations,
-  latestMetrics,
+  latestReadModel,
   loadError,
 }: {
   evidenceItems: EvidenceItem[];
   smartRecommendations: {
     todayCount: number;
     latest: (DashboardRecommendationItem & {
-      normalized_metrics?: { soil_moisture: number | null; temperature: number | null; humidity: number | null };
+      normalized_read_model?: {
+        soil_moisture: number | null;
+        soil_temperature: number | null;
+        soil_ec: number | null;
+        soil_ph: number | null;
+        fertility_state: string | null;
+        salinity_risk: string | null;
+        confidence: number | null;
+        recommendation_bias: string | null;
+        last_updated: string | number | null;
+      };
     }) | null;
   };
-  latestMetrics: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null };
+  latestReadModel: {
+    soil_moisture?: number | null;
+    soil_temperature?: number | null;
+    soil_ec?: number | null;
+    soil_ph?: number | null;
+    fertility_state?: string | null;
+    salinity_risk?: string | null;
+    confidence?: number | null;
+    recommendation_bias?: string | null;
+    last_updated?: string | number | null;
+  };
   loadError?: string | null;
 }): React.ReactElement {
   if (loadError) {
@@ -144,17 +164,53 @@ export default function EvidenceOutcomeSection({
             <div className="decisionItemTitle">今日自动建议</div>
             <div className="decisionItemMeta">{smartRecommendations.todayCount} 条</div>
           </div>
+          {latestReadModel.soil_moisture != null ? (
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">soil_moisture</div>
+              <div className="decisionItemMeta">{Number(latestReadModel.soil_moisture).toFixed(1)}%</div>
+            </div>
+          ) : null}
+          {latestReadModel.soil_temperature != null ? (
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">soil_temperature</div>
+              <div className="decisionItemMeta">{Number(latestReadModel.soil_temperature).toFixed(1)}°C</div>
+            </div>
+          ) : null}
+          {latestReadModel.soil_ec != null ? (
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">soil_ec</div>
+              <div className="decisionItemMeta">{Number(latestReadModel.soil_ec).toFixed(2)} dS/m</div>
+            </div>
+          ) : null}
+          {latestReadModel.soil_ph != null ? (
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">soil_ph</div>
+              <div className="decisionItemMeta">{Number(latestReadModel.soil_ph).toFixed(2)}</div>
+            </div>
+          ) : null}
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">soil_moisture</div>
-            <div className="decisionItemMeta">{latestMetrics.soil_moisture == null ? "--" : `${Number(latestMetrics.soil_moisture).toFixed(1)}%`}</div>
+            <div className="decisionItemTitle">fertility_state</div>
+            <div className="decisionItemMeta">{latestReadModel.fertility_state ?? "--"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">temperature</div>
-            <div className="decisionItemMeta">{latestMetrics.temperature == null ? "--" : `${Number(latestMetrics.temperature).toFixed(1)}°C`}</div>
+            <div className="decisionItemTitle">salinity_risk</div>
+            <div className="decisionItemMeta">{latestReadModel.salinity_risk ?? "--"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">humidity</div>
-            <div className="decisionItemMeta">{latestMetrics.humidity == null ? "--" : `${Number(latestMetrics.humidity).toFixed(1)}%`}</div>
+            <div className="decisionItemTitle">confidence</div>
+            <div className="decisionItemMeta">{latestReadModel.confidence == null ? "--" : Number(latestReadModel.confidence).toFixed(2)}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">last_updated</div>
+            <div className="decisionItemMeta">{latestReadModel.last_updated == null ? "--" : String(latestReadModel.last_updated)}</div>
+          </div>
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">recommendation_bias</div>
+            <div className="decisionItemMeta">
+              <StatusPill tone={latestReadModel.recommendation_bias ? "warning" : "neutral"}>
+                {latestReadModel.recommendation_bias ?? "无偏置提示"}
+              </StatusPill>
+            </div>
           </div>
         </div>
       </details>
