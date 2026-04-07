@@ -9,6 +9,11 @@ import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
+import {
+  appendDerivedSensingStateV1,
+  ensureDerivedSensingStateProjectionV1,
+  getLatestDerivedSensingStatesByFieldV1
+} from "../services/derived_sensing_state_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -649,6 +654,7 @@ function toAoActParameterSchema(parameters: Record<string, number | boolean | st
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
   app.addHook("onReady", async () => {
     await ensureRulePerformanceTable(pool);
+    await ensureDerivedSensingStateProjectionV1(pool);
   });
 
   app.get("/api/v1/agronomy/rule-performance", async (req, reply) => {
@@ -696,7 +702,14 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const fieldId = String(q.field_id ?? "").trim();
     const limit = Math.max(1, Math.min(Number(q.limit ?? 50) || 50, 200));
     const rows = await loadRecommendations(pool, tenant, limit, fieldId);
-    const items = await Promise.all(rows.map(async (row) => normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant))));
+    const items = await Promise.all(rows.map(async (row) => {
+      const item = normalizeRecommendationOutput(row, await loadRecommendationChainById(pool, String(row?.record_json?.payload?.recommendation_id ?? ""), tenant));
+      const field_id = String(item?.field_id ?? "").trim();
+      const latest_states = field_id
+        ? await getLatestDerivedSensingStatesByFieldV1(pool, { ...tenant, field_id })
+        : [];
+      return { ...item, latest_derived_sensing_states: latest_states };
+    }));
     return reply.send({ ok: true, items, count: rows.length });
   });
 
@@ -716,7 +729,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const row = await loadRecommendationById(pool, recommendation_id, tenant);
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
-    return reply.send({ ok: true, item: normalizeRecommendationOutput(row, chain) });
+    const item = normalizeRecommendationOutput(row, chain);
+    const field_id = String(item?.field_id ?? "").trim();
+    const latest_states = field_id
+      ? await getLatestDerivedSensingStatesByFieldV1(pool, { ...tenant, field_id })
+      : [];
+    return reply.send({ ok: true, item: { ...item, latest_derived_sensing_states: latest_states } });
   });
 
   app.get("/api/v1/agronomy/recommendations/control-plane", async (req, reply) => {
@@ -880,6 +898,46 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     }
 
     const snapshot_id = `snap_${tenant.tenant_id}_${requestedDeviceId}_${snapshot.updated_ts_ms}`;
+    const derivedFieldId = String(body.field_id ?? snapshot.field_id ?? "").trim();
+    if (!derivedFieldId) return badRequest(reply, "MISSING_FIELD_ID");
+    const fertilityState = telemetry.soil_moisture_pct < 22 ? "LOW" : telemetry.soil_moisture_pct < 35 ? "MEDIUM" : "HIGH";
+    const salinityRiskState = telemetry.soil_moisture_pct < 20 && telemetry.canopy_temp_c >= 32 ? "HIGH" : telemetry.canopy_temp_c >= 30 ? "MEDIUM" : "LOW";
+    await appendDerivedSensingStateV1(pool, {
+      ...tenant,
+      field_id: derivedFieldId,
+      state_type: "fertility_state",
+      payload: {
+        level: fertilityState,
+        soil_moisture_pct: telemetry.soil_moisture_pct,
+        canopy_temp_c: telemetry.canopy_temp_c
+      },
+      confidence: 0.72,
+      explanation_codes: [
+        "RULE_SOIL_MOISTURE_FERTILITY_PROXY_V1",
+        telemetry.soil_moisture_pct < 22 ? "LOW_SOIL_MOISTURE" : "ADEQUATE_SOIL_MOISTURE"
+      ],
+      source_device_ids: [requestedDeviceId],
+      computed_at_ts_ms: Date.now(),
+      source: "decision_engine_v1"
+    });
+    await appendDerivedSensingStateV1(pool, {
+      ...tenant,
+      field_id: derivedFieldId,
+      state_type: "salinity_risk_state",
+      payload: {
+        level: salinityRiskState,
+        soil_moisture_pct: telemetry.soil_moisture_pct,
+        canopy_temp_c: telemetry.canopy_temp_c
+      },
+      confidence: 0.68,
+      explanation_codes: [
+        "RULE_HEAT_DRYNESS_SALINITY_PROXY_V1",
+        salinityRiskState === "HIGH" ? "HEAT_AND_DRYNESS_COMBINED" : "NO_HIGH_RISK_SIGNAL"
+      ],
+      source_device_ids: [requestedDeviceId],
+      computed_at_ts_ms: Date.now(),
+      source: "decision_engine_v1"
+    });
     const recommendations = buildRecommendations(body, telemetry, snapshot_id);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");

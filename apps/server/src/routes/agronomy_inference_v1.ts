@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import * as GeoxContracts from "@geox/contracts";
 import { runAgronomyInferenceV1, type InferenceTaskTypeV1 } from "../services/agronomy_inference_service_v1";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
+import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
 const { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } = GeoxContracts;
 function normalizeString(v: unknown, maxLen = 128): string | null {
   if (typeof v !== "string") return null;
@@ -201,6 +202,9 @@ async function ensureAgronomyInferenceIndexV1(pool: Pool): Promise<void> {
 export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Pool): void {
   void ensureAgronomyInferenceIndexV1(pool).catch((e: any) => {
     app.log.error({ err: e }, "failed_to_ensure_agronomy_inference_index_v1");
+  });
+  void ensureDerivedSensingStateProjectionV1(pool).catch((e: any) => {
+    app.log.error({ err: e }, "failed_to_ensure_derived_sensing_state_index_v1");
   });
 
   app.post("/api/v1/agronomy/inference/run", async (req, reply) => {
@@ -514,6 +518,12 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
     }
 
     const recentInferenceResults = (inferenceQ.rows ?? []).map((row: any) => formatInferenceRow(row));
+    const derivedStateRows = await getLatestDerivedSensingStatesByFieldV1(pool, {
+      tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      field_id
+    });
     const decision_input = buildAgronomyDecisionInput(recentInferenceResults, telemetrySummary);
 
     return reply.send({
@@ -522,6 +532,7 @@ export function registerAgronomyInferenceV1Routes(app: FastifyInstance, pool: Po
       field_id,
       recent_observations: observationsQ.rows ?? [],
       recent_inference_results: recentInferenceResults,
+      latest_derived_sensing_states: derivedStateRows,
       telemetry_summary: telemetrySummary,
       decision_input,
     });

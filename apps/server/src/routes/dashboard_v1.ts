@@ -9,6 +9,7 @@ import {
   listManualExecutionQualityTaskDetailsV1,
   type ManualExecutionQualityDimension
 } from "../projections/manual_execution_quality_v1";
+import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -93,6 +94,23 @@ function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): Das
 }
 
 export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): void { // Register dashboard summary routes.
+  void ensureDerivedSensingStateProjectionV1(pool).catch(() => null);
+
+  app.get("/api/v1/dashboard/derived-sensing-states", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+    const q: any = (req as any).query ?? {};
+    const field_id = String(q.field_id ?? "").trim();
+    if (!field_id) return badRequest(reply, "MISSING:field_id");
+    const items = await getLatestDerivedSensingStatesByFieldV1(pool, {
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      field_id
+    });
+    return reply.send({ ok: true, field_id, count: items.length, items });
+  });
+
   app.get("/api/v1/dashboard/control-plane", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
