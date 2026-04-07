@@ -158,13 +158,9 @@ export async function listSkillRegistry(input?: {
   scope?: SkillBindingScope;
   limit?: number;
 }): Promise<SkillRegistryItem[]> {
-  try {
-    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
-    const items = normalizeList<SkillRegistryItem>(res);
-    return items.map((item) => normalizeSkillRegistryItem(item));
-  } catch {
-    return [];
-  }
+  const res = await apiRequestOptional<any>(withQuery("/api/v1/skills", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+  const items = normalizeList<SkillRegistryItem>(res);
+  return items.map((item) => normalizeSkillRegistryItem(item));
 }
 
 export async function listSkillBindings(input?: {
