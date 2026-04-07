@@ -105,6 +105,7 @@ type RegressionScenario = {
       salinity_risk: string;
       confidence: number;
     };
+    precheck_reason_codes: string[];
     precheck_action_hints: string[];
   };
 };
@@ -131,6 +132,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "low",
         confidence: 0.95,
       },
+      precheck_reason_codes: ["hard_rule_moisture_constraint_dry"],
       precheck_action_hints: ["irrigate_first"],
     },
   },
@@ -155,6 +157,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "high",
         confidence: 0.95,
       },
+      precheck_reason_codes: ["hard_rule_salinity_risk_high"],
       precheck_action_hints: ["inspect"],
     },
   },
@@ -179,6 +182,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "low",
         confidence: 0.85,
       },
+      precheck_reason_codes: [],
       precheck_action_hints: [],
     },
   },
@@ -203,6 +207,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "low",
         confidence: 0.85,
       },
+      precheck_reason_codes: [],
       precheck_action_hints: [],
     },
   },
@@ -227,6 +232,7 @@ const REGRESSION_MATRIX: RegressionScenario[] = [
         salinity_risk: "unknown",
         confidence: 0.2,
       },
+      precheck_reason_codes: [],
       precheck_action_hints: [],
     },
   },
@@ -251,6 +257,7 @@ for (const scenario of REGRESSION_MATRIX) {
     assert.equal(out.fieldReadModel.computed_at_ts_ms, scenario.input.source_ts_ms);
     assert.ok(out.fieldReadModel.explanation_codes_json.includes("multisource_derived_state_merged"));
 
+    assert.deepEqual(out.precheckHints.map((x) => x.reason_code).sort(), scenario.expected.precheck_reason_codes);
     assert.deepEqual(out.routedActionHints, scenario.expected.precheck_action_hints);
   });
 }

@@ -4,7 +4,7 @@
 
 ## Gate 1：回归矩阵必须全绿（强制）
 
-- 命令：`node --test apps/server/src/domain/sensing/fertility_precheck_e2e.test.ts`
+- 命令：`pnpm -C apps/server test:sensing:closed-loop`
 - 判定标准：5 个场景全部通过，且无 flaky（同一 commit 连续执行至少 2 次结果一致）。
 - 任一失败：**禁止上线**。
 
