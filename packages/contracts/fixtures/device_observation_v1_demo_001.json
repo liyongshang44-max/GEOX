@@ -1,0 +1,17 @@
+{
+  "type": "device_observation_v1",
+  "schema_version": "1.0.0",
+  "tenant_id": "tenant_demo",
+  "project_id": "project_alpha",
+  "group_id": "group_north",
+  "field_id": "field_001",
+  "device_id": "sensor_station_01",
+  "observed_at": "2026-04-07T10:00:00Z",
+  "ingested_at": "2026-04-07T10:00:05Z",
+  "metric_key": "soil_moisture_pct",
+  "metric_value": 27.3,
+  "metric_unit": "%",
+  "confidence": 0.94,
+  "quality_flags": ["OK"],
+  "explanation_codes": ["DIRECT_SENSOR_READING"]
+}
