@@ -106,7 +106,7 @@ export default function OperationDetailPage(): React.ReactElement {
   const errorText = String(error ?? "").toLowerCase();
   const permissionDenied = errorText.includes("403") || errorText.includes("forbidden") || errorText.includes("permission");
 
-  const [executing, setExecuting] = React.useState(false);
+  const [isExecuting, setIsExecuting] = React.useState(false);
   const [runFeedback, setRunFeedback] = React.useState<string>("");
   const [handoffItems, setHandoffItems] = React.useState<OperationHandoffItem[]>([]);
 
@@ -155,7 +155,7 @@ export default function OperationDetailPage(): React.ReactElement {
   const notExecutedYet = !executionTrace?.task_id && !model.receiptEvidence;
   const runFromDetail = async (): Promise<void> => {
     if (!executionReady || !executionPlan) return;
-    setExecuting(true);
+    setIsExecuting(true);
     setRunFeedback("");
     try {
       const res = await executeOperationAction({
@@ -168,7 +168,7 @@ export default function OperationDetailPage(): React.ReactElement {
       setRunFeedback(res?.ok ? `已触发执行任务 ${res.act_task_id ?? "-"}` : `执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
       await reload();
     } finally {
-      setExecuting(false);
+      setIsExecuting(false);
     }
   };
 
@@ -269,8 +269,8 @@ export default function OperationDetailPage(): React.ReactElement {
                 <div className="operationWarningBlock danger">
                   <div>⚠️ 当前执行结果被判定为无效，请补充正式证据或重新执行。</div>
                   <div className="operationWarningActions">
-                    <button className="btn danger" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
-                      {executing ? "执行中..." : "立即重试执行"}
+                    <button className="btn danger" type="button" disabled={!executionReady || isExecuting} onClick={() => { void runFromDetail(); }}>
+                      {isExecuting ? "执行中..." : "立即重试执行"}
                     </button>
                     <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
                   </div>
@@ -314,8 +314,8 @@ export default function OperationDetailPage(): React.ReactElement {
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">为何转人工</span><strong>{model.execution.manualFallbackReasonLabel}</strong></div>
             </div>
             <div style={{ marginTop: 10 }}>
-              <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
-                {executing ? "执行中..." : "一键执行"}
+              <button className="btn" type="button" disabled={!executionReady || isExecuting} onClick={() => { void runFromDetail(); }}>
+                {isExecuting ? "执行中..." : "一键执行"}
               </button>
               {runFeedback ? <span className="muted" style={{ marginLeft: 10 }}>{runFeedback}</span> : null}
             </div>
@@ -385,8 +385,8 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">下一步</span><strong>{model.nextStepHint || "按时间线逐项推进"}</strong></div>
           </div>
           <div className="operationAsideActions">
-            <button className="btn" type="button" disabled={!executionReady || executing} onClick={() => { void runFromDetail(); }}>
-              {executing ? "执行中..." : "一键执行"}
+            <button className="btn" type="button" disabled={!executionReady || isExecuting} onClick={() => { void runFromDetail(); }}>
+              {isExecuting ? "执行中..." : "一键执行"}
             </button>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
             <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
