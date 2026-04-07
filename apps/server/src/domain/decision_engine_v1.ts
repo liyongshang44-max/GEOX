@@ -20,26 +20,31 @@ export type HardRuleActionHintV1 = "irrigate_first" | "inspect";
 export type HardRuleMatchV1 = {
   action_hint: HardRuleActionHintV1;
   reason_code: string;
+  source: "request_constraints" | "field_fertility_state_v1";
 };
 
 export function evaluateHardRuleHintsV1(input: {
   moisture_constraint?: string | null;
   salinity_risk?: string | null;
+  source?: "request_constraints" | "field_fertility_state_v1";
 }): HardRuleMatchV1[] {
   const moistureConstraint = String(input.moisture_constraint ?? "").trim().toLowerCase();
   const salinityRisk = String(input.salinity_risk ?? "").trim().toLowerCase();
+  const source = input.source ?? "request_constraints";
   const out: HardRuleMatchV1[] = [];
 
   if (moistureConstraint === "dry") {
     out.push({
       action_hint: "irrigate_first",
-      reason_code: "hard_rule_moisture_constraint_dry"
+      reason_code: "hard_rule_moisture_constraint_dry",
+      source
     });
   }
   if (salinityRisk === "high") {
     out.push({
       action_hint: "inspect",
-      reason_code: "hard_rule_salinity_risk_high"
+      reason_code: "hard_rule_salinity_risk_high",
+      source
     });
   }
 
