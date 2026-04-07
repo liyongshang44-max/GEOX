@@ -44,15 +44,16 @@ export type ParsedFieldReadModelV1 = {
   } | null;
 };
 
-export function parseFieldReadModelV1(rawRecommendation: any): ParsedFieldReadModelV1 {
+export function parseFieldReadModelV1(rawRecommendation: any, options?: { enableLegacyFallback?: boolean }): ParsedFieldReadModelV1 {
   const readModel = rawRecommendation?.read_model ?? rawRecommendation?.sensing_summary ?? rawRecommendation?.aggregated_result ?? {};
   const sensingFact = pickFact(readModel, "field_sensing_overview_v1");
   const fertilityFact = pickFact(readModel, "field_fertility_state_v1");
   const legacySensing = readModel?.sensing_overview ?? readModel?.sensing ?? readModel;
   const legacyFertility = readModel?.fertility_state ?? readModel?.fertility ?? readModel;
+  const enableLegacyFallback = Boolean(options?.enableLegacyFallback);
 
-  const sensingPayload = sensingFact ?? legacySensing ?? null;
-  const fertilityPayload = fertilityFact ?? legacyFertility ?? null;
+  const sensingPayload = sensingFact ?? (enableLegacyFallback ? legacySensing : null) ?? null;
+  const fertilityPayload = fertilityFact ?? (enableLegacyFallback ? legacyFertility : null) ?? null;
 
   return {
     sensing: sensingPayload
