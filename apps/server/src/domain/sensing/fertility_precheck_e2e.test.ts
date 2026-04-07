@@ -6,13 +6,16 @@ import { composeFieldFertilityStateFromDerivedRowsV1 } from "../../projections/f
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../decision_engine_v1";
 
 type E2EScenarioInput = {
-  soil_moisture_pct: number;
-  ec_ds_m: number;
-  canopy_temp_c: number;
+  soil_moisture_pct?: number | null;
+  ec_ds_m?: number | null;
+  canopy_temp_c?: number | null;
   source_ts_ms: number;
 };
 
 function runPerceptionClosedLoopScenario(input: E2EScenarioInput) {
+  const asFiniteOrNull = (value: number | null | undefined): number | null =>
+    value == null ? null : Number.isFinite(value) ? value : null;
+
   const observation = {
     type: "device_observation_v1",
     payload: {
@@ -24,9 +27,9 @@ function runPerceptionClosedLoopScenario(input: E2EScenarioInput) {
   };
 
   const derivedState = inferFertilityFromObservationAggregateV1({
-    soil_moisture_pct: Number(observation.payload.soil_moisture_pct),
-    ec_ds_m: Number(observation.payload.ec_ds_m),
-    canopy_temp_c: Number(observation.payload.canopy_temp_c),
+    soil_moisture_pct: asFiniteOrNull(observation.payload.soil_moisture_pct),
+    ec_ds_m: asFiniteOrNull(observation.payload.ec_ds_m),
+    canopy_temp_c: asFiniteOrNull(observation.payload.canopy_temp_c),
     observation_count: 1,
     source_ids: ["device_e2e_1"],
   });
@@ -86,69 +89,175 @@ function runPerceptionClosedLoopScenario(input: E2EScenarioInput) {
   };
 }
 
-test("e2e scenario (route A): telemetry -> observation -> derived state -> read model -> precheck: irrigate_first", () => {
-  const sourceTs = Date.parse("2026-04-07T08:00:00.000Z");
-  const out = runPerceptionClosedLoopScenario({
-    soil_moisture_pct: 18,
-    ec_ds_m: 1.2,
-    canopy_temp_c: 33,
-    source_ts_ms: sourceTs,
+type RegressionScenario = {
+  name: string;
+  input: E2EScenarioInput;
+  expected: {
+    derived: {
+      fertility_level: string;
+      recommendation_bias: string;
+      salinity_risk: string;
+      confidence: number;
+    };
+    field: {
+      fertility_level: string;
+      recommendation_bias: string;
+      salinity_risk: string;
+      confidence: number;
+    };
+    precheck_reason_codes: string[];
+    precheck_action_hints: string[];
+  };
+};
+
+const REGRESSION_MATRIX: RegressionScenario[] = [
+  {
+    name: "dry -> irrigate_first",
+    input: {
+      soil_moisture_pct: 18,
+      ec_ds_m: 1.2,
+      canopy_temp_c: 33,
+      source_ts_ms: Date.parse("2026-04-07T08:00:00.000Z"),
+    },
+    expected: {
+      derived: {
+        fertility_level: "low",
+        recommendation_bias: "irrigate_first",
+        salinity_risk: "low",
+        confidence: 0.95,
+      },
+      field: {
+        fertility_level: "low",
+        recommendation_bias: "irrigate_first",
+        salinity_risk: "low",
+        confidence: 0.95,
+      },
+      precheck_reason_codes: ["hard_rule_moisture_constraint_dry"],
+      precheck_action_hints: ["irrigate_first"],
+    },
+  },
+  {
+    name: "high salinity -> inspect",
+    input: {
+      soil_moisture_pct: 42,
+      ec_ds_m: 3.4,
+      canopy_temp_c: 31,
+      source_ts_ms: Date.parse("2026-04-07T09:00:00.000Z"),
+    },
+    expected: {
+      derived: {
+        fertility_level: "high",
+        recommendation_bias: "inspect",
+        salinity_risk: "high",
+        confidence: 0.95,
+      },
+      field: {
+        fertility_level: "high",
+        recommendation_bias: "inspect",
+        salinity_risk: "high",
+        confidence: 0.95,
+      },
+      precheck_reason_codes: ["hard_rule_salinity_risk_high"],
+      precheck_action_hints: ["inspect"],
+    },
+  },
+  {
+    name: "normal (fertilize)",
+    input: {
+      soil_moisture_pct: 30,
+      ec_ds_m: 1.8,
+      canopy_temp_c: 25,
+      source_ts_ms: Date.parse("2026-04-07T10:00:00.000Z"),
+    },
+    expected: {
+      derived: {
+        fertility_level: "medium",
+        recommendation_bias: "fertilize",
+        salinity_risk: "low",
+        confidence: 0.85,
+      },
+      field: {
+        fertility_level: "medium",
+        recommendation_bias: "fertilize",
+        salinity_risk: "low",
+        confidence: 0.85,
+      },
+      precheck_reason_codes: [],
+      precheck_action_hints: [],
+    },
+  },
+  {
+    name: "normal (wait)",
+    input: {
+      soil_moisture_pct: 30,
+      ec_ds_m: 0.8,
+      canopy_temp_c: 35,
+      source_ts_ms: Date.parse("2026-04-07T11:00:00.000Z"),
+    },
+    expected: {
+      derived: {
+        fertility_level: "medium",
+        recommendation_bias: "wait",
+        salinity_risk: "low",
+        confidence: 0.85,
+      },
+      field: {
+        fertility_level: "medium",
+        recommendation_bias: "wait",
+        salinity_risk: "low",
+        confidence: 0.85,
+      },
+      precheck_reason_codes: [],
+      precheck_action_hints: [],
+    },
+  },
+  {
+    name: "observation missing fallback",
+    input: {
+      soil_moisture_pct: null,
+      ec_ds_m: null,
+      canopy_temp_c: null,
+      source_ts_ms: Date.parse("2026-04-07T12:00:00.000Z"),
+    },
+    expected: {
+      derived: {
+        fertility_level: "unknown",
+        recommendation_bias: "inspect",
+        salinity_risk: "unknown",
+        confidence: 0.2,
+      },
+      field: {
+        fertility_level: "unknown",
+        recommendation_bias: "inspect",
+        salinity_risk: "unknown",
+        confidence: 0.2,
+      },
+      precheck_reason_codes: [],
+      precheck_action_hints: [],
+    },
+  },
+];
+
+for (const scenario of REGRESSION_MATRIX) {
+  test(`fertility precheck regression matrix: ${scenario.name}`, () => {
+    const out = runPerceptionClosedLoopScenario(scenario.input);
+
+    assert.equal(out.observation.type, "device_observation_v1");
+    assert.equal(out.observation.source_ts_ms, scenario.input.source_ts_ms);
+
+    assert.equal(out.derivedState.fertility_level, scenario.expected.derived.fertility_level);
+    assert.equal(out.derivedState.recommendation_bias, scenario.expected.derived.recommendation_bias);
+    assert.equal(out.derivedState.salinity_risk, scenario.expected.derived.salinity_risk);
+    assert.equal(out.derivedState.confidence, scenario.expected.derived.confidence);
+
+    assert.equal(out.fieldReadModel.fertility_level, scenario.expected.field.fertility_level);
+    assert.equal(out.fieldReadModel.recommendation_bias, scenario.expected.field.recommendation_bias);
+    assert.equal(out.fieldReadModel.salinity_risk, scenario.expected.field.salinity_risk);
+    assert.equal(out.fieldReadModel.confidence, scenario.expected.field.confidence);
+    assert.equal(out.fieldReadModel.computed_at_ts_ms, scenario.input.source_ts_ms);
+    assert.ok(out.fieldReadModel.explanation_codes_json.includes("multisource_derived_state_merged"));
+
+    assert.deepEqual(out.precheckHints.map((x) => x.reason_code).sort(), scenario.expected.precheck_reason_codes);
+    assert.deepEqual(out.routedActionHints, scenario.expected.precheck_action_hints);
   });
-
-  // step 1: telemetry ingress -> device_observation_v1
-  assert.equal(out.observation.type, "device_observation_v1");
-  assert.equal(out.observation.source_ts_ms, sourceTs);
-  assert.equal(out.observation.payload.soil_moisture_pct, 18);
-
-  // step 2: inference -> derived_sensing_state_v1（使用领域推理结果作为 derived state payload）
-  assert.equal(out.derivedState.fertility_level, "low");
-  assert.equal(out.derivedState.recommendation_bias, "irrigate_first");
-  assert.equal(out.derivedState.salinity_risk, "low");
-  assert.equal(out.derivedState.confidence, 0.95);
-  assert.ok(out.derivedState.explanation_codes.includes("LOW_SOIL_MOISTURE"));
-  assert.ok(out.derivedState.explanation_codes.includes("RULE_MOISTURE_LOW_IRRIGATE_FIRST"));
-
-  // step 3: field 两张读模型聚合（fertility_state + salinity_risk_state）
-  assert.equal(out.fieldReadModel.fertility_level, "low");
-  assert.equal(out.fieldReadModel.recommendation_bias, "irrigate_first");
-  assert.equal(out.fieldReadModel.salinity_risk, "low");
-  assert.equal(out.fieldReadModel.confidence, 0.95);
-  assert.equal(out.fieldReadModel.computed_at_ts_ms, sourceTs);
-  assert.ok(out.fieldReadModel.explanation_codes_json.includes("LOW_SOIL_MOISTURE"));
-  assert.ok(out.fieldReadModel.explanation_codes_json.includes("multisource_derived_state_merged"));
-
-  // step 4: recommendation / precheck 命中分流规则之一
-  assert.deepEqual(out.precheckHints.map((x) => x.reason_code), ["hard_rule_moisture_constraint_dry"]);
-  assert.deepEqual(out.routedActionHints, ["irrigate_first"]);
-});
-
-test("e2e scenario (route B): telemetry -> observation -> derived state -> read model -> precheck: inspect", () => {
-  const sourceTs = Date.parse("2026-04-07T09:00:00.000Z");
-  const out = runPerceptionClosedLoopScenario({
-    soil_moisture_pct: 42,
-    ec_ds_m: 3.4,
-    canopy_temp_c: 31,
-    source_ts_ms: sourceTs,
-  });
-
-  // step 1
-  assert.equal(out.observation.type, "device_observation_v1");
-  assert.equal(out.observation.source_ts_ms, sourceTs);
-
-  // step 2
-  assert.equal(out.derivedState.fertility_level, "high");
-  assert.equal(out.derivedState.recommendation_bias, "inspect");
-  assert.equal(out.derivedState.salinity_risk, "high");
-  assert.equal(out.derivedState.confidence, 0.95);
-  assert.ok(out.derivedState.explanation_codes.includes("HIGH_EC"));
-
-  // step 3
-  assert.equal(out.fieldReadModel.recommendation_bias, "inspect");
-  assert.equal(out.fieldReadModel.salinity_risk, "high");
-  assert.equal(out.fieldReadModel.confidence, 0.95);
-  assert.equal(out.fieldReadModel.computed_at_ts_ms, sourceTs);
-
-  // step 4
-  assert.deepEqual(out.precheckHints.map((x) => x.reason_code), ["hard_rule_salinity_risk_high"]);
-  assert.deepEqual(out.routedActionHints, ["inspect"]);
-});
+}
