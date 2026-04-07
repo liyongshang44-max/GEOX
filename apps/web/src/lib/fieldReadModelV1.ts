@@ -115,6 +115,27 @@ export function resolveStateTone(status: string | null | undefined): "normal" | 
   return "normal";
 }
 
+export function toneCardClass(tone: "normal" | "warning" | "stale" | "empty" | null | undefined): string {
+  if (tone === "stale") return "staleStateCard";
+  if (tone === "empty") return "emptyStateCard";
+  return "";
+}
+
+export function toneHintText(tone: "normal" | "warning" | "stale" | "empty" | null | undefined): string | null {
+  if (tone === "stale") return "状态过期，请优先人工复核现场与设备连通性。";
+  if (tone === "empty") return "暂无可用数据，请先检查设备回传与读模型刷新。";
+  return null;
+}
+
+export function resolveFreshnessTone(
+  value: string | null | undefined,
+): "normal" | "warning" | "stale" | "empty" {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw || raw === "no_data" || raw === "unknown") return "empty";
+  if (raw === "stale") return "stale";
+  return "normal";
+}
+
 export function shouldShowRecommendationBiasWarning(bias: string | null | undefined): boolean {
   return Boolean(String(bias ?? "").trim());
 }
