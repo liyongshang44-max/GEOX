@@ -10,8 +10,7 @@ import {
   type ManualExecutionQualityDimension
 } from "../projections/manual_execution_quality_v1";
 import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
-import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1";
-import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -120,26 +119,30 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const field_id = String((req.params as any)?.field_id ?? "").trim();
     if (!field_id) return badRequest(reply, "MISSING:field_id");
 
-    const [sensing_overview, fertility_state] = await Promise.all([
-      refreshFieldSensingOverviewV1(pool, {
+    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
         field_id,
-      }),
-      refreshFieldFertilityStateV1(pool, {
-        tenant_id: auth.tenant_id,
-        project_id: auth.project_id,
-        group_id: auth.group_id,
-        field_id,
-      }),
-    ]);
+      });
 
     return reply.send({
       ok: true,
       field_id,
-      sensing_overview,
-      fertility_state,
+      sensing_overview: refreshed.sensing_overview.payload,
+      fertility_state: refreshed.fertility_state.payload,
+      freshness: {
+        sensing_overview: refreshed.sensing_overview.freshness,
+        fertility_state: refreshed.fertility_state.freshness,
+      },
+      status: {
+        sensing_overview: refreshed.sensing_overview.status,
+        fertility_state: refreshed.fertility_state.status,
+      },
+      refresh_metrics: {
+        sensing_overview: refreshed.sensing_overview.refresh_metrics,
+        fertility_state: refreshed.fertility_state.refresh_metrics,
+      },
     });
   });
 

@@ -14,8 +14,7 @@ import type { Pool } from "pg"; // Postgres pool type.
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
-import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1";
-import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
   return typeof v === "string" && v.trim().length > 0; // True only when string has visible content.
@@ -810,26 +809,30 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     );
     if (fieldQ.rowCount === 0) return notFound(reply);
 
-    const [sensing_overview, fertility_state] = await Promise.all([
-      refreshFieldSensingOverviewV1(pool, {
+    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
         field_id,
-      }),
-      refreshFieldFertilityStateV1(pool, {
-        tenant_id: auth.tenant_id,
-        project_id: auth.project_id,
-        group_id: auth.group_id,
-        field_id,
-      }),
-    ]);
+      });
 
     return reply.send({
       ok: true,
       field_id,
-      sensing_overview,
-      fertility_state,
+      sensing_overview: refreshed.sensing_overview.payload,
+      fertility_state: refreshed.fertility_state.payload,
+      freshness: {
+        sensing_overview: refreshed.sensing_overview.freshness,
+        fertility_state: refreshed.fertility_state.freshness,
+      },
+      status: {
+        sensing_overview: refreshed.sensing_overview.status,
+        fertility_state: refreshed.fertility_state.status,
+      },
+      refresh_metrics: {
+        sensing_overview: refreshed.sensing_overview.refresh_metrics,
+        fertility_state: refreshed.fertility_state.refresh_metrics,
+      },
     });
   });
 
