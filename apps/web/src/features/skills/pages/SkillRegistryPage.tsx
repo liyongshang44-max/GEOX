@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { listSkillRegistry, type SkillRegistryItem } from "../../../api/skills";
 import ErrorState from "../../../components/common/ErrorState";
+const SKILL_REGISTRY_TIMEOUT_MS = 8000;
 
 function fmtTs(ts?: number | null): string {
   const n = Number(ts ?? 0);
@@ -13,25 +14,48 @@ export default function SkillRegistryPage(): React.ReactElement {
   const [items, setItems] = React.useState<SkillRegistryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
-  const loadedRef = React.useRef(false);
+  const bootstrappedRef = React.useRef(false);
 
-  React.useEffect(() => {
-    if (loadedRef.current) return;
-    loadedRef.current = true;
+  const load = React.useCallback(() => {
     let mounted = true;
-    void listSkillRegistry({ limit: 100 }).then((res) => {
-      if (!mounted) return;
-      setItems(res);
-      setError(null);
-    }).catch((e: any) => {
-      if (mounted) setError(e?.message ?? "读取失败");
-    }).finally(() => {
-      if (mounted) setLoading(false);
+    setLoading(true);
+    setError(null);
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const timeoutPromise = new Promise<SkillRegistryItem[]>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(`请求超时（>${Math.round(SKILL_REGISTRY_TIMEOUT_MS / 1000)}s），请检查后端 /api/v1/skills`)), SKILL_REGISTRY_TIMEOUT_MS);
     });
+
+    void Promise.race([listSkillRegistry({ limit: 100 }), timeoutPromise])
+      .then((res) => {
+        if (!mounted) return;
+        setItems(Array.isArray(res) ? res : []);
+        setError(null);
+      })
+      .catch((e: any) => {
+        if (!mounted) return;
+        const raw = String(e?.message ?? "读取失败");
+        const normalized = /failed to fetch|err_empty_response|networkerror|fetch/i.test(raw)
+          ? "后端服务不可用（127.0.0.1:3001），请先启动 server 再重试。"
+          : /request timeout|api 408/i.test(raw)
+            ? "请求超时，请确认后端服务健康后重试。"
+            : raw;
+        setItems([]);
+        setError(normalized);
+      })
+      .finally(() => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (mounted) setLoading(false);
+      });
     return () => {
       mounted = false;
     };
   }, []);
+
+  React.useEffect(() => {
+    if (bootstrappedRef.current) return;
+    bootstrappedRef.current = true;
+    return load();
+  }, [load]);
 
   return (
     <div className="consolePage">
@@ -43,7 +67,7 @@ export default function SkillRegistryPage(): React.ReactElement {
         </div>
       </section>
 
-      {error ? <ErrorState title="技能注册中心加载失败" message={error} onRetry={() => window.location.reload()} /> : null}
+      {error ? <ErrorState title="技能注册中心加载失败" message={error} onRetry={load} /> : null}
 
       <section className="card sectionBlock">
         <div className="sectionHeader">
