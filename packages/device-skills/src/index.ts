@@ -1,4 +1,4 @@
-import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_core_v1";
+import { inferFertilityFromDeviceObservationV1 } from "./fertility_inference_core_v1";
 
 export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
@@ -230,22 +230,6 @@ const soilSensorV1: DeviceSkillDefinition = {
   }
 };
 
-function extractObservationList(deviceObservation: any): any[] {
-  if (Array.isArray(deviceObservation)) return deviceObservation;
-  if (Array.isArray(deviceObservation?.observations)) return deviceObservation.observations;
-  if (Array.isArray(deviceObservation?.sources)) return deviceObservation.sources;
-  if (deviceObservation && typeof deviceObservation === "object") return [deviceObservation];
-  return [];
-}
-
-function firstFiniteFromObservation(observation: any, keys: string[]): number | null {
-  for (const key of keys) {
-    const n = finite(observation?.[key]);
-    if (n != null) return n;
-  }
-  return null;
-}
-
 const fertilityInferenceV1: DeviceSkillDefinition = {
   skill_id: "fertility_inference_v1",
   version: "v1",
@@ -258,42 +242,7 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
     protocols: ["mqtt", "http", "lorawan", "coap"]
   },
   inferSensing: ({ device_observation_v1 }) => {
-    const observations = extractObservationList(device_observation_v1);
-    if (observations.length === 0) {
-      return {
-        source: "device_observation_v1",
-        source_skill_id: "fertility_inference_v1",
-        source_skill_version: "v1",
-        derived_sensing_state_v1: {
-          fertility_level: "unknown",
-          recommendation_bias: "inspect",
-          salinity_risk: "unknown",
-          confidence: 0.2,
-          explanation_codes: ["no_device_observation"]
-        }
-      };
-    }
-
-    const soilMoistureSeries = observations
-      .map((x) => firstFiniteFromObservation(x, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]))
-      .filter((x): x is number => x != null);
-    const ecSeries = observations
-      .map((x) => firstFiniteFromObservation(x, ["ec_ds_m", "ec", "soil_ec_ds_m", "salinity_ec_ds_m"]))
-      .filter((x): x is number => x != null);
-    const canopyTempSeries = observations
-      .map((x) => firstFiniteFromObservation(x, ["canopy_temp_c", "canopy_temp", "temperature_c", "temp_c"]))
-      .filter((x): x is number => x != null);
-
-    const moisture = soilMoistureSeries.length ? soilMoistureSeries[soilMoistureSeries.length - 1] : null;
-    const ec = ecSeries.length ? ecSeries[ecSeries.length - 1] : null;
-    const canopyTemp = canopyTempSeries.length ? canopyTempSeries[canopyTempSeries.length - 1] : null;
-
-    const inferred = inferFertilityFromObservationAggregateV1({
-      soil_moisture_pct: moisture,
-      ec_ds_m: ec,
-      canopy_temp_c: canopyTemp,
-      observation_count: observations.length,
-    });
+    const inferred = inferFertilityFromDeviceObservationV1(device_observation_v1);
 
     return {
       source: "device_observation_v1",
@@ -304,9 +253,7 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
         recommendation_bias: inferred.recommendation_bias,
         salinity_risk: inferred.salinity_risk,
         confidence: inferred.confidence,
-        explanation_codes: observations.length > 1
-          ? Array.from(new Set([...inferred.explanation_codes, "MULTISOURCE_AGGREGATED"]))
-          : inferred.explanation_codes
+        explanation_codes: inferred.explanation_codes
       }
     };
   }

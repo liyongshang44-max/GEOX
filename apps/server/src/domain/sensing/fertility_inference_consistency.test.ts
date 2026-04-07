@@ -34,14 +34,20 @@ function runBoth(input: { soil_moisture_pct?: number | null; ec_ds_m?: number | 
 test("fertility inference: route and skill outputs are identical for dry/high-ec input", () => {
   const { route, skill } = runBoth({ soil_moisture_pct: 18, ec_ds_m: 3.1, canopy_temp_c: 33 });
   assert.deepEqual(skill, route);
+  assert.equal(route.recommendation_bias, "irrigate_first");
+  assert.equal(route.salinity_risk, "high");
 });
 
-test("fertility inference: route and skill outputs are identical for balanced input", () => {
+test("fertility inference: route and skill outputs are identical for high salinity input", () => {
+  const { route, skill } = runBoth({ soil_moisture_pct: 28, ec_ds_m: 3.2, canopy_temp_c: 24 });
+  assert.deepEqual(skill, route);
+  assert.equal(route.recommendation_bias, "inspect");
+  assert.equal(route.salinity_risk, "high");
+});
+
+test("fertility inference: route and skill outputs are identical for normal input", () => {
   const { route, skill } = runBoth({ soil_moisture_pct: 30, ec_ds_m: 1.8, canopy_temp_c: 24 });
   assert.deepEqual(skill, route);
-});
-
-test("fertility inference: route and skill outputs are identical when all signals missing", () => {
-  const { route, skill } = runBoth({ soil_moisture_pct: null, ec_ds_m: null, canopy_temp_c: null });
-  assert.deepEqual(skill, route);
+  assert.equal(route.recommendation_bias, "fertilize");
+  assert.equal(route.salinity_risk, "low");
 });
