@@ -35,7 +35,10 @@ type FieldSensingOverviewV1 = {
   evapotranspiration_risk: "low" | "medium" | "high" | "unknown" | null;
   sensor_quality: "good" | "fair" | "poor" | "unknown" | null;
   irrigation_effectiveness: "low" | "medium" | "high" | "unknown" | null;
+  leak_risk: "low" | "medium" | "high" | "unknown" | null;
   irrigation_action_hint: string | null;
+  computed_at_ts_ms: number | null;
+  source_observed_at_ts_ms: number | null;
   explanation_codes_json: string[];
   updated_ts_ms: number;
 };
@@ -111,11 +114,37 @@ function coerceSensorQuality(v: unknown): "good" | "fair" | "poor" | "unknown" |
   return null;
 }
 
-function extractLatestDerivedState(rows: any[], stateType: string): any | null {
+type LatestDerivedState = {
+  payload: Record<string, any>;
+  computed_at_ts_ms: number | null;
+  confidence: number | null;
+  source_observed_at_ts_ms: number | null;
+};
+
+function extractObservedAtFromPayload(payload: Record<string, any>): number | null {
+  const candidate = toFiniteNumber(
+    payload?.source_observed_at_ts_ms
+    ?? payload?.observed_at_ts_ms
+    ?? payload?.source_ts_ms
+    ?? payload?.ts_ms
+  );
+  return candidate == null ? null : Math.trunc(candidate);
+}
+
+function extractLatestDerivedState(rows: any[], stateType: string): LatestDerivedState | null {
   const target = rows
     .filter((row) => String(row.state_type ?? "") === stateType)
     .sort((a, b) => Number(b.computed_at_ts_ms ?? 0) - Number(a.computed_at_ts_ms ?? 0))[0];
-  return target?.payload_json && typeof target.payload_json === "object" ? target.payload_json : null;
+  const payload = target?.payload_json && typeof target.payload_json === "object"
+    ? target.payload_json as Record<string, any>
+    : null;
+  if (!payload) return null;
+  return {
+    payload,
+    computed_at_ts_ms: toFiniteNumber(target?.computed_at_ts_ms),
+    confidence: toConfidence(target?.confidence),
+    source_observed_at_ts_ms: extractObservedAtFromPayload(payload),
+  };
 }
 
 export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promise<void> {
@@ -137,7 +166,10 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
           evapotranspiration_risk text NULL,
           sensor_quality text NULL,
           irrigation_effectiveness text NULL,
+          leak_risk text NULL,
           irrigation_action_hint text NULL,
+          computed_at_ts_ms bigint NULL,
+          source_observed_at_ts_ms bigint NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
           PRIMARY KEY (tenant_id, field_id)
@@ -149,7 +181,10 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS evapotranspiration_risk text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS sensor_quality text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_effectiveness text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS leak_risk text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_action_hint text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS computed_at_ts_ms bigint NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS source_observed_at_ts_ms bigint NULL`);
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_sensing_overview_v1_scope ON field_sensing_overview_v1 (tenant_id, project_id, group_id, field_id)`);
     })().catch((err) => {
       ensurePromise = null;
@@ -241,7 +276,7 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   }
 
   const derivedRows = await db.query(
-    `SELECT state_type, payload_json, computed_at_ts_ms
+    `SELECT state_type, payload_json, computed_at_ts_ms, confidence
        FROM derived_sensing_state_index_v1
       WHERE tenant_id = $1
         AND field_id = $2
@@ -254,22 +289,35 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   const qualityPayload = extractLatestDerivedState(derivedRows.rows ?? [], "sensor_quality_state");
   const canopyPayload = extractLatestDerivedState(derivedRows.rows ?? [], "canopy_state");
   const waterFlowPayload = extractLatestDerivedState(derivedRows.rows ?? [], "water_flow_state");
-  const irrigationNeedLevel = coerceLevel(irrigationPayload?.level ?? irrigationPayload?.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const);
-  const sensorQualityLevel = coerceSensorQualityLevel(qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level ?? qualityPayload?.sensor_quality);
-  const canopyTempStatus = coerceEnumLower(canopyPayload?.canopy_temp_status ?? canopyPayload?.canopy_temperature_status ?? canopyPayload?.temp_status, ["normal", "elevated", "critical", "unknown"] as const);
-  const evapotranspirationRisk = coerceEnumLower(canopyPayload?.evapotranspiration_risk ?? canopyPayload?.et_risk ?? canopyPayload?.risk_level, ["low", "medium", "high", "unknown"] as const);
-  const sensorQuality = coerceSensorQuality(qualityPayload?.sensor_quality ?? qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level);
-  const irrigationEffectiveness = coerceEnumLower(waterFlowPayload?.irrigation_effectiveness ?? waterFlowPayload?.flow_effectiveness, ["low", "medium", "high", "unknown"] as const);
-  const irrigationActionHintRaw = irrigationPayload?.action_hint ?? irrigationPayload?.suggested_action ?? irrigationPayload?.recommendation;
+  const irrigationNeedLevel = coerceLevel(irrigationPayload?.payload?.level ?? irrigationPayload?.payload?.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const);
+  const sensorQualityLevel = coerceSensorQualityLevel(qualityPayload?.payload?.level ?? qualityPayload?.payload?.sensor_quality_level ?? qualityPayload?.payload?.quality_level ?? qualityPayload?.payload?.sensor_quality);
+  const canopyTempStatus = coerceEnumLower(canopyPayload?.payload?.canopy_temp_status ?? canopyPayload?.payload?.canopy_temperature_status ?? canopyPayload?.payload?.temp_status, ["normal", "elevated", "critical", "unknown"] as const);
+  const evapotranspirationRisk = coerceEnumLower(canopyPayload?.payload?.evapotranspiration_risk ?? canopyPayload?.payload?.et_risk ?? canopyPayload?.payload?.risk_level, ["low", "medium", "high", "unknown"] as const);
+  const sensorQuality = coerceSensorQuality(qualityPayload?.payload?.sensor_quality ?? qualityPayload?.payload?.level ?? qualityPayload?.payload?.sensor_quality_level ?? qualityPayload?.payload?.quality_level);
+  const irrigationEffectiveness = coerceEnumLower(waterFlowPayload?.payload?.irrigation_effectiveness ?? waterFlowPayload?.payload?.flow_effectiveness, ["low", "medium", "high", "unknown"] as const);
+  const leakRisk = coerceEnumLower(waterFlowPayload?.payload?.leak_risk ?? waterFlowPayload?.payload?.leakage_risk, ["low", "medium", "high", "unknown"] as const);
+  const irrigationActionHintRaw = irrigationPayload?.payload?.action_hint ?? irrigationPayload?.payload?.suggested_action ?? irrigationPayload?.payload?.recommendation;
   const irrigationActionHint = String(irrigationActionHintRaw ?? "").trim() || null;
 
   const observedAtTsMs = items.length
     ? Math.max(...items.map((x) => Number(x.observed_at_ts_ms ?? 0)))
     : null;
   const confidenceSeries = items.map((x) => x.confidence).filter((x): x is number => x != null);
-  const confidence = confidenceSeries.length
+  const soilConfidence = confidenceSeries.length
     ? Number((confidenceSeries.reduce((sum, n) => sum + n, 0) / confidenceSeries.length).toFixed(3))
     : null;
+  const derivedConfidenceSeries = [canopyPayload?.confidence, qualityPayload?.confidence, waterFlowPayload?.confidence]
+    .filter((x): x is number => x != null);
+  const derivedConfidence = derivedConfidenceSeries.length
+    ? Number((derivedConfidenceSeries.reduce((sum, n) => sum + n, 0) / derivedConfidenceSeries.length).toFixed(3))
+    : null;
+  const confidence = derivedConfidence ?? soilConfidence;
+  const computedAtTsMs = [canopyPayload?.computed_at_ts_ms, qualityPayload?.computed_at_ts_ms, waterFlowPayload?.computed_at_ts_ms]
+    .filter((x): x is number => Number.isFinite(x ?? null))
+    .sort((a, b) => b - a)[0] ?? null;
+  const sourceObservedAtTsMs = [canopyPayload?.source_observed_at_ts_ms, qualityPayload?.source_observed_at_ts_ms, waterFlowPayload?.source_observed_at_ts_ms]
+    .filter((x): x is number => Number.isFinite(x ?? null))
+    .sort((a, b) => b - a)[0] ?? null;
   const overview: FieldSensingOverviewV1 = {
     tenant_id: params.tenant_id,
     project_id: params.project_id ?? null,
@@ -285,15 +333,18 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     evapotranspiration_risk: evapotranspirationRisk,
     sensor_quality: sensorQuality,
     irrigation_effectiveness: irrigationEffectiveness,
+    leak_risk: leakRisk,
     irrigation_action_hint: irrigationActionHint,
+    computed_at_ts_ms: computedAtTsMs,
+    source_observed_at_ts_ms: sourceObservedAtTsMs,
     explanation_codes_json: normalizeCodes(globalExplanations),
     updated_ts_ms: nowMs,
   };
 
   const upsert = await db.query(
     `INSERT INTO field_sensing_overview_v1
-      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, irrigation_action_hint, explanation_codes_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17)
+      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,$20)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -308,7 +359,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       evapotranspiration_risk = EXCLUDED.evapotranspiration_risk,
       sensor_quality = EXCLUDED.sensor_quality,
       irrigation_effectiveness = EXCLUDED.irrigation_effectiveness,
+      leak_risk = EXCLUDED.leak_risk,
       irrigation_action_hint = EXCLUDED.irrigation_action_hint,
+      computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
+      source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
      RETURNING *`,
@@ -327,7 +381,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       overview.evapotranspiration_risk,
       overview.sensor_quality,
       overview.irrigation_effectiveness,
+      overview.leak_risk,
       overview.irrigation_action_hint,
+      overview.computed_at_ts_ms,
+      overview.source_observed_at_ts_ms,
       JSON.stringify(overview.explanation_codes_json),
       overview.updated_ts_ms,
     ]
@@ -349,7 +406,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     evapotranspiration_risk: coerceEnumLower(row.evapotranspiration_risk, ["low", "medium", "high", "unknown"] as const),
     sensor_quality: coerceSensorQuality(row.sensor_quality),
     irrigation_effectiveness: coerceEnumLower(row.irrigation_effectiveness, ["low", "medium", "high", "unknown"] as const),
+    leak_risk: coerceEnumLower(row.leak_risk, ["low", "medium", "high", "unknown"] as const),
     irrigation_action_hint: String(row.irrigation_action_hint ?? "").trim() || null,
+    computed_at_ts_ms: row.computed_at_ts_ms == null ? null : Number(row.computed_at_ts_ms),
+    source_observed_at_ts_ms: row.source_observed_at_ts_ms == null ? null : Number(row.source_observed_at_ts_ms),
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
   };

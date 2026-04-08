@@ -178,7 +178,18 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
       key: `sensing_overview:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
       refresher: () => refreshFieldSensingOverviewV1(db, base),
       resolveFreshness: (payload) => payload.freshness,
-      hasData: (payload) => Array.isArray(payload.soil_indicators_json) && payload.soil_indicators_json.length > 0,
+      hasData: (payload) => {
+        if (Array.isArray(payload.soil_indicators_json) && payload.soil_indicators_json.length > 0) return true;
+        return Boolean(
+          payload.canopy_temp_status
+          || payload.evapotranspiration_risk
+          || payload.sensor_quality
+          || payload.irrigation_effectiveness
+          || payload.leak_risk
+          || payload.computed_at_ts_ms
+          || payload.source_observed_at_ts_ms
+        );
+      },
     }),
     refreshWithFallback({
       key: `fertility_state:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
