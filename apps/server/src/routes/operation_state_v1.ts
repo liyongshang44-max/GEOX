@@ -134,7 +134,7 @@ async function ensureSkillRunFact(params: {
   tenant: TenantTriple;
   operationPlanId: string;
   triggerStage: "before_recommendation" | "after_recommendation" | "before_dispatch" | "before_acceptance";
-  category: "AGRONOMY" | "DEVICE";
+  category: "AGRONOMY" | "DEVICE" | "ACCEPTANCE";
   bindTarget: string;
   skillId: string;
   version?: string | null;
@@ -1320,7 +1320,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         tenant,
         operationPlanId,
         triggerStage: "before_acceptance",
-        category: "AGRONOMY",
+        category: "ACCEPTANCE",
         bindTarget: "operation_acceptance",
         skillId: toText(acceptance?.record_json?.payload?.acceptance_skill_id ?? state.skill_trace?.acceptance_skill?.skill_id) ?? "acceptance_skill_v1",
         version: toText(acceptance?.record_json?.payload?.acceptance_skill_version ?? state.skill_trace?.acceptance_skill?.version) ?? "v1",
@@ -1826,6 +1826,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         acceptance: acceptanceForResponse ? {
           verdict: toText(acceptanceForResponse.record_json?.payload?.verdict),
           missing_evidence: Array.isArray(acceptanceForResponse.record_json?.payload?.missing_evidence) ? acceptanceForResponse.record_json.payload.missing_evidence : [],
+          explanation_codes: Array.isArray(acceptanceForResponse.record_json?.payload?.explanation_codes) ? acceptanceForResponse.record_json.payload.explanation_codes : [],
+          skill_meta: {
+            skill_id: toText(acceptanceForResponse.record_json?.payload?.acceptance_skill_id),
+            version: toText(acceptanceForResponse.record_json?.payload?.acceptance_skill_version),
+            input_digest: toText(acceptanceForResponse.record_json?.payload?.input_digest),
+            output_digest: toText(acceptanceForResponse.record_json?.payload?.output_digest),
+          },
           generated_at: toText(acceptanceForResponse.record_json?.payload?.generated_at ?? acceptanceForResponse.record_json?.payload?.evaluated_at ?? acceptanceForResponse.occurred_at)
         } : null,
         manual_fallback: (state as any)?.manual_fallback ?? null,

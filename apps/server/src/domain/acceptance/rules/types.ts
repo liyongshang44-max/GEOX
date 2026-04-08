@@ -9,6 +9,9 @@ export type AcceptanceEvaluationOutput = {
   score?: number;
   metrics: Record<string, number>;
   rule_id: string;
+  explanation_codes?: string[];
+  acceptance_skill_id?: string;
+  acceptance_skill_version?: string;
 };
 
 export type AcceptanceRule = {

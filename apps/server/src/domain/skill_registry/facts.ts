@@ -2,7 +2,7 @@ import { randomUUID, createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
 
-const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE"] as const;
+const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
 const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
 const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as const;
 const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
@@ -90,6 +90,7 @@ const SKILL_CATEGORY_COMPAT: Record<string, SkillDefinitionFactPayload["category
   CONTROL: "CONTROL",
   OBSERVABILITY: "OBSERVABILITY",
   DEVICE: "DEVICE",
+  ACCEPTANCE: "ACCEPTANCE",
 };
 
 const SKILL_STATUS_COMPAT: Record<string, SkillDefinitionFactPayload["status"]> = {
