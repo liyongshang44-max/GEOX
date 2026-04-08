@@ -15,6 +15,9 @@ export * from "./schema/agronomy_inference_result_v1";
 export * from "./schema/device_observation_v1";
 export * from "./schema/derived_sensing_state_v1";
 export * from "./schema/fertility_inference_v1";
+export * from "./schema/canopy_temperature_inference_v1";
+export * from "./schema/sensor_quality_inference_v1";
+export * from "./schema/water_flow_inference_v1";
 export * from "./schema/state_payload_v1"; // v1.0.0: Week-2 扩展预留最小 state payload
 export * from "./schema/telemetry_metric_catalog_v1";
 export * from "./schema/agronomy_decision_context_v1";
