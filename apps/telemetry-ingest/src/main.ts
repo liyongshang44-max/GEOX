@@ -3,6 +3,7 @@
 import crypto from "node:crypto"; // Node crypto for sha256 telemetry_id and deterministic fact_id.
 import { randomUUID } from "node:crypto"; // UUID generator for alert event fact ids.
 import process from "node:process"; // Access environment variables and argv.
+import { isTelemetryMetricNameV1, isValidTelemetryUnitV1, TELEMETRY_METRIC_CATALOG_V1, toCanonicalTelemetryMetricNameV1 } from "@geox/contracts"; // Canonical telemetry metric + unit mapping from contracts (single source of truth).
 import { Pool } from "pg"; // Postgres client pool to write ledger + projection.
 import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
@@ -12,6 +13,7 @@ import { ensureDeviceObservationProjectionV1, writeDeviceObservationFactV1 } fro
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
   value: z.union([z.number(), z.string(), z.boolean(), z.null()]), // Metric value (simple scalar types).
+  unit: z.string().min(1).optional(), // Optional unit string from device payload.
   ts_ms: z.number().int().positive(), // Event timestamp in epoch milliseconds.
   credential: z.string().min(1), // Device credential secret (issued by /api/devices/:id/credentials).
   geo: z.object({ // Optional geographic point for GIS marker / trajectory extraction.
@@ -74,13 +76,13 @@ function seenRecently(key: string, ttlMs: number): boolean { // Deduplicate repe
   return false; // Caller should emit log.
 } // End helper.
 
-function normalizeMetric(metricRaw: string): { metric: string; unit: string | null } { // Normalize metric naming/unit so business readers consume stable semantics.
-  const metric = String(metricRaw || "").trim().toLowerCase();
-  if (metric === "soil_temp") return { metric: "soil_temperature", unit: "celsius" };
-  if (metric === "soil_temperature") return { metric: "soil_temperature", unit: "celsius" };
-  if (metric === "air_temp") return { metric: "air_temperature", unit: "celsius" };
-  if (metric === "soil_moisture" || metric === "humidity") return { metric: metric === "humidity" ? "air_humidity" : "soil_moisture", unit: "percent" };
-  return { metric, unit: null };
+function normalizeMetricAndUnit(metricRaw: string, unitRaw?: string): { metric: string; unit: string | null } { // Normalize with contracts canonical mapping + unit validation.
+  const metric = toCanonicalTelemetryMetricNameV1(String(metricRaw || ""));
+  const normalizedUnit = typeof unitRaw === "string" ? unitRaw.trim() : "";
+  if (!isTelemetryMetricNameV1(metric)) return { metric, unit: normalizedUnit || null };
+  if (normalizedUnit.length < 1) return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
+  if (isValidTelemetryUnitV1(metric, normalizedUnit)) return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
+  return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
 } // End helper.
 
 function toQualityFlags(value: unknown): string[] { // Derive basic quality flags for normalized observation contract.
@@ -290,7 +292,7 @@ record = { // Telemetry record.
 
       let projInserted = false; // Whether a projection row was inserted (telemetry) or updated (heartbeat).
       if (parsed.kind === "telemetry") { // Telemetry projection path.
-        const normalized = normalizeMetric(String((p as any).metric ?? "")); // Step-1 normalize(metric/unit/name): raw_telemetry_v1 -> normalize(metric/unit/name).
+        const normalized = normalizeMetricAndUnit(String((p as any).metric ?? ""), typeof (p as any).unit === "string" ? (p as any).unit : undefined); // Step-1 normalize(metric/unit/name) via contracts canonical mapper + unit validation.
         const quality_flags = toQualityFlags((p as any).value); // Step-2 derive quality flags for contract quality_flags.
         const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Attach field dimension when bound.
         await writeDeviceObservationFactV1(clientConn, { // Step-3 write normalized business observation: quality/confidence -> device_observation_v1.
@@ -312,7 +314,7 @@ record = { // Telemetry record.
            VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
            ON CONFLICT (tenant_id, device_id, metric, ts) DO NOTHING
            RETURNING fact_id`,
-          [parsed.tenant_id, parsed.device_id, (p as any).metric, occurredAtIso, value_num, value_text, fact_id]
+          [parsed.tenant_id, parsed.device_id, normalized.metric, occurredAtIso, value_num, value_text, fact_id]
         ); // Insert into telemetry projection.
 
         await clientConn.query(

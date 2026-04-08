@@ -5,7 +5,11 @@ export type TelemetryMetricNameV1 =
   | "light_lux"
   | "soil_ec"
   | "soil_ph"
-  | "soil_temperature";
+  | "soil_temperature"
+  | "canopy_temperature"
+  | "soil_salinity_index"
+  | "water_flow_rate"
+  | "water_pressure";
 
 export type TelemetryMetricSpecV1 = {
   /** Canonical metric unit used across ingest, storage and downstream fusion. */
@@ -69,6 +73,34 @@ export const TELEMETRY_METRIC_CATALOG_V1: Record<TelemetryMetricNameV1, Telemetr
     max: 85,
     description: "Soil temperature in degrees Celsius",
   },
+  canopy_temperature: {
+    unit: "°C",
+    aliases: ["C", "celsius", "℃"],
+    min: -40,
+    max: 85,
+    description: "Canopy temperature in degrees Celsius",
+  },
+  soil_salinity_index: {
+    unit: "index",
+    aliases: ["ssi", "salinity_index"],
+    min: 0,
+    max: 100,
+    description: "Normalized soil salinity index",
+  },
+  water_flow_rate: {
+    unit: "L/min",
+    aliases: ["l/min", "lpm", "LPM"],
+    min: 0,
+    max: 10000,
+    description: "Water flow rate in liters per minute",
+  },
+  water_pressure: {
+    unit: "kPa",
+    aliases: ["kpa", "KPA", "kilopascal"],
+    min: 0,
+    max: 1600,
+    description: "Water pressure in kilopascal",
+  },
 };
 
 // Backward compatibility map: ingest accepts legacy metric keys, storage should persist canonical keys.
@@ -77,10 +109,21 @@ export const TELEMETRY_METRIC_COMPAT_ALIASES_V1: Readonly<Record<string, Telemet
   soil_temp_c: "soil_temperature",
   soil_ec_bulk: "soil_ec",
   soil_ec_ds_m: "soil_ec",
+  air_temp: "air_temperature",
+  humidity: "air_humidity",
+  canopy_temp: "canopy_temperature",
+  canopy_temp_c: "canopy_temperature",
+  salinity_index: "soil_salinity_index",
+  soil_salinity: "soil_salinity_index",
+  flow_rate: "water_flow_rate",
+  water_flow: "water_flow_rate",
+  pressure: "water_pressure",
+  pressure_kpa: "water_pressure",
+  water_pressure_kpa: "water_pressure",
 });
 
 export function toCanonicalTelemetryMetricNameV1(metric: string): string {
-  const normalized = metric.trim();
+  const normalized = metric.trim().toLowerCase().replace(/\s+/g, "_");
   if (!normalized) return normalized;
   if (isTelemetryMetricNameV1(normalized)) return normalized;
   return TELEMETRY_METRIC_COMPAT_ALIASES_V1[normalized] ?? normalized;
