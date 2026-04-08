@@ -93,7 +93,7 @@ export type SkillRegistryDeps<TSkill extends RegistryRuleSkill> = {
     status: "ACTIVE" | "DISABLED";
     scope_type: "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM";
     rollout_mode: "DIRECT" | "CANARY" | "DRY_RUN";
-    trigger_stage: "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
+    trigger_stage: "before_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance" | "after_recommendation";
     bind_target: string;
     crop_code: string | null;
     device_type: "PUMP" | "DRONE" | "SENSOR" | "HUMAN" | "UNKNOWN" | null;
@@ -249,7 +249,7 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       status: input.enabled ? "ACTIVE" : "DISABLED",
       scope_type: (input.scope?.scope_type ?? "TENANT") as "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM",
       rollout_mode: (input.scope?.rollout_mode ?? "DIRECT") as "DIRECT" | "CANARY" | "DRY_RUN",
-      trigger_stage: (input.scope?.trigger_stage ?? "before_recommendation") as "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance",
+      trigger_stage: (input.scope?.trigger_stage ?? "before_recommendation") as "before_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance" | "after_recommendation",
       bind_target: input.scope?.bind_target ?? tenant_id,
       crop_code: input.scope?.crop_code ?? null,
       device_type: (input.scope?.device_type ?? null) as "PUMP" | "DRONE" | "SENSOR" | "HUMAN" | "UNKNOWN" | null,

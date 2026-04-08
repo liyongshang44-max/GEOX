@@ -209,10 +209,18 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
 
       return reply.send({ ok: true, item: switched });
     } catch (error) {
+      const message = error instanceof Error ? error.message : "unknown";
+      if (message.includes("INVALID_TRIGGER_STAGE")) {
+        return reply.code(400).send({
+          ok: false,
+          error: "INVALID_TRIGGER_STAGE",
+          message,
+        });
+      }
       return reply.code(500).send({
         ok: false,
         error: "SKILL_SWITCH_FAILED",
-        message: error instanceof Error ? error.message : "unknown",
+        message,
       });
     }
   });
