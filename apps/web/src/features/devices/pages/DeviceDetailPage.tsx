@@ -160,6 +160,9 @@ export default function DeviceDetailPage(): React.ReactElement {
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
   const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
   const recentLatest = latest[0]; const statusLabel = normalizeStatusWord(hero?.status?.label || statusObj?.status || "-");
+  const latestImageItem = latest.find((item: any) => String(item?.metric ?? item?.metric_key ?? "").toLowerCase() === "image_ref") || null;
+  const latestImageRef = String(latestImageItem?.value_text ?? latestImageItem?.value ?? "-") || "-";
+  const latestImageUpdatedTs = latestImageItem?.ts_ms ?? latestImageItem?.observed_at_ts_ms ?? statusObj?.last_telemetry_ts_ms ?? null;
   const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
   const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
@@ -208,6 +211,30 @@ export default function DeviceDetailPage(): React.ReactElement {
       {error ? <ErrorState title="设备详情暂不可用" message={error} technical={status} onRetry={() => void refresh()} /> : null}
 
       <section className="demoContentGrid">
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">图像观测（V1）</div>
+            <div className="detailSectionLead">当前仅提供图像占位预览、更新时间与最新 image_ref。</div>
+          </div>
+          <div className="decisionList">
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">图像占位预览</div>
+              <div className="decisionItemMeta">当前版本不渲染实时视频流，仅显示静态占位。</div>
+              <div style={{ marginTop: 8, border: "1px dashed #9ca3af", borderRadius: 10, minHeight: 160, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", background: "#f9fafb" }}>
+                image preview placeholder
+              </div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">更新时间</div>
+              <div className="decisionItemMeta">{fmtTs(latestImageUpdatedTs)}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">最新 image_ref</div>
+              <div className="decisionItemMeta" style={{ wordBreak: "break-all" }}>{latestImageRef || "-"}</div>
+            </div>
+          </div>
+        </section>
+
         <section className="card detailHeroCard">
           <div className="demoSectionHeader"><div className="sectionTitle">现场状态</div><div className="detailSectionLead">先判断这台设备当前是否可联动、是否绑定到了正确田块，以及最近是否还在稳定回传数据。</div></div>
           <div className="decisionList">
