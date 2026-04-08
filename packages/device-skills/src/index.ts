@@ -370,15 +370,10 @@ export function checkCapabilityCompatibilityMatrix(input: {
   const normalized_adapter = normalizeAdapterType(input.adapter_type);
   const normalized_device_type = normalizeDeviceType(input.device_type);
   const allowedAdapters = (input.capability.compatibility?.adapters ?? []).map((x) => normalizeAdapterType(x));
-  const allowedDeviceTypes = (input.capability.compatibility?.device_types ?? []).map((x) => normalizeDeviceType(x));
   const reasons: string[] = [];
   if (!normalized_adapter) reasons.push("missing_adapter_type");
-  if (!normalized_device_type) reasons.push("missing_device_type");
   if (normalized_adapter && allowedAdapters.length > 0 && !allowedAdapters.includes(normalized_adapter)) {
     reasons.push("adapter_not_compatible");
-  }
-  if (normalized_device_type && allowedDeviceTypes.length > 0 && !allowedDeviceTypes.includes(normalized_device_type)) {
-    reasons.push("device_type_not_compatible");
   }
   if (reasons.length === 0) return { ok: true, normalized_adapter, normalized_device_type };
   return {
