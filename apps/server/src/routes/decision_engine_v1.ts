@@ -11,7 +11,6 @@ import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1";
-import { runFertilityInferenceAndPersistV1 } from "../domain/sensing/fertility_inference_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 import {
   ensureDerivedSensingStateProjectionV1,
@@ -952,21 +951,20 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const snapshot_id = `snap_${tenant.tenant_id}_${requestedDeviceId}_${snapshot.updated_ts_ms}`;
     const derivedFieldId = String(body.field_id ?? snapshot.field_id ?? "").trim();
     if (!derivedFieldId) return badRequest(reply, "MISSING_FIELD_ID");
-    await runFertilityInferenceAndPersistV1(pool, {
-      ...tenant,
-      field_id: derivedFieldId,
-      device_id: requestedDeviceId,
-      soil_moisture_pct: telemetry.soil_moisture_pct,
-      canopy_temp_c: telemetry.canopy_temp_c,
-      ec_ds_m: Number.isFinite(Number(body.ec_ds_m)) ? Number(body.ec_ds_m) : null,
-      source: "decision_engine_v1"
-    });
     const fertilityState = await refreshFieldFertilityStateV1(pool, {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
       field_id: derivedFieldId,
     });
+    if (!fertilityState || String(fertilityState.fertility_level ?? "").trim() === "") {
+      req.log.warn({
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        field_id: derivedFieldId
+      }, "[recommendations.generate] missing field_fertility_state_v1; precheck downgraded to neutral constraints");
+    }
     const enableRecommendationPrecheck = isFeatureEnabled("GEOX_ENABLE_RECOMMENDATION_PRECHECK_V1", true);
     const hardRuleInput: HardRuleConstraintInputV1 = enableRecommendationPrecheck
       ? {

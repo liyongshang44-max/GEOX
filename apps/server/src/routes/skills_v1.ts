@@ -4,9 +4,12 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import {
   appendSkillBindingFact,
   appendSkillDefinitionFact,
+  digestJson,
   type SkillDefinitionFactPayload,
 } from "../domain/skill_registry/facts";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
+import { ruleSkills } from "../domain/agronomy/skills";
+import { listFallbackSkillSwitches } from "../domain/agronomy/skills/runtime_config";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
@@ -109,6 +112,51 @@ function sendSkillsInternalError(reply: any, e: unknown) {
   });
 }
 
+async function initAgronomySkillsIfEmpty(pool: Pool, tenant: TenantTriple, logger: FastifyInstance["log"]): Promise<void> {
+  const seedEnabled = String(process.env.GEOX_ENABLE_SKILL_DEFINITION_INIT ?? "0").trim().toLowerCase() === "1";
+  if (!seedEnabled) return;
+  logger.warn({ tenant }, "[skills] skill_definition_v1 empty; bootstrapping agronomy defaults once");
+
+  for (const skill of ruleSkills) {
+    await appendSkillDefinitionFact(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      skill_id: skill.id,
+      version: skill.version,
+      display_name: skill.id,
+      category: "AGRONOMY",
+      status: skill.enabled ? "ACTIVE" : "DISABLED",
+      trigger_stage: "before_recommendation",
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      crop_code: skill.crop_code,
+      input_schema_digest: digestJson({ crop_code: skill.crop_code, skill_id: skill.id, version: skill.version, type: "agronomy_rule_input_v1" }),
+      output_schema_digest: digestJson({ recommendation_type: "agronomy_rule_output_v1", skill_id: skill.id, version: skill.version }),
+    });
+  }
+
+  const switches = listFallbackSkillSwitches({ tenant_id: tenant.tenant_id, enabled_only: false });
+  for (const item of switches) {
+    await appendSkillBindingFact(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      skill_id: item.skill_id,
+      version: item.version,
+      category: "AGRONOMY",
+      status: item.enabled ? "ACTIVE" : "DISABLED",
+      scope_type: "TENANT",
+      rollout_mode: "DIRECT",
+      trigger_stage: "before_recommendation",
+      bind_target: item.scope?.tenant_id || tenant.tenant_id,
+      crop_code: item.scope?.crop_code ?? null,
+      device_type: null,
+      priority: item.priority,
+    });
+  }
+}
+
 export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/registry", async (req, reply) => {
     const query = (req as any).url?.includes("?") ? String((req as any).url).slice(String((req as any).url).indexOf("?")) : "";
@@ -134,7 +182,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
 
       const q = (req.query ?? {}) as any;
       await projectSkillRegistryReadV1(pool, tenant);
-      const rows = await querySkillRegistryReadV1(pool, {
+      let rows = await querySkillRegistryReadV1(pool, {
         ...tenant,
         category: typeof q.category === "string" ? q.category : undefined,
         status: typeof q.status === "string" ? q.status : undefined,
@@ -144,6 +192,31 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
         fact_type: "skill_definition_v1",
       });
+      if ((rows?.length ?? 0) === 0) {
+        await initAgronomySkillsIfEmpty(pool, tenant, app.log);
+        await projectSkillRegistryReadV1(pool, tenant);
+        rows = await querySkillRegistryReadV1(pool, {
+          ...tenant,
+          category: typeof q.category === "string" ? q.category : undefined,
+          status: typeof q.status === "string" ? q.status : undefined,
+          crop_code: typeof q.crop_code === "string" ? q.crop_code : undefined,
+          device_type: typeof q.device_type === "string" ? q.device_type : undefined,
+          trigger_stage: typeof q.trigger_stage === "string" ? q.trigger_stage : undefined,
+          bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
+          fact_type: "skill_definition_v1",
+        });
+      }
+      const bindingRows = await querySkillRegistryReadV1(pool, {
+        ...tenant,
+        crop_code: typeof q.crop_code === "string" ? q.crop_code : undefined,
+        bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
+        fact_type: "skill_binding_v1",
+      });
+      const bindingMap = new Map<string, string>();
+      for (const row of bindingRows) {
+        const key = `${row.skill_id}::${row.version}`;
+        if (!bindingMap.has(key)) bindingMap.set(key, String(row.status ?? "DISABLED").toUpperCase());
+      }
 
       const items = (rows ?? []).map((row) => ({
         skill_id: row.skill_id,
@@ -156,6 +229,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         rollout_mode: row.rollout_mode,
         crop_code: row.crop_code,
         device_type: row.device_type,
+        binding_status: bindingMap.get(`${row.skill_id}::${row.version}`) ?? "UNBOUND",
         updated_at: row.occurred_at,
       }));
 
