@@ -8,6 +8,8 @@ import {
   type DeviceObservationQualityFlagV1
 } from "@geox/contracts";
 import type { PoolClient } from "pg";
+import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1";
+import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1";
 
 export type DeviceObservationServiceV1Input = {
   tenant_id: string;
@@ -22,6 +24,16 @@ export type DeviceObservationServiceV1Input = {
   confidence: number | null;
   observed_at_ts_ms: number;
   source_fact_id: string;
+};
+
+type DeviceObservationDbConn = PoolClient;
+
+type DeviceObservationPipelineResultV1 = {
+  observation: { fact_id: string; occurred_at_iso: string };
+  pipeline: RunSensingInferencePipelineV1Result | null;
+  read_model_refresh:
+    | Awaited<ReturnType<typeof refreshFieldReadModelsWithObservabilityV1>>
+    | null;
 };
 
 function sha256Hex(s: string): string {
@@ -191,4 +203,129 @@ export async function ensureDeviceObservationProjectionV1(clientConn: PoolClient
   await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_device_metric_time ON device_observation_index_v1 (tenant_id, device_id, metric, observed_at_ts_ms DESC)`);
   await clientConn.query(`CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_tenant_field_time ON device_observation_index_v1 (tenant_id, field_id, observed_at_ts_ms DESC)`);
   await clientConn.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_device_observation_index_v1_fact_id ON device_observation_index_v1 (fact_id)`);
+}
+
+function toFiniteNumber(v: unknown): number | null {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function mapObservationMetricToPipelineShape(metric: string, valueNum: number, device_id: string): Record<string, unknown> {
+  const observation: Record<string, unknown> = { device_id, [metric]: valueNum };
+  switch (metric) {
+    case "soil_moisture":
+      observation.soil_moisture_pct = valueNum;
+      break;
+    case "canopy_temperature":
+      observation.canopy_temp_c = valueNum;
+      observation.canopy_temp = valueNum;
+      observation.temperature_c = valueNum;
+      break;
+    case "soil_ec":
+      observation.ec_ds_m = valueNum;
+      observation.soil_ec_ds_m = valueNum;
+      break;
+    case "air_temperature":
+      observation.ambient_temp_c = valueNum;
+      observation.air_temp_c = valueNum;
+      observation.ambient_temperature_c = valueNum;
+      break;
+    case "air_humidity":
+      observation.relative_humidity_pct = valueNum;
+      observation.humidity_pct = valueNum;
+      observation.rh_pct = valueNum;
+      break;
+    case "water_flow_rate":
+      observation.inlet_flow_lpm = valueNum;
+      observation.inlet_lpm = valueNum;
+      break;
+    case "water_pressure":
+      observation.pressure_drop_kpa = valueNum;
+      observation.pressure_kpa = valueNum;
+      break;
+    default:
+      break;
+  }
+  return observation;
+}
+
+async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  field_id: string;
+}): Promise<Array<Record<string, unknown>>> {
+  const rows = await db.query(
+    `SELECT device_id, metric, value_num
+       FROM device_observation_index_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND field_id = $4
+      ORDER BY observed_at_ts_ms DESC
+      LIMIT 256`,
+    [params.tenant_id, params.project_id, params.group_id, params.field_id]
+  );
+
+  return (rows.rows ?? [])
+    .map((row: any) => {
+      const metric = String(row.metric ?? "").trim();
+      const device_id = String(row.device_id ?? "").trim();
+      const valueNum = toFiniteNumber(row.value_num);
+      if (!metric || !device_id || valueNum == null) return null;
+      return mapObservationMetricToPipelineShape(metric, valueNum, device_id);
+    })
+    .filter((row: Record<string, unknown> | null): row is Record<string, unknown> => Boolean(row));
+}
+
+/**
+ * Unified official sensing path:
+ * observation write -> runSensingInferencePipelineV1 -> derived states -> read model refresh.
+ */
+export async function writeObservationRunPipelineAndRefreshFieldV1(
+  db: DeviceObservationDbConn,
+  input: DeviceObservationServiceV1Input
+): Promise<DeviceObservationPipelineResultV1> {
+  const observation = await writeDeviceObservationFactV1(db, input);
+  const project_id = normalizeNonEmpty(input.project_id, "_na_project");
+  const group_id = normalizeNonEmpty(input.group_id, "_na_group");
+  const field_id = normalizeNonEmpty(input.field_id, "_na_field");
+
+  if (field_id === "_na_field") {
+    return { observation, pipeline: null, read_model_refresh: null };
+  }
+
+  const observations = await loadRecentFieldObservationsForPipelineV1(db, {
+    tenant_id: input.tenant_id,
+    project_id,
+    group_id,
+    field_id,
+  });
+  const source_device_ids = Array.from(
+    new Set(
+      observations
+        .map((item) => String(item.device_id ?? "").trim())
+        .filter(Boolean)
+    )
+  );
+
+  const pipeline = await runSensingInferencePipelineV1({
+    db,
+    tenant_id: input.tenant_id,
+    project_id,
+    group_id,
+    field_id,
+    source_device_ids,
+    observations,
+    now: Number.isFinite(input.observed_at_ts_ms) ? input.observed_at_ts_ms : Date.now(),
+  });
+
+  const read_model_refresh = await refreshFieldReadModelsWithObservabilityV1(db, {
+    tenant_id: input.tenant_id,
+    project_id,
+    group_id,
+    field_id,
+  });
+
+  return { observation, pipeline, read_model_refresh };
 }

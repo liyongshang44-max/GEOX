@@ -1,6 +1,8 @@
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
+
+type DbConn = Pool | PoolClient;
 
 type Freshness = "fresh" | "stale" | "unknown";
 type RefreshStatus = "ok" | "fallback_stale" | "no_data" | "error";
@@ -155,7 +157,7 @@ async function refreshWithFallback<T extends object>(params: {
   };
 }
 
-export async function refreshFieldReadModelsWithObservabilityV1(pool: Pool, params: {
+export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, params: {
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -174,13 +176,13 @@ export async function refreshFieldReadModelsWithObservabilityV1(pool: Pool, para
   const [sensing_overview, fertility_state] = await Promise.all([
     refreshWithFallback({
       key: `sensing_overview:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
-      refresher: () => refreshFieldSensingOverviewV1(pool, base),
+      refresher: () => refreshFieldSensingOverviewV1(db, base),
       resolveFreshness: (payload) => payload.freshness,
       hasData: (payload) => Array.isArray(payload.soil_indicators_json) && payload.soil_indicators_json.length > 0,
     }),
     refreshWithFallback({
       key: `fertility_state:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
-      refresher: () => refreshFieldFertilityStateV1(pool, base),
+      refresher: () => refreshFieldFertilityStateV1(db, base),
       resolveFreshness: (payload, nowMs) => fertilityFreshnessFromComputedAt(payload.computed_at_ts_ms, nowMs),
       hasData: (payload) => Boolean(payload.fertility_level || payload.salinity_risk || payload.recommendation_bias || payload.computed_at_ts_ms),
     }),

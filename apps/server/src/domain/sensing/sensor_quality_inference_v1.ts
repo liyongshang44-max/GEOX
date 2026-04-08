@@ -3,9 +3,6 @@ import type {
   SensorQualityInferenceV1Result,
   SensorQualityV1,
 } from "@geox/contracts";
-import type { Pool, PoolClient } from "pg";
-import { appendDerivedSensingStateV1 } from "../../services/derived_sensing_state_v1";
-import { appendSkillRunFact, digestJson } from "../skill_registry/facts";
 
 export type SensingSensorQualityAggregateV1 = {
   signal_strength_dbm?: number | null;
@@ -134,109 +131,4 @@ export function inferSensorQualityFromObservationAggregateV1(input: SensingSenso
     confidence: Number(clamp(baseConfidence, 0.2, 0.95).toFixed(3)),
     explanation_codes: Array.from(new Set(explanationCodes)),
   };
-}
-
-export type RunSensorQualityInferenceAndPersistV1Input = {
-  tenant_id: string;
-  project_id: string | null;
-  group_id: string | null;
-  field_id: string;
-  device_id: string;
-  signal_strength_dbm?: number | null;
-  battery_level_pct?: number | null;
-  packet_loss_rate_pct?: number | null;
-  computed_at_ts_ms?: number;
-};
-
-export async function runSensorQualityInferenceAndPersistV1(
-  db: Pool | PoolClient,
-  input: RunSensorQualityInferenceAndPersistV1Input
-): Promise<{ inference: SensorQualityInferenceV1Result; computed_at_ts_ms: number }> {
-  const telemetryDigestInput = {
-    signal_strength_dbm: toFiniteNumber(input.signal_strength_dbm),
-    battery_level_pct: toFiniteNumber(input.battery_level_pct),
-    packet_loss_rate_pct: toFiniteNumber(input.packet_loss_rate_pct),
-    device_id: input.device_id,
-    field_id: input.field_id,
-  };
-
-  await appendSkillRunFact(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id ?? "default",
-    group_id: input.group_id ?? "default",
-    skill_id: "sensor_quality_inference_v1",
-    version: "v1",
-    category: "OBSERVABILITY",
-    status: "ACTIVE",
-    result_status: "SUCCESS",
-    trigger_stage: "before_recommendation",
-    scope_type: "DEVICE",
-    rollout_mode: "DIRECT",
-    bind_target: input.device_id,
-    operation_id: null,
-    operation_plan_id: null,
-    field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson({ parsed: telemetryDigestInput }),
-    error_code: null,
-    duration_ms: 0,
-  });
-
-  const inference = inferSensorQualityFromObservationAggregateV1({
-    signal_strength_dbm: telemetryDigestInput.signal_strength_dbm,
-    battery_level_pct: telemetryDigestInput.battery_level_pct,
-    packet_loss_rate_pct: telemetryDigestInput.packet_loss_rate_pct,
-    observation_count: 1,
-    source_ids: [input.device_id],
-  });
-
-  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms))
-    ? Number(input.computed_at_ts_ms)
-    : Date.now();
-
-  await appendDerivedSensingStateV1(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id,
-    group_id: input.group_id,
-    field_id: input.field_id,
-    state_type: "sensor_quality_state",
-    payload: {
-      level: inference.sensor_quality,
-      sensor_quality: inference.sensor_quality,
-      signal_strength_dbm: telemetryDigestInput.signal_strength_dbm,
-      battery_level_pct: telemetryDigestInput.battery_level_pct,
-      packet_loss_rate_pct: telemetryDigestInput.packet_loss_rate_pct,
-    },
-    confidence: inference.confidence,
-    explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
-    computed_at_ts_ms,
-    source: "sensing_pipeline_v1",
-  });
-
-  await appendSkillRunFact(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id ?? "default",
-    group_id: input.group_id ?? "default",
-    skill_id: "sensor_quality_inference_v1",
-    version: "v1",
-    category: "OBSERVABILITY",
-    status: "ACTIVE",
-    result_status: "SUCCESS",
-    trigger_stage: "after_recommendation",
-    scope_type: "FIELD",
-    rollout_mode: "DIRECT",
-    bind_target: input.field_id,
-    operation_id: null,
-    operation_plan_id: null,
-    field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson(inference),
-    error_code: null,
-    duration_ms: 0,
-  });
-
-  return { inference, computed_at_ts_ms };
 }
