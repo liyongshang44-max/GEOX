@@ -192,20 +192,6 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
         fact_type: "skill_definition_v1",
       });
-      if ((rows?.length ?? 0) === 0) {
-        await initAgronomySkillsIfEmpty(pool, tenant, app.log);
-        await projectSkillRegistryReadV1(pool, tenant);
-        rows = await querySkillRegistryReadV1(pool, {
-          ...tenant,
-          category: typeof q.category === "string" ? q.category : undefined,
-          status: typeof q.status === "string" ? q.status : undefined,
-          crop_code: typeof q.crop_code === "string" ? q.crop_code : undefined,
-          device_type: typeof q.device_type === "string" ? q.device_type : undefined,
-          trigger_stage: typeof q.trigger_stage === "string" ? q.trigger_stage : undefined,
-          bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
-          fact_type: "skill_definition_v1",
-        });
-      }
       const bindingRows = await querySkillRegistryReadV1(pool, {
         ...tenant,
         crop_code: typeof q.crop_code === "string" ? q.crop_code : undefined,
