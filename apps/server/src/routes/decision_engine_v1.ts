@@ -4,14 +4,13 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { getAgronomySnapshot } from "../projections/agronomy_signal_snapshot_v1";
 import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1";
-import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
 import {
   ensureDerivedSensingStateProjectionV1,
   getLatestDerivedSensingStatesByFieldV1
@@ -34,7 +33,8 @@ type RecommendationV1 = {
   recommendation_type: RecommendationTypeV1;
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
-  reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" }>;
+  reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" }>;
+  explanation_codes?: Array<{ code: string; source: "field_sensing_overview_v1" | "field_fertility_state_v1" | "request_constraints" }>;
   evidence_refs: string[];
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
@@ -55,6 +55,13 @@ type HardRuleConstraintInputV1 = {
   moisture_constraint?: string | null;
   salinity_risk?: string | null;
   source: "request_constraints" | "field_fertility_state_v1";
+};
+
+type FieldSensingOverviewInputV1 = {
+  observed_at_ts_ms: number | null;
+  updated_ts_ms: number;
+  soil_indicators_json: Array<{ metric: string; value: number | null }>;
+  explanation_codes_json: string[];
 };
 
 type RulePerformanceStats = {
@@ -137,19 +144,37 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
   return fact_id;
 }
 
-function recommendationEvidenceFacts(telemetry: any, imageInput: any): Array<{ key: string; value: number | null; unit: string | null; source: string }> {
+function sensingMetricValue(
+  overview: FieldSensingOverviewInputV1,
+  metrics: string[],
+): number | null {
+  const normalized = new Set(metrics.map((x) => x.trim().toLowerCase()));
+  const hit = (Array.isArray(overview.soil_indicators_json) ? overview.soil_indicators_json : [])
+    .find((item) => normalized.has(String(item.metric ?? "").trim().toLowerCase()));
+  const n = Number(hit?.value ?? NaN);
+  return Number.isFinite(n) ? n : null;
+}
+
+function recommendationEvidenceFacts(sensingOverview: FieldSensingOverviewInputV1, imageInput: any): Array<{ key: string; value: number | null; unit: string | null; source: string }> {
   const image = (imageInput && typeof imageInput === "object") ? imageInput : {};
   const toNum = (x: any): number | null => Number.isFinite(Number(x)) ? Number(x) : null;
+  const soilMoisture = sensingMetricValue(sensingOverview, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]);
+  const canopyTemp = sensingMetricValue(sensingOverview, ["canopy_temp_c", "canopy_temperature_c"]);
   return [
-    { key: "soil_moisture_pct", value: toNum(telemetry.soil_moisture_pct), unit: "%", source: "telemetry" },
-    { key: "canopy_temp_c", value: toNum(telemetry.canopy_temp_c), unit: "c", source: "telemetry" },
+    { key: "soil_moisture_pct", value: soilMoisture, unit: "%", source: "field_sensing_overview_v1" },
+    { key: "canopy_temp_c", value: canopyTemp, unit: "c", source: "field_sensing_overview_v1" },
     { key: "image_stress_score", value: toNum(image.stress_score), unit: null, source: "image_recognition" },
     { key: "image_disease_score", value: toNum(image.disease_score), unit: null, source: "image_recognition" },
     { key: "image_pest_risk_score", value: toNum(image.pest_risk_score), unit: null, source: "image_recognition" }
   ];
 }
 
-function buildRecommendations(body: any, telemetryInput: any, snapshotId: string, hardRuleInput?: HardRuleConstraintInputV1 | null): RecommendationV1[] {
+function buildRecommendations(
+  body: any,
+  readModel: FieldSensingOverviewInputV1,
+  snapshotId: string,
+  hardRuleInput?: HardRuleConstraintInputV1 | null,
+): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
@@ -157,12 +182,11 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
   const program_id = String(body.program_id ?? "").trim() || null;
   if (!field_id || !season_id || !device_id || !crop_code) return [];
 
-  const telemetry = (telemetryInput && typeof telemetryInput === "object") ? telemetryInput : {};
   const image = (body.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
   const now = Date.now();
 
-  const soilMoisture = Number(telemetry.soil_moisture_pct ?? NaN);
-  const canopyTemp = Number(telemetry.canopy_temp_c ?? NaN);
+  const soilMoisture = Number(sensingMetricValue(readModel, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]) ?? NaN);
+  const canopyTemp = Number(sensingMetricValue(readModel, ["canopy_temp_c", "canopy_temperature_c"]) ?? NaN);
   const stressScore = clamp01(Number(image.stress_score ?? 0));
   const diseaseScore = clamp01(Number(image.disease_score ?? 0));
   const pestRisk = clamp01(Number(image.pest_risk_score ?? 0));
@@ -208,6 +232,7 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
         status: "proposed",
         reason_codes: [hint.reason_code, ...blueprint.reason_codes_suffix],
         reason_details: [{ code: hint.reason_code, action_hint: hint.action_hint, source: hint.source }],
+        explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
         evidence_refs: blueprint.evidence_refs,
         rule_hit: [{ rule_id: blueprint.rule_id, matched: true, threshold: null, actual: null }],
         confidence: blueprint.confidence,
@@ -240,7 +265,9 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
       reason_codes: [irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress"],
-      evidence_refs: ["telemetry:soil_moisture", "telemetry:canopy_temp", "image:stress_score"],
+      reason_details: [{ code: irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress", action_hint: "irrigate_first", source: "field_sensing_overview_v1" }],
+      explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
+      evidence_refs: ["field_sensing_overview_v1:soil_moisture", "field_sensing_overview_v1:canopy_temp", "image:stress_score"],
       rule_hit: [
         { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < moistureThreshold : false, threshold: moistureThreshold, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
         { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
@@ -283,6 +310,8 @@ function buildRecommendations(body: any, telemetryInput: any, snapshotId: string
       recommendation_type: "crop_health_alert_v1",
       status: "proposed",
       reason_codes: ["image_health_risk_high"],
+      reason_details: [{ code: "image_health_risk_high", action_hint: "inspect", source: "field_sensing_overview_v1" }],
+      explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
       evidence_refs: ["image:disease_score", "image:pest_risk_score", "image:stress_score"],
       rule_hit: [
         { rule_id: "crop_health_risk_rule_v1", matched: healthRisk >= 0.7, threshold: 0.7, actual: healthRisk }
@@ -935,28 +964,25 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const requestedDeviceId = String(body.device_id ?? "").trim();
     if (!requestedDeviceId) return badRequest(reply, "MISSING_DEVICE_ID");
-    const snapshot = await getAgronomySnapshot(pool, tenant.tenant_id, requestedDeviceId);
-    if (!snapshot) return badRequest(reply, "AGRONOMY_SNAPSHOT_NOT_FOUND");
-
-    const telemetry = {
-      soil_moisture_pct: snapshot.soil_moisture_pct,
-      canopy_temp_c: snapshot.canopy_temp_c,
-      battery_percent: snapshot.battery_percent
-    };
-
-    if (telemetry.soil_moisture_pct == null || telemetry.canopy_temp_c == null) {
-      return badRequest(reply, "AGRONOMY_SNAPSHOT_INCOMPLETE");
-    }
-
-    const snapshot_id = `snap_${tenant.tenant_id}_${requestedDeviceId}_${snapshot.updated_ts_ms}`;
-    const derivedFieldId = String(body.field_id ?? snapshot.field_id ?? "").trim();
+    const derivedFieldId = String(body.field_id ?? "").trim();
     if (!derivedFieldId) return badRequest(reply, "MISSING_FIELD_ID");
-    const fertilityState = await refreshFieldFertilityStateV1(pool, {
+    const refreshedReadModels = await refreshFieldReadModelsWithObservabilityV1(pool, {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
-      field_id: derivedFieldId,
+      field_id: derivedFieldId
     });
+    const fertilityState = refreshedReadModels.fertility_state.payload;
+    const sensingOverview = refreshedReadModels.sensing_overview.payload;
+    if (!sensingOverview) return badRequest(reply, "FIELD_SENSING_OVERVIEW_NOT_FOUND");
+    const snapshot_id = `rm_${tenant.tenant_id}_${derivedFieldId}_${sensingOverview.updated_ts_ms ?? Date.now()}`;
+
+    const soilMoisture = sensingMetricValue(sensingOverview, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]);
+    const canopyTemp = sensingMetricValue(sensingOverview, ["canopy_temp_c", "canopy_temperature_c"]);
+    if (soilMoisture == null || canopyTemp == null) {
+      return badRequest(reply, "FIELD_SENSING_OVERVIEW_INCOMPLETE");
+    }
+
     if (!fertilityState || String(fertilityState.fertility_level ?? "").trim() === "") {
       req.log.warn({
         tenant_id: tenant.tenant_id,
@@ -969,7 +995,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const hardRuleInput: HardRuleConstraintInputV1 = enableRecommendationPrecheck
       ? {
           ...deriveFertilityPrecheckConstraintsV1({
-            fertilityState,
+            fertilityState: fertilityState ?? {},
             baseConstraints: {
               moisture_constraint: null,
               salinity_risk: null,
@@ -982,7 +1008,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           salinity_risk: null,
           source: "field_fertility_state_v1"
         };
-    const recommendations = buildRecommendations(body, telemetry, snapshot_id, hardRuleInput);
+    const recommendations = buildRecommendations(body, sensingOverview, snapshot_id, hardRuleInput);
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
@@ -1025,7 +1051,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           season_id: recommendationPayload.season_id,
           device_id: recommendationPayload.device_id,
           program_id: recommendationPayload.program_id,
-          evidence_facts: recommendationEvidenceFacts(telemetry, body.image_recognition),
+          evidence_facts: recommendationEvidenceFacts(sensingOverview, body.image_recognition),
           created_ts: Date.now()
         }
       });
@@ -1038,7 +1064,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           ...recommendationPayload,
           recommendation_input_fact_id,
           data_sources: {
-            telemetry,
+            field_sensing_overview_v1: sensingOverview,
+            field_fertility_state_v1: fertilityState ?? null,
             image_recognition: body.image_recognition ?? null
           }
         }
