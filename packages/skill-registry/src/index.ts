@@ -133,6 +133,12 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
 
   const sourceOrder: SkillBindingSource[] = ["tenant+crop", "tenant+*", "*+crop", "global", "fallback_config"];
 
+  function allowFallbackConfig(input?: { explicit_migration?: boolean }): boolean {
+    if (input?.explicit_migration) return true;
+    const raw = String(process.env.GEOX_ENABLE_SKILL_REGISTRY_FALLBACK ?? "0").trim().toLowerCase();
+    return ["1", "true", "yes", "on"].includes(raw);
+  }
+
   function pickBySkill(rows: Array<SkillBindingRecord & { source: SkillBindingSource }>): Array<SkillBindingRecord & { source: SkillBindingSource }> {
     const grouped = new Map<string, Array<SkillBindingRecord & { source: SkillBindingSource }>>();
     for (const row of rows) {
@@ -184,8 +190,10 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     project_id?: string;
     group_id?: string;
     enabled_only?: boolean;
+    explicit_migration?: boolean;
   }): Promise<SkillBindingRecord[]> {
     if (!bindingsPool || !input?.tenant_id || !input?.project_id || !input?.group_id) {
+      if (!allowFallbackConfig({ explicit_migration: input?.explicit_migration })) return [];
       return deps.listFallbackSkillSwitches(input).map((item, index) => ({
         id: `fallback_${index}`,
         skill_id: item.skill_id,
@@ -336,8 +344,12 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     tenant_id: string;
     project_id?: string;
     group_id?: string;
+    explicit_migration?: boolean;
   }): Promise<Array<SkillBindingRecord & { source: SkillBindingSource }>> {
     if (!bindingsPool || !input.project_id || !input.group_id) {
+      if (!allowFallbackConfig({ explicit_migration: input.explicit_migration })) {
+        throw new Error("NO_SKILL_BINDING_FOUND");
+      }
       return resolveFromFallback(input).map((item) => ({
         id: `fallback_${item.skill_id}_${item.version}`,
         skill_id: item.skill_id,
@@ -387,7 +399,9 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       if (picked.length > 0) return picked;
     }
 
-    const fallback = resolveFromFallback(input);
+    const fallback = allowFallbackConfig({ explicit_migration: input.explicit_migration })
+      ? resolveFromFallback(input)
+      : [];
     if (fallback.length > 0) {
       return fallback.map((item) => ({
         id: `fallback_${item.skill_id}_${item.version}`,

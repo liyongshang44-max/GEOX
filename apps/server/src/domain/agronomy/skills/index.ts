@@ -1,3 +1,5 @@
+// LEGACY AGRONOMY SKILLS CATALOG (migration/bootstrap only).
+// DO_NOT_USE_LEGACY_AGRONOMY_SKILLS_IN_RUNTIME
 import { cornCrop } from "./crop/corn/corn.crop";
 import { tomatoCrop } from "./crop/tomato/tomato.crop";
 

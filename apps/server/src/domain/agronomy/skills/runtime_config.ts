@@ -19,11 +19,17 @@ const defaultFallbackSkillSwitches: SkillSwitch[] = [
 
 let fallbackSkillSwitches: SkillSwitch[] = defaultFallbackSkillSwitches.map((s) => ({ ...s, scope: s.scope ? { ...s.scope } : undefined }));
 
+function isLegacyAgronomyFallbackEnabled(): boolean {
+  const raw = String(process.env.GEOX_ENABLE_AGRONOMY_SKILL_FALLBACK ?? "0").trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(raw);
+}
+
 export function listFallbackSkillSwitches(input?: {
   crop_code?: string;
   tenant_id?: string;
   enabled_only?: boolean;
 }): SkillSwitch[] {
+  if (!isLegacyAgronomyFallbackEnabled()) return [];
   const crop_code = input?.crop_code;
   const tenant_id = input?.tenant_id;
   const enabledOnly = input?.enabled_only ?? false;

@@ -1,22 +1,7 @@
-import { createSkillRegistry, type SkillBindingRecord, type SkillBindingSource } from "@geox/skill-registry";
-import { ruleSkills } from "./index";
-import type { AgronomyRuleSkill } from "./types";
-import { listFallbackSkillSwitches } from "./runtime_config";
-import { appendSkillBindingFact } from "../../skill_registry/facts";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../../../projections/skill_registry_read_v1";
+// Legacy compatibility bridge only.
+// Runtime must not load this unless explicitly opting in for migration/backfill.
+if (process.env.GEOX_DISABLE_LEGACY_SKILLS !== "false") {
+  throw new Error("DO_NOT_USE_LEGACY_AGRONOMY_SKILLS_IN_RUNTIME");
+}
 
-const registry = createSkillRegistry<AgronomyRuleSkill>({
-  ruleSkills,
-  listFallbackSkillSwitches,
-  appendSkillBindingFact,
-  projectSkillRegistryReadV1,
-  querySkillRegistryReadV1,
-});
-
-export type { SkillBindingRecord, SkillBindingSource };
-
-export const configureSkillBindingsPool = registry.configureSkillBindingsPool;
-export const listSkillBindings = registry.listSkillBindings;
-export const switchSkillBinding = registry.switchSkillBinding;
-export const resolveRuleSkillBindings = registry.resolveRuleSkillBindings;
-export const getRuleSkills = registry.getRuleSkills;
+export * from "../../skill_registry/agronomy_rule_registry";

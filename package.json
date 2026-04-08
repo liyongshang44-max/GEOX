@@ -33,6 +33,7 @@
     "build:web": "pnpm --filter @geox/web build",
     "build:judge": "pnpm --filter @geox/judge build",
     "acceptance:stage5": "pnpm --filter @geox/server test:agronomy:stage5 && pnpm --filter @geox/server test:stage5:frontend",
+    "ci:server:no-legacy-agronomy-imports": "node scripts/check_no_legacy_agronomy_imports.cjs",
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json"

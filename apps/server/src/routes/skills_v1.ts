@@ -134,7 +134,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
 
       const q = (req.query ?? {}) as any;
       await projectSkillRegistryReadV1(pool, tenant);
-      const rows = await querySkillRegistryReadV1(pool, {
+      let rows = await querySkillRegistryReadV1(pool, {
         ...tenant,
         category: typeof q.category === "string" ? q.category : undefined,
         status: typeof q.status === "string" ? q.status : undefined,
@@ -144,6 +144,17 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
         fact_type: "skill_definition_v1",
       });
+      const bindingRows = await querySkillRegistryReadV1(pool, {
+        ...tenant,
+        crop_code: typeof q.crop_code === "string" ? q.crop_code : undefined,
+        bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
+        fact_type: "skill_binding_v1",
+      });
+      const bindingMap = new Map<string, string>();
+      for (const row of bindingRows) {
+        const key = `${row.skill_id}::${row.version}`;
+        if (!bindingMap.has(key)) bindingMap.set(key, String(row.status ?? "DISABLED").toUpperCase());
+      }
 
       const items = (rows ?? []).map((row) => ({
         skill_id: row.skill_id,
@@ -156,6 +167,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         rollout_mode: row.rollout_mode,
         crop_code: row.crop_code,
         device_type: row.device_type,
+        binding_status: bindingMap.get(`${row.skill_id}::${row.version}`) ?? "UNBOUND",
         updated_at: row.occurred_at,
       }));
 
