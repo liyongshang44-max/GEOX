@@ -166,95 +166,87 @@ export type RunWaterFlowInferenceAndPersistV1Input = {
   computed_at_ts_ms?: number;
 };
 
-export async function runWaterFlowInferenceAndPersistV1(
+export type RunWaterFlowInferenceV1Input = {
+  tenant_id: string;
+  project_id: string | null;
+  group_id: string | null;
+  field_id: string;
+  source_device_ids?: string[];
+  observation?: DeviceObservationV1Input;
+  computed_at_ts_ms?: number;
+};
+
+export type RunWaterFlowInferenceV1Result = {
+  state_type: "water_flow_state";
+  fact_id: string;
+  payload_summary: {
+    irrigation_effectiveness: IrrigationEffectivenessV1;
+    leak_risk: LeakRiskV1;
+    confidence: number;
+    explanation_codes: WaterFlowInferenceExplanationCodeV1[];
+  };
+  payload: Record<string, unknown>;
+};
+
+function pickLatestFinite(observations: Array<Record<string, unknown>>, keys: string[]): number | null {
+  for (let i = observations.length - 1; i >= 0; i -= 1) {
+    const value = firstFiniteFromObservation(observations[i], keys);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+function pickSourceDeviceIds(observations: Array<Record<string, unknown>>, inputDeviceIds?: string[]): string[] {
+  const inferred = observations
+    .map((x) => x.device_id ?? x.source_device_id ?? x.sensor_id ?? x.id)
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .map((x) => x.trim());
+  const fromInput = (inputDeviceIds ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
+  return Array.from(new Set([...fromInput, ...inferred]));
+}
+
+export async function runWaterFlowInferenceV1(
   db: Pool | PoolClient,
-  input: RunWaterFlowInferenceAndPersistV1Input
-): Promise<{ inference: WaterFlowInferenceV1Result; computed_at_ts_ms: number }> {
-  const telemetryDigestInput = {
-    inlet_flow_lpm: toFiniteNumber(input.inlet_flow_lpm),
-    outlet_flow_lpm: toFiniteNumber(input.outlet_flow_lpm),
-    pressure_drop_kpa: toFiniteNumber(input.pressure_drop_kpa),
-    device_id: input.device_id,
-    field_id: input.field_id,
+  input: RunWaterFlowInferenceV1Input
+): Promise<RunWaterFlowInferenceV1Result> {
+  const observations = extractObservationList(input.observation);
+  const sourceDeviceIds = pickSourceDeviceIds(observations, input.source_device_ids);
+  const aggregate: SensingWaterFlowAggregateV1 = {
+    inlet_flow_lpm: pickLatestFinite(observations, ["inlet_flow_lpm", "inflow_lpm", "flow_in_lpm"]),
+    outlet_flow_lpm: pickLatestFinite(observations, ["outlet_flow_lpm", "outflow_lpm", "flow_out_lpm"]),
+    pressure_drop_kpa: pickLatestFinite(observations, ["pressure_drop_kpa", "delta_pressure_kpa", "pressure_loss_kpa"]),
+    observation_count: observations.length,
+    source_ids: sourceDeviceIds,
   };
 
-  await appendSkillRunFact(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id ?? "default",
-    group_id: input.group_id ?? "default",
-    skill_id: "water_flow_inference_v1",
-    version: "v1",
-    category: "AGRONOMY",
-    status: "ACTIVE",
-    result_status: "SUCCESS",
-    trigger_stage: "before_recommendation",
-    scope_type: "DEVICE",
-    rollout_mode: "DIRECT",
-    bind_target: input.device_id,
-    operation_id: null,
-    operation_plan_id: null,
-    field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson({ parsed: telemetryDigestInput }),
-    error_code: null,
-    duration_ms: 0,
-  });
-
-  const inference = inferWaterFlowFromObservationAggregateV1({
-    inlet_flow_lpm: telemetryDigestInput.inlet_flow_lpm,
-    outlet_flow_lpm: telemetryDigestInput.outlet_flow_lpm,
-    pressure_drop_kpa: telemetryDigestInput.pressure_drop_kpa,
-    observation_count: 1,
-    source_ids: [input.device_id],
-  });
-
-  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms))
-    ? Number(input.computed_at_ts_ms)
-    : Date.now();
+  const inference = inferWaterFlowFromObservationAggregateV1(aggregate);
+  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now();
+  const payload = {
+    irrigation_effectiveness: inference.irrigation_effectiveness,
+    leak_risk: inference.leak_risk,
+    confidence: inference.confidence,
+    explanation_codes: inference.explanation_codes,
+    inlet_flow_lpm: aggregate.inlet_flow_lpm ?? null,
+    outlet_flow_lpm: aggregate.outlet_flow_lpm ?? null,
+    pressure_drop_kpa: aggregate.pressure_drop_kpa ?? null,
+    observation_count: aggregate.observation_count ?? 0,
+  } satisfies Record<string, unknown>;
 
   await appendDerivedSensingStateV1(db, {
     tenant_id: input.tenant_id,
     project_id: input.project_id,
     group_id: input.group_id,
     field_id: input.field_id,
-    state_type: "irrigation_effectiveness_state",
-    payload: {
-      level: inference.irrigation_effectiveness,
-      irrigation_effectiveness: inference.irrigation_effectiveness,
-      inlet_flow_lpm: telemetryDigestInput.inlet_flow_lpm,
-      outlet_flow_lpm: telemetryDigestInput.outlet_flow_lpm,
-      pressure_drop_kpa: telemetryDigestInput.pressure_drop_kpa,
-    },
+    state_type: "water_flow_state",
+    payload,
     confidence: inference.confidence,
     explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
+    source_device_ids: sourceDeviceIds,
     computed_at_ts_ms,
     source: "sensing_pipeline_v1",
   });
 
-  await appendDerivedSensingStateV1(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id,
-    group_id: input.group_id,
-    field_id: input.field_id,
-    state_type: "leak_risk_state",
-    payload: {
-      level: inference.leak_risk,
-      leak_risk: inference.leak_risk,
-      irrigation_effectiveness: inference.irrigation_effectiveness,
-      inlet_flow_lpm: telemetryDigestInput.inlet_flow_lpm,
-      outlet_flow_lpm: telemetryDigestInput.outlet_flow_lpm,
-      pressure_drop_kpa: telemetryDigestInput.pressure_drop_kpa,
-    },
-    confidence: inference.confidence,
-    explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
-    computed_at_ts_ms,
-    source: "sensing_pipeline_v1",
-  });
-
-  await appendSkillRunFact(db, {
+  const run = await appendSkillRunFact(db, {
     tenant_id: input.tenant_id,
     project_id: input.project_id ?? "default",
     group_id: input.group_id ?? "default",
@@ -270,12 +262,53 @@ export async function runWaterFlowInferenceAndPersistV1(
     operation_id: null,
     operation_plan_id: null,
     field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson(inference),
+    device_id: sourceDeviceIds[0] ?? null,
+    input_digest: digestJson(aggregate),
+    output_digest: digestJson(payload),
     error_code: null,
     duration_ms: 0,
   });
 
-  return { inference, computed_at_ts_ms };
+  return {
+    state_type: "water_flow_state",
+    fact_id: run.fact_id,
+    payload_summary: {
+      irrigation_effectiveness: inference.irrigation_effectiveness,
+      leak_risk: inference.leak_risk,
+      confidence: inference.confidence,
+      explanation_codes: inference.explanation_codes,
+    },
+    payload,
+  };
+}
+
+export async function runWaterFlowInferenceAndPersistV1(
+  db: Pool | PoolClient,
+  input: RunWaterFlowInferenceAndPersistV1Input
+): Promise<{ inference: WaterFlowInferenceV1Result; computed_at_ts_ms: number }> {
+  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now();
+  const run = await runWaterFlowInferenceV1(db, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id,
+    source_device_ids: [input.device_id],
+    observation: {
+      inlet_flow_lpm: input.inlet_flow_lpm,
+      outlet_flow_lpm: input.outlet_flow_lpm,
+      pressure_drop_kpa: input.pressure_drop_kpa,
+      device_id: input.device_id,
+    },
+    computed_at_ts_ms,
+  });
+
+  return {
+    inference: {
+      irrigation_effectiveness: run.payload_summary.irrigation_effectiveness,
+      leak_risk: run.payload_summary.leak_risk,
+      confidence: run.payload_summary.confidence,
+      explanation_codes: run.payload_summary.explanation_codes,
+    },
+    computed_at_ts_ms,
+  };
 }
