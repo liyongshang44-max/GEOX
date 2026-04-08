@@ -9,29 +9,63 @@ export const DERIVED_SENSING_STATE_TYPES_V1 = [
   "salinity_risk_state",
   "irrigation_need_state",
   "sensor_quality_state",
+  "canopy_temperature_state",
+  "evapotranspiration_risk_state",
+  "irrigation_effectiveness_state",
+  "leak_risk_state",
 ] as const;
 export type DerivedSensingStateTypeV1 = typeof DERIVED_SENSING_STATE_TYPES_V1[number];
 
 const FertilityStatePayloadSchema = z.object({
-  level: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
   soil_moisture_pct: z.number().finite().optional(),
   canopy_temp_c: z.number().finite().optional(),
 }).passthrough();
 
 const SalinityRiskStatePayloadSchema = z.object({
-  level: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
   soil_moisture_pct: z.number().finite().optional(),
   canopy_temp_c: z.number().finite().optional(),
 }).passthrough();
 
 const IrrigationNeedStatePayloadSchema = z.object({
-  level: z.enum(["LOW", "MEDIUM", "HIGH"]),
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
   action_hint: z.string().trim().min(1).max(120).optional(),
 }).passthrough();
 
 const SensorQualityStatePayloadSchema = z.object({
-  level: z.enum(["GOOD", "FAIR", "POOR"]),
+  level: z.enum(["GOOD", "FAIR", "POOR", "UNKNOWN"]),
   reason: z.string().trim().min(1).max(160).optional(),
+}).passthrough();
+
+const CanopyTemperatureStatePayloadSchema = z.object({
+  level: z.enum(["NORMAL", "ELEVATED", "CRITICAL", "UNKNOWN"]),
+  canopy_temp_c: z.number().finite().nullable().optional(),
+  ambient_temp_c: z.number().finite().nullable().optional(),
+  relative_humidity_pct: z.number().finite().nullable().optional(),
+}).passthrough();
+
+const EvapotranspirationRiskStatePayloadSchema = z.object({
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
+  canopy_temp_status: z.enum(["normal", "elevated", "critical", "unknown"]).optional(),
+  canopy_temp_c: z.number().finite().nullable().optional(),
+  ambient_temp_c: z.number().finite().nullable().optional(),
+  relative_humidity_pct: z.number().finite().nullable().optional(),
+}).passthrough();
+
+const IrrigationEffectivenessStatePayloadSchema = z.object({
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
+  inlet_flow_lpm: z.number().finite().nullable().optional(),
+  outlet_flow_lpm: z.number().finite().nullable().optional(),
+  pressure_drop_kpa: z.number().finite().nullable().optional(),
+}).passthrough();
+
+const LeakRiskStatePayloadSchema = z.object({
+  level: z.enum(["LOW", "MEDIUM", "HIGH", "UNKNOWN"]),
+  irrigation_effectiveness: z.enum(["low", "medium", "high", "unknown"]).optional(),
+  inlet_flow_lpm: z.number().finite().nullable().optional(),
+  outlet_flow_lpm: z.number().finite().nullable().optional(),
+  pressure_drop_kpa: z.number().finite().nullable().optional(),
 }).passthrough();
 
 const DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1: Record<DerivedSensingStateTypeV1, z.ZodTypeAny> = {
@@ -39,6 +73,10 @@ const DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1: Record<DerivedSensingStateTypeV1,
   salinity_risk_state: SalinityRiskStatePayloadSchema,
   irrigation_need_state: IrrigationNeedStatePayloadSchema,
   sensor_quality_state: SensorQualityStatePayloadSchema,
+  canopy_temperature_state: CanopyTemperatureStatePayloadSchema,
+  evapotranspiration_risk_state: EvapotranspirationRiskStatePayloadSchema,
+  irrigation_effectiveness_state: IrrigationEffectivenessStatePayloadSchema,
+  leak_risk_state: LeakRiskStatePayloadSchema,
 };
 
 export type DerivedSensingStateV1Input = {
