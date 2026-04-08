@@ -7,7 +7,7 @@ import type {
 import { inferFertilityFromDeviceObservationV1 } from "./fertility_inference_core_v1";
 
 export type DeviceSkillCategory = "device" | "sensing_inference";
-export type TriggerStage = "before_recommendation" | "before_approval" | "before_dispatch" | "before_acceptance" | "after_acceptance";
+export type TriggerStage = "before_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance" | "after_recommendation";
 export type FertilityLevel = FertilityLevelV1;
 export type SalinityRiskLevel = SalinityRiskV1;
 export type RecommendationBias = RecommendationBiasV1;

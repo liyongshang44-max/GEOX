@@ -83,6 +83,24 @@ function sendSkillsResponse(reply: any, payload: Record<string, unknown>) {
 }
 
 function sendSkillsInternalError(reply: any, e: unknown) {
+  const message = e instanceof Error ? e.message : String(e);
+  if (message.includes("INVALID_TRIGGER_STAGE")) {
+    return reply.status(400).send({
+      ok: false,
+      error: "INVALID_TRIGGER_STAGE",
+      message,
+      api_contract_version: SKILLS_API_CONTRACT_VERSION,
+    });
+  }
+  if (message.includes("Invalid enum value") && message.includes("trigger_stage")) {
+    return reply.status(400).send({
+      ok: false,
+      error: "INVALID_TRIGGER_STAGE",
+      message:
+        "trigger_stage 校验失败：before_approval 已弃用，请改用 after_recommendation。允许值：before_recommendation | before_dispatch | before_acceptance | after_acceptance | after_recommendation",
+      api_contract_version: SKILLS_API_CONTRACT_VERSION,
+    });
+  }
   console.error(e);
   return reply.status(500).send({
     ok: false,

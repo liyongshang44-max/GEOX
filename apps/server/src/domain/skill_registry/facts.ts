@@ -7,7 +7,7 @@ const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as con
 const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as const;
 const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
 const RESULT_STATUS_VALUES = ["SUCCESS", "FAILED", "SKIPPED", "TIMEOUT"] as const;
-const TRIGGER_STAGE_VALUES = ["before_recommendation", "after_recommendation", "before_approval", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
+const TRIGGER_STAGE_VALUES = ["before_recommendation", "after_recommendation", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
 const DEVICE_TYPE_VALUES = ["PUMP", "DRONE", "SENSOR", "HUMAN", "UNKNOWN"] as const;
 const BINDING_STATUS_VALUES = ["ACTIVE", "DISABLED"] as const;
 
@@ -182,6 +182,15 @@ function normalizeTriggerStage(value: unknown): SkillDefinitionFactPayload["trig
   return compatEnum(value, TRIGGER_STAGE_COMPAT) ?? "before_dispatch";
 }
 
+function ensureWritableTriggerStage(value: unknown, factType: "skill_definition_v1" | "skill_binding_v1" | "skill_run_v1"): void {
+  const requestedStage = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (requestedStage === "before_approval") {
+    throw new Error(
+      `INVALID_TRIGGER_STAGE: before_approval is deprecated for ${factType} writes; use after_recommendation. Allowed values: before_recommendation | before_dispatch | before_acceptance | after_acceptance | after_recommendation`
+    );
+  }
+}
+
 function normalizeDeviceType(value: unknown): SkillDefinitionFactPayload["device_type"] | null | undefined {
   if (value == null) return value as null | undefined;
   const normalized = compatEnum(value, DEVICE_TYPE_COMPAT);
@@ -210,6 +219,7 @@ export function digestJson(input: unknown): string {
 }
 
 export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: SkillDefinitionFactPayload): Promise<{ fact_id: string; occurred_at: string; payload: SkillDefinitionFactPayload }> {
+  ensureWritableTriggerStage(input.trigger_stage, "skill_definition_v1");
   const payload = SkillDefinitionPayloadSchema.parse({
     ...input,
     category: normalizeCategory(input.category),
@@ -225,6 +235,7 @@ export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: Sk
 }
 
 export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<SkillBindingFactPayload, "binding_id"> & { binding_id?: string }): Promise<{ fact_id: string; occurred_at: string; payload: SkillBindingFactPayload }> {
+  ensureWritableTriggerStage(input.trigger_stage, "skill_binding_v1");
   const payload = SkillBindingPayloadSchema.parse({
     ...input,
     binding_id: input.binding_id ?? randomUUID(),
@@ -244,10 +255,7 @@ export async function appendSkillRunFact(
   db: Pool | PoolClient,
   input: Omit<SkillRunFactPayload, "run_id" | "lifecycle_version"> & { run_id?: string; lifecycle_version?: number }
 ): Promise<{ fact_id: string; occurred_at: string; payload: SkillRunFactPayload }> {
-  const requestedStage = String(input.trigger_stage ?? "").trim().toLowerCase();
-  if (requestedStage === "before_approval") {
-    throw new Error("INVALID_TRIGGER_STAGE: before_approval is deprecated for skill_run_v1 writes; use after_recommendation");
-  }
+  ensureWritableTriggerStage(input.trigger_stage, "skill_run_v1");
   const payload = SkillRunPayloadSchema.parse({
     ...input,
     run_id: input.run_id ?? randomUUID(),
