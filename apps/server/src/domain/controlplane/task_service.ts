@@ -1831,8 +1831,9 @@ type ParsedTaskCapability = {
   explain: string | null;
   compatibility: {
     adapters: string[];
-    device_types: string[];
+    capabilities: string[];
     protocols: string[];
+    hints?: { device_types?: string[] };
   };
 };
 

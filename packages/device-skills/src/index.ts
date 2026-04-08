@@ -28,8 +28,11 @@ export type CapabilityResolution = {
   explain: string;
   compatibility: {
     adapters: string[];
-    device_types: string[];
+    capabilities: string[];
     protocols: string[];
+    hints?: {
+      device_types?: string[];
+    };
   };
 };
 
@@ -79,8 +82,11 @@ export type DeviceSkillDefinition = {
   trigger_stage: TriggerStage;
   compatibility: {
     adapters: string[];
-    device_types: string[];
+    capabilities: string[];
     protocols: string[];
+    hints?: {
+      device_types?: string[];
+    };
   };
   resolveCapability?: (input: { task_payload: any }) => CapabilityResolution | null;
   interpretTelemetry?: (input: { report: any; now_ms?: number }) => TelemetryInterpretation;
@@ -100,8 +106,9 @@ const irrigationValveV1: DeviceSkillDefinition = {
   trigger_stage: "before_dispatch",
   compatibility: {
     adapters: ["mqtt", "mqtt_downlink_once_v1", "irrigation_http_v1", "irrigation_simulator"],
-    device_types: ["PUMP", "VALVE", "IRRIGATION_CONTROLLER"],
-    protocols: ["mqtt", "http"]
+    capabilities: ["device.irrigation.valve.open"],
+    protocols: ["mqtt", "http"],
+    hints: { device_types: ["PUMP", "VALVE", "IRRIGATION_CONTROLLER"] }
   },
   resolveCapability: ({ task_payload }) => {
     const actionLike = String(task_payload?.action_type ?? task_payload?.task_type ?? task_payload?.meta?.task_type ?? "").trim().toLowerCase();
@@ -141,8 +148,9 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
   trigger_stage: "before_dispatch",
   compatibility: {
     adapters: ["mqtt", "mqtt_downlink_once_v1", "fertigation_http_v1", "fertigation_simulator"],
-    device_types: ["FERTILIZER_UNIT", "FERTIGATION_CONTROLLER", "IRRIGATION_CONTROLLER"],
-    protocols: ["mqtt", "http"]
+    capabilities: ["device.fertilization.dispense"],
+    protocols: ["mqtt", "http"],
+    hints: { device_types: ["FERTILIZER_UNIT", "FERTIGATION_CONTROLLER", "IRRIGATION_CONTROLLER"] }
   },
   resolveCapability: ({ task_payload }) => {
     const actionLike = String(task_payload?.action_type ?? task_payload?.task_type ?? task_payload?.meta?.task_type ?? "").trim().toLowerCase();
@@ -184,8 +192,9 @@ const soilSensorV1: DeviceSkillDefinition = {
   trigger_stage: "before_dispatch",
   compatibility: {
     adapters: ["mqtt", "telemetry_gateway"],
-    device_types: ["SENSOR"],
-    protocols: ["mqtt", "lorawan", "http"]
+    capabilities: ["device.telemetry.interpret"],
+    protocols: ["mqtt", "lorawan", "http"],
+    hints: { device_types: ["SENSOR"] }
   },
   interpretTelemetry: ({ report, now_ms }) => {
     const tsMs = finite(report?.ts_ms ?? report?.timestamp_ms ?? report?.timestamp);
@@ -236,8 +245,9 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
   trigger_stage: "before_recommendation",
   compatibility: {
     adapters: ["mqtt", "http", "telemetry_gateway", "edge_aggregator"],
-    device_types: ["SENSOR", "GATEWAY", "EDGE_NODE", "IRRIGATION_CONTROLLER"],
-    protocols: ["mqtt", "http", "lorawan", "coap"]
+    capabilities: ["sensing.fertility.infer"],
+    protocols: ["mqtt", "http", "lorawan", "coap"],
+    hints: { device_types: ["SENSOR", "GATEWAY", "EDGE_NODE", "IRRIGATION_CONTROLLER"] }
   },
   inferSensing: ({ device_observation_v1 }) => {
     const inferred = inferFertilityFromDeviceObservationV1(device_observation_v1);
@@ -302,12 +312,12 @@ export function validateDeviceSkillCompatibilityMatrix(skills: DeviceSkillDefini
   const errors: Array<{ skill_id: string; code: string; message: string }> = [];
   for (const skill of skills) {
     const adapters = Array.isArray(skill.compatibility?.adapters) ? skill.compatibility.adapters : [];
-    const deviceTypes = Array.isArray(skill.compatibility?.device_types) ? skill.compatibility.device_types : [];
+    const capabilities = Array.isArray(skill.compatibility?.capabilities) ? skill.compatibility.capabilities : [];
     if (adapters.length === 0) {
       errors.push({ skill_id: skill.skill_id, code: "MISSING_COMPATIBLE_ADAPTERS", message: "Skill compatibility.adapters must not be empty." });
     }
-    if (deviceTypes.length === 0) {
-      errors.push({ skill_id: skill.skill_id, code: "MISSING_COMPATIBLE_DEVICE_TYPES", message: "Skill compatibility.device_types must not be empty." });
+    if (capabilities.length === 0) {
+      errors.push({ skill_id: skill.skill_id, code: "MISSING_COMPATIBLE_CAPABILITIES", message: "Skill compatibility.capabilities must not be empty." });
     }
   }
   return errors.length ? { ok: false, errors } : { ok: true };
@@ -370,10 +380,16 @@ export function checkCapabilityCompatibilityMatrix(input: {
   const normalized_adapter = normalizeAdapterType(input.adapter_type);
   const normalized_device_type = normalizeDeviceType(input.device_type);
   const allowedAdapters = (input.capability.compatibility?.adapters ?? []).map((x) => normalizeAdapterType(x));
+  const requiredCapability = String(input.capability.capability ?? "").trim().toLowerCase();
+  const allowedCapabilities = (input.capability.compatibility?.capabilities ?? []).map((x) => String(x ?? "").trim().toLowerCase()).filter(Boolean);
   const reasons: string[] = [];
   if (!normalized_adapter) reasons.push("missing_adapter_type");
   if (normalized_adapter && allowedAdapters.length > 0 && !allowedAdapters.includes(normalized_adapter)) {
     reasons.push("adapter_not_compatible");
+  }
+  if (!requiredCapability) reasons.push("missing_required_capability");
+  if (requiredCapability && allowedCapabilities.length > 0 && !allowedCapabilities.includes(requiredCapability)) {
+    reasons.push("capability_not_compatible");
   }
   if (reasons.length === 0) return { ok: true, normalized_adapter, normalized_device_type };
   return {
