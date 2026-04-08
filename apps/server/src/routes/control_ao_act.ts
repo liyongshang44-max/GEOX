@@ -11,6 +11,7 @@ import { computeEffect } from "../domain/agronomy/effect_engine";
 import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -165,6 +166,13 @@ type EffectMetricSnapshot = {
   temperature?: number;
   humidity?: number;
 };
+
+function resolveDeviceExecutionSkillMeta(actionType: string): { skill_id: "irrigation_valve_v1" | "fertilizer_unit_v1"; version: "v1" } | null {
+  const normalized = String(actionType ?? "").trim().toUpperCase();
+  if (normalized === "IRRIGATE") return { skill_id: "irrigation_valve_v1", version: "v1" };
+  if (normalized === "FERTILIZE") return { skill_id: "fertilizer_unit_v1", version: "v1" };
+  return null;
+}
 
 function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
   const out: EffectMetricSnapshot = {};
@@ -977,6 +985,43 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           }
         }]
       );
+      const executionSkillMeta = resolveDeviceExecutionSkillMeta(actionType);
+      if (executionSkillMeta) {
+        const relatedFieldId = body.execution_plan.target.kind === "field" ? String(body.execution_plan.target.ref) : null;
+        const relatedDeviceId = body.execution_plan.target.kind === "device" ? String(body.execution_plan.target.ref) : null;
+        await appendSkillRunFact(pool, {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          skill_id: executionSkillMeta.skill_id,
+          version: executionSkillMeta.version,
+          category: "DEVICE",
+          status: "ACTIVE",
+          result_status: "SUCCESS",
+          trigger_stage: "before_dispatch",
+          scope_type: "DEVICE",
+          rollout_mode: "DIRECT",
+          bind_target: relatedDeviceId ?? relatedFieldId ?? body.operation_id,
+          operation_id: body.operation_id,
+          operation_plan_id: body.operation_id,
+          field_id: relatedFieldId,
+          device_id: relatedDeviceId,
+          input_digest: digestJson({
+            action_type: actionType,
+            operation_id: body.operation_id,
+            target: body.execution_plan.target,
+            parameters: body.execution_plan.parameters,
+          }),
+          output_digest: digestJson({
+            act_task_id,
+            execution_key: executionKey,
+            dedupe_key: dedupeKey,
+            status: "PENDING",
+          }),
+          error_code: null,
+          duration_ms: 0,
+        });
+      }
       return reply.send({
         ok: true,
         act_task_id,
