@@ -6,11 +6,7 @@ if (process.env.GEOX_DISABLE_LEGACY_SKILLS !== "false") {
   throw new Error("LEGACY_AGRONOMY_SKILLS_DISABLED");
 }
 
-type MigrationRuleSkill = { id: string; version: string };
-
-const registry = createSkillRegistry<MigrationRuleSkill>({
-  ruleSkills: [],
-  listFallbackSkillSwitches: () => [],
+const registry = createSkillRegistry({
   appendSkillBindingFact,
   projectSkillRegistryReadV1,
   querySkillRegistryReadV1,

@@ -4,12 +4,9 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import {
   appendSkillBindingFact,
   appendSkillDefinitionFact,
-  digestJson,
   type SkillDefinitionFactPayload,
 } from "../domain/skill_registry/facts";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
-import { ruleSkills } from "../domain/agronomy/skills";
-import { listFallbackSkillSwitches } from "../domain/agronomy/skills/runtime_config";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
@@ -110,51 +107,6 @@ function sendSkillsInternalError(reply: any, e: unknown) {
     error: String(e),
     api_contract_version: SKILLS_API_CONTRACT_VERSION,
   });
-}
-
-async function initAgronomySkillsIfEmpty(pool: Pool, tenant: TenantTriple, logger: FastifyInstance["log"]): Promise<void> {
-  const seedEnabled = String(process.env.GEOX_ENABLE_SKILL_DEFINITION_INIT ?? "0").trim().toLowerCase() === "1";
-  if (!seedEnabled) return;
-  logger.warn({ tenant }, "[skills] skill_definition_v1 empty; bootstrapping agronomy defaults once");
-
-  for (const skill of ruleSkills) {
-    await appendSkillDefinitionFact(pool, {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      skill_id: skill.id,
-      version: skill.version,
-      display_name: skill.id,
-      category: "AGRONOMY",
-      status: skill.enabled ? "ACTIVE" : "DISABLED",
-      trigger_stage: "before_recommendation",
-      scope_type: "TENANT",
-      rollout_mode: "DIRECT",
-      crop_code: skill.crop_code,
-      input_schema_digest: digestJson({ crop_code: skill.crop_code, skill_id: skill.id, version: skill.version, type: "agronomy_rule_input_v1" }),
-      output_schema_digest: digestJson({ recommendation_type: "agronomy_rule_output_v1", skill_id: skill.id, version: skill.version }),
-    });
-  }
-
-  const switches = listFallbackSkillSwitches({ tenant_id: tenant.tenant_id, enabled_only: false });
-  for (const item of switches) {
-    await appendSkillBindingFact(pool, {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      skill_id: item.skill_id,
-      version: item.version,
-      category: "AGRONOMY",
-      status: item.enabled ? "ACTIVE" : "DISABLED",
-      scope_type: "TENANT",
-      rollout_mode: "DIRECT",
-      trigger_stage: "before_recommendation",
-      bind_target: item.scope?.tenant_id || tenant.tenant_id,
-      crop_code: item.scope?.crop_code ?? null,
-      device_type: null,
-      priority: item.priority,
-    });
-  }
 }
 
 export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {

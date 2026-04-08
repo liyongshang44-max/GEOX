@@ -1,18 +1,5 @@
 import type { Pool } from "pg";
 
-export type SkillSwitchScope = {
-  tenant_id?: string;
-  crop_code?: string;
-};
-
-export type SkillSwitch = {
-  skill_id: string;
-  version: string;
-  enabled: boolean;
-  priority: number;
-  scope?: SkillSwitchScope;
-};
-
 export type RegistryRuleSkill = {
   id: string;
   version: string;
@@ -37,7 +24,7 @@ export type SkillBindingRecord = {
   updated_at: string;
 };
 
-export type SkillBindingSource = "tenant+crop" | "tenant+*" | "*+crop" | "global" | "fallback_config";
+export type SkillBindingSource = "tenant+crop" | "tenant+*" | "*+crop" | "global";
 
 type RegistryRow = {
   fact_id?: string;
@@ -76,13 +63,7 @@ type AppendedSkillBinding = {
   };
 };
 
-export type SkillRegistryDeps<TSkill extends RegistryRuleSkill> = {
-  ruleSkills: TSkill[];
-  listFallbackSkillSwitches: (input?: {
-    crop_code?: string;
-    tenant_id?: string;
-    enabled_only?: boolean;
-  }) => SkillSwitch[];
+export type SkillRegistryDeps = {
   appendSkillBindingFact: (pool: Pool, input: {
     tenant_id: string;
     project_id: string;
@@ -113,8 +94,8 @@ export type SkillRegistryDeps<TSkill extends RegistryRuleSkill> = {
   }) => Promise<RegistryRow[]>;
 };
 
-export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: SkillRegistryDeps<TSkill>) {
-  type ResolvedRuleSkill = TSkill & { __priority: number };
+export function createSkillRegistry(deps: SkillRegistryDeps) {
+  type ResolvedRuleSkill = RegistryRuleSkill & { __priority: number };
 
   let bindingsPool: Pool | null = null;
 
@@ -131,13 +112,7 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     return null;
   }
 
-  const sourceOrder: SkillBindingSource[] = ["tenant+crop", "tenant+*", "*+crop", "global", "fallback_config"];
-
-  function allowFallbackConfig(input?: { explicit_migration?: boolean }): boolean {
-    if (input?.explicit_migration) return true;
-    const raw = String(process.env.GEOX_ENABLE_SKILL_REGISTRY_FALLBACK ?? "0").trim().toLowerCase();
-    return ["1", "true", "yes", "on"].includes(raw);
-  }
+  const sourceOrder: SkillBindingSource[] = ["tenant+crop", "tenant+*", "*+crop", "global"];
 
   function pickBySkill(rows: Array<SkillBindingRecord & { source: SkillBindingSource }>): Array<SkillBindingRecord & { source: SkillBindingSource }> {
     const grouped = new Map<string, Array<SkillBindingRecord & { source: SkillBindingSource }>>();
@@ -190,28 +165,9 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     project_id?: string;
     group_id?: string;
     enabled_only?: boolean;
-    explicit_migration?: boolean;
   }): Promise<SkillBindingRecord[]> {
     if (!bindingsPool || !input?.tenant_id || !input?.project_id || !input?.group_id) {
-      if (!allowFallbackConfig({ explicit_migration: input?.explicit_migration })) return [];
-      return deps.listFallbackSkillSwitches(input).map((item, index) => ({
-        id: `fallback_${index}`,
-        skill_id: item.skill_id,
-        version: item.version,
-        tenant_id: item.scope?.tenant_id ?? null,
-        project_id: null,
-        group_id: null,
-        crop_code: item.scope?.crop_code ?? null,
-        enabled: item.enabled,
-        priority: item.priority,
-        category: null,
-        scope_type: "TENANT",
-        rollout_mode: "DIRECT",
-        trigger_stage: null,
-        bind_target: item.scope?.tenant_id ?? "*",
-        device_type: null,
-        updated_at: new Date(0).toISOString(),
-      }));
+      return [];
     }
 
     await deps.projectSkillRegistryReadV1(bindingsPool, {
@@ -286,89 +242,14 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     };
   }
 
-  function resolveFromFallback(input: { crop_code: string; tenant_id: string }): Array<SkillSwitch & { source: SkillBindingSource }> {
-    const enabled = deps.listFallbackSkillSwitches({
-      crop_code: input.crop_code,
-      tenant_id: input.tenant_id,
-      enabled_only: true,
-    });
-
-    const mapped = enabled
-      .map((row) => {
-        const source = resolveSource(input.tenant_id, input.crop_code, {
-          tenant_id: row.scope?.tenant_id ?? null,
-          crop_code: row.scope?.crop_code ?? null,
-        });
-        return source ? { ...row, source } : null;
-      })
-      .filter((row): row is SkillSwitch & { source: SkillBindingSource } => Boolean(row));
-
-    for (const source of sourceOrder) {
-      const matched = mapped.filter((item) => item.source === source);
-      const picked = pickBySkill(matched.map((item) => ({
-        id: `fallback_${item.skill_id}_${item.version}_${source}`,
-        skill_id: item.skill_id,
-        version: item.version,
-        tenant_id: item.scope?.tenant_id ?? null,
-        project_id: null,
-        group_id: null,
-        crop_code: item.scope?.crop_code ?? null,
-        enabled: item.enabled,
-        priority: item.priority,
-        category: null,
-        scope_type: "TENANT",
-        rollout_mode: "DIRECT",
-        trigger_stage: null,
-        bind_target: item.scope?.tenant_id ?? "*",
-        device_type: null,
-        updated_at: new Date(0).toISOString(),
-        source,
-      })));
-      if (picked.length > 0) {
-        return picked.map((item) => ({
-          skill_id: item.skill_id,
-          version: item.version,
-          enabled: item.enabled,
-          priority: item.priority,
-          scope: { tenant_id: item.tenant_id ?? undefined, crop_code: item.crop_code ?? undefined },
-          source,
-        }));
-      }
-    }
-
-    return [];
-  }
-
   async function resolveRuleSkillBindings(input: {
     crop_code: string;
     tenant_id: string;
     project_id?: string;
     group_id?: string;
-    explicit_migration?: boolean;
   }): Promise<Array<SkillBindingRecord & { source: SkillBindingSource }>> {
     if (!bindingsPool || !input.project_id || !input.group_id) {
-      if (!allowFallbackConfig({ explicit_migration: input.explicit_migration })) {
-        throw new Error("NO_SKILL_BINDING_FOUND");
-      }
-      return resolveFromFallback(input).map((item) => ({
-        id: `fallback_${item.skill_id}_${item.version}`,
-        skill_id: item.skill_id,
-        version: item.version,
-        tenant_id: item.scope?.tenant_id ?? null,
-        project_id: null,
-        group_id: null,
-        crop_code: item.scope?.crop_code ?? null,
-        enabled: item.enabled,
-        priority: item.priority,
-        category: null,
-        scope_type: "TENANT",
-        rollout_mode: "DIRECT",
-        trigger_stage: null,
-        bind_target: item.scope?.tenant_id ?? "*",
-        device_type: null,
-        updated_at: new Date(0).toISOString(),
-        source: item.source,
-      }));
+      throw new Error("NO_SKILL_BINDING_FOUND");
     }
 
     await deps.projectSkillRegistryReadV1(bindingsPool, {
@@ -399,31 +280,6 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
       if (picked.length > 0) return picked;
     }
 
-    const fallback = allowFallbackConfig({ explicit_migration: input.explicit_migration })
-      ? resolveFromFallback(input)
-      : [];
-    if (fallback.length > 0) {
-      return fallback.map((item) => ({
-        id: `fallback_${item.skill_id}_${item.version}`,
-        skill_id: item.skill_id,
-        version: item.version,
-        tenant_id: item.scope?.tenant_id ?? null,
-        project_id: null,
-        group_id: null,
-        crop_code: item.scope?.crop_code ?? null,
-        enabled: item.enabled,
-        priority: item.priority,
-        category: null,
-        scope_type: "TENANT",
-        rollout_mode: "DIRECT",
-        trigger_stage: null,
-        bind_target: item.scope?.tenant_id ?? "*",
-        device_type: null,
-        updated_at: new Date(0).toISOString(),
-        source: item.source,
-      }));
-    }
-
     throw new Error("NO_SKILL_BINDING_FOUND");
   }
 
@@ -434,12 +290,11 @@ export function createSkillRegistry<TSkill extends RegistryRuleSkill>(deps: Skil
     group_id?: string;
   }): Promise<ResolvedRuleSkill[]> {
     const resolvedBindings = await resolveRuleSkillBindings(input);
-    const resolved = resolvedBindings
-      .map((s) => {
-        const impl = deps.ruleSkills.find((r) => r.id === s.skill_id && r.version === s.version);
-        return impl ? { ...impl, __priority: s.priority } : null;
-      })
-      .filter((x): x is ResolvedRuleSkill => x !== null);
+    const resolved = resolvedBindings.map((s) => ({
+      id: s.skill_id,
+      version: s.version,
+      __priority: s.priority,
+    }));
 
     resolved.sort((a, b) => b.__priority - a.__priority);
     return resolved;
