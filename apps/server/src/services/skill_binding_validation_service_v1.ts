@@ -78,11 +78,11 @@ export async function ensureDeviceSkillBindingStatusRuntimeV1(db: Pool | PoolCli
 
 export async function validateDeviceRequiredObservationSkillBindingsV1(
   db: Pool | PoolClient,
-  input: TenantTriple & { device_id: string; template_id?: string | null }
+  input: TenantTriple & { device_id: string; template_code?: string | null }
 ): Promise<{ binding_status: "binding_valid" | "binding_invalid"; missing_required_observation_skills: string[] }> {
   await ensureDeviceSkillBindingStatusRuntimeV1(db);
 
-  const template = resolveDeviceTemplateV1(input.template_id);
+  const template = resolveDeviceTemplateV1(input.template_code);
   const existingRows = await listLatestDeviceSkillBindingRows(db, input, input.device_id);
   const activeSkillKeys = new Set(existingRows.filter((x) => x.status === "ACTIVE").map((x) => `${x.skill_id}::${x.version}`));
 
@@ -122,11 +122,11 @@ export async function reconcileDeviceTemplateSkillBindingsV1(
   db: Pool | PoolClient,
   input: TenantTriple & {
     device_id: string;
-    template_id?: string | null;
+    template_code?: string | null;
     missing_required_mode?: "fail" | "autofill";
   }
 ): Promise<{ auto_bound_required_observation_skills: string[]; auto_bound_default_inference_skills: string[]; binding_status: "binding_valid" | "binding_invalid" }> {
-  const template = resolveDeviceTemplateV1(input.template_id);
+  const template = resolveDeviceTemplateV1(input.template_code);
   const mode = input.missing_required_mode ?? "autofill";
 
   const existingRows = await listLatestDeviceSkillBindingRows(db, input, input.device_id);
@@ -152,7 +152,7 @@ export async function reconcileDeviceTemplateSkillBindingsV1(
       trigger_stage: skill.trigger_stage,
       bind_target: input.device_id,
       priority: 10,
-      config_patch: { source: "device_template_autofill", template_id: template.template_id, lane: "observation_baseline" },
+      config_patch: { source: "device_template_autofill", template_code: template.template_code, lane: "observation_baseline" },
     });
     auto_bound_required_observation_skills.push(`${skill.skill_id}@${skill.version}`);
     activeSkillKeys.add(skillKey(skill));
@@ -174,7 +174,7 @@ export async function reconcileDeviceTemplateSkillBindingsV1(
       trigger_stage: skill.trigger_stage,
       bind_target: input.device_id,
       priority: 1,
-      config_patch: { source: "device_template_default", template_id: template.template_id, lane: "inference_strategy_default" },
+      config_patch: { source: "device_template_default", template_code: template.template_code, lane: "inference_strategy_default" },
     });
     auto_bound_default_inference_skills.push(`${skill.skill_id}@${skill.version}`);
     activeSkillKeys.add(skillKey(skill));
@@ -185,7 +185,7 @@ export async function reconcileDeviceTemplateSkillBindingsV1(
     project_id: input.project_id,
     group_id: input.group_id,
     device_id: input.device_id,
-    template_id: template.template_id,
+    template_code: template.template_code,
   });
 
   return {

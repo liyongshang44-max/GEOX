@@ -21,7 +21,7 @@ import type {
 
 
 import { registerSimConfigRoutes } from "./routes/sim_config"; // sim config 路由
-import { registerSimulatorRunnerV1Routes } from "./routes/simulator_runner_v1"; // Backend-owned simulator runner start/stop/status + runtime lock.
+import { registerDeviceSimulatorV1Routes } from "./routes/device_simulator_v1"; // Device simulator routes: /api/v1/devices/:id/simulator/* + deprecated simulator-runner compatibility.
 import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // AO-SENSE 控制路由
 import { registerControlAoActRoutes } from "./routes/control_ao_act"; // AO-ACT 控制路由
 import { registerControlApprovalRequestV1Routes } from "./routes/control_approval_request_v1"; // Sprint 25: Approval runtime v1 routes.
@@ -273,7 +273,7 @@ if (!GEOX_DISABLE_APPLE_II) { // 允许在非商用 profile 下显式启用 Appl
   console.warn("[WARN] Apple II disabled (GEOX_DISABLE_APPLE_II=1). Judge routes/runtime not initialized."); // 明确：不会触发 SQLite bindings
 }
 registerSimConfigRoutes(app); // 注册 sim config 路由
-registerSimulatorRunnerV1Routes(app, pool); // 唯一模拟器实现：后端 runner 维护运行态并产出 telemetry。
+registerDeviceSimulatorV1Routes(app, pool); // Device simulator v1: canonical device-scoped endpoints + deprecated simulator-runner compatibility endpoints.
 // ⚠️ LEGACY ROUTES: kept only for compatibility; DO NOT wire any new page/flow to these endpoints.
 registerRawRoutes(app, pool); // legacy monitoring route registration only.
 registerTelemetryV1Routes(app, pool); // legacy telemetry route registration only.
