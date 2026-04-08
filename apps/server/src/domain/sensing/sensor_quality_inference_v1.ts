@@ -148,52 +148,76 @@ export type RunSensorQualityInferenceAndPersistV1Input = {
   computed_at_ts_ms?: number;
 };
 
-export async function runSensorQualityInferenceAndPersistV1(
-  db: Pool | PoolClient,
-  input: RunSensorQualityInferenceAndPersistV1Input
-): Promise<{ inference: SensorQualityInferenceV1Result; computed_at_ts_ms: number }> {
-  const telemetryDigestInput = {
-    signal_strength_dbm: toFiniteNumber(input.signal_strength_dbm),
-    battery_level_pct: toFiniteNumber(input.battery_level_pct),
-    packet_loss_rate_pct: toFiniteNumber(input.packet_loss_rate_pct),
-    device_id: input.device_id,
-    field_id: input.field_id,
+export type RunSensorQualityInferenceV1Input = {
+  tenant_id: string;
+  project_id: string | null;
+  group_id: string | null;
+  field_id: string;
+  source_device_ids?: string[];
+  observation?: DeviceObservationV1Input;
+  computed_at_ts_ms?: number;
+};
+
+export type RunSensorQualityInferenceV1Result = {
+  state_type: "sensor_quality_state";
+  fact_id: string;
+  payload_summary: {
+    sensor_quality: SensorQualityV1;
+    confidence: number;
+    explanation_codes: SensorQualityInferenceExplanationCodeV1[];
   };
+  payload: Record<string, unknown>;
+};
 
-  await appendSkillRunFact(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id ?? "default",
-    group_id: input.group_id ?? "default",
-    skill_id: "sensor_quality_inference_v1",
-    version: "v1",
-    category: "OBSERVABILITY",
-    status: "ACTIVE",
-    result_status: "SUCCESS",
-    trigger_stage: "before_recommendation",
-    scope_type: "DEVICE",
-    rollout_mode: "DIRECT",
-    bind_target: input.device_id,
-    operation_id: null,
-    operation_plan_id: null,
-    field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson({ parsed: telemetryDigestInput }),
-    error_code: null,
-    duration_ms: 0,
-  });
+function pickLatestFinite(observations: Array<Record<string, unknown>>, keys: string[]): number | null {
+  for (let i = observations.length - 1; i >= 0; i -= 1) {
+    const value = firstFiniteFromObservation(observations[i], keys);
+    if (value != null) return value;
+  }
+  return null;
+}
 
-  const inference = inferSensorQualityFromObservationAggregateV1({
-    signal_strength_dbm: telemetryDigestInput.signal_strength_dbm,
-    battery_level_pct: telemetryDigestInput.battery_level_pct,
-    packet_loss_rate_pct: telemetryDigestInput.packet_loss_rate_pct,
-    observation_count: 1,
-    source_ids: [input.device_id],
-  });
+function pickSourceDeviceIds(observations: Array<Record<string, unknown>>, inputDeviceIds?: string[]): string[] {
+  const inferred = observations
+    .map((x) => x.device_id ?? x.source_device_id ?? x.sensor_id ?? x.id)
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .map((x) => x.trim());
+  const fromInput = (inputDeviceIds ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
+  return Array.from(new Set([...fromInput, ...inferred]));
+}
 
-  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms))
-    ? Number(input.computed_at_ts_ms)
-    : Date.now();
+function toSensorQualityStateLevel(sensorQuality: SensorQualityV1): "GOOD" | "DEGRADED" | "INVALID" | "UNKNOWN" {
+  if (sensorQuality === "good") return "GOOD";
+  if (sensorQuality === "fair") return "DEGRADED";
+  if (sensorQuality === "poor") return "INVALID";
+  return "UNKNOWN";
+}
+
+export async function runSensorQualityInferenceV1(
+  db: Pool | PoolClient,
+  input: RunSensorQualityInferenceV1Input
+): Promise<RunSensorQualityInferenceV1Result> {
+  const observations = extractObservationList(input.observation);
+  const sourceDeviceIds = pickSourceDeviceIds(observations, input.source_device_ids);
+  const aggregate: SensingSensorQualityAggregateV1 = {
+    signal_strength_dbm: pickLatestFinite(observations, ["signal_strength_dbm", "rssi_dbm", "signal_dbm"]),
+    battery_level_pct: pickLatestFinite(observations, ["battery_level_pct", "battery_pct", "battery"]),
+    packet_loss_rate_pct: pickLatestFinite(observations, ["packet_loss_rate_pct", "packet_loss_pct", "packet_loss_rate"]),
+    observation_count: observations.length,
+    source_ids: sourceDeviceIds,
+  };
+  const inference = inferSensorQualityFromObservationAggregateV1(aggregate);
+  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now();
+  const payload = {
+    level: toSensorQualityStateLevel(inference.sensor_quality),
+    sensor_quality: inference.sensor_quality,
+    confidence: inference.confidence,
+    explanation_codes: inference.explanation_codes,
+    signal_strength_dbm: aggregate.signal_strength_dbm ?? null,
+    battery_level_pct: aggregate.battery_level_pct ?? null,
+    packet_loss_rate_pct: aggregate.packet_loss_rate_pct ?? null,
+    observation_count: aggregate.observation_count ?? 0,
+  } satisfies Record<string, unknown>;
 
   await appendDerivedSensingStateV1(db, {
     tenant_id: input.tenant_id,
@@ -201,21 +225,15 @@ export async function runSensorQualityInferenceAndPersistV1(
     group_id: input.group_id,
     field_id: input.field_id,
     state_type: "sensor_quality_state",
-    payload: {
-      level: inference.sensor_quality,
-      sensor_quality: inference.sensor_quality,
-      signal_strength_dbm: telemetryDigestInput.signal_strength_dbm,
-      battery_level_pct: telemetryDigestInput.battery_level_pct,
-      packet_loss_rate_pct: telemetryDigestInput.packet_loss_rate_pct,
-    },
+    payload,
     confidence: inference.confidence,
     explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
+    source_device_ids: sourceDeviceIds,
     computed_at_ts_ms,
     source: "sensing_pipeline_v1",
   });
 
-  await appendSkillRunFact(db, {
+  const run = await appendSkillRunFact(db, {
     tenant_id: input.tenant_id,
     project_id: input.project_id ?? "default",
     group_id: input.group_id ?? "default",
@@ -231,12 +249,51 @@ export async function runSensorQualityInferenceAndPersistV1(
     operation_id: null,
     operation_plan_id: null,
     field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson(inference),
+    device_id: sourceDeviceIds[0] ?? null,
+    input_digest: digestJson(aggregate),
+    output_digest: digestJson(payload),
     error_code: null,
     duration_ms: 0,
   });
 
-  return { inference, computed_at_ts_ms };
+  return {
+    state_type: "sensor_quality_state",
+    fact_id: run.fact_id,
+    payload_summary: {
+      sensor_quality: inference.sensor_quality,
+      confidence: inference.confidence,
+      explanation_codes: inference.explanation_codes,
+    },
+    payload,
+  };
+}
+
+export async function runSensorQualityInferenceAndPersistV1(
+  db: Pool | PoolClient,
+  input: RunSensorQualityInferenceAndPersistV1Input
+): Promise<{ inference: SensorQualityInferenceV1Result; computed_at_ts_ms: number }> {
+  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now();
+  const run = await runSensorQualityInferenceV1(db, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id,
+    source_device_ids: [input.device_id],
+    observation: {
+      signal_strength_dbm: input.signal_strength_dbm,
+      battery_level_pct: input.battery_level_pct,
+      packet_loss_rate_pct: input.packet_loss_rate_pct,
+      device_id: input.device_id,
+    },
+    computed_at_ts_ms,
+  });
+
+  return {
+    inference: {
+      sensor_quality: run.payload_summary.sensor_quality,
+      confidence: run.payload_summary.confidence,
+      explanation_codes: run.payload_summary.explanation_codes,
+    },
+    computed_at_ts_ms,
+  };
 }

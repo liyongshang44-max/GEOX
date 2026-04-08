@@ -175,96 +175,88 @@ export type RunCanopyTemperatureInferenceAndPersistV1Input = {
   computed_at_ts_ms?: number;
 };
 
-export async function runCanopyTemperatureInferenceAndPersistV1(
+export type RunCanopyTemperatureInferenceV1Input = {
+  tenant_id: string;
+  project_id: string | null;
+  group_id: string | null;
+  field_id: string;
+  source_device_ids?: string[];
+  observation?: DeviceObservationV1Input;
+  computed_at_ts_ms?: number;
+};
+
+export type RunCanopyTemperatureInferenceV1Result = {
+  state_type: "canopy_state";
+  fact_id: string;
+  payload_summary: {
+    canopy_temp_status: CanopyTempStatusV1;
+    evapotranspiration_risk: EvapotranspirationRiskV1;
+    confidence: number;
+    explanation_codes: CanopyTemperatureInferenceExplanationCodeV1[];
+  };
+  payload: Record<string, unknown>;
+};
+
+function pickLatestFinite(observations: Array<Record<string, unknown>>, keys: string[]): number | null {
+  for (let i = observations.length - 1; i >= 0; i -= 1) {
+    const value = firstFiniteFromObservation(observations[i], keys);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+function pickSourceDeviceIds(observations: Array<Record<string, unknown>>, inputDeviceIds?: string[]): string[] {
+  const inferred = observations
+    .map((x) => x.device_id ?? x.source_device_id ?? x.sensor_id ?? x.id)
+    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    .map((x) => x.trim());
+  const fromInput = (inputDeviceIds ?? []).map((x) => String(x ?? "").trim()).filter(Boolean);
+  const merged = [...fromInput, ...inferred];
+  return Array.from(new Set(merged));
+}
+
+export async function runCanopyTemperatureInferenceV1(
   db: Pool | PoolClient,
-  input: RunCanopyTemperatureInferenceAndPersistV1Input
-): Promise<{ inference: CanopyTemperatureInferenceV1Result; computed_at_ts_ms: number }> {
-  const telemetryDigestInput = {
-    canopy_temp_c: toFiniteNumber(input.canopy_temp_c),
-    ambient_temp_c: toFiniteNumber(input.ambient_temp_c),
-    relative_humidity_pct: toFiniteNumber(input.relative_humidity_pct),
-    device_id: input.device_id,
-    field_id: input.field_id,
+  input: RunCanopyTemperatureInferenceV1Input
+): Promise<RunCanopyTemperatureInferenceV1Result> {
+  const observations = extractObservationList(input.observation);
+  const sourceDeviceIds = pickSourceDeviceIds(observations, input.source_device_ids);
+  const aggregate: SensingCanopyObservationAggregateV1 = {
+    canopy_temp_c: pickLatestFinite(observations, ["canopy_temp_c", "canopy_temp", "temperature_c", "temp_c"]),
+    ambient_temp_c: pickLatestFinite(observations, ["ambient_temp_c", "air_temp_c", "ambient_temperature_c"]),
+    relative_humidity_pct: pickLatestFinite(observations, ["relative_humidity_pct", "humidity_pct", "rh_pct"]),
+    observation_count: observations.length,
+    source_ids: sourceDeviceIds,
   };
 
-  await appendSkillRunFact(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id ?? "default",
-    group_id: input.group_id ?? "default",
-    skill_id: "canopy_temperature_inference_v1",
-    version: "v1",
-    category: "AGRONOMY",
-    status: "ACTIVE",
-    result_status: "SUCCESS",
-    trigger_stage: "before_recommendation",
-    scope_type: "DEVICE",
-    rollout_mode: "DIRECT",
-    bind_target: input.device_id,
-    operation_id: null,
-    operation_plan_id: null,
-    field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson({ parsed: telemetryDigestInput }),
-    error_code: null,
-    duration_ms: 0,
-  });
-
-  const inference = inferCanopyTemperatureFromObservationAggregateV1({
-    canopy_temp_c: telemetryDigestInput.canopy_temp_c,
-    ambient_temp_c: telemetryDigestInput.ambient_temp_c,
-    relative_humidity_pct: telemetryDigestInput.relative_humidity_pct,
-    observation_count: 1,
-    source_ids: [input.device_id],
-  });
-
-  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms))
-    ? Number(input.computed_at_ts_ms)
-    : Date.now();
+  const inference = inferCanopyTemperatureFromObservationAggregateV1(aggregate);
+  const computed_at_ts_ms = Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now();
+  const payload = {
+    canopy_temp_status: inference.canopy_temp_status,
+    evapotranspiration_risk: inference.evapotranspiration_risk,
+    confidence: inference.confidence,
+    explanation_codes: inference.explanation_codes,
+    canopy_temp_c: aggregate.canopy_temp_c ?? null,
+    ambient_temp_c: aggregate.ambient_temp_c ?? null,
+    relative_humidity_pct: aggregate.relative_humidity_pct ?? null,
+    observation_count: aggregate.observation_count ?? 0,
+  } satisfies Record<string, unknown>;
 
   await appendDerivedSensingStateV1(db, {
     tenant_id: input.tenant_id,
     project_id: input.project_id,
     group_id: input.group_id,
     field_id: input.field_id,
-    state_type: "canopy_temperature_state",
-    payload: {
-      level: inference.canopy_temp_status,
-      canopy_temp_status: inference.canopy_temp_status,
-      canopy_temp_c: telemetryDigestInput.canopy_temp_c,
-      ambient_temp_c: telemetryDigestInput.ambient_temp_c,
-      relative_humidity_pct: telemetryDigestInput.relative_humidity_pct,
-      confidence: inference.confidence,
-    },
+    state_type: "canopy_state",
+    payload,
     confidence: inference.confidence,
     explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
+    source_device_ids: sourceDeviceIds,
     computed_at_ts_ms,
     source: "sensing_pipeline_v1",
   });
 
-  await appendDerivedSensingStateV1(db, {
-    tenant_id: input.tenant_id,
-    project_id: input.project_id,
-    group_id: input.group_id,
-    field_id: input.field_id,
-    state_type: "evapotranspiration_risk_state",
-    payload: {
-      level: inference.evapotranspiration_risk,
-      evapotranspiration_risk: inference.evapotranspiration_risk,
-      canopy_temp_status: inference.canopy_temp_status,
-      canopy_temp_c: telemetryDigestInput.canopy_temp_c,
-      ambient_temp_c: telemetryDigestInput.ambient_temp_c,
-      relative_humidity_pct: telemetryDigestInput.relative_humidity_pct,
-    },
-    confidence: inference.confidence,
-    explanation_codes: inference.explanation_codes,
-    source_device_ids: [input.device_id],
-    computed_at_ts_ms,
-    source: "sensing_pipeline_v1",
-  });
-
-  await appendSkillRunFact(db, {
+  const run = await appendSkillRunFact(db, {
     tenant_id: input.tenant_id,
     project_id: input.project_id ?? "default",
     group_id: input.group_id ?? "default",
@@ -280,12 +272,52 @@ export async function runCanopyTemperatureInferenceAndPersistV1(
     operation_id: null,
     operation_plan_id: null,
     field_id: input.field_id,
-    device_id: input.device_id,
-    input_digest: digestJson(telemetryDigestInput),
-    output_digest: digestJson(inference),
+    device_id: sourceDeviceIds[0] ?? null,
+    input_digest: digestJson(aggregate),
+    output_digest: digestJson(payload),
     error_code: null,
     duration_ms: 0,
   });
 
-  return { inference, computed_at_ts_ms };
+  return {
+    state_type: "canopy_state",
+    fact_id: run.fact_id,
+    payload_summary: {
+      canopy_temp_status: inference.canopy_temp_status,
+      evapotranspiration_risk: inference.evapotranspiration_risk,
+      confidence: inference.confidence,
+      explanation_codes: inference.explanation_codes,
+    },
+    payload,
+  };
+}
+
+export async function runCanopyTemperatureInferenceAndPersistV1(
+  db: Pool | PoolClient,
+  input: RunCanopyTemperatureInferenceAndPersistV1Input
+): Promise<{ inference: CanopyTemperatureInferenceV1Result; computed_at_ts_ms: number }> {
+  const run = await runCanopyTemperatureInferenceV1(db, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id,
+    source_device_ids: [input.device_id],
+    observation: {
+      canopy_temp_c: input.canopy_temp_c,
+      ambient_temp_c: input.ambient_temp_c,
+      relative_humidity_pct: input.relative_humidity_pct,
+      device_id: input.device_id,
+    },
+    computed_at_ts_ms: input.computed_at_ts_ms,
+  });
+
+  return {
+    inference: {
+      canopy_temp_status: run.payload_summary.canopy_temp_status,
+      evapotranspiration_risk: run.payload_summary.evapotranspiration_risk,
+      confidence: run.payload_summary.confidence,
+      explanation_codes: run.payload_summary.explanation_codes,
+    },
+    computed_at_ts_ms: Number.isFinite(Number(input.computed_at_ts_ms)) ? Number(input.computed_at_ts_ms) : Date.now(),
+  };
 }
