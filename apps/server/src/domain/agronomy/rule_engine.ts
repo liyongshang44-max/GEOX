@@ -1,7 +1,6 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
 import type { AgronomyContext } from "./types";
-import { cropSkills } from "./skills";
-import { getRuleSkills } from "../skill_registry/agronomy_rule_registry";
+import { cropSkills, ruleSkills } from "./skills";
 import type { CropStage } from "./skills/types";
 
 function normalizeSkillStage(stage: string): CropStage {
@@ -135,15 +134,8 @@ export async function evaluateRulesByInput(input: AgronomyRuleInput): Promise<Ag
       ? cropSkill.resolveStage({ days_after_sowing, metrics })
       : "seedling";
 
-  const tenant_id = String(normalized.tenant_id ?? "").trim();
-  if (!tenant_id) {
-    throw new Error("TENANT_ID_REQUIRED_FOR_RULE_ENGINE");
-  }
-
-  const rules = await getRuleSkills({
-    crop_code,
-    tenant_id,
-  });
+  const rules = ruleSkills
+    .filter((rule) => rule.enabled && String(rule.crop_code ?? "").toLowerCase() === crop_code);
 
   for (const rule of rules) {
     if (rule.match({ crop_stage, metrics })) {
