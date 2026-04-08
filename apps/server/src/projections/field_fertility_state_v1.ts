@@ -12,6 +12,7 @@ type FieldFertilityStateV1 = {
   recommendation_bias: string | null;
   confidence: number | null;
   computed_at_ts_ms: number | null;
+  source_observed_at_ts_ms: number | null;
   explanation_codes_json: string[];
   source_device_ids_json: string[];
   updated_ts_ms: number;
@@ -70,6 +71,7 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
   let recommendationBias: string | null = null;
   let confidence: number | null = null;
   let computedAtTsMs: number | null = null;
+  let sourceObservedAtTsMs: number | null = null;
   const explanationCodes: string[] = [];
   const sourceDeviceIds: string[] = [];
 
@@ -93,6 +95,10 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
 
     if (computedAtTsMs == null || rowComputedAt > computedAtTsMs) {
       computedAtTsMs = rowComputedAt;
+    }
+    const payloadObservedAt = toFiniteNumber(payload?.source_observed_at_ts_ms ?? payload?.observed_at_ts_ms ?? payload?.source_ts_ms ?? payload?.ts_ms);
+    if (payloadObservedAt != null && (sourceObservedAtTsMs == null || payloadObservedAt > sourceObservedAtTsMs)) {
+      sourceObservedAtTsMs = Math.trunc(payloadObservedAt);
     }
     if (rowConfidence != null) {
       confidence = confidence == null ? rowConfidence : Math.max(confidence, rowConfidence);
@@ -120,6 +126,7 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
     recommendation_bias: recommendationBias,
     confidence,
     computed_at_ts_ms: computedAtTsMs,
+    source_observed_at_ts_ms: sourceObservedAtTsMs,
     explanation_codes_json: normalizeCodes(explanationCodes),
     source_device_ids_json: normalizeCodes(sourceDeviceIds),
     updated_ts_ms: nowMs,
@@ -140,6 +147,7 @@ export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise
           recommendation_bias text NULL,
           confidence double precision NULL,
           computed_at_ts_ms bigint NULL,
+          source_observed_at_ts_ms bigint NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           source_device_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
@@ -147,6 +155,7 @@ export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise
         )`
       );
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_fertility_state_v1_scope ON field_fertility_state_v1 (tenant_id, project_id, group_id, field_id)`);
+      await db.query(`ALTER TABLE field_fertility_state_v1 ADD COLUMN IF NOT EXISTS source_observed_at_ts_ms bigint NULL`);
     })().catch((err) => {
       ensurePromise = null;
       throw err;
@@ -197,8 +206,8 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
 
   const upsert = await db.query(
     `INSERT INTO field_fertility_state_v1
-      (tenant_id, project_id, group_id, field_id, fertility_level, salinity_risk, recommendation_bias, confidence, computed_at_ts_ms, explanation_codes_json, source_device_ids_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12)
+      (tenant_id, project_id, group_id, field_id, fertility_level, salinity_risk, recommendation_bias, confidence, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_device_ids_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -208,6 +217,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
       recommendation_bias = EXCLUDED.recommendation_bias,
       confidence = EXCLUDED.confidence,
       computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
+      source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
       source_device_ids_json = EXCLUDED.source_device_ids_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
@@ -222,6 +232,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
       state.recommendation_bias,
       state.confidence,
       state.computed_at_ts_ms,
+      state.source_observed_at_ts_ms,
       JSON.stringify(state.explanation_codes_json),
       JSON.stringify(state.source_device_ids_json),
       state.updated_ts_ms,
@@ -239,6 +250,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
     recommendation_bias: asTextOrNull(row.recommendation_bias),
     confidence: clampConfidence(row.confidence),
     computed_at_ts_ms: row.computed_at_ts_ms == null ? null : Number(row.computed_at_ts_ms),
+    source_observed_at_ts_ms: row.source_observed_at_ts_ms == null ? null : Number(row.source_observed_at_ts_ms),
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
     source_device_ids_json: Array.isArray(row.source_device_ids_json) ? row.source_device_ids_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
