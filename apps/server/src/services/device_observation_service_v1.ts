@@ -1,5 +1,12 @@
 import crypto from "node:crypto";
-import { DeviceObservationV1Schema, type DeviceObservationQualityFlagV1 } from "@geox/contracts";
+import {
+  DeviceObservationV1Schema,
+  isTelemetryMetricNameV1,
+  isValidTelemetryUnitV1,
+  TELEMETRY_METRIC_CATALOG_V1,
+  toCanonicalTelemetryMetricNameV1,
+  type DeviceObservationQualityFlagV1
+} from "@geox/contracts";
 import type { PoolClient } from "pg";
 
 export type DeviceObservationServiceV1Input = {
@@ -26,12 +33,14 @@ function normalizeNonEmpty(v: string | null | undefined, fallback: string): stri
   return normalized.length > 0 ? normalized : fallback;
 }
 
-function normalizeMetric(metricRaw: string): string {
-  return normalizeNonEmpty(metricRaw, "unknown_metric").toLowerCase().replace(/\s+/g, "_");
-}
-
-function normalizeUnit(unitRaw: string | null): string {
-  return normalizeNonEmpty(unitRaw, "unitless").toLowerCase();
+function normalizeMetricAndUnit(metricRaw: string, unitRaw: string | null): { metric: string; unit: string } {
+  const fallbackMetric = normalizeNonEmpty(metricRaw, "unknown_metric").toLowerCase().replace(/\s+/g, "_");
+  const metric = toCanonicalTelemetryMetricNameV1(fallbackMetric);
+  const incomingUnit = normalizeNonEmpty(unitRaw, "");
+  if (!isTelemetryMetricNameV1(metric)) return { metric, unit: normalizeNonEmpty(unitRaw, "unitless").toLowerCase() };
+  if (!incomingUnit) return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
+  if (!isValidTelemetryUnitV1(metric, incomingUnit)) return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
+  return { metric, unit: TELEMETRY_METRIC_CATALOG_V1[metric].unit };
 }
 
 function normalizeNumericValue(value: number | string | boolean | null): number {
@@ -70,8 +79,9 @@ function normalizeQualityFlags(input: string[]): DeviceObservationQualityFlagV1[
 export async function writeDeviceObservationFactV1(clientConn: PoolClient, input: DeviceObservationServiceV1Input): Promise<{ fact_id: string; occurred_at_iso: string }> {
   const nowIso = new Date().toISOString();
   const occurred_at_iso = new Date(input.observed_at_ts_ms).toISOString();
-  const metric = normalizeMetric(input.metric);
-  const unit = normalizeUnit(input.unit);
+  const normalizedTelemetry = normalizeMetricAndUnit(input.metric, input.unit);
+  const metric = normalizedTelemetry.metric;
+  const unit = normalizedTelemetry.unit;
   const value_num = normalizeNumericValue(input.value);
   const confidence = clampConfidence(input.confidence);
   const quality_flags = normalizeQualityFlags(input.quality_flags);
