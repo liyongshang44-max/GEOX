@@ -12,9 +12,7 @@ import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } fro
 import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy";
 import {
   checkCapabilityCompatibilityMatrix,
-  deviceSkillRegistry,
   resolveTaskCapabilityViaDeviceSkillsResult,
-  validateDeviceSkillCompatibilityMatrix
 } from "@geox/device-skills";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string }; // Hard-isolation tenant triple.
@@ -1894,48 +1892,6 @@ function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true 
   return { ok: true };
 }
 
-async function ensureDeviceSkillsRegistered(pool: Pool, tenant: TenantTriple): Promise<void> {
-  const matrixValidation = validateDeviceSkillCompatibilityMatrix(deviceSkillRegistry);
-  if (!matrixValidation.ok) {
-    throw new Error(`DEVICE_SKILL_COMPATIBILITY_MATRIX_INVALID:${JSON.stringify(matrixValidation.errors)}`);
-  }
-  for (const skill of deviceSkillRegistry) {
-    const existing = await pool.query(
-      `SELECT 1
-         FROM facts
-        WHERE (record_json::jsonb->>'type') = 'skill_definition_v1'
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
-          AND (record_json::jsonb#>>'{payload,project_id}') = $2
-          AND (record_json::jsonb#>>'{payload,group_id}') = $3
-          AND (record_json::jsonb#>>'{payload,skill_id}') = $4
-          AND (record_json::jsonb#>>'{payload,version}') = $5
-        LIMIT 1`,
-      [tenant.tenant_id, tenant.project_id, tenant.group_id, skill.skill_id, skill.version]
-    );
-    if ((existing.rowCount ?? 0) > 0) continue;
-    await insertFact(pool, "system/device-skills/bootstrap", {
-      type: "skill_definition_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        skill_id: skill.skill_id,
-        version: skill.version,
-        display_name: skill.display_name,
-        category: "DEVICE",
-        status: "ACTIVE",
-        trigger_stage: skill.trigger_stage,
-        scope_type: "DEVICE",
-        rollout_mode: "DIRECT",
-        bind_target: "device:*",
-        input_schema_digest: `device-skill-input:${skill.skill_id}:${skill.version}`,
-        output_schema_digest: `device-skill-output:${skill.skill_id}:${skill.version}`,
-        compatibility: skill.compatibility
-      }
-    });
-  }
-}
-
 function deriveReceiptTopic(tenant: TenantTriple, deviceId: string, body: any): string {
   const explicit = typeof body?.uplink_topic === "string" ? body.uplink_topic.trim() : ""; // Allow explicit receipt topic override.
   if (explicit) return explicit; // Use explicit topic when provided.
@@ -2149,7 +2105,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? proposal?.target ?? "" }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-      await ensureDeviceSkillsRegistered(pool, tenant);
       const compatibilityCheck = checkCapabilityCompatibilityMatrix({
         capability: {
           capability: parsedCapability.capability,
@@ -2374,7 +2329,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const aoActActionType = toAoActAllowlistAction(requestedActionType);
     const tripleValidation = assertTenantFieldDeviceTriple({ ...body, tenant_id: tenant.tenant_id, project_id: tenant.project_id, group_id: tenant.group_id });
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    await ensureDeviceSkillsRegistered(pool, tenant);
     const matrixCheck = checkCapabilityCompatibilityMatrix({
       capability: {
         capability: parsedCapability.capability,
@@ -2543,7 +2497,6 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     const tenant: TenantTriple = parseTenantFromBody(body);
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-    await ensureDeviceSkillsRegistered(pool, tenant);
 
     const taskFact = await loadLatestFactByTypeAndKey(pool, "ao_act_task_v0", "payload,act_task_id", act_task_id, tenant);
     if (!taskFact) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
