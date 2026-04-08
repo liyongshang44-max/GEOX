@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { appendSkillBindingFact } from "../domain/skill_registry/facts";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/rules", async (req, reply) => {
@@ -142,6 +143,22 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
         fact_type: "skill_binding_v1",
       });
       const latest = rows.find((row) => String(row.fact_id) === appended.fact_id) ?? rows[0] ?? null;
+
+      const deviceRows = await pool.query<{ device_id: string }>(
+        `SELECT device_id FROM device_index_v1 WHERE tenant_id = $1 ORDER BY created_ts_ms DESC LIMIT 500`,
+        [tenant_id],
+      );
+      for (const dev of deviceRows.rows ?? []) {
+        await ensureDeviceSkillBindings({
+          pool,
+          tenant_id,
+          project_id,
+          group_id,
+          device_id: String(dev.device_id ?? ""),
+          trigger: "DEVICE_TEMPLATE_SWITCHED",
+          allow_write: true,
+        });
+      }
 
       return reply.send({
         ok: true,

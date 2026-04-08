@@ -266,6 +266,45 @@ export async function postSimConfigPatch(req: SimConfigPatchRequestV1): Promise<
   });
 }
 
+
+// Simulator runner is backend-owned: frontend may only invoke start/stop/status APIs.
+export type SimulatorRunnerStatusResponseV1 = {
+  ok?: boolean;
+  tenant_id?: string;
+  device_id?: string;
+  key?: string;
+  running?: boolean;
+  already_running?: boolean;
+  stopped?: boolean;
+  started_ts_ms?: number;
+  interval_ms?: number;
+  last_tick_ts_ms?: number | null;
+  seq?: number;
+  reason?: string;
+};
+
+export async function startSimulatorRunner(token: string, body: { device_id: string; interval_ms?: number }): Promise<SimulatorRunnerStatusResponseV1> {
+  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/start`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function stopSimulatorRunner(token: string, body: { device_id: string }): Promise<SimulatorRunnerStatusResponseV1> {
+  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/stop`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+}
+
+export async function fetchSimulatorRunnerStatus(token: string, device_id: string): Promise<SimulatorRunnerStatusResponseV1> {
+  return requestJson<SimulatorRunnerStatusResponseV1>(withQuery(`/api/v1/simulator-runner/status`, { device_id }), {
+    headers: authHeaders(token),
+  });
+}
+
 export async function fetchJudgeProblemStates(limit = 50): Promise<any> {
   return requestJson<any>(withQuery(`/api/judge/problem_states`, { limit }));
 }
