@@ -57,9 +57,21 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
   const [selected, setSelected] = React.useState<DetailItem | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
   const [error, setError] = React.useState<string>("");
+  const [fallbackActive, setFallbackActive] = React.useState<boolean>(false);
   const fieldIdFilter = React.useMemo(() => String(searchParams.get("field_id") ?? "").trim(), [searchParams]);
-  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
-  const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_LEGACY_AGRONOMY_FALLBACK ?? "1") !== "0";
+  const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_LEGACY_AGRONOMY_FALLBACK ?? "0") !== "0";
+
+  const trackLegacyFallback = React.useCallback((stage: "list" | "detail" | "manual_select_detail", cause: unknown): void => {
+    setFallbackActive(true);
+    const message = String((cause as any)?.message ?? cause ?? "unknown");
+    // eslint-disable-next-line no-console
+    console.warn("[AgronomyRecommendationsPage] legacy fallback active", {
+      stage,
+      fieldIdFilter: fieldIdFilter || null,
+      at: new Date().toISOString(),
+      cause: message,
+    });
+  }, [fieldIdFilter]);
 
   const visibleItems = React.useMemo(() => {
     if (!fieldIdFilter) return items;
@@ -83,6 +95,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
         nextSummary = res.summary ?? { total: nextItems.length, pending: 0, in_approval: 0, receipted: 0 };
       } catch (cpError) {
         if (!enableLegacyFallback) throw cpError;
+        trackLegacyFallback("list", cpError);
         const legacyRes = await fetchAgronomyRecommendations({ limit: 50 });
         const legacyItems = Array.isArray(legacyRes.items) ? legacyRes.items : [];
         nextItems = fieldIdFilter ? legacyItems.filter((item) => toFieldId(item) === fieldIdFilter) : legacyItems;
@@ -98,6 +111,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
           setSelected(detail.item);
         } catch (cpDetailError) {
           if (!enableLegacyFallback) throw cpDetailError;
+          trackLegacyFallback("detail", cpDetailError);
           const legacyDetail = await fetchAgronomyRecommendationDetail({ recommendation_id: targetId });
           setSelected(legacyDetail.item);
         }
@@ -121,6 +135,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
         <p className="demoHeroSubTitle">
           这里不是算法明细页，而是建议推进入口。先看哪些建议要立刻推进，再决定是否进入审批和执行链。
         </p>
+        {fallbackActive ? <div className="decisionItemMeta" style={{ marginTop: 8, fontWeight: 700 }}>fallback active</div> : null}
       </section>
 
       <section className="summaryGrid4 demoSummaryGrid">
@@ -165,9 +180,9 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
           <div className="demoList">
             {visibleItems.map((item) => (
               (() => {
-                const parsedReadModel = parseFieldReadModelV1(item);
-                const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
-                const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
+                const parsedReadModel = parseFieldReadModelV1(item, { enableLegacyFallback: false });
+                const sensingV1 = parsedReadModel.sensing;
+                const fertilityV1 = parsedReadModel.fertility;
                 const recommendationBias = fertilityV1?.recommendationBias ?? null;
                 const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
                 return (
@@ -178,9 +193,10 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                   onClick={() => {
                     fetchAgronomyRecommendationDetailControlPlane({ recommendation_id: item.recommendation_id })
                       .then((res) => setSelected(res.item))
-                      .catch(async () => {
+                      .catch(async (cpDetailError) => {
                         if (!enableLegacyFallback) return;
                         try {
+                          trackLegacyFallback("manual_select_detail", cpDetailError);
                           const legacy = await fetchAgronomyRecommendationDetail({ recommendation_id: item.recommendation_id });
                           setSelected(legacy.item);
                         } catch (e: any) {
@@ -244,9 +260,9 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
 
           {!selected ? <EmptyState title="请选择左侧建议" description="可查看建议原因、链路状态与关联审批信息" /> : (
             (() => {
-              const parsedReadModel = parseFieldReadModelV1(selected);
-              const sensingV1 = enableReadModelV1 ? parsedReadModel.sensing : null;
-              const fertilityV1 = enableReadModelV1 ? parsedReadModel.fertility : null;
+              const parsedReadModel = parseFieldReadModelV1(selected, { enableLegacyFallback: false });
+              const sensingV1 = parsedReadModel.sensing;
+              const fertilityV1 = parsedReadModel.fertility;
               const recommendationBias = fertilityV1?.recommendationBias ?? null;
               const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
               return (
