@@ -8,6 +8,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
@@ -269,6 +270,28 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
         telemetry: { ...telemetry, field_polygon, track_points },
         acceptance_policy_ref
+      });
+      await appendSkillRunFact(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        skill_id: String(evaluated.rule_id ?? "acceptance_manual_fallback_v1").replace(/_[^_]+$/, ""),
+        version: String(evaluated.rule_id ?? "acceptance_manual_fallback_v1").split("_").pop() || "v1",
+        category: "OPS",
+        status: "ACTIVE",
+        result_status: evaluated.result === "PASSED" ? "SUCCESS" : (evaluated.result === "FAILED" ? "FAILED" : "SKIPPED"),
+        trigger_stage: "after_acceptance",
+        scope_type: "FIELD",
+        rollout_mode: "DIRECT",
+        bind_target: field_id ?? body.act_task_id,
+        operation_id: null,
+        operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : null,
+        field_id,
+        device_id,
+        input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, acceptance_policy_ref }),
+        output_digest: digestJson(evaluated),
+        error_code: null,
+        duration_ms: 0,
       });
 
       const acceptanceFactId = randomUUID();

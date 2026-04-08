@@ -48,7 +48,6 @@ export type RunFertilityInferenceAndPersistV1Input = {
   canopy_temp_c: number;
   ec_ds_m?: number | null;
   computed_at_ts_ms?: number;
-  source?: string;
 };
 
 type FertilityDerivedPayloadV1 = {
@@ -170,7 +169,7 @@ export async function runFertilityInferenceAndPersistV1(
     explanation_codes: inference.explanation_codes,
     source_device_ids: [input.device_id],
     computed_at_ts_ms,
-    source: input.source ?? "decision_engine_v1",
+    source: "sensing_pipeline_v1",
   });
 
   await appendDerivedSensingStateV1(db, {
@@ -184,7 +183,7 @@ export async function runFertilityInferenceAndPersistV1(
     explanation_codes: inference.explanation_codes,
     source_device_ids: [input.device_id],
     computed_at_ts_ms,
-    source: input.source ?? "decision_engine_v1",
+    source: "sensing_pipeline_v1",
   });
   await appendSkillRunFact(db, {
     tenant_id: input.tenant_id,
