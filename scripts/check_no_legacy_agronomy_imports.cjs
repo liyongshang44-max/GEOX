@@ -6,8 +6,6 @@ const repoRoot = process.cwd();
 const scanRoot = path.join(repoRoot, "apps", "server", "src");
 
 const allowlist = new Set([
-  "apps/server/src/domain/skill_registry/agronomy_rule_registry.ts",
-  "apps/server/src/routes/skills_v1.ts",
   "apps/server/src/domain/acceptance/engine_v1.ts",
 ]);
 
@@ -35,6 +33,7 @@ walk(scanRoot);
 
 if (violations.length > 0) {
   console.error("Found forbidden imports from \"agronomy/skills\".");
+  console.error("New runtime features must not introduce new entrypoints from apps/server/src/domain/agronomy/skills/*.");
   for (const v of violations) console.error(` - ${v}`);
   process.exit(1);
 }

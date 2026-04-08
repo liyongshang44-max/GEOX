@@ -47,7 +47,7 @@ export type CapabilityResolutionResult =
   | { ok: false; error: CapabilityResolutionFailure };
 
 export type CapabilityCompatibilityCheckResult =
-  | { ok: true; normalized_adapter: string; normalized_device_type: string }
+  | { ok: true; normalized_adapter: string }
   | {
       ok: false;
       error: {
@@ -56,7 +56,6 @@ export type CapabilityCompatibilityCheckResult =
         reasons: string[];
         compatibility: CapabilityResolution["compatibility"];
         normalized_adapter: string;
-        normalized_device_type: string;
       };
     };
 
@@ -368,17 +367,11 @@ function normalizeAdapterType(adapterType: unknown): string {
   return normalized;
 }
 
-function normalizeDeviceType(deviceType: unknown): string {
-  return String(deviceType ?? "").trim().toUpperCase();
-}
-
 export function checkCapabilityCompatibilityMatrix(input: {
   capability: CapabilityResolution;
   adapter_type: string | null | undefined;
-  device_type: string | null | undefined;
 }): CapabilityCompatibilityCheckResult {
   const normalized_adapter = normalizeAdapterType(input.adapter_type);
-  const normalized_device_type = normalizeDeviceType(input.device_type);
   const allowedAdapters = (input.capability.compatibility?.adapters ?? []).map((x) => normalizeAdapterType(x));
   const requiredCapability = String(input.capability.capability ?? "").trim().toLowerCase();
   const allowedCapabilities = (input.capability.compatibility?.capabilities ?? []).map((x) => String(x ?? "").trim().toLowerCase()).filter(Boolean);
@@ -391,7 +384,7 @@ export function checkCapabilityCompatibilityMatrix(input: {
   if (requiredCapability && allowedCapabilities.length > 0 && !allowedCapabilities.includes(requiredCapability)) {
     reasons.push("capability_not_compatible");
   }
-  if (reasons.length === 0) return { ok: true, normalized_adapter, normalized_device_type };
+  if (reasons.length === 0) return { ok: true, normalized_adapter };
   return {
     ok: false,
     error: {
@@ -400,7 +393,6 @@ export function checkCapabilityCompatibilityMatrix(input: {
       reasons,
       compatibility: input.capability.compatibility,
       normalized_adapter,
-      normalized_device_type,
     },
   };
 }
