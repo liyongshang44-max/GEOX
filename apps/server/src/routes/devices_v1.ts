@@ -6,6 +6,7 @@ import type { Pool } from "pg"; // Postgres connection pool for db access.
 
 import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
   return typeof v === "string" && v.trim().length > 0; // Return true only for non-empty trimmed string.
@@ -434,7 +435,17 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       clientConn.release(); // Release.
     } // End tx.
 
-    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, fact_id }); // Response.
+    const skillBindings = await ensureDeviceSkillBindings({
+      pool,
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      device_id,
+      trigger: "DEVICE_CREATED",
+      allow_write: true,
+    });
+
+    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, fact_id, skill_bindings: skillBindings }); // Response.
   }); // End /api/v1 register.
 
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
@@ -472,7 +483,20 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       [auth.tenant_id, limit, Date.now() - 15 * 60 * 1000]
     ); // Query joined device summary.
 
-    return reply.send({ ok: true, devices: q.rows }); // Return summarized device list.
+    const devices = await Promise.all((q.rows ?? []).map(async (row: any) => {
+      const health = await ensureDeviceSkillBindings({
+        pool,
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id: String(row.device_id ?? ""),
+        trigger: "EXPLICIT_RECONCILE",
+        allow_write: false,
+      });
+      return { ...row, binding_health: health.binding_health, binding_repair: health.repair };
+    }));
+
+    return reply.send({ ok: true, devices }); // Return summarized device list.
   }); // End list.
 
   app.put("/api/v1/devices/:device_id/capabilities", async (req, reply) => { // Upsert device capability projection + fact.
@@ -879,7 +903,16 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       device: q.rows[0],
       capabilities: Array.isArray(capabilityRow?.capabilities) ? capabilityRow.capabilities : [],
       capabilities_updated_ts_ms: capabilityRow?.updated_ts_ms == null ? null : Number(capabilityRow.updated_ts_ms),
-      latest_telemetry: latestTelemetryRows
+      latest_telemetry: latestTelemetryRows,
+      ...(await ensureDeviceSkillBindings({
+        pool,
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        trigger: "EXPLICIT_RECONCILE",
+        allow_write: false,
+      }))
     }); // Return enriched detail.
   }); // End get.
 
@@ -967,6 +1000,15 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       access_info: buildAccessInfo(auth.tenant_id, device_id),
       register_fact_id,
       credential_fact_id,
+      skill_bindings: await ensureDeviceSkillBindings({
+        pool,
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        trigger: "DEVICE_CREATED",
+        allow_write: true,
+      }),
     });
   });
 
@@ -1054,6 +1096,15 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       access_info: buildAccessInfo(auth.tenant_id, device_id),
       register_fact_id,
       credential_fact_id,
+      skill_bindings: await ensureDeviceSkillBindings({
+        pool,
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        trigger: "DEVICE_CREATED",
+        allow_write: true,
+      }),
     });
   });
 
@@ -1125,6 +1176,32 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     }
 
     return reply.status(delegated.status).send(parsed);
+  });
+
+  app.post("/api/v1/devices/:device_id/skill-bindings/reconcile", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+    if (!auth) return;
+
+    const device_id = normalizeDeviceId((req.params as any)?.device_id);
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+
+    const existsQ = await pool.query(
+      `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
+      [auth.tenant_id, device_id]
+    );
+    if ((existsQ.rowCount ?? 0) < 1) return notFound(reply);
+
+    const ensured = await ensureDeviceSkillBindings({
+      pool,
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      device_id,
+      trigger: "EXPLICIT_RECONCILE",
+      allow_write: true,
+    });
+
+    return reply.send({ ok: true, device_id, ...ensured });
   });
 
   app.get("/api/v1/devices/:device_id/onboarding-status", async (req, reply) => { // Device onboarding progress: registration/credential/first telemetry.
