@@ -21,6 +21,7 @@ function evaluateCorn(tenant_id: string): Promise<ReturnType<typeof evaluateRule
 }
 
 test("stage6 fallback_config: priority selects v2 when v1/v2 are both enabled", async () => {
+  process.env.GEOX_ENABLE_AGRONOMY_SKILL_FALLBACK = "1";
   resetFallbackSkillSwitches();
   const rules = await getRuleSkills({ crop_code: "corn", tenant_id: "tenantA" });
   assert.equal(rules[0]?.version, "v2");
@@ -30,9 +31,16 @@ test("stage6 fallback_config: priority selects v2 when v1/v2 are both enabled", 
 });
 
 test("stage6 fallback_config is queryable", () => {
+  process.env.GEOX_ENABLE_AGRONOMY_SKILL_FALLBACK = "1";
   resetFallbackSkillSwitches();
   const rows = listFallbackSkillSwitches({ crop_code: "corn", enabled_only: true });
   assert.ok(rows.some((row) => row.skill_id === "corn_water_balance" && row.version === "v1"));
   assert.ok(rows.some((row) => row.skill_id === "corn_water_balance" && row.version === "v2"));
 });
 
+test("stage6 fallback_config disabled by default", () => {
+  delete process.env.GEOX_ENABLE_AGRONOMY_SKILL_FALLBACK;
+  resetFallbackSkillSwitches();
+  const rows = listFallbackSkillSwitches({ crop_code: "corn", enabled_only: true });
+  assert.equal(rows.length, 0);
+});

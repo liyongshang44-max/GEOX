@@ -5,7 +5,7 @@ import {
   listSkillBindings,
   resolveRuleSkillBindings,
   switchSkillBinding,
-} from "../domain/agronomy/skills/registry";
+} from "../domain/skill_registry/agronomy_rule_registry";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
