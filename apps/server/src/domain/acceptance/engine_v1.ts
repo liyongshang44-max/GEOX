@@ -1,3 +1,5 @@
+// LEGACY acceptance bridge relying on agronomy/skills catalog.
+// Frozen for compatibility; do not expand this into new runtime feature entrypoints.
 import { acceptanceSkills } from "../agronomy/skills";
 import { buildGeoMetrics } from "./rules/geo";
 import type { AcceptanceEvaluationOutput } from "./rules/types";

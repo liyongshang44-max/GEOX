@@ -1,3 +1,5 @@
+// LEGACY AGRONOMY RULE ENGINE (frozen compatibility surface).
+// Do not add new runtime entrypoints depending on agronomy/skills/* from this module.
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
 import type { AgronomyContext } from "./types";
 import { cropSkills, ruleSkills } from "./skills";

@@ -1,5 +1,6 @@
 // LEGACY AGRONOMY SKILLS CATALOG (migration/bootstrap only).
 // DO_NOT_USE_LEGACY_AGRONOMY_SKILLS_IN_RUNTIME
+// FROZEN: do not add new runtime features or new entrypoints that depend on this catalog.
 import { cornCrop } from "./crop/corn/corn.crop";
 import { tomatoCrop } from "./crop/tomato/tomato.crop";
 
