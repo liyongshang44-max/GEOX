@@ -135,6 +135,9 @@ importers:
 
   apps/telemetry-ingest:
     dependencies:
+      '@geox/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
       mqtt:
         specifier: ^5.10.4
         version: 5.15.0

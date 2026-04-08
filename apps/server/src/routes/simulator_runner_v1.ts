@@ -1,9 +1,8 @@
-import crypto from "node:crypto";
-
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1";
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
 
 type SimulatorRunner = {
@@ -19,9 +18,6 @@ type SimulatorRunner = {
 
 const runners = new Map<string, SimulatorRunner>(); // Process-level singleton: one runner per tenant+device.
 
-function sha256Hex(s: string): string {
-  return crypto.createHash("sha256").update(s).digest("hex");
-}
 
 function isNonEmptyString(v: any): v is string {
   return typeof v === "string" && v.trim().length > 0;
@@ -38,36 +34,21 @@ async function writeTelemetryTick(pool: Pool, runner: SimulatorRunner): Promise<
   const ts_ms = Date.now();
   const metric = "sim_runner_alive";
   const value_num = 1;
-  const telemetry_id = sha256Hex(`${runner.tenant_id}|${runner.device_id}|${metric}|${ts_ms}`);
-  const fact_id = `raw_${telemetry_id}`;
-  const occurred_at = new Date(ts_ms).toISOString();
-  const payload = {
-    telemetry_id,
-    metric,
-    value: value_num,
-    ts_ms,
-    source: "simulator_runner_v1",
-    seq: runner.seq,
-  };
-  await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-     VALUES ($1, $2, 'simulator_runner_v1', $3)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [fact_id, occurred_at, JSON.stringify({ type: "raw_telemetry_v1", schema_version: 1, occurred_at, entity: { tenant_id: runner.tenant_id, device_id: runner.device_id }, payload })]
-  );
-  await pool.query(
-    `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
-     VALUES ($1, $2, $3, $4::timestamptz, $5, NULL, $6)
-     ON CONFLICT (tenant_id, device_id, metric, ts) DO NOTHING`,
-    [runner.tenant_id, runner.device_id, metric, occurred_at, value_num, fact_id]
-  );
-  await pool.query(
-    `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
-     VALUES ($1, $2, $3, NULL, NULL, NULL, NULL, $4)
-     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
-       last_telemetry_ts_ms = GREATEST(COALESCE(device_status_index_v1.last_telemetry_ts_ms, 0), EXCLUDED.last_telemetry_ts_ms),
-       updated_ts_ms = EXCLUDED.updated_ts_ms`,
-    [runner.tenant_id, runner.device_id, ts_ms, ts_ms]
+  await ingestTelemetryV1(
+    pool,
+    {
+      tenant_id: runner.tenant_id,
+      device_id: runner.device_id,
+      metric,
+      value: value_num,
+      unit: "unitless",
+      ts_ms,
+    },
+    {
+      source: "simulator_runner_v1",
+      quality_flags: ["OK"],
+      confidence: 1,
+    }
   );
   runner.last_tick_ts_ms = ts_ms;
   runner.seq += 1;

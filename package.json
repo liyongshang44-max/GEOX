@@ -36,7 +36,8 @@
     "ci:server:no-legacy-agronomy-imports": "node scripts/check_no_legacy_agronomy_imports.cjs",
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
-    "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json"
+    "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
+    "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs"
   },
   "volta": {
     "node": "20.11.1"
