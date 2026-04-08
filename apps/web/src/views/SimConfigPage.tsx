@@ -6,6 +6,7 @@
 // - 编辑能力严格来自后端 /api/sim/config 的 manifest.editable
 // - 前端只产生 replace-only patch；权威校验在后端 /api/sim/config/patch
 // - 提供可复制的 CLI 命令（--config-b64）来运行 scripts/sim_sensor_stream.mjs
+// - 前端不维护模拟器运行态、不本地伪造 telemetry；仅允许调用后端 start/stop/status API
 
 import React, { useEffect, useMemo, useState } from "react";
 
@@ -193,7 +194,7 @@ export default function SimConfigPage(): JSX.Element {
     <div style={{ padding: 16, maxWidth: 980 }}>
       <h2>监测器配置</h2>
       <div style={{ marginBottom: 12, color: "#555" }}>
-        由 Manifest 驱动的编辑器（replace-only）。SSOT：{manifest?.ssot.source ?? "-"}
+        由 Manifest 驱动的编辑器（replace-only）。SSOT：{manifest?.ssot.source ?? "-"}。运行态与 telemetry 产出仅由后端 simulator runner 负责。
       </div>
 
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>

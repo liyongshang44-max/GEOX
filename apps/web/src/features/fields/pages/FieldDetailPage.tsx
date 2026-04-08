@@ -19,43 +19,6 @@ const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }
   error: { color: "var(--color-status-failed-fg)", bg: "var(--color-status-failed-bg)", border: "var(--color-status-failed-border)" },
 };
 
-function collectPairs(raw: any, out: Array<[number, number]>): void {
-  if (!Array.isArray(raw)) return;
-  if (raw.length >= 2 && Number.isFinite(Number(raw[0])) && Number.isFinite(Number(raw[1]))) {
-    out.push([Number(raw[0]), Number(raw[1])]);
-    return;
-  }
-  for (const item of raw) collectPairs(item, out);
-}
-
-function extractPairs(geo: any): Array<[number, number]> {
-  if (!geo || typeof geo !== "object") return [];
-  const type = String(geo?.type ?? "");
-  if (type === "Feature") return extractPairs(geo?.geometry);
-  if (type === "FeatureCollection") return Array.isArray(geo?.features) ? geo.features.flatMap((f: any) => extractPairs(f)) : [];
-  if (type === "Polygon" || type === "MultiPolygon") {
-    const pairs: Array<[number, number]> = [];
-    collectPairs(geo?.coordinates, pairs);
-    return pairs;
-  }
-  return [];
-}
-
-function buildMockMapLayers(model: any) {
-  const basePairs = extractPairs(model?.map?.polygonGeoJson);
-  const seed = basePairs[0] ?? [121.012, 23.102];
-  const second = basePairs[Math.max(1, Math.floor(basePairs.length / 3))] ?? [seed[0] + 0.0025, seed[1] + 0.0018];
-  const third = basePairs[Math.max(2, Math.floor(basePairs.length / 2))] ?? [seed[0] + 0.0048, seed[1] + 0.0031];
-  const deviceId = model?.device || model?.currentTask?.deviceId || "dev_onboard_accept_001";
-  return {
-    polygonGeoJson: model?.map?.polygonGeoJson ?? { type: "Feature", geometry: { type: "Polygon", coordinates: [[[seed[0]-0.0015, seed[1]-0.0012],[seed[0]+0.0045, seed[1]-0.0012],[seed[0]+0.0045, seed[1]+0.0038],[seed[0]-0.0015, seed[1]+0.0038],[seed[0]-0.0015, seed[1]-0.0012]]] } },
-    heatGeoJson: { type: "FeatureCollection", features: [{ type: "Feature", geometry: { type: "Point", coordinates: [second[0], second[1]] }, properties: { intensity: 2, event_id: "demo_attention", metric: "soil_moisture", status: "OPEN", time: model?.lastEvent?.relativeText || "刚刚" } }] },
-    markers: [{ device_id: deviceId, lon: seed[0], lat: seed[1], ts_ms: Date.now() - 15 * 60 * 1000 }],
-    trajectorySegments: [{ id: "demo_track_1", status: "SUCCEEDED", color: "#2563eb", label: `${deviceId} · 演示轨迹`, coordinates: [seed, second, third] }],
-    acceptancePoints: [{ id: "demo_accept_1", status: "PASS", lon: third[0], lat: third[1] }],
-  };
-}
-
 function timelineTypeLabel(type: string): string {
   if (type === "alert") return "告警";
   if (type === "recommendation") return "建议";
@@ -102,9 +65,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasCurrentPlan = rawCurrentPlanText !== "--" && hasCurrentProgram;
   const currentPlanText = hasCurrentPlan ? rawCurrentPlanText : "暂无当前经营方案";
   const fieldSubline = `${model?.areaText || "--"} · ${(model?.currentCropText || "--")}/${currentPlanText}`;
-  const mockMap = buildMockMapLayers(model);
-  const showMockMap = !(model?.map?.hasTrajectory);
-  const activeTrackId = showMockMap ? mockMap.trajectorySegments[0]?.id : (model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined);
+  const hasServerTrajectory = Boolean(model?.map?.hasTrajectory);
+  const activeTrackId = model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined;
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
   const programHref = "/programs";
   const recommendationsHref = fieldId
@@ -419,26 +381,26 @@ export default function FieldDetailPage(): React.ReactElement {
         <div className="demoCardTopRow">
           <div>
             <div className="sectionTitle">GIS 与轨迹区</div>
-            <div className="detailSectionLead">{showMockMap ? "当前真实 geo telemetry 尚未进入，地图仅展示示意图，帮助理解经营上下文。" : "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。"}</div>
+            <div className="detailSectionLead">{hasServerTrajectory ? "已收到现场轨迹数据，可直接查看设备路径、作业点和热区。" : "暂未收到后端 simulator/device 的真实 geo telemetry。"}</div>
           </div>
-          {showMockMap ? <span className="traceChip fieldDemoChip">示意图（非实时轨迹）</span> : <span className="traceChip traceChipLive">真实轨迹</span>}
+          {hasServerTrajectory ? <span className="traceChip traceChipLive">真实轨迹</span> : <span className="traceChip">等待后端 telemetry</span>}
         </div>
         {!hasGeometry ? (
           <div className="decisionItemStatic">边界尚未补充，可先完成设备与方案初始化。</div>
         ) : (
           <>
             <FieldGisMap
-              polygonGeoJson={showMockMap ? mockMap.polygonGeoJson : model?.map?.polygonGeoJson}
-              heatGeoJson={showMockMap ? mockMap.heatGeoJson : model?.map?.heatGeoJson}
-              markers={showMockMap ? mockMap.markers : model?.map?.markers}
-              trajectorySegments={showMockMap ? mockMap.trajectorySegments : model?.map?.trajectorySegments}
-              acceptancePoints={showMockMap ? mockMap.acceptancePoints : model?.map?.acceptancePoints}
+              polygonGeoJson={model?.map?.polygonGeoJson}
+              heatGeoJson={model?.map?.heatGeoJson}
+              markers={model?.map?.markers || []}
+              trajectorySegments={model?.map?.trajectorySegments || []}
+              acceptancePoints={model?.map?.acceptancePoints || []}
               activeSegmentId={activeTrackId}
               labels={labels}
               onSelectObject={setSelectedMapObject}
             />
             <div className="traceChipRow" style={{ marginTop: 12 }}>
-              {showMockMap ? (<><span className="traceChip fieldDemoChip">示意图：设备路径</span><span className="traceChip fieldDemoChip">示意图：作业定位点</span><span className="traceChip fieldDemoChip">示意图：热区</span></>) : (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>)}
+              {hasServerTrajectory ? (<><span className="traceChip traceChipLive">真实 GPS 轨迹</span><span className="traceChip">最近作业定位点</span><span className="traceChip">告警 / 热区叠加</span></>) : (<><span className="traceChip">暂无轨迹</span><span className="traceChip">请先启动后端 simulator runner 或接入真实设备</span></>)}
             </div>
           </>
         )}

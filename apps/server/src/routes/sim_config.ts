@@ -1,6 +1,7 @@
 // GEOX/apps/server/src/routes/sim_config.ts
 //
 // Simulator Config Manifest + Patch preview endpoint.
+// Runtime ownership rule: backend simulator runner is the only component allowed to keep runtime state and emit telemetry.
 //
 // This follows the same governance pattern as JudgeConfig:
 // - SSOT = config/sim/default.json
