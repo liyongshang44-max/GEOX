@@ -2103,7 +2103,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           compatibility: parsedCapability.compatibility
         },
         adapter_type: planAdapterType,
-        device_type: resolveDeviceType(proposal)
+        device_type: null
       });
       if (!compatibilityCheck.ok) {
         console.error("[CAPABILITY_COMPATIBILITY_APPROVAL]", JSON.stringify({
@@ -2320,7 +2320,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         compatibility: parsedCapability.compatibility
       },
       adapter_type: adapterType,
-      device_type: resolveDeviceType(body)
+      device_type: null
     });
     if (!matrixCheck.ok) {
       console.error("[CAPABILITY_COMPATIBILITY_TASK_CREATE]", JSON.stringify({
@@ -2504,7 +2504,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         compatibility: parsedCapability.compatibility
       },
       adapter_type: adapterType,
-      device_type: resolveDeviceType(taskPayload)
+      device_type: null
     });
     const capabilitySupport = matrixCheck.ok;
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
