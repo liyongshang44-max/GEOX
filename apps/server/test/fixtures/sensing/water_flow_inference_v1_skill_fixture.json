@@ -1,0 +1,60 @@
+{
+  "fixture_id": "water_flow_inference_v1_skill_fixture",
+  "skill_id": "water_flow_inference_v1",
+  "scenarios": [
+    {
+      "scenario_id": "water_flow_inference_v1_normal_irrigation",
+      "observation": {
+        "device_id": "flow_meter_wf_01",
+        "inlet_flow_lpm": 120,
+        "outlet_flow_lpm": 112,
+        "pressure_drop_kpa": 12
+      },
+      "expected": {
+        "derived_state_payload": {
+          "irrigation_effectiveness": "high",
+          "leak_risk": "low",
+          "inlet_flow_lpm": 120,
+          "outlet_flow_lpm": 112,
+          "pressure_drop_kpa": 12
+        },
+        "explanation_codes": [
+          "SENSING_SKILL_WATER_FLOW_INFERENCE_V1",
+          "HIGH_FLOW_EFFICIENCY",
+          "PRESSURE_DROP_LOW",
+          "RULE_FLOW_BALANCED_LEAK_LOW"
+        ],
+        "skill_run": {
+          "result_status": "SUCCESS"
+        }
+      }
+    },
+    {
+      "scenario_id": "water_flow_inference_v1_low_efficiency_suspected_leak",
+      "observation": {
+        "device_id": "flow_meter_wf_01",
+        "inlet_flow_lpm": 110,
+        "outlet_flow_lpm": 70,
+        "pressure_drop_kpa": 38
+      },
+      "expected": {
+        "derived_state_payload": {
+          "irrigation_effectiveness": "low",
+          "leak_risk": "high",
+          "inlet_flow_lpm": 110,
+          "outlet_flow_lpm": 70,
+          "pressure_drop_kpa": 38
+        },
+        "explanation_codes": [
+          "SENSING_SKILL_WATER_FLOW_INFERENCE_V1",
+          "LOW_FLOW_EFFICIENCY",
+          "PRESSURE_DROP_HIGH",
+          "RULE_EFFICIENCY_LOW_LEAK_HIGH"
+        ],
+        "skill_run": {
+          "result_status": "SUCCESS"
+        }
+      }
+    }
+  ]
+}

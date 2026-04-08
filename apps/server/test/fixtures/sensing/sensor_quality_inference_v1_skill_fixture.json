@@ -1,0 +1,59 @@
+{
+  "fixture_id": "sensor_quality_inference_v1_skill_fixture",
+  "skill_id": "sensor_quality_inference_v1",
+  "scenarios": [
+    {
+      "scenario_id": "sensor_quality_inference_v1_out_of_range_packet_loss",
+      "observation": {
+        "device_id": "sensor_quality_07",
+        "signal_strength_dbm": -98,
+        "battery_level_pct": 77,
+        "packet_loss_rate_pct": 18.5
+      },
+      "expected": {
+        "derived_state_payload": {
+          "sensor_quality": "poor",
+          "signal_strength_dbm": -98,
+          "battery_level_pct": 77,
+          "packet_loss_rate_pct": 18.5
+        },
+        "explanation_codes": [
+          "SENSING_SKILL_SENSOR_QUALITY_INFERENCE_V1",
+          "SIGNAL_WEAK",
+          "BATTERY_OK",
+          "PACKET_LOSS_HIGH",
+          "RULE_SIGNAL_OR_PACKET_POOR"
+        ],
+        "skill_run": {
+          "result_status": "SUCCESS"
+        }
+      }
+    },
+    {
+      "scenario_id": "sensor_quality_inference_v1_missing_battery_and_abnormal_jitter",
+      "observation": {
+        "device_id": "sensor_quality_07",
+        "signal_strength_dbm": -86,
+        "packet_loss_rate_pct": 6.2,
+        "signal_jitter_dbm": 14.7
+      },
+      "expected": {
+        "derived_state_payload": {
+          "sensor_quality": "fair",
+          "signal_strength_dbm": -86,
+          "battery_level_pct": null,
+          "packet_loss_rate_pct": 6.2
+        },
+        "explanation_codes": [
+          "SENSING_SKILL_SENSOR_QUALITY_INFERENCE_V1",
+          "MISSING_BATTERY_LEVEL",
+          "PACKET_LOSS_MODERATE",
+          "RULE_BATTERY_OR_PACKET_FAIR"
+        ],
+        "skill_run": {
+          "result_status": "FAILED"
+        }
+      }
+    }
+  ]
+}
