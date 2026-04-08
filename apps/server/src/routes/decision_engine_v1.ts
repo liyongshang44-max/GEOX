@@ -15,6 +15,7 @@ import {
   ensureDerivedSensingStateProjectionV1,
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -92,6 +93,17 @@ function parseJsonMaybe(v: any): any {
     try { return JSON.parse(v); } catch { return null; }
   }
   return null;
+}
+
+function mapRuleToSkill(ruleId: string): { skill_id: string; version: string } {
+  const normalized = String(ruleId ?? "").trim();
+  if (!normalized) return { skill_id: "agronomy_rule", version: "v1" };
+  const m = normalized.match(/^(.*)_(v\d+)$/i);
+  if (!m) return { skill_id: normalized, version: "v1" };
+  return {
+    skill_id: String(m[1] ?? "").trim() || normalized,
+    version: String(m[2] ?? "v1").toLowerCase(),
+  };
 }
 
 function requireTenantMatchOr404(auth: AoActAuthContextV0, tenant: TenantTriple, reply: FastifyReply): boolean {
@@ -1036,7 +1048,55 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
       const recommendationPayload = { ...rec, program_id: resolvedProgramId };
       const chainValidation = validateRecommendationMainChainFields(recommendationPayload);
+      const matchedRuleHit = (Array.isArray(recommendationPayload.rule_hit) ? recommendationPayload.rule_hit : [])
+        .find((item) => Boolean(item?.matched) && String(item?.rule_id ?? "").trim().length > 0);
+      const primaryRuleId = String(matchedRuleHit?.rule_id ?? recommendationPayload.rule_id ?? "").trim();
+      const primaryRule = mapRuleToSkill(primaryRuleId);
+      const recommendationInputDigest = digestJson({
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        field_id: recommendationPayload.field_id,
+        operation_plan_id: null,
+        recommendation_id: recommendationPayload.recommendation_id,
+        rule_id: primaryRuleId,
+        rule_hit: recommendationPayload.rule_hit,
+        data_sources: {
+          field_sensing_overview_v1: sensingOverview,
+          field_fertility_state_v1: fertilityState ?? null,
+          image_recognition: body.image_recognition ?? null
+        }
+      });
       if (!chainValidation.ok) {
+        await appendSkillRunFact(pool, {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          skill_id: primaryRule.skill_id,
+          version: primaryRule.version,
+          category: "AGRONOMY",
+          status: "ACTIVE",
+          result_status: matchedRuleHit ? "FAILED" : "SKIPPED",
+          trigger_stage: "before_recommendation",
+          scope_type: "FIELD",
+          rollout_mode: "DIRECT",
+          bind_target: recommendationPayload.recommendation_id,
+          operation_id: recommendationPayload.recommendation_id,
+          operation_plan_id: null,
+          field_id: recommendationPayload.field_id,
+          device_id: recommendationPayload.device_id,
+          input_digest: recommendationInputDigest,
+          output_digest: digestJson({
+            ok: false,
+            chain_validation_error: chainValidation.error,
+            field_id: recommendationPayload.field_id,
+            operation_plan_id: null,
+            recommendation_id: recommendationPayload.recommendation_id,
+            rule_id: primaryRuleId,
+          }),
+          error_code: "RECOMMENDATION_CHAIN_VALIDATION_FAILED",
+          duration_ms: 0,
+        });
         return badRequest(reply, chainValidation.error);
       }
       const recommendation_input_fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
@@ -1069,6 +1129,37 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
             image_recognition: body.image_recognition ?? null
           }
         }
+      });
+      await appendSkillRunFact(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        skill_id: primaryRule.skill_id,
+        version: primaryRule.version,
+        category: "AGRONOMY",
+        status: "ACTIVE",
+        result_status: matchedRuleHit ? "SUCCESS" : "SKIPPED",
+        trigger_stage: "before_recommendation",
+        scope_type: "FIELD",
+        rollout_mode: "DIRECT",
+        bind_target: recommendationPayload.recommendation_id,
+        operation_id: recommendationPayload.recommendation_id,
+        operation_plan_id: null,
+        field_id: recommendationPayload.field_id,
+        device_id: recommendationPayload.device_id,
+        input_digest: recommendationInputDigest,
+        output_digest: digestJson({
+          ok: true,
+          fact_id,
+          field_id: recommendationPayload.field_id,
+          operation_plan_id: null,
+          recommendation_id: recommendationPayload.recommendation_id,
+          rule_id: primaryRuleId,
+          rank_score: recommendationPayload.rank_score ?? null,
+          confidence: recommendationPayload.confidence ?? null,
+        }),
+        error_code: null,
+        duration_ms: 0,
       });
       fact_ids.push(fact_id);
       resolvedRecommendations.push(recommendationPayload);
