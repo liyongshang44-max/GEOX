@@ -1871,17 +1871,6 @@ function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
   };
 }
 
-function adapterSupportsCapability(adapterType: string, capability: string): boolean {
-  const adapter = String(adapterType ?? "").trim().toLowerCase();
-  const c = String(capability ?? "").trim().toLowerCase();
-  if (!adapter || !c) return false;
-  const normalizedAdapter = adapter === "mqtt_downlink_once_v1" ? "mqtt" : adapter;
-  if (c === "device.irrigation.valve.open") {
-    return ["mqtt", "irrigation_real", "irrigation_http_v1", "irrigation_simulator"].includes(normalizedAdapter);
-  }
-  return normalizedAdapter === "mqtt";
-}
-
 function validateAdapterTask(adapterType: string, taskPayload: any): { ok: true } | { ok: false; reason: string } {
   const adapter = String(adapterType ?? "").trim().toLowerCase();
   if (!adapter) return { ok: false, reason: "MISSING_ADAPTER_TYPE" };
@@ -2116,8 +2105,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         adapter_type: planAdapterType,
         device_type: resolveDeviceType(proposal)
       });
-      const supportsCapability = adapterSupportsCapability(planAdapterType, parsedCapability.capability);
-      if (!supportsCapability || !compatibilityCheck.ok) {
+      if (!compatibilityCheck.ok) {
         console.error("[CAPABILITY_COMPATIBILITY_APPROVAL]", JSON.stringify({
           adapter_type: planAdapterType,
           capability: parsedCapability.capability,
@@ -2131,13 +2119,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           operation_plan_id,
           adapter_type: planAdapterType || null,
           device_type: resolveDeviceType(proposal),
-          error: !compatibilityCheck.ok
-            ? compatibilityCheck.error
-            : {
-                code: "CAPABILITY_COMPATIBILITY_MISMATCH",
-                message: "Adapter does not support resolved capability.",
-                reasons: ["adapter_not_compatible"]
-              }
+          error: compatibilityCheck.error
         });
       }
       const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? "" } });
@@ -2340,8 +2322,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       adapter_type: adapterType,
       device_type: resolveDeviceType(body)
     });
-    const supportsCapability = adapterSupportsCapability(adapterType, parsedCapability.capability);
-    if (!supportsCapability || !matrixCheck.ok) {
+    if (!matrixCheck.ok) {
       console.error("[CAPABILITY_COMPATIBILITY_TASK_CREATE]", JSON.stringify({
         adapter_type: adapterType,
         capability: parsedCapability.capability,
@@ -2355,13 +2336,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         operation_plan_id,
         adapter_type: adapterType || null,
         device_type: resolveDeviceType(body),
-        error: !matrixCheck.ok
-          ? matrixCheck.error
-          : {
-              code: "CAPABILITY_COMPATIBILITY_MISMATCH",
-              message: "Adapter does not support resolved capability.",
-              reasons: ["adapter_not_compatible"]
-            }
+        error: matrixCheck.error
       });
     }
     const adapterValidation = validateAdapterTask(adapterType, body);
@@ -2531,7 +2506,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       adapter_type: adapterType,
       device_type: resolveDeviceType(taskPayload)
     });
-    const capabilitySupport = adapterSupportsCapability(adapterType, parsedCapability.capability);
+    const capabilitySupport = matrixCheck.ok;
     console.log(`[DISPATCH_TASK_PAYLOAD] act_task_id=${act_task_id} adapter_type=${selectedAdapter} action_type=${String(actionType).trim().toLowerCase()} canonical_action_type=${canonicalDispatchActionType} task_type=${String(taskPayload?.task_type ?? taskPayload?.meta?.task_type ?? "").trim().toLowerCase()} meta_device_id=${String(taskPayload?.meta?.device_id ?? "").trim()} meta_topic=${String(taskPayload?.meta?.topic ?? "").trim()}`);
     console.log("[dispatch-debug-server]", {
       adapter_type: String(adapterType ?? ""),
@@ -2546,7 +2521,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     });
     const tripleValidation = assertTenantFieldDeviceTriple(taskPayload);
     if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
-    if (!capabilitySupport || !matrixCheck.ok) {
+    if (!matrixCheck.ok) {
       console.error("[CAPABILITY_COMPATIBILITY_DISPATCH]", JSON.stringify({
         act_task_id,
         selected_adapter: selectedAdapter,
@@ -2567,13 +2542,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         operation_plan_id: String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim() || null,
         adapter_type: adapterType || null,
         device_type: resolveDeviceType(taskPayload),
-        error: !matrixCheck.ok
-          ? matrixCheck.error
-          : {
-              code: "CAPABILITY_COMPATIBILITY_MISMATCH",
-              message: "Adapter does not support resolved capability.",
-              reasons: ["adapter_not_compatible"]
-            }
+        error: matrixCheck.error
       });
     }
     const adapterValidation = validateAdapterTask(adapterType, taskPayload);
