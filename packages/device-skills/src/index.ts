@@ -5,6 +5,8 @@ import type {
   SalinityRiskV1,
 } from "@geox/contracts";
 import { inferFertilityFromDeviceObservationV1 } from "./fertility_inference_core_v1";
+import { pumpControllerV1 } from "./pump_controller_v1";
+import { sprayerUnitV1 } from "./sprayer_unit_v1";
 
 export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance" | "after_recommendation";
@@ -58,6 +60,7 @@ export type CapabilityCompatibilityCheckResult =
         normalized_adapter: string;
       };
     };
+type CapabilityCompatibilityFailure = Extract<CapabilityCompatibilityCheckResult, { ok: false }>["error"];
 
 export type TelemetryInterpretation = {
   interpreted: {
@@ -154,13 +157,21 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
   resolveCapability: ({ task_payload }) => {
     const actionLike = String(task_payload?.action_type ?? task_payload?.task_type ?? task_payload?.meta?.task_type ?? "").trim().toLowerCase();
     const compact = actionLike.replace(/[\s_-]+/g, ".");
-    if (!["fertilize", "fertilization.start", "start.fertilization", "fertilize.start", "apply.fertilizer", "fertilizer.apply"].includes(compact)) return null;
+    const requestedCapability = String(task_payload?.capability ?? task_payload?.meta?.capability ?? "").trim().toUpperCase();
+    if (
+      requestedCapability !== "DEVICE.FERTILIZATION.DISPENSE"
+      && !["fertilize", "fertilization.start", "start.fertilization", "fertilize.start", "apply.fertilizer", "fertilizer.apply"].includes(compact)
+    ) return null;
 
     const parameters = task_payload?.parameters && typeof task_payload.parameters === "object" ? task_payload.parameters : {};
     const device_target = String(task_payload?.target?.ref ?? task_payload?.meta?.device_target ?? task_payload?.meta?.device_id ?? "").trim() || null;
     const chemical_ml = finite((parameters as any)?.chemical_ml ?? (parameters as any)?.dose_ml ?? (parameters as any)?.amount_ml);
     const duration_sec = finite((parameters as any)?.duration_sec ?? (parameters as any)?.duration_seconds ?? (parameters as any)?.duration);
     const flow_lpm = finite((parameters as any)?.flow_lpm ?? (parameters as any)?.flow_rate_lpm);
+    const fertilizer_type = String((parameters as any)?.fertilizer_type ?? task_payload?.meta?.fertilizer_type ?? "").trim() || null;
+    const target_dose_ml = finite((parameters as any)?.target_dose_ml ?? (parameters as any)?.dose_target_ml);
+    const dose_rate_ml_min = finite((parameters as any)?.dose_rate_ml_min ?? (parameters as any)?.target_dose_rate_ml_min);
+    const tolerance = finite((parameters as any)?.tolerance ?? (parameters as any)?.dose_tolerance ?? (parameters as any)?.dose_tolerance_pct);
 
     return {
       capability: "device.fertilization.dispense",
@@ -168,16 +179,21 @@ const fertilizerUnitV1: DeviceSkillDefinition = {
         task_type: "FERTILIZE",
         action_type: "FERTILIZE",
         device_id: device_target,
+        fertilizer_type,
         chemical_ml,
         duration_sec,
-        flow_lpm
+        flow_lpm,
+        target_dose_ml,
+        dose_rate_ml_min,
+        tolerance
       },
       evidence_requirements: [
         "dispatch_ack",
         "fertilizer_dispense_confirmation",
-        "execution_receipt"
+        "execution_receipt",
+        target_dose_ml != null ? "dose_target_reached" : "dose_total_reported"
       ],
-      explain: `Dispense fertilizer${device_target ? ` on ${device_target}` : ""}${chemical_ml != null ? ` with ${chemical_ml}ml` : ""}.`,
+      explain: `Dispense fertilizer${fertilizer_type ? ` (${fertilizer_type})` : ""}${device_target ? ` on ${device_target}` : ""}${target_dose_ml != null ? ` target=${target_dose_ml}ml` : chemical_ml != null ? ` with ${chemical_ml}ml` : ""}${dose_rate_ml_min != null ? ` @${dose_rate_ml_min}ml/min` : ""}${tolerance != null ? ` ±${tolerance}` : ""}.`,
       compatibility: fertilizerUnitV1.compatibility
     };
   }
@@ -269,9 +285,31 @@ const fertilityInferenceV1: DeviceSkillDefinition = {
 export const deviceSkillRegistry: DeviceSkillDefinition[] = [
   irrigationValveV1,
   fertilizerUnitV1,
+  sprayerUnitV1,
+  pumpControllerV1,
   soilSensorV1,
   fertilityInferenceV1
 ];
+
+function normalizeCapability(capability: unknown): string {
+  return String(capability ?? "").trim().toLowerCase();
+}
+
+function buildCapabilitySkillIndex(skills: DeviceSkillDefinition[]): Map<string, DeviceSkillDefinition[]> {
+  const index = new Map<string, DeviceSkillDefinition[]>();
+  for (const skill of skills) {
+    for (const capability of skill.compatibility?.capabilities ?? []) {
+      const normalized = normalizeCapability(capability);
+      if (!normalized) continue;
+      const list = index.get(normalized) ?? [];
+      list.push(skill);
+      index.set(normalized, list);
+    }
+  }
+  return index;
+}
+
+const capabilitySkillIndex = buildCapabilitySkillIndex(deviceSkillRegistry);
 
 export function inferDerivedSensingStateViaDeviceSkills(input: {
   device_observation_v1: any;
@@ -329,6 +367,15 @@ export function findDeviceSkill(skillId: string): DeviceSkillDefinition | null {
 }
 
 export function resolveTaskCapabilityViaDeviceSkills(taskPayload: any): CapabilityResolution | null {
+  const requestedCapability = normalizeCapability(taskPayload?.capability ?? taskPayload?.meta?.capability);
+  if (requestedCapability) {
+    for (const skill of capabilitySkillIndex.get(requestedCapability) ?? []) {
+      if (!skill.resolveCapability) continue;
+      const resolved = skill.resolveCapability({ task_payload: taskPayload });
+      if (resolved) return resolved;
+    }
+  }
+
   const hintedSkillId = String(taskPayload?.skill_id ?? taskPayload?.meta?.skill_id ?? "").trim();
   if (hintedSkillId) {
     const hintedSkill = findDeviceSkill(hintedSkillId);
@@ -343,6 +390,31 @@ export function resolveTaskCapabilityViaDeviceSkills(taskPayload: any): Capabili
     if (resolved) return resolved;
   }
   return null;
+}
+
+export function routeCapabilityToSkillAdapter(input: {
+  task_payload: any;
+  adapter_type: string | null | undefined;
+}): {
+  ok: true;
+  resolution: CapabilityResolution;
+  normalized_adapter: string;
+} | {
+  ok: false;
+  error: CapabilityResolutionFailure | CapabilityCompatibilityFailure;
+} {
+  const resolved = resolveTaskCapabilityViaDeviceSkillsResult(input.task_payload);
+  if (!resolved.ok) return { ok: false, error: resolved.error };
+  const compatibility = checkCapabilityCompatibilityMatrix({
+    capability: resolved.resolution,
+    adapter_type: input.adapter_type,
+  });
+  if (!compatibility.ok) return { ok: false, error: compatibility.error };
+  return {
+    ok: true,
+    resolution: resolved.resolution,
+    normalized_adapter: compatibility.normalized_adapter,
+  };
 }
 
 export function resolveTaskCapabilityViaDeviceSkillsResult(taskPayload: any): CapabilityResolutionResult {
@@ -398,3 +470,5 @@ export function checkCapabilityCompatibilityMatrix(input: {
 }
 
 export * from "./fertility_inference_core_v1";
+export * from "./pump_controller_v1";
+export * from "./sprayer_unit_v1";
