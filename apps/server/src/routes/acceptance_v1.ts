@@ -204,6 +204,40 @@ async function loadProgramAcceptancePolicyRef(
   return value || null;
 }
 
+
+
+type AcceptanceDerivedStates = {
+  water_flow_state: Record<string, any> | null;
+  fertility_state: Record<string, any> | null;
+  sensor_quality_state: Record<string, any> | null;
+};
+
+async function loadAcceptanceDerivedStates(pool: Pool, tenant: TenantTriple, fieldId: string | null): Promise<AcceptanceDerivedStates> {
+  if (!fieldId) {
+    return { water_flow_state: null, fertility_state: null, sensor_quality_state: null };
+  }
+  const q = await pool.query(
+    `SELECT DISTINCT ON (state_type) state_type, payload_json
+       FROM derived_sensing_state_index_v1
+      WHERE tenant_id = $1
+        AND field_id = $2
+        AND ($3::text IS NULL OR project_id = $3)
+        AND ($4::text IS NULL OR group_id = $4)
+        AND state_type = ANY($5::text[])
+      ORDER BY state_type, computed_at_ts_ms DESC`,
+    [tenant.tenant_id, fieldId, tenant.project_id, tenant.group_id, ["water_flow_state", "fertility_state", "sensor_quality_state"]]
+  ).catch(() => ({ rows: [] as any[] }));
+
+  const byType = new Map<string, Record<string, any>>();
+  for (const row of q.rows ?? []) {
+    byType.set(String(row.state_type), normalizeRecordJson(row.payload_json) ?? row.payload_json ?? null);
+  }
+  return {
+    water_flow_state: byType.get("water_flow_state") ?? null,
+    fertility_state: byType.get("fertility_state") ?? null,
+    sensor_quality_state: byType.get("sensor_quality_state") ?? null,
+  };
+}
 function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
   if (result === "PASSED") return "PASS";
   if (result === "FAILED") return "FAIL";
@@ -259,25 +293,30 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       const start_ts = Number.isFinite(start_ts_raw) && start_ts_raw > 0 ? start_ts_raw : (taskFactOccurredAtMs ?? Date.now() - 2 * 60 * 60 * 1000);
       const end_ts = Number.isFinite(end_ts_raw) && end_ts_raw > 0 ? end_ts_raw : (start_ts + 2 * 60 * 60 * 1000);
       const program_id = typeof taskPayload?.program_id === "string" ? taskPayload.program_id : null;
-      const [field_polygon, track_points, acceptance_policy_ref] = await Promise.all([
+      const [field_polygon, track_points, acceptance_policy_ref, derived_states] = await Promise.all([
         loadFieldPolygon(pool, tenant.tenant_id, field_id),
         loadTrackPoints(pool, tenant, device_id, start_ts, end_ts),
-        loadProgramAcceptancePolicyRef(pool, tenant, program_id)
+        loadProgramAcceptancePolicyRef(pool, tenant, program_id),
+        loadAcceptanceDerivedStates(pool, tenant, field_id)
       ]);
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
         parameters: (taskPayload.parameters ?? {}) as Record<string, any>,
         telemetry: { ...telemetry, field_polygon, track_points },
+        receipt: receiptFact.record_json ?? {},
+        water_flow_state: derived_states.water_flow_state,
+        fertility_state: derived_states.fertility_state,
+        sensor_quality_state: derived_states.sensor_quality_state,
         acceptance_policy_ref
       });
       await appendSkillRunFact(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        skill_id: String(evaluated.rule_id ?? "acceptance_manual_fallback_v1").replace(/_[^_]+$/, ""),
-        version: String(evaluated.rule_id ?? "acceptance_manual_fallback_v1").split("_").pop() || "v1",
-        category: "OPS",
+        skill_id: evaluated.acceptance_skill_id ?? "acceptance_manual_fallback_v1",
+        version: evaluated.acceptance_skill_version ?? "v1",
+        category: "ACCEPTANCE",
         status: "ACTIVE",
         result_status: evaluated.result === "PASSED" ? "SUCCESS" : (evaluated.result === "FAILED" ? "FAILED" : "SKIPPED"),
         trigger_stage: "after_acceptance",
@@ -288,7 +327,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : null,
         field_id,
         device_id,
-        input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, acceptance_policy_ref }),
+        input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
         output_digest: digestJson(evaluated),
         error_code: null,
         duration_ms: 0,
@@ -311,6 +350,11 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           verdict: toVerdict(evaluated.result),
           metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),
           rule_id: evaluated.rule_id,
+          explanation_codes: evaluated.explanation_codes,
+          acceptance_skill_id: evaluated.acceptance_skill_id,
+          acceptance_skill_version: evaluated.acceptance_skill_version,
+          input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
+          output_digest: digestJson({ result: evaluated.result, verdict: toVerdict(evaluated.result), explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
           evaluated_at: nowIso,
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id]
         })

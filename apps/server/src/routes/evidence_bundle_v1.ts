@@ -264,6 +264,13 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
         operation_plan_id: toText(acceptancePayload.operation_plan_id) ?? operationPlanId,
         verdict: toText(acceptancePayload.verdict) ?? builtAcceptance.verdict,
         missing_evidence: Array.isArray(acceptancePayload.missing_evidence) ? acceptancePayload.missing_evidence : builtAcceptance.missing_evidence,
+        explanation_codes: Array.isArray(acceptancePayload.explanation_codes) ? acceptancePayload.explanation_codes : [],
+        skill_meta: {
+          skill_id: toText(acceptancePayload.acceptance_skill_id),
+          version: toText(acceptancePayload.acceptance_skill_version),
+          input_digest: toText(acceptancePayload.input_digest),
+          output_digest: toText(acceptancePayload.output_digest),
+        },
         generated_at: toText(acceptancePayload.generated_at) ?? acceptanceRows[0].occurred_at
       }
       : builtAcceptance;
