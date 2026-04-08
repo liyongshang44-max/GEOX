@@ -1,7 +1,7 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
 import type { AgronomyContext } from "./types";
 import { cropSkills } from "./skills";
-import { getRuleSkills } from "./skills/registry";
+import { getRuleSkills } from "../skill_registry/agronomy_rule_registry";
 import type { CropStage } from "./skills/types";
 
 function normalizeSkillStage(stage: string): CropStage {

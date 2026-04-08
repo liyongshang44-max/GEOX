@@ -1,16 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import {
-  configureSkillBindingsPool,
-  listSkillBindings,
-  resolveRuleSkillBindings,
-  switchSkillBinding,
-} from "../domain/agronomy/skills/registry";
+import { appendSkillBindingFact } from "../domain/skill_registry/facts";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
-  configureSkillBindingsPool(pool);
-
   app.get("/api/v1/skills/rules", async (req, reply) => {
     const query = (req.query ?? {}) as {
       crop_code?: string;
@@ -22,8 +15,8 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       device_type?: string;
       trigger_stage?: string;
       bind_target?: string;
+      fact_type?: string;
       enabled_only?: string;
-      dry_run?: string;
     };
 
     const crop_code = typeof query.crop_code === "string" ? query.crop_code.trim().toLowerCase() : undefined;
@@ -31,49 +24,6 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
     const project_id = typeof query.project_id === "string" ? query.project_id.trim() : undefined;
     const group_id = typeof query.group_id === "string" ? query.group_id.trim() : undefined;
     const enabledOnly = String(query.enabled_only ?? "true").trim().toLowerCase() !== "false";
-    const dryRun = String(query.dry_run ?? "false").trim().toLowerCase() === "true";
-
-    if (dryRun) {
-      if (!tenant_id || !project_id || !group_id || !crop_code) {
-        return reply.code(400).send({
-          ok: false,
-          error: "INVALID_QUERY",
-          message: "dry_run=true requires tenant_id/project_id/group_id/crop_code",
-        });
-      }
-
-      try {
-        const resolved = await resolveRuleSkillBindings({ tenant_id, project_id, group_id, crop_code });
-        return reply.send({
-          ok: true,
-          items: resolved.map((item) => ({
-            skill_id: item.skill_id,
-            version: item.version,
-            enabled: item.enabled,
-            priority: item.priority,
-            category: item.category,
-            scope_type: item.scope_type,
-            rollout_mode: item.rollout_mode,
-            trigger_stage: item.trigger_stage,
-            bind_target: item.bind_target,
-            device_type: item.device_type,
-            source: item.source,
-            scope: {
-              tenant_id: item.tenant_id,
-              project_id: item.project_id,
-              group_id: item.group_id,
-              crop_code: item.crop_code,
-            },
-          })),
-        });
-      } catch (error) {
-        return reply.code(404).send({
-          ok: false,
-          error: "NO_SKILL_BINDING_FOUND",
-          message: error instanceof Error ? error.message : "resolve failed",
-        });
-      }
-    }
 
     if (!tenant_id || !project_id || !group_id) {
       return reply.code(400).send({
@@ -94,10 +44,12 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       device_type: query.device_type,
       trigger_stage: query.trigger_stage,
       bind_target: query.bind_target,
-      fact_type: "skill_binding_v1",
+      fact_type: query.fact_type === "skill_definition_v1" || query.fact_type === "skill_run_v1"
+        ? query.fact_type
+        : "skill_binding_v1",
     });
 
-    const readItems = readRows
+    const items = readRows
       .map((row) => ({
         id: String(row.fact_id),
         skill_id: String(row.skill_id),
@@ -121,38 +73,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       }))
       .filter((item) => !enabledOnly || item.enabled);
 
-    if (readItems.length > 0) {
-      return reply.send(readItems);
-    }
-
-    const items = await listSkillBindings({
-      crop_code,
-      tenant_id,
-      project_id,
-      group_id,
-      enabled_only: enabledOnly,
-    });
-
-    return reply.send(items.map((item) => ({
-      id: item.id,
-      skill_id: item.skill_id,
-      version: item.version,
-      enabled: item.enabled,
-      priority: item.priority,
-      category: item.category,
-      scope_type: item.scope_type,
-      rollout_mode: item.rollout_mode,
-      trigger_stage: item.trigger_stage,
-      bind_target: item.bind_target,
-      crop_code: item.crop_code,
-      device_type: item.device_type,
-      scope: {
-        tenant_id: item.tenant_id,
-        project_id: item.project_id,
-        group_id: item.group_id,
-      },
-      updated_at: item.updated_at,
-    })));
+    return reply.send(items);
   });
 
   app.post("/api/v1/skills/rules/switch", async (req, reply) => {
@@ -186,28 +107,61 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
     }
 
     try {
-      const switched = await switchSkillBinding({
+      const tenant_id = typeof body.scope?.tenant_id === "string" ? body.scope.tenant_id.trim() : "";
+      const project_id = typeof body.scope?.project_id === "string" ? body.scope.project_id.trim() : "";
+      const group_id = typeof body.scope?.group_id === "string" ? body.scope.group_id.trim() : "";
+      if (!tenant_id || !project_id || !group_id) {
+        return reply.code(400).send({
+          ok: false,
+          error: "INVALID_SCOPE",
+          message: "scope.tenant_id/project_id/group_id are required",
+        });
+      }
+      const appended = await appendSkillBindingFact(pool, {
+        tenant_id,
+        project_id,
+        group_id,
         skill_id,
         version,
-        category: typeof body.category === "string" ? body.category.trim().toUpperCase() : undefined,
-        enabled: body.enabled,
-        priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : undefined,
-        scope: body.scope
-          ? {
-            tenant_id: typeof body.scope.tenant_id === "string" ? body.scope.tenant_id.trim() : undefined,
-            project_id: typeof body.scope.project_id === "string" ? body.scope.project_id.trim() : undefined,
-            group_id: typeof body.scope.group_id === "string" ? body.scope.group_id.trim() : undefined,
-            crop_code: typeof body.scope.crop_code === "string" ? body.scope.crop_code.trim().toLowerCase() : undefined,
-            scope_type: typeof body.scope.scope_type === "string" ? body.scope.scope_type.trim().toUpperCase() : undefined,
-            bind_target: typeof body.scope.bind_target === "string" ? body.scope.bind_target.trim() : undefined,
-            trigger_stage: typeof body.scope.trigger_stage === "string" ? body.scope.trigger_stage.trim() : undefined,
-            rollout_mode: typeof body.scope.rollout_mode === "string" ? body.scope.rollout_mode.trim().toUpperCase() : undefined,
-            device_type: typeof body.scope.device_type === "string" ? body.scope.device_type.trim().toUpperCase() : undefined,
-          }
-          : undefined,
+        category: typeof body.category === "string" ? body.category.trim().toUpperCase() as any : "AGRONOMY",
+        status: body.enabled ? "ACTIVE" : "DISABLED",
+        scope_type: typeof body.scope?.scope_type === "string" ? body.scope.scope_type.trim().toUpperCase() as any : "TENANT",
+        rollout_mode: typeof body.scope?.rollout_mode === "string" ? body.scope.rollout_mode.trim().toUpperCase() as any : "DIRECT",
+        trigger_stage: typeof body.scope?.trigger_stage === "string" ? body.scope.trigger_stage.trim() as any : "before_recommendation",
+        bind_target: typeof body.scope?.bind_target === "string" ? body.scope.bind_target.trim() : tenant_id,
+        crop_code: typeof body.scope?.crop_code === "string" ? body.scope.crop_code.trim().toLowerCase() : null,
+        device_type: typeof body.scope?.device_type === "string" ? body.scope.device_type.trim().toUpperCase() as any : null,
+        priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : 0,
       });
+      await projectSkillRegistryReadV1(pool, { tenant_id, project_id, group_id });
+      const rows = await querySkillRegistryReadV1(pool, {
+        tenant_id,
+        project_id,
+        group_id,
+        crop_code: appended.payload.crop_code ?? undefined,
+        fact_type: "skill_binding_v1",
+      });
+      const latest = rows.find((row) => String(row.fact_id) === appended.fact_id) ?? rows[0] ?? null;
 
-      return reply.send({ ok: true, item: switched });
+      return reply.send({
+        ok: true,
+        item: latest ? {
+          id: String(latest.fact_id),
+          skill_id: String(latest.skill_id),
+          version: String(latest.version),
+          enabled: ["ACTIVE", "ENABLED"].includes(String(latest.status ?? "").toUpperCase()),
+          priority: Number.isFinite(Number(latest.payload_json?.priority)) ? Number(latest.payload_json?.priority) : 0,
+          category: latest.category,
+          scope_type: latest.scope_type,
+          rollout_mode: latest.rollout_mode,
+          trigger_stage: latest.trigger_stage,
+          bind_target: latest.bind_target,
+          crop_code: latest.crop_code,
+          device_type: latest.device_type,
+          scope: { tenant_id: latest.tenant_id, project_id: latest.project_id, group_id: latest.group_id },
+          updated_at: latest.occurred_at,
+        } : null,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown";
       if (message.includes("INVALID_TRIGGER_STAGE")) {
