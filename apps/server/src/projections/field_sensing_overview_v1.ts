@@ -31,6 +31,10 @@ type FieldSensingOverviewV1 = {
   soil_indicators_json: SoilIndicatorItem[];
   irrigation_need_level: "LOW" | "MEDIUM" | "HIGH" | null;
   sensor_quality_level: "GOOD" | "FAIR" | "POOR" | null;
+  canopy_temp_status: "normal" | "elevated" | "critical" | "unknown" | null;
+  evapotranspiration_risk: "low" | "medium" | "high" | "unknown" | null;
+  sensor_quality: "good" | "fair" | "poor" | "unknown" | null;
+  irrigation_effectiveness: "low" | "medium" | "high" | "unknown" | null;
   irrigation_action_hint: string | null;
   explanation_codes_json: string[];
   updated_ts_ms: number;
@@ -86,6 +90,27 @@ function coerceLevel<T extends string>(v: unknown, allowed: readonly T[]): T | n
   return (allowed as readonly string[]).includes(normalized) ? normalized as T : null;
 }
 
+function coerceEnumLower<T extends string>(v: unknown, allowed: readonly T[]): T | null {
+  const normalized = String(v ?? "").trim().toLowerCase();
+  return (allowed as readonly string[]).includes(normalized) ? normalized as T : null;
+}
+
+function coerceSensorQualityLevel(v: unknown): "GOOD" | "FAIR" | "POOR" | null {
+  const normalized = String(v ?? "").trim().toUpperCase();
+  if (normalized === "DEGRADED") return "FAIR";
+  if (normalized === "INVALID") return "POOR";
+  if (normalized === "GOOD" || normalized === "FAIR" || normalized === "POOR") return normalized;
+  return null;
+}
+
+function coerceSensorQuality(v: unknown): "good" | "fair" | "poor" | "unknown" | null {
+  const normalized = String(v ?? "").trim().toLowerCase();
+  if (normalized === "degraded") return "fair";
+  if (normalized === "invalid") return "poor";
+  if (normalized === "good" || normalized === "fair" || normalized === "poor" || normalized === "unknown") return normalized;
+  return null;
+}
+
 function extractLatestDerivedState(rows: any[], stateType: string): any | null {
   const target = rows
     .filter((row) => String(row.state_type ?? "") === stateType)
@@ -108,6 +133,10 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
           soil_indicators_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           irrigation_need_level text NULL,
           sensor_quality_level text NULL,
+          canopy_temp_status text NULL,
+          evapotranspiration_risk text NULL,
+          sensor_quality text NULL,
+          irrigation_effectiveness text NULL,
           irrigation_action_hint text NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
@@ -116,6 +145,10 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
       );
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_need_level text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS sensor_quality_level text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS canopy_temp_status text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS evapotranspiration_risk text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS sensor_quality text NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_effectiveness text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_action_hint text NULL`);
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_sensing_overview_v1_scope ON field_sensing_overview_v1 (tenant_id, project_id, group_id, field_id)`);
     })().catch((err) => {
@@ -215,12 +248,18 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
         AND ($3::text IS NULL OR project_id = $3)
         AND ($4::text IS NULL OR group_id = $4)
         AND state_type = ANY($5::text[])`,
-    [params.tenant_id, params.field_id, params.project_id ?? null, params.group_id ?? null, ["irrigation_need_state", "sensor_quality_state"]]
+    [params.tenant_id, params.field_id, params.project_id ?? null, params.group_id ?? null, ["irrigation_need_state", "sensor_quality_state", "canopy_state", "water_flow_state"]]
   );
   const irrigationPayload = extractLatestDerivedState(derivedRows.rows ?? [], "irrigation_need_state");
   const qualityPayload = extractLatestDerivedState(derivedRows.rows ?? [], "sensor_quality_state");
+  const canopyPayload = extractLatestDerivedState(derivedRows.rows ?? [], "canopy_state");
+  const waterFlowPayload = extractLatestDerivedState(derivedRows.rows ?? [], "water_flow_state");
   const irrigationNeedLevel = coerceLevel(irrigationPayload?.level ?? irrigationPayload?.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const);
-  const sensorQualityLevel = coerceLevel(qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level, ["GOOD", "FAIR", "POOR"] as const);
+  const sensorQualityLevel = coerceSensorQualityLevel(qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level ?? qualityPayload?.sensor_quality);
+  const canopyTempStatus = coerceEnumLower(canopyPayload?.canopy_temp_status ?? canopyPayload?.canopy_temperature_status ?? canopyPayload?.temp_status, ["normal", "elevated", "critical", "unknown"] as const);
+  const evapotranspirationRisk = coerceEnumLower(canopyPayload?.evapotranspiration_risk ?? canopyPayload?.et_risk ?? canopyPayload?.risk_level, ["low", "medium", "high", "unknown"] as const);
+  const sensorQuality = coerceSensorQuality(qualityPayload?.sensor_quality ?? qualityPayload?.level ?? qualityPayload?.sensor_quality_level ?? qualityPayload?.quality_level);
+  const irrigationEffectiveness = coerceEnumLower(waterFlowPayload?.irrigation_effectiveness ?? waterFlowPayload?.flow_effectiveness, ["low", "medium", "high", "unknown"] as const);
   const irrigationActionHintRaw = irrigationPayload?.action_hint ?? irrigationPayload?.suggested_action ?? irrigationPayload?.recommendation;
   const irrigationActionHint = String(irrigationActionHintRaw ?? "").trim() || null;
 
@@ -242,6 +281,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     soil_indicators_json: items.sort((a, b) => a.metric.localeCompare(b.metric)),
     irrigation_need_level: irrigationNeedLevel,
     sensor_quality_level: sensorQualityLevel,
+    canopy_temp_status: canopyTempStatus,
+    evapotranspiration_risk: evapotranspirationRisk,
+    sensor_quality: sensorQuality,
+    irrigation_effectiveness: irrigationEffectiveness,
     irrigation_action_hint: irrigationActionHint,
     explanation_codes_json: normalizeCodes(globalExplanations),
     updated_ts_ms: nowMs,
@@ -249,8 +292,8 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
 
   const upsert = await db.query(
     `INSERT INTO field_sensing_overview_v1
-      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, irrigation_action_hint, explanation_codes_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,$13)
+      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, irrigation_action_hint, explanation_codes_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16::jsonb,$17)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -261,6 +304,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       soil_indicators_json = EXCLUDED.soil_indicators_json,
       irrigation_need_level = EXCLUDED.irrigation_need_level,
       sensor_quality_level = EXCLUDED.sensor_quality_level,
+      canopy_temp_status = EXCLUDED.canopy_temp_status,
+      evapotranspiration_risk = EXCLUDED.evapotranspiration_risk,
+      sensor_quality = EXCLUDED.sensor_quality,
+      irrigation_effectiveness = EXCLUDED.irrigation_effectiveness,
       irrigation_action_hint = EXCLUDED.irrigation_action_hint,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
@@ -276,6 +323,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       JSON.stringify(overview.soil_indicators_json),
       overview.irrigation_need_level,
       overview.sensor_quality_level,
+      overview.canopy_temp_status,
+      overview.evapotranspiration_risk,
+      overview.sensor_quality,
+      overview.irrigation_effectiveness,
       overview.irrigation_action_hint,
       JSON.stringify(overview.explanation_codes_json),
       overview.updated_ts_ms,
@@ -293,7 +344,11 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     confidence: row.confidence == null ? null : Number(row.confidence),
     soil_indicators_json: Array.isArray(row.soil_indicators_json) ? row.soil_indicators_json as SoilIndicatorItem[] : [],
     irrigation_need_level: coerceLevel(row.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const),
-    sensor_quality_level: coerceLevel(row.sensor_quality_level, ["GOOD", "FAIR", "POOR"] as const),
+    sensor_quality_level: coerceSensorQualityLevel(row.sensor_quality_level),
+    canopy_temp_status: coerceEnumLower(row.canopy_temp_status, ["normal", "elevated", "critical", "unknown"] as const),
+    evapotranspiration_risk: coerceEnumLower(row.evapotranspiration_risk, ["low", "medium", "high", "unknown"] as const),
+    sensor_quality: coerceSensorQuality(row.sensor_quality),
+    irrigation_effectiveness: coerceEnumLower(row.irrigation_effectiveness, ["low", "medium", "high", "unknown"] as const),
     irrigation_action_hint: String(row.irrigation_action_hint ?? "").trim() || null,
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
