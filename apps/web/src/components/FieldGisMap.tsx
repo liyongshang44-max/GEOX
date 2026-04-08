@@ -135,6 +135,7 @@ export default function FieldGisMap({
 
   useEffect(() => {
     if (!primarySegment || primarySegment.coordinates.length < 2) return;
+    // UI-only cursor animation over server-provided trajectory; this never fabricates telemetry data.
     const timer = window.setInterval(() => {
       setCursorIndex((prev) => {
         if (prev >= primarySegment.coordinates.length - 1) return prev;

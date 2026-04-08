@@ -23,3 +23,8 @@ This file maps constitutional documents to concrete code responsibilities.
 - Append-only storage enforced (run_id)
 - Step1 hooks always present
 - No forbidden decision vocabulary present
+
+## Simulator Runtime Ownership (Single Implementation)
+- 唯一实现：后端 simulator runner 维护运行态并写入 telemetry（不得由前端本地定时伪造）。
+- Frontend 仅允许调用 start/stop/status API，不承担 telemetry 生成职责。
+- 运行实例锁按 `(tenant_id, device_id)` 约束，防止重复启动多套循环。
