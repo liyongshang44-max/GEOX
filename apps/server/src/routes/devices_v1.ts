@@ -6,6 +6,7 @@ import type { Pool } from "pg"; // Postgres connection pool for db access.
 
 import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
+import { ensureDeviceSkillBindingStatusRuntimeV1, reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
   return typeof v === "string" && v.trim().length > 0; // Return true only for non-empty trimmed string.
@@ -168,6 +169,13 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
          DO UPDATE SET display_name = EXCLUDED.display_name`,
         [auth.tenant_id, device_id, display_name, created_ts_ms]
       ); // End upsert.
+      await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        missing_required_mode: "autofill",
+      });
 
       await clientConn.query("COMMIT"); // Commit.
     } catch (e: any) { // Error handler.
@@ -425,6 +433,13 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
          DO UPDATE SET display_name = EXCLUDED.display_name`,
         [auth.tenant_id, device_id, display_name, now_ms]
       ); // End upsert.
+      await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        missing_required_mode: "autofill",
+      });
 
       await clientConn.query("COMMIT"); // Commit.
     } catch (e: any) { // Error.
@@ -440,6 +455,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require devices.read.
     if (!auth) return; // Auth handled.
+    await ensureDeviceSkillBindingStatusRuntimeV1(pool);
 
     const limit = 200; // Fixed list limit for commercial UI MVP.
     const q = await pool.query(
@@ -457,6 +473,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
           s.battery_percent,
           s.rssi_dbm,
           s.fw_ver,
+          COALESCE(sb.binding_status, 'binding_valid') AS binding_status,
+          COALESCE(sb.missing_required_observation_skills_json, '[]'::jsonb) AS missing_required_observation_skills,
           CASE
             WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE'
             ELSE 'OFFLINE'
@@ -466,10 +484,15 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
           ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
         LEFT JOIN device_status_index_v1 s
           ON s.tenant_id = d.tenant_id AND s.device_id = d.device_id
+        LEFT JOIN device_skill_binding_status_v1 sb
+          ON sb.tenant_id = d.tenant_id
+         AND sb.project_id = $4
+         AND sb.group_id = $5
+         AND sb.device_id = d.device_id
         WHERE d.tenant_id = $1
         ORDER BY d.created_ts_ms DESC
         LIMIT $2`,
-      [auth.tenant_id, limit, Date.now() - 15 * 60 * 1000]
+      [auth.tenant_id, limit, Date.now() - 15 * 60 * 1000, auth.project_id, auth.group_id]
     ); // Query joined device summary.
 
     return reply.send({ ok: true, devices: q.rows }); // Return summarized device list.
@@ -800,6 +823,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const params: any = (req as any).params ?? {}; // Params.
     const device_id = normalizeDeviceId(params.device_id); // Normalize.
     if (!device_id) return notFound(reply); // Invalid -> 404.
+    await ensureDeviceSkillBindingStatusRuntimeV1(pool);
 
     const q = await pool.query(
       `SELECT
@@ -816,6 +840,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
           s.battery_percent,
           s.rssi_dbm,
           s.fw_ver,
+          COALESCE(sb.binding_status, 'binding_valid') AS binding_status,
+          COALESCE(sb.missing_required_observation_skills_json, '[]'::jsonb) AS missing_required_observation_skills,
           CASE
             WHEN s.last_heartbeat_ts_ms IS NOT NULL AND s.last_heartbeat_ts_ms >= $3 THEN 'ONLINE'
             ELSE 'OFFLINE'
@@ -825,9 +851,14 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
            ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
          LEFT JOIN device_status_index_v1 s
            ON s.tenant_id = d.tenant_id AND s.device_id = d.device_id
+         LEFT JOIN device_skill_binding_status_v1 sb
+           ON sb.tenant_id = d.tenant_id
+          AND sb.project_id = $4
+          AND sb.group_id = $5
+          AND sb.device_id = d.device_id
         WHERE d.tenant_id = $1 AND d.device_id = $2
         LIMIT 1`,
-      [auth.tenant_id, device_id, Date.now() - 15 * 60 * 1000]
+      [auth.tenant_id, device_id, Date.now() - 15 * 60 * 1000, auth.project_id, auth.group_id]
     ); // Query joined detail row.
     if ((q.rowCount ?? 0) < 1) return notFound(reply); // Missing.
 

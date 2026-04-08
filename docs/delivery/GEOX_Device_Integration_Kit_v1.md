@@ -161,6 +161,18 @@ AO-ACT 作业在审批通过后会进入 dispatch outbox。对设备侧而言，
 
 ## 6. 设备开发建议
 
+### 6.0 设备模板与 Skill Binding 语义（新增）
+
+- 设备模板 `device_templates_v1` 分两层：
+  - `required_observation_skills`：**观测基线层（observation baseline）**，属于必绑能力。
+  - `default_inference_skills`：**推理策略层（inference strategy layer）**，默认启用但允许后续替换/灰度。
+- 在“创建设备”或“设备模板变更”时，平台会自动对齐模板：
+  - `required_observation_skills` 缺失时，平台会失败或自动补齐（当前默认自动补齐）。
+  - `default_inference_skills` 会按默认策略补齐为 ACTIVE，后续可通过 skill binding 开关/替换策略调整。
+- skill binding 校验规则：
+  - 若缺任一 required observation skill，设备会被标记为 `binding_invalid`。
+  - 当 required observation skills 全部就绪后，状态恢复为 `binding_valid`。
+
 ### 6.1 幂等
 
 同一个 `act_task_id` 不应重复执行多次。设备端应把 `act_task_id` 作为本地去重键。
