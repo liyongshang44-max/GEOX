@@ -9,6 +9,8 @@ export const DERIVED_SENSING_STATE_TYPES_V1 = [
   "salinity_risk_state",
   "irrigation_need_state",
   "sensor_quality_state",
+  "canopy_state",
+  "water_flow_state",
   "canopy_temperature_state",
   "evapotranspiration_risk_state",
   "irrigation_effectiveness_state",
@@ -34,8 +36,22 @@ const IrrigationNeedStatePayloadSchema = z.object({
 }).passthrough();
 
 const SensorQualityStatePayloadSchema = z.object({
-  level: z.enum(["GOOD", "FAIR", "POOR", "UNKNOWN"]),
+  level: z.enum(["GOOD", "DEGRADED", "INVALID", "UNKNOWN"]),
   reason: z.string().trim().min(1).max(160).optional(),
+}).passthrough();
+
+const CanopyStatePayloadSchema = z.object({
+  canopy_temp_status: z.enum(["normal", "elevated", "critical", "unknown"]),
+  evapotranspiration_risk: z.enum(["low", "medium", "high", "unknown"]),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  explanation_codes: z.array(z.string().trim().min(1)).optional(),
+}).passthrough();
+
+const WaterFlowStatePayloadSchema = z.object({
+  irrigation_effectiveness: z.enum(["low", "medium", "high", "unknown"]),
+  leak_risk: z.enum(["low", "medium", "high", "unknown"]),
+  confidence: z.number().min(0).max(1).nullable().optional(),
+  explanation_codes: z.array(z.string().trim().min(1)).optional(),
 }).passthrough();
 
 const CanopyTemperatureStatePayloadSchema = z.object({
@@ -73,6 +89,8 @@ const DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1: Record<DerivedSensingStateTypeV1,
   salinity_risk_state: SalinityRiskStatePayloadSchema,
   irrigation_need_state: IrrigationNeedStatePayloadSchema,
   sensor_quality_state: SensorQualityStatePayloadSchema,
+  canopy_state: CanopyStatePayloadSchema,
+  water_flow_state: WaterFlowStatePayloadSchema,
   canopy_temperature_state: CanopyTemperatureStatePayloadSchema,
   evapotranspiration_risk_state: EvapotranspirationRiskStatePayloadSchema,
   irrigation_effectiveness_state: IrrigationEffectivenessStatePayloadSchema,
@@ -122,27 +140,101 @@ function normalizeArray(values: string[]): string[] {
 
 function normalizeStatePayload(stateType: DerivedSensingStateTypeV1, payload: Record<string, any>): Record<string, any> {
   const source = (payload && typeof payload === "object") ? payload : {};
-  const levelCandidate = String(
-    source.level
-      ?? source.fertility_level
-      ?? source.salinity_risk
-      ?? source.risk
-      ?? source.irrigation_need_level
-      ?? source.sensor_quality_level
-      ?? source.quality_level
-      ?? ""
-  ).trim().toUpperCase();
+  const asUpper = (value: unknown): string => String(value ?? "").trim().toUpperCase();
+  const asLower = (value: unknown): string => String(value ?? "").trim().toLowerCase();
+  const normalizeConfidence = (value: unknown): number | null | undefined => {
+    if (value == null || value === "") return undefined;
+    const num = Number(value);
+    if (!Number.isFinite(num)) return undefined;
+    return Math.max(0, Math.min(1, num));
+  };
+  const normalizeCodes = (value: unknown): string[] | undefined => {
+    if (!Array.isArray(value)) return undefined;
+    const normalized = Array.from(new Set(value.map((item) => String(item ?? "").trim()).filter(Boolean)));
+    return normalized.length > 0 ? normalized : undefined;
+  };
 
-  const normalizedPayload = stateType === "irrigation_need_state"
-    ? {
-      ...source,
-      level: levelCandidate,
-      action_hint: source.action_hint ?? source.suggested_action ?? source.recommendation,
+  let normalizedPayload: Record<string, any>;
+  switch (stateType) {
+    case "fertility_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level ?? source.fertility_level),
+      };
+      break;
+    case "salinity_risk_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level ?? source.salinity_risk ?? source.risk),
+      };
+      break;
+    case "irrigation_need_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level ?? source.irrigation_need_level),
+        action_hint: source.action_hint ?? source.suggested_action ?? source.recommendation,
+      };
+      break;
+    case "sensor_quality_state": {
+      const raw = asUpper(source.level ?? source.sensor_quality_level ?? source.quality_level);
+      const migrated =
+        raw === "FAIR" ? "DEGRADED"
+          : raw === "POOR" ? "INVALID"
+            : raw;
+      normalizedPayload = {
+        ...source,
+        level: migrated,
+      };
+      break;
     }
-    : {
-      ...source,
-      level: levelCandidate,
-    };
+    case "canopy_state":
+      normalizedPayload = {
+        ...source,
+        canopy_temp_status: asLower(source.canopy_temp_status ?? source.canopy_temperature_status ?? source.temp_status),
+        evapotranspiration_risk: asLower(source.evapotranspiration_risk ?? source.et_risk ?? source.risk_level),
+        confidence: normalizeConfidence(source.confidence),
+        explanation_codes: normalizeCodes(source.explanation_codes),
+      };
+      break;
+    case "water_flow_state":
+      normalizedPayload = {
+        ...source,
+        irrigation_effectiveness: asLower(source.irrigation_effectiveness ?? source.flow_effectiveness),
+        leak_risk: asLower(source.leak_risk ?? source.risk_level),
+        confidence: normalizeConfidence(source.confidence),
+        explanation_codes: normalizeCodes(source.explanation_codes),
+      };
+      break;
+    case "canopy_temperature_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level),
+      };
+      break;
+    case "evapotranspiration_risk_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level),
+        canopy_temp_status: asLower(source.canopy_temp_status),
+      };
+      break;
+    case "irrigation_effectiveness_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level),
+      };
+      break;
+    case "leak_risk_state":
+      normalizedPayload = {
+        ...source,
+        level: asUpper(source.level),
+        irrigation_effectiveness: asLower(source.irrigation_effectiveness),
+      };
+      break;
+    default:
+      normalizedPayload = { ...source };
+      break;
+  }
   const schema = DERIVED_SENSING_STATE_PAYLOAD_SCHEMA_V1[stateType];
   const parsed = schema.safeParse(normalizedPayload);
   if (!parsed.success) {
