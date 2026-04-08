@@ -49,6 +49,21 @@ function emptyGeometry(reply: any) { // Helper: explicit empty geometry response
   return reply.status(422).send({ ok: false, error: "EMPTY_GEOMETRY" });
 }
 
+function hasRealDeviceMode(input: any): boolean { // Detect any caller intent to create real devices in demo flow.
+  if (!input || typeof input !== "object") return false; // Non-object bodies cannot carry mode flags.
+  if (String((input as any).device_mode ?? "").trim().toLowerCase() === "real") return true; // Top-level mode.
+  if (String((input as any).mode ?? "").trim().toLowerCase() === "real") return true; // Common alias.
+  if (String((input as any).environment_type ?? "").trim().toLowerCase() === "real") return true; // Environment alias.
+  const devices = Array.isArray((input as any).devices) ? (input as any).devices : []; // Optional per-device list.
+  for (const dev of devices) {
+    if (!dev || typeof dev !== "object") continue; // Skip invalid entries.
+    if (String((dev as any).device_mode ?? "").trim().toLowerCase() === "real") return true; // Per-device mode.
+    if (String((dev as any).mode ?? "").trim().toLowerCase() === "real") return true; // Per-device alias.
+    if (String((dev as any).device_type ?? "").trim().toLowerCase() === "real") return true; // Defensive type misuse.
+  }
+  return false; // No real mode found.
+}
+
 function normalizeGeoJsonText(v: any): string | null { // Helper: validate and normalize GeoJSON input.
   if (v == null) return null; // Missing => invalid.
   let obj: any = null; // Parsed object placeholder.
@@ -330,6 +345,139 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       clientConn.release(); // Release connection.
     } // End try/finally.
   }); // End POST /api/v1/fields.
+
+  app.post("/api/v1/dev-lab/create-demo-field", async (req, reply) => { // Create demo field with simulator-only templated devices.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write"); // Require write access to create field + bindings.
+    if (!auth) return; // Auth helper already replied.
+
+    const body: any = (req as any).body ?? {}; // Read request body.
+    if (hasRealDeviceMode(body)) { // Explicitly reject real-device input in demo environment.
+      return reply.status(400).send({ ok: false, error: "DEMO_FIELD_REAL_DEVICE_NOT_ALLOWED" });
+    }
+
+    const now_ms = Date.now(); // Shared server timestamp for deterministic audit writes.
+    const occurredAtIso = new Date(now_ms).toISOString(); // Fact occurred_at.
+
+    const field_id = normalizeId(body.field_id) ?? `demo_field_${sha256Hex(`${auth.tenant_id}|${now_ms}|${Math.random()}`).slice(0, 12)}`; // Caller may pass id; otherwise generate one.
+    const field_name = normalizeName(body.name, 256) ?? "Demo Simulator Field"; // Stable default field display name.
+    const area_ha = (typeof body.area_ha === "number" && Number.isFinite(body.area_ha)) ? body.area_ha : 1; // Conservative demo area.
+
+    const templateDevices = [
+      { key: "soil", suffix: "soil", display_name: "Demo Soil Sensor (Simulator)" },
+      { key: "environment", suffix: "env", display_name: "Demo Environment Sensor (Simulator)" },
+      { key: "image", suffix: "img", display_name: "Demo Image Sensor (Simulator)" },
+    ] as const; // Fixed template set: soil / environment / image.
+    const deviceRows = templateDevices.map((tpl) => ({ // Build deterministic device ids under the created demo field.
+      key: tpl.key,
+      device_id: `demo_${field_id}_${tpl.suffix}`,
+      display_name: tpl.display_name,
+    }));
+
+    const clientConn = await pool.connect(); // Acquire DB connection.
+    try {
+      await clientConn.query("BEGIN"); // Start atomic write.
+
+      const fieldFactId = `field_${sha256Hex(`field_created_v1|${auth.tenant_id}|${field_id}`)}`; // Deterministic field fact id.
+      const fieldRecord = {
+        type: "field_created_v1",
+        entity: { tenant_id: auth.tenant_id, field_id },
+        payload: {
+          name: field_name,
+          area_ha,
+          status: "ACTIVE",
+          created_ts_ms: now_ms,
+          actor_id: auth.actor_id,
+          token_id: auth.token_id,
+        },
+      };
+      await clientConn.query(
+        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+         VALUES ($1, $2::timestamptz, $3, $4)
+         ON CONFLICT (fact_id) DO NOTHING`,
+        [fieldFactId, occurredAtIso, "control", JSON.stringify(fieldRecord)]
+      );
+      await clientConn.query(
+        `INSERT INTO field_index_v1 (tenant_id, field_id, name, area_ha, status, created_ts_ms, updated_ts_ms)
+         VALUES ($1, $2, $3, $4, $5, $6, $6)
+         ON CONFLICT (tenant_id, field_id) DO UPDATE SET
+           name = EXCLUDED.name,
+           area_ha = EXCLUDED.area_ha,
+           status = EXCLUDED.status,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+        [auth.tenant_id, field_id, field_name, area_ha, "ACTIVE", now_ms]
+      );
+
+      for (const row of deviceRows) { // Create each simulator template device and bind it to the demo field.
+        const deviceFactId = `device_${sha256Hex(`device_registered_v1|${auth.tenant_id}|${row.device_id}`)}`; // Deterministic fact id.
+        const deviceRecord = {
+          type: "device_registered_v1",
+          entity: { tenant_id: auth.tenant_id, device_id: row.device_id },
+          payload: {
+            display_name: row.display_name,
+            device_mode: "simulator",
+            device_role: row.key,
+            created_ts_ms: now_ms,
+            actor_id: auth.actor_id,
+            token_id: auth.token_id,
+          },
+        };
+        await clientConn.query(
+          `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+           VALUES ($1, $2::timestamptz, $3, $4)
+           ON CONFLICT (fact_id) DO NOTHING`,
+          [deviceFactId, occurredAtIso, "control", JSON.stringify(deviceRecord)]
+        );
+        await clientConn.query(
+          `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
+           VALUES ($1, $2, $3, $4, NULL, NULL)
+           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+             display_name = EXCLUDED.display_name`,
+          [auth.tenant_id, row.device_id, row.display_name, now_ms]
+        );
+
+        const bindFactId = `bind_${sha256Hex(`device_bound_to_field_v1|${auth.tenant_id}|${row.device_id}|${field_id}`)}`;
+        const bindRecord = {
+          type: "device_bound_to_field_v1",
+          entity: { tenant_id: auth.tenant_id, device_id: row.device_id, field_id },
+          payload: { bound_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id, device_mode: "simulator" },
+        };
+        await clientConn.query(
+          `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+           VALUES ($1, $2::timestamptz, $3, $4)
+           ON CONFLICT (fact_id) DO NOTHING`,
+          [bindFactId, occurredAtIso, "control", JSON.stringify(bindRecord)]
+        );
+        await clientConn.query(
+          `INSERT INTO device_binding_index_v1 (tenant_id, device_id, field_id, bound_ts_ms)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+             field_id = EXCLUDED.field_id,
+             bound_ts_ms = EXCLUDED.bound_ts_ms`,
+          [auth.tenant_id, row.device_id, field_id, now_ms]
+        );
+      }
+
+      await clientConn.query("COMMIT");
+      return reply.send({
+        ok: true,
+        field_id,
+        field_name,
+        device_mode: "simulator",
+        environment_type: "demo_simulator_only",
+        devices: deviceRows.map((row) => ({
+          device_id: row.device_id,
+          display_name: row.display_name,
+          template_type: row.key,
+          device_mode: "simulator",
+        })),
+      });
+    } catch (e: any) {
+      await clientConn.query("ROLLBACK");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
+  }); // End POST /api/v1/dev-lab/create-demo-field.
 
   app.put("/api/v1/fields/:field_id", async (req, reply) => { // Update field base info (name/area/status) and optional polygon.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write");
