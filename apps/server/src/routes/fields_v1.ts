@@ -15,7 +15,7 @@ import type { Pool } from "pg"; // Postgres pool type.
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
-import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
+import { reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
   return typeof v === "string" && v.trim().length > 0; // True only when string has visible content.
@@ -1355,6 +1355,13 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
            bound_ts_ms = EXCLUDED.bound_ts_ms`,
         [auth.tenant_id, device_id, field_id, now_ms]
       ); // End upsert.
+      await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        device_id,
+        missing_required_mode: "autofill",
+      });
 
       await clientConn.query("COMMIT"); // Commit.
       return reply.send({ ok: true, device_id, field_id }); // Return binding result.
