@@ -240,7 +240,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         where.push(`${field} = $${params.length}`);
       };
 
-      pushEq("operation_id", q.operation_id);
+      pushEq("operation_id", q.operation_id ?? q.operation);
       pushEq("field_id", q.field_id);
       pushEq("device_id", q.device_id);
 

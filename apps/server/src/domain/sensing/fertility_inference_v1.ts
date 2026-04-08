@@ -12,6 +12,7 @@ import type {
 } from "@geox/contracts";
 import type { Pool, PoolClient } from "pg";
 import { appendDerivedSensingStateV1 } from "../../services/derived_sensing_state_v1";
+import { appendSkillRunFact, digestJson } from "../skill_registry/facts";
 
 export type {
   DeviceObservationV1Input,
@@ -110,6 +111,35 @@ export async function runFertilityInferenceAndPersistV1(
   computed_at_ts_ms: number;
 }> {
   const normalizedEcDsM = Number.isFinite(Number(input.ec_ds_m)) ? Number(input.ec_ds_m) : null;
+  const telemetryDigestInput = {
+    soil_moisture_pct: input.soil_moisture_pct,
+    canopy_temp_c: input.canopy_temp_c,
+    ec_ds_m: normalizedEcDsM,
+    device_id: input.device_id,
+    field_id: input.field_id,
+  };
+  await appendSkillRunFact(db, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id ?? "default",
+    group_id: input.group_id ?? "default",
+    skill_id: "soil_sensor_v1",
+    version: "v1",
+    category: "OBSERVABILITY",
+    status: "ACTIVE",
+    result_status: "SUCCESS",
+    trigger_stage: "before_recommendation",
+    scope_type: "DEVICE",
+    rollout_mode: "DIRECT",
+    bind_target: input.device_id,
+    operation_id: null,
+    operation_plan_id: null,
+    field_id: input.field_id,
+    device_id: input.device_id,
+    input_digest: digestJson(telemetryDigestInput),
+    output_digest: digestJson({ normalized: telemetryDigestInput }),
+    error_code: null,
+    duration_ms: 0,
+  });
   const inference = inferFertilityFromObservationAggregateCoreV1({
     soil_moisture_pct: input.soil_moisture_pct,
     canopy_temp_c: input.canopy_temp_c,
@@ -155,6 +185,28 @@ export async function runFertilityInferenceAndPersistV1(
     source_device_ids: [input.device_id],
     computed_at_ts_ms,
     source: input.source ?? "decision_engine_v1",
+  });
+  await appendSkillRunFact(db, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id ?? "default",
+    group_id: input.group_id ?? "default",
+    skill_id: "fertility_inference_v1",
+    version: "v1",
+    category: "AGRONOMY",
+    status: "ACTIVE",
+    result_status: "SUCCESS",
+    trigger_stage: "after_recommendation",
+    scope_type: "FIELD",
+    rollout_mode: "DIRECT",
+    bind_target: input.field_id,
+    operation_id: null,
+    operation_plan_id: null,
+    field_id: input.field_id,
+    device_id: input.device_id,
+    input_digest: digestJson(telemetryDigestInput),
+    output_digest: digestJson(inference),
+    error_code: null,
+    duration_ms: 0,
   });
 
   return { inference, computed_at_ts_ms };
