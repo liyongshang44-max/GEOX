@@ -1804,7 +1804,11 @@ function normalizeActionType(raw: any): string {
   return normalized;
 }
 
-function resolveDeviceType(input: any): string | null {
+function resolveDeviceTypeMetadata(input: any): string | null {
+  // Metadata-only helper:
+  // - UI/error context
+  // - logging
+  // Must NOT be used for capability resolution or compatibility decisions.
   const candidates = [
     input?.device_type,
     input?.meta?.device_type,
@@ -2082,7 +2086,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           stage: "approval",
           operation_plan_id,
           adapter_type: planAdapterType || null,
-          device_type: resolveDeviceType(proposal),
+          device_type: resolveDeviceTypeMetadata(proposal),
           error: parsedCapabilityResult.error
         });
       }
@@ -2119,7 +2123,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           stage: "approval",
           operation_plan_id,
           adapter_type: planAdapterType || null,
-          device_type: resolveDeviceType(proposal),
+          device_type: resolveDeviceTypeMetadata(proposal),
           error: compatibilityCheck.error
         });
       }
@@ -2304,7 +2308,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         stage: "task_create",
         operation_plan_id,
         adapter_type: adapterType || null,
-        device_type: resolveDeviceType(body),
+        device_type: resolveDeviceTypeMetadata(body),
         error: parsedCapabilityResult.error
       });
     }
@@ -2336,7 +2340,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         stage: "task_create",
         operation_plan_id,
         adapter_type: adapterType || null,
-        device_type: resolveDeviceType(body),
+        device_type: resolveDeviceTypeMetadata(body),
         error: matrixCheck.error
       });
     }
@@ -2489,7 +2493,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         stage: "dispatch",
         act_task_id,
         adapter_type: adapterType || null,
-        device_type: resolveDeviceType(taskPayload),
+        device_type: resolveDeviceTypeMetadata(taskPayload),
         error: parsedCapabilityResult.error
       });
     }
@@ -2542,7 +2546,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         act_task_id,
         operation_plan_id: String(taskFact.record_json?.payload?.operation_plan_id ?? "").trim() || null,
         adapter_type: adapterType || null,
-        device_type: resolveDeviceType(taskPayload),
+        device_type: resolveDeviceTypeMetadata(taskPayload),
         error: matrixCheck.error
       });
     }
