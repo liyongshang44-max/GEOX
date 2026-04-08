@@ -8,7 +8,7 @@ import { Pool } from "pg"; // Postgres client pool to write ledger + projection.
 import mqtt from "mqtt"; // MQTT client for telemetry subscription.
 import { z } from "zod"; // Runtime schema validation for incoming telemetry payloads.
 import { updateAgronomySnapshot } from "../../server/src/projections/agronomy_signal_snapshot_v1"; // Refresh agronomy snapshot projection after telemetry commits.
-import { ensureDeviceObservationProjectionV1, writeDeviceObservationFactV1 } from "../../server/src/services/device_observation_service_v1"; // raw_telemetry_v1 -> normalize(metric/unit/name) -> quality/confidence -> device_observation_v1 writer.
+import { ensureDeviceObservationProjectionV1, writeObservationRunPipelineAndRefreshFieldV1 } from "../../server/src/services/device_observation_service_v1"; // raw_telemetry_v1 -> device_observation_v1 -> sensing pipeline -> read-model refresh.
 
 const TelemetryPayloadSchema = z.object({ // Define minimal telemetry payload schema.
   metric: z.string().min(1), // Metric name (e.g., soil_moisture).
@@ -295,20 +295,6 @@ record = { // Telemetry record.
         const normalized = normalizeMetricAndUnit(String((p as any).metric ?? ""), typeof (p as any).unit === "string" ? (p as any).unit : undefined); // Step-1 normalize(metric/unit/name) via contracts canonical mapper + unit validation.
         const quality_flags = toQualityFlags((p as any).value); // Step-2 derive quality flags for contract quality_flags.
         const field_id = await resolveTelemetryObservationFieldId(clientConn, parsed.tenant_id, parsed.device_id); // Attach field dimension when bound.
-        await writeDeviceObservationFactV1(clientConn, { // Step-3 write normalized business observation: quality/confidence -> device_observation_v1.
-          tenant_id: parsed.tenant_id,
-          project_id: null,
-          group_id: null,
-          device_id: parsed.device_id,
-          field_id,
-          metric: normalized.metric,
-          value: (p as any).value,
-          unit: normalized.unit,
-          quality_flags,
-          confidence: quality_flags.includes("OK") ? 1 : 0,
-          observed_at_ts_ms: p.ts_ms,
-          source_fact_id: fact_id,
-        });
         const projRes = await clientConn.query(
           `INSERT INTO telemetry_index_v1 (tenant_id, device_id, metric, ts, value_num, value_text, fact_id)
            VALUES ($1, $2, $3, $4::timestamptz, $5, $6, $7)
@@ -327,6 +313,22 @@ record = { // Telemetry record.
         ); // Update last telemetry status projection.
 
         projInserted = (projRes.rows ?? []).length > 0; // True if insert happened.
+        if (projInserted) {
+          await writeObservationRunPipelineAndRefreshFieldV1(clientConn, { // Step-3 write normalized business observation and execute sensing pipeline/read-model refresh in unified chain.
+            tenant_id: parsed.tenant_id,
+            project_id: null,
+            group_id: null,
+            device_id: parsed.device_id,
+            field_id,
+            metric: normalized.metric,
+            value: (p as any).value,
+            unit: normalized.unit,
+            quality_flags,
+            confidence: quality_flags.includes("OK") ? 1 : 0,
+            observed_at_ts_ms: p.ts_ms,
+            source_fact_id: fact_id,
+          });
+        }
       } else { // Heartbeat projection path.
         await clientConn.query(
           `INSERT INTO device_status_index_v1 (tenant_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
