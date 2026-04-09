@@ -7,6 +7,7 @@ import type { Pool } from "pg"; // Postgres connection pool for db access.
 import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
 import { getDeviceTemplateOrThrow } from "../domain/device_templates/device_templates_v1";
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 import { ensureDeviceSkillBindingStatusRuntimeV1, reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
@@ -24,6 +25,13 @@ function normalizeId(v: any): string | null { // Helper: normalize an id-like st
 function normalizeDeviceId(v: any): string | null { // Helper: normalize device_id strings (alias of normalizeId).
   return normalizeId(v); // Reuse shared id normalization rules.
 } // End normalizeDeviceId.
+
+function normalizeDeviceMode(v: any): "real" | "simulator" | null {
+  if (v == null || v === "") return "simulator";
+  const s = String(v).trim().toLowerCase();
+  if (s === "real" || s === "simulator") return s;
+  return null;
+}
 
 function nowIso(ms: number): string { // Helper: convert ms to ISO string.
   return new Date(ms).toISOString(); // Convert.
@@ -90,22 +98,26 @@ function normalizeCapabilities(input: any): string[] | null {
   return normalized;
 }
 
-function parseDeviceTemplateCodeOrReply(body: any, reply: any): string | null {
-  const template_code = typeof body?.template_code === "string" ? body.template_code.trim() : "";
-  if (!template_code) {
-    badRequest(reply, "MISSING_OR_INVALID:template_code");
+function parseDeviceTemplateOrReply(body: any, reply: any): string | null {
+  const rawTemplate = typeof body?.device_template === "string"
+    ? body.device_template
+    : body?.template_code;
+  const device_template = typeof rawTemplate === "string" ? rawTemplate.trim() : "";
+  if (!device_template) {
+    badRequest(reply, "MISSING_OR_INVALID:device_template");
     return null;
   }
   try {
-    getDeviceTemplateOrThrow(template_code);
-    return template_code;
+    getDeviceTemplateOrThrow(device_template);
+    return device_template;
   } catch {
-    badRequest(reply, `UNKNOWN_TEMPLATE_CODE:${template_code}`);
+    badRequest(reply, `UNKNOWN_TEMPLATE_CODE:${device_template}`);
     return null;
   }
 }
 
 let ensureDeviceCapabilityRuntimePromise: Promise<void> | null = null;
+let ensureDeviceModeRuntimePromise: Promise<void> | null = null;
 
 async function ensureDeviceCapabilityRuntime(pool: Pool): Promise<void> {
   if (!ensureDeviceCapabilityRuntimePromise) {
@@ -128,6 +140,18 @@ async function ensureDeviceCapabilityRuntime(pool: Pool): Promise<void> {
   await ensureDeviceCapabilityRuntimePromise;
 }
 
+async function ensureDeviceModeRuntime(pool: Pool): Promise<void> {
+  if (!ensureDeviceModeRuntimePromise) {
+    ensureDeviceModeRuntimePromise = (async () => {
+      await pool.query(`ALTER TABLE device_index_v1 ADD COLUMN IF NOT EXISTS device_mode TEXT NOT NULL DEFAULT 'simulator'`);
+    })().catch((err) => {
+      ensureDeviceModeRuntimePromise = null;
+      throw err;
+    });
+  }
+  await ensureDeviceModeRuntimePromise;
+}
+
 /**
  * Sprint A2: Devices P0 (registration + credentials)
  *
@@ -144,8 +168,10 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const body: any = (req as any).body ?? {}; // Read JSON body.
     const device_id = normalizeId(body.device_id); // Required device id.
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_mode = normalizeDeviceMode(body.device_mode);
+    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = isNonEmptyString(body.display_name) ? String(body.display_name).trim().slice(0, 256) : null; // Optional display name.
 
@@ -163,11 +189,14 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       }, // End entity.
       payload: { // Payload.
         display_name, // Optional human name.
+        device_mode,
+        device_template,
         created_ts_ms, // Creation timestamp in ms.
         actor_id: auth.actor_id, // Actor for audit.
         token_id: auth.token_id, // Token id for audit.
       }, // End payload.
     }; // End record.
+    await ensureDeviceModeRuntime(pool);
 
     const clientConn = await pool.connect(); // Acquire db connection.
     try { // Begin transaction.
@@ -181,18 +210,18 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       ); // End insert.
 
       await clientConn.query( // Upsert device projection.
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, NULL, NULL)
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL)
          ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name`,
-        [auth.tenant_id, device_id, display_name, created_ts_ms]
+         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode`,
+        [auth.tenant_id, device_id, display_name, device_mode, created_ts_ms]
       ); // End upsert.
       await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -204,7 +233,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       clientConn.release(); // Release back to pool.
     } // End tx.
 
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, template_code, fact_id }); // Return success.
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template, template_code: device_template, fact_id }); // Return success.
   }); // End register device route.
 
   app.post("/api/devices/:device_id/credentials", async (req, reply) => { // Issue a new credential for a registered device.
@@ -421,8 +450,10 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
 
     const body: any = (req as any).body ?? {}; // Body.
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : ""; // Optional name.
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_mode = normalizeDeviceMode(body.device_mode);
+    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const now_ms = Date.now(); // Server time.
     const occurred_iso = nowIso(now_ms); // occurred_at.
@@ -433,8 +464,9 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const record = { // Append-only fact record.
       type: "device_registered_v1", // Fact type.
       entity: { tenant_id: auth.tenant_id, device_id }, // Entity.
-      payload: { display_name, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
     }; // End record.
+    await ensureDeviceModeRuntime(pool);
 
     const clientConn = await pool.connect(); // Acquire db connection.
     try { // Tx.
@@ -448,18 +480,18 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       ); // End insert.
 
       await clientConn.query( // Upsert device projection.
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, NULL, NULL)
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, $5, NULL, NULL)
          ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name`,
-        [auth.tenant_id, device_id, display_name, now_ms]
+         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode`,
+        [auth.tenant_id, device_id, display_name, device_mode, now_ms]
       ); // End upsert.
       await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -481,13 +513,14 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       allow_write: true,
     });
 
-    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, template_code, fact_id, skill_bindings: skillBindings }); // Response.
+    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, device_template, template_code: device_template, fact_id, skill_bindings: skillBindings }); // Response.
   }); // End /api/v1 register.
 
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Require devices.read.
     if (!auth) return; // Auth handled.
     await ensureDeviceSkillBindingStatusRuntimeV1(pool);
+    await ensureDeviceModeRuntime(pool);
 
     const limit = 200; // Fixed list limit for commercial UI MVP.
     const q = await pool.query(
@@ -495,6 +528,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
           d.tenant_id,
           d.device_id,
           d.display_name,
+          d.device_mode,
           d.created_ts_ms,
           d.last_credential_id,
           d.last_credential_status,
@@ -869,12 +903,14 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const device_id = normalizeDeviceId(params.device_id); // Normalize.
     if (!device_id) return notFound(reply); // Invalid -> 404.
     await ensureDeviceSkillBindingStatusRuntimeV1(pool);
+    await ensureDeviceModeRuntime(pool);
 
     const q = await pool.query(
       `SELECT
           d.tenant_id,
           d.device_id,
           d.display_name,
+          d.device_mode,
           d.created_ts_ms,
           d.last_credential_id,
           d.last_credential_status,
@@ -975,8 +1011,10 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const body: any = (req as any).body ?? {};
     const device_id = normalizeDeviceId(body.device_id);
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_mode = normalizeDeviceMode(body.device_mode);
+    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : "";
     const requested_credential_id = normalizeId(body.credential_id);
@@ -992,8 +1030,9 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const register_record = {
       type: "device_registered_v1",
       entity: { tenant_id: auth.tenant_id, device_id },
-      payload: { display_name, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
     };
+    await ensureDeviceModeRuntime(pool);
 
     const credential_record = {
       type: "device_credential_issued_v1",
@@ -1013,11 +1052,11 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       );
 
       await clientConn.query(
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE')
          ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name, last_credential_id = EXCLUDED.last_credential_id, last_credential_status = EXCLUDED.last_credential_status`,
-        [auth.tenant_id, device_id, display_name, now_ms, credential_id]
+         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode, last_credential_id = EXCLUDED.last_credential_id, last_credential_status = EXCLUDED.last_credential_status`,
+        [auth.tenant_id, device_id, display_name, device_mode, now_ms, credential_id]
       );
 
       await clientConn.query(
@@ -1039,7 +1078,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -1056,7 +1095,9 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       tenant_id: auth.tenant_id,
       device_id,
       display_name,
-      template_code,
+      device_mode,
+      device_template,
+      template_code: device_template,
       credential_id,
       credential_secret: secret,
       credential_hash,
@@ -1082,8 +1123,10 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const body: any = (req as any).body ?? {};
     const device_id = normalizeDeviceId(body.device_id);
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_mode = normalizeDeviceMode(body.device_mode);
+    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : "";
     const requested_credential_id = normalizeId(body.credential_id);
@@ -1099,8 +1142,9 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const register_record = {
       type: "device_registered_v1",
       entity: { tenant_id: auth.tenant_id, device_id },
-      payload: { display_name, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
     };
+    await ensureDeviceModeRuntime(pool);
 
     const credential_record = {
       type: "device_credential_issued_v1",
@@ -1120,11 +1164,11 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       );
 
       await clientConn.query(
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, $5, 'ACTIVE')
+        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE')
          ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name, last_credential_id = EXCLUDED.last_credential_id, last_credential_status = EXCLUDED.last_credential_status`,
-        [auth.tenant_id, device_id, display_name, now_ms, credential_id]
+         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode, last_credential_id = EXCLUDED.last_credential_id, last_credential_status = EXCLUDED.last_credential_status`,
+        [auth.tenant_id, device_id, display_name, device_mode, now_ms, credential_id]
       );
 
       await clientConn.query(
@@ -1146,7 +1190,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -1163,7 +1207,9 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       tenant_id: auth.tenant_id,
       device_id,
       display_name,
-      template_code,
+      device_mode,
+      device_template,
+      template_code: device_template,
       credential_id,
       credential_secret: secret,
       credential_hash,
@@ -1281,6 +1327,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
   app.get("/api/v1/devices/:device_id/onboarding-status", async (req, reply) => { // Device onboarding progress: registration/credential/first telemetry.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read");
     if (!auth) return;
+    await ensureDeviceModeRuntime(pool);
 
     const params: any = (req as any).params ?? {};
     const device_id = normalizeDeviceId(params.device_id);
@@ -1290,6 +1337,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       `SELECT
           d.device_id,
           d.display_name,
+          d.device_mode,
           d.created_ts_ms,
           d.last_credential_id,
           d.last_credential_status,
@@ -1316,6 +1364,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       tenant_id: auth.tenant_id,
       device_id: row.device_id,
       display_name: row.display_name ?? null,
+      device_mode: String(row.device_mode ?? "simulator"),
       registration_completed,
       credential_ready,
       first_telemetry_uploaded,
