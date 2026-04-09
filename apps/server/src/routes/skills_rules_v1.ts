@@ -7,6 +7,7 @@ import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
   const deprecatedSwitchHint = {
     deprecated: true as const,
+    successor: "Use /api/v1/skills/bindings/override instead.",
     successor_endpoint: "/api/v1/skills/bindings/override",
   };
 

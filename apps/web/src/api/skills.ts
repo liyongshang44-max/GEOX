@@ -26,6 +26,13 @@ const BINDING_SCOPE_COMPAT: Record<string, SkillBindingScope> = {
   DEVICE: "DEVICE",
 };
 
+/**
+ * Compatibility-only legacy API path.
+ * Do not use as the default request chain for new feature flows.
+ */
+const LEGACY_RULE_SWITCH_ENDPOINT = "/api/v1/skills/rules/switch";
+const PRIMARY_BINDING_OVERRIDE_ENDPOINT = "/api/v1/skills/bindings/override";
+
 export type SkillRuleSwitch = {
   skill_id: string;
   version: string;
@@ -185,8 +192,8 @@ export async function switchSkillRule(input: {
   };
 }): Promise<{ ok: true; item: SkillRuleSwitch }> {
   // eslint-disable-next-line no-console
-  console.warn("[deprecated] switchSkillRule() calls legacy endpoint /api/v1/skills/rules/switch. Please migrate to /api/v1/skills/bindings/override.");
-  return requestJson<{ ok: true; item: SkillRuleSwitch }>("/api/v1/skills/rules/switch", {
+  console.warn(`[deprecated] switchSkillRule() calls compatibility endpoint ${LEGACY_RULE_SWITCH_ENDPOINT}. Default chain should use ${PRIMARY_BINDING_OVERRIDE_ENDPOINT}.`);
+  return requestJson<{ ok: true; item: SkillRuleSwitch }>(LEGACY_RULE_SWITCH_ENDPOINT, {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -219,7 +226,7 @@ export async function overrideSkillBinding(input: {
   overridden_by: string | null;
   api_contract_version?: string;
 }> {
-  return requestJson("/api/v1/skills/bindings/override", {
+  return requestJson(PRIMARY_BINDING_OVERRIDE_ENDPOINT, {
     method: "POST",
     body: JSON.stringify(input),
   });
