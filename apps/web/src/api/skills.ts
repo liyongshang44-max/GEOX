@@ -163,7 +163,42 @@ export async function switchSkillRule(input: {
     crop_code?: string;
   };
 }): Promise<{ ok: true; item: SkillRuleSwitch }> {
+  // eslint-disable-next-line no-console
+  console.warn("[deprecated] switchSkillRule() calls legacy endpoint /api/v1/skills/rules/switch. Please migrate to /api/v1/skills/bindings/override.");
   return requestJson<{ ok: true; item: SkillRuleSwitch }>("/api/v1/skills/rules/switch", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function overrideSkillBinding(input: {
+  tenant_id?: string;
+  project_id?: string;
+  group_id?: string;
+  binding_id?: string;
+  skill_id: string;
+  version: string;
+  category: string;
+  enabled?: boolean;
+  scope_type?: string;
+  rollout_mode?: string;
+  trigger_stage?: string;
+  bind_target: string;
+  crop_code?: string | null;
+  device_type?: string | null;
+  priority?: number;
+  config_patch?: Record<string, unknown>;
+  effective?: boolean;
+  overridden_by?: string | null;
+}): Promise<{
+  ok: true;
+  fact_id: string;
+  occurred_at: string;
+  effective: boolean;
+  overridden_by: string | null;
+  api_contract_version?: string;
+}> {
+  return requestJson("/api/v1/skills/bindings/override", {
     method: "POST",
     body: JSON.stringify(input),
   });
