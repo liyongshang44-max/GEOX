@@ -272,9 +272,24 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
                 <div className="decisionItemMeta">{selected?.suggested_action?.title || "建议动作"} · {selected?.suggested_action?.summary || "-"}</div>
               </div>
               <div className="decisionItemStatic">
-                <div className="decisionItemTitle">触发原因</div>
-                <div className="decisionItemMeta">{selected?.reasoning?.trigger_reason && selected.reasoning.trigger_reason !== "其他原因" ? selected.reasoning.trigger_reason : "监测指标出现异常波动"}</div>
-                <div className="decisionItemMeta" style={{ marginTop: 6 }}>{(selected?.reasoning?.rule_hits || []).map((hit: any) => `${hit.label}: ${hit.summary}`).join("；") || "暂无规则说明"}</div>
+                <div className="decisionItemTitle">为什么推荐</div>
+                {selected?.explain ? (
+                  <div style={{ display: "grid", gap: 8 }}>
+                    <div className="decisionItemMeta">原因列表：</div>
+                    {(Array.isArray(selected.explain.triggered_rules) ? selected.explain.triggered_rules : []).map((rule: any, idx: number) => (
+                      <div key={`${rule?.rule_id || "rule"}-${idx}`} className="decisionItemMeta">
+                        {idx + 1}. {String(rule?.rule_id || "unknown_rule")} · 命中：{rule?.matched ? "是" : "否"} · 阈值：{rule?.threshold ?? "-"} · 实际：{rule?.actual ?? "-"} · 来源 skill：{String(rule?.skill || "-")}
+                      </div>
+                    ))}
+                    {(Array.isArray(selected.explain.reasoning_path) ? selected.explain.reasoning_path : []).length ? (
+                      <div className="decisionItemMeta">
+                        推理链路：{selected.explain.reasoning_path.map((node: any) => `${String(node?.label || "-")}（来源 skill：${String(node?.skill || "-")}）`).join(" → ")}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="decisionItemMeta">后端未提供 explain</div>
+                )}
               </div>
               <div className="decisionItemStatic">
                 <div className="decisionItemTitle">当前链路状态</div>

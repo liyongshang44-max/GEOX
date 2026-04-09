@@ -20,6 +20,32 @@ import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
 
+type RecommendationExplainV1 = {
+  source_states: Array<{
+    source: "derived_sensing_state_v1" | "field_fertility_state_v1" | "field_sensing_overview_v1";
+    skill: string;
+    state_ref: string;
+    label: string;
+    value: string | number | boolean | null;
+    observed_at_ts_ms?: number | null;
+  }>;
+  triggered_rules: Array<{
+    rule_id: string;
+    matched: boolean;
+    threshold: number | string | null;
+    actual: number | string | null;
+    basis: string;
+    skill: string;
+  }>;
+  reasoning_path: Array<{
+    node_id: string;
+    node_type: "observation" | "rule" | "recommendation";
+    label: string;
+    detail: string;
+    skill: string;
+  }>;
+};
+
 type RecommendationV1 = {
   recommendation_id: string;
   snapshot_id: string;
@@ -36,6 +62,7 @@ type RecommendationV1 = {
   reason_codes: string[];
   reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" }>;
   explanation_codes?: Array<{ code: string; source: "field_sensing_overview_v1" | "field_fertility_state_v1" | "request_constraints" }>;
+  explain?: RecommendationExplainV1;
   evidence_refs: string[];
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
@@ -179,6 +206,93 @@ function recommendationEvidenceFacts(sensingOverview: FieldSensingOverviewInputV
     { key: "image_disease_score", value: toNum(image.disease_score), unit: null, source: "image_recognition" },
     { key: "image_pest_risk_score", value: toNum(image.pest_risk_score), unit: null, source: "image_recognition" }
   ];
+}
+
+function buildRecommendationExplainV1(params: {
+  recommendation: RecommendationV1;
+  sensingOverview: FieldSensingOverviewInputV1;
+  fertilityState: any;
+  derivedSensingStates: any[];
+}): RecommendationExplainV1 {
+  const { recommendation, sensingOverview, fertilityState, derivedSensingStates } = params;
+  const source_states: RecommendationExplainV1["source_states"] = [];
+  const sensingIndicators = Array.isArray(sensingOverview?.soil_indicators_json) ? sensingOverview.soil_indicators_json : [];
+  for (const indicator of sensingIndicators) {
+    const metric = String(indicator?.metric ?? "").trim();
+    if (!metric) continue;
+    source_states.push({
+      source: "field_sensing_overview_v1",
+      skill: "sensing_inference_v1",
+      state_ref: `field_sensing_overview_v1.soil_indicators_json.${metric}`,
+      label: metric,
+      value: Number.isFinite(Number(indicator?.value)) ? Number(indicator?.value) : null,
+      observed_at_ts_ms: Number.isFinite(Number(sensingOverview?.observed_at_ts_ms)) ? Number(sensingOverview?.observed_at_ts_ms) : null,
+    });
+  }
+  if (fertilityState && typeof fertilityState === "object") {
+    const fertilityRefs: Array<{ key: string; label: string }> = [
+      { key: "fertility_level", label: "fertility_level" },
+      { key: "salinity_risk", label: "salinity_risk" },
+      { key: "recommendation_bias", label: "recommendation_bias" },
+    ];
+    for (const ref of fertilityRefs) {
+      const value = (fertilityState as any)?.[ref.key];
+      if (value === undefined) continue;
+      source_states.push({
+        source: "field_fertility_state_v1",
+        skill: "fertility_inference_v1",
+        state_ref: `field_fertility_state_v1.${ref.key}`,
+        label: ref.label,
+        value: value == null ? null : String(value),
+        observed_at_ts_ms: Number.isFinite(Number(fertilityState?.computed_at_ts_ms)) ? Number(fertilityState?.computed_at_ts_ms) : null,
+      });
+    }
+  }
+  for (const state of (Array.isArray(derivedSensingStates) ? derivedSensingStates : []).slice(0, 5)) {
+    const stateType = String(state?.state_type ?? "").trim();
+    if (!stateType) continue;
+    source_states.push({
+      source: "derived_sensing_state_v1",
+      skill: String(state?.skill_id ?? "derived_sensing_state_v1"),
+      state_ref: `derived_sensing_state_v1.${stateType}`,
+      label: stateType,
+      value: String(state?.state_value ?? state?.value ?? "-"),
+      observed_at_ts_ms: Number.isFinite(Number(state?.computed_at_ts_ms)) ? Number(state?.computed_at_ts_ms) : null,
+    });
+  }
+  const triggered_rules = (Array.isArray(recommendation.rule_hit) ? recommendation.rule_hit : []).map((hit) => ({
+    rule_id: String(hit?.rule_id ?? recommendation.rule_id ?? "unknown_rule"),
+    matched: Boolean(hit?.matched),
+    threshold: Number.isFinite(Number(hit?.threshold)) ? Number(hit?.threshold) : (hit?.threshold ?? null),
+    actual: Number.isFinite(Number(hit?.actual)) ? Number(hit?.actual) : (hit?.actual ?? null),
+    basis: `rule_hit.${String(hit?.rule_id ?? recommendation.rule_id ?? "unknown_rule")}`,
+    skill: mapRuleToSkill(String(hit?.rule_id ?? recommendation.rule_id ?? "")).skill_id || "agronomy_rule",
+  }));
+  const primaryRule = mapRuleToSkill(String(recommendation.rule_id ?? ""));
+  const reasoning_path: RecommendationExplainV1["reasoning_path"] = [
+    {
+      node_id: "obs",
+      node_type: "observation",
+      label: "输入观测状态",
+      detail: `${source_states.length} 条输入状态参与本次建议推理`,
+      skill: "field_read_model_refresh_v1",
+    },
+    {
+      node_id: "rule",
+      node_type: "rule",
+      label: `规则命中 ${recommendation.rule_id || "-"}`,
+      detail: `${triggered_rules.filter((x) => x.matched).length}/${Math.max(triggered_rules.length, 1)} 条规则命中阈值`,
+      skill: primaryRule.skill_id,
+    },
+    {
+      node_id: "action",
+      node_type: "recommendation",
+      label: `推荐动作 ${String(recommendation?.suggested_action?.action_type ?? "-")}`,
+      detail: String(recommendation?.suggested_action?.summary ?? "建议动作已生成"),
+      skill: "decision_engine_v1",
+    }
+  ];
+  return { source_states, triggered_rules, reasoning_path };
 }
 
 function buildRecommendations(
@@ -664,6 +778,7 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     title: payload.title ?? null,
     summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
+    explain: payload.explain ?? null,
   };
 }
 
@@ -931,6 +1046,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           evidence_count: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
           processing_status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) }
         },
+        explain: item.explain ?? null,
         reasoning: {
           trigger_reason: item?.suggested_action?.summary || "建议由规则与证据触发。",
           rule_hits: (Array.isArray(item.rule_hit) ? item.rule_hit : []).map((rule: any) => ({
@@ -986,6 +1102,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     });
     const fertilityState = refreshedReadModels.fertility_state.payload;
     const sensingOverview = refreshedReadModels.sensing_overview.payload;
+    const latestDerivedStates = await getLatestDerivedSensingStatesByFieldV1(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      field_id: derivedFieldId
+    });
     if (!sensingOverview) return badRequest(reply, "FIELD_SENSING_OVERVIEW_NOT_FOUND");
     const snapshot_id = `rm_${tenant.tenant_id}_${derivedFieldId}_${sensingOverview.updated_ts_ms ?? Date.now()}`;
 
@@ -1039,6 +1161,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       rec.rule_score = payloadStats.rule_score;
       rec.rule_confidence = payloadStats.rule_confidence;
       rec.rank_score = Number((Number(rec.confidence ?? 0) * (1 + perfScore)).toFixed(6));
+      rec.explain = buildRecommendationExplainV1({
+        recommendation: rec,
+        sensingOverview,
+        fertilityState: fertilityState ?? null,
+        derivedSensingStates: latestDerivedStates
+      });
     });
     recommendations.sort((a, b) => Number(b.rank_score ?? 0) - Number(a.rank_score ?? 0));
 
