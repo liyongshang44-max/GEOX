@@ -10,6 +10,16 @@
 
 ---
 
+## 联调验收增补（I6：Skill 管理中心入口收敛）
+
+- [x] 抓前端网络请求，确认 Skill 管理中心仅使用 `/api/v1/skills/bindings` 与 `/api/v1/skills/bindings/override`。
+- [x] 直接调用旧入口 `/api/v1/skills/rules/switch`、`/api/v1/skills/:id/enable|disable`，响应需包含 `deprecated: true`（并返回 successor/replacement 提示）。
+- [x] 文档/页面主流程不再展示旧入口调用方式。
+
+> 代码侧自动化补充：`apps/web/test/skills_i6_acceptance.test.ts` 已纳入 I6 静态验收断言（主流程入口、旧入口 deprecated 标记、页面文案约束）。
+
+---
+
 ## 发布 checklist
 
 ### A. 必做（上线门禁）
