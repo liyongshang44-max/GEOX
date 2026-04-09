@@ -479,7 +479,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     } finally {
       clientConn.release();
     }
-  }); // End POST /api/v1/dev-lab/create-demo-field.
+  }); // End demo field creation route.
 
   app.put("/api/v1/fields/:field_id", async (req, reply) => { // Update field base info (name/area/status) and optional polygon.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write");
@@ -1380,76 +1380,6 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
 
     return reply.send({ ok: true, field_id, seasons: q.rows }); // Return season list.
   }); // End GET /api/v1/fields/:field_id/seasons.
-
-  app.post("/api/v1/dev-lab/create-demo-field", async (req, reply) => { // Dev-lab helper: create demo field and optional device binding bootstrap.
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.write");
-    if (!auth) return;
-
-    const body: any = (req as any).body ?? {};
-    const field_id = normalizeId(body.field_id) ?? `demo_field_${Date.now()}`;
-    const name = normalizeName(body.name, 120) ?? "Demo Field";
-    const device_id = normalizeId(body.device_id);
-
-    const now_ms = Date.now();
-    const occurredAtIso = new Date(now_ms).toISOString();
-    const geometry_json = JSON.stringify({
-      type: "Polygon",
-      coordinates: [[[120.0, 30.0], [120.001, 30.0], [120.001, 30.001], [120.0, 30.001], [120.0, 30.0]]]
-    });
-
-    const clientConn = await pool.connect();
-    try {
-      await clientConn.query("BEGIN");
-      await clientConn.query(
-        `INSERT INTO field_index_v1 (tenant_id, field_id, name, area_m2, crop_type, geom_geojson, created_ts_ms)
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7)
-         ON CONFLICT (tenant_id, field_id)
-         DO UPDATE SET name = EXCLUDED.name`,
-        [auth.tenant_id, field_id, name, 1000, "demo", geometry_json, now_ms]
-      );
-
-      if (device_id) {
-        await clientConn.query(
-          `INSERT INTO device_binding_index_v1 (tenant_id, device_id, field_id, bound_ts_ms)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (tenant_id, device_id) DO UPDATE SET field_id = EXCLUDED.field_id, bound_ts_ms = EXCLUDED.bound_ts_ms`,
-          [auth.tenant_id, device_id, field_id, now_ms]
-        );
-      }
-
-      await clientConn.query(
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [
-          `devlab_${sha256Hex(`dev_lab_create_demo_field_v1|${auth.tenant_id}|${field_id}|${device_id ?? ""}`)}`,
-          occurredAtIso,
-          "control",
-          JSON.stringify({ type: "dev_lab_create_demo_field_v1", entity: { tenant_id: auth.tenant_id, field_id }, payload: { device_id, actor_id: auth.actor_id, token_id: auth.token_id, created_ts_ms: now_ms } }),
-        ]
-      );
-      await clientConn.query("COMMIT");
-    } catch (e: any) {
-      await clientConn.query("ROLLBACK");
-      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) });
-    } finally {
-      clientConn.release();
-    }
-
-    const skill_bindings = device_id
-      ? await ensureDeviceSkillBindings({
-          pool,
-          tenant_id: auth.tenant_id,
-          project_id: auth.project_id,
-          group_id: auth.group_id,
-          device_id,
-          trigger: "DEV_LAB_CREATE_DEMO_FIELD",
-          allow_write: true,
-        })
-      : null;
-
-    return reply.send({ ok: true, field_id, name, device_id: device_id ?? null, skill_bindings });
-  });
 
   app.post("/api/v1/devices/:device_id/bind-field", async (req, reply) => { // Bind a device to a field.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.bind"); // Require devices.bind scope.
