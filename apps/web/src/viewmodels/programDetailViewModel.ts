@@ -313,7 +313,7 @@ function topStatus(code: unknown): { status: ProgramConsoleStatus; label: string
 }
 
 function mapProgramStage(data: { ops: any[]; controlPlane: any; detail: any }): string {
-  const hasRunningTask = data.ops.some((op) => ["RUNNING", "IN_PROGRESS", "DISPATCHED"].includes(String(op?.final_status ?? op?.dispatch_status ?? "").toUpperCase()));
+  const hasRunningTask = data.ops.some((op) => ["RUNNING", "IN_PROGRESS"].includes(String(op?.final_status ?? "").toUpperCase()));
   if (hasRunningTask) return "执行中";
 
   const approvalCode = String(data.controlPlane?.summary?.approval?.code ?? data.detail?.latest_approval?.status ?? "").toUpperCase();

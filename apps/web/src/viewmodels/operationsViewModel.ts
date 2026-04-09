@@ -1,4 +1,5 @@
 import type { OperationStateItemV1 } from "../api";
+import { normalizeOperationFinalStatus } from "../lib/operationLabels";
 
 export type OperationQueueStatus = "待执行" | "已派发" | "已回执" | "已完成" | "未通过";
 export type AcceptanceStatus = "通过" | "未通过" | "待验收";
@@ -60,14 +61,10 @@ function opTypeText(type: unknown): string {
 }
 
 function mapStatus(item: OperationStateItemV1): { status: OperationQueueStatus; tone: OperationItem["statusTone"] } {
-  const finalStatus = String(item.final_status ?? "").toUpperCase();
-  const dispatchStatus = String(item.dispatch_status ?? "").toUpperCase();
-  const receiptStatus = String(item.receipt_status ?? "").toUpperCase();
-
-  if (finalStatus === "FAILED") return { status: "未通过", tone: "danger" };
-  if (finalStatus === "SUCCESS" || finalStatus === "SUCCEEDED") return { status: "已完成", tone: "success" };
-  if (receiptStatus === "ACKED") return { status: "已回执", tone: "inProgress" };
-  if (dispatchStatus === "DISPATCHED") return { status: "已派发", tone: "inProgress" };
+  const finalStatus = normalizeOperationFinalStatus(item.final_status);
+  if (finalStatus === "FAILED" || finalStatus === "INVALID_EXECUTION") return { status: "未通过", tone: "danger" };
+  if (finalStatus === "SUCCESS") return { status: "已完成", tone: "success" };
+  if (finalStatus === "PENDING_ACCEPTANCE" || finalStatus === "RUNNING") return { status: "已派发", tone: "inProgress" };
   return { status: "待执行", tone: "warning" };
 }
 
