@@ -33,6 +33,35 @@ type SkillRegistryReadRow = {
   updated_at_ts_ms: number;
 };
 
+type SkillBindingProjectionInput = TenantTriple & {
+  category?: string;
+  status?: string;
+  crop_code?: string;
+  device_type?: string;
+  trigger_stage?: string;
+  bind_target?: string;
+};
+
+type SkillBindingProjectionItem = {
+  fact_id: string;
+  occurred_at: string;
+  binding_id: string;
+  skill_id: string;
+  version: string;
+  category: string | null;
+  scope_type: string | null;
+  trigger_stage: string | null;
+  bind_target: string | null;
+  rollout_mode: string | null;
+  crop_code: string | null;
+  device_type: string | null;
+  priority: number;
+  enabled: boolean;
+  config_patch: Record<string, unknown>;
+  effective: boolean;
+  overridden_by: string | null;
+};
+
 function parseRecordJson(v: any): any {
   if (v && typeof v === "object") return v;
   if (typeof v === "string") {
@@ -43,6 +72,14 @@ function parseRecordJson(v: any): any {
 
 function str(v: unknown): string {
   return String(v ?? "").trim();
+}
+
+function upper(v: unknown): string {
+  return str(v).toUpperCase();
+}
+
+function lower(v: unknown): string {
+  return str(v).toLowerCase();
 }
 
 function toIsoTimestamp(value: unknown): string {
@@ -281,4 +318,105 @@ export async function querySkillRegistryReadV1(
     params
   );
   return rows.rows ?? [];
+}
+
+function makeBindingOverrideKey(item: SkillBindingProjectionItem): string {
+  return [
+    item.skill_id,
+    item.version,
+    item.category ?? "",
+    item.scope_type ?? "",
+    item.trigger_stage ?? "",
+    item.bind_target ?? "",
+    item.crop_code ?? "",
+    item.device_type ?? "",
+  ].join("|");
+}
+
+export async function querySkillBindingProjectionV1(
+  pool: Pool,
+  input: SkillBindingProjectionInput
+): Promise<{
+  items_effective: SkillBindingProjectionItem[];
+  items_history: SkillBindingProjectionItem[];
+  overrides: Array<{ fact_id: string; overridden_by: string; key: string }>;
+}> {
+  const rows = await pool.query(
+    `SELECT fact_id, occurred_at, (record_json::jsonb) AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'skill_binding_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      ORDER BY occurred_at DESC, fact_id DESC`,
+    [input.tenant_id, input.project_id, input.group_id]
+  );
+
+  const mapped: SkillBindingProjectionItem[] = (rows.rows ?? []).map((row: any) => {
+    const record = parseRecordJson(row.record_json) ?? row.record_json ?? {};
+    const payload = record?.payload ?? {};
+    const effective = typeof payload.effective === "boolean" ? payload.effective : true;
+    return {
+      fact_id: str(row.fact_id),
+      occurred_at: toIsoTimestamp(row.occurred_at),
+      binding_id: str(payload.binding_id) || str(row.fact_id),
+      skill_id: str(payload.skill_id),
+      version: str(payload.version),
+      category: upper(payload.category) || null,
+      scope_type: upper(payload.scope_type) || null,
+      trigger_stage: str(payload.trigger_stage) || null,
+      bind_target: str(payload.bind_target) || null,
+      rollout_mode: upper(payload.rollout_mode) || null,
+      crop_code: lower(payload.crop_code) || null,
+      device_type: upper(payload.device_type) || null,
+      priority: Number.isFinite(Number(payload.priority)) ? Number(payload.priority) : 0,
+      enabled: ["ACTIVE", "ENABLED"].includes(upper(payload.status)),
+      config_patch: (payload.config_patch && typeof payload.config_patch === "object" && !Array.isArray(payload.config_patch)) ? payload.config_patch : {},
+      effective,
+      overridden_by: str(payload.overridden_by) || null,
+    };
+  }).filter((item) => item.skill_id && item.version);
+
+  const filtered = mapped.filter((item) => {
+    if (input.category && upper(item.category) !== upper(input.category)) return false;
+    if (input.status) {
+      const expected = upper(input.status);
+      const actual = item.enabled ? "ACTIVE" : "DISABLED";
+      if (actual !== expected) return false;
+    }
+    if (input.crop_code && lower(item.crop_code) !== lower(input.crop_code)) return false;
+    if (input.device_type && upper(item.device_type) !== upper(input.device_type)) return false;
+    if (input.trigger_stage && str(item.trigger_stage) !== str(input.trigger_stage)) return false;
+    if (input.bind_target && str(item.bind_target) !== str(input.bind_target)) return false;
+    return true;
+  });
+
+  const groups = new Map<string, SkillBindingProjectionItem[]>();
+  for (const item of filtered) {
+    const key = makeBindingOverrideKey(item);
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  }
+
+  const items_effective: SkillBindingProjectionItem[] = [];
+  const items_history: SkillBindingProjectionItem[] = [];
+  const overrides: Array<{ fact_id: string; overridden_by: string; key: string }> = [];
+
+  for (const [key, group] of groups.entries()) {
+    const sorted = [...group].sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
+    const winner = sorted.find((x) => x.effective) ?? null;
+    if (winner) items_effective.push(winner);
+
+    for (const item of sorted) {
+      const overriddenBy = item.overridden_by ?? ((winner && winner.fact_id !== item.fact_id) ? winner.fact_id : null);
+      items_history.push({ ...item, effective: !!winner && winner.fact_id === item.fact_id, overridden_by: overriddenBy });
+      if (overriddenBy) overrides.push({ fact_id: item.fact_id, overridden_by: overriddenBy, key });
+    }
+  }
+
+  items_effective.sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
+  items_history.sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
+
+  return { items_effective, items_history, overrides };
 }

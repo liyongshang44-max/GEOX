@@ -55,6 +55,8 @@ const SkillBindingPayloadSchema = TenantTripleSchema.extend({
   device_type: DeviceTypeSchema.nullable().optional(),
   priority: z.number().int().default(0),
   config_patch: z.record(z.any()).optional(),
+  effective: z.boolean().optional(),
+  overridden_by: z.string().min(1).nullable().optional(),
 });
 
 const SkillRunPayloadSchema = TenantTripleSchema.extend({

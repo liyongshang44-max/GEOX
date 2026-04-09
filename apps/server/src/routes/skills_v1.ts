@@ -6,7 +6,7 @@ import {
   appendSkillDefinitionFact,
   type SkillDefinitionFactPayload,
 } from "../domain/skill_registry/facts";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
+import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
@@ -382,7 +382,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
 
       const q = (req.query ?? {}) as any;
       await projectSkillRegistryReadV1(pool, tenant);
-      const rows = await querySkillRegistryReadV1(pool, {
+      const projection = await querySkillBindingProjectionV1(pool, {
         ...tenant,
         category: typeof q.category === "string" ? q.category : undefined,
         status: typeof q.status === "string" ? q.status : undefined,
@@ -390,27 +390,77 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         device_type: typeof q.device_type === "string" ? q.device_type : undefined,
         trigger_stage: typeof q.trigger_stage === "string" ? q.trigger_stage : undefined,
         bind_target: typeof q.bind_target === "string" ? q.bind_target : undefined,
-        fact_type: "skill_binding_v1",
       });
 
       return sendSkillsResponse(reply, {
         ok: true,
-        items: (rows ?? []).map((row) => ({
-          binding_id: row.payload_json?.binding_id ?? row.fact_id,
-          skill_id: row.skill_id,
-          version: row.version,
-          category: row.category,
-          scope_type: row.scope_type,
-          trigger_stage: row.trigger_stage,
-          bind_target: row.bind_target,
-          rollout_mode: row.rollout_mode,
-          crop_code: row.crop_code,
-          device_type: row.device_type,
-          priority: Number(row.payload_json?.priority ?? 0),
-          enabled: ["ACTIVE", "ENABLED"].includes(String(row.status ?? "").toUpperCase()),
-          config_patch: row.payload_json?.config_patch ?? {},
-          updated_at: row.occurred_at,
-        })),
+        items_effective: projection.items_effective,
+        items_history: projection.items_history,
+        overrides: projection.overrides,
+      });
+    } catch (e) {
+      return sendSkillsInternalError(reply, e);
+    }
+  });
+
+  app.post("/api/v1/skills/bindings/override", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      if (!auth) return;
+
+      const body = (req.body ?? {}) as any;
+      const tenant: TenantTriple = {
+        tenant_id: String(body.tenant_id ?? auth.tenant_id).trim(),
+        project_id: String(body.project_id ?? auth.project_id).trim(),
+        group_id: String(body.group_id ?? auth.group_id).trim(),
+      };
+      if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+      const skill_id = String(body.skill_id ?? "").trim();
+      const version = String(body.version ?? "").trim();
+      const category = String(body.category ?? "").trim().toUpperCase();
+      const scope_type = String(body.scope_type ?? "TENANT").trim().toUpperCase();
+      const trigger_stage = String(body.trigger_stage ?? "before_dispatch").trim();
+      const bind_target = String(body.bind_target ?? "default").trim();
+      const rollout_mode = String(body.rollout_mode ?? "DIRECT").trim().toUpperCase();
+      const effective = boolLike(body.effective, true);
+      const overridden_by = typeof body.overridden_by === "string" && body.overridden_by.trim() ? body.overridden_by.trim() : null;
+
+      if (!skill_id || !version || !category || !bind_target) {
+        return reply.code(400).send({
+          ok: false,
+          error: "INVALID_BODY",
+          message: "skill_id/version/category/bind_target are required",
+          api_contract_version: SKILLS_API_CONTRACT_VERSION,
+        });
+      }
+
+      const inserted = await appendSkillBindingFact(pool, {
+        ...tenant,
+        binding_id: typeof body.binding_id === "string" ? body.binding_id : undefined,
+        skill_id,
+        version,
+        category: category as any,
+        status: boolLike(body.enabled, true) ? "ACTIVE" : "DISABLED",
+        scope_type: scope_type as any,
+        rollout_mode: rollout_mode as any,
+        trigger_stage: trigger_stage as any,
+        bind_target,
+        crop_code: typeof body.crop_code === "string" ? body.crop_code : null,
+        device_type: typeof body.device_type === "string" ? body.device_type.trim().toUpperCase() : null,
+        priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : 0,
+        config_patch: asObject(body.config_patch) ?? undefined,
+        effective,
+        overridden_by,
+      } as any);
+
+      return reply.code(201).send({
+        ok: true,
+        fact_id: inserted.fact_id,
+        occurred_at: inserted.occurred_at,
+        effective: typeof inserted.payload?.effective === "boolean" ? inserted.payload.effective : true,
+        overridden_by: inserted.payload?.overridden_by ?? null,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     } catch (e) {
       return sendSkillsInternalError(reply, e);
