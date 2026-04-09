@@ -2,10 +2,20 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1";
+import { inferEvidenceLevel, type EvidenceLevel } from "../domain/acceptance/evidence_policy";
 import { projectOperationStateFromFacts, type OperationProjectionFactRow } from "../projections/operation_state_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
+type SkillRunMatch = {
+  source: "skill_run_v1" | "acceptance_skill_meta" | "none";
+  skill_id: string | null;
+  skill_version: string | null;
+  explanation_codes: string[];
+  trigger_stage: string | null;
+  run_id: string | null;
+  matched_at: string | null;
+};
 
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
@@ -46,6 +56,73 @@ function toText(v: unknown): string | null {
 function toMs(v: unknown): number {
   const ts = Date.parse(String(v ?? ""));
   return Number.isFinite(ts) ? ts : 0;
+}
+
+function normalizeStage(value: unknown): string {
+  const x = String(value ?? "").trim().toLowerCase();
+  if (x === "before_approval") return "after_recommendation";
+  return x;
+}
+
+function getPreferredStagesForArtifact(kind: string | null): string[] {
+  const normalized = String(kind ?? "").trim().toLowerCase();
+  if (normalized.includes("note")) return ["after_acceptance", "before_acceptance"];
+  return ["before_acceptance", "after_acceptance", "before_dispatch", "after_recommendation", "before_recommendation"];
+}
+
+function buildArtifactSkillMatch(input: {
+  artifactTs: string;
+  artifactKind: string | null;
+  skillRunRows: FactRow[];
+  acceptancePayload: any;
+}): SkillRunMatch {
+  const artifactMs = toMs(input.artifactTs);
+  const preferredStages = getPreferredStagesForArtifact(input.artifactKind);
+  const scored = input.skillRunRows.map((row) => {
+    const payload = row.record_json?.payload ?? {};
+    const stage = normalizeStage(payload.trigger_stage);
+    const stageIdx = preferredStages.indexOf(stage);
+    const stagePenalty = stageIdx >= 0 ? stageIdx : preferredStages.length + 3;
+    const tsPenalty = Math.abs(toMs(row.occurred_at) - artifactMs);
+    return { row, payload, stage, stagePenalty, tsPenalty };
+  }).sort((a, b) => (a.stagePenalty - b.stagePenalty) || (a.tsPenalty - b.tsPenalty));
+
+  const best = scored[0];
+  if (best) {
+    return {
+      source: "skill_run_v1",
+      skill_id: toText(best.payload.skill_id),
+      skill_version: toText(best.payload.version),
+      explanation_codes: Array.isArray(best.payload.explanation_codes) ? best.payload.explanation_codes.map((x: unknown) => String(x)).filter(Boolean) : [],
+      trigger_stage: best.stage || null,
+      run_id: toText(best.payload.run_id),
+      matched_at: best.row.occurred_at
+    };
+  }
+
+  const acceptanceSkillId = toText(input.acceptancePayload?.acceptance_skill_id);
+  const acceptanceSkillVersion = toText(input.acceptancePayload?.acceptance_skill_version);
+  if (acceptanceSkillId || acceptanceSkillVersion) {
+    return {
+      source: "acceptance_skill_meta",
+      skill_id: acceptanceSkillId,
+      skill_version: acceptanceSkillVersion,
+      explanation_codes: Array.isArray(input.acceptancePayload?.explanation_codes) ? input.acceptancePayload.explanation_codes.map((x: unknown) => String(x)).filter(Boolean) : [],
+      trigger_stage: "before_acceptance",
+      run_id: null,
+      matched_at: toText(input.acceptancePayload?.generated_at)
+    };
+  }
+
+  return {
+    source: "none",
+    skill_id: null,
+    skill_version: null,
+    explanation_codes: [],
+    trigger_stage: null,
+    run_id: null,
+    matched_at: null
+  };
 }
 
 async function queryFacts(pool: Pool, sql: string, args: unknown[]): Promise<FactRow[]> {
@@ -237,18 +314,52 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
         LIMIT 1`,
       [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId, actTaskId]
     );
+    const acceptancePayload = acceptanceRows[0]?.record_json?.payload ?? null;
+
+    const skillRunRows = await queryFacts(
+      pool,
+      `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='skill_run_v1'
+          AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+          AND (record_json::jsonb#>>'{payload,project_id}')=$2
+          AND (record_json::jsonb#>>'{payload,group_id}')=$3
+          AND (
+            (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+            OR (record_json::jsonb#>>'{payload,operation_id}')=$4
+          )
+        ORDER BY occurred_at ASC, fact_id ASC`,
+      [tenant.tenant_id, tenant.project_id, tenant.group_id, operationPlanId]
+    );
 
     const artifactItems = artifactRows.map((row) => {
       const p = row.record_json?.payload ?? {};
+      const evidenceLevel = inferEvidenceLevel(p.kind) as EvidenceLevel;
+      const skill = buildArtifactSkillMatch({
+        artifactTs: toText(p.created_at) ?? row.occurred_at,
+        artifactKind: toText(p.kind),
+        skillRunRows,
+        acceptancePayload
+      });
       return {
         artifact_id: toText(p.artifact_id) ?? row.fact_id,
         act_task_id: toText(p.act_task_id),
         operation_plan_id: toText(p.operation_plan_id),
         kind: toText(p.kind),
+        evidence_level: evidenceLevel,
         url: toText(p.url),
         text: toText(p.text),
         created_at: toText(p.created_at) ?? row.occurred_at,
-        created_by: toText(p.created_by)
+        created_by: toText(p.created_by),
+        skill_id: skill.skill_id,
+        skill_version: skill.skill_version,
+        explanation_codes: skill.explanation_codes,
+        skill_source: {
+          source: skill.source,
+          trigger_stage: skill.trigger_stage,
+          run_id: skill.run_id,
+          matched_at: skill.matched_at
+        }
       };
     });
 
@@ -257,7 +368,6 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
       hasReceipt: Boolean(receipt),
       evidenceCount: artifactItems.length
     });
-    const acceptancePayload = acceptanceRows[0]?.record_json?.payload ?? null;
     const acceptance = acceptancePayload
       ? {
         acceptance_id: toText(acceptancePayload.acceptance_id) ?? builtAcceptance.acceptance_id,
@@ -308,6 +418,11 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
         skillTrace?.acceptance_skill,
       ].filter((x) => String(x?.result_status ?? "").toUpperCase() === "SUCCESS").length,
     };
+    const levelCounts: Record<EvidenceLevel, number> = { DEBUG: 0, FORMAL: 0, STRONG: 0 };
+    for (const item of artifactItems) {
+      const level = String(item.evidence_level ?? "").toUpperCase() as EvidenceLevel;
+      if (levelCounts[level] != null) levelCounts[level] += 1;
+    }
 
     return reply.send({
       ok: true,
@@ -325,6 +440,10 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
           }
           : null,
         artifacts: artifactItems,
+        evidence_summary: {
+          artifact_count: artifactItems.length,
+          level_counts: levelCounts,
+        },
         acceptance,
         timeline,
         skill_trace_summary: skillTraceSummary

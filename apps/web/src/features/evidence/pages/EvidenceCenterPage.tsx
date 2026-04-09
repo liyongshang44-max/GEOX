@@ -1,33 +1,42 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { fetchEvidenceControlPlane } from "../../../api";
+import { Link, useLocation } from "react-router-dom";
+import { fetchEvidenceControlPlane, fetchOperationEvidenceBundle } from "../../../api";
 import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
 import { normalizeStatusWord } from "../../../lib/statusVocabulary";
 
 export default function EvidenceCenterPage(): React.ReactElement {
+  const location = useLocation();
   const [item, setItem] = React.useState<any>(null);
+  const [bundle, setBundle] = React.useState<any>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
+  const operationPlanId = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return String(params.get("operation_plan_id") ?? "").trim();
+  }, [location.search]);
 
   const reload = React.useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       const res = await fetchEvidenceControlPlane({ limit: 30 });
+      const operationBundle = operationPlanId ? await fetchOperationEvidenceBundle(operationPlanId) : null;
       setItem(res.item ?? null);
+      setBundle(operationBundle ?? null);
     } catch (e: any) {
       setError(String(e?.message || e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [operationPlanId]);
 
   React.useEffect(() => { void reload(); }, [reload]);
 
   const reportItems = Array.isArray(item?.export_jobs) ? item.export_jobs : [];
   const evidenceItems = Array.isArray(item?.recent_evidence_items) ? item.recent_evidence_items : [];
   const successfulOps = evidenceItems.filter((ev: any) => String(ev?.status?.code || "").toUpperCase().includes("SUCC")).slice(0, 6);
+  const artifactItems = Array.isArray(bundle?.artifacts) ? bundle.artifacts : [];
 
   return (
     <div className="productPage">
@@ -100,6 +109,37 @@ export default function EvidenceCenterPage(): React.ReactElement {
           {!successfulOps.length ? <div className="decisionItemStatic">当前没有最近成功作业，可能是尚未执行或证据未回传。</div> : null}
         </div>
       </section>
+
+      {operationPlanId ? (
+        <section className="card sectionBlock">
+          <div className="sectionHeader">
+            <div>
+              <div className="sectionTitle">作业证据来源</div>
+              <div className="sectionDesc">作业 {operationPlanId} 的证据条目与 skill 来源，用于判断验收可靠性。</div>
+            </div>
+          </div>
+          {!artifactItems.length ? (
+            <div className="decisionItemStatic" style={{ marginTop: 8 }}>该作业暂无证据条目，或证据尚未聚合。</div>
+          ) : (
+            <div className="list modernList compactList" style={{ marginTop: 8 }}>
+              {artifactItems.map((ev: any, idx: number) => (
+                <article key={String(ev?.artifact_id || idx)} className="infoCard">
+                  <div className="jobTitleRow">
+                    <div className="title">{String(ev?.kind || "artifact")} · {String(ev?.evidence_level || "UNKNOWN")}</div>
+                    <span className="statusWord data">{String(ev?.skill_source?.source || "none")}</span>
+                  </div>
+                  <div className="meta wrapMeta">
+                    <span>skill：{String(ev?.skill_id || "-")}@{String(ev?.skill_version || "-")}</span>
+                    <span>stage：{String(ev?.skill_source?.trigger_stage || "-")}</span>
+                    <span>explanations：{Array.isArray(ev?.explanation_codes) && ev.explanation_codes.length > 0 ? ev.explanation_codes.join(", ") : "-"}</span>
+                    <span>创建时间：{String(ev?.created_at || "-")}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
 
       <section className="card sectionBlock">
         <div className="sectionTitle">说明与去向</div>
