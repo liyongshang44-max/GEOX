@@ -3,6 +3,7 @@ import { apiRequestOptional, requestJson, withQuery } from "./client";
 export type SkillRuntimeStatus = "DRAFT" | "ACTIVE" | "DISABLED" | "DEPRECATED" | "UNKNOWN" | string;
 export type SkillBindingScope = "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM" | string;
 export type SkillRunStatus = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "SKIPPED" | "TIMEOUT" | string;
+export type SkillType = "sensing" | "agronomy" | "device" | "acceptance";
 
 const RUNTIME_STATUS_COMPAT: Record<string, SkillRuntimeStatus> = {
   DRAFT: "DRAFT",
@@ -39,7 +40,8 @@ export type SkillRuleSwitch = {
 export type SkillRegistryItem = {
   skill_id: string;
   skill_name?: string | null;
-  skill_type?: string | null;
+  skill_type?: SkillType | null;
+  category?: SkillType | null;
   status: SkillRuntimeStatus;
   current_version?: string | null;
   latest_version?: string | null;
@@ -105,8 +107,11 @@ function normalizeList<T>(res: any): T[] {
 }
 
 function normalizeSkillRegistryItem(item: SkillRegistryItem): SkillRegistryItem {
+  const mappedSkillType = (item.skill_type ?? item.category ?? null) as SkillType | null;
   return {
     ...item,
+    skill_type: mappedSkillType,
+    category: mappedSkillType,
     status: normalizeRuntimeStatus(item.status),
     binding_scope: item.binding_scope == null ? item.binding_scope : normalizeScope(item.binding_scope),
   };

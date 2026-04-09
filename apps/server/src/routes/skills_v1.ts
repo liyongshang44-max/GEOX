@@ -11,6 +11,15 @@ import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRe
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
 
+
+type PublicSkillType = "sensing" | "agronomy" | "device" | "acceptance";
+
+function toPublicSkillType(value: unknown): PublicSkillType {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (normalized === "sensing" || normalized === "agronomy" || normalized === "device" || normalized === "acceptance") return normalized;
+  return "agronomy";
+}
+
 type SkillRow = {
   tenant_id: string;
   project_id: string;
@@ -156,20 +165,24 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         if (!bindingMap.has(key)) bindingMap.set(key, String(row.status ?? "DISABLED").toUpperCase());
       }
 
-      const items = (rows ?? []).map((row) => ({
-        skill_id: row.skill_id,
-        version: row.version,
-        display_name: String(row.payload_json?.display_name ?? row.skill_id),
-        category: row.category,
-        status: row.status,
-        trigger_stage: row.trigger_stage,
-        scope_type: row.scope_type,
-        rollout_mode: row.rollout_mode,
-        crop_code: row.crop_code,
-        device_type: row.device_type,
-        binding_status: bindingMap.get(`${row.skill_id}::${row.version}`) ?? "UNBOUND",
-        updated_at: row.occurred_at,
-      }));
+      const items = (rows ?? []).map((row) => {
+        const skill_type = toPublicSkillType(row.category);
+        return {
+          skill_id: row.skill_id,
+          version: row.version,
+          display_name: String(row.payload_json?.display_name ?? row.skill_id),
+          category: skill_type,
+          skill_type,
+          status: row.status,
+          trigger_stage: row.trigger_stage,
+          scope_type: row.scope_type,
+          rollout_mode: row.rollout_mode,
+          crop_code: row.crop_code,
+          device_type: row.device_type,
+          binding_status: bindingMap.get(`${row.skill_id}::${row.version}`) ?? "UNBOUND",
+          updated_at: row.occurred_at,
+        };
+      });
 
       return sendSkillsResponse(reply, { ok: true, items });
     } catch (e) {
