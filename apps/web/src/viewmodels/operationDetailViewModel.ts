@@ -1,5 +1,6 @@
 
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
+import { resolveUnifiedOperationFinalStatus, toOperationDetailStatusLabel } from "../lib/operationStatusUnified";
 
 export type OperationStoryTimelineItemVm = {
   id: string;
@@ -290,38 +291,18 @@ function buildSummaryWithCode(label: string, code: unknown): string {
 }
 
 function mapStatusLabel(raw: unknown): string {
-  const key = String(raw ?? "").toUpperCase().trim();
-  if (!key) return "待推进";
-  if (key === "READY") return "待执行";
-  if (key === "DISPATCHED") return "已下发";
-  if (key === "ACKED") return "已确认执行";
-  if (key === "SUCCEEDED" || key === "SUCCESS" || key === "EXECUTED") return "执行完成";
-  if (key === "FAILED" || key === "ERROR") return "执行失败";
-  if (key === "INVALID_EXECUTION") return "执行无效";
-  if (key === "PENDING_ACCEPTANCE") return "待验收";
-  if (key === "NOT_EXECUTED") return "未执行";
-  return toText(raw, "待推进");
+  return toOperationDetailStatusLabel(resolveUnifiedOperationFinalStatus({ final_status: String(raw ?? "") }));
 }
 
 function normalizeFinalStatusCode(detail: any): string {
-  const rawCode = String(detail?.final_status ?? "").trim().toUpperCase();
-  if (rawCode) return rawCode;
-  const statusLabel = String(detail?.status_label ?? "").trim();
-  if (statusLabel.includes("执行无效")) return "INVALID_EXECUTION";
-  if (statusLabel.includes("待验收")) return "PENDING_ACCEPTANCE";
-  if (statusLabel.includes("执行失败")) return "FAILED";
-  if (statusLabel.includes("执行中")) return "RUNNING";
-  if (statusLabel.includes("待审批") || statusLabel.includes("待推进")) return "PENDING";
-  if (statusLabel.includes("执行成功") || statusLabel.includes("已完成")) return "SUCCESS";
-  if (String(detail?.invalid_reason ?? "").trim()) return "INVALID_EXECUTION";
-  return "";
+  return resolveUnifiedOperationFinalStatus(detail);
 }
 
 function resolveExecutionProgress(detail: any): string {
   if (!detail?.approval && !detail?.task) return "暂无执行数据";
   const finalStatus = normalizeFinalStatusCode(detail);
-  if (["SUCCEEDED", "SUCCESS", "EXECUTED"].includes(finalStatus)) return "已完成并回传结果";
-  if (["FAILED", "ERROR", "NOT_EXECUTED"].includes(finalStatus)) return "执行结束（异常）";
+  if (finalStatus === "SUCCESS") return "已完成并回传结果";
+  if (["FAILED", "INVALID_EXECUTION", "EVIDENCE_MISSING", "UNKNOWN"].includes(finalStatus)) return "执行结束（异常）";
 
   const ackTs = toMs(detail?.task?.acked_at);
   if (ackTs != null) return "设备已确认，正在执行";
@@ -510,7 +491,7 @@ function resolveCustomerViewStage(detail: any): CustomerViewStage {
   if (finalStatus === "INVALID_EXECUTION") return "无效执行";
   if (!detail?.approval && !detail?.task) return "待审批";
   if (finalStatus === "PENDING_ACCEPTANCE" || detail?.receipt) return "待验收";
-  if (["SUCCEEDED", "SUCCESS", "EXECUTED", "DONE"].includes(finalStatus) || detail?.acceptance?.verdict) return "已完成";
+  if (finalStatus === "SUCCESS" || detail?.acceptance?.verdict) return "已完成";
   if (detail?.task && !detail?.receipt) return "待回执";
   return "执行中";
 }
@@ -637,7 +618,7 @@ export function buildOperationDetailViewModel(args?: {
   const approvalDecidedAtLabel = toDateLabel(safeDetail?.approval?.decided_at);
   const ackStatusLabel = ackTs != null ? "已确认" : "待确认";
   const finalStatusCode = normalizeFinalStatusCode(safeDetail);
-  const finalStatusLabel = mapStatusLabel(finalStatusCode || (safeDetail?.status_label ?? safeDetail?.final_status));
+  const finalStatusLabel = mapStatusLabel(finalStatusCode);
   const businessEffect = buildBusinessEffect(safeDetail, finalStatusCode);
   const executorKind = String(evidenceBundle?.executor?.kind ?? "").toLowerCase();
   const executionMode = executorKind === "human" ? "human" : executorKind === "hybrid" ? "hybrid" : "device";
@@ -689,7 +670,7 @@ export function buildOperationDetailViewModel(args?: {
       ackedAtLabel: toDateLabel(safeDetail?.task?.acked_at),
       ackStatusLabel,
       progressLabel: resolveExecutionProgress(safeDetail),
-      finalStatus: finalStatusCode || String(safeDetail?.final_status ?? safeDetail?.status_label ?? "").toUpperCase(),
+      finalStatus: finalStatusCode,
       finalStatusLabel,
       dispatchedChipLabel: `下发时间：${toDateLabel(safeDetail?.task?.dispatched_at)}`,
       ackChipLabel: `确认状态：${ackStatusLabel}`,
@@ -763,8 +744,8 @@ export function buildOperationDetailViewModel(args?: {
     operationPlanId: toText(safeDetail?.operation_plan_id),
     fieldLabel: toText(safeDetail?.field_name, toText(safeDetail?.field_id)),
     programLabel: toText(safeDetail?.program_name, toText(safeDetail?.program_id)),
-    statusLabel: mapStatusLabel(finalStatusCode || (safeDetail?.status_label ?? safeDetail?.final_status)),
-    finalStatus: toText(finalStatusCode || safeDetail?.final_status),
+    statusLabel: mapStatusLabel(finalStatusCode),
+    finalStatus: toText(finalStatusCode),
     latestUpdatedAtLabel: latestTs != null ? new Date(latestTs).toLocaleString() : "-",
     expectedOutcomeLabel: buildExpectedOutcomeLabel(safeDetail),
     actualOutcomeLabel: buildActualOutcomeLabel(safeDetail, receipt),

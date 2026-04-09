@@ -10,7 +10,8 @@ import OperationStoryTimeline from "../../../components/operations/OperationStor
 import { useOperationDetail } from "../../../hooks/useOperationDetail";
 import { buildOperationDetailViewModel } from "../../../viewmodels/operationDetailViewModel";
 import { executeOperationAction, fetchOperationHandoff, type OperationHandoffItem } from "../../../api/operations";
-import { mapOperationActionLabel, mapOperationStatusLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { mapOperationActionLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { toOperationDetailStatusLabel } from "../../../lib/operationStatusUnified";
 import { toBusinessTimelineLabel } from "../../../viewmodels/timelineLabels";
 
 const COPY = {
@@ -97,7 +98,7 @@ export default function OperationDetailPage(): React.ReactElement {
   }
   const safeDetail = detail ?? {};
 
-  const topStatusLabel = mapOperationStatusLabel(model.finalStatus);
+  const topStatusLabel = toOperationDetailStatusLabel((model.finalStatus as any) ?? "UNKNOWN");
   const actionLabel = mapOperationActionLabel(model.actionLabel);
   const fieldSource = (safeDetail as any)?.field_id || (safeDetail as any)?.field_name || model.fieldLabel;
   const deviceSource = (safeDetail as any)?.task?.device_id || (safeDetail as any)?.device_id || model.execution.deviceId || model.deviceLabel;
@@ -109,7 +110,7 @@ export default function OperationDetailPage(): React.ReactElement {
   const executionTrace = (safeDetail as any)?.execution_trace ?? {};
   const executionContext = (safeDetail as any)?.execution_context ?? {};
   const detailSource = String((safeDetail as any)?.source ?? (safeDetail as any)?.operation?.source ?? "UNKNOWN");
-  const detailFinalStatus = String((safeDetail as any)?.final_status ?? (safeDetail as any)?.operation?.final_status ?? model.finalStatus ?? "--");
+  const detailFinalStatus = model.execution.finalStatusLabel || toOperationDetailStatusLabel((model.finalStatus as any) ?? "UNKNOWN");
   const detailSkillTrace = (safeDetail as any)?.skill_trace ?? (safeDetail as any)?.operation?.skill_trace ?? null;
   const explainSystem = (safeDetail as any)?.explain?.system ?? {};
   const explainHuman = (safeDetail as any)?.explain?.human ?? {};

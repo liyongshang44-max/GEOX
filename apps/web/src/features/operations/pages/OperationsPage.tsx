@@ -4,19 +4,17 @@ import { useOperationsListQuery } from "../../../features/operations/queries/use
 import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../../../lib/operationLink";
-import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, normalizeOperationFinalStatus, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { resolveUnifiedOperationFinalStatus, toOperationsListGroup } from "../../../lib/operationStatusUnified";
 
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
 function normalizeStatus(item: any): string {
-  return normalizeOperationFinalStatus(item?.final_status);
+  return resolveUnifiedOperationFinalStatus(item);
 }
 
 function groupOf(item: any): GroupKey {
-  const status = normalizeStatus(item);
-  if (status === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
-  if (["SUCCESS", "INVALID_EXECUTION", "FAILED"].includes(status)) return "DONE_OR_EXCEPTION";
-  return "TODO";
+  return toOperationsListGroup(resolveUnifiedOperationFinalStatus(item));
 }
 
 export default function OperationsPage(): React.ReactElement {
