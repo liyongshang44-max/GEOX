@@ -135,6 +135,37 @@ export type OperationEvidencePackV1 = {
   timeline?: any[];
 };
 
+export type OperationEvidenceArtifactV1 = {
+  artifact_id: string;
+  act_task_id?: string | null;
+  operation_plan_id?: string | null;
+  kind?: string | null;
+  evidence_level?: "DEBUG" | "FORMAL" | "STRONG" | string | null;
+  url?: string | null;
+  text?: string | null;
+  created_at?: string | null;
+  created_by?: string | null;
+  skill_id?: string | null;
+  skill_version?: string | null;
+  explanation_codes?: string[] | null;
+  skill_source?: {
+    source?: "skill_run_v1" | "acceptance_skill_meta" | "none" | string;
+    trigger_stage?: string | null;
+    run_id?: string | null;
+    matched_at?: string | null;
+  } | null;
+};
+
+export type OperationEvidenceBundleV1 = {
+  operation_plan_id: string;
+  act_task_id?: string | null;
+  artifacts: OperationEvidenceArtifactV1[];
+  evidence_summary?: {
+    artifact_count?: number;
+    level_counts?: Partial<Record<"DEBUG" | "FORMAL" | "STRONG", number>>;
+  } | null;
+};
+
 export async function fetchOperationDetail(operationPlanId: string): Promise<OperationDetailResponse | null> {
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
@@ -174,6 +205,13 @@ export async function fetchOperationEvidencePack(operationId: string): Promise<O
   const id = String(operationId ?? "").trim();
   if (!id) return null;
   return apiRequestOptional<OperationEvidencePackV1>(`/api/v1/operations/${encodeURIComponent(id)}/evidence`);
+}
+
+export async function fetchOperationEvidenceBundle(operationPlanId: string): Promise<OperationEvidenceBundleV1 | null> {
+  const id = String(operationPlanId ?? "").trim();
+  if (!id) return null;
+  const res = await apiRequestOptional<{ ok?: boolean; item?: OperationEvidenceBundleV1 }>(`/api/v1/operations/${encodeURIComponent(id)}/evidence-bundle`);
+  return res?.item ?? null;
 }
 
 export async function fetchTaskTrajectory(actTaskId: string): Promise<any | null> {
