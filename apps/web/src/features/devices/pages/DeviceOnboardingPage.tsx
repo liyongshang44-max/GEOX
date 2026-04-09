@@ -10,6 +10,8 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const [deviceId, setDeviceId] = React.useState<string>(searchParams.get("device_id") || "demo_device_001");
   const [displayName, setDisplayName] = React.useState<string>("演示设备 001");
   const [fieldId, setFieldId] = React.useState<string>("field_demo_001");
+  const [deviceMode, setDeviceMode] = React.useState<"real" | "simulator">("simulator");
+  const [deviceTemplate, setDeviceTemplate] = React.useState<string>("soil_probe_v1");
 
   return (
     <div className="consolePage">
@@ -23,14 +25,25 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
           <label className="field">设备 ID<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
           <label className="field">设备名称<input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
+          <label className="field">
+            device_mode
+            <select className="select" value={deviceMode} onChange={(e) => setDeviceMode((e.target.value as "real" | "simulator"))}>
+              <option value="simulator">simulator（仿真）</option>
+              <option value="real">real（真实设备）</option>
+            </select>
+          </label>
+          <label className="field">
+            device_template
+            <input className="input" value={deviceTemplate} onChange={(e) => setDeviceTemplate(e.target.value)} />
+          </label>
           <label className="field">目标田块 ID<input className="input" value={fieldId} onChange={(e) => setFieldId(e.target.value)} /></label>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          当前演示上下文：<code>{deviceId}</code> / <code>{displayName}</code> / <code>{fieldId}</code>。
+          当前演示上下文：<code>{deviceId}</code> / <code>{displayName}</code> / <code>{deviceMode}</code> / <code>{deviceTemplate}</code> / <code>{fieldId}</code>。
         </div>
       </SectionCard>
 
-      <DeviceOnboardingFlow deviceId={deviceId} />
+      <DeviceOnboardingFlow deviceId={deviceId} deviceMode={deviceMode} deviceTemplate={deviceTemplate} />
 
       <SectionCard title="后续动作">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
