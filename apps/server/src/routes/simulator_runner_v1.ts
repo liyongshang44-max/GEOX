@@ -17,6 +17,17 @@ type SimulatorRunner = {
   last_tick_ts_ms: number | null;
 };
 
+type SimulatorStateRow = {
+  tenant_id: string;
+  device_id: string;
+  status: "running" | "stopped" | "error";
+  profile_code: string | null;
+  started_at_ts_ms: number | null;
+  stopped_at_ts_ms: number | null;
+  last_tick_ts_ms: number | null;
+  last_error: string | null;
+};
+
 const runners = new Map<string, SimulatorRunner>(); // Process-level singleton: one runner per tenant+device.
 
 

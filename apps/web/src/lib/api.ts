@@ -538,7 +538,7 @@ function isNotFoundApiError(err: unknown): boolean {
   return err.bodyText.includes('"statusCode":404') || err.bodyText.includes('NOT_FOUND') || err.bodyText.includes('Not Found');
 }
 
-export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string }): Promise<any> {
+export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string; device_mode?: "real" | "simulator" }): Promise<any> {
   try {
     return await requestJson<any>(`/api/v1/devices/onboarding/register`, {
       method: "POST",
@@ -562,7 +562,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
     await requestJson<any>(`/api/v1/devices`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name }),
+    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name, device_mode: body.device_mode }),
   });
 
   const created = await requestJson<any>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/credentials`, {
