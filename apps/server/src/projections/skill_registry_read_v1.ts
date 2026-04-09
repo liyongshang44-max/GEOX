@@ -344,7 +344,7 @@ export async function querySkillRegistryReadV1(
 
 function makeBindingOverrideKey(
   scope: TenantTriple,
-  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "category" | "skill_id">
+  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "skill_id">
 ): string {
   return [
     scope.tenant_id,
@@ -352,7 +352,6 @@ function makeBindingOverrideKey(
     scope.group_id,
     item.scope_type ?? "",
     item.bind_target ?? "",
-    item.category ?? "",
     item.skill_id,
   ].join("|");
 }
@@ -379,7 +378,6 @@ export async function querySkillBindingProjectionV1(
   const mapped: SkillBindingProjectionItem[] = (rows.rows ?? []).map((row: any) => {
     const record = parseRecordJson(row.record_json) ?? row.record_json ?? {};
     const payload = record?.payload ?? {};
-    const effective = typeof payload.effective === "boolean" ? payload.effective : true;
     const legacyCategory = str(payload.category).toLowerCase() || null;
     const publicCategory = toPublicCategory(payload.category);
     return {
@@ -437,9 +435,9 @@ export async function querySkillBindingProjectionV1(
       return a.fact_id.localeCompare(b.fact_id);
     });
     // P1 规则：
-    // 1) 仅在同一覆盖链历史（按 classification/category + skill_id + scope）内计算 effective；
-    // 2) 不同 skill_id 的覆盖链彼此独立，可并存生效；
-    // 3) 不做同类互斥裁决。
+    // 1) effective 仅在同一 skill_id 的时间线（tenant/project/group + scope_type + bind_target + skill_id）内计算；
+    // 2) 不同 skill_id 的记录可同时 effective；
+    // 3) 不做同类互斥，也不使用 category/publicCategory/legacy_category 推断覆盖关系。
     const winner = timeline[timeline.length - 1] ?? null;
     if (winner) items_effective.push({ ...winner, effective: true, overridden_by: null });
 

@@ -38,7 +38,7 @@ test("same skill_id override chain keeps only newest fact effective", async () =
       binding_id: "b2",
       skill_id: "skill.same",
       version: "v1",
-      category: "agronomy",
+      category: "device",
       scope_type: "FIELD",
       bind_target: "field_1",
       status: "ACTIVE",
@@ -50,7 +50,7 @@ test("same skill_id override chain keeps only newest fact effective", async () =
       binding_id: "b3",
       skill_id: "skill.same",
       version: "v1",
-      category: "agronomy",
+      category: "acceptance",
       scope_type: "FIELD",
       bind_target: "field_1",
       status: "ACTIVE",
@@ -79,6 +79,52 @@ test("same skill_id override chain keeps only newest fact effective", async () =
   assert.equal(byFact.get("f2")?.overridden_by, "f3");
   assert.equal(byFact.get("f3")?.effective, true);
   assert.equal(byFact.get("f3")?.overridden_by, null);
+});
+
+test("same skill_id with different categories still falls into one override chain", async () => {
+  const rows = [
+    bindingFactRow("f20", "2026-04-01T00:00:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b20",
+      skill_id: "skill.category.switch",
+      version: "v1",
+      category: "agronomy",
+      scope_type: "FIELD",
+      bind_target: "field_1",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("f21", "2026-04-01T00:01:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b21",
+      skill_id: "skill.category.switch",
+      version: "v1",
+      category: "sensing",
+      scope_type: "FIELD",
+      bind_target: "field_1",
+      status: "ACTIVE",
+    }),
+  ];
+
+  const pool = {
+    query: async () => ({ rows }),
+  };
+
+  const out = await querySkillBindingProjectionV1(pool as any, {
+    tenant_id: "t1",
+    project_id: "p1",
+    group_id: "g1",
+  });
+
+  assert.equal(out.items_effective.length, 1);
+  assert.equal(out.items_effective[0].fact_id, "f21");
+  const byFact = new Map(out.items_history.map((it) => [it.fact_id, it]));
+  assert.equal(byFact.get("f20")?.effective, false);
+  assert.equal(byFact.get("f20")?.overridden_by, "f21");
+  assert.equal(byFact.get("f21")?.effective, true);
 });
 
 test("different skill_id can be effective at the same time", async () => {
