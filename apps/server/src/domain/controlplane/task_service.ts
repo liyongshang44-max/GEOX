@@ -779,16 +779,24 @@ export async function loadManualOperationByCommandId(
   const normalizedCommandId = String(command_id ?? "").trim();
   if (!normalizedCommandId) return null;
   const sql = `
-    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
+    SELECT
+      fact_id,
+      occurred_at,
+      source,
+      (record_json::jsonb) AS record_json,
+      COALESCE(
+        (record_json::jsonb#>>'{payload,command_id}'),
+        (record_json::jsonb#>>'{payload,meta,command_id}')
+      ) AS resolved_command_id
     FROM facts
     WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
       AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
       AND (record_json::jsonb#>>'{payload,project_id}') = $2
       AND (record_json::jsonb#>>'{payload,group_id}') = $3
-      AND (
-        (record_json::jsonb#>>'{payload,command_id}') = $4
-        OR (record_json::jsonb#>>'{payload,meta,command_id}') = $4
-      )
+      AND COALESCE(
+        (record_json::jsonb#>>'{payload,command_id}'),
+        (record_json::jsonb#>>'{payload,meta,command_id}')
+      ) = $4
     ORDER BY occurred_at DESC, fact_id DESC
     LIMIT 1
   `;
@@ -800,10 +808,12 @@ export async function loadManualOperationByCommandId(
   const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
   if (!operation_plan_id) return null;
   const operation_id = String(payload.operation_id ?? operation_plan_id).trim() || operation_plan_id;
+  const resolvedCommandId = String(row.resolved_command_id ?? "").trim();
+  if (!resolvedCommandId) return null;
   return {
     operation_id,
     operation_plan_id,
-    command_id: normalizedCommandId
+    command_id: resolvedCommandId
   };
 }
 
