@@ -13,12 +13,12 @@ const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
 const SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT = "/api/v1/skills/bindings/override";
 
 
-type PublicSkillType = "sensing" | "agronomy" | "device" | "acceptance";
+type PublicSkillType = "sensing" | "agronomy" | "device" | "acceptance" | "unknown";
 
 function toPublicSkillType(value: unknown): PublicSkillType {
   const normalized = String(value ?? "").trim().toLowerCase();
-  if (normalized === "sensing" || normalized === "agronomy" || normalized === "device" || normalized === "acceptance") return normalized;
-  return "agronomy";
+  if (normalized === "sensing" || normalized === "agronomy" || normalized === "device" || normalized === "acceptance" || normalized === "unknown") return normalized;
+  return "unknown";
 }
 
 type SkillRow = {
@@ -30,6 +30,7 @@ type SkillRow = {
   skill_id: string;
   version: string;
   category: string | null;
+  legacy_category: string | null;
   status: string | null;
   scope_type: string | null;
   rollout_mode: string | null;
@@ -173,6 +174,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
           version: row.version,
           display_name: String(row.payload_json?.display_name ?? row.skill_id),
           category: skill_type,
+          legacy_category: row.legacy_category,
           skill_type,
           status: row.status,
           trigger_stage: row.trigger_stage,
@@ -458,9 +460,6 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       const trigger_stage = String(body.trigger_stage ?? "before_dispatch").trim();
       const bind_target = String(body.bind_target ?? "default").trim();
       const rollout_mode = String(body.rollout_mode ?? "DIRECT").trim().toUpperCase();
-      const effective = boolLike(body.effective, true);
-      const overridden_by = typeof body.overridden_by === "string" && body.overridden_by.trim() ? body.overridden_by.trim() : null;
-
       if (!skill_id || !version || !category || !bind_target) {
         return reply.code(400).send({
           ok: false,
@@ -485,16 +484,12 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         device_type: typeof body.device_type === "string" ? body.device_type.trim().toUpperCase() : null,
         priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : 0,
         config_patch: asObject(body.config_patch) ?? undefined,
-        effective,
-        overridden_by,
       } as any);
 
       return reply.code(201).send({
         ok: true,
         fact_id: inserted.fact_id,
         occurred_at: inserted.occurred_at,
-        effective: typeof inserted.payload?.effective === "boolean" ? inserted.payload.effective : true,
-        overridden_by: inserted.payload?.overridden_by ?? null,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     } catch (e) {

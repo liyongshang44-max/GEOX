@@ -1,5 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import OperationQuickCreate from "../../../components/operations/OperationQuickCreate";
+import { ApiError } from "../../../api/client";
+import { createManualOperation } from "../../../api/operations";
 import { useOperationsListQuery } from "../../../features/operations/queries/useOperationsListQuery";
 import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
@@ -19,6 +22,15 @@ function groupOf(item: any): GroupKey {
 
 export default function OperationsPage(): React.ReactElement {
   const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
+  const labels = OP_LABELS.zh;
+  const [issuer, setIssuer] = React.useState("human");
+  const [actionType, setActionType] = React.useState("IRRIGATE");
+  const [targetText, setTargetText] = React.useState("");
+  const [requestDeviceId, setRequestDeviceId] = React.useState("");
+  const [parametersText, setParametersText] = React.useState("{}");
+  const [createError, setCreateError] = React.useState("");
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [commandId] = React.useState(() => uuidv4());
 
   const reload = React.useCallback(async () => {
     await refetch();
@@ -32,6 +44,48 @@ export default function OperationsPage(): React.ReactElement {
     }
     return base;
   }, [items]);
+
+  const onCreate = React.useCallback(async () => {
+    if (isCreating) return;
+    const normalizedCommandId = String(commandId ?? "").trim();
+    if (!normalizedCommandId) {
+      setCreateError("幂等键/参数错误：缺少 command_id。");
+      return;
+    }
+    let parsedParameters: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(parametersText || "{}");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid parameters");
+      parsedParameters = parsed as Record<string, unknown>;
+    } catch {
+      setCreateError("幂等键/参数错误：参数必须是 JSON 对象。");
+      return;
+    }
+    setCreateError("");
+    setIsCreating(true);
+    try {
+      const res = await createManualOperation({
+        command_id: normalizedCommandId,
+        issuer: issuer.trim() || "human",
+        action_type: actionType,
+        target: { kind: "field", ref: targetText.trim() || "field_demo" },
+        request_device_id: requestDeviceId.trim() || undefined,
+        parameters: parsedParameters,
+      });
+      const jumpId = String(res?.operation_id ?? res?.operation_plan_id ?? "").trim();
+      if (!jumpId) throw new Error("missing operation id");
+      window.location.assign(`/operations/${encodeURIComponent(jumpId)}`);
+    } catch (error) {
+      const bodyText = error instanceof ApiError ? error.bodyText : "";
+      setCreateError(
+        String(bodyText).toLowerCase().includes("command_id")
+          ? "幂等键/参数错误：请检查 command_id 与请求参数。"
+          : "幂等键/参数错误：请稍后重试。",
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  }, [actionType, commandId, isCreating, issuer, parametersText, requestDeviceId, targetText]);
 
   const groupMeta: Array<{ key: GroupKey; title: string; lead: string }> = [
     { key: "TODO", title: "待执行", lead: "先确认条件，再下发任务。" },
@@ -50,6 +104,26 @@ export default function OperationsPage(): React.ReactElement {
           </div>
           <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
         </div>
+      </section>
+
+      <section className="operationsGroupSection">
+        <OperationQuickCreate
+          labels={labels}
+          issuer={issuer}
+          actionType={actionType}
+          targetText={targetText}
+          requestDeviceId={requestDeviceId}
+          parametersText={parametersText}
+          roleText={`command_id: ${commandId}`}
+          disabled={isCreating || !String(commandId).trim()}
+          onIssuer={setIssuer}
+          onActionType={setActionType}
+          onTargetText={setTargetText}
+          onDevice={setRequestDeviceId}
+          onParameters={setParametersText}
+          onCreate={() => { void onCreate(); }}
+        />
+        {createError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{createError}</div> : null}
       </section>
 
       {groupMeta.map((group) => (

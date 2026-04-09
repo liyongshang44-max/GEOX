@@ -13,6 +13,7 @@ type SkillRegistryReadRow = {
   skill_id: string;
   version: string;
   category: string | null;
+  legacy_category: string | null;
   status: string | null;
   scope_type: string | null;
   rollout_mode: string | null;
@@ -49,6 +50,7 @@ type SkillBindingProjectionItem = {
   skill_id: string;
   version: string;
   category: string | null;
+  legacy_category: string | null;
   scope_type: string | null;
   trigger_stage: string | null;
   bind_target: string | null;
@@ -110,23 +112,17 @@ function toEpochMs(value: unknown, fallbackIso?: string): number {
 }
 
 
-const SKILL_CATEGORY_PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance"> = {
-  crop_skill: "agronomy",
-  agronomy_skill: "agronomy",
-  device_skill: "device",
-  acceptance_skill: "acceptance",
-  sensing_skill: "sensing",
-  observability: "sensing",
+const SKILL_CATEGORY_PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance" | "unknown"> = {
+  sensing: "sensing",
   agronomy: "agronomy",
-  ops: "agronomy",
-  control: "agronomy",
   device: "device",
   acceptance: "acceptance",
+  unknown: "unknown",
 };
 
-function toPublicSkillCategory(value: unknown): "sensing" | "agronomy" | "device" | "acceptance" {
+function toPublicCategory(value: unknown): "sensing" | "agronomy" | "device" | "acceptance" | "unknown" {
   const normalized = str(value).toLowerCase();
-  return SKILL_CATEGORY_PUBLIC_MAP[normalized] ?? "agronomy";
+  return SKILL_CATEGORY_PUBLIC_MAP[normalized] ?? "unknown";
 }
 
 function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
@@ -172,6 +168,7 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
       skill_id text NOT NULL,
       version text NOT NULL,
       category text NULL,
+      legacy_category text NULL,
       status text NULL,
       scope_type text NULL,
       rollout_mode text NULL,
@@ -196,6 +193,7 @@ async function ensureSkillRegistryReadTable(pool: Pool): Promise<void> {
 
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_skill_registry_read_v1_lookup ON skill_registry_read_v1 (tenant_id, project_id, group_id, category, status, crop_code, device_type, trigger_stage, bind_target, updated_at_ts_ms DESC)`);
   await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS lifecycle_version integer NULL`);
+  await pool.query(`ALTER TABLE skill_registry_read_v1 ADD COLUMN IF NOT EXISTS legacy_category text NULL`);
 }
 
 export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTriple): Promise<SkillRegistryReadRow[]> {
@@ -218,6 +216,8 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
     const factType = String(record?.type ?? "") as SkillRegistryFactType;
     const occurredAt = toIsoTimestamp(row.occurred_at);
     const ts = toEpochMs(row.occurred_at, occurredAt);
+    const legacyCategory = str(payload.category).toLowerCase() || null;
+    const publicCategory = toPublicCategory(payload.category);
 
     return {
       tenant_id: str(payload.tenant_id),
@@ -227,7 +227,8 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
       fact_id: str(row.fact_id),
       skill_id: str(payload.skill_id),
       version: str(payload.version),
-      category: toPublicSkillCategory(payload.category),
+      category: publicCategory,
+      legacy_category: legacyCategory,
       status: str(payload.status) || null,
       scope_type: str(payload.scope_type) || null,
       rollout_mode: str(payload.rollout_mode) || null,
@@ -258,16 +259,17 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
     for (const row of latest) {
       await client.query(
         `INSERT INTO skill_registry_read_v1 (
-          tenant_id, project_id, group_id, fact_type, fact_id, skill_id, version, category, status, scope_type, rollout_mode, result_status,
+          tenant_id, project_id, group_id, fact_type, fact_id, skill_id, version, category, legacy_category, status, scope_type, rollout_mode, result_status,
           crop_code, device_type, trigger_stage, bind_target, operation_id, operation_plan_id, field_id, device_id,
           input_digest, output_digest, lifecycle_version, payload_json, occurred_at, updated_at_ts_ms
         ) VALUES (
-          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,
-          $13,$14,$15,$16,$17,$18,$19,$20,
-          $21,$22,$23,$24::jsonb,$25::timestamptz,$26
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,
+          $14,$15,$16,$17,$18,$19,$20,$21,
+          $22,$23,$24,$25::jsonb,$26::timestamptz,$27
         )
         ON CONFLICT (fact_id) DO UPDATE SET
           category = EXCLUDED.category,
+          legacy_category = EXCLUDED.legacy_category,
           status = EXCLUDED.status,
           scope_type = EXCLUDED.scope_type,
           rollout_mode = EXCLUDED.rollout_mode,
@@ -287,7 +289,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
           occurred_at = EXCLUDED.occurred_at,
           updated_at_ts_ms = EXCLUDED.updated_at_ts_ms`,
         [
-          row.tenant_id, row.project_id, row.group_id, row.fact_type, row.fact_id, row.skill_id, row.version, row.category, row.status, row.scope_type, row.rollout_mode, row.result_status,
+          row.tenant_id, row.project_id, row.group_id, row.fact_type, row.fact_id, row.skill_id, row.version, row.category, row.legacy_category, row.status, row.scope_type, row.rollout_mode, row.result_status,
           row.crop_code, row.device_type, row.trigger_stage, row.bind_target, row.operation_id, row.operation_plan_id, row.field_id, row.device_id,
           row.input_digest, row.output_digest, row.lifecycle_version, JSON.stringify(row.payload_json ?? {}), row.occurred_at, row.updated_at_ts_ms,
         ]
@@ -342,7 +344,7 @@ export async function querySkillRegistryReadV1(
 
 function makeBindingOverrideKey(
   scope: TenantTriple,
-  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "skill_id">
+  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "category" | "skill_id">
 ): string {
   return [
     scope.tenant_id,
@@ -350,6 +352,7 @@ function makeBindingOverrideKey(
     scope.group_id,
     item.scope_type ?? "",
     item.bind_target ?? "",
+    item.category ?? "",
     item.skill_id,
   ].join("|");
 }
@@ -377,13 +380,16 @@ export async function querySkillBindingProjectionV1(
     const record = parseRecordJson(row.record_json) ?? row.record_json ?? {};
     const payload = record?.payload ?? {};
     const effective = typeof payload.effective === "boolean" ? payload.effective : true;
+    const legacyCategory = str(payload.category).toLowerCase() || null;
+    const publicCategory = toPublicCategory(payload.category);
     return {
       fact_id: str(row.fact_id),
       occurred_at: toIsoTimestamp(row.occurred_at),
       binding_id: str(payload.binding_id) || str(row.fact_id),
       skill_id: str(payload.skill_id),
       version: str(payload.version),
-      category: toPublicSkillCategory(payload.category),
+      category: publicCategory,
+      legacy_category: legacyCategory,
       scope_type: upper(payload.scope_type) || null,
       trigger_stage: str(payload.trigger_stage) || null,
       bind_target: str(payload.bind_target) || null,
@@ -393,8 +399,8 @@ export async function querySkillBindingProjectionV1(
       priority: Number.isFinite(Number(payload.priority)) ? Number(payload.priority) : 0,
       enabled: ["ACTIVE", "ENABLED"].includes(upper(payload.status)),
       config_patch: (payload.config_patch && typeof payload.config_patch === "object" && !Array.isArray(payload.config_patch)) ? payload.config_patch : {},
-      effective,
-      overridden_by: str(payload.overridden_by) || null,
+      effective: false,
+      overridden_by: null,
     };
   }).filter((item) => item.skill_id && item.version);
 
@@ -430,12 +436,17 @@ export async function querySkillBindingProjectionV1(
       if (t !== 0) return t;
       return a.fact_id.localeCompare(b.fact_id);
     });
-    const winner = [...timeline].reverse().find((x) => x.effective) ?? null;
+    // P1 规则：
+    // 1) 仅在同一覆盖链历史（按 classification/category + skill_id + scope）内计算 effective；
+    // 2) 不同 skill_id 的覆盖链彼此独立，可并存生效；
+    // 3) 不做同类互斥裁决。
+    const winner = timeline[timeline.length - 1] ?? null;
     if (winner) items_effective.push({ ...winner, effective: true, overridden_by: null });
 
     for (const item of timeline) {
-      const overriddenBy = item.overridden_by ?? ((winner && winner.fact_id !== item.fact_id) ? winner.fact_id : null);
-      items_history.push({ ...item, effective: !!winner && winner.fact_id === item.fact_id, overridden_by: overriddenBy });
+      const isEffective = !!winner && winner.fact_id === item.fact_id;
+      const overriddenBy = isEffective ? null : winner?.fact_id ?? null;
+      items_history.push({ ...item, effective: isEffective, overridden_by: overriddenBy });
       if (overriddenBy) overrides.push({ fact_id: item.fact_id, overridden_by: overriddenBy, key });
     }
   }
