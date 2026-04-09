@@ -1,4 +1,4 @@
-import { apiRequest, apiRequestOptional, withQuery } from "./client";
+import { apiRequest, apiRequestOptional, apiRequestWithPolicy, withQuery } from "./client";
 import { resolveSkillClassification } from "./skills";
 
 export type OperationStateTimelineItemV1 = { type: string; label: string; ts: number };
@@ -63,6 +63,39 @@ export async function fetchOperationStates(params?: { field_id?: string; device_
       }))
       : [],
   };
+}
+
+export type ManualOperationCreatePayload = {
+  command_id: string;
+  issuer: string;
+  action_type: string;
+  target: { kind: "field" | "device"; ref: string };
+  request_device_id?: string;
+  parameters: Record<string, unknown>;
+};
+
+export type ManualOperationCreateResponse = {
+  ok?: boolean;
+  operation_id?: string;
+  operation_plan_id?: string;
+  idempotent?: boolean;
+  error?: string;
+};
+
+export async function createManualOperation(payload: ManualOperationCreatePayload): Promise<ManualOperationCreateResponse> {
+  const commandId = String(payload?.command_id ?? "").trim();
+  if (!commandId) throw new Error("command_id is required");
+  const res = await apiRequestWithPolicy<ManualOperationCreateResponse>("/api/v1/operations/manual", {
+    method: "POST",
+    body: JSON.stringify({
+      ...payload,
+      command_id: commandId,
+    }),
+  }, {
+    dedupe: true,
+  });
+  if (!res.ok) throw new Error("create manual operation failed");
+  return res.data;
 }
 
 export type OperationDetailResponse = {
