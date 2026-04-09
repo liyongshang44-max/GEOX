@@ -3,7 +3,8 @@ import { apiRequestOptional, requestJson, withQuery } from "./client";
 export type SkillRuntimeStatus = "DRAFT" | "ACTIVE" | "DISABLED" | "DEPRECATED" | "UNKNOWN" | string;
 export type SkillBindingScope = "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROGRAM" | string;
 export type SkillRunStatus = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "SKIPPED" | "TIMEOUT" | string;
-export type SkillType = "sensing" | "agronomy" | "device" | "acceptance";
+export type SkillType = "sensing" | "agronomy" | "device" | "acceptance" | "unknown";
+const PRIMARY_BINDING_OVERRIDE_ENDPOINT = "/api/v1/skills/bindings/override";
 
 export function resolveSkillClassification(input: any): string {
   const candidates = [
@@ -14,6 +15,7 @@ export function resolveSkillClassification(input: any): string {
     input?.trigger_stage,
     input?.type,
     input?.legacy_classification,
+    input?.legacy_category,
     input?.legacy_stage,
   ];
   for (const value of candidates) {
@@ -49,6 +51,7 @@ export type SkillRegistryItem = {
   skill_name?: string | null;
   skill_type?: SkillType | null;
   category?: SkillType | null;
+  legacy_category?: string | null;
   status: SkillRuntimeStatus;
   current_version?: string | null;
   latest_version?: string | null;
@@ -76,6 +79,7 @@ export type SkillBindingViewItem = {
   skill_id?: string | null;
   version?: string | null;
   classification?: string | null;
+  legacy_category?: string | null;
   scope_type?: string | null;
   bind_target?: string | null;
   priority?: number | null;
@@ -136,7 +140,7 @@ function normalizeList<T>(res: any): T[] {
 
 function normalizeSkillRegistryItem(item: SkillRegistryItem): SkillRegistryItem {
   const classification = resolveSkillClassification(item);
-  const mappedSkillType = (classification === "unknown" ? null : classification) as SkillType | null;
+  const mappedSkillType = classification as SkillType;
   return {
     ...item,
     skill_type: mappedSkillType,
@@ -239,6 +243,7 @@ function normalizeSkillBindingViewItem(item: any): SkillBindingViewItem {
     skill_id: item?.skill_id ?? null,
     version: item?.version ?? null,
     classification: resolveSkillClassification(item),
+    legacy_category: item?.legacy_category ?? null,
     scope_type: item?.scope_type ?? item?.scope ?? null,
     bind_target: item?.bind_target ?? item?.target_id ?? item?.crop_code ?? null,
     priority: item?.priority ?? null,
