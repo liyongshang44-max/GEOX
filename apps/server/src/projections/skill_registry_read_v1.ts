@@ -109,6 +109,26 @@ function toEpochMs(value: unknown, fallbackIso?: string): number {
   return 0;
 }
 
+
+const SKILL_CATEGORY_PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance"> = {
+  crop_skill: "agronomy",
+  agronomy_skill: "agronomy",
+  device_skill: "device",
+  acceptance_skill: "acceptance",
+  sensing_skill: "sensing",
+  observability: "sensing",
+  agronomy: "agronomy",
+  ops: "agronomy",
+  control: "agronomy",
+  device: "device",
+  acceptance: "acceptance",
+};
+
+function toPublicSkillCategory(value: unknown): "sensing" | "agronomy" | "device" | "acceptance" {
+  const normalized = str(value).toLowerCase();
+  return SKILL_CATEGORY_PUBLIC_MAP[normalized] ?? "agronomy";
+}
+
 function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
   const normalized = str(stage).toLowerCase();
   if (!normalized) return null;
@@ -207,7 +227,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
       fact_id: str(row.fact_id),
       skill_id: str(payload.skill_id),
       version: str(payload.version),
-      category: str(payload.category) || null,
+      category: toPublicSkillCategory(payload.category),
       status: str(payload.status) || null,
       scope_type: str(payload.scope_type) || null,
       rollout_mode: str(payload.rollout_mode) || null,
@@ -305,7 +325,7 @@ export async function querySkillRegistryReadV1(
     where.push(`${sql} = $${params.length}`);
   };
 
-  append("category", input.category?.trim().toUpperCase());
+  append("category", input.category?.trim().toLowerCase());
   append("status", input.status?.trim().toUpperCase());
   append("crop_code", input.crop_code?.trim().toLowerCase());
   append("device_type", input.device_type?.trim().toUpperCase());
@@ -362,7 +382,7 @@ export async function querySkillBindingProjectionV1(
       binding_id: str(payload.binding_id) || str(row.fact_id),
       skill_id: str(payload.skill_id),
       version: str(payload.version),
-      category: upper(payload.category) || null,
+      category: toPublicSkillCategory(payload.category),
       scope_type: upper(payload.scope_type) || null,
       trigger_stage: str(payload.trigger_stage) || null,
       bind_target: str(payload.bind_target) || null,
@@ -378,7 +398,7 @@ export async function querySkillBindingProjectionV1(
   }).filter((item) => item.skill_id && item.version);
 
   const filtered = mapped.filter((item) => {
-    if (input.category && upper(item.category) !== upper(input.category)) return false;
+    if (input.category && str(item.category).toLowerCase() !== str(input.category).toLowerCase()) return false;
     if (input.status) {
       const expected = upper(input.status);
       const actual = item.enabled ? "ACTIVE" : "DISABLED";
