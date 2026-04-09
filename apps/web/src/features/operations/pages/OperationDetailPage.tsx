@@ -108,6 +108,11 @@ export default function OperationDetailPage(): React.ReactElement {
   const executionReady = Boolean((safeDetail as any)?.execution_ready);
   const executionTrace = (safeDetail as any)?.execution_trace ?? {};
   const executionContext = (safeDetail as any)?.execution_context ?? {};
+  const detailSource = String((safeDetail as any)?.source ?? (safeDetail as any)?.operation?.source ?? "UNKNOWN");
+  const detailFinalStatus = String((safeDetail as any)?.final_status ?? (safeDetail as any)?.operation?.final_status ?? model.finalStatus ?? "--");
+  const detailSkillTrace = (safeDetail as any)?.skill_trace ?? (safeDetail as any)?.operation?.skill_trace ?? null;
+  const explainSystem = (safeDetail as any)?.explain?.system ?? {};
+  const explainHuman = (safeDetail as any)?.explain?.human ?? {};
   const valueAttribution = (safeDetail as any)?.value_attribution_v1 ?? null;
   const traceGap = (safeDetail as any)?.trace_gap ?? { missing_receipt: false, missing_evidence: false };
   const acceptanceVerdict = String((safeDetail as any)?.operation?.acceptance?.verdict ?? "PENDING").toUpperCase();
@@ -256,7 +261,22 @@ export default function OperationDetailPage(): React.ReactElement {
             </section>
           ) : null}
 
-          <OperationSkillTraceCard trace={(safeDetail as any)?.skill_trace ?? null} />
+          <section className="card" style={{ marginTop: 12 }}>
+            <div className="sectionTitle">来源与解释</div>
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{detailSource || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最终状态</span><strong>{detailFinalStatus || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则 ID</span><strong>{String(explainSystem?.rule_id ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则版本</span><strong>{String(explainSystem?.rule_version ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{String(explainSystem?.crop_stage ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{Array.isArray(explainSystem?.reason_codes) ? explainSystem.reason_codes.join(", ") || "--" : String(explainSystem?.reason_codes ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">系统解释</span><strong>{String(explainHuman?.reason ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务预期</span><strong>{String(explainHuman?.expectation ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险提示</span><strong>{String(explainHuman?.risk ?? "--")}</strong></div>
+            </div>
+          </section>
+
+          <OperationSkillTraceCard trace={detailSkillTrace} />
 
           <section className="card" style={{ marginTop: 12 }}>
             <div className="sectionTitle">执行过程</div>
