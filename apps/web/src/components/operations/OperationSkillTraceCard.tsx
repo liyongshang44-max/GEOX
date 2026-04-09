@@ -1,23 +1,6 @@
 import React from "react";
-import type { OperationSkillTraceItemV2, OperationSkillTraceStageV2 } from "../../api/operations";
+import type { OperationSkillTraceItemV2 } from "../../api/operations";
 import { StatusPill } from "../../shared/ui";
-
-type SkillRow = {
-  key: OperationSkillTraceStageV2;
-  label: string;
-};
-
-const SKILL_ROWS: SkillRow[] = [
-  { key: "sensing", label: "Sensing Skill" },
-  { key: "agronomy", label: "Agronomy Skill" },
-  { key: "device", label: "Device Skill" },
-  { key: "acceptance", label: "Acceptance Skill" },
-];
-
-function isMissingSkill(entry: OperationSkillTraceItemV2 | null | undefined): boolean {
-  if (!entry) return true;
-  return !entry.skill_id;
-}
 
 function toStatusTone(value: string): "warning" | "danger" | "success" | "neutral" {
   const code = String(value || "").toUpperCase();
@@ -29,32 +12,39 @@ function toStatusTone(value: string): "warning" | "danger" | "success" | "neutra
 }
 
 export default function OperationSkillTraceCard({ trace }: { trace?: OperationSkillTraceItemV2[] | null }): React.ReactElement {
-  const byStage = new Map((Array.isArray(trace) ? trace : []).map((item) => [String(item.stage || "").toLowerCase(), item]));
+  const items = (Array.isArray(trace) ? trace : [])
+    .map((item, idx) => ({ ...item, _idx: idx }))
+    .sort((a, b) => {
+      const left = Number(a.started_ts_ms ?? a.finished_ts_ms ?? 0);
+      const right = Number(b.started_ts_ms ?? b.finished_ts_ms ?? 0);
+      if (left === right) return a._idx - b._idx;
+      return left - right;
+    });
   return (
     <section className="card operationSkillTraceCard" style={{ marginTop: 12 }}>
       <div className="sectionTitle">技能运行追踪</div>
       <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-        展示 sensing/agronomy/device/acceptance 四类技能链路与解释码。
+        按 skill_trace[] timeline 展示 stage、status 与 explanation_codes。
       </div>
+      {!items.length ? <div className="muted" style={{ marginTop: 8 }}>暂无 skill_trace 记录。</div> : null}
       <div className="operationSkillTraceList">
-        {SKILL_ROWS.map((row) => {
-          const item = byStage.get(row.key);
-          const missing = isMissingSkill(item);
+        {items.map((item, idx) => {
           const resultStatus = String(item?.status || "");
           const explanationCodes = Array.isArray(item?.explanation_codes) ? item.explanation_codes : [];
           return (
-            <article key={row.key} className={`operationSkillTraceItem ${missing ? "isWarning" : ""}`}>
+            <article key={`${item.run_id || item.stage || "stage"}-${idx}`} className={`operationSkillTraceItem ${!item?.skill_id ? "isWarning" : ""}`}>
               <div className="operationSkillTraceHeader">
-                <strong>{row.label}</strong>
-                {missing ? <StatusPill tone="warning">缺失该类 skill</StatusPill> : <StatusPill tone={toStatusTone(resultStatus)}>{resultStatus || "UNKNOWN"}</StatusPill>}
+                <strong>{item?.stage || "unknown_stage"}</strong>
+                <StatusPill tone={toStatusTone(resultStatus)}>{resultStatus || "UNKNOWN"}</StatusPill>
               </div>
               <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">skill_id</span><strong>{item?.skill_id || "--"}</strong></div>
                 <div className="operationsSummaryMetric">
                   <span className="operationsSummaryLabel">stage</span>
-                  <strong>{item?.stage || row.key}</strong>
+                  <strong>{item?.stage || "--"}</strong>
                 </div>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">explanation_codes</span><strong>{explanationCodes.length > 0 ? explanationCodes.join(", ") : "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">run_id</span><strong>{item?.run_id || "--"}</strong></div>
               </div>
             </article>
           );

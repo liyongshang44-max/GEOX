@@ -20,6 +20,9 @@ export type OperationSkillTraceItemV2 = {
   skill_id: string | null;
   status: string | null;
   explanation_codes: string[];
+  run_id?: string | null;
+  started_ts_ms?: number | null;
+  finished_ts_ms?: number | null;
 };
 export type OperationStateItemV1 = {
   operation_id: string;
@@ -49,7 +52,16 @@ export type ApprovalRequestItem = {
 };
 
 export async function fetchOperationStates(params?: { field_id?: string; device_id?: string; final_status?: string; limit?: number }): Promise<{ ok: boolean; count: number; items: OperationStateItemV1[] }> {
-  return apiRequest<{ ok: boolean; count: number; items: OperationStateItemV1[] }>(withQuery("/api/v1/operations", params));
+  const res = await apiRequest<{ ok: boolean; count: number; items: OperationStateItemV1[] }>(withQuery("/api/v1/operations", params));
+  return {
+    ...res,
+    items: Array.isArray(res?.items)
+      ? res.items.map((item) => ({
+        ...item,
+        skill_trace: normalizeSkillTrace((item as any)?.skill_trace, (item as any)?.legacy_skill_trace ?? null),
+      }))
+      : [],
+  };
 }
 
 export type OperationDetailResponse = {
@@ -112,6 +124,45 @@ export type OperationDetailResponse = {
   };
 };
 
+function normalizeSkillTraceItem(item: any): OperationSkillTraceItemV2 {
+  const stageRaw = String(item?.stage ?? item?.trigger_stage ?? item?.type ?? "").trim().toLowerCase();
+  const stage = (["sensing", "agronomy", "device", "acceptance"].includes(stageRaw) ? stageRaw : "agronomy") as OperationSkillTraceStageV2;
+  const status = String(item?.status ?? item?.result_status ?? item?.final_status ?? "").trim() || null;
+  const rawCodes = item?.explanation_codes ?? item?.explain_codes ?? item?.reason_codes ?? [];
+  const explanationCodes = Array.isArray(rawCodes)
+    ? rawCodes.map((code: unknown) => String(code ?? "").trim()).filter(Boolean)
+    : [];
+  const startedTs = Number(item?.started_ts_ms ?? item?.started_at_ts_ms ?? item?.started_at ?? 0);
+  const finishedTs = Number(item?.finished_ts_ms ?? item?.finished_at_ts_ms ?? item?.finished_at ?? 0);
+  return {
+    stage,
+    skill_id: item?.skill_id ? String(item.skill_id) : null,
+    status,
+    explanation_codes: explanationCodes,
+    run_id: item?.run_id ? String(item.run_id) : null,
+    started_ts_ms: Number.isFinite(startedTs) && startedTs > 0 ? startedTs : null,
+    finished_ts_ms: Number.isFinite(finishedTs) && finishedTs > 0 ? finishedTs : null,
+  };
+}
+
+function normalizeSkillTrace(trace: any, legacy: OperationSkillTraceV1 | null | undefined): OperationSkillTraceItemV2[] {
+  if (Array.isArray(trace) && trace.length > 0) return trace.map((item) => normalizeSkillTraceItem(item));
+  if (!legacy) return [];
+  const legacyRows: Array<{ stage: OperationSkillTraceStageV2; entry: OperationSkillTraceEntryV1 | null | undefined }> = [
+    { stage: "sensing", entry: legacy.crop_skill },
+    { stage: "agronomy", entry: legacy.agronomy_skill },
+    { stage: "device", entry: legacy.device_skill },
+    { stage: "acceptance", entry: legacy.acceptance_skill },
+  ];
+  return legacyRows.map(({ stage, entry }) => normalizeSkillTraceItem({
+    stage,
+    skill_id: entry?.skill_id ?? null,
+    status: entry?.result_status ?? null,
+    run_id: entry?.run_id ?? null,
+    explanation_codes: entry?.error_code ? [entry.error_code] : [],
+  }));
+}
+
 export type OperationEvidenceExportResponse = {
   has_bundle: boolean;
   latest_job_id?: string | null;
@@ -170,7 +221,12 @@ export async function fetchOperationDetail(operationPlanId: string): Promise<Ope
   const id = String(operationPlanId ?? "").trim();
   if (!id) return null;
   const res = await apiRequest<{ ok?: boolean; item?: OperationDetailResponse; operation?: OperationDetailResponse }>(`/api/v1/operations/${encodeURIComponent(id)}/detail`);
-  return res?.operation ?? res?.item ?? null;
+  const detail = res?.operation ?? res?.item ?? null;
+  if (!detail) return null;
+  return {
+    ...detail,
+    skill_trace: normalizeSkillTrace((detail as any)?.skill_trace, (detail as any)?.legacy_skill_trace ?? null),
+  };
 }
 
 export type OperationHandoffItem = {
