@@ -1812,8 +1812,39 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
 
+    const stableSource = toText((state as any)?.source)
+      ?? toText(operationPayload?.source)
+      ?? toText((plan as any)?.record_json?.payload?.source)
+      ?? toText((rec as any)?.record_json?.payload?.source)
+      ?? toText(recommendedNextAction?.source)
+      ?? "UNKNOWN";
+    const stableSkillTrace = resolvedSkillTrace ?? {
+      crop_skill: null,
+      agronomy_skill: null,
+      device_skill: null,
+      acceptance_skill: null,
+    };
+    const stableLegacySkillTrace = resolvedLegacySkillTrace ?? {};
+    const stableFinalStatus = finalStatus ?? "PENDING";
+    const stableExplainSystem = {
+      rule_id: agronomyRuleId ?? null,
+      rule_version: agronomyRuleVersion ?? null,
+      crop_stage: agronomyCropStage ?? null,
+      reason_codes: Array.isArray(agronomyReasonCodes) ? agronomyReasonCodes : [],
+    };
+    const stableExplainHuman = explainHuman ?? {
+      reason: "暂无解释",
+      expectation: "暂无解释",
+      risk: "暂无解释",
+    };
+
     return reply.send({
       ok: true,
+      source: stableSource,
+      skill_trace: stableSkillTrace,
+      // Deprecated: keep for compatibility with older frontend versions.
+      legacy_skill_trace: stableLegacySkillTrace,
+      final_status: stableFinalStatus,
       operation: {
         operation_plan_id: operationPlanId,
         recommendation_id: toText(state.recommendation_id),
@@ -1822,11 +1853,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         approval_id: toText(state.approval_id ?? state.approval_decision_id ?? state.approval_request_id),
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
-        skill_trace: resolvedSkillTrace,
+        source: stableSource,
+        skill_trace: stableSkillTrace,
         // Deprecated: keep for compatibility with older frontend versions.
-        legacy_skill_trace: resolvedLegacySkillTrace,
-        final_status: finalStatus,
-        status_label: statusLabel(finalStatus),
+        legacy_skill_trace: stableLegacySkillTrace,
+        final_status: stableFinalStatus,
+        status_label: statusLabel(stableFinalStatus),
         invalid_reason: invalidReason,
         executor_device_id: task ? executorDeviceId : null,
         recommended_device_id: recommendedDeviceId,
@@ -1908,13 +1940,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         customer_view: customerView
       },
       explain: {
-        system: {
-          rule_id: agronomyRuleId,
-          rule_version: agronomyRuleVersion,
-          crop_stage: agronomyCropStage,
-          reason_codes: agronomyReasonCodes,
-        },
-        human: explainHuman,
+        system: stableExplainSystem,
+        human: stableExplainHuman,
       },
       value_profile: valueProfile,
       value_attribution_v1: valueAttributionV1,
