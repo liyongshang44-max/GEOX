@@ -342,7 +342,7 @@ export async function querySkillRegistryReadV1(
 
 function makeBindingOverrideKey(
   scope: TenantTriple,
-  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "skill_id">
+  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "category" | "skill_id">
 ): string {
   return [
     scope.tenant_id,
@@ -350,6 +350,7 @@ function makeBindingOverrideKey(
     scope.group_id,
     item.scope_type ?? "",
     item.bind_target ?? "",
+    item.category ?? "",
     item.skill_id,
   ].join("|");
 }
@@ -376,7 +377,6 @@ export async function querySkillBindingProjectionV1(
   const mapped: SkillBindingProjectionItem[] = (rows.rows ?? []).map((row: any) => {
     const record = parseRecordJson(row.record_json) ?? row.record_json ?? {};
     const payload = record?.payload ?? {};
-    const effective = typeof payload.effective === "boolean" ? payload.effective : true;
     return {
       fact_id: str(row.fact_id),
       occurred_at: toIsoTimestamp(row.occurred_at),
@@ -393,8 +393,8 @@ export async function querySkillBindingProjectionV1(
       priority: Number.isFinite(Number(payload.priority)) ? Number(payload.priority) : 0,
       enabled: ["ACTIVE", "ENABLED"].includes(upper(payload.status)),
       config_patch: (payload.config_patch && typeof payload.config_patch === "object" && !Array.isArray(payload.config_patch)) ? payload.config_patch : {},
-      effective,
-      overridden_by: str(payload.overridden_by) || null,
+      effective: false,
+      overridden_by: null,
     };
   }).filter((item) => item.skill_id && item.version);
 
@@ -430,12 +430,17 @@ export async function querySkillBindingProjectionV1(
       if (t !== 0) return t;
       return a.fact_id.localeCompare(b.fact_id);
     });
-    const winner = [...timeline].reverse().find((x) => x.effective) ?? null;
+    // P1 规则：
+    // 1) 仅在同一覆盖链历史（按 classification/category + skill_id + scope）内计算 effective；
+    // 2) 不同 skill_id 的覆盖链彼此独立，可并存生效；
+    // 3) 不做同类互斥裁决。
+    const winner = timeline[timeline.length - 1] ?? null;
     if (winner) items_effective.push({ ...winner, effective: true, overridden_by: null });
 
     for (const item of timeline) {
-      const overriddenBy = item.overridden_by ?? ((winner && winner.fact_id !== item.fact_id) ? winner.fact_id : null);
-      items_history.push({ ...item, effective: !!winner && winner.fact_id === item.fact_id, overridden_by: overriddenBy });
+      const isEffective = !!winner && winner.fact_id === item.fact_id;
+      const overriddenBy = isEffective ? null : winner?.fact_id ?? null;
+      items_history.push({ ...item, effective: isEffective, overridden_by: overriddenBy });
       if (overriddenBy) overrides.push({ fact_id: item.fact_id, overridden_by: overriddenBy, key });
     }
   }
