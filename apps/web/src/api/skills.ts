@@ -65,6 +65,27 @@ export type SkillBindingItem = {
   last_run?: SkillRunSummary | null;
 };
 
+export type SkillBindingViewItem = {
+  skill_id?: string | null;
+  version?: string | null;
+  classification?: string | null;
+  scope_type?: string | null;
+  bind_target?: string | null;
+  priority?: number | null;
+  enabled?: boolean | null;
+  config_patch?: unknown;
+  fact_id?: string | null;
+  occurred_at?: number | string | null;
+  effective?: boolean | null;
+  overridden_by?: string | null;
+};
+
+export type SkillBindingViews = {
+  items_effective: SkillBindingViewItem[];
+  items_history: SkillBindingViewItem[];
+  overrides: SkillBindingViewItem[];
+};
+
 export type SkillRunSummary = {
   run_id: string;
   skill_id: string;
@@ -228,6 +249,49 @@ export async function listSkillBindings(input?: {
     return items.map((item) => normalizeSkillBindingItem(item));
   } catch {
     return [];
+  }
+}
+
+function normalizeSkillBindingViewItem(item: any): SkillBindingViewItem {
+  return {
+    skill_id: item?.skill_id ?? null,
+    version: item?.version ?? null,
+    classification: item?.classification ?? item?.status ?? null,
+    scope_type: item?.scope_type ?? item?.scope ?? null,
+    bind_target: item?.bind_target ?? item?.target_id ?? item?.crop_code ?? null,
+    priority: item?.priority ?? null,
+    enabled: typeof item?.enabled === "boolean" ? item.enabled : null,
+    config_patch: item?.config_patch ?? null,
+    fact_id: item?.fact_id ?? item?.binding_id ?? null,
+    occurred_at: item?.occurred_at ?? item?.updated_ts_ms ?? null,
+    effective: typeof item?.effective === "boolean" ? item.effective : null,
+    overridden_by: item?.overridden_by ?? null,
+  };
+}
+
+export async function listSkillBindingsViews(input?: {
+  skill_id?: string;
+  scope?: SkillBindingScope;
+  status?: SkillRuntimeStatus;
+  target_id?: string;
+  limit?: number;
+}): Promise<SkillBindingViews> {
+  try {
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/bindings", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+    if (Array.isArray(res)) {
+      return {
+        items_effective: res.map((item) => normalizeSkillBindingViewItem(item)),
+        items_history: [],
+        overrides: [],
+      };
+    }
+    return {
+      items_effective: normalizeList<any>(res?.items_effective).map((item) => normalizeSkillBindingViewItem(item)),
+      items_history: normalizeList<any>(res?.items_history).map((item) => normalizeSkillBindingViewItem(item)),
+      overrides: normalizeList<any>(res?.overrides).map((item) => normalizeSkillBindingViewItem(item)),
+    };
+  } catch {
+    return { items_effective: [], items_history: [], overrides: [] };
   }
 }
 

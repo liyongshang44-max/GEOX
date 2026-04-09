@@ -1,6 +1,6 @@
 import React from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { listSkillBindings, type SkillBindingItem } from "../../../api/skills";
+import { useSearchParams } from "react-router-dom";
+import { listSkillBindingsViews, type SkillBindingViewItem, type SkillBindingViews } from "../../../api/skills";
 import ErrorState from "../../../components/common/ErrorState";
 
 function fmtTs(ts?: number | null): string {
@@ -12,16 +12,20 @@ function fmtTs(ts?: number | null): string {
 export default function SkillBindingsPage(): React.ReactElement {
   const [search] = useSearchParams();
   const skillId = search.get("skill_id") ?? "";
-  const [items, setItems] = React.useState<SkillBindingItem[]>([]);
+  const [views, setViews] = React.useState<SkillBindingViews>({
+    items_effective: [],
+    items_history: [],
+    overrides: [],
+  });
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let mounted = true;
     setLoading(true);
-    void listSkillBindings({ skill_id: skillId || undefined, limit: 100 }).then((res) => {
+    void listSkillBindingsViews({ skill_id: skillId || undefined, limit: 100 }).then((res) => {
       if (!mounted) return;
-      setItems(res);
+      setViews(res);
       setError(null);
     }).catch((e: any) => {
       if (mounted) setError(e?.message ?? "读取失败");
@@ -32,6 +36,33 @@ export default function SkillBindingsPage(): React.ReactElement {
       mounted = false;
     };
   }, [skillId]);
+
+  const renderRows = React.useCallback((items: SkillBindingViewItem[]) => (
+    <div className="list modernList">
+      {items.map((item, idx) => (
+        <div key={`${item.fact_id ?? "fact"}-${idx}`} className="infoCard">
+          <div className="jobTitleRow">
+            <div>
+              <div className="title">{item.skill_id || "-"}</div>
+              <div className="metaText">fact_id: {item.fact_id || "-"}</div>
+            </div>
+            <div className={`pill tone-${item.enabled ? "ok" : "warn"}`}>{item.enabled == null ? "-" : (item.enabled ? "ENABLED" : "DISABLED")}</div>
+          </div>
+          <div className="meta wrapMeta">
+            <span>version：{item.version || "-"}</span>
+            <span>classification：{item.classification || "-"}</span>
+            <span>scope_type：{item.scope_type || "-"}</span>
+            <span>bind_target：{item.bind_target || "-"}</span>
+            <span>priority：{item.priority ?? "-"}</span>
+            <span>config_patch：{item.config_patch == null ? "-" : JSON.stringify(item.config_patch)}</span>
+            <span>occurred_at：{fmtTs(typeof item.occurred_at === "number" ? item.occurred_at : Number(item.occurred_at ?? 0))}</span>
+            <span>effective：{item.effective == null ? "-" : (item.effective ? "true" : "false")}</span>
+            <span>overridden_by：{item.overridden_by || "-"}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  ), []);
 
   return (
     <div className="consolePage">
@@ -48,40 +79,20 @@ export default function SkillBindingsPage(): React.ReactElement {
       <section className="card sectionBlock">
         <div className="sectionHeader">
           <div>
-            <div className="sectionTitle">绑定清单 {skillId ? `· ${skillId}` : ""}</div>
-            <div className="sectionDesc">展示标准状态（ACTIVE/DISABLED）、版本、作用域、目标对象、最近运行状态。</div>
+            <div className="sectionTitle">绑定三视图 {skillId ? `· ${skillId}` : ""}</div>
+            <div className="sectionDesc">只读展示当前生效列表、历史列表、override 覆盖链，不提供编辑/删除入口。</div>
           </div>
         </div>
 
         {loading ? <div className="emptyState">加载中...</div> : null}
-        {!loading && !items.length ? <div className="emptyState">暂无绑定数据。</div> : null}
+        {!loading && !views.items_effective.length && !views.items_history.length && !views.overrides.length ? <div className="emptyState">暂无绑定数据。</div> : null}
 
-        <div className="list modernList">
-          {items.map((item) => (
-            <div key={item.binding_id} className="infoCard">
-              <div className="jobTitleRow">
-                <div>
-                  <div className="title">{item.skill_id}</div>
-                  <div className="metaText">{item.binding_id}</div>
-                </div>
-                <div className={`pill tone-${String(item.status).toUpperCase() === "ACTIVE" ? "ok" : "warn"}`}>{item.status}</div>
-              </div>
-              <div className="meta wrapMeta">
-                <span>版本：{item.version}</span>
-                <span>范围：{item.scope}</span>
-                <span>目标：{item.target_id || item.crop_code || "-"}</span>
-                <span>优先级：{item.priority ?? "-"}</span>
-                <span>默认绑定：{item.is_default ? "是" : "否"}</span>
-                <span>最近运行：{item.last_run?.status || "-"}</span>
-                <span>更新时间：{fmtTs(item.updated_ts_ms)}</span>
-              </div>
-              <div className="inlineActions">
-                <Link className="btn" to="/skills/registry">返回注册中心</Link>
-                <Link className="btn" to={item.last_run?.run_id ? `/skills/runs/${encodeURIComponent(item.last_run.run_id)}` : "/skills/runs"}>查看运行</Link>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="sectionHeader"><div><div className="sectionTitle">1. 当前生效列表（items_effective）</div></div></div>
+        {!loading && !views.items_effective.length ? <div className="emptyState">暂无当前生效数据。</div> : renderRows(views.items_effective)}
+        <div className="sectionHeader"><div><div className="sectionTitle">2. 历史列表（items_history）</div></div></div>
+        {!loading && !views.items_history.length ? <div className="emptyState">暂无历史数据。</div> : renderRows(views.items_history)}
+        <div className="sectionHeader"><div><div className="sectionTitle">3. override 列表 / 覆盖链（overrides）</div></div></div>
+        {!loading && !views.overrides.length ? <div className="emptyState">暂无 override 数据。</div> : renderRows(views.overrides)}
       </section>
     </div>
   );
