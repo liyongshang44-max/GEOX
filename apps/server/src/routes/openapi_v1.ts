@@ -34,10 +34,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       schemas: {
         DeviceRegistrationRequest: {
           type: "object",
-          required: ["device_id"],
+          required: ["device_id", "device_mode"],
           properties: {
             device_id: { type: "string" },
-            display_name: { type: "string" }
+            display_name: { type: "string" },
+            device_mode: { type: "string", enum: ["real", "simulator"], description: "Device onboarding mode contract." }
           }
         },
         DeviceCredentialIssueResponse: {
