@@ -34,11 +34,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       schemas: {
         DeviceRegistrationRequest: {
           type: "object",
-          required: ["device_id", "device_mode"],
+          required: ["device_id", "device_mode", "device_template"],
           properties: {
             device_id: { type: "string" },
             display_name: { type: "string" },
-            device_mode: { type: "string", enum: ["real", "simulator"], description: "Device onboarding mode contract." }
+            device_mode: { type: "string", enum: ["real", "simulator"], description: "Device onboarding mode contract." },
+            device_template: { type: "string", description: "Unified device template field (preferred)." },
+            template_code: { type: "string", description: "Legacy alias of device_template; kept for compatibility." }
           }
         },
         DeviceCredentialIssueResponse: {

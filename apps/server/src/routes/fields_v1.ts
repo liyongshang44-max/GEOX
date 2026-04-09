@@ -16,6 +16,7 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope au
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
+import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1";
 import { reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
@@ -64,6 +65,34 @@ function hasRealDeviceMode(input: any): boolean { // Detect any caller intent to
     if (String((dev as any).device_type ?? "").trim().toLowerCase() === "real") return true; // Defensive type misuse.
   }
   return false; // No real mode found.
+}
+
+async function emitDemoBootstrapTelemetry(pool: Pool, tenant_id: string, device_id: string): Promise<void> {
+  const now = Date.now();
+  await ingestTelemetryV1(
+    pool,
+    {
+      tenant_id,
+      device_id,
+      metric: "sim_runner_alive",
+      value: 1,
+      unit: "unitless",
+      ts_ms: now - 1000,
+    },
+    { source: "dev_lab_create_demo_field_v1", quality_flags: ["OK"], confidence: 1 }
+  );
+  await ingestTelemetryV1(
+    pool,
+    {
+      tenant_id,
+      device_id,
+      metric: "demo_bootstrap_signal",
+      value: 1,
+      unit: "unitless",
+      ts_ms: now,
+    },
+    { source: "dev_lab_create_demo_field_v1", quality_flags: ["OK"], confidence: 1 }
+  );
 }
 
 function normalizeGeoJsonText(v: any): string | null { // Helper: validate and normalize GeoJSON input.
@@ -460,6 +489,30 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }
 
       await clientConn.query("COMMIT");
+      const simulator_bootstrap: Array<{ device_id: string; simulator_started: boolean; telemetry_seeded: boolean; error?: string }> = [];
+      const authHeader = String((req.headers as any)?.authorization ?? "");
+      const internalBaseUrl = process.env.GEOX_INTERNAL_BASE_URL || process.env.INTERNAL_BASE_URL || "http://127.0.0.1:3000";
+      for (const row of deviceRows) {
+        let simulator_started = false;
+        let telemetry_seeded = false;
+        let error: string | undefined;
+        try {
+          const started = await fetch(`${internalBaseUrl}/api/v1/devices/${encodeURIComponent(row.device_id)}/simulator/start`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: authHeader,
+            },
+            body: JSON.stringify({ interval_ms: 3000 }),
+          });
+          simulator_started = started.ok;
+          await emitDemoBootstrapTelemetry(pool, auth.tenant_id, row.device_id);
+          telemetry_seeded = true;
+        } catch (e: any) {
+          error = String(e?.message ?? e);
+        }
+        simulator_bootstrap.push({ device_id: row.device_id, simulator_started, telemetry_seeded, ...(error ? { error } : {}) });
+      }
       return reply.send({
         ok: true,
         field_id,
@@ -472,6 +525,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
           template_type: row.key,
           device_mode: "simulator",
         })),
+        simulator_bootstrap,
       });
     } catch (e: any) {
       await clientConn.query("ROLLBACK");

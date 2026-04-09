@@ -284,49 +284,24 @@ export type SimulatorRunnerStatusResponseV1 = {
 };
 
 export async function startSimulatorRunner(token: string, body: { device_id: string; interval_ms?: number }): Promise<SimulatorRunnerStatusResponseV1> {
-  try {
-    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/start`, {
-      method: "POST",
-      headers: authHeaders(token),
-      body: JSON.stringify({ interval_ms: body.interval_ms }),
-    });
-  } catch (e: unknown) {
-    if (!isNotFoundApiError(e)) throw e;
-    return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/start`, {
-      method: "POST",
-      headers: authHeaders(token),
-      body: JSON.stringify(body),
-    });
-  }
+  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/start`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ interval_ms: body.interval_ms }),
+  });
 }
 
 export async function stopSimulatorRunner(token: string, body: { device_id: string }): Promise<SimulatorRunnerStatusResponseV1> {
-  try {
-    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/stop`, {
-      method: "POST",
-      headers: authHeaders(token),
-    });
-  } catch (e: unknown) {
-    if (!isNotFoundApiError(e)) throw e;
-    return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/stop`, {
-      method: "POST",
-      headers: authHeaders(token),
-      body: JSON.stringify(body),
-    });
-  }
+  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/stop`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
 }
 
 export async function fetchSimulatorRunnerStatus(token: string, device_id: string): Promise<SimulatorRunnerStatusResponseV1> {
-  try {
-    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`, {
-      headers: authHeaders(token),
-    });
-  } catch (e: unknown) {
-    if (!isNotFoundApiError(e)) throw e;
-    return requestJson<SimulatorRunnerStatusResponseV1>(withQuery(`/api/v1/simulator-runner/status`, { device_id }), {
-      headers: authHeaders(token),
-    });
-  }
+  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`, {
+    headers: authHeaders(token),
+  });
 }
 
 export async function fetchJudgeProblemStates(limit = 50): Promise<any> {

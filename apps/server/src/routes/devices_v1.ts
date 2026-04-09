@@ -99,9 +99,12 @@ function normalizeCapabilities(input: any): string[] | null {
 }
 
 function parseDeviceTemplateCodeOrReply(body: any, reply: any): string | null {
-  const template_code = typeof body?.template_code === "string" ? body.template_code.trim() : "";
+  const rawTemplate = typeof body?.device_template === "string"
+    ? body.device_template
+    : body?.template_code;
+  const template_code = typeof rawTemplate === "string" ? rawTemplate.trim() : "";
   if (!template_code) {
-    badRequest(reply, "MISSING_OR_INVALID:template_code");
+    badRequest(reply, "MISSING_OR_INVALID:device_template");
     return null;
   }
   try {
@@ -229,7 +232,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       clientConn.release(); // Release back to pool.
     } // End tx.
 
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, template_code, fact_id }); // Return success.
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template: template_code, template_code, fact_id }); // Return success.
   }); // End register device route.
 
   app.post("/api/devices/:device_id/credentials", async (req, reply) => { // Issue a new credential for a registered device.
@@ -509,7 +512,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       allow_write: true,
     });
 
-    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, template_code, fact_id, skill_bindings: skillBindings }); // Response.
+    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, device_template: template_code, template_code, fact_id, skill_bindings: skillBindings }); // Response.
   }); // End /api/v1 register.
 
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
@@ -1092,6 +1095,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       device_id,
       display_name,
       device_mode,
+      device_template: template_code,
       template_code,
       credential_id,
       credential_secret: secret,
@@ -1203,6 +1207,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       device_id,
       display_name,
       device_mode,
+      device_template: template_code,
       template_code,
       credential_id,
       credential_secret: secret,
