@@ -89,6 +89,56 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               items: { type: "string", enum: ["INAPP", "WEBHOOK", "EMAIL", "SMS", "WECHAT", "DINGTALK"] }
             }
           }
+        },
+        DeviceSimulatorStartRequest: {
+          type: "object",
+          description: "Start simulator runner for a device. profile_code is reserved for profile selection and currently optional.",
+          properties: {
+            interval_ms: {
+              type: "integer",
+              minimum: 1000,
+              maximum: 60000,
+              default: 5000,
+              description: "Simulation tick interval in milliseconds. Server clamps into [1000, 60000]."
+            },
+            profile_code: {
+              type: "string",
+              description: "Optional simulator profile code (reserved for compatibility / rollout)."
+            }
+          }
+        },
+        DeviceSimulatorLegacyRequest: {
+          type: "object",
+          required: ["device_id"],
+          properties: {
+            device_id: { type: "string" },
+            interval_ms: {
+              type: "integer",
+              minimum: 1000,
+              maximum: 60000,
+              default: 5000
+            },
+            profile_code: { type: "string" }
+          }
+        },
+        DeviceSimulatorStatusResponse: {
+          type: "object",
+          required: ["ok", "tenant_id", "device_id", "key", "running"],
+          properties: {
+            ok: { type: "boolean" },
+            tenant_id: { type: "string" },
+            device_id: { type: "string" },
+            key: { type: "string" },
+            running: { type: "boolean" },
+            already_running: { type: "boolean" },
+            already_stopped: { type: "boolean" },
+            started_ts_ms: { type: "integer", format: "int64" },
+            interval_ms: { type: "integer" },
+            last_tick_ts_ms: { type: "integer", format: "int64", nullable: true },
+            seq: { type: "integer" },
+            deprecated: { type: "boolean" },
+            replacement: { type: "string" }
+          }
         }
       }
     },
@@ -245,6 +295,156 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           ],
           responses: {
             "200": { description: "Device console returned successfully" }
+          }
+        }
+      },
+      "/api/v1/devices/{id}/simulator/start": {
+        post: {
+          tags: ["devices"],
+          summary: "Start simulator for a specific device",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Target device id" }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/DeviceSimulatorStartRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Simulator started (or already running)",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            },
+            "400": { description: "Missing or invalid device id" },
+            "404": { description: "Device not found under current tenant" }
+          }
+        }
+      },
+      "/api/v1/devices/{id}/simulator/stop": {
+        post: {
+          tags: ["devices"],
+          summary: "Stop simulator for a specific device",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Target device id" }
+          ],
+          responses: {
+            "200": {
+              description: "Simulator stopped (or already stopped)",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            },
+            "400": { description: "Missing or invalid device id" },
+            "404": { description: "Device not found under current tenant" }
+          }
+        }
+      },
+      "/api/v1/devices/{id}/simulator/status": {
+        get: {
+          tags: ["devices"],
+          summary: "Read simulator status for a specific device",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string" }, description: "Target device id" }
+          ],
+          responses: {
+            "200": {
+              description: "Simulator status returned",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            },
+            "400": { description: "Missing or invalid device id" },
+            "404": { description: "Device not found under current tenant" }
+          }
+        }
+      },
+      "/api/v1/simulator-runner/start": {
+        post: {
+          tags: ["devices"],
+          summary: "[Deprecated] Start simulator via legacy runner endpoint",
+          deprecated: true,
+          description: "Deprecated. Replacement: POST /api/v1/devices/{id}/simulator/start",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/DeviceSimulatorLegacyRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Legacy response with deprecated=true and replacement path",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/simulator-runner/stop": {
+        post: {
+          tags: ["devices"],
+          summary: "[Deprecated] Stop simulator via legacy runner endpoint",
+          deprecated: true,
+          description: "Deprecated. Replacement: POST /api/v1/devices/{id}/simulator/stop",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["device_id"],
+                  properties: {
+                    device_id: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Legacy response with deprecated=true and replacement path",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/simulator-runner/status": {
+        get: {
+          tags: ["devices"],
+          summary: "[Deprecated] Read simulator status via legacy runner endpoint",
+          deprecated: true,
+          description: "Deprecated. Replacement: GET /api/v1/devices/{id}/simulator/status",
+          parameters: [
+            { name: "device_id", in: "query", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Legacy response with deprecated=true and replacement path",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/DeviceSimulatorStatusResponse" }
+                }
+              }
+            }
           }
         }
       },
