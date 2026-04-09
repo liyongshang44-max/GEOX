@@ -5,6 +5,24 @@ export type SkillBindingScope = "GLOBAL" | "TENANT" | "FIELD" | "DEVICE" | "PROG
 export type SkillRunStatus = "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "SKIPPED" | "TIMEOUT" | string;
 export type SkillType = "sensing" | "agronomy" | "device" | "acceptance";
 
+export function resolveSkillClassification(input: any): string {
+  const candidates = [
+    input?.classification,
+    input?.category,
+    input?.skill_type,
+    input?.stage,
+    input?.trigger_stage,
+    input?.type,
+    input?.legacy_classification,
+    input?.legacy_stage,
+  ];
+  for (const value of candidates) {
+    const normalized = String(value ?? "").trim().toLowerCase();
+    if (normalized) return normalized;
+  }
+  return "unknown";
+}
+
 const RUNTIME_STATUS_COMPAT: Record<string, SkillRuntimeStatus> = {
   DRAFT: "DRAFT",
   ACTIVE: "ACTIVE",
@@ -128,7 +146,8 @@ function normalizeList<T>(res: any): T[] {
 }
 
 function normalizeSkillRegistryItem(item: SkillRegistryItem): SkillRegistryItem {
-  const mappedSkillType = (item.skill_type ?? item.category ?? null) as SkillType | null;
+  const classification = resolveSkillClassification(item);
+  const mappedSkillType = (classification === "unknown" ? null : classification) as SkillType | null;
   return {
     ...item,
     skill_type: mappedSkillType,
@@ -256,7 +275,7 @@ function normalizeSkillBindingViewItem(item: any): SkillBindingViewItem {
   return {
     skill_id: item?.skill_id ?? null,
     version: item?.version ?? null,
-    classification: item?.classification ?? item?.status ?? null,
+    classification: resolveSkillClassification(item),
     scope_type: item?.scope_type ?? item?.scope ?? null,
     bind_target: item?.bind_target ?? item?.target_id ?? item?.crop_code ?? null,
     priority: item?.priority ?? null,
