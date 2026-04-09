@@ -540,6 +540,7 @@ function isNotFoundApiError(err: unknown): boolean {
 export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string; device_mode?: "real" | "simulator"; template_code?: string; device_template?: string }): Promise<any> {
   const payload = {
     ...body,
+    device_template: body.device_template ?? body.template_code,
     template_code: body.template_code ?? body.device_template,
     device_mode: body.device_mode ?? "simulator",
   };
@@ -570,6 +571,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
       body: JSON.stringify({
         display_name: body.display_name,
         device_mode: payload.device_mode,
+        device_template: payload.device_template,
         template_code: payload.template_code,
       }),
     });
@@ -582,6 +584,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
         device_id: body.device_id,
         display_name: body.display_name,
         device_mode: payload.device_mode,
+        device_template: payload.device_template,
         template_code: payload.template_code,
       }),
     });

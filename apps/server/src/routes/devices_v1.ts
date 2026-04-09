@@ -98,20 +98,20 @@ function normalizeCapabilities(input: any): string[] | null {
   return normalized;
 }
 
-function parseDeviceTemplateCodeOrReply(body: any, reply: any): string | null {
+function parseDeviceTemplateOrReply(body: any, reply: any): string | null {
   const rawTemplate = typeof body?.device_template === "string"
     ? body.device_template
     : body?.template_code;
-  const template_code = typeof rawTemplate === "string" ? rawTemplate.trim() : "";
-  if (!template_code) {
+  const device_template = typeof rawTemplate === "string" ? rawTemplate.trim() : "";
+  if (!device_template) {
     badRequest(reply, "MISSING_OR_INVALID:device_template");
     return null;
   }
   try {
-    getDeviceTemplateOrThrow(template_code);
-    return template_code;
+    getDeviceTemplateOrThrow(device_template);
+    return device_template;
   } catch {
-    badRequest(reply, `UNKNOWN_TEMPLATE_CODE:${template_code}`);
+    badRequest(reply, `UNKNOWN_TEMPLATE_CODE:${device_template}`);
     return null;
   }
 }
@@ -170,8 +170,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
     const device_mode = normalizeDeviceMode(body.device_mode);
     if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = isNonEmptyString(body.display_name) ? String(body.display_name).trim().slice(0, 256) : null; // Optional display name.
 
@@ -190,6 +190,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       payload: { // Payload.
         display_name, // Optional human name.
         device_mode,
+        device_template,
         created_ts_ms, // Creation timestamp in ms.
         actor_id: auth.actor_id, // Actor for audit.
         token_id: auth.token_id, // Token id for audit.
@@ -220,7 +221,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -232,7 +233,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       clientConn.release(); // Release back to pool.
     } // End tx.
 
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template: template_code, template_code, fact_id }); // Return success.
+    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template, template_code: device_template, fact_id }); // Return success.
   }); // End register device route.
 
   app.post("/api/devices/:device_id/credentials", async (req, reply) => { // Issue a new credential for a registered device.
@@ -451,8 +452,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : ""; // Optional name.
     const device_mode = normalizeDeviceMode(body.device_mode);
     if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const now_ms = Date.now(); // Server time.
     const occurred_iso = nowIso(now_ms); // occurred_at.
@@ -463,7 +464,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const record = { // Append-only fact record.
       type: "device_registered_v1", // Fact type.
       entity: { tenant_id: auth.tenant_id, device_id }, // Entity.
-      payload: { display_name, device_mode, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
     }; // End record.
     await ensureDeviceModeRuntime(pool);
 
@@ -490,7 +491,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -512,7 +513,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       allow_write: true,
     });
 
-    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, device_template: template_code, template_code, fact_id, skill_bindings: skillBindings }); // Response.
+    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, device_template, template_code: device_template, fact_id, skill_bindings: skillBindings }); // Response.
   }); // End /api/v1 register.
 
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
@@ -1012,8 +1013,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
     const device_mode = normalizeDeviceMode(body.device_mode);
     if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : "";
     const requested_credential_id = normalizeId(body.credential_id);
@@ -1029,7 +1030,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const register_record = {
       type: "device_registered_v1",
       entity: { tenant_id: auth.tenant_id, device_id },
-      payload: { display_name, device_mode, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
     };
     await ensureDeviceModeRuntime(pool);
 
@@ -1077,7 +1078,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -1095,8 +1096,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       device_id,
       display_name,
       device_mode,
-      device_template: template_code,
-      template_code,
+      device_template,
+      template_code: device_template,
       credential_id,
       credential_secret: secret,
       credential_hash,
@@ -1124,8 +1125,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
     const device_mode = normalizeDeviceMode(body.device_mode);
     if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const template_code = parseDeviceTemplateCodeOrReply(body, reply);
-    if (!template_code) return;
+    const device_template = parseDeviceTemplateOrReply(body, reply);
+    if (!device_template) return;
 
     const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : "";
     const requested_credential_id = normalizeId(body.credential_id);
@@ -1141,7 +1142,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     const register_record = {
       type: "device_registered_v1",
       entity: { tenant_id: auth.tenant_id, device_id },
-      payload: { display_name, device_mode, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id },
     };
     await ensureDeviceModeRuntime(pool);
 
@@ -1189,7 +1190,7 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
         project_id: auth.project_id,
         group_id: auth.group_id,
         device_id,
-        template_code,
+        template_code: device_template,
         missing_required_mode: "autofill",
       });
 
@@ -1207,8 +1208,8 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       device_id,
       display_name,
       device_mode,
-      device_template: template_code,
-      template_code,
+      device_template,
+      template_code: device_template,
       credential_id,
       credential_secret: secret,
       credential_hash,
