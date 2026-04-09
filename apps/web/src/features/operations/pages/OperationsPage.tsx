@@ -4,18 +4,12 @@ import { useOperationsListQuery } from "../../../features/operations/queries/use
 import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../../../lib/operationLink";
-import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, normalizeOperationFinalStatus, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
 
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
 function normalizeStatus(item: any): string {
-  const status = String(item?.final_status || item?.status || "").toUpperCase();
-  if (status === "INVALID_EXECUTION") return "INVALID_EXECUTION";
-  if (status === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
-  if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(status)) return "SUCCESS";
-  if (["FAILED", "ERROR", "CANCELLED"].includes(status)) return "FAILED";
-  if (["PENDING", "READY", "DISPATCHED", "ACKED", "RUNNING"].includes(status)) return "PENDING";
-  return status || "PENDING";
+  return normalizeOperationFinalStatus(item?.final_status || item?.status);
 }
 
 function groupOf(item: any): GroupKey {

@@ -50,6 +50,8 @@ export function localizeOperationStatus(
     READY: "待执行",
     DISPATCHED: "已下发",
     ACKED: "执行中",
+    RUNNING: "执行中",
+    IN_PROGRESS: "执行中",
     SUCCEEDED: "已完成",
     SUCCESS: "已完成",
     FAILED: "异常",
@@ -63,6 +65,8 @@ export function localizeOperationStatus(
     READY: "Ready",
     DISPATCHED: "Dispatched",
     ACKED: "In Progress",
+    RUNNING: "In Progress",
+    IN_PROGRESS: "In Progress",
     SUCCEEDED: "Completed",
     SUCCESS: "Completed",
     FAILED: "Failed",
@@ -180,6 +184,41 @@ export function mapOperationActionLabel(value?: string | null, locale: UiLocale 
 }
 
 export function mapOperationStatusLabel(value?: string | null, locale: UiLocale = "zh"): string {
+  return localizeOperationStatus(value, locale);
+}
+
+export type NormalizedOperationFinalStatus =
+  | "PENDING"
+  | "RUNNING"
+  | "PENDING_ACCEPTANCE"
+  | "SUCCESS"
+  | "FAILED"
+  | "INVALID_EXECUTION"
+  | "EVIDENCE_MISSING"
+  | "UNKNOWN";
+
+export function normalizeOperationFinalStatus(value?: string | null): NormalizedOperationFinalStatus {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw) return "UNKNOWN";
+  if (raw === "INVALID_EXECUTION") return "INVALID_EXECUTION";
+  if (raw === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
+  if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED", "COMPLETED"].includes(raw)) return "SUCCESS";
+  if (["FAILED", "ERROR", "CANCELLED", "NOT_EXECUTED", "REJECTED"].includes(raw)) return "FAILED";
+  if (["PENDING", "READY", "QUEUED", "CREATED"].includes(raw)) return "PENDING";
+  if (["RUNNING", "EXECUTING", "DISPATCHED", "ACKED", "IN_PROGRESS"].includes(raw)) return "RUNNING";
+  if (["EVIDENCE_MISSING", "MISSING_EVIDENCE", "NO_RECEIPT", "RECEIPT_MISSING"].includes(raw)) return "EVIDENCE_MISSING";
+  return "UNKNOWN";
+}
+
+export function mapOperationFinalStatusLabel(value?: string | null, locale: UiLocale = "zh"): string {
+  const normalized = normalizeOperationFinalStatus(value);
+  if (normalized === "PENDING") return localizeOperationStatus("PENDING", locale);
+  if (normalized === "RUNNING") return localizeOperationStatus("RUNNING", locale);
+  if (normalized === "PENDING_ACCEPTANCE") return localizeOperationStatus("PENDING_ACCEPTANCE", locale);
+  if (normalized === "SUCCESS") return localizeOperationStatus("SUCCESS", locale);
+  if (normalized === "FAILED") return localizeOperationStatus("FAILED", locale);
+  if (normalized === "INVALID_EXECUTION") return localizeOperationStatus("INVALID_EXECUTION", locale);
+  if (normalized === "EVIDENCE_MISSING") return locale === "en" ? "Evidence Missing" : "证据缺失";
   return localizeOperationStatus(value, locale);
 }
 

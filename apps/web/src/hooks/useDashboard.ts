@@ -418,9 +418,9 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             href: toOperationDetailPath(item),
             fieldName: item?.field_name || item?.field_id || "田块",
             operationName: item?.program_name || item?.executor_label || "作业",
-            hasReceipt: Boolean(item?.receipt_fact_id),
-            acceptanceVerdict: String(item?.acceptance_verdict ?? "PENDING").toUpperCase(),
-            isPendingAcceptance: Boolean(item?.is_pending_acceptance ?? (item?.receipt_fact_id && String(item?.acceptance_verdict ?? "PENDING").toUpperCase() !== "PASS")),
+            operation_state_v1: {
+              final_status: item?.operation_state_v1?.final_status ?? item?.final_status ?? item?.status ?? null,
+            },
             card: mapDashboardEvidenceToVm({
               ...item,
               normalized_metrics: normalizeModelMetrics(
