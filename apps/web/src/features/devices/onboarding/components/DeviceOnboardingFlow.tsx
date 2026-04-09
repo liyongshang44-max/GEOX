@@ -11,6 +11,8 @@ import {
 
 type Props = {
   deviceId: string;
+  deviceMode?: "real" | "simulator";
+  deviceTemplate?: string;
 };
 
 function makeTraceId(deviceId: string, stepKey: OnboardingStepKey): string {
@@ -39,7 +41,7 @@ function saveRecords(records: OnboardingRecord[]): void {
   localStorage.setItem(ONBOARDING_TRACE_STORAGE_KEY, JSON.stringify(records));
 }
 
-export default function DeviceOnboardingFlow({ deviceId }: Props): React.ReactElement {
+export default function DeviceOnboardingFlow({ deviceId, deviceMode = "simulator", deviceTemplate = "soil_probe_v1" }: Props): React.ReactElement {
   const [stepState, setStepState] = React.useState<Record<OnboardingStepKey, OnboardingStepRuntime>>(initialRuntime);
   const [nextOutcome, setNextOutcome] = React.useState<Record<OnboardingStepKey, "success" | "failed">>(() => ONBOARDING_STEPS.reduce((acc, step) => {
     acc[step.key] = "success";
@@ -95,6 +97,9 @@ export default function DeviceOnboardingFlow({ deviceId }: Props): React.ReactEl
   return (
     <>
       <SectionCard title="接入步骤（Mock 闭环）">
+        <div className="metaText" style={{ marginBottom: 8 }}>
+          当前接入契约：<code>device_mode={deviceMode}</code> · <code>device_template={deviceTemplate}</code>
+        </div>
         <Stepper
           items={ONBOARDING_STEPS.map((step, idx) => ({
             key: step.key,
