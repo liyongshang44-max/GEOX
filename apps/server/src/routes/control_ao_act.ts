@@ -12,6 +12,7 @@ import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
+import { loadManualOperationByCommandId } from "../domain/controlplane/task_service";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -185,6 +186,29 @@ function buildEffectMetricSnapshot(rows: any[]): EffectMetricSnapshot {
     if (["humidity", "air_humidity"].includes(metric) && out.humidity == null) out.humidity = value;
   }
   return out;
+}
+
+async function postJsonInternal(
+  req: any,
+  authz: string,
+  path: string,
+  body: any
+): Promise<{ ok: boolean; status: number; json: any }> {
+  const proto = String((req.headers as any)?.["x-forwarded-proto"] ?? "http");
+  const localPortRaw = Number((req.socket as any)?.localPort ?? 3000);
+  const localPort = Number.isFinite(localPortRaw) && localPortRaw > 0 ? localPortRaw : 3000;
+  const url = `${proto}://127.0.0.1:${localPort}${path}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: authz,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json().catch(() => null);
+  return { ok: res.ok, status: res.status, json };
 }
 
 function validateKeyedPrimitives(
@@ -977,6 +1001,97 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         idempotent: false,
         expected_evidence_requirements: expectedEvidenceRequirements,
         capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null
+      });
+    } catch (e: any) {
+      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+    }
+  });
+
+  // POST /api/v1/operations/manual
+  // Manual operation bootstrap: operation_plan -> approval -> AO-ACT.
+  app.post("/api/v1/operations/manual", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      if (!auth) return;
+      const body = z.object({
+        tenant_id: z.string().min(1),
+        project_id: z.string().min(1),
+        group_id: z.string().min(1),
+        field_id: z.string().min(1),
+        action_type: z.string().min(1),
+        parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
+        issuer: z.object({
+          kind: z.literal("human"),
+          id: z.string().min(1),
+          namespace: z.string().min(1)
+        }),
+        command_id: z.string().min(1),
+        meta: z.record(z.any()).optional()
+      }).parse(req.body ?? {});
+      const tenant = assertTenantFieldsPresentV0(body, "body");
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+      const command_id = String(body.command_id ?? "").trim();
+      if (!command_id) return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
+      const existing = await loadManualOperationByCommandId(pool, tenant, command_id);
+      if (existing) return reply.send({ ok: true, ...existing, reused: true });
+
+      const operation_id = `op_${randomUUID().replace(/-/g, "")}`;
+      const now = Date.now();
+      const parameterSchemaKeys = Object.entries(body.parameters ?? {}).map(([name, value]) => {
+        if (typeof value === "number") return { name, type: "number" as const };
+        if (typeof value === "boolean") return { name, type: "boolean" as const };
+        return { name, type: "enum" as const, enum: [String(value)] };
+      });
+      if (parameterSchemaKeys.length < 1) return reply.status(400).send({ ok: false, error: "MISSING_PARAMETERS" });
+      const approvalRequest = await postJsonInternal(
+        req,
+        String((req.headers as any).authorization ?? ""),
+        "/api/v1/approvals",
+        {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          field_id: body.field_id,
+          issuer: body.issuer,
+          action_type: String(body.action_type).trim().toUpperCase(),
+          target: { kind: "field", ref: body.field_id },
+          time_window: { start_ts: now, end_ts: now + 60 * 60 * 1000 },
+          parameter_schema: { keys: parameterSchemaKeys },
+          parameters: body.parameters,
+          constraints: {},
+          meta: {
+            ...(body.meta ?? {}),
+            operation_id,
+            command_id
+          }
+        }
+      );
+      if (!approvalRequest.ok || !approvalRequest.json?.ok || !approvalRequest.json?.request_id) {
+        return reply.status(approvalRequest.status || 400).send(approvalRequest.json ?? { ok: false, error: "APPROVAL_REQUEST_CREATE_FAILED" });
+      }
+      const request_id = String(approvalRequest.json.request_id);
+      const approvalDecision = await postJsonInternal(
+        req,
+        String((req.headers as any).authorization ?? ""),
+        `/api/v1/approvals/${encodeURIComponent(request_id)}/decide`,
+        {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          decision: "APPROVE",
+          reason: "manual_operation_auto_approve"
+        }
+      );
+      if (!approvalDecision.ok || !approvalDecision.json?.ok) {
+        return reply.status(approvalDecision.status || 400).send(approvalDecision.json ?? { ok: false, error: "APPROVAL_DECISION_FAILED" });
+      }
+      const operation_plan_id = String(approvalDecision.json.operation_plan_id ?? "").trim();
+      if (!operation_plan_id) return reply.status(500).send({ ok: false, error: "MISSING_OPERATION_PLAN_ID" });
+      return reply.send({
+        ok: true,
+        operation_id,
+        operation_plan_id,
+        command_id
       });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });

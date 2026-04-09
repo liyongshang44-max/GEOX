@@ -771,6 +771,42 @@ async function loadLatestOperationPlanByApprovalRequestId(
   return loadLatestFactByTypeAndKey(pool, "operation_plan_v1", "payload,approval_request_id", approval_request_id, tenant);
 }
 
+export async function loadManualOperationByCommandId(
+  pool: Pool,
+  tenant: TenantTriple,
+  command_id: string
+): Promise<{ operation_id: string; operation_plan_id: string; command_id: string } | null> {
+  const normalizedCommandId = String(command_id ?? "").trim();
+  if (!normalizedCommandId) return null;
+  const sql = `
+    SELECT fact_id, occurred_at, source, (record_json::jsonb) AS record_json
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+      AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+      AND (record_json::jsonb#>>'{payload,project_id}') = $2
+      AND (record_json::jsonb#>>'{payload,group_id}') = $3
+      AND (
+        (record_json::jsonb#>>'{payload,command_id}') = $4
+        OR (record_json::jsonb#>>'{payload,meta,command_id}') = $4
+      )
+    ORDER BY occurred_at DESC, fact_id DESC
+    LIMIT 1
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, normalizedCommandId]);
+  const row: any = res.rows?.[0];
+  if (!row) return null;
+  const record = parseJsonMaybe(row.record_json) ?? row.record_json;
+  const payload = record?.payload ?? {};
+  const operation_plan_id = String(payload.operation_plan_id ?? "").trim();
+  if (!operation_plan_id) return null;
+  const operation_id = String(payload.operation_id ?? operation_plan_id).trim() || operation_plan_id;
+  return {
+    operation_id,
+    operation_plan_id,
+    command_id: normalizedCommandId
+  };
+}
+
 
 async function createOperationPlanForApproval(
   pool: Pool,
@@ -787,6 +823,8 @@ async function createOperationPlanForApproval(
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      operation_id: requestPayload?.meta?.operation_id ?? null,
+      command_id: requestPayload?.meta?.command_id ?? null,
       operation_plan_id,
       recommendation_id: requestPayload?.meta?.recommendation_id ?? null,
       program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
