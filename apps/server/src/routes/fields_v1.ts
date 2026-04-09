@@ -513,6 +513,23 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
         }
         simulator_bootstrap.push({ device_id: row.device_id, simulator_started, telemetry_seeded, ...(error ? { error } : {}) });
       }
+      let read_model_refresh: any = null;
+      try {
+        const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          field_id,
+        });
+        read_model_refresh = {
+          sensing_overview_status: refreshed.sensing_overview.status,
+          fertility_state_status: refreshed.fertility_state.status,
+          sensing_overview_refresh_tracking: refreshed.sensing_overview.refresh_tracking,
+          fertility_state_refresh_tracking: refreshed.fertility_state.refresh_tracking,
+        };
+      } catch (e: any) {
+        read_model_refresh = { error: String(e?.message ?? e) };
+      }
       return reply.send({
         ok: true,
         field_id,
@@ -526,6 +543,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
           device_mode: "simulator",
         })),
         simulator_bootstrap,
+        read_model_refresh,
       });
     } catch (e: any) {
       await clientConn.query("ROLLBACK");
