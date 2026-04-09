@@ -10,6 +10,7 @@ import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRe
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
+const SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT = "/api/v1/skills/bindings/override";
 
 
 type PublicSkillType = "sensing" | "agronomy" | "device" | "acceptance";
@@ -186,7 +187,14 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
 
       return sendSkillsResponse(reply, { ok: true, items });
     } catch (e) {
-      return sendSkillsInternalError(reply, e);
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.status(500).send({
+        ok: false,
+        error: message,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
   });
 
@@ -252,7 +260,14 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         recent_run_summary: summary,
       });
     } catch (e) {
-      return sendSkillsInternalError(reply, e);
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.status(500).send({
+        ok: false,
+        error: message,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
   });
 
@@ -322,7 +337,14 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         })),
       });
     } catch (e) {
-      return sendSkillsInternalError(reply, e);
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.status(500).send({
+        ok: false,
+        error: message,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
   });
 
@@ -488,7 +510,15 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
       const skill_id = String((req.params as any)?.skill_id ?? "").trim();
-      if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID", api_contract_version: SKILLS_API_CONTRACT_VERSION });
+      if (!skill_id) {
+        return reply.code(400).send({
+          ok: false,
+          error: "INVALID_SKILL_ID",
+          deprecated: true,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          api_contract_version: SKILLS_API_CONTRACT_VERSION,
+        });
+      }
 
       await projectSkillRegistryReadV1(pool, tenant);
       const latestQ = await pool.query<SkillRow>(
@@ -500,16 +530,38 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         [tenant.tenant_id, tenant.project_id, tenant.group_id, skill_id],
       );
       const latest = latestQ.rows?.[0];
-      if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND", api_contract_version: SKILLS_API_CONTRACT_VERSION });
+      if (!latest) {
+        return reply.code(404).send({
+          ok: false,
+          error: "SKILL_NOT_FOUND",
+          deprecated: true,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          api_contract_version: SKILLS_API_CONTRACT_VERSION,
+        });
+      }
 
       const payload = latest.payload_json as SkillDefinitionFactPayload;
       const appended = await appendSkillDefinitionFact(pool, {
         ...payload,
         status: "ACTIVE",
       });
-      return sendSkillsResponse(reply, { ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "ACTIVE" });
+      return sendSkillsResponse(reply, {
+        ok: true,
+        fact_id: appended.fact_id,
+        occurred_at: appended.occurred_at,
+        status: "ACTIVE",
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+      });
     } catch (e) {
-      return sendSkillsInternalError(reply, e);
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.status(500).send({
+        ok: false,
+        error: message,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
   });
 
@@ -521,7 +573,15 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
       const skill_id = String((req.params as any)?.skill_id ?? "").trim();
-      if (!skill_id) return reply.code(400).send({ ok: false, error: "INVALID_SKILL_ID", api_contract_version: SKILLS_API_CONTRACT_VERSION });
+      if (!skill_id) {
+        return reply.code(400).send({
+          ok: false,
+          error: "INVALID_SKILL_ID",
+          deprecated: true,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          api_contract_version: SKILLS_API_CONTRACT_VERSION,
+        });
+      }
 
       await projectSkillRegistryReadV1(pool, tenant);
       const latestQ = await pool.query<SkillRow>(
@@ -533,16 +593,38 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         [tenant.tenant_id, tenant.project_id, tenant.group_id, skill_id],
       );
       const latest = latestQ.rows?.[0];
-      if (!latest) return reply.code(404).send({ ok: false, error: "SKILL_NOT_FOUND", api_contract_version: SKILLS_API_CONTRACT_VERSION });
+      if (!latest) {
+        return reply.code(404).send({
+          ok: false,
+          error: "SKILL_NOT_FOUND",
+          deprecated: true,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          api_contract_version: SKILLS_API_CONTRACT_VERSION,
+        });
+      }
 
       const payload = latest.payload_json as SkillDefinitionFactPayload;
       const appended = await appendSkillDefinitionFact(pool, {
         ...payload,
         status: "DISABLED",
       });
-      return sendSkillsResponse(reply, { ok: true, fact_id: appended.fact_id, occurred_at: appended.occurred_at, status: "DISABLED" });
+      return sendSkillsResponse(reply, {
+        ok: true,
+        fact_id: appended.fact_id,
+        occurred_at: appended.occurred_at,
+        status: "DISABLED",
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+      });
     } catch (e) {
-      return sendSkillsInternalError(reply, e);
+      const message = e instanceof Error ? e.message : String(e);
+      return reply.status(500).send({
+        ok: false,
+        error: message,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        api_contract_version: SKILLS_API_CONTRACT_VERSION,
+      });
     }
   });
 }

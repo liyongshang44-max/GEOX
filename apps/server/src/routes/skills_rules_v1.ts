@@ -5,6 +5,11 @@ import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../project
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
+  const deprecatedSwitchHint = {
+    deprecated: true as const,
+    successor_endpoint: "/api/v1/skills/bindings/override",
+  };
+
   app.get("/api/v1/skills/rules", async (req, reply) => {
     const query = (req.query ?? {}) as {
       crop_code?: string;
@@ -104,6 +109,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
         ok: false,
         error: "INVALID_BODY",
         message: "skill_id/version/enabled are required",
+        ...deprecatedSwitchHint,
       });
     }
 
@@ -116,6 +122,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
           ok: false,
           error: "INVALID_SCOPE",
           message: "scope.tenant_id/project_id/group_id are required",
+          ...deprecatedSwitchHint,
         });
       }
       const appended = await appendSkillBindingFact(pool, {
@@ -162,6 +169,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
 
       return reply.send({
         ok: true,
+        ...deprecatedSwitchHint,
         item: latest ? {
           id: String(latest.fact_id),
           skill_id: String(latest.skill_id),
@@ -186,12 +194,14 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
           ok: false,
           error: "INVALID_TRIGGER_STAGE",
           message,
+          ...deprecatedSwitchHint,
         });
       }
       return reply.code(500).send({
         ok: false,
         error: "SKILL_SWITCH_FAILED",
         message,
+        ...deprecatedSwitchHint,
       });
     }
   });
