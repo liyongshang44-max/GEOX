@@ -102,6 +102,15 @@ Server listening on http://0.0.0.0:3000
 
 - **宿主机入口**：`http://127.0.0.1:3001`
 - **容器内调用**：`http://server:3000`（容器间通信保持不变）
+
+十五、OpenAPI 与 Simulator 接口文档（新增）
+
+- OpenAPI JSON 入口：`GET /api/v1/openapi.json`  
+  本地可直接访问：`http://127.0.0.1:3001/api/v1/openapi.json`
+- Device Simulator 新路由文档：`docs/DEVICE_OBSERVATION_AND_SIMULATION_V1.md` 的
+  [6. Device Simulator 路由（V1）](docs/DEVICE_OBSERVATION_AND_SIMULATION_V1.md#device-simulator-v1-routes)
+- 迁移说明：同文档
+  [6.4 从 /api/v1/simulator-runner/* 迁移](docs/DEVICE_OBSERVATION_AND_SIMULATION_V1.md#migration-from-legacy-simulator-runner)
 九、数据库初始化（Groups）
 public.groups 是 group 的唯一事实来源。
 
