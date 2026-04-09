@@ -458,16 +458,6 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       const trigger_stage = String(body.trigger_stage ?? "before_dispatch").trim();
       const bind_target = String(body.bind_target ?? "default").trim();
       const rollout_mode = String(body.rollout_mode ?? "DIRECT").trim().toUpperCase();
-
-      if (Object.prototype.hasOwnProperty.call(body, "effective") || Object.prototype.hasOwnProperty.call(body, "overridden_by")) {
-        return reply.code(400).send({
-          ok: false,
-          error: "INVALID_PAYLOAD",
-          message: "effective/overridden_by are projection-derived fields and must not be provided",
-          api_contract_version: SKILLS_API_CONTRACT_VERSION,
-        });
-      }
-
       if (!skill_id || !version || !category || !bind_target) {
         return reply.code(400).send({
           ok: false,
