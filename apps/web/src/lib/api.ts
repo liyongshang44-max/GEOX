@@ -538,12 +538,16 @@ function isNotFoundApiError(err: unknown): boolean {
   return err.bodyText.includes('"statusCode":404') || err.bodyText.includes('NOT_FOUND') || err.bodyText.includes('Not Found');
 }
 
-export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string; device_mode?: "real" | "simulator" }): Promise<any> {
+export async function registerDeviceOnboarding(token: string, body: { device_id: string; display_name?: string; credential_id?: string; device_mode?: "real" | "simulator"; template_code?: string; device_template?: string }): Promise<any> {
+  const payload = {
+    ...body,
+    template_code: body.template_code ?? body.device_template,
+  };
   try {
     return await requestJson<any>(`/api/v1/devices/onboarding/register`, {
       method: "POST",
       headers: authHeaders(token),
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload),
     });
   } catch (e: unknown) {
     if (!isNotFoundApiError(e)) throw e;
@@ -551,7 +555,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
       return await requestJson<any>(`/api/v1/devices/register`, {
         method: "POST",
         headers: authHeaders(token),
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
     } catch (e2: unknown) {
       if (!isNotFoundApiError(e2)) throw e2;
@@ -562,7 +566,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
     await requestJson<any>(`/api/v1/devices`, {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name, device_mode: body.device_mode }),
+    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name, device_mode: body.device_mode, template_code: payload.template_code }),
   });
 
   const created = await requestJson<any>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/credentials`, {
