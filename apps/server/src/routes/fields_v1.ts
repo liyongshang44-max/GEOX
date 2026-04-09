@@ -14,6 +14,7 @@ import type { Pool } from "pg"; // Postgres pool type.
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
 import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1";
 import { reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
