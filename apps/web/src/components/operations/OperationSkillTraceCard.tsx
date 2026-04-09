@@ -1,23 +1,22 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import type { OperationSkillTraceEntryV1, OperationSkillTraceV1 } from "../../api/operations";
+import type { OperationSkillTraceItemV2, OperationSkillTraceStageV2 } from "../../api/operations";
 import { StatusPill } from "../../shared/ui";
 
 type SkillRow = {
-  key: keyof OperationSkillTraceV1;
+  key: OperationSkillTraceStageV2;
   label: string;
 };
 
 const SKILL_ROWS: SkillRow[] = [
-  { key: "crop_skill", label: "Crop Skill" },
-  { key: "agronomy_skill", label: "Agronomy Skill" },
-  { key: "device_skill", label: "Device Skill" },
-  { key: "acceptance_skill", label: "Acceptance Skill" },
+  { key: "sensing", label: "Sensing Skill" },
+  { key: "agronomy", label: "Agronomy Skill" },
+  { key: "device", label: "Device Skill" },
+  { key: "acceptance", label: "Acceptance Skill" },
 ];
 
-function isMissingSkill(entry: OperationSkillTraceEntryV1 | null | undefined): boolean {
+function isMissingSkill(entry: OperationSkillTraceItemV2 | null | undefined): boolean {
   if (!entry) return true;
-  return !entry.skill_id && !entry.version && !entry.run_id;
+  return !entry.skill_id;
 }
 
 function toStatusTone(value: string): "warning" | "danger" | "success" | "neutral" {
@@ -29,19 +28,20 @@ function toStatusTone(value: string): "warning" | "danger" | "success" | "neutra
   return "neutral";
 }
 
-export default function OperationSkillTraceCard({ trace }: { trace?: OperationSkillTraceV1 | null }): React.ReactElement {
+export default function OperationSkillTraceCard({ trace }: { trace?: OperationSkillTraceItemV2[] | null }): React.ReactElement {
+  const byStage = new Map((Array.isArray(trace) ? trace : []).map((item) => [String(item.stage || "").toLowerCase(), item]));
   return (
     <section className="card operationSkillTraceCard" style={{ marginTop: 12 }}>
       <div className="sectionTitle">技能运行追踪</div>
       <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-        展示 crop/agronomy/device/acceptance 四类技能链路，点击 run_id 可进入运行详情。
+        展示 sensing/agronomy/device/acceptance 四类技能链路与解释码。
       </div>
       <div className="operationSkillTraceList">
         {SKILL_ROWS.map((row) => {
-          const item = trace?.[row.key];
+          const item = byStage.get(row.key);
           const missing = isMissingSkill(item);
-          const resultStatus = String(item?.result_status || "");
-          const errorCode = String(item?.error_code || "");
+          const resultStatus = String(item?.status || "");
+          const explanationCodes = Array.isArray(item?.explanation_codes) ? item.explanation_codes : [];
           return (
             <article key={row.key} className={`operationSkillTraceItem ${missing ? "isWarning" : ""}`}>
               <div className="operationSkillTraceHeader">
@@ -50,16 +50,11 @@ export default function OperationSkillTraceCard({ trace }: { trace?: OperationSk
               </div>
               <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">skill_id</span><strong>{item?.skill_id || "--"}</strong></div>
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">version</span><strong>{item?.version || "--"}</strong></div>
                 <div className="operationsSummaryMetric">
-                  <span className="operationsSummaryLabel">run_id</span>
-                  <strong>
-                    {item?.run_id
-                      ? <Link to={`/skills/runs/${encodeURIComponent(item.run_id)}`}>{item.run_id}</Link>
-                      : "--"}
-                  </strong>
+                  <span className="operationsSummaryLabel">stage</span>
+                  <strong>{item?.stage || row.key}</strong>
                 </div>
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">error_code</span><strong>{errorCode || "--"}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">explanation_codes</span><strong>{explanationCodes.length > 0 ? explanationCodes.join(", ") : "--"}</strong></div>
               </div>
             </article>
           );
