@@ -44,24 +44,6 @@ const BINDING_SCOPE_COMPAT: Record<string, SkillBindingScope> = {
   DEVICE: "DEVICE",
 };
 
-/**
- * Compatibility-only legacy API path.
- * Do not use as the default request chain for new feature flows.
- */
-const LEGACY_RULE_SWITCH_ENDPOINT = "/api/v1/skills/rules/switch";
-const PRIMARY_BINDING_OVERRIDE_ENDPOINT = "/api/v1/skills/bindings/override";
-
-export type SkillRuleSwitch = {
-  skill_id: string;
-  version: string;
-  enabled: boolean;
-  priority: number;
-  scope?: {
-    tenant_id?: string;
-    crop_code?: string;
-  };
-};
-
 export type SkillRegistryItem = {
   skill_id: string;
   skill_name?: string | null;
@@ -190,32 +172,6 @@ function normalizeSkillRunSummary(item: SkillRunSummary): SkillRunSummary {
     finished_ts_ms: Number.isFinite(finishedTsMs) && finishedTsMs > 0 ? finishedTsMs : item.finished_ts_ms ?? null,
     scope: item.scope == null ? normalizeScope((item as any)?.binding_scope ?? (item as any)?.scope) : normalizeScope(item.scope),
   };
-}
-
-export async function listSkillRules(input?: {
-  crop_code?: string;
-  tenant_id?: string;
-  enabled_only?: boolean;
-}): Promise<SkillRuleSwitch[]> {
-  return requestJson<SkillRuleSwitch[]>(withQuery("/api/v1/skills/rules", input));
-}
-
-export async function switchSkillRule(input: {
-  skill_id: string;
-  version: string;
-  enabled: boolean;
-  priority?: number;
-  scope?: {
-    tenant_id?: string;
-    crop_code?: string;
-  };
-}): Promise<{ ok: true; item: SkillRuleSwitch }> {
-  // eslint-disable-next-line no-console
-  console.warn(`[deprecated] switchSkillRule() calls compatibility endpoint ${LEGACY_RULE_SWITCH_ENDPOINT}. Default chain should use ${PRIMARY_BINDING_OVERRIDE_ENDPOINT}.`);
-  return requestJson<{ ok: true; item: SkillRuleSwitch }>(LEGACY_RULE_SWITCH_ENDPOINT, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
 }
 
 export async function overrideSkillBinding(input: {
