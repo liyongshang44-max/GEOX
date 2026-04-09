@@ -460,9 +460,6 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       const trigger_stage = String(body.trigger_stage ?? "before_dispatch").trim();
       const bind_target = String(body.bind_target ?? "default").trim();
       const rollout_mode = String(body.rollout_mode ?? "DIRECT").trim().toUpperCase();
-      const effective = boolLike(body.effective, true);
-      const overridden_by = typeof body.overridden_by === "string" && body.overridden_by.trim() ? body.overridden_by.trim() : null;
-
       if (!skill_id || !version || !category || !bind_target) {
         return reply.code(400).send({
           ok: false,
@@ -487,16 +484,12 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         device_type: typeof body.device_type === "string" ? body.device_type.trim().toUpperCase() : null,
         priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : 0,
         config_patch: asObject(body.config_patch) ?? undefined,
-        effective,
-        overridden_by,
       } as any);
 
       return reply.code(201).send({
         ok: true,
         fact_id: inserted.fact_id,
         occurred_at: inserted.occurred_at,
-        effective: typeof inserted.payload?.effective === "boolean" ? inserted.payload.effective : true,
-        overridden_by: inserted.payload?.overridden_by ?? null,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     } catch (e) {
