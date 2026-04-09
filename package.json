@@ -37,7 +37,8 @@
     "ci:web:views-boundary": "pnpm --filter @geox/web lint:views-boundary",
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
-    "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs"
+    "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
+    "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs"
   },
   "volta": {
     "node": "20.11.1"
