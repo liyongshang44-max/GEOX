@@ -206,6 +206,8 @@ export default function FieldDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
               <div className="decisionItemMeta">updated_at：{sensingV1.updatedAtLabel}</div>
               <div className="decisionItemMeta">解释码：{sensingV1.explainCodeLabels.length ? sensingV1.explainCodeLabels.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">source_observation_ids：{sensingV1.sourceObservationIds.length ? sensingV1.sourceObservationIds.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">来源设备：{sensingV1.sourceDevices.length ? sensingV1.sourceDevices.join(" / ") : "--"}</div>
               {toneHintText(sensingV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(sensingV1.tone)}</div> : null}
             </div>
           ) : null}
@@ -218,6 +220,8 @@ export default function FieldDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">confidence：{fertilityV1.confidenceLabel}</div>
               <div className="decisionItemMeta">updated_at：{fertilityV1.updatedAtLabel}</div>
               <div className="decisionItemMeta">解释码：{fertilityV1.explainCodeLabels.length ? fertilityV1.explainCodeLabels.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">source_observation_ids：{fertilityV1.sourceObservationIds.length ? fertilityV1.sourceObservationIds.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">来源设备：{fertilityV1.sourceDevices.length ? fertilityV1.sourceDevices.join(" / ") : "--"}</div>
               {toneHintText(fertilityV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(fertilityV1.tone)}</div> : null}
             </div>
           ) : null}

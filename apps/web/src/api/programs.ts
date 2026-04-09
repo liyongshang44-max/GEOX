@@ -219,6 +219,18 @@ export async function fetchAgronomyRecommendationDetail(params: {
 export type AgronomyRecommendationControlPlaneListItem = any;
 export type AgronomyRecommendationControlPlaneDetailItem = any;
 
+function normalizeRecommendationExplain<T extends Record<string, any>>(item: T): T {
+  if (!item || typeof item !== "object") return item;
+  const explain = item?.recommendation?.explain ?? item?.explain ?? null;
+  return {
+    ...item,
+    recommendation: {
+      ...(item?.recommendation ?? {}),
+      explain,
+    },
+  };
+}
+
 export async function fetchAgronomyRecommendationsControlPlane(params?: {
   tenant_id?: string;
   project_id?: string;
@@ -227,7 +239,7 @@ export async function fetchAgronomyRecommendationsControlPlane(params?: {
   limit?: number;
 }): Promise<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }> {
   const token = readStoredAoActToken();
-  return apiRequest<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }>(
+  const res = await apiRequest<{ ok: boolean; summary: { total: number; pending: number; in_approval: number; receipted: number }; items: AgronomyRecommendationControlPlaneListItem[] }>(
     withQuery("/api/v1/agronomy/recommendations/control-plane", {
       tenant_id: params?.tenant_id,
       project_id: params?.project_id,
@@ -237,6 +249,10 @@ export async function fetchAgronomyRecommendationsControlPlane(params?: {
     }),
     { headers: { Authorization: `Bearer ${token}` } },
   );
+  return {
+    ...res,
+    items: Array.isArray(res?.items) ? res.items.map((item) => normalizeRecommendationExplain(item)) : [],
+  };
 }
 
 export async function fetchAgronomyRecommendationDetailControlPlane(params: {
@@ -246,7 +262,7 @@ export async function fetchAgronomyRecommendationDetailControlPlane(params: {
   group_id?: string;
 }): Promise<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }> {
   const token = readStoredAoActToken();
-  return apiRequest<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }>(
+  const res = await apiRequest<{ ok: boolean; item: AgronomyRecommendationControlPlaneDetailItem }>(
     withQuery(`/api/v1/agronomy/recommendations/${encodeURIComponent(params.recommendation_id)}/control-plane`, {
       tenant_id: params.tenant_id,
       project_id: params.project_id,
@@ -254,6 +270,10 @@ export async function fetchAgronomyRecommendationDetailControlPlane(params: {
     }),
     { headers: { Authorization: `Bearer ${token}` } },
   );
+  return {
+    ...res,
+    item: normalizeRecommendationExplain(res?.item ?? {}),
+  };
 }
 
 export async function submitRecommendationApproval(params: {
