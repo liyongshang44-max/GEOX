@@ -1025,13 +1025,13 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           id: z.string().min(1),
           namespace: z.string().min(1)
         }),
-        command_id: z.string().min(1),
+        command_id: z.string().optional(),
         meta: z.record(z.any()).optional()
       }).parse(req.body ?? {});
-      const tenant = assertTenantFieldsPresentV0(body, "body");
-      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
       const command_id = String(body.command_id ?? "").trim();
       if (!command_id) return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
+      const tenant = assertTenantFieldsPresentV0(body, "body");
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
       const existing = await loadManualOperationByCommandId(pool, tenant, command_id);
       if (existing) return reply.send({ ok: true, ...existing, reused: true });
 

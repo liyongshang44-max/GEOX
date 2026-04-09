@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { DashboardActionVm, DashboardRiskVm, DashboardVm } from "../viewmodels/dashboard";
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
-import { resolveTimelineLabel } from "../viewmodels/timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
+import { mapOperationFinalStatusLabel, normalizeOperationFinalStatus } from "../lib/operationLabels";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -203,14 +203,12 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
 
         const executionList = executions ?? [];
         const mappedActions: DashboardActionVm[] = executionList.map((o: any) => {
-          const status = String(o?.status || o?.final_status || "").toUpperCase();
-          const finalStatus: DashboardActionVm["finalStatus"] = status === "SUCCEEDED"
+          const normalizedFinalStatus = normalizeOperationFinalStatus(o?.final_status);
+          const finalStatus: DashboardActionVm["finalStatus"] = normalizedFinalStatus === "SUCCESS"
             ? "succeeded"
-            : status === "FAILED"
+            : normalizedFinalStatus === "FAILED" || normalizedFinalStatus === "INVALID_EXECUTION"
               ? "failed"
-              : status === "INVALID_EXECUTION"
-                ? "invalid"
-                : status === "PENDING"
+              : normalizedFinalStatus === "PENDING"
                   ? "pending"
                   : "running";
           return {
@@ -219,7 +217,7 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             subjectName: o?.field_name || o?.field_id || o?.device_id || "-",
             actionLabel: o?.action_type || "执行任务",
             occurredAtLabel: new Date(o?.occurred_at || o?.last_event_ts || o?.updated_ts_ms || Date.now()).toLocaleString(),
-            statusLabel: resolveTimelineLabel({ operationPlanStatus: o?.status || o?.final_status, dispatchState: o?.dispatch_status }),
+            statusLabel: mapOperationFinalStatusLabel(o?.final_status),
             finalStatus,
             hasEvidence: Boolean(o?.receipt_fact_id),
             href: toOperationDetailPath(o),

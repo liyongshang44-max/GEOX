@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { listSkillRegistry, listSkillRuns, type SkillRegistryItem, type SkillRunSummary } from "../../../api/skills";
+import { listSkillRegistry, listSkillRuns, resolveSkillClassification, type SkillRegistryItem, type SkillRunSummary } from "../../../api/skills";
 import { SectionCard, StatusPill } from "../../../shared/ui";
 
 export default function SkillOverview(): React.ReactElement {
@@ -55,7 +55,7 @@ export default function SkillOverview(): React.ReactElement {
       <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
         {items.slice(0, 5).map((item) => (
           <StatusPill key={item.skill_id} tone={String(item.status).toUpperCase() === "ACTIVE" ? "success" : "warning"}>
-            {item.skill_name || item.skill_id} · {item.current_version || "-"}
+            {item.skill_name || item.skill_id} · {resolveSkillClassification(item)} · {item.current_version || "-"}
           </StatusPill>
         ))}
       </div>

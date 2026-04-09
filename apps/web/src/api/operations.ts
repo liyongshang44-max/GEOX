@@ -1,4 +1,5 @@
 import { apiRequest, apiRequestOptional, withQuery } from "./client";
+import { resolveSkillClassification } from "./skills";
 
 export type OperationStateTimelineItemV1 = { type: string; label: string; ts: number };
 export type OperationSkillTraceEntryV1 = {
@@ -14,7 +15,7 @@ export type OperationSkillTraceV1 = {
   device_skill: OperationSkillTraceEntryV1;
   acceptance_skill: OperationSkillTraceEntryV1;
 };
-export type OperationSkillTraceStageV2 = "sensing" | "agronomy" | "device" | "acceptance";
+export type OperationSkillTraceStageV2 = "sensing" | "agronomy" | "device" | "acceptance" | "unknown" | string;
 export type OperationSkillTraceItemV2 = {
   stage: OperationSkillTraceStageV2;
   skill_id: string | null;
@@ -125,8 +126,7 @@ export type OperationDetailResponse = {
 };
 
 function normalizeSkillTraceItem(item: any): OperationSkillTraceItemV2 {
-  const stageRaw = String(item?.stage ?? item?.trigger_stage ?? item?.type ?? "").trim().toLowerCase();
-  const stage = (["sensing", "agronomy", "device", "acceptance"].includes(stageRaw) ? stageRaw : "agronomy") as OperationSkillTraceStageV2;
+  const stage = resolveSkillClassification(item) as OperationSkillTraceStageV2;
   const status = String(item?.status ?? item?.result_status ?? item?.final_status ?? "").trim() || null;
   const rawCodes = item?.explanation_codes ?? item?.explain_codes ?? item?.reason_codes ?? [];
   const explanationCodes = Array.isArray(rawCodes)

@@ -7,8 +7,9 @@
     "dev": "vite --config vite.config.ts --host 0.0.0.0 --port 5173",
     "build": "vite build --config vite.config.ts",
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/web/tsconfig.json",
-    "lint": "pnpm run lint:views-boundary --dir apps/web",
+    "lint": "pnpm run lint:views-boundary --dir apps/web && pnpm run lint:operation-status-convergence --dir apps/web",
     "lint:views-boundary": "node ./scripts/check-views-boundary.mjs",
+    "lint:operation-status-convergence": "node ./scripts/check-operation-status-convergence.mjs",
     "lint:operation-detail-hooks": "pnpm exec eslint --max-warnings 0 --rule \"@typescript-eslint/no-explicit-any: off\" --rule \"@typescript-eslint/no-unused-vars: off\" src/features/operations/pages/OperationDetailPage.tsx"
   },
   "dependencies": {

@@ -9,7 +9,7 @@ import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOp
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
 function normalizeStatus(item: any): string {
-  return normalizeOperationFinalStatus(item?.final_status || item?.status);
+  return normalizeOperationFinalStatus(item?.final_status);
 }
 
 function groupOf(item: any): GroupKey {
@@ -29,6 +29,9 @@ export default function OperationsPage(): React.ReactElement {
   const grouped = React.useMemo(() => {
     const base: Record<GroupKey, any[]> = { TODO: [], PENDING_ACCEPTANCE: [], DONE_OR_EXCEPTION: [] };
     for (const item of items) base[groupOf(item)].push(item);
+    for (const key of Object.keys(base) as GroupKey[]) {
+      base[key].sort((a, b) => Number(b?.last_event_ts ?? b?.updated_ts_ms ?? 0) - Number(a?.last_event_ts ?? a?.updated_ts_ms ?? 0));
+    }
     return base;
   }, [items]);
 
@@ -69,7 +72,7 @@ export default function OperationsPage(): React.ReactElement {
                   <div className="operationsSummaryTop">
                     <div>
                       <div className="operationsSummaryTitle">{actionLabel}</div>
-                      <div className="operationsSummaryLead">{buildOperationSummary(x.final_status || x.status, x.action_type)}</div>
+                      <div className="operationsSummaryLead">{buildOperationSummary(x.final_status, x.action_type)}</div>
                     </div>
                     <span className="statusTag tone-neutral">{group.title}</span>
                   </div>
