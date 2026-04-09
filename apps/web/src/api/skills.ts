@@ -122,9 +122,21 @@ function normalizeSkillBindingItem(item: SkillBindingItem): SkillBindingItem {
 }
 
 function normalizeSkillRunSummary(item: SkillRunSummary): SkillRunSummary {
+  const runId = String((item as any)?.run_id ?? (item as any)?.id ?? "").trim();
+  const skillId = String((item as any)?.skill_id ?? (item as any)?.skill ?? "").trim();
+  const startedTs = (item as any)?.started_ts_ms ?? (item as any)?.started_at_ts_ms ?? (item as any)?.started_at;
+  const finishedTs = (item as any)?.finished_ts_ms ?? (item as any)?.finished_at_ts_ms ?? (item as any)?.finished_at;
+  const startedTsMs = Number(startedTs ?? 0);
+  const finishedTsMs = Number(finishedTs ?? 0);
+  const normalizedStatus = String((item as any)?.status ?? (item as any)?.result_status ?? (item as any)?.final_status ?? "").trim();
   return {
     ...item,
-    scope: item.scope == null ? item.scope : normalizeScope(item.scope),
+    run_id: runId || String(item.run_id ?? "").trim(),
+    skill_id: skillId || String(item.skill_id ?? "").trim(),
+    status: normalizedStatus || String(item.status ?? "UNKNOWN"),
+    started_ts_ms: Number.isFinite(startedTsMs) && startedTsMs > 0 ? startedTsMs : item.started_ts_ms ?? null,
+    finished_ts_ms: Number.isFinite(finishedTsMs) && finishedTsMs > 0 ? finishedTsMs : item.finished_ts_ms ?? null,
+    scope: item.scope == null ? normalizeScope((item as any)?.binding_scope ?? (item as any)?.scope) : normalizeScope(item.scope),
   };
 }
 
@@ -185,6 +197,13 @@ export async function listSkillRuns(input?: {
   scope?: SkillBindingScope;
   limit?: number;
 }): Promise<SkillRunSummary[]> {
+  try {
+    const res = await apiRequestOptional<any>(withQuery("/api/v1/skill-runs", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+    const items = normalizeList<SkillRunSummary>(res);
+    if (items.length) return items.map((item) => normalizeSkillRunSummary(item));
+  } catch {
+    // fallback below
+  }
   try {
     const res = await apiRequestOptional<any>(withQuery("/api/v1/skills/runs", input), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
     const items = normalizeList<SkillRunSummary>(res);

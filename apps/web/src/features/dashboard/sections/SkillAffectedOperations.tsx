@@ -18,13 +18,16 @@ export default function SkillAffectedOperations(): React.ReactElement {
     };
   }, []);
 
-  const failedRuns = runs.filter((run) => String(run.status).toUpperCase() === "FAILED");
+  const failedRuns = runs.filter((run) => ["FAILED", "ERROR", "TIMEOUT"].includes(String(run.status).toUpperCase()));
+  const latestRuns = [...runs]
+    .sort((a, b) => Number(b.started_ts_ms ?? b.finished_ts_ms ?? 0) - Number(a.started_ts_ms ?? a.finished_ts_ms ?? 0))
+    .slice(0, 10);
 
   return (
-    <SectionCard title="SkillAffectedOperations" subtitle="近 30 次技能运行对作业链路的影响追踪。">
+    <SectionCard title="SkillAffectedOperations" subtitle="最近 10 条 skill run 与状态分布。">
       {!runs.length ? <div className="muted">暂无技能运行数据。</div> : null}
       <div className="decisionList" style={{ marginTop: 8 }}>
-        {runs.slice(0, 6).map((run) => (
+        {latestRuns.map((run) => (
           <div key={run.run_id} className="decisionItemStatic" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div className="decisionItemTitle">{run.skill_id}</div>

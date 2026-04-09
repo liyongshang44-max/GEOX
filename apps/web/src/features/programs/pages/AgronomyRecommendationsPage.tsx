@@ -265,6 +265,7 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               const fertilityV1 = parsedReadModel.fertility;
               const recommendationBias = fertilityV1?.recommendationBias ?? null;
               const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
+              const recommendationExplain = selected?.recommendation?.explain;
               return (
             <div className="decisionList">
               <div className="decisionItemStatic">
@@ -273,22 +274,22 @@ export default function AgronomyRecommendationsPage(): React.ReactElement {
               </div>
               <div className="decisionItemStatic">
                 <div className="decisionItemTitle">为什么推荐</div>
-                {selected?.explain ? (
+                {recommendationExplain ? (
                   <div style={{ display: "grid", gap: 8 }}>
                     <div className="decisionItemMeta">原因列表：</div>
-                    {(Array.isArray(selected.explain.triggered_rules) ? selected.explain.triggered_rules : []).map((rule: any, idx: number) => (
+                    {(Array.isArray(recommendationExplain.triggered_rules) ? recommendationExplain.triggered_rules : []).map((rule: any, idx: number) => (
                       <div key={`${rule?.rule_id || "rule"}-${idx}`} className="decisionItemMeta">
                         {idx + 1}. {String(rule?.rule_id || "unknown_rule")} · 命中：{rule?.matched ? "是" : "否"} · 阈值：{rule?.threshold ?? "-"} · 实际：{rule?.actual ?? "-"} · 来源 skill：{String(rule?.skill || "-")}
                       </div>
                     ))}
-                    {(Array.isArray(selected.explain.reasoning_path) ? selected.explain.reasoning_path : []).length ? (
+                    {(Array.isArray(recommendationExplain.reasoning_path) ? recommendationExplain.reasoning_path : []).length ? (
                       <div className="decisionItemMeta">
-                        推理链路：{selected.explain.reasoning_path.map((node: any) => `${String(node?.label || "-")}（来源 skill：${String(node?.skill || "-")}）`).join(" → ")}
+                        推理链路：{recommendationExplain.reasoning_path.map((node: any) => `${String(node?.label || "-")}（来源 skill：${String(node?.skill || "-")}）`).join(" → ")}
                       </div>
                     ) : null}
                   </div>
                 ) : (
-                  <div className="decisionItemMeta">后端未提供 explain</div>
+                  <div className="decisionItemMeta">recommendation.explain 为空</div>
                 )}
               </div>
               <div className="decisionItemStatic">
