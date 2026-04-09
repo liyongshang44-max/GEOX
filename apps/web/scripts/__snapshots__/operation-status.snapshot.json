@@ -1,0 +1,58 @@
+[
+  {
+    "input": {
+      "final_status": "SUCCESS"
+    },
+    "normalized": "SUCCESS",
+    "dashboard": "PASS",
+    "list": "DONE_OR_EXCEPTION",
+    "detail": "已完成"
+  },
+  {
+    "input": {
+      "final_status": "PENDING_ACCEPTANCE"
+    },
+    "normalized": "PENDING_ACCEPTANCE",
+    "dashboard": "PENDING_ACCEPTANCE",
+    "list": "PENDING_ACCEPTANCE",
+    "detail": "待验收"
+  },
+  {
+    "input": {
+      "final_status": "INVALID_EXECUTION"
+    },
+    "normalized": "INVALID_EXECUTION",
+    "dashboard": "EXECUTION_EXCEPTION",
+    "list": "DONE_OR_EXCEPTION",
+    "detail": "执行无效"
+  },
+  {
+    "input": {
+      "final_status": "EVIDENCE_MISSING"
+    },
+    "normalized": "EVIDENCE_MISSING",
+    "dashboard": "EVIDENCE_MISSING",
+    "list": "DONE_OR_EXCEPTION",
+    "detail": "证据缺失"
+  },
+  {
+    "input": {
+      "final_status": "UNKNOWN_STATUS"
+    },
+    "normalized": "UNKNOWN",
+    "dashboard": "EXECUTION_EXCEPTION",
+    "list": "DONE_OR_EXCEPTION",
+    "detail": "UNKNOWN"
+  },
+  {
+    "input": {
+      "operation_state_v1": {
+        "final_status": "PENDING_ACCEPTANCE"
+      }
+    },
+    "normalized": "PENDING_ACCEPTANCE",
+    "dashboard": "PENDING_ACCEPTANCE",
+    "list": "PENDING_ACCEPTANCE",
+    "detail": "待验收"
+  }
+]

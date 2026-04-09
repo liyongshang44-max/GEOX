@@ -4,7 +4,8 @@ import type { DashboardRecommendationItem } from "../../../api/dashboard";
 import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
 import { resolveFreshnessTone, toneCardClass, toneHintText } from "../../../lib/fieldReadModelV1";
-import { mapFieldDisplayName, normalizeOperationFinalStatus } from "../../../lib/operationLabels";
+import { mapFieldDisplayName } from "../../../lib/operationLabels";
+import { resolveUnifiedOperationFinalStatus, toDashboardEvidenceGroup } from "../../../lib/operationStatusUnified";
 import { SectionCard, StatusPill } from "../../../shared/ui";
 
 type EvidenceItem = {
@@ -26,12 +27,8 @@ type EvidenceItem = {
 type GroupKey = "PASS" | "PENDING_ACCEPTANCE" | "EXECUTION_EXCEPTION" | "EVIDENCE_MISSING";
 
 function classifyGroup(item: EvidenceItem): GroupKey {
-  const normalizedStatus = normalizeOperationFinalStatus(item?.operation_state_v1?.final_status);
-  if (normalizedStatus === "SUCCESS") return "PASS";
-  if (normalizedStatus === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
-  if (normalizedStatus === "FAILED" || normalizedStatus === "INVALID_EXECUTION") return "EXECUTION_EXCEPTION";
-  if (normalizedStatus === "EVIDENCE_MISSING") return "EVIDENCE_MISSING";
-  return "PENDING_ACCEPTANCE";
+  const normalizedStatus = resolveUnifiedOperationFinalStatus(item);
+  return toDashboardEvidenceGroup(normalizedStatus);
 }
 
 const GROUP_META: Record<GroupKey, { title: string; tone: "success" | "warning" | "danger" | "neutral" }> = {
