@@ -7,6 +7,7 @@ import type { Pool } from "pg"; // Postgres connection pool for db access.
 import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
 import { getDeviceTemplateOrThrow } from "../domain/device_templates/device_templates_v1";
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
 import { ensureDeviceSkillBindingStatusRuntimeV1, reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
