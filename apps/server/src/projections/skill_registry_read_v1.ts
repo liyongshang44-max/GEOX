@@ -340,16 +340,17 @@ export async function querySkillRegistryReadV1(
   return rows.rows ?? [];
 }
 
-function makeBindingOverrideKey(item: SkillBindingProjectionItem): string {
+function makeBindingOverrideKey(
+  scope: TenantTriple,
+  item: Pick<SkillBindingProjectionItem, "scope_type" | "bind_target" | "skill_id">
+): string {
   return [
-    item.skill_id,
-    item.version,
-    item.category ?? "",
+    scope.tenant_id,
+    scope.project_id,
+    scope.group_id,
     item.scope_type ?? "",
-    item.trigger_stage ?? "",
     item.bind_target ?? "",
-    item.crop_code ?? "",
-    item.device_type ?? "",
+    item.skill_id,
   ].join("|");
 }
 
@@ -413,7 +414,7 @@ export async function querySkillBindingProjectionV1(
 
   const groups = new Map<string, SkillBindingProjectionItem[]>();
   for (const item of filtered) {
-    const key = makeBindingOverrideKey(item);
+    const key = makeBindingOverrideKey(input, item);
     const list = groups.get(key) ?? [];
     list.push(item);
     groups.set(key, list);
@@ -424,11 +425,15 @@ export async function querySkillBindingProjectionV1(
   const overrides: Array<{ fact_id: string; overridden_by: string; key: string }> = [];
 
   for (const [key, group] of groups.entries()) {
-    const sorted = [...group].sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
-    const winner = sorted.find((x) => x.effective) ?? null;
-    if (winner) items_effective.push(winner);
+    const timeline = [...group].sort((a, b) => {
+      const t = Date.parse(a.occurred_at) - Date.parse(b.occurred_at);
+      if (t !== 0) return t;
+      return a.fact_id.localeCompare(b.fact_id);
+    });
+    const winner = [...timeline].reverse().find((x) => x.effective) ?? null;
+    if (winner) items_effective.push({ ...winner, effective: true, overridden_by: null });
 
-    for (const item of sorted) {
+    for (const item of timeline) {
       const overriddenBy = item.overridden_by ?? ((winner && winner.fact_id !== item.fact_id) ? winner.fact_id : null);
       items_history.push({ ...item, effective: !!winner && winner.fact_id === item.fact_id, overridden_by: overriddenBy });
       if (overriddenBy) overrides.push({ fact_id: item.fact_id, overridden_by: overriddenBy, key });
