@@ -95,6 +95,10 @@ function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): Das
 }
 
 export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): void { // Register dashboard summary routes.
+  const projectOperationState = (tenant: { tenant_id: string; project_id: string; group_id: string }) => {
+    const projector = (app as any).dashboardProjectOperationStateV1 ?? projectOperationStateV1;
+    return projector(pool, tenant);
+  };
   void ensureDerivedSensingStateProjectionV1(pool).catch(() => null);
 
   app.get("/api/v1/dashboard/derived-sensing-states", async (req, reply) => {
@@ -357,7 +361,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const dayStartMs = new Date(new Date(nowMs).toISOString().slice(0, 10)).getTime();
     const activeStates = ["CREATED", "READY", "DISPATCHED", "ACKED"];
 
-    const operationStates = await projectOperationStateV1(pool, { tenant_id, project_id, group_id }).catch(() => []);
+    const operationStates = await projectOperationState({ tenant_id, project_id, group_id }).catch(() => []);
     const performanceCompletedStates = operationStates.filter((item: any) => Boolean(item?.receipt_id));
     const performanceCompletedCount = performanceCompletedStates.length;
     const performancePassCount = performanceCompletedStates.filter((item: any) => String(item?.acceptance?.status ?? "").toUpperCase() === "PASS").length;
@@ -600,21 +604,33 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       .slice(0, 3);
     const benefitOperations = topActions.filter((item) => item.priority_components.value >= 20);
     const inProgressOperations = operationStates
-      .filter((item: any) => ["PENDING", "RUNNING", "DISPATCHED", "ACKED", "READY"].includes(String(item?.final_status ?? item?.dispatch_status ?? "").toUpperCase()))
+      .filter((item: any) => {
+        const status = String(item?.final_status ?? "UNKNOWN").toUpperCase();
+        return ["PENDING", "RUNNING", "DISPATCHED", "ACKED", "READY"].includes(status);
+      })
       .slice(0, 20)
-      .map((item: any) => ({
-        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
-        field_id: typeof item?.field_id === "string" ? item.field_id : null,
-        status: String(item?.final_status ?? item?.dispatch_status ?? ""),
-      }));
+      .map((item: any) => {
+        const status = String(item?.final_status ?? "UNKNOWN");
+        return {
+          operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+          field_id: typeof item?.field_id === "string" ? item.field_id : null,
+          status,
+        };
+      });
     const failedOperations = operationStates
-      .filter((item: any) => ["FAILED", "ERROR", "INVALID_EXECUTION"].includes(String(item?.final_status ?? "").toUpperCase()))
+      .filter((item: any) => {
+        const status = String(item?.final_status ?? "UNKNOWN").toUpperCase();
+        return ["FAILED", "ERROR", "INVALID_EXECUTION"].includes(status);
+      })
       .slice(0, 20)
-      .map((item: any) => ({
-        operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
-        field_id: typeof item?.field_id === "string" ? item.field_id : null,
-        status: String(item?.final_status ?? ""),
-      }));
+      .map((item: any) => {
+        const status = String(item?.final_status ?? "UNKNOWN");
+        return {
+          operation_plan_id: String(item?.operation_plan_id ?? item?.operation_id ?? ""),
+          field_id: typeof item?.field_id === "string" ? item.field_id : null,
+          status,
+        };
+      });
     const responseTimeAvg = Number(delayedQ.rows?.[0]?.count ?? 0) > 0 ? 2 * 60 * 60 * 1000 : 0;
     const riskTrend: TrendValue = computeTrendByCounts([
       Number(riskBreakdownQ.rows?.[0]?.high ?? 0) + Number(riskBreakdownQ.rows?.[0]?.medium ?? 0),
@@ -837,18 +853,21 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const tenant_id = String(auth.tenant_id ?? "");
     const project_id = String(auth.project_id ?? "");
     const group_id = String(auth.group_id ?? "");
-    const operationStates = await projectOperationStateV1(pool, { tenant_id, project_id, group_id }).catch(() => []);
+    const operationStates = await projectOperationState({ tenant_id, project_id, group_id }).catch(() => []);
     const items: DashboardRecentExecutionItem[] = operationStates
       .sort((a: any, b: any) => Number(b?.last_event_ts ?? 0) - Number(a?.last_event_ts ?? 0))
       .slice(0, limit)
-      .map((row: any) => ({
-        id: String(row.operation_plan_id ?? row.operation_id ?? ""),
-        operation_plan_id: String(row.operation_plan_id ?? row.operation_id ?? ""),
-        field_id: typeof row.field_id === "string" ? row.field_id : null,
-        status: String(row.final_status ?? row.dispatch_status ?? ""),
-        updated_ts_ms: Number(row.last_event_ts ?? Date.now()),
-        href: `/operations?operation_plan_id=${encodeURIComponent(String(row.operation_plan_id ?? ""))}`
-      }));
+      .map((row: any) => {
+        const status = String(row.final_status ?? "UNKNOWN");
+        return {
+          id: String(row.operation_plan_id ?? row.operation_id ?? ""),
+          operation_plan_id: String(row.operation_plan_id ?? row.operation_id ?? ""),
+          field_id: typeof row.field_id === "string" ? row.field_id : null,
+          status,
+          updated_ts_ms: Number(row.last_event_ts ?? Date.now()),
+          href: `/operations?operation_plan_id=${encodeURIComponent(String(row.operation_plan_id ?? ""))}`
+        };
+      });
     return reply.send({ ok: true, items });
   });
 
