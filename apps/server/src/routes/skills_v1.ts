@@ -244,6 +244,9 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   });
 
   app.get("/api/v1/skills/runs", async (req, reply) => {
+    reply.header("Deprecation", "true");
+    reply.header("Link", "</api/v1/skill-runs>; rel=\"successor-version\"");
+    reply.header("Sunset", "Wed, 30 Sep 2026 00:00:00 GMT");
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
       if (!auth) return;
