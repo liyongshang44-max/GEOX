@@ -142,6 +142,52 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             deprecated: { type: "boolean" },
             replacement: { type: "string" }
           }
+        },
+        SkillRunV1: {
+          type: "object",
+          required: [
+            "skill_run_id",
+            "skill_id",
+            "category",
+            "status",
+            "started_at_ts_ms",
+            "finished_at_ts_ms",
+            "target",
+            "input_digest",
+            "output_digest",
+            "explanation_codes"
+          ],
+          properties: {
+            skill_run_id: { type: "string" },
+            skill_id: { type: "string" },
+            category: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance"] },
+            status: { type: "string", enum: ["success", "failed"] },
+            started_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
+            finished_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
+            target: {
+              type: "object",
+              properties: {
+                field_id: { type: "string" },
+                device_id: { type: "string" }
+              },
+              additionalProperties: false
+            },
+            input_digest: { type: "string" },
+            output_digest: { type: "string" },
+            explanation_codes: { type: "array", items: { type: "string" }, description: "Stable explanation code list; empty array when absent." }
+          }
+        },
+        SkillRunListV1Response: {
+          type: "object",
+          required: ["ok", "limit", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            limit: { type: "integer", minimum: 1, maximum: 200 },
+            items: {
+              type: "array",
+              items: { '$ref': "#/components/schemas/SkillRunV1" }
+            }
+          }
         }
       }
     },
@@ -190,6 +236,30 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           summary: "Read current session and role info",
           responses: {
             "200": { description: "Session info returned successfully" }
+          }
+        }
+      },
+      "/api/v1/skill-runs": {
+        get: {
+          tags: ["operations"],
+          summary: "List normalized skill runs (v1 taskbook enum mapping)",
+          parameters: [
+            { name: "tenant_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "device_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "category", in: "query", required: false, schema: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance"] } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["success", "failed"] } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } }
+          ],
+          responses: {
+            "200": {
+              description: "Normalized skill run list",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/SkillRunListV1Response" }
+                }
+              }
+            }
           }
         }
       },
