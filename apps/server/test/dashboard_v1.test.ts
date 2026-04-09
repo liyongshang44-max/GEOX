@@ -6,7 +6,7 @@ import { registerDashboardV1Routes } from "../src/routes/dashboard_v1";
 test("dashboard routes derive statuses from final_status only", async () => {
   const operationStates = [
     { operation_plan_id: "op_final_running", field_id: "fieldA", final_status: "RUNNING", dispatch_status: "FAILED", last_event_ts: 3000 },
-    { operation_plan_id: "op_dispatch_only", field_id: "fieldB", dispatch_status: "RUNNING", last_event_ts: 2000 },
+    { operation_plan_id: "op_dispatch_only", field_id: "fieldB", final_status: null, dispatch_status: "RUNNING", last_event_ts: 2000 },
     { operation_plan_id: "op_failed", field_id: "fieldC", final_status: "FAILED", dispatch_status: "RUNNING", last_event_ts: 1000 },
   ];
 
