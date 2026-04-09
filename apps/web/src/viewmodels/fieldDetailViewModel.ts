@@ -5,6 +5,7 @@ import {
   mapSourceFieldToLabel,
   type FieldLang,
 } from "../lib/fieldViewModel";
+import { mapOperationFinalStatusLabel, normalizeOperationFinalStatus } from "../lib/operationLabels";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -17,12 +18,13 @@ function fmtIso(ts: string | null | undefined): string {
   return Number.isFinite(ms) ? new Date(ms).toLocaleString() : ts;
 }
 
-type ExecutionStatus = "READY" | "DISPATCHED" | "SUCCEEDED" | "FAILED";
+type ExecutionStatus = "PENDING" | "RUNNING" | "PENDING_ACCEPTANCE" | "SUCCEEDED" | "FAILED" | "INVALID_EXECUTION";
 
 function executionColor(status: ExecutionStatus): string {
-  if (status === "READY") return "#2563eb";
-  if (status === "DISPATCHED") return "#f79009";
+  if (status === "PENDING") return "#2563eb";
+  if (status === "RUNNING" || status === "PENDING_ACCEPTANCE") return "#f79009";
   if (status === "SUCCEEDED") return "#12b76a";
+  if (status === "INVALID_EXECUTION") return "#b42318";
   return "#f04438";
 }
 
@@ -42,7 +44,7 @@ export function buildFieldDetailViewModel(params: {
   const operationItems = (Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : []).map((item: any) => {
     const sourceRaw = String(item?.timing_source ?? "");
     const source = mapSourceFieldToLabel(sourceRaw, lang);
-    const statusLabel = sourceRaw.includes("receipt") ? labels.opCompleted : labels.opPlanned;
+    const statusLabel = mapOperationFinalStatusLabel(item?.final_status ?? item?.status ?? null, lang === "en" ? "en" : "zh");
     const window = item.trajectory_window_start_ts_ms
       ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}`
       : "-";
@@ -85,12 +87,6 @@ export function buildFieldDetailViewModel(params: {
     .sort((a, b) => a.ts - b.ts);
 
   const trajectories = Array.isArray(detail?.map_layers?.trajectories) ? detail.map_layers.trajectories : [];
-  const receiptByTask = new Map<string, any>();
-  for (const receipt of detail?.recent_receipts || []) {
-    const actTaskId = String(receipt?.receipt?.payload?.act_task_id ?? "").trim();
-    if (actTaskId) receiptByTask.set(actTaskId, receipt);
-  }
-
   const trajectorySegments = operationItems.map((op) => {
     const traj = trajectories.find((t: any) => String(t.device_id ?? "") === String(op.raw?.device_id ?? ""));
     const points = Array.isArray(traj?.points) ? traj.points : [];
@@ -99,12 +95,13 @@ export function buildFieldDetailViewModel(params: {
     const clipped = points
       .filter((p: any) => Number(p.ts_ms) >= start && Number(p.ts_ms) <= end && Number(p.ts_ms) <= playbackTs)
       .map((p: any) => [Number(p.lon), Number(p.lat)] as [number, number]);
-    const receipt = op.actTaskId ? receiptByTask.get(op.actTaskId) : null;
-    const receiptStatus = String(receipt?.receipt?.payload?.status ?? "").toUpperCase();
-    let statusCode: ExecutionStatus = "READY";
-    if (receiptStatus.includes("FAIL")) statusCode = "FAILED";
-    else if (receiptStatus.includes("SUCCESS") || receiptStatus.includes("SUCC") || op.source === labels.fromReceipt) statusCode = "SUCCEEDED";
-    else if (op.source === labels.fromSchedule) statusCode = "DISPATCHED";
+    const normalized = normalizeOperationFinalStatus(op.raw?.final_status ?? op.raw?.status);
+    let statusCode: ExecutionStatus = "PENDING";
+    if (normalized === "SUCCESS") statusCode = "SUCCEEDED";
+    else if (normalized === "FAILED") statusCode = "FAILED";
+    else if (normalized === "INVALID_EXECUTION") statusCode = "INVALID_EXECUTION";
+    else if (normalized === "PENDING_ACCEPTANCE") statusCode = "PENDING_ACCEPTANCE";
+    else if (normalized === "RUNNING") statusCode = "RUNNING";
     return {
       id: op.id,
       status: statusCode,

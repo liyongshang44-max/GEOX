@@ -4,7 +4,7 @@ import type { DashboardRecommendationItem } from "../../../api/dashboard";
 import EmptyState from "../../../components/common/EmptyState";
 import ErrorState from "../../../components/common/ErrorState";
 import { resolveFreshnessTone, toneCardClass, toneHintText } from "../../../lib/fieldReadModelV1";
-import { mapFieldDisplayName } from "../../../lib/operationLabels";
+import { mapFieldDisplayName, normalizeOperationFinalStatus } from "../../../lib/operationLabels";
 import { SectionCard, StatusPill } from "../../../shared/ui";
 
 type EvidenceItem = {
@@ -12,8 +12,9 @@ type EvidenceItem = {
   href?: string;
   fieldName?: string;
   operationName?: string;
-  hasReceipt?: boolean;
-  acceptanceVerdict?: string;
+  operation_state_v1?: {
+    final_status?: string | null;
+  };
   card?: {
     statusLabel?: string;
     statusTone?: "success" | "warning" | "danger" | "neutral";
@@ -25,13 +26,11 @@ type EvidenceItem = {
 type GroupKey = "PASS" | "PENDING_ACCEPTANCE" | "EXECUTION_EXCEPTION" | "EVIDENCE_MISSING";
 
 function classifyGroup(item: EvidenceItem): GroupKey {
-  const verdict = String(item?.acceptanceVerdict ?? "").toUpperCase();
-  const tone = String(item?.card?.statusTone ?? "").toLowerCase();
-  const status = String(item?.card?.statusLabel ?? "").toUpperCase();
-
-  if (!item?.hasReceipt) return "EVIDENCE_MISSING";
-  if (verdict === "FAIL" || verdict === "INVALID_EXECUTION" || tone === "danger" || status.includes("失败")) return "EXECUTION_EXCEPTION";
-  if (verdict === "PASS") return "PASS";
+  const normalizedStatus = normalizeOperationFinalStatus(item?.operation_state_v1?.final_status);
+  if (normalizedStatus === "SUCCESS") return "PASS";
+  if (normalizedStatus === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
+  if (normalizedStatus === "FAILED" || normalizedStatus === "INVALID_EXECUTION") return "EXECUTION_EXCEPTION";
+  if (normalizedStatus === "EVIDENCE_MISSING") return "EVIDENCE_MISSING";
   return "PENDING_ACCEPTANCE";
 }
 
