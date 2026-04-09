@@ -284,25 +284,49 @@ export type SimulatorRunnerStatusResponseV1 = {
 };
 
 export async function startSimulatorRunner(token: string, body: { device_id: string; interval_ms?: number }): Promise<SimulatorRunnerStatusResponseV1> {
-  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/start`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify(body),
-  });
+  try {
+    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/start`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({ interval_ms: body.interval_ms }),
+    });
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+    return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/start`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    });
+  }
 }
 
 export async function stopSimulatorRunner(token: string, body: { device_id: string }): Promise<SimulatorRunnerStatusResponseV1> {
-  return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/stop`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify(body),
-  });
+  try {
+    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/simulator/stop`, {
+      method: "POST",
+      headers: authHeaders(token),
+    });
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+    return requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/simulator-runner/stop`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(body),
+    });
+  }
 }
 
 export async function fetchSimulatorRunnerStatus(token: string, device_id: string): Promise<SimulatorRunnerStatusResponseV1> {
-  return requestJson<SimulatorRunnerStatusResponseV1>(withQuery(`/api/v1/simulator-runner/status`, { device_id }), {
-    headers: authHeaders(token),
-  });
+  try {
+    return await requestJson<SimulatorRunnerStatusResponseV1>(`/api/v1/devices/${encodeURIComponent(device_id)}/simulator/status`, {
+      headers: authHeaders(token),
+    });
+  } catch (e: unknown) {
+    if (!isNotFoundApiError(e)) throw e;
+    return requestJson<SimulatorRunnerStatusResponseV1>(withQuery(`/api/v1/simulator-runner/status`, { device_id }), {
+      headers: authHeaders(token),
+    });
+  }
 }
 
 export async function fetchJudgeProblemStates(limit = 50): Promise<any> {
@@ -542,6 +566,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
   const payload = {
     ...body,
     template_code: body.template_code ?? body.device_template,
+    device_mode: body.device_mode ?? "simulator",
   };
   try {
     return await requestJson<any>(`/api/v1/devices/onboarding/register`, {
@@ -562,12 +587,30 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
     }
   }
 
-  // Fallback for mixed backend versions: create device + issue credential via stable legacy endpoints.
-    await requestJson<any>(`/api/v1/devices`, {
-    method: "POST",
-    headers: authHeaders(token),
-    body: JSON.stringify({ device_id: body.device_id, display_name: body.display_name, device_mode: body.device_mode, template_code: payload.template_code }),
-  });
+  // Fallback for mixed backend versions: create device + issue credential via legacy composition path.
+  try {
+    await requestJson<any>(`/api/v1/devices/${encodeURIComponent(body.device_id)}`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({
+        display_name: body.display_name,
+        device_mode: payload.device_mode,
+        template_code: payload.template_code,
+      }),
+    });
+  } catch (e3: unknown) {
+    if (!isNotFoundApiError(e3)) throw e3;
+    await requestJson<any>(`/api/devices`, {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify({
+        device_id: body.device_id,
+        display_name: body.display_name,
+        device_mode: payload.device_mode,
+        template_code: payload.template_code,
+      }),
+    });
+  }
 
   const created = await requestJson<any>(`/api/v1/devices/${encodeURIComponent(body.device_id)}/credentials`, {
     method: "POST",
