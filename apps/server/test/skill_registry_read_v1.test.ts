@@ -124,3 +124,98 @@ test("different skill_id can be effective at the same time", async () => {
   assert.equal(effectiveFactIds.has("f11"), true);
   assert.equal(out.items_effective.length, 2);
 });
+
+test("maps fixed internal category keys to public category", async () => {
+  const rows = [
+    bindingFactRow("c1", "2026-04-01T00:00:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b1",
+      skill_id: "skill.crop",
+      version: "v1",
+      category: "crop_skill",
+      scope_type: "FIELD",
+      bind_target: "field_1",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("c2", "2026-04-01T00:01:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b2",
+      skill_id: "skill.agronomy",
+      version: "v1",
+      category: "agronomy_skill",
+      scope_type: "FIELD",
+      bind_target: "field_2",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("c3", "2026-04-01T00:02:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b3",
+      skill_id: "skill.device",
+      version: "v1",
+      category: "device_skill",
+      scope_type: "FIELD",
+      bind_target: "field_3",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("c4", "2026-04-01T00:03:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b4",
+      skill_id: "skill.acceptance",
+      version: "v1",
+      category: "acceptance_skill",
+      scope_type: "FIELD",
+      bind_target: "field_4",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("c5", "2026-04-01T00:04:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b5",
+      skill_id: "skill.sensing",
+      version: "v1",
+      category: "sensing_skill",
+      scope_type: "FIELD",
+      bind_target: "field_5",
+      status: "ACTIVE",
+    }),
+    bindingFactRow("c6", "2026-04-01T00:05:00.000Z", {
+      tenant_id: "t1",
+      project_id: "p1",
+      group_id: "g1",
+      binding_id: "b6",
+      skill_id: "skill.unknown",
+      version: "v1",
+      category: "unexpected_key",
+      scope_type: "FIELD",
+      bind_target: "field_6",
+      status: "ACTIVE",
+    }),
+  ];
+
+  const pool = {
+    query: async () => ({ rows }),
+  };
+
+  const out = await querySkillBindingProjectionV1(pool as any, {
+    tenant_id: "t1",
+    project_id: "p1",
+    group_id: "g1",
+  });
+
+  const byFact = new Map(out.items_history.map((it) => [it.fact_id, it]));
+  assert.equal(byFact.get("c1")?.category, "agronomy");
+  assert.equal(byFact.get("c2")?.category, "agronomy");
+  assert.equal(byFact.get("c3")?.category, "device");
+  assert.equal(byFact.get("c4")?.category, "acceptance");
+  assert.equal(byFact.get("c5")?.category, "sensing");
+  assert.equal(byFact.get("c6")?.category, "unknown");
+});
