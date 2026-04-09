@@ -14,8 +14,8 @@ if (!fs.existsSync(target)) {
 const text = fs.readFileSync(target, "utf8");
 const rel = path.relative(repoRoot, target).replace(/\\/g, "/");
 const forbiddenPatterns = [
-  /final_status\s*\?\?\s*dispatch_status/,
-  /final_status\s*\|\|\s*dispatch_status/
+  /(?:^|[^\w])(?:\w+\??\.)*final_status\s*\?\?\s*(?:\w+\??\.)*dispatch_status(?:[^\w]|$)/m,
+  /(?:^|[^\w])(?:\w+\??\.)*final_status\s*\|\|\s*(?:\w+\??\.)*dispatch_status(?:[^\w]|$)/m
 ];
 
 const violations = forbiddenPatterns.filter((pattern) => pattern.test(text));
