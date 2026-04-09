@@ -14,6 +14,13 @@ export type OperationSkillTraceV1 = {
   device_skill: OperationSkillTraceEntryV1;
   acceptance_skill: OperationSkillTraceEntryV1;
 };
+export type OperationSkillTraceStageV2 = "sensing" | "agronomy" | "device" | "acceptance";
+export type OperationSkillTraceItemV2 = {
+  stage: OperationSkillTraceStageV2;
+  skill_id: string | null;
+  status: string | null;
+  explanation_codes: string[];
+};
 export type OperationStateItemV1 = {
   operation_id: string;
   recommendation_id?: string | null;
@@ -30,7 +37,8 @@ export type OperationStateItemV1 = {
   final_status: string;
   last_event_ts: number;
   timeline: OperationStateTimelineItemV1[];
-  skill_trace?: OperationSkillTraceV1 | null;
+  skill_trace?: OperationSkillTraceItemV2[] | null;
+  legacy_skill_trace?: OperationSkillTraceV1 | null;
 };
 
 export type ApprovalRequestItem = {
@@ -88,7 +96,8 @@ export type OperationDetailResponse = {
     missing_receipt: boolean;
     missing_evidence: boolean;
   };
-  skill_trace?: OperationSkillTraceV1 | null;
+  skill_trace?: OperationSkillTraceItemV2[] | null;
+  legacy_skill_trace?: OperationSkillTraceV1 | null;
   fallback_state?: {
     generated: boolean;
     executable: boolean;

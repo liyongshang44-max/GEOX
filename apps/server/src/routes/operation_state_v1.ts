@@ -820,7 +820,46 @@ function buildEvidenceTimeline(state: any, approvalDecision: FactRow | null, fac
 }
 
 type SkillTraceEntry = { skill_id: string | null; version: string | null; run_id: string | null; result_status: string | null; error_code: string | null };
-function buildSkillTraceFromFacts(facts: FactRow[], operationPlanId: string, fallback?: any): {
+type SkillTraceStage = "sensing" | "agronomy" | "device" | "acceptance";
+type SkillTraceItemV2 = { stage: SkillTraceStage; skill_id: string | null; status: string | null; explanation_codes: string[] };
+
+function buildSkillTraceFromFacts(facts: FactRow[], operationPlanId: string): SkillTraceItemV2[] {
+  const triggerStageToViewStage = (triggerStage: string): SkillTraceStage | null => {
+    const normalized = triggerStage.trim().toLowerCase();
+    if (normalized === "before_recommendation") return "sensing";
+    if (normalized === "after_recommendation" || normalized === "before_approval") return "agronomy";
+    if (normalized === "before_dispatch") return "device";
+    if (normalized === "before_acceptance" || normalized === "after_acceptance") return "acceptance";
+    return null;
+  };
+  const runs = facts.filter((row) => {
+    if (String(row.record_json?.type ?? "") !== "skill_run_v1") return false;
+    const payload = row.record_json?.payload ?? {};
+    return toText(payload.operation_id) === operationPlanId || toText(payload.operation_plan_id) === operationPlanId;
+  });
+  const latestByStage = new Map<SkillTraceStage, FactRow>();
+  for (const run of runs) {
+    const stage = triggerStageToViewStage(String(run.record_json?.payload?.trigger_stage ?? ""));
+    if (!stage) continue;
+    const prev = latestByStage.get(stage);
+    if (!prev || (toMs(run.occurred_at) ?? 0) >= (toMs(prev.occurred_at) ?? 0)) {
+      latestByStage.set(stage, run);
+    }
+  }
+  return (["sensing", "agronomy", "device", "acceptance"] as SkillTraceStage[]).map((stage) => {
+    const payload = latestByStage.get(stage)?.record_json?.payload ?? {};
+    return {
+      stage,
+      skill_id: toText(payload.skill_id),
+      status: toText(payload.result_status),
+      explanation_codes: Array.isArray(payload.explanation_codes)
+        ? payload.explanation_codes.map((x: unknown) => String(x)).filter(Boolean)
+        : [],
+    };
+  });
+}
+
+function buildLegacySkillTraceFromFacts(facts: FactRow[], operationPlanId: string, fallback?: any): {
   crop_skill: SkillTraceEntry;
   agronomy_skill: SkillTraceEntry;
   device_skill: SkillTraceEntry;
@@ -1331,7 +1370,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
     const skillTraceFacts = await queryFactsForOperation(pool, tenant, operationPlanId);
-    const resolvedSkillTrace = buildSkillTraceFromFacts(skillTraceFacts, operationPlanId, state.skill_trace);
+    const resolvedSkillTrace = buildSkillTraceFromFacts(skillTraceFacts, operationPlanId);
+    const resolvedLegacySkillTrace = buildLegacySkillTraceFromFacts(skillTraceFacts, operationPlanId, state.skill_trace);
     const taskIdForBundle = toText(task?.record_json?.payload?.act_task_id ?? state.task_id ?? plan?.record_json?.payload?.act_task_id);
     const artifactQ = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json::jsonb AS record_json
@@ -1783,6 +1823,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         act_task_id: toText(state.act_task_id ?? state.task_id),
         receipt_id: toText(state.receipt_id ?? normalizedReceipt?.receipt_fact_id),
         skill_trace: resolvedSkillTrace,
+        // Deprecated: keep for compatibility with older frontend versions.
+        legacy_skill_trace: resolvedLegacySkillTrace,
         final_status: finalStatus,
         status_label: statusLabel(finalStatus),
         invalid_reason: invalidReason,

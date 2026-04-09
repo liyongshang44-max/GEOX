@@ -867,10 +867,10 @@ export function buildOperationDetailViewModel(args?: {
       ),
     },
     skillTrace: {
-      cropSkillRunId: toText(safeDetail?.skill_trace?.crop_skill?.run_id),
-      agronomySkillRunId: toText(safeDetail?.skill_trace?.agronomy_skill?.run_id),
-      deviceSkillRunId: toText(safeDetail?.skill_trace?.device_skill?.run_id),
-      acceptanceSkillRunId: toText(safeDetail?.skill_trace?.acceptance_skill?.run_id),
+      cropSkillRunId: toText(safeDetail?.legacy_skill_trace?.crop_skill?.run_id),
+      agronomySkillRunId: toText(safeDetail?.legacy_skill_trace?.agronomy_skill?.run_id),
+      deviceSkillRunId: toText(safeDetail?.legacy_skill_trace?.device_skill?.run_id),
+      acceptanceSkillRunId: toText(safeDetail?.legacy_skill_trace?.acceptance_skill?.run_id),
     },
     invalidReason: toText(safeDetail?.invalid_reason, ""),
     customerView: {
