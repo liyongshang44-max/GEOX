@@ -40,6 +40,7 @@ type FieldSensingOverviewV1 = {
   computed_at_ts_ms: number | null;
   source_observed_at_ts_ms: number | null;
   explanation_codes_json: string[];
+  source_observation_ids_json: string[];
   updated_ts_ms: number;
 };
 
@@ -119,6 +120,7 @@ type LatestDerivedState = {
   computed_at_ts_ms: number | null;
   confidence: number | null;
   source_observed_at_ts_ms: number | null;
+  source_observation_ids_json: string[];
 };
 
 function extractObservedAtFromPayload(payload: Record<string, any>): number | null {
@@ -144,6 +146,9 @@ function extractLatestDerivedState(rows: any[], stateType: string): LatestDerive
     computed_at_ts_ms: toFiniteNumber(target?.computed_at_ts_ms),
     confidence: toConfidence(target?.confidence),
     source_observed_at_ts_ms: extractObservedAtFromPayload(payload),
+    source_observation_ids_json: Array.isArray(target?.source_observation_ids_json)
+      ? target.source_observation_ids_json.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
+      : [],
   };
 }
 
@@ -171,6 +176,7 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
           computed_at_ts_ms bigint NULL,
           source_observed_at_ts_ms bigint NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+          source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
           PRIMARY KEY (tenant_id, field_id)
         )`
@@ -185,6 +191,7 @@ export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promis
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS irrigation_action_hint text NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS computed_at_ts_ms bigint NULL`);
       await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS source_observed_at_ts_ms bigint NULL`);
+      await db.query(`ALTER TABLE field_sensing_overview_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_sensing_overview_v1_scope ON field_sensing_overview_v1 (tenant_id, project_id, group_id, field_id)`);
     })().catch((err) => {
       ensurePromise = null;
@@ -276,7 +283,7 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   }
 
   const derivedRows = await db.query(
-    `SELECT state_type, payload_json, computed_at_ts_ms, confidence
+    `SELECT state_type, payload_json, computed_at_ts_ms, confidence, source_observation_ids_json
        FROM derived_sensing_state_index_v1
       WHERE tenant_id = $1
         AND field_id = $2
@@ -318,6 +325,12 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   const sourceObservedAtTsMs = [canopyPayload?.source_observed_at_ts_ms, qualityPayload?.source_observed_at_ts_ms, waterFlowPayload?.source_observed_at_ts_ms]
     .filter((x): x is number => Number.isFinite(x ?? null))
     .sort((a, b) => b - a)[0] ?? null;
+  const sourceObservationIds = normalizeCodes([
+    ...(canopyPayload?.source_observation_ids_json ?? []),
+    ...(qualityPayload?.source_observation_ids_json ?? []),
+    ...(waterFlowPayload?.source_observation_ids_json ?? []),
+    ...(irrigationPayload?.source_observation_ids_json ?? []),
+  ]);
   const overview: FieldSensingOverviewV1 = {
     tenant_id: params.tenant_id,
     project_id: params.project_id ?? null,
@@ -338,13 +351,14 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     computed_at_ts_ms: computedAtTsMs,
     source_observed_at_ts_ms: sourceObservedAtTsMs,
     explanation_codes_json: normalizeCodes(globalExplanations),
+    source_observation_ids_json: sourceObservationIds,
     updated_ts_ms: nowMs,
   };
 
   const upsert = await db.query(
     `INSERT INTO field_sensing_overview_v1
-      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,$20)
+      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, irrigation_need_level, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, sensor_quality, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,$20::jsonb,$21)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -364,6 +378,7 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
       source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
+      source_observation_ids_json = EXCLUDED.source_observation_ids_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
      RETURNING *`,
     [
@@ -386,6 +401,7 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       overview.computed_at_ts_ms,
       overview.source_observed_at_ts_ms,
       JSON.stringify(overview.explanation_codes_json),
+      JSON.stringify(overview.source_observation_ids_json),
       overview.updated_ts_ms,
     ]
   );
@@ -411,6 +427,7 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     computed_at_ts_ms: row.computed_at_ts_ms == null ? null : Number(row.computed_at_ts_ms),
     source_observed_at_ts_ms: row.source_observed_at_ts_ms == null ? null : Number(row.source_observed_at_ts_ms),
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
+    source_observation_ids_json: Array.isArray(row.source_observation_ids_json) ? row.source_observation_ids_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
   };
 }

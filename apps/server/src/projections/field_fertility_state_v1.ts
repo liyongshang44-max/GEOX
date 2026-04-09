@@ -14,6 +14,7 @@ type FieldFertilityStateV1 = {
   computed_at_ts_ms: number | null;
   source_observed_at_ts_ms: number | null;
   explanation_codes_json: string[];
+  source_observation_ids_json: string[];
   source_device_ids_json: string[];
   updated_ts_ms: number;
 };
@@ -23,6 +24,7 @@ type DerivedStateProjectionRowV1 = {
   state_type: string;
   confidence?: number | null;
   explanation_codes_json?: string[] | null;
+  source_observation_ids_json?: string[] | null;
   source_device_ids_json?: string[] | null;
   computed_at_ts_ms?: number | null;
 };
@@ -73,6 +75,7 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
   let computedAtTsMs: number | null = null;
   let sourceObservedAtTsMs: number | null = null;
   const explanationCodes: string[] = [];
+  const sourceObservationIds: string[] = [];
   const sourceDeviceIds: string[] = [];
 
   for (const row of rows ?? []) {
@@ -107,6 +110,9 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
     if (Array.isArray(row.explanation_codes_json)) {
       explanationCodes.push(...row.explanation_codes_json.map((x: unknown) => String(x)));
     }
+    if (Array.isArray(row.source_observation_ids_json)) {
+      sourceObservationIds.push(...row.source_observation_ids_json.map((x: unknown) => String(x)));
+    }
     if (Array.isArray(row.source_device_ids_json)) {
       sourceDeviceIds.push(...row.source_device_ids_json.map((x: unknown) => String(x)));
     }
@@ -128,6 +134,7 @@ export function composeFieldFertilityStateFromDerivedRowsV1(rows: DerivedStatePr
     computed_at_ts_ms: computedAtTsMs,
     source_observed_at_ts_ms: sourceObservedAtTsMs,
     explanation_codes_json: normalizeCodes(explanationCodes),
+    source_observation_ids_json: normalizeCodes(sourceObservationIds),
     source_device_ids_json: normalizeCodes(sourceDeviceIds),
     updated_ts_ms: nowMs,
   };
@@ -149,6 +156,7 @@ export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise
           computed_at_ts_ms bigint NULL,
           source_observed_at_ts_ms bigint NULL,
           explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+          source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           source_device_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
           updated_ts_ms bigint NOT NULL,
           PRIMARY KEY (tenant_id, field_id)
@@ -156,6 +164,7 @@ export async function ensureFieldFertilityStateProjectionV1(db: DbConn): Promise
       );
       await db.query(`CREATE INDEX IF NOT EXISTS idx_field_fertility_state_v1_scope ON field_fertility_state_v1 (tenant_id, project_id, group_id, field_id)`);
       await db.query(`ALTER TABLE field_fertility_state_v1 ADD COLUMN IF NOT EXISTS source_observed_at_ts_ms bigint NULL`);
+      await db.query(`ALTER TABLE field_fertility_state_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
     })().catch((err) => {
       ensurePromise = null;
       throw err;
@@ -184,6 +193,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
         payload_json,
         confidence,
         explanation_codes_json,
+        source_observation_ids_json,
         source_device_ids_json,
         computed_at_ts_ms
       FROM derived_sensing_state_index_v1
@@ -206,8 +216,8 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
 
   const upsert = await db.query(
     `INSERT INTO field_fertility_state_v1
-      (tenant_id, project_id, group_id, field_id, fertility_level, salinity_risk, recommendation_bias, confidence, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_device_ids_json, updated_ts_ms)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13)
+      (tenant_id, project_id, group_id, field_id, fertility_level, salinity_risk, recommendation_bias, confidence, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, source_device_ids_json, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14)
      ON CONFLICT (tenant_id, field_id)
      DO UPDATE SET
       project_id = EXCLUDED.project_id,
@@ -219,6 +229,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
       computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
       source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
       explanation_codes_json = EXCLUDED.explanation_codes_json,
+      source_observation_ids_json = EXCLUDED.source_observation_ids_json,
       source_device_ids_json = EXCLUDED.source_device_ids_json,
       updated_ts_ms = EXCLUDED.updated_ts_ms
      RETURNING *`,
@@ -234,6 +245,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
       state.computed_at_ts_ms,
       state.source_observed_at_ts_ms,
       JSON.stringify(state.explanation_codes_json),
+      JSON.stringify(state.source_observation_ids_json),
       JSON.stringify(state.source_device_ids_json),
       state.updated_ts_ms,
     ]
@@ -252,6 +264,7 @@ export async function refreshFieldFertilityStateV1(db: DbConn, params: {
     computed_at_ts_ms: row.computed_at_ts_ms == null ? null : Number(row.computed_at_ts_ms),
     source_observed_at_ts_ms: row.source_observed_at_ts_ms == null ? null : Number(row.source_observed_at_ts_ms),
     explanation_codes_json: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: unknown) => String(x)) : [],
+    source_observation_ids_json: Array.isArray(row.source_observation_ids_json) ? row.source_observation_ids_json.map((x: unknown) => String(x)) : [],
     source_device_ids_json: Array.isArray(row.source_device_ids_json) ? row.source_device_ids_json.map((x: unknown) => String(x)) : [],
     updated_ts_ms: Number(row.updated_ts_ms ?? nowMs),
   };

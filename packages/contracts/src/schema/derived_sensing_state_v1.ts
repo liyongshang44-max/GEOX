@@ -119,7 +119,8 @@ export const DerivedSensingStateV1Schema = z
       payload: z.record(z.string(), z.any()),
       confidence: z.number().min(0).max(1).nullable(),
       explanation_codes: z.array(z.string().trim().min(1)),
-      source_device_ids: z.array(z.string().trim().min(1)),
+      source_observation_ids: z.array(z.string().trim().min(1)),
+      source_device_ids: z.array(z.string().trim().min(1)).optional(),
       computed_at_ts_ms: z.number().int(),
     }),
   })

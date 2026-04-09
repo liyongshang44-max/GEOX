@@ -106,7 +106,8 @@ export type DerivedSensingStateV1Input = {
   payload: Record<string, any>;
   confidence: number | null;
   explanation_codes: string[];
-  source_device_ids: string[];
+  source_observation_ids: string[];
+  source_device_ids?: string[];
   computed_at_ts_ms: number;
   source: string;
 };
@@ -120,7 +121,8 @@ export type DerivedSensingStateV1Row = {
   payload: Record<string, any>;
   confidence: number | null;
   explanation_codes: string[];
-  source_device_ids: string[];
+  source_observation_ids: string[];
+  source_device_ids?: string[];
   computed_at_ts_ms: number;
   fact_id: string;
 };
@@ -134,7 +136,7 @@ function clampConfidence(v: number | null): number | null {
   return Math.max(0, Math.min(1, v));
 }
 
-function normalizeArray(values: string[]): string[] {
+function normalizeArray(values: unknown): string[] {
   return Array.from(new Set((Array.isArray(values) ? values : []).map((x) => String(x || "").trim()).filter(Boolean)));
 }
 
@@ -254,6 +256,7 @@ export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise
       payload_json jsonb NOT NULL,
       confidence double precision NULL,
       explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
       source_device_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
       computed_at timestamptz NOT NULL,
       computed_at_ts_ms bigint NOT NULL,
@@ -264,6 +267,8 @@ export async function ensureDerivedSensingStateProjectionV1(db: DbConn): Promise
   await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_scope_time ON derived_sensing_state_index_v1 (tenant_id, project_id, group_id, field_id, computed_at_ts_ms DESC)`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_derived_sensing_state_index_v1_type_time ON derived_sensing_state_index_v1 (tenant_id, field_id, state_type, computed_at_ts_ms DESC)`);
   await db.query(`CREATE UNIQUE INDEX IF NOT EXISTS ux_derived_sensing_state_index_v1_fact_id ON derived_sensing_state_index_v1 (fact_id)`);
+  await db.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+  await db.query(`UPDATE derived_sensing_state_index_v1 SET source_observation_ids_json = '[]'::jsonb WHERE source_observation_ids_json IS NULL`);
 }
 
 export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSensingStateV1Input): Promise<{ fact_id: string; occurred_at_iso: string }> {
@@ -275,6 +280,7 @@ export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSens
   const payload = normalizeStatePayload(stateType, input.payload ?? {});
   const fact_id = `derived_state_${sha256Hex(`${input.tenant_id}|${input.field_id}|${stateType}|${input.computed_at_ts_ms}`)}`;
   const normalizedCodes = normalizeArray(input.explanation_codes);
+  const normalizedObservationIds = normalizeArray(input.source_observation_ids);
   const normalizedDevices = normalizeArray(input.source_device_ids);
 
   const record = {
@@ -290,7 +296,8 @@ export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSens
       payload,
       confidence: clampConfidence(input.confidence),
       explanation_codes: normalizedCodes,
-      source_device_ids: normalizedDevices,
+      source_observation_ids: normalizedObservationIds,
+      ...(normalizedDevices.length > 0 ? { source_device_ids: normalizedDevices } : {}),
       computed_at_ts_ms: input.computed_at_ts_ms,
     },
   };
@@ -304,8 +311,8 @@ export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSens
 
   await db.query(
     `INSERT INTO derived_sensing_state_index_v1
-      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence, explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id)
-     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9::jsonb, $10::timestamptz, $11, $12)
+      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence, explanation_codes_json, source_observation_ids_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id)
+     VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11::timestamptz, $12, $13)
      ON CONFLICT (tenant_id, field_id, state_type, computed_at_ts_ms) DO NOTHING`,
     [
       input.tenant_id,
@@ -316,6 +323,7 @@ export async function appendDerivedSensingStateV1(db: DbConn, input: DerivedSens
       JSON.stringify(payload),
       clampConfidence(input.confidence),
       JSON.stringify(normalizedCodes),
+      JSON.stringify(normalizedObservationIds),
       JSON.stringify(normalizedDevices),
       occurred_at_iso,
       input.computed_at_ts_ms,
@@ -347,6 +355,7 @@ export async function getLatestDerivedSensingStatesByFieldV1(db: DbConn, params:
         payload_json,
         confidence,
         explanation_codes_json,
+        source_observation_ids_json,
         source_device_ids_json,
         computed_at_ts_ms,
         fact_id
@@ -369,6 +378,7 @@ export async function getLatestDerivedSensingStatesByFieldV1(db: DbConn, params:
     payload: (row.payload_json && typeof row.payload_json === "object") ? row.payload_json : {},
     confidence: row.confidence == null ? null : Number(row.confidence),
     explanation_codes: Array.isArray(row.explanation_codes_json) ? row.explanation_codes_json.map((x: any) => String(x)) : [],
+    source_observation_ids: Array.isArray(row.source_observation_ids_json) ? row.source_observation_ids_json.map((x: any) => String(x)) : [],
     source_device_ids: Array.isArray(row.source_device_ids_json) ? row.source_device_ids_json.map((x: any) => String(x)) : [],
     computed_at_ts_ms: Number(row.computed_at_ts_ms),
     fact_id: String(row.fact_id),

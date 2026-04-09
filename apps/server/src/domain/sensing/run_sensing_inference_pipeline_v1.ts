@@ -23,6 +23,7 @@ export type RunSensingInferencePipelineV1Input = {
   group_id: string | null;
   field_id: string;
   source_device_ids: string[];
+  source_observation_ids?: string[];
   observations: Observation[];
   now: number;
 };
@@ -62,6 +63,11 @@ function getObservationDeviceId(observation: Observation): string | null {
   return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
+function getObservationId(observation: Observation): string | null {
+  const raw = observation.observation_id ?? observation.source_observation_id ?? observation.observation_fact_id ?? observation.fact_id;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
+}
+
 function pickLatestFinite(observations: Observation[], keys: string[]): number | null {
   for (let i = observations.length - 1; i >= 0; i -= 1) {
     const observation = observations[i];
@@ -85,6 +91,14 @@ function filterObservationsByDevices(observations: Observation[], deviceIds: str
 export async function runSensingInferencePipelineV1(input: RunSensingInferencePipelineV1Input): Promise<RunSensingInferencePipelineV1Result> {
   const scopedObservations = filterObservationsByDevices(input.observations ?? [], input.source_device_ids ?? []);
   const primaryDeviceId = input.source_device_ids[0] ?? null;
+  const sourceObservationIds = Array.from(
+    new Set(
+      [
+        ...(Array.isArray(input.source_observation_ids) ? input.source_observation_ids : []),
+        ...scopedObservations.map((x) => getObservationId(x)).filter((x): x is string => Boolean(x)),
+      ].map((x) => String(x).trim()).filter(Boolean)
+    )
+  );
 
   async function persistFailureSkillRun(args: {
     skill_id: SensingSkillRunSummaryV1["skill_id"];
@@ -150,6 +164,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -171,6 +186,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -257,6 +273,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -277,6 +294,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -364,6 +382,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -444,6 +463,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",
@@ -465,6 +485,7 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
       },
       confidence: inference.confidence,
       explanation_codes: inference.explanation_codes,
+      source_observation_ids: sourceObservationIds,
       source_device_ids: input.source_device_ids,
       computed_at_ts_ms: input.now,
       source: "sensing_pipeline_v1",

@@ -256,7 +256,7 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
   field_id: string;
 }): Promise<Array<Record<string, unknown>>> {
   const rows = await db.query(
-    `SELECT device_id, metric, value_num
+    `SELECT device_id, metric, value_num, fact_id
        FROM device_observation_index_v1
       WHERE tenant_id = $1
         AND project_id = $2
@@ -268,12 +268,17 @@ async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbC
   );
 
   return (rows.rows ?? [])
-    .map((row: any) => {
+    .map((row: any): Record<string, unknown> | null => {
       const metric = String(row.metric ?? "").trim();
       const device_id = String(row.device_id ?? "").trim();
+      const observation_id = String(row.fact_id ?? "").trim();
       const valueNum = toFiniteNumber(row.value_num);
-      if (!metric || !device_id || valueNum == null) return null;
-      return mapObservationMetricToPipelineShape(metric, valueNum, device_id);
+      if (!metric || !device_id || !observation_id || valueNum == null) return null;
+      return {
+        ...mapObservationMetricToPipelineShape(metric, valueNum, device_id),
+        observation_id,
+        fact_id: observation_id,
+      };
     })
     .filter((row: Record<string, unknown> | null): row is Record<string, unknown> => Boolean(row));
 }
@@ -308,6 +313,13 @@ export async function writeObservationRunPipelineAndRefreshFieldV1(
         .filter(Boolean)
     )
   );
+  const source_observation_ids = Array.from(
+    new Set(
+      observations
+        .map((item) => String(item.observation_id ?? item.fact_id ?? "").trim())
+        .filter(Boolean)
+    )
+  );
 
   const pipeline = await runSensingInferencePipelineV1({
     db,
@@ -316,6 +328,7 @@ export async function writeObservationRunPipelineAndRefreshFieldV1(
     group_id,
     field_id,
     source_device_ids,
+    source_observation_ids,
     observations,
     now: Number.isFinite(input.observed_at_ts_ms) ? input.observed_at_ts_ms : Date.now(),
   });

@@ -164,7 +164,9 @@ export type ParsedFieldReadModelV1 = {
     statusLabel: string;
     explainCodes: string[];
     explainCodeLabels: string[];
+    sourceObservationIds: string[];
     sensorQuality: string | null;
+    confidence: number | null;
     updatedAtMs: number | null;
     updatedAtLabel: string;
     tone: "normal" | "warning" | "stale" | "empty";
@@ -178,6 +180,7 @@ export type ParsedFieldReadModelV1 = {
     statusLabel: string;
     explainCodes: string[];
     explainCodeLabels: string[];
+    sourceObservationIds: string[];
     fertilityState: string | null;
     fertilityStateLabel: string;
     salinityRisk: string | null;
@@ -207,18 +210,31 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
     sensing: sensingPayload
       ? (() => {
         const status = toStringOrNull(sensingPayload?.status ?? sensingPayload?.state ?? sensingPayload?.status_code);
-        const explainCodes = toStringArray(sensingPayload?.explain_codes ?? sensingPayload?.reason_codes ?? sensingPayload?.codes);
+        const explainCodes = toStringArray(
+          sensingPayload?.explanation_codes_json
+          ?? sensingPayload?.explanation_codes
+          ?? sensingPayload?.explain_codes
+          ?? sensingPayload?.reason_codes
+          ?? sensingPayload?.codes
+        );
+        const sourceObservationIds = toStringArray(
+          sensingPayload?.source_observation_ids_json
+          ?? sensingPayload?.source_observation_ids
+        );
+        const confidence = toNumberOrNull(sensingPayload?.confidence);
         return {
           status,
           statusLabel: toReadableStatusLabel(status),
           explainCodes,
           explainCodeLabels: toReadableExplanationCodes(explainCodes),
+          sourceObservationIds,
           sensorQuality: toStringOrNull(
             sensingPayload?.sensor_quality_level
             ?? sensingPayload?.sensor_quality
             ?? sensingPayload?.quality_level
             ?? sensingPayload?.quality
           ),
+          confidence,
           updatedAtMs: toMs(sensingPayload?.updated_ts_ms ?? sensingPayload?.updated_at ?? sensingPayload?.computed_at_ts_ms ?? sensingFact.updatedAtMs),
           updatedAtLabel: formatUpdatedAt(sensingPayload?.updated_ts_ms ?? sensingPayload?.updated_at ?? sensingPayload?.computed_at_ts_ms ?? sensingFact.updatedAtMs),
           tone: resolveStateTone(status),
@@ -238,10 +254,16 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
           ?? fertilityPayload?.level
         );
         const explainCodes = toStringArray(
-          fertilityPayload?.explain_codes
+          fertilityPayload?.explanation_codes_json
+          ?? fertilityPayload?.explanation_codes
+          ?? fertilityPayload?.explain_codes
           ?? fertilityPayload?.reason_codes
           ?? fertilityPayload?.codes
           ?? (fertilityPayload?.explanation ? [fertilityPayload.explanation] : [])
+        );
+        const sourceObservationIds = toStringArray(
+          fertilityPayload?.source_observation_ids_json
+          ?? fertilityPayload?.source_observation_ids
         );
         const fertilityState = toStringOrNull(
           fertilityPayload?.fertility_state
@@ -264,6 +286,7 @@ export function parseFieldReadModelV1(rawRecommendation: any, options?: { enable
           statusLabel: toReadableStatusLabel(status),
           explainCodes,
           explainCodeLabels: toReadableExplanationCodes(explainCodes),
+          sourceObservationIds,
           fertilityState,
           fertilityStateLabel: toReadableStatusLabel(fertilityState),
           salinityRisk,
