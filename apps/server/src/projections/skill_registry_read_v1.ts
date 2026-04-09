@@ -112,17 +112,17 @@ function toEpochMs(value: unknown, fallbackIso?: string): number {
 }
 
 
-const SKILL_CATEGORY_PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance" | "unknown"> = {
-  sensing: "sensing",
-  agronomy: "agronomy",
-  device: "device",
-  acceptance: "acceptance",
-  unknown: "unknown",
+const PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance"> = {
+  crop_skill: "agronomy",
+  agronomy_skill: "agronomy",
+  device_skill: "device",
+  acceptance_skill: "acceptance",
+  sensing_skill: "sensing",
 };
 
 function toPublicCategory(value: unknown): "sensing" | "agronomy" | "device" | "acceptance" | "unknown" {
   const normalized = str(value).toLowerCase();
-  return SKILL_CATEGORY_PUBLIC_MAP[normalized] ?? "unknown";
+  return PUBLIC_MAP[normalized] ?? "unknown";
 }
 
 function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
