@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { listSkillRegistry, listSkillRuns, resolveSkillClassification, type SkillRegistryItem, type SkillRunSummary } from "../../../api/skills";
 import { SectionCard, StatusPill } from "../../../shared/ui";
+import { buildSkillOverviewMetrics } from "./SkillOverview.metrics";
 
 export default function SkillOverview(): React.ReactElement {
   const [items, setItems] = React.useState<SkillRegistryItem[]>([]);
@@ -31,26 +32,23 @@ export default function SkillOverview(): React.ReactElement {
     };
   }, []);
 
-  const activeCount = items.filter((item) => String(item.status).toUpperCase() === "ACTIVE").length;
-  const latestVersionCount = items.filter((item) => item.current_version && item.latest_version && item.current_version === item.latest_version).length;
-  const successCount = runs.filter((run) => ["SUCCESS", "SUCCEEDED", "PASS"].includes(String(run.status).toUpperCase())).length;
-  const failedCount = runs.filter((run) => ["FAILED", "ERROR", "TIMEOUT"].includes(String(run.status).toUpperCase())).length;
-  const abnormalSkillCount = new Set(
-    runs
-      .filter((run) => ["FAILED", "ERROR", "TIMEOUT"].includes(String(run.status).toUpperCase()))
-      .map((run) => String(run.skill_id ?? "").trim())
-      .filter(Boolean),
-  ).size;
+  const metrics = React.useMemo(() => buildSkillOverviewMetrics(items, runs), [items, runs]);
 
   return (
     <SectionCard title="SkillOverview" subtitle="技能资产总体状态（标准枚举）：ACTIVE/DISABLED、版本同步、最近运行健康度。">
       <div className="decisionList" style={{ marginTop: 8 }}>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">已注册技能</div><div className="decisionItemMeta">{items.length} 项</div></div>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">激活中</div><div className="decisionItemMeta">{activeCount} 项</div></div>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">版本已对齐最新</div><div className="decisionItemMeta">{latestVersionCount} 项</div></div>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">运行成功</div><div className="decisionItemMeta">{successCount} 次</div></div>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">运行失败</div><div className="decisionItemMeta">{failedCount} 次</div></div>
-        <div className="decisionItemStatic"><div className="decisionItemTitle">异常 skill 数</div><div className="decisionItemMeta">{abnormalSkillCount} 项</div></div>
+        {metrics.map((metric) => {
+          const passed = metric.value >= metric.threshold;
+          return (
+            <div key={metric.key} className="decisionItemStatic">
+              <div className="decisionItemTitle">{metric.label}</div>
+              <div className="decisionItemMeta">{metric.value} {metric.unit}</div>
+              <div className="decisionItemMeta" style={{ marginTop: 4 }}>
+                阈值 {`>=${metric.threshold}`} · {passed ? "满足" : "未满足"}
+              </div>
+            </div>
+          );
+        })}
       </div>
       <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
         {items.slice(0, 5).map((item) => (
