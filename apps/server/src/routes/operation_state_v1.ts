@@ -14,6 +14,36 @@ import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
+function buildInvalidAcceptanceFact(params: {
+  acceptance: FactRow | null;
+  invalidReason: "evidence_missing" | "evidence_invalid" | null;
+  fallbackOccurredAt?: string | null;
+}): FactRow {
+  const payload = params.acceptance?.record_json?.payload ?? {};
+  const missingEvidence = Array.isArray(payload?.missing_evidence)
+    ? payload.missing_evidence.map((x: unknown) => String(x)).filter(Boolean)
+    : [];
+  const explanationCodes = Array.isArray(payload?.explanation_codes)
+    ? payload.explanation_codes.map((x: unknown) => String(x)).filter(Boolean)
+    : [];
+  if (params.invalidReason) missingEvidence.push(params.invalidReason);
+  explanationCodes.push("invalid_execution");
+  return {
+    fact_id: params.acceptance?.fact_id ?? `derived_invalid_acceptance_${Date.now()}`,
+    occurred_at: params.acceptance?.occurred_at ?? params.fallbackOccurredAt ?? new Date().toISOString(),
+    source: params.acceptance?.source ?? "api/v1/operation/state/detail",
+    record_json: {
+      type: "acceptance_result_v1",
+      payload: {
+        ...payload,
+        verdict: "FAIL",
+        missing_evidence: Array.from(new Set(missingEvidence)),
+        explanation_codes: Array.from(new Set(explanationCodes)),
+      },
+    },
+  };
+}
+
 function tenantFromReq(req: any, auth: any): TenantTriple {
   const q = req.query ?? {};
   return {
@@ -1379,9 +1409,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
     if (acceptance || normalizedReceipt) {
+      const invalidExecutionFromState = String(state?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION";
       const acceptanceVerdict = String(acceptance?.record_json?.payload?.verdict ?? "").toUpperCase();
       const acceptanceResultStatus =
-        !acceptanceVerdict || acceptanceVerdict === "PENDING_ACCEPTANCE"
+        invalidExecutionFromState
+          ? "FAILED"
+          : !acceptanceVerdict || acceptanceVerdict === "PENDING_ACCEPTANCE"
           ? "PENDING"
           : acceptanceVerdict === "PASS"
             ? "SUCCESS"
@@ -1659,7 +1692,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       recommendationPayloadWithFallback?.risk_if_not_execute
       ?? recommendationPayloadWithFallback?.suggested_action?.parameters?.risk_if_not_execute
     );
-    const acceptanceForResponse = invalidExecution ? null : acceptance;
+    const acceptanceForResponse = invalidExecution
+      ? buildInvalidAcceptanceFact({
+        acceptance,
+        invalidReason,
+        fallbackOccurredAt: receiptFact?.occurred_at ?? null,
+      })
+      : acceptance;
     const finalStatusCode = String(finalStatus ?? "").trim().toUpperCase();
     const explainHuman = buildExplainHuman({
       cropStage: agronomyCropStage,
