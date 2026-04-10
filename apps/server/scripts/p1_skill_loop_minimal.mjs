@@ -101,9 +101,23 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
-  const parameters = {
+  const rawParameters = {
     duration_sec: 30,
+    mode: "auto",
+    profile: "default",
+    strategy: "aggressive",
+    smoke_case: suffix,
   };
+  const parameters = sanitizeParametersForSmoke(actionType, rawParameters);
+  if (Object.keys(parameters).length === 0) {
+    console.error("[p1-smoke] SMOKE_PARAMETERS_INVALID", {
+      actionType,
+      rawParameters,
+      sanitizedParameters: parameters,
+    });
+    throw new Error("SMOKE_PARAMETERS_INVALID");
+  }
+  console.log("[p1-smoke] manual parameters", { actionType, suffix, parameters });
   const body = {
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
@@ -174,6 +188,15 @@ async function waitForFinalState(operationPlanId) {
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
   return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE", "COMPLETED"].includes(s);
+}
+
+function sanitizeParametersForSmoke(actionType, raw) {
+  const allowlistByActionType = {
+    IRRIGATE: new Set(["duration_sec"]),
+  };
+  const allowlist = allowlistByActionType[String(actionType ?? "").toUpperCase()] ?? new Set();
+  if (!raw || typeof raw !== "object") return {};
+  return Object.fromEntries(Object.entries(raw).filter(([key]) => allowlist.has(key)));
 }
 
 async function main() {
