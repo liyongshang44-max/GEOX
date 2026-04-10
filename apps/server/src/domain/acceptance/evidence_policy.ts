@@ -29,6 +29,12 @@ const FORMAL_LOG_ALLOWLIST = [
   "runtime",
 ] as const;
 
+const FORMAL_LOG_EXACT_KINDS = [
+  "dispatch_ack",
+  "valve_open_confirmation",
+  "water_delivery_receipt",
+] as const;
+
 function toKind(value: unknown): string {
   return String((value as { kind?: string } | undefined)?.kind ?? value ?? "").trim().toLowerCase();
 }
@@ -44,6 +50,7 @@ export function inferEvidenceLevel(value: unknown): EvidenceLevel {
 export function isFormalLogKind(kindRaw: unknown): boolean {
   const kind = toKind(kindRaw);
   if (!kind || kind === "sim_trace") return false;
+  if (FORMAL_LOG_EXACT_KINDS.includes(kind as (typeof FORMAL_LOG_EXACT_KINDS)[number])) return true;
   return FORMAL_LOG_ALLOWLIST.some((token) => kind.includes(token));
 }
 
