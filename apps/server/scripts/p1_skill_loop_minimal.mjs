@@ -299,6 +299,16 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) 
   });
 }
 
+async function evaluateAcceptance(actTaskId) {
+  return requestWithRetry("/api/v1/acceptance/evaluate", {
+    method: "POST",
+    body: JSON.stringify({
+      ...tenant,
+      act_task_id: actTaskId,
+    }),
+  });
+}
+
 async function waitForFinalState(operationPlanId) {
   for (let i = 0; i < 10; i += 1) {
     const list = await requestWithRetry("/api/v1/operations", { method: "GET" });
@@ -331,6 +341,7 @@ async function main() {
   const successOp = await createOperation("IRRIGATE", "success", SMOKE_SUCCESS_BIND_TARGET);
   const successTaskId = await waitForTask(successOp.operationPlanId);
   await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
+  await evaluateAcceptance(successTaskId);
   const successFinal = await waitForFinalState(successOp.operationPlanId);
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
