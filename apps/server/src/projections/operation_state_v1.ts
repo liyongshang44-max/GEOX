@@ -5,6 +5,10 @@ import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
 
+const OPERATION_STATE_INVALID_EXECUTION_DEBUG = ["1", "true", "yes", "on"].includes(
+  String(process.env.OPERATION_STATE_INVALID_EXECUTION_DEBUG ?? "").trim().toLowerCase()
+);
+
 type TimelineType =
   | "ASSIGNMENT_CREATED"
   | "ASSIGNMENT_ACCEPTED"
@@ -75,6 +79,7 @@ export type OperationStateV1 = {
     missing: string[];
   };
   final_status: "SUCCESS" | "FAILED" | "RUNNING" | "PENDING" | "PENDING_ACCEPTANCE" | "INVALID_EXECUTION";
+  invalid_reason: "evidence_missing" | "evidence_invalid" | null;
   last_event_ts: number;
   timeline: OperationTimelineItemV1[];
   manual_fallback?: {
@@ -498,7 +503,22 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const acceptanceCompleted = acceptance.status === "PASS";
     const hasReceipt = Boolean(receipt);
     const executedReceipt = hasExecutedReceiptStatus(receiptStatus);
+    if (OPERATION_STATE_INVALID_EXECUTION_DEBUG) {
+      console.debug("[operation_state_v1] invalid execution check", {
+        operation_plan_id,
+        receipt_status: receiptStatus,
+        has_formal_evidence: evidenceEvaluation.has_formal_evidence,
+        evidence_reason: evidenceEvaluation.reason ?? null,
+        artifacts_count: artifactEvidence.length,
+        media_count: mediaEvidence.length,
+        metrics_count: Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics.length : 0,
+        logs_count: Array.isArray(receiptPayload?.logs_refs) ? receiptPayload.logs_refs.length : 0,
+      });
+    }
     const invalidExecution = hasReceipt && executedReceipt && !evidenceEvaluation.has_formal_evidence;
+    const invalidReason: OperationStateV1["invalid_reason"] = invalidExecution
+      ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
+      : null;
     const final_status =
       invalidExecution
         ? "INVALID_EXECUTION"
@@ -646,9 +666,10 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       receipt_status: receiptStatus,
       acceptance: {
         status: invalidExecution ? "PENDING" : acceptance.status,
-        missing: invalidExecution ? [evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing"] : acceptance.missing
+        missing: invalidExecution && invalidReason ? [invalidReason] : acceptance.missing
       },
       final_status: finalStatusNormalized,
+      invalid_reason: finalStatusNormalized === "INVALID_EXECUTION" ? invalidReason : null,
       last_event_ts: fullTimeline.length ? fullTimeline[fullTimeline.length - 1].ts : toMs(row.occurred_at),
       timeline: fullTimeline,
       manual_fallback: manualFallbackFact
