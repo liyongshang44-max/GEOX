@@ -76,6 +76,19 @@ function parseFiniteNumber(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+
+function sanitizeParametersBySchema(parameterSchema: any, rawParameters: any): Record<string, unknown> {
+  const allowedKeys = new Set(
+    Array.isArray(parameterSchema?.keys)
+      ? parameterSchema.keys.map((x: any) => String(x?.name ?? "").trim()).filter(Boolean)
+      : []
+  );
+  const source = rawParameters && typeof rawParameters === "object" ? rawParameters : {};
+  return Object.fromEntries(
+    Object.entries(source).filter(([k]) => allowedKeys.has(k))
+  );
+}
+
 function parseTaskLocation(taskPayload: any): { lat: number; lon: number } | null {
   const sources = [
     taskPayload?.meta?.location,
@@ -2205,6 +2218,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           approved_by_token_id: auth.token_id
         }
       });
+      const sanitizedParameters = sanitizeParametersBySchema(proposal.parameter_schema, proposal.parameters);
       const taskCreatePayload = {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -2216,7 +2230,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         target: proposal.target,
         time_window: proposal.time_window,
         parameter_schema: proposal.parameter_schema,
-        parameters: proposal.parameters,
+        parameters: sanitizedParameters,
         constraints: proposal.constraints,
         meta: {
           ...(proposal.meta ?? {}),
@@ -2229,6 +2243,15 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
             : (proposal?.meta?.adapter_type ?? null)
         }
       };
+      console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
+        action_type: taskCreatePayload.action_type,
+        adapter_type: taskCreatePayload.meta?.adapter_type ?? null,
+        rawParameters: proposal.parameters ?? {},
+        sanitizedParameters,
+        parameter_schema_keys: Array.isArray(proposal?.parameter_schema?.keys)
+          ? proposal.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
+          : []
+      }));
       const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
       if (!delegated.ok || !delegated.json?.ok) {
         console.error("[AO_ACT_TASK_CREATE_FAILED_APPROVAL]", JSON.stringify({
@@ -2410,8 +2433,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }
     const adapterValidation = validateAdapterTask(adapterType, body);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
+    const rawParameters = body?.parameters && typeof body.parameters === "object" ? body.parameters : {};
+    const sanitizedParameters = sanitizeParametersBySchema(body?.parameter_schema, rawParameters);
     const taskCreatePayload = {
       ...body,
+      parameters: sanitizedParameters,
       action_type: aoActActionType,
       meta: {
         ...((body?.meta && typeof body.meta === "object") ? body.meta : {}),
@@ -2426,6 +2452,15 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       operation_plan_id,
       approval_request_id: String(body.approval_request_id ?? "").trim()
     };
+    console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
+      action_type: taskCreatePayload.action_type,
+      adapter_type: taskCreatePayload.meta?.adapter_type ?? null,
+      rawParameters,
+      sanitizedParameters,
+      parameter_schema_keys: Array.isArray(body?.parameter_schema?.keys)
+        ? body.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
+        : []
+    }));
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
     if (!delegated.ok || !delegated.json?.ok) {
       console.error("[AO_ACT_TASK_CREATE_FAILED_API]", JSON.stringify({

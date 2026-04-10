@@ -127,8 +127,7 @@ const irrigationValveV1: DeviceSkillDefinition = {
       parameters: {
         valve_id,
         duration_sec,
-        flow_lpm,
-        mode: duration_sec != null ? "duration" : (flow_lpm != null ? "flow" : "default")
+        flow_lpm
       },
       evidence_requirements: [
         "dispatch_ack",
