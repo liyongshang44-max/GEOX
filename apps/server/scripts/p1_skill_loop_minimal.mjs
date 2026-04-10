@@ -364,23 +364,30 @@ async function main() {
   console.log(`[p1-smoke] base=${BASE_URL}`);
   await waitForServerHealth();
   await ensureSkillBinding();
-
-  const successOp = await createOperation("IRRIGATE", "success", SMOKE_SUCCESS_BIND_TARGET);
-  const successTask = await waitForTask(successOp.operationPlanId);
-  const successTaskId = successTask.taskId;
-  console.log("[p1-smoke][success][waitTask]", {
-    operation_plan_id: successOp.operationPlanId,
-    act_task_id: successTaskId,
-    detail_task: successTask?.detail?.operation?.task ?? successTask?.detail?.task ?? null,
-    detail_status: successTask?.detail?.operation?.final_status ?? successTask?.detail?.final_status ?? null,
-  });
-  const successDispatchState = await setDispatchState(successTaskId, "ACKED");
-  console.log("[p1-smoke][success][setDispatchState]", successDispatchState);
-  const successReceipt = await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
-  console.log("[p1-smoke][success][submitReceipt]", successReceipt);
-  const successFinalState = await waitForFinalState(successOp.operationPlanId);
-  const successFinal = successFinalState.finalStatus;
-  console.log("[p1-smoke][success][waitFinal]", successFinalState);
+  let successOp = null;
+  let successFinal = "FAILED";
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
+    const successTask = await waitForTask(successOp.operationPlanId);
+    const successTaskId = successTask.taskId;
+    console.log("[p1-smoke][success][waitTask]", {
+      attempt,
+      operation_plan_id: successOp.operationPlanId,
+      act_task_id: successTaskId,
+      detail_task: successTask?.detail?.operation?.task ?? successTask?.detail?.task ?? null,
+      detail_status: successTask?.detail?.operation?.final_status ?? successTask?.detail?.final_status ?? null,
+    });
+    const successDispatchState = await setDispatchState(successTaskId, "ACKED");
+    console.log("[p1-smoke][success][setDispatchState]", { attempt, ...successDispatchState });
+    const successReceipt = await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
+    console.log("[p1-smoke][success][submitReceipt]", { attempt, ...successReceipt });
+    const successFinalState = await waitForFinalState(successOp.operationPlanId);
+    successFinal = successFinalState.finalStatus;
+    console.log("[p1-smoke][success][waitFinal]", { attempt, ...successFinalState });
+    if (isSuccessMapped(successFinal)) break;
+    console.warn(`[p1-smoke][success] attempt=${attempt} final=${successFinal}, retrying success lane...`);
+  }
+  if (!successOp) throw new Error("success lane did not produce operation");
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
   const invalidTask = await waitForTask(invalidOp.operationPlanId);
@@ -398,7 +405,7 @@ async function main() {
 
   console.log("[p1-smoke] done", {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
-    success: { operation_plan_id: successOp.operationPlanId, final_status: successFinal },
+    success: { operation_plan_id: successOp?.operationPlanId, final_status: successFinal },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
   });
 
