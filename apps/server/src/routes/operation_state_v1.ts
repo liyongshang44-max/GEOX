@@ -138,7 +138,7 @@ async function ensureSkillRunFact(params: {
   bindTarget: string;
   skillId: string;
   version?: string | null;
-  resultStatus: "SUCCESS" | "FAILED";
+  resultStatus: "SUCCESS" | "FAILED" | "PENDING";
   errorCode?: string | null;
   fieldId?: string | null;
   deviceId?: string | null;
@@ -1361,7 +1361,9 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
             ? "SUCCESS"
             : "FAILED";
       const acceptanceErrorCode =
-        acceptanceResultStatus === "FAILED" ? "ACCEPTANCE_NOT_PASS" : null;
+        acceptanceResultStatus === "FAILED"
+          ? "ACCEPTANCE_NOT_PASS"
+          : null;
       await ensureSkillRunFact({
         pool,
         tenant,
