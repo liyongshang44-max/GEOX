@@ -151,3 +151,31 @@ Judge 的评估对象始终是 group。
 • recommendation 没有执行权；用户界面、recommendation 域和审批提交流程不得直接调用执行入口。
 • 执行入口仅供 executor runtime 在已批准 task 上调用。
 • 宪法级约束：执行只能通过 approval → AO-ACT task → executor，任何 recommendation 不能直接触发执行。
+
+十五、P1 smoke（skills -> operation -> receipt/evidence -> operation_state）
+------------------------------------------------------------
+用于最小联调闭环脚本（同一租户上下文下，一条成功、一条 INVALID_EXECUTION）：
+
+```bash
+node apps/server/scripts/p1_skill_loop_minimal.mjs
+```
+
+可选环境变量（默认值如下）：
+
+- `GEOX_BASE_URL`（默认 `http://127.0.0.1:3001`）
+- `GEOX_TOKEN`（默认使用 `config/auth/ao_act_tokens_v0.json` 中 tenantA 的开发 token）
+- `GEOX_TENANT_ID`（默认 `tenantA`）
+- `GEOX_PROJECT_ID`（默认 `projectA`）
+- `GEOX_GROUP_ID`（默认 `groupA`）
+
+脚本会执行以下串联：
+
+1. `POST/GET /api/v1/skills/bindings`
+2. `POST /api/v1/operations/manual` 创建两条 operation
+3. `POST /api/control/ao_act/receipt` 分别写入正式证据（runtime log）与无效证据（sim_trace）
+4. `GET /api/v1/operations` 查询最终 `final_status`
+
+最终断言：
+
+- 至少 1 条 `final_status` 被映射为 `SUCCESS|VALID`（系统口径兼容 `SUCCEEDED/PENDING_ACCEPTANCE/COMPLETED`）
+- 至少 1 条 `final_status=INVALID_EXECUTION`
