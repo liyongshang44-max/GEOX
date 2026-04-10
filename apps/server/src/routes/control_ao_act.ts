@@ -1018,7 +1018,9 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         project_id: z.string().min(1),
         group_id: z.string().min(1),
         field_id: z.string().min(1),
+        device_id: z.string().min(1).optional(),
         action_type: z.string().min(1),
+        adapter_type: z.string().min(1).optional(),
         parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
         issuer: z.object({
           kind: z.literal("human"),
@@ -1061,6 +1063,8 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           constraints: {},
           meta: {
             ...(body.meta ?? {}),
+            device_id: body.device_id ?? (body.meta as any)?.device_id ?? null,
+            adapter_type: body.adapter_type ?? (body.meta as any)?.adapter_type ?? null,
             operation_id,
             command_id
           }
