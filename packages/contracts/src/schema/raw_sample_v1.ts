@@ -5,7 +5,7 @@ import {
   isTelemetryMetricNameV1,
   isValidTelemetryUnitV1,
   toCanonicalTelemetryMetricNameV1,
-} from "./telemetry_metric_catalog_v1";
+} from "./telemetry_metric_catalog_v1.js";
 
 /**
  * RawSampleV1Schema

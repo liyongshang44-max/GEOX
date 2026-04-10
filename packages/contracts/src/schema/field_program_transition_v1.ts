@@ -1,4 +1,4 @@
-import type { FieldProgramStatusV1 } from "./field_program_v1";
+import type { FieldProgramStatusV1 } from "./field_program_v1.js";
 
 export type FieldProgramTransitionV1 = {
   type: "field_program_transition_v1";

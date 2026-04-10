@@ -5,8 +5,8 @@
     "lib": [
       "ES2022"
     ],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "rootDir": "../..",
     "outDir": "dist",
     "strict": true,
