@@ -669,7 +669,7 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
       dispatch_status: task_id ? "DISPATCHED" : String(payload.status ?? "CREATED"),
       receipt_status: receiptStatus,
       acceptance: {
-        status: invalidExecution ? "PENDING" : acceptance.status,
+        status: invalidExecution ? "FAIL" : acceptance.status,
         missing: invalidExecution && invalidReason ? [invalidReason] : acceptance.missing
       },
       final_status: finalStatusNormalized,

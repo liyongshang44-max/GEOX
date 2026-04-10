@@ -28,6 +28,7 @@ test("evaluateEvidence: Case A only sim_trace", () => {
     }, "2026-03-31T01:01:00.000Z", "f2"),
   ]);
   assert.equal(out[0].final_status, "INVALID_EXECUTION");
+  assert.equal(out[0].acceptance.status, "FAIL");
   assert.deepEqual(out[0].acceptance.missing, ["evidence_invalid"]);
 });
 
@@ -140,4 +141,24 @@ test("final_status: executed receipt + pending acceptance overrides transition F
   assert.equal(out[0].invalid_reason, null);
   assert.equal(out[0].acceptance.status, "PENDING");
   assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
+});
+
+test("contract: the same operation must not expose acceptance=PENDING with final_status=INVALID_EXECUTION", () => {
+  const out = projectOperationStateFromFacts([
+    fact("operation_plan_v1", { operation_plan_id: "op_contract", act_task_id: "task_contract" }, "2026-03-31T01:00:00.000Z", "ct_1"),
+    fact("ao_act_receipt_v1", {
+      act_task_id: "task_contract",
+      status: "executed",
+      logs_refs: [{ kind: "sim_trace" }],
+    }, "2026-03-31T01:01:00.000Z", "ct_2"),
+    fact("acceptance_result_v1", {
+      operation_plan_id: "op_contract",
+      act_task_id: "task_contract",
+      verdict: "PENDING",
+    }, "2026-03-31T01:01:30.000Z", "ct_3"),
+  ]);
+
+  assert.equal(out[0].final_status, "INVALID_EXECUTION");
+  assert.notEqual(out[0].acceptance.status, "PENDING");
+  assert.equal(out[0].acceptance.status, "FAIL");
 });
