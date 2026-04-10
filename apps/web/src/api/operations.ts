@@ -162,7 +162,7 @@ export function normalizeSkillTraceStatus(value: unknown): string {
   const raw = String(value ?? "").trim().toUpperCase();
   if (!raw || raw === "PENDING_ACCEPTANCE") return "PENDING";
   if (["PASS", "PASSED", "SUCCESS", "SUCCEEDED", "OK", "DONE", "COMPLETED"].includes(raw)) return "SUCCESS";
-  if (["FAIL", "FAILED", "ERROR", "REJECTED", "DENIED", "TIMEOUT", "CRASHED", "INVALID_EXECUTION"].includes(raw)) return "FAILED";
+  if (["FAIL", "FAILED", "ERROR", "REJECTED", "DENIED", "TIMEOUT", "CRASHED"].includes(raw)) return "FAILED";
   if (["PENDING", "READY", "QUEUED", "CREATED"].includes(raw)) return "PENDING";
   if (["RUNNING", "IN_PROGRESS", "DISPATCHED", "ACKED", "EXECUTING"].includes(raw)) return "RUNNING";
   return raw;
