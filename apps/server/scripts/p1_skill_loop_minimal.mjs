@@ -153,8 +153,12 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
-  const parameters = {
+  const rawParameters = {
     duration_sec: 30,
+    mode: "auto",
+    profile: "default",
+    strategy: "aggressive",
+    smoke_case: suffix,
   };
   preflightAssertAoActTaskMinimalSchema(parameters, actionType);
   const body = {
@@ -227,6 +231,15 @@ async function waitForFinalState(operationPlanId) {
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
   return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE", "COMPLETED"].includes(s);
+}
+
+function sanitizeParametersForSmoke(actionType, raw) {
+  const allowlistByActionType = {
+    IRRIGATE: new Set(["duration_sec"]),
+  };
+  const allowlist = allowlistByActionType[String(actionType ?? "").toUpperCase()] ?? new Set();
+  if (!raw || typeof raw !== "object") return {};
+  return Object.fromEntries(Object.entries(raw).filter(([key]) => allowlist.has(key)));
 }
 
 async function main() {
