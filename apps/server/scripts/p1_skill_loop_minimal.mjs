@@ -224,7 +224,7 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE", "COMPLETED"].includes(s);
+  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -250,17 +250,22 @@ async function main() {
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace");
   const invalidFinal = await waitForFinalState(invalidOp.operationPlanId);
 
-  const statuses = [successFinal, invalidFinal];
-  const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
-  const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
-
-  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=SUCCESS|VALID（映射后）；实际=${JSON.stringify(statuses)}`);
-  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}`);
-
-  console.log("[p1-smoke] done", {
+  const operationFinalStates = {
     success: { operation_plan_id: successOp.operationPlanId, final_status: successFinal },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
-  });
+  };
+
+  assert.ok(
+    isSuccessMapped(successFinal),
+    `断言失败：success case final_status 仅接受 SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(operationFinalStates)}`,
+  );
+  assert.equal(
+    invalidFinal,
+    "INVALID_EXECUTION",
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(operationFinalStates)}`,
+  );
+
+  console.log("[p1-smoke] done", operationFinalStates);
 }
 
 main().catch((err) => {
