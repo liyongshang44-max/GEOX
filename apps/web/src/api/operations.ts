@@ -158,9 +158,19 @@ export type OperationDetailResponse = {
   };
 };
 
+export function normalizeSkillTraceStatus(value: unknown): string {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw || raw === "PENDING_ACCEPTANCE") return "PENDING";
+  if (["PASS", "PASSED", "SUCCESS", "SUCCEEDED", "OK", "DONE", "COMPLETED"].includes(raw)) return "SUCCESS";
+  if (["FAIL", "FAILED", "ERROR", "REJECTED", "DENIED", "TIMEOUT", "CRASHED", "INVALID_EXECUTION"].includes(raw)) return "FAILED";
+  if (["PENDING", "READY", "QUEUED", "CREATED"].includes(raw)) return "PENDING";
+  if (["RUNNING", "IN_PROGRESS", "DISPATCHED", "ACKED", "EXECUTING"].includes(raw)) return "RUNNING";
+  return raw;
+}
+
 function normalizeSkillTraceItem(item: any): OperationSkillTraceItemV2 {
   const stage = resolveSkillClassification(item) as OperationSkillTraceStageV2;
-  const status = String(item?.status ?? item?.result_status ?? item?.final_status ?? "").trim() || null;
+  const status = normalizeSkillTraceStatus(item?.status ?? item?.result_status ?? item?.final_status ?? "");
   const rawCodes = item?.explanation_codes ?? item?.explain_codes ?? item?.reason_codes ?? [];
   const explanationCodes = Array.isArray(rawCodes)
     ? rawCodes.map((code: unknown) => String(code ?? "").trim()).filter(Boolean)
