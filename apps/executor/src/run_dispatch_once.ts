@@ -101,6 +101,41 @@ function toAoActTask(item, args) {
 }
 const recentTerminalByTask = new Map();
 const DEFAULT_TERMINAL_DEDUPE_MS = 120000;
+const DEBUG_PREFIX = "[executor-smoke-debug]";
+function maskString(value) {
+    const text = String(value ?? "");
+    if (!text)
+        return text;
+    if (text.length <= 6)
+        return "***";
+    return `${text.slice(0, 3)}***${text.slice(-3)}`;
+}
+function sanitizeReceiptPayload(value) {
+    const redactedKeys = new Set([
+        "authorization",
+        "token",
+        "idempotency_key",
+        "logs_refs",
+        "raw_receipt_ref"
+    ]);
+    if (Array.isArray(value))
+        return value.map((entry) => sanitizeReceiptPayload(entry));
+    if (!value || typeof value !== "object")
+        return value;
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+        if (redactedKeys.has(String(k).toLowerCase())) {
+            out[k] = "***";
+            continue;
+        }
+        if (typeof v === "string" && (k.endsWith("_id") || k === "act_task_id" || k === "task_id")) {
+            out[k] = maskString(v);
+            continue;
+        }
+        out[k] = sanitizeReceiptPayload(v);
+    }
+    return out;
+}
 function parseTerminalDedupeMs() {
     const raw = process.env.GEOX_EXECUTOR_TERMINAL_DEDUPE_MS ?? `${DEFAULT_TERMINAL_DEDUPE_MS}`;
     const parsed = Number.parseInt(String(raw), 10);
@@ -241,53 +276,76 @@ async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_ty
         throw new Error("MISSING_OPERATION_PLAN_ID");
     if (!commandId)
         throw new Error("MISSING_COMMAND_ID");
+    const receiptPayload = {
+        tenant_id: task.tenant_id,
+        project_id: task.project_id,
+        group_id: task.group_id,
+        task_id: task.act_task_id,
+        act_task_id: task.act_task_id,
+        command_id: commandId,
+        operation_plan_id: operationPlanId,
+        executor_id: {
+            kind: "script",
+            id: args.executor_id,
+            namespace: "executor_runtime_v1"
+        },
+        execution_time: { start_ts: now - 100, end_ts: now },
+        execution_coverage: {
+            kind: "field",
+            ref: String(task.meta?.field_id ?? task.meta?.target_ref ?? "executor_dispatch")
+        },
+        resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
+        logs_refs: [{ kind: "stdout", ref: raw_receipt_ref ?? `executor://run_dispatch_once/${task.act_task_id}` }],
+        status: mappedStatus,
+        constraint_check: { violated: false, violations: [] },
+        observed_parameters: {},
+        meta: {
+            schema: "ao_act_receipt_v1",
+            task_id: task.act_task_id,
+            command_id: commandId,
+            operation_plan_id: operationPlanId,
+            device_id: task.device_id ?? "",
+            adapter_type,
+            attempt_no: attemptNo,
+            receipt_status,
+            receipt_code: receiptCode,
+            receipt_message: receipt_message ?? null,
+            raw_receipt_ref: raw_receipt_ref ?? null,
+            received_ts: now,
+            idempotency_key: idempotencyKey
+        }
+    };
+    console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+        event: "receipt_append_before",
+        task_id: task.act_task_id,
+        operation_plan_id: operationPlanId,
+        receipt_status,
+        receipt_payload: sanitizeReceiptPayload(receiptPayload)
+    })}`);
     try {
         const out = await httpJson(`${args.baseUrl}/api/v1/ao-act/receipts`, args.token, {
             method: "POST",
-            body: JSON.stringify({
-                tenant_id: task.tenant_id,
-                project_id: task.project_id,
-                group_id: task.group_id,
-                task_id: task.act_task_id,
-                act_task_id: task.act_task_id,
-                command_id: commandId,
-                operation_plan_id: operationPlanId,
-                executor_id: {
-                    kind: "script",
-                    id: args.executor_id,
-                    namespace: "executor_runtime_v1"
-                },
-                execution_time: { start_ts: now - 100, end_ts: now },
-                execution_coverage: {
-                    kind: "field",
-                    ref: String(task.meta?.field_id ?? task.meta?.target_ref ?? "executor_dispatch")
-                },
-                resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
-                logs_refs: logsRefs,
-                status: mappedStatus,
-                constraint_check: { violated: false, violations: [] },
-                observed_parameters: {},
-                meta: {
-                    schema: "ao_act_receipt_v1",
-                    task_id: task.act_task_id,
-                    command_id: commandId,
-                    operation_plan_id: operationPlanId,
-                    device_id: task.device_id ?? "",
-                    adapter_type,
-                    attempt_no: attemptNo,
-                    receipt_status,
-                    receipt_code: receiptCode,
-                    receipt_message: receipt_message ?? null,
-                    raw_receipt_ref: raw_receipt_ref ?? null,
-                    received_ts: now,
-                    idempotency_key: idempotencyKey
-                }
-            })
+            body: JSON.stringify(receiptPayload)
         });
         if (!out?.ok)
             throw new Error(`append receipt failed: ${JSON.stringify(out)}`);
+        console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+            event: "receipt_append_after",
+            task_id: task.act_task_id,
+            operation_plan_id: operationPlanId,
+            receipt_status,
+            append_result: "ok"
+        })}`);
     }
     catch (error) {
+        console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+            event: "receipt_append_after",
+            task_id: task.act_task_id,
+            operation_plan_id: operationPlanId,
+            receipt_status,
+            append_result: "error",
+            error: String(error?.message ?? error)
+        })}`);
         const msg = String(error?.message ?? error);
         if (msg.includes("TASK_ALREADY_HAS_RECEIPT")) {
             console.log(`WARN: receipt append skipped act_task_id=${task.act_task_id} reason=already_has_receipt`);
@@ -356,6 +414,16 @@ async function runDispatchOnce(cliArgs) {
             }
             const attemptNo = Math.max(1, Number(item?.attempt_no ?? item?.attempt_count ?? 1));
             console.log(`INFO: claimed task act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
+            console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+                event: "claim_dispatch_status",
+                task_id: task.act_task_id,
+                operation_plan_id: task.operation_plan_id,
+                adapter_type: adapterTypeForLog,
+                dispatch_status: {
+                    before: String(item?.dispatch_status ?? item?.status ?? "CLAIMED"),
+                    after: "DISPATCHED"
+                }
+            })}`);
             await writeDispatchState(args, task, "DISPATCHED");
             const execTask = {
                 ...task,
@@ -399,6 +467,13 @@ async function runDispatchOnce(cliArgs) {
                 }
                 markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
                 executionStatus = "FAILED";
+                console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+                    event: "claim_dispatch_status",
+                    task_id: task.act_task_id,
+                    operation_plan_id: task.operation_plan_id,
+                    adapter_type: adapterTypeNormalized,
+                    dispatch_status: { before: "DISPATCHED", after: "FAILED" }
+                })}`);
                 console.log(`PASS: dispatch failed act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
                 continue;
             }
@@ -411,6 +486,13 @@ async function runDispatchOnce(cliArgs) {
             }
             markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
             executionStatus = "SUCCEEDED";
+            console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+                event: "claim_dispatch_status",
+                task_id: task.act_task_id,
+                operation_plan_id: task.operation_plan_id,
+                adapter_type: adapterTypeNormalized,
+                dispatch_status: { before: "DISPATCHED", after: "ACKED" }
+            })}`);
             console.log(`PASS: dispatch acked act_task_id=${task.act_task_id} attempt_no=${attemptNo}`);
         }
         catch (error) {
@@ -436,6 +518,14 @@ async function runDispatchOnce(cliArgs) {
             });
             markTerminalDedupe(task.act_task_id, Date.now(), terminalDedupeMs);
             executionStatus = "FAILED";
+            console.log(`${DEBUG_PREFIX} ${JSON.stringify({
+                event: "claim_dispatch_status",
+                task_id: task.act_task_id,
+                operation_plan_id: task.operation_plan_id,
+                adapter_type: adapterType,
+                dispatch_status: { before: "DISPATCHED", after: "FAILED" },
+                error: String(error?.message ?? error)
+            })}`);
             throw error;
         }
         finally {
