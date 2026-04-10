@@ -153,13 +153,7 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
-  const rawParameters = {
-    duration_sec: 30,
-    mode: "auto",
-    profile: "default",
-    strategy: "aggressive",
-    smoke_case: suffix,
-  };
+  const parameters = { duration_sec: 30 }; // 最小合法参数集：仅保留 duration_sec。
   preflightAssertAoActTaskMinimalSchema(parameters, actionType);
   const body = {
     tenant_id: tenant.tenant_id,
