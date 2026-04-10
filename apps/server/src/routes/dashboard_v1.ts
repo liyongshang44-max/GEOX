@@ -858,6 +858,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       .sort((a: any, b: any) => Number(b?.last_event_ts ?? 0) - Number(a?.last_event_ts ?? 0))
       .slice(0, limit)
       .map((row: any) => {
+        // status source of truth = operation_state_v1.final_status
         const status = String(row.final_status ?? "UNKNOWN");
         return {
           id: String(row.operation_plan_id ?? row.operation_id ?? ""),
