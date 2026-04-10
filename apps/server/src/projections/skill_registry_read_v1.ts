@@ -111,18 +111,15 @@ function toEpochMs(value: unknown, fallbackIso?: string): number {
   return 0;
 }
 
+type PublicCategory = "sensing" | "agronomy" | "device" | "acceptance" | "unknown";
 
-const PUBLIC_MAP: Record<string, "sensing" | "agronomy" | "device" | "acceptance"> = {
-  crop_skill: "agronomy",
-  agronomy_skill: "agronomy",
-  device_skill: "device",
-  acceptance_skill: "acceptance",
-  sensing_skill: "sensing",
-};
-
-function toPublicCategory(value: unknown): "sensing" | "agronomy" | "device" | "acceptance" | "unknown" {
-  const normalized = str(value).toLowerCase();
-  return PUBLIC_MAP[normalized] ?? "unknown";
+function toPublicCategoryFromLegacy(legacyCategory: unknown): PublicCategory {
+  const normalized = str(legacyCategory).toLowerCase();
+  if (normalized === "sensing") return "sensing";
+  if (normalized === "agronomy") return "agronomy";
+  if (normalized === "device") return "device";
+  if (normalized === "acceptance") return "acceptance";
+  return "unknown";
 }
 
 function normalizeRunTriggerStage(factType: SkillRegistryFactType, stage: unknown): string | null {
@@ -217,7 +214,7 @@ export async function projectSkillRegistryReadV1(pool: Pool, tenant: TenantTripl
     const occurredAt = toIsoTimestamp(row.occurred_at);
     const ts = toEpochMs(row.occurred_at, occurredAt);
     const legacyCategory = str(payload.category).toLowerCase() || null;
-    const publicCategory = toPublicCategory(payload.category);
+    const publicCategory = toPublicCategoryFromLegacy(legacyCategory);
 
     return {
       tenant_id: str(payload.tenant_id),
@@ -327,7 +324,7 @@ export async function querySkillRegistryReadV1(
     where.push(`${sql} = $${params.length}`);
   };
 
-  append("category", input.category?.trim().toLowerCase());
+  if (typeof input.category === "string") append("category", toPublicCategoryFromLegacy(input.category));
   append("status", input.status?.trim().toUpperCase());
   append("crop_code", input.crop_code?.trim().toLowerCase());
   append("device_type", input.device_type?.trim().toUpperCase());
@@ -379,7 +376,7 @@ export async function querySkillBindingProjectionV1(
     const record = parseRecordJson(row.record_json) ?? row.record_json ?? {};
     const payload = record?.payload ?? {};
     const legacyCategory = str(payload.category).toLowerCase() || null;
-    const publicCategory = toPublicCategory(payload.category);
+    const publicCategory = toPublicCategoryFromLegacy(legacyCategory);
     return {
       fact_id: str(row.fact_id),
       occurred_at: toIsoTimestamp(row.occurred_at),
