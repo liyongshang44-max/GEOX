@@ -46,8 +46,6 @@ const BINDING_SCOPE_COMPAT: Record<string, SkillBindingScope> = {
   DEVICE: "DEVICE",
 };
 
-const PRIMARY_BINDING_OVERRIDE_ENDPOINT = "/api/v1/skills/bindings/override";
-
 export type SkillRegistryItem = {
   skill_id: string;
   skill_name?: string | null;
