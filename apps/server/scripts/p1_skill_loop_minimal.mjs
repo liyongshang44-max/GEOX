@@ -438,6 +438,13 @@ async function main() {
     console.log("[p1-smoke][success][submitReceipt]", { attempt, ...successReceipt });
     const successFinalState = await waitForAcceptanceResolution(successOp.operationPlanId);
     successFinal = successFinalState.finalStatus;
+    const successReportRefs = Array.isArray(successFinalState?.item?.report_json?.evidence_refs)
+      ? successFinalState.item.report_json.evidence_refs
+      : [];
+    assert.ok(
+      successReportRefs.length > 0,
+      `success smoke 回归失败：report_json.evidence_refs 为空 operation=${successOp.operationPlanId}`,
+    );
     console.log("[p1-smoke][success][waitFinal]", { attempt, ...successFinalState });
     if (isSuccessMapped(successFinal)) break;
     console.warn(`[p1-smoke][success] attempt=${attempt} final=${successFinal}, retrying success lane...`);

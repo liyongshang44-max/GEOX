@@ -5,7 +5,7 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
+import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
@@ -755,6 +755,32 @@ function toEvidenceRefs(value: unknown): string[] {
     .map((item) => cleanJsonText(item, ""))
     .filter((item) => item.length > 0)
     .slice(0, 50);
+}
+
+function toEvidenceRefFromValue(value: unknown): string | null {
+  if (typeof value === "string") {
+    const ref = cleanJsonText(value, "");
+    return ref || null;
+  }
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const ref = cleanJsonText(record.ref ?? record.path ?? record.url ?? "", "");
+  return ref || null;
+}
+
+function collectValidEvidenceRefs(input: { artifacts: Array<{ payload?: any }>; logs: unknown[] }): string[] {
+  const artifactRefs = input.artifacts
+    .filter((item) => {
+      const kind = String(item?.payload?.kind ?? "").trim().toLowerCase();
+      return Boolean(kind) && kind !== "sim_trace";
+    })
+    .map((item) => toEvidenceRefFromValue(item?.payload))
+    .filter((item): item is string => Boolean(item));
+  const logRefs = input.logs
+    .filter((item) => isFormalLogKind((item as any)?.kind ?? item))
+    .map((item) => toEvidenceRefFromValue(item))
+    .filter((item): item is string => Boolean(item));
+  return [...new Set([...artifactRefs, ...logRefs])].slice(0, 50);
 }
 
 function buildInvalidExecutionReport(op: any) {
@@ -1755,10 +1781,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       field_risk_adjustment: fieldRiskAdjustment,
     };
     const globalPriorityScore = globalPriorityComponents.base + globalPriorityComponents.trend_adjustment + globalPriorityComponents.field_risk_adjustment;
-    const evidenceRefs = artifacts
-      .map((item: any) => String(item?.payload?.ref ?? item?.payload?.path ?? item?.payload?.url ?? "").trim())
-      .filter(Boolean)
-      .slice(0, 20);
+    const evidenceRefs = collectValidEvidenceRefs({
+      artifacts,
+      logs,
+    });
     const traceStatus: "PENDING" | "SUCCESS" | "FAILED" = executionReadyFromState(finalStatusCode, Boolean(normalizedReceipt), evidenceRefs.length > 0);
     const executionTrace = {
       execution_id: executionPlan.idempotency_key,
@@ -1767,6 +1793,20 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       evidence_refs: evidenceRefs.length > 0 ? evidenceRefs : undefined,
       status: traceStatus,
     };
+    const reportJson = invalidExecution
+      ? {
+        ...buildInvalidExecutionReport({
+          ...state,
+          failure_reason: invalidReason,
+          invalid_reason: invalidReason,
+        }),
+        evidence_refs: evidenceRefs,
+      }
+      : {
+        type: "operation_report_v1",
+        summary: cleanJsonText("operation execution report", "operation execution report"),
+        evidence_refs: evidenceRefs,
+      };
     const attemptFacts = [...facts].filter((x) => {
       const t = String(x.record_json?.type ?? "");
       return t === "action_execution_attempt_v1" || t === "action_execution_request_v1";
@@ -1927,6 +1967,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           media,
           metrics
         },
+        report_json: reportJson,
         agronomy: {
           crop_code: agronomyCropCode,
           crop_stage: agronomyCropStage,
@@ -1970,6 +2011,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       execution_blockers: readiness.execution_blockers,
       device_capability_check: capabilityCheck,
       execution_trace: executionTrace,
+      report_json: reportJson,
       attempt_history: attemptHistory,
       trace_gap: traceGap,
       fallback_state: fallbackState,
