@@ -279,8 +279,12 @@ async function waitForTask(operationPlanId) {
   throw new Error(`operation ${operationPlanId} 未就绪：无法读取 act_task_id`);
 }
 
-async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) {
+async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId) {
   const now = Date.now();
+  const logsRefs = evidenceKinds.map((kind, idx) => ({
+    kind,
+    ref: `${idx % 2 === 0 ? "log" : "evidence"}://${operationPlanId}/${kind}/${idx + 1}`,
+  }));
   return requestWithRetry("/api/control/ao_act/receipt", {
     method: "POST",
     body: JSON.stringify({
@@ -291,7 +295,7 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) 
       execution_time: { start_ts: now - 2000, end_ts: now },
       execution_coverage: { kind: "field", ref: fieldId },
       resource_usage: { fuel_l: 0, electric_kwh: 0.2, water_l: 15, chemical_ml: 0 },
-      logs_refs: [{ kind: evidenceKind, ref: `log://${operationPlanId}/${evidenceKind}` }],
+      logs_refs: logsRefs,
       status: "executed",
       constraint_check: { violated: false, violations: [] },
       observed_parameters: { duration_sec: 30 },
@@ -302,6 +306,27 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) 
       },
     }),
   });
+}
+
+async function waitForAcceptanceResolution(operationPlanId) {
+  let seenPendingAcceptance = false;
+  for (let i = 0; i < 20; i += 1) {
+    const state = await waitForFinalState(operationPlanId);
+    const status = String(state.finalStatus ?? "").toUpperCase();
+    if (status === "PENDING_ACCEPTANCE") {
+      seenPendingAcceptance = true;
+      await sleep(300);
+      continue;
+    }
+    if (["SUCCESS", "SUCCEEDED", "VALID"].includes(status)) {
+      return { ...state, seenPendingAcceptance };
+    }
+    if (status) {
+      return { ...state, seenPendingAcceptance };
+    }
+    await sleep(300);
+  }
+  throw new Error(`operation ${operationPlanId} receipt 后未进入 SUCCESS/VALID`);
 }
 
 async function setDispatchState(actTaskId, state) {
@@ -348,7 +373,7 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE"].includes(s);
+  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -379,9 +404,37 @@ async function main() {
     });
     const successDispatchState = await setDispatchState(successTaskId, "ACKED");
     console.log("[p1-smoke][success][setDispatchState]", { attempt, ...successDispatchState });
-    const successReceipt = await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
+    const successEvidenceKinds = [
+      "dispatch_ack",
+      "valve_open_confirmation",
+      "water_delivery_receipt",
+    ];
+    const successReceipt = await submitReceipt(
+      successOp.operationPlanId,
+      successTaskId,
+      successEvidenceKinds,
+      SMOKE_SUCCESS_BIND_TARGET,
+    );
+    const expectedRequirements = Array.isArray(successReceipt?.expected_requirements)
+      ? successReceipt.expected_requirements
+      : Array.isArray(successReceipt?.acceptance?.expected_requirements)
+        ? successReceipt.acceptance.expected_requirements
+        : [];
+    const providedKinds = Array.isArray(successReceipt?.provided_kinds)
+      ? successReceipt.provided_kinds
+      : Array.isArray(successReceipt?.acceptance?.provided_kinds)
+        ? successReceipt.acceptance.provided_kinds
+        : [];
+    if (expectedRequirements.length > 0) {
+      const missing = expectedRequirements.filter((kind) => !providedKinds.includes(kind));
+      assert.equal(
+        missing.length,
+        0,
+        `success receipt 缺少 expected_requirements 对应证据：missing=${JSON.stringify(missing)}`,
+      );
+    }
     console.log("[p1-smoke][success][submitReceipt]", { attempt, ...successReceipt });
-    const successFinalState = await waitForFinalState(successOp.operationPlanId);
+    const successFinalState = await waitForAcceptanceResolution(successOp.operationPlanId);
     successFinal = successFinalState.finalStatus;
     console.log("[p1-smoke][success][waitFinal]", { attempt, ...successFinalState });
     if (isSuccessMapped(successFinal)) break;
@@ -393,7 +446,7 @@ async function main() {
   const invalidTask = await waitForTask(invalidOp.operationPlanId);
   const invalidTaskId = invalidTask.taskId;
   await setDispatchState(invalidTaskId, "ACKED");
-  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace", SMOKE_FAILURE_BIND_TARGET);
+  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, ["sim_trace"], SMOKE_FAILURE_BIND_TARGET);
   const invalidFinal = (await waitForFinalState(invalidOp.operationPlanId)).finalStatus;
 
   const statuses = [successFinal, invalidFinal];
