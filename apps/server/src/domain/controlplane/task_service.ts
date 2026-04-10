@@ -598,6 +598,31 @@ async function transitionDispatchQueueState(
   );
   return Number(result.rowCount ?? 0) > 0;
 }
+
+async function loadDispatchQueueStateByActTask(
+  pool: Pool,
+  tenant: TenantTriple,
+  actTaskId: string,
+  commandId: string
+): Promise<"READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED" | null> {
+  await ensureDispatchQueueRuntime(pool);
+  const res = await pool.query(
+    `SELECT state
+       FROM dispatch_queue_v1
+      WHERE tenant_id = $1
+        AND project_id = $2
+        AND group_id = $3
+        AND act_task_id = $4
+        AND command_id = $5
+      ORDER BY updated_at DESC
+      LIMIT 1`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, actTaskId, commandId]
+  );
+  const raw = String(res.rows?.[0]?.state ?? "").trim().toUpperCase();
+  if (!raw) return null;
+  if (!["READY", "DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(raw)) return null;
+  return raw as "READY" | "DISPATCHED" | "ACKED" | "SUCCEEDED" | "FAILED";
+}
 async function loadLatestFactByTypeAndKey(
   pool: Pool,
   factType: string,
@@ -925,6 +950,28 @@ const OPERATION_PLAN_NEXT_STATUS_V1: Record<
   DISPATCHED: "ACKED",
   ACKED: "PENDING_ACCEPTANCE"
 };
+
+export function isAckConvergedOperationPlanStatus(status: string): boolean {
+  return ["ACKED", "SUCCEEDED", "FAILED", "PENDING_ACCEPTANCE", "INVALID_EXECUTION"].includes(
+    String(status ?? "").trim().toUpperCase()
+  );
+}
+
+export function isAckConvergedDispatchQueueState(state: string): boolean {
+  return ["ACKED", "SUCCEEDED", "FAILED"].includes(String(state ?? "").trim().toUpperCase());
+}
+
+export function shouldTreatAckAsIdempotent(input: {
+  requestedState: string;
+  queueState?: string | null;
+  operationPlanStatus?: string | null;
+}): boolean {
+  if (String(input.requestedState ?? "").trim().toUpperCase() !== "ACKED") return false;
+  return (
+    isAckConvergedDispatchQueueState(input.queueState ?? "")
+    || isAckConvergedOperationPlanStatus(input.operationPlanStatus ?? "")
+  );
+}
 
 async function transitionOperationPlanStateV1(
   pool: Pool,
@@ -2862,14 +2909,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!act_task_id) return badRequest(reply, "MISSING_ACT_TASK_ID");
     if (!command_id) return badRequest(reply, "MISSING_COMMAND_ID");
     if (!["DISPATCHED", "ACKED", "SUCCEEDED", "FAILED"].includes(state)) return badRequest(reply, "INVALID_STATE");
-     const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
-
-    // 关键：DISPATCHED 允许幂等重放。
-    // claim 阶段已经可能把 queue 置为 DISPATCHED，但此时 operation_plan 仍可能停在 READY，
-    // 所以这里不能因为 queue 未变化就直接 409，需要继续尝试推进 operation_plan。
-    if (!changed && state !== "DISPATCHED") {
-      return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
-    }
+    const changed = await transitionDispatchQueueState(pool, tenant, act_task_id, command_id, state as any);
+    const queueState = changed ? state : await loadDispatchQueueStateByActTask(pool, tenant, act_task_id, command_id);
 
     const taskFact = await loadLatestFactByTypeAndKey(
       pool,
@@ -2886,6 +2927,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     let work_assignment_fact_id: string | null = null;
     let work_assignment_id: string | null = null;
     let manual_fallback_created = false;
+    let idempotent = !changed;
+    let ackConverged = false;
 
     if (operation_plan_id) {
       const operationPlan = await loadLatestFactByTypeAndKey(
@@ -2899,9 +2942,23 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       if (operationPlan) {
         const currentPlanStatus = String(operationPlan.record_json?.payload?.status ?? "").trim().toUpperCase();
         const targetPlanStatus = String(state ?? "").trim().toUpperCase();
+        ackConverged = shouldTreatAckAsIdempotent({
+          requestedState: state,
+          queueState,
+          operationPlanStatus: currentPlanStatus
+        });
 
-        // 如果 plan 已经在目标状态，则视为幂等成功，不重复写 transition
-        if (currentPlanStatus !== targetPlanStatus) {
+        if (!changed && state === "ACKED" && !ackConverged) {
+          return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+        }
+        if (!changed && state !== "DISPATCHED" && state !== "ACKED") {
+          return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+        }
+
+        // ACK 收敛链路内重复上报视为幂等成功，不重复写 transition。
+        if (state === "ACKED" && isAckConvergedOperationPlanStatus(currentPlanStatus)) {
+          idempotent = true;
+        } else if (currentPlanStatus !== targetPlanStatus) {
           const transitioned = await transitionOperationPlanStateV1(
             pool,
             tenant,
@@ -2916,6 +2973,18 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           operation_plan_transition_fact_id = transitioned.transition_fact_id;
           operation_plan_update_fact_id = transitioned.operation_plan_fact_id;
         }
+      }
+    }
+
+    if (!operation_plan_id) {
+      if (!changed && shouldTreatAckAsIdempotent({ requestedState: state, queueState })) {
+        ackConverged = true;
+      }
+      if (!changed && state === "ACKED" && !ackConverged) {
+        return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
+      }
+      if (!changed && state !== "DISPATCHED" && state !== "ACKED") {
+        return reply.status(409).send({ ok: false, error: "STATE_TRANSITION_DENIED" });
       }
     }
 
@@ -2947,6 +3016,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       operation_plan_id: operation_plan_id || null,
       operation_plan_transition_fact_id,
       operation_plan_update_fact_id,
+      idempotent,
       manual_fallback_fact_id,
       work_assignment_fact_id,
       work_assignment_id,
