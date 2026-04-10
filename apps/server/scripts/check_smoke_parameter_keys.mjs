@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = path.dirname(new URL(import.meta.url).pathname);
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
   irrigate_minimal_example: {
     action_type: "IRRIGATE",
@@ -16,7 +17,7 @@ const ALLOWED_KEYS = new Set(AO_ACT_TASK_SCHEMA_RULES_V0.irrigate_minimal_exampl
 function listSmokeScripts() {
   return fs
     .readdirSync(ROOT)
-    .filter((name) => /smoke|p1_skill_loop_minimal/i.test(name) && /\.(mjs|ts)$/.test(name))
+    .filter((name) => /\.(mjs|ts)$/.test(name) && /(?:smoke|p1_skill_loop_minimal)/i.test(name))
     .map((name) => path.join(ROOT, name));
 }
 
