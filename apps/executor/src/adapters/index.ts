@@ -27,6 +27,7 @@ export type AoActTask = {
 export type DispatchContext = {
   baseUrl: string;
   token: string;
+  executor_token?: string;
   executor_id?: string;
   lease_token?: string;
   lease_until_ts?: number;

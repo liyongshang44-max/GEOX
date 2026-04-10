@@ -15,6 +15,8 @@ const headers = {
 };
 const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 const ADAPTER_TYPE = "irrigation_simulator";
+const SMOKE_SUCCESS_BIND_TARGET = `field_p1_smoke_success_${Date.now()}`;
+const SMOKE_FAILURE_BIND_TARGET = `field_p1_smoke_failure_${Date.now()}`;
 
 const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
   forbidden_keys: [
@@ -130,7 +132,7 @@ async function request(path, init = {}) {
 }
 
 async function ensureSkillBinding() {
-  const bind_target = `p1_smoke_${Date.now()}`;
+  const dispatchBindTarget = `p1_smoke_${Date.now()}`;
   await request("/api/v1/skills/bindings", {
     method: "POST",
     body: JSON.stringify({
@@ -140,18 +142,67 @@ async function ensureSkillBinding() {
       category: "DEVICE",
       scope_type: "TENANT",
       trigger_stage: "before_dispatch",
-      bind_target,
+      bind_target: dispatchBindTarget,
       enabled: true,
       priority: 1,
       config_patch: { smoke: true },
     }),
   });
+
+  // Smoke-only acceptance bindings: do not change production/default tenant strategy.
+  await request("/api/v1/skills/bindings", {
+    method: "POST",
+    body: JSON.stringify({
+      ...tenant,
+      skill_id: "operation_acceptance_gate_v1",
+      version: "1.0.0",
+      category: "ACCEPTANCE",
+      scope_type: "FIELD",
+      trigger_stage: "before_acceptance",
+      bind_target: SMOKE_SUCCESS_BIND_TARGET,
+      enabled: true,
+      priority: 999,
+      config_patch: {
+        smoke: true,
+        lane: "success",
+        strict_mode: false,
+        min_evidence_count: 1,
+      },
+    }),
+  });
+
+  await request("/api/v1/skills/bindings", {
+    method: "POST",
+    body: JSON.stringify({
+      ...tenant,
+      skill_id: "operation_acceptance_gate_v1",
+      version: "1.0.0",
+      category: "ACCEPTANCE",
+      scope_type: "FIELD",
+      trigger_stage: "before_acceptance",
+      bind_target: SMOKE_FAILURE_BIND_TARGET,
+      enabled: true,
+      priority: 999,
+      config_patch: {
+        smoke: true,
+        lane: "failure",
+        strict_mode: true,
+        min_evidence_count: 2,
+      },
+    }),
+  });
+
   const listing = await request("/api/v1/skills/bindings", { method: "GET" });
-  const found = (listing.items_effective ?? []).some((item) => item.bind_target === bind_target);
-  assert.ok(found, "skills/bindings 链路失败：未找到刚创建的 binding");
+  const effective = listing.items_effective ?? [];
+  const foundDispatch = effective.some((item) => item.bind_target === dispatchBindTarget);
+  const foundSuccess = effective.some((item) => item.bind_target === SMOKE_SUCCESS_BIND_TARGET && String(item.skill_id) === "operation_acceptance_gate_v1");
+  const foundFailure = effective.some((item) => item.bind_target === SMOKE_FAILURE_BIND_TARGET && String(item.skill_id) === "operation_acceptance_gate_v1");
+  assert.ok(foundDispatch, "skills/bindings 链路失败：未找到 dispatch smoke binding");
+  assert.ok(foundSuccess, "skills/bindings 链路失败：未找到 success smoke acceptance binding");
+  assert.ok(foundFailure, "skills/bindings 链路失败：未找到 failure smoke acceptance binding");
 }
 
-async function createOperation(actionType, suffix) {
+async function createOperation(actionType, suffix, fieldId) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
   const parameters = { duration_sec: 30 }; // 最小合法参数集：仅保留 duration_sec。
   preflightAssertAoActTaskMinimalSchema(parameters, actionType);
@@ -159,7 +210,7 @@ async function createOperation(actionType, suffix) {
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
     group_id: tenant.group_id,
-    field_id: "field_p1_smoke",
+    field_id: fieldId,
     device_id: DEVICE_ID,
     action_type: actionType,
     adapter_type: ADAPTER_TYPE,
@@ -187,7 +238,7 @@ async function waitForTask(operationPlanId) {
   throw new Error(`operation ${operationPlanId} 未就绪：无法读取 act_task_id`);
 }
 
-async function submitReceipt(operationPlanId, actTaskId, evidenceKind) {
+async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) {
   const now = Date.now();
   return request("/api/control/ao_act/receipt", {
     method: "POST",
@@ -197,7 +248,7 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind) {
       act_task_id: actTaskId,
       executor_id: { kind: "script", id: "p1_smoke_executor", namespace: "qa" },
       execution_time: { start_ts: now - 2000, end_ts: now },
-      execution_coverage: { kind: "field", ref: "field_p1_smoke" },
+      execution_coverage: { kind: "field", ref: fieldId },
       resource_usage: { fuel_l: 0, electric_kwh: 0.2, water_l: 15, chemical_ml: 0 },
       logs_refs: [{ kind: evidenceKind, ref: `log://${operationPlanId}/${evidenceKind}` }],
       status: "executed",
@@ -240,14 +291,14 @@ async function main() {
   console.log(`[p1-smoke] base=${BASE_URL}`);
   await ensureSkillBinding();
 
-  const successOp = await createOperation("IRRIGATE", "success");
+  const successOp = await createOperation("IRRIGATE", "success", SMOKE_SUCCESS_BIND_TARGET);
   const successTaskId = await waitForTask(successOp.operationPlanId);
-  await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log");
+  await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
   const successFinal = await waitForFinalState(successOp.operationPlanId);
 
-  const invalidOp = await createOperation("IRRIGATE", "invalid");
+  const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
   const invalidTaskId = await waitForTask(invalidOp.operationPlanId);
-  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace");
+  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace", SMOKE_FAILURE_BIND_TARGET);
   const invalidFinal = await waitForFinalState(invalidOp.operationPlanId);
 
   const statuses = [successFinal, invalidFinal];
@@ -258,6 +309,7 @@ async function main() {
   assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}`);
 
   console.log("[p1-smoke] done", {
+    bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
     success: { operation_plan_id: successOp.operationPlanId, final_status: successFinal },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
   });

@@ -39,7 +39,8 @@ export function createExecutorApi(ctx: DispatchContext) {
     },
 
     async executeIrrigationSimulator(task: AoActTask): Promise<any> {
-      return httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, ctx.token, {
+      const simulatorToken = ctx.executor_token ?? ctx.token;
+      return httpJson(`${ctx.baseUrl}/api/v1/simulators/irrigation/execute`, simulatorToken, {
         method: "POST",
         body: JSON.stringify({
           tenant_id: task.tenant_id,
