@@ -102,6 +102,7 @@ export type SkillRunSummary = {
   skill_id: string;
   version?: string | null;
   status: SkillRunStatus;
+  is_abnormal?: boolean | null;
   started_ts_ms?: number | null;
   finished_ts_ms?: number | null;
   duration_ms?: number | null;
@@ -172,6 +173,9 @@ function normalizeSkillRunSummary(item: SkillRunSummary): SkillRunSummary {
     run_id: runId || String(item.run_id ?? "").trim(),
     skill_id: skillId || String(item.skill_id ?? "").trim(),
     status: normalizedStatus || String(item.status ?? "UNKNOWN"),
+    is_abnormal: typeof (item as any)?.is_abnormal === "boolean"
+      ? (item as any).is_abnormal
+      : (typeof (item as any)?.abnormal === "boolean" ? (item as any).abnormal : null),
     started_ts_ms: Number.isFinite(startedTsMs) && startedTsMs > 0 ? startedTsMs : item.started_ts_ms ?? null,
     finished_ts_ms: Number.isFinite(finishedTsMs) && finishedTsMs > 0 ? finishedTsMs : item.finished_ts_ms ?? null,
     scope: item.scope == null ? normalizeScope((item as any)?.binding_scope ?? (item as any)?.scope) : normalizeScope(item.scope),
