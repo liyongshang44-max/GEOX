@@ -20,16 +20,61 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function inferStepFromPath(path) {
+  if (path === "/api/v1/operations/manual") return "manual_create";
+  if (/^\/api\/v1\/approvals\/[^/]+\/decide$/.test(path)) return "approve_decide";
+  if (path === "/api/control/ao_act/task") return "task_create";
+  return null;
+}
+
 async function request(path, init = {}) {
+  const { step, ...fetchInit } = init;
   const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: { ...headers, ...(init.headers ?? {}) },
+    ...fetchInit,
+    headers: { ...headers, ...(fetchInit.headers ?? {}) },
   });
-  const json = await res.json().catch(() => ({}));
+  const rawBody = await res.text();
+  const responseBody = (() => {
+    if (!rawBody) return {};
+    try {
+      return JSON.parse(rawBody);
+    } catch {
+      return rawBody;
+    }
+  })();
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${path}: ${JSON.stringify(json)}`);
+    const parsedRequestPayload = (() => {
+      if (!fetchInit.body) return null;
+      if (typeof fetchInit.body !== "string") return fetchInit.body;
+      try {
+        return JSON.parse(fetchInit.body);
+      } catch {
+        return fetchInit.body;
+      }
+    })();
+    const sanitize = (input) => {
+      if (Array.isArray(input)) return input.map((x) => sanitize(x));
+      if (input && typeof input === "object") {
+        return Object.fromEntries(
+          Object.entries(input).map(([key, value]) => {
+            if (key.toLowerCase().includes("token")) return [key, "[REDACTED]"];
+            return [key, sanitize(value)];
+          }),
+        );
+      }
+      return input;
+    };
+    const detail = {
+      step: step ?? inferStepFromPath(path),
+      path,
+      statusCode: res.status,
+      responseBody,
+      requestPayload: sanitize(parsedRequestPayload),
+    };
+    console.error(`[p1-smoke][HTTP_FAIL] ${JSON.stringify(detail)}`);
+    throw new Error(`HTTP ${res.status} ${path}`);
   }
-  return json;
+  return responseBody;
 }
 
 async function ensureSkillBinding() {
@@ -73,6 +118,7 @@ async function createOperation(actionType, suffix) {
     meta: { smoke: "p1", case: suffix, device_id: DEVICE_ID, adapter_type: ADAPTER_TYPE },
   };
   const out = await request("/api/v1/operations/manual", {
+    step: "manual_create",
     method: "POST",
     body: JSON.stringify(body),
   });
