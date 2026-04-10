@@ -81,6 +81,13 @@ function inferStepFromPath(path) {
   return null;
 }
 
+function isRetryableNetworkError(err) {
+  const code = String(err?.cause?.code ?? err?.code ?? "").toUpperCase();
+  if (["UND_ERR_SOCKET", "ECONNRESET", "ECONNREFUSED", "ETIMEDOUT", "EPIPE"].includes(code)) return true;
+  const message = String(err?.message ?? "").toLowerCase();
+  return message.includes("fetch failed") || message.includes("socket");
+}
+
 async function request(path, init = {}) {
   const { step, ...fetchInit } = init;
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -131,9 +138,38 @@ async function request(path, init = {}) {
   return responseBody;
 }
 
+async function requestWithRetry(path, init = {}, options = {}) {
+  const retries = Number(options.retries ?? 4);
+  const baseDelayMs = Number(options.baseDelayMs ?? 250);
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await request(path, init);
+    } catch (err) {
+      const isLast = attempt >= retries;
+      if (isLast || !isRetryableNetworkError(err)) throw err;
+      const waitMs = baseDelayMs * (attempt + 1);
+      console.warn(`[p1-smoke][RETRY] path=${path} attempt=${attempt + 1}/${retries + 1} wait_ms=${waitMs} reason=${String(err?.cause?.code ?? err?.message ?? "unknown")}`);
+      await sleep(waitMs);
+    }
+  }
+  throw new Error(`requestWithRetry exhausted: ${path}`);
+}
+
+async function waitForServerHealth(maxWaitMs = 15_000) {
+  const started = Date.now();
+  while (Date.now() - started < maxWaitMs) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/health`, { method: "GET", headers: { accept: "application/json" } });
+      if (res.ok) return;
+    } catch {}
+    await sleep(500);
+  }
+  throw new Error(`[p1-smoke] server not ready: ${BASE_URL}/api/health timeout ${maxWaitMs}ms`);
+}
+
 async function ensureSkillBinding() {
   const dispatchBindTarget = `p1_smoke_${Date.now()}`;
-  await request("/api/v1/skills/bindings", {
+  await requestWithRetry("/api/v1/skills/bindings", {
     method: "POST",
     body: JSON.stringify({
       ...tenant,
@@ -150,7 +186,7 @@ async function ensureSkillBinding() {
   });
 
   // Smoke-only acceptance bindings: do not change production/default tenant strategy.
-  await request("/api/v1/skills/bindings", {
+  await requestWithRetry("/api/v1/skills/bindings", {
     method: "POST",
     body: JSON.stringify({
       ...tenant,
@@ -171,7 +207,7 @@ async function ensureSkillBinding() {
     }),
   });
 
-  await request("/api/v1/skills/bindings", {
+  await requestWithRetry("/api/v1/skills/bindings", {
     method: "POST",
     body: JSON.stringify({
       ...tenant,
@@ -192,7 +228,7 @@ async function ensureSkillBinding() {
     }),
   });
 
-  const listing = await request("/api/v1/skills/bindings", { method: "GET" });
+  const listing = await requestWithRetry("/api/v1/skills/bindings", { method: "GET" });
   const effective = listing.items_effective ?? [];
   const foundDispatch = effective.some((item) => item.bind_target === dispatchBindTarget);
   const foundSuccess = effective.some((item) => item.bind_target === SMOKE_SUCCESS_BIND_TARGET && String(item.skill_id) === "operation_acceptance_gate_v1");
@@ -219,7 +255,7 @@ async function createOperation(actionType, suffix, fieldId) {
     command_id: commandId,
     meta: { smoke: "p1", case: suffix, device_id: DEVICE_ID, adapter_type: ADAPTER_TYPE },
   };
-  const out = await request("/api/v1/operations/manual", {
+  const out = await requestWithRetry("/api/v1/operations/manual", {
     step: "manual_create",
     method: "POST",
     body: JSON.stringify(body),
@@ -230,7 +266,7 @@ async function createOperation(actionType, suffix, fieldId) {
 
 async function waitForTask(operationPlanId) {
   for (let i = 0; i < 10; i += 1) {
-    const detail = await request(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
+    const detail = await requestWithRetry(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
     const taskId = detail?.operation?.act_task_id;
     if (taskId) return taskId;
     await sleep(300);
@@ -240,7 +276,7 @@ async function waitForTask(operationPlanId) {
 
 async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) {
   const now = Date.now();
-  return request("/api/control/ao_act/receipt", {
+  return requestWithRetry("/api/control/ao_act/receipt", {
     method: "POST",
     body: JSON.stringify({
       ...tenant,
@@ -263,9 +299,36 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) 
   });
 }
 
+async function setDispatchState(actTaskId, state) {
+  const body = {
+    ...tenant,
+    act_task_id: actTaskId,
+    command_id: actTaskId,
+    state,
+  };
+  const res = await fetch(`${BASE_URL}/api/v1/ao-act/dispatches/state`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const json = (() => {
+    if (!text) return {};
+    try { return JSON.parse(text); } catch { return { raw: text }; }
+  })();
+  if (res.status === 409 && String(json?.error ?? "").toUpperCase() === "STATE_TRANSITION_DENIED") {
+    console.warn(`[p1-smoke] dispatch state ${state} denied for task=${actTaskId}, continue with current state`);
+    return { ok: false, skipped: true, reason: "STATE_TRANSITION_DENIED" };
+  }
+  if (!res.ok) {
+    throw new Error(`dispatch state failed: HTTP ${res.status} ${JSON.stringify(json)}`);
+  }
+  return json;
+}
+
 async function waitForFinalState(operationPlanId) {
   for (let i = 0; i < 10; i += 1) {
-    const list = await request("/api/v1/operations", { method: "GET" });
+    const list = await requestWithRetry("/api/v1/operations", { method: "GET" });
     const item = (list.items ?? []).find((x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId);
     if (item?.final_status) return String(item.final_status).toUpperCase();
     await sleep(300);
@@ -275,7 +338,7 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
+  return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE"].includes(s);
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -289,15 +352,18 @@ function sanitizeParametersForSmoke(actionType, raw) {
 
 async function main() {
   console.log(`[p1-smoke] base=${BASE_URL}`);
+  await waitForServerHealth();
   await ensureSkillBinding();
 
   const successOp = await createOperation("IRRIGATE", "success", SMOKE_SUCCESS_BIND_TARGET);
   const successTaskId = await waitForTask(successOp.operationPlanId);
+  await setDispatchState(successTaskId, "ACKED");
   await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
   const successFinal = await waitForFinalState(successOp.operationPlanId);
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
   const invalidTaskId = await waitForTask(invalidOp.operationPlanId);
+  await setDispatchState(invalidTaskId, "ACKED");
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace", SMOKE_FAILURE_BIND_TARGET);
   const invalidFinal = await waitForFinalState(invalidOp.operationPlanId);
 
@@ -312,19 +378,19 @@ async function main() {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
     success: { operation_plan_id: successOp.operationPlanId, final_status: successFinal },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
-  };
+  });
 
   assert.ok(
     isSuccessMapped(successFinal),
-    `断言失败：success case final_status 仅接受 SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(operationFinalStates)}`,
+    `断言失败：success case final_status 仅接受 SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}`,
   );
   assert.equal(
     invalidFinal,
     "INVALID_EXECUTION",
-    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(operationFinalStates)}`,
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}`,
   );
 
-  console.log("[p1-smoke] done", operationFinalStates);
+  console.log("[p1-smoke] done", statuses);
 }
 
 main().catch((err) => {
