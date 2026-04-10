@@ -60,32 +60,44 @@ type DeviceActionValidationResultV1 =
       resolved_action_type?: string;
     };
 
-const FORBID_KEYS_V0 = new Set<string>([
-  "problem_state_id",
-  "lifecycle_state",
-  "recommendation",
-  "suggestion",
-  "proposal",
-  "agronomy",
-  "prescription",
-  "severity",
-  "priority",
-  "expected_outcome",
-  "effectiveness",
-  "quality",
-  "desirability",
-  "next_action",
-  "follow_up",
-  "autotrigger",
-  "auto",
-  "profile",
-  "preset",
-  "mode",
-  "success_criteria",
-  "success_score",
-  "yield",
-  "profit"
-]); // Exact-match, case-sensitive
+export const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
+  forbidden_keys: [
+    "problem_state_id",
+    "lifecycle_state",
+    "recommendation",
+    "suggestion",
+    "proposal",
+    "agronomy",
+    "prescription",
+    "severity",
+    "priority",
+    "expected_outcome",
+    "effectiveness",
+    "quality",
+    "desirability",
+    "next_action",
+    "follow_up",
+    "autotrigger",
+    "auto",
+    "profile",
+    "preset",
+    "mode",
+    "success_criteria",
+    "success_score",
+    "yield",
+    "profit"
+  ] as const,
+  parameter_schema_parameters_relationship: "parameter_schema.keys must 1:1 match parameters keys (no missing, no extras)",
+  irrigate_minimal_example: {
+    action_type: "IRRIGATE",
+    parameter_schema: {
+      keys: [{ name: "duration_sec", type: "number", min: 1 }]
+    },
+    parameters: { duration_sec: 30 }
+  }
+} as const);
+
+const FORBID_KEYS_V0 = new Set<string>(AO_ACT_TASK_SCHEMA_RULES_V0.forbidden_keys); // Exact-match, case-sensitive
 
 type TenantTripleV0 = { // Sprint 22: hard isolation scope triple used across AO-ACT routes.
   tenant_id: string; // Tenant isolation SSOT field; MUST be present on token + request.
