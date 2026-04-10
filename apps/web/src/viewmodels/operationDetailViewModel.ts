@@ -396,10 +396,13 @@ function resolveAcceptanceStatus(detail: any, receipt?: ReceiptEvidenceVm): "PAS
   if (!detail?.approval && !detail?.task) return "PENDING";
   const raw = String(
     detail?.acceptance?.verdict
+    ?? detail?.acceptance?.status
+    ?? detail?.acceptance?.result_status
     ?? "",
   ).toUpperCase();
-  if (raw.includes("PASS")) return "PASS";
-  if (raw.includes("FAIL")) return "FAIL";
+  if (["PASS", "PASSED", "SUCCESS", "SUCCEEDED", "OK", "DONE", "COMPLETED"].some((token) => raw.includes(token))) return "PASS";
+  if (["FAIL", "FAILED", "ERROR", "REJECTED", "DENIED", "TIMEOUT", "CRASHED", "INVALID_EXECUTION"].some((token) => raw.includes(token))) return "FAIL";
+  if (!raw || raw.includes("PENDING_ACCEPTANCE") || raw.includes("PENDING")) return "PENDING";
   if (receipt?.constraintCheckLabel === "符合约束") return "PASS";
   if (receipt?.constraintCheckLabel === "存在违规") return "FAIL";
   return "PENDING";
