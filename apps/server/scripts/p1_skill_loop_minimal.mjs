@@ -16,6 +16,58 @@ const headers = {
 const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 const ADAPTER_TYPE = "irrigation_simulator";
 
+const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
+  forbidden_keys: [
+    "problem_state_id",
+    "lifecycle_state",
+    "recommendation",
+    "suggestion",
+    "proposal",
+    "agronomy",
+    "prescription",
+    "severity",
+    "priority",
+    "expected_outcome",
+    "effectiveness",
+    "quality",
+    "desirability",
+    "next_action",
+    "follow_up",
+    "autotrigger",
+    "auto",
+    "profile",
+    "preset",
+    "mode",
+    "success_criteria",
+    "success_score",
+    "yield",
+    "profit",
+  ],
+  parameter_schema_parameters_relationship: "parameter_schema.keys must 1:1 match parameters keys (no missing, no extras)",
+  irrigate_minimal_example: {
+    action_type: "IRRIGATE",
+    parameter_schema: {
+      keys: [{ name: "duration_sec", type: "number", min: 1 }],
+    },
+    parameters: { duration_sec: 30 },
+  },
+});
+
+function preflightAssertAoActTaskMinimalSchema(parameters, actionType = "IRRIGATE") {
+  assert.equal(actionType, AO_ACT_TASK_SCHEMA_RULES_V0.irrigate_minimal_example.action_type, "仅支持 IRRIGATE 最小预检");
+  const schemaKeys = AO_ACT_TASK_SCHEMA_RULES_V0.irrigate_minimal_example.parameter_schema.keys.map((k) => k.name);
+  const parameterKeys = Object.keys(parameters);
+
+  for (const k of parameterKeys) {
+    assert.ok(!AO_ACT_TASK_SCHEMA_RULES_V0.forbidden_keys.includes(k), `parameters 命中 forbidden key: ${k}`);
+    assert.ok(schemaKeys.includes(k), `parameters 含越界键: ${k}`);
+  }
+  for (const k of schemaKeys) {
+    assert.ok(parameterKeys.includes(k), `parameters 缺少 schema 键: ${k}`);
+  }
+}
+
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -101,9 +153,8 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
-  const parameters = {
-    duration_sec: 30,
-  };
+  const parameters = { duration_sec: 30 }; // 最小合法参数集：仅保留 duration_sec。
+  preflightAssertAoActTaskMinimalSchema(parameters, actionType);
   const body = {
     tenant_id: tenant.tenant_id,
     project_id: tenant.project_id,
