@@ -1,15 +1,7 @@
 import React from "react";
 import type { OperationSkillTraceItemV2 } from "../../api/operations";
 import { StatusPill } from "../../shared/ui";
-
-function toStatusTone(value: string): "warning" | "danger" | "success" | "neutral" {
-  const code = String(value || "").toUpperCase();
-  if (!code) return "neutral";
-  if (["SUCCESS", "SUCCEEDED", "OK", "PASSED", "PASS"].includes(code)) return "success";
-  if (["FAILED", "ERROR", "TIMEOUT", "CRASHED"].includes(code)) return "danger";
-  if (["PENDING", "RUNNING", "SKIPPED", "PARTIAL", "WARNING"].includes(code)) return "warning";
-  return "neutral";
-}
+import { mapSkillRunStatusLabel, mapSkillRunStatusTone } from "../../lib/operationLabels";
 
 export default function OperationSkillTraceCard({ trace }: { trace?: OperationSkillTraceItemV2[] | null }): React.ReactElement {
   const items = (Array.isArray(trace) ? trace : [])
@@ -35,7 +27,7 @@ export default function OperationSkillTraceCard({ trace }: { trace?: OperationSk
             <article key={`${item.run_id || item.stage || "stage"}-${idx}`} className={`operationSkillTraceItem ${!item?.skill_id ? "isWarning" : ""}`}>
               <div className="operationSkillTraceHeader">
                 <strong>{item?.stage || "unknown_stage"}</strong>
-                <StatusPill tone={toStatusTone(resultStatus)}>{resultStatus || "UNKNOWN"}</StatusPill>
+                <StatusPill tone={mapSkillRunStatusTone(resultStatus)}>{mapSkillRunStatusLabel(resultStatus, "zh")}</StatusPill>
               </div>
               <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">skill_id</span><strong>{item?.skill_id || "--"}</strong></div>
