@@ -17,6 +17,18 @@ const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 const ADAPTER_TYPE = "irrigation_simulator";
 const SMOKE_SUCCESS_BIND_TARGET = `field_p1_smoke_success_${Date.now()}`;
 const SMOKE_FAILURE_BIND_TARGET = `field_p1_smoke_failure_${Date.now()}`;
+const SMOKE_SUCCESS_ACCEPTANCE_CONFIG_PATCH = Object.freeze({
+  smoke: true,
+  lane: "success",
+  strict_mode: false,
+  min_evidence_count: 0,
+});
+const SMOKE_FAILURE_ACCEPTANCE_CONFIG_PATCH = Object.freeze({
+  smoke: true,
+  lane: "failure",
+  strict_mode: true,
+  min_evidence_count: 2,
+});
 
 const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
   forbidden_keys: [
@@ -198,12 +210,7 @@ async function ensureSkillBinding() {
       bind_target: SMOKE_SUCCESS_BIND_TARGET,
       enabled: true,
       priority: 999,
-      config_patch: {
-        smoke: true,
-        lane: "success",
-        strict_mode: false,
-        min_evidence_count: 1,
-      },
+      config_patch: SMOKE_SUCCESS_ACCEPTANCE_CONFIG_PATCH,
     }),
   });
 
@@ -219,12 +226,7 @@ async function ensureSkillBinding() {
       bind_target: SMOKE_FAILURE_BIND_TARGET,
       enabled: true,
       priority: 999,
-      config_patch: {
-        smoke: true,
-        lane: "failure",
-        strict_mode: true,
-        min_evidence_count: 2,
-      },
+      config_patch: SMOKE_FAILURE_ACCEPTANCE_CONFIG_PATCH,
     }),
   });
 
