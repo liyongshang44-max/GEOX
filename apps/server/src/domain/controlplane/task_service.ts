@@ -1901,7 +1901,19 @@ type ParsedTaskCapabilityResult =
     };
 
 function parseTaskCapability(taskPayload: any): ParsedTaskCapabilityResult {
-  const resolved = resolveTaskCapabilityViaDeviceSkillsResult(taskPayload);
+  const metaAdapterType = typeof taskPayload?.meta?.adapter_type === "string" ? taskPayload.meta.adapter_type.trim() : "";
+  const metaAdapterHint = typeof taskPayload?.meta?.adapter_hint === "string" ? taskPayload.meta.adapter_hint.trim() : "";
+  const topLevelAdapterType = typeof taskPayload?.adapter_type === "string" ? taskPayload.adapter_type.trim() : "";
+  const topLevelAdapterHint = typeof taskPayload?.adapter_hint === "string" ? taskPayload.adapter_hint.trim() : "";
+  const resolvedAdapterHint = topLevelAdapterType || topLevelAdapterHint || metaAdapterType || metaAdapterHint;
+  const resolved = resolveTaskCapabilityViaDeviceSkillsResult({
+    ...(taskPayload ?? {}),
+    ...(resolvedAdapterHint ? { adapter_type: resolvedAdapterHint, adapter_hint: resolvedAdapterHint } : {}),
+    meta: {
+      ...(taskPayload?.meta ?? {}),
+      ...(resolvedAdapterHint ? { adapter_type: resolvedAdapterHint, adapter_hint: resolvedAdapterHint } : {})
+    }
+  });
   if (!resolved.ok) {
     return {
       ok: false,
