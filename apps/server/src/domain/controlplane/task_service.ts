@@ -2193,7 +2193,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           approved_by_token_id: auth.token_id
         }
       });
-      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
+      const taskCreatePayload = {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
@@ -2216,8 +2216,14 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
             ? String(operationPlan.record_json.payload.adapter_type)
             : (proposal?.meta?.adapter_type ?? null)
         }
-      });
+      };
+      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
       if (!delegated.ok || !delegated.json?.ok) {
+        console.error("[AO_ACT_TASK_CREATE_FAILED_APPROVAL]", JSON.stringify({
+          statusCode: delegated.status,
+          responseBody: delegated.json ?? null,
+          requestPayload: taskCreatePayload,
+        }, null, 2));
         return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_CREATE_FAILED", detail: delegated.json ?? null });
       }
       act_task_id = String(delegated.json.act_task_id ?? "");
@@ -2392,7 +2398,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }
     const adapterValidation = validateAdapterTask(adapterType, body);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), {
+    const taskCreatePayload = {
       ...body,
       action_type: aoActActionType,
       meta: {
@@ -2407,8 +2413,16 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       group_id: tenant.group_id,
       operation_plan_id,
       approval_request_id: String(body.approval_request_id ?? "").trim()
-    });
-    if (!delegated.ok || !delegated.json?.ok) return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
+    };
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
+    if (!delegated.ok || !delegated.json?.ok) {
+      console.error("[AO_ACT_TASK_CREATE_FAILED_API]", JSON.stringify({
+        statusCode: delegated.status,
+        responseBody: delegated.json ?? null,
+        requestPayload: taskCreatePayload,
+      }, null, 2));
+      return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "TASK_CREATE_FAILED" });
+    }
 
     const wrapper_fact_id = await insertFact(pool, "api/v1/ao-act/tasks", {
       type: "ao_act_task_created_v1",
