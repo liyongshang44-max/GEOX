@@ -344,6 +344,7 @@ async function main() {
   const successTaskId = await waitForTask(successOp.operationPlanId);
   await setDispatchState(successTaskId, "ACKED");
   await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
+  await evaluateAcceptance(successTaskId);
   const successFinal = await waitForFinalState(successOp.operationPlanId);
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
