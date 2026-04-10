@@ -57,6 +57,10 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
+  const normalizedParameters = {
+    device_type: "VALVE",
+    ...(parameters ?? {}),
+  };
   const out = await request("/api/v1/operations/manual", {
     method: "POST",
     body: JSON.stringify({

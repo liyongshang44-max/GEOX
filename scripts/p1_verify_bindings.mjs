@@ -2,6 +2,13 @@
 import pg from "pg";
 
 const { Pool } = pg;
+const COMMERCIAL_V1_PG_DEFAULTS = Object.freeze({
+  host: "127.0.0.1",
+  port: 5433,
+  user: "landos",
+  password: "landos_pwd",
+  database: "landos",
+});
 
 const tenantId = process.env.TENANT_ID ?? "tenantA";
 const projectId = process.env.PROJECT_ID ?? "projectA";
@@ -45,14 +52,57 @@ function hasRequiredBindingFields(item) {
   );
 }
 
+function parseConnectionInfoFromUrl(connectionString) {
+  const text = norm(connectionString);
+  if (!text) return null;
+  try {
+    const url = new URL(text);
+    return {
+      host: url.hostname || "unknown",
+      port: url.port ? Number(url.port) : 5432,
+      database: norm(url.pathname).replace(/^\//, "") || "unknown",
+    };
+  } catch {
+    return {
+      host: "invalid",
+      port: "invalid",
+      database: "invalid",
+    };
+  }
+}
+
+function resolvePoolConfig() {
+  const connectionString = norm(process.env.DATABASE_URL);
+  if (connectionString) {
+    return {
+      poolConfig: { connectionString },
+      connInfo: {
+        source: "DATABASE_URL",
+        ...parseConnectionInfoFromUrl(connectionString),
+      },
+    };
+  }
+
+  const host = process.env.PGHOST ?? COMMERCIAL_V1_PG_DEFAULTS.host;
+  const port = Number(process.env.PGPORT ?? COMMERCIAL_V1_PG_DEFAULTS.port);
+  const user = process.env.PGUSER ?? COMMERCIAL_V1_PG_DEFAULTS.user;
+  const password = process.env.PGPASSWORD ?? COMMERCIAL_V1_PG_DEFAULTS.password;
+  const database = process.env.PGDATABASE ?? COMMERCIAL_V1_PG_DEFAULTS.database;
+  return {
+    poolConfig: { host, port, user, password, database },
+    connInfo: { source: "PG*", host, port, database },
+  };
+}
+
 async function main() {
-  const pool = new Pool({
-    host: process.env.PGHOST ?? "127.0.0.1",
-    port: Number(process.env.PGPORT ?? "5432"),
-    database: process.env.PGDATABASE ?? "geox",
-    user: process.env.PGUSER ?? "geox",
-    password: process.env.PGPASSWORD ?? "geox",
-  });
+  const { poolConfig, connInfo } = resolvePoolConfig();
+  const pool = new Pool(poolConfig);
+  console.log(
+    `[p1_verify_bindings] db_source=${connInfo.source} host=${connInfo.host} port=${connInfo.port} db=${connInfo.database}`
+  );
+  console.log(
+    "[p1_verify_bindings] powershell_example=$env:DATABASE_URL=\"postgres://<user>:<password>@<host>:<port>/<db>\"; node .\\scripts\\p1_verify_bindings.mjs"
+  );
 
   try {
     const { rows } = await pool.query(

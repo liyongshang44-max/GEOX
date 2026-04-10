@@ -13,14 +13,6 @@ const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
 const SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT = "/api/v1/skills/bindings/override";
 
 
-type PublicSkillType = "sensing" | "agronomy" | "device" | "acceptance" | "unknown";
-
-function toPublicSkillType(value: unknown): PublicSkillType {
-  const normalized = String(value ?? "").trim().toLowerCase();
-  if (normalized === "sensing" || normalized === "agronomy" || normalized === "device" || normalized === "acceptance" || normalized === "unknown") return normalized;
-  return "unknown";
-}
-
 type SkillRow = {
   tenant_id: string;
   project_id: string;
@@ -168,14 +160,13 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       }
 
       const items = (rows ?? []).map((row) => {
-        const skill_type = toPublicSkillType(row.category);
         return {
           skill_id: row.skill_id,
           version: row.version,
           display_name: String(row.payload_json?.display_name ?? row.skill_id),
-          category: skill_type,
+          category: row.category ?? "unknown",
           legacy_category: row.legacy_category,
-          skill_type,
+          skill_type: row.category ?? "unknown",
           status: row.status,
           trigger_stage: row.trigger_stage,
           scope_type: row.scope_type,
