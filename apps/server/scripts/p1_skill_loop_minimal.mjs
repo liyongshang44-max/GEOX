@@ -55,13 +55,17 @@ async function ensureSkillBinding() {
 
 async function createOperation(actionType, parameters, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
+  const normalizedParameters = {
+    device_type: "VALVE",
+    ...(parameters ?? {}),
+  };
   const out = await request("/api/v1/operations/manual", {
     method: "POST",
     body: JSON.stringify({
       ...tenant,
       field_id: "field_p1_smoke",
       action_type: actionType,
-      parameters,
+      parameters: normalizedParameters,
       issuer: { kind: "human", id: "smoke_user", namespace: "qa" },
       command_id: commandId,
       meta: { smoke: "p1", case: suffix, device_id: DEVICE_ID },

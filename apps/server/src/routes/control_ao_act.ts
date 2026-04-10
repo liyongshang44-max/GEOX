@@ -1030,6 +1030,14 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       }).parse(req.body ?? {});
       const command_id = String(body.command_id ?? "").trim();
       if (!command_id) return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
+      const manualMeta = (body.meta && typeof body.meta === "object") ? { ...body.meta } : {};
+      const metaAdapterType = typeof manualMeta.adapter_type === "string" ? manualMeta.adapter_type.trim() : "";
+      const metaAdapterHint = typeof manualMeta.adapter_hint === "string" ? manualMeta.adapter_hint.trim() : "";
+      const adapterTypeHint = metaAdapterType || metaAdapterHint;
+      if (adapterTypeHint) {
+        manualMeta.adapter_type = adapterTypeHint;
+        manualMeta.adapter_hint = adapterTypeHint;
+      }
       const tenant = assertTenantFieldsPresentV0(body, "body");
       if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
       const existing = await loadManualOperationByCommandId(pool, tenant, command_id);
@@ -1059,8 +1067,9 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
           parameter_schema: { keys: parameterSchemaKeys },
           parameters: body.parameters,
           constraints: {},
+          adapter_type: adapterTypeHint || undefined,
           meta: {
-            ...(body.meta ?? {}),
+            ...manualMeta,
             operation_id,
             command_id
           }
