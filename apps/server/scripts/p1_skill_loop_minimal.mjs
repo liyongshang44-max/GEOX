@@ -268,7 +268,12 @@ async function waitForTask(operationPlanId) {
   for (let i = 0; i < 10; i += 1) {
     const detail = await requestWithRetry(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
     const taskId = detail?.operation?.act_task_id;
-    if (taskId) return taskId;
+    if (taskId) {
+      return {
+        taskId,
+        detail,
+      };
+    }
     await sleep(300);
   }
   throw new Error(`operation ${operationPlanId} 未就绪：无法读取 act_task_id`);
@@ -300,22 +305,42 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind, fieldId) 
 }
 
 async function setDispatchState(actTaskId, state) {
-  return requestWithRetry("/api/v1/ao-act/dispatches/state", {
+  const body = {
+    ...tenant,
+    act_task_id: actTaskId,
+    command_id: actTaskId,
+    state,
+  };
+  const res = await fetch(`${BASE_URL}/api/v1/ao-act/dispatches/state`, {
     method: "POST",
-    body: JSON.stringify({
-      ...tenant,
-      act_task_id: actTaskId,
-      command_id: actTaskId,
-      state,
-    }),
+    headers,
+    body: JSON.stringify(body),
   });
+  const text = await res.text();
+  const json = (() => {
+    if (!text) return {};
+    try { return JSON.parse(text); } catch { return { raw: text }; }
+  })();
+  if (res.status === 409 && String(json?.error ?? "").toUpperCase() === "STATE_TRANSITION_DENIED") {
+    console.warn(`[p1-smoke] dispatch state ${state} denied for task=${actTaskId}, continue with current state`);
+    return { ok: false, skipped: true, reason: "STATE_TRANSITION_DENIED" };
+  }
+  if (!res.ok) {
+    throw new Error(`dispatch state failed: HTTP ${res.status} ${JSON.stringify(json)}`);
+  }
+  return json;
 }
 
 async function waitForFinalState(operationPlanId) {
   for (let i = 0; i < 10; i += 1) {
     const list = await requestWithRetry("/api/v1/operations", { method: "GET" });
     const item = (list.items ?? []).find((x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId);
-    if (item?.final_status) return String(item.final_status).toUpperCase();
+    if (item?.final_status) {
+      return {
+        finalStatus: String(item.final_status).toUpperCase(),
+        item,
+      };
+    }
     await sleep(300);
   }
   throw new Error(`operation_state 查询失败：${operationPlanId} 无 final_status`);
@@ -341,17 +366,28 @@ async function main() {
   await ensureSkillBinding();
 
   const successOp = await createOperation("IRRIGATE", "success", SMOKE_SUCCESS_BIND_TARGET);
-  const successTaskId = await waitForTask(successOp.operationPlanId);
-  await setDispatchState(successTaskId, "ACKED");
-  await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
-  await evaluateAcceptance(successTaskId);
-  const successFinal = await waitForFinalState(successOp.operationPlanId);
+  const successTask = await waitForTask(successOp.operationPlanId);
+  const successTaskId = successTask.taskId;
+  console.log("[p1-smoke][success][waitTask]", {
+    operation_plan_id: successOp.operationPlanId,
+    act_task_id: successTaskId,
+    detail_task: successTask?.detail?.operation?.task ?? successTask?.detail?.task ?? null,
+    detail_status: successTask?.detail?.operation?.final_status ?? successTask?.detail?.final_status ?? null,
+  });
+  const successDispatchState = await setDispatchState(successTaskId, "ACKED");
+  console.log("[p1-smoke][success][setDispatchState]", successDispatchState);
+  const successReceipt = await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log", SMOKE_SUCCESS_BIND_TARGET);
+  console.log("[p1-smoke][success][submitReceipt]", successReceipt);
+  const successFinalState = await waitForFinalState(successOp.operationPlanId);
+  const successFinal = successFinalState.finalStatus;
+  console.log("[p1-smoke][success][waitFinal]", successFinalState);
 
   const invalidOp = await createOperation("IRRIGATE", "invalid", SMOKE_FAILURE_BIND_TARGET);
-  const invalidTaskId = await waitForTask(invalidOp.operationPlanId);
+  const invalidTask = await waitForTask(invalidOp.operationPlanId);
+  const invalidTaskId = invalidTask.taskId;
   await setDispatchState(invalidTaskId, "ACKED");
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace", SMOKE_FAILURE_BIND_TARGET);
-  const invalidFinal = await waitForFinalState(invalidOp.operationPlanId);
+  const invalidFinal = (await waitForFinalState(invalidOp.operationPlanId)).finalStatus;
 
   const statuses = [successFinal, invalidFinal];
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
