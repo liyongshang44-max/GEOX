@@ -519,9 +519,13 @@ export function projectOperationStateFromFacts(facts: OperationProjectionFactRow
     const invalidReason: OperationStateV1["invalid_reason"] = invalidExecution
       ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
       : null;
+    const pendingAcceptanceAfterExecutedReceipt =
+      hasReceipt && executedReceipt && !invalidExecution && acceptance.status !== "PASS";
     const final_status =
       invalidExecution
         ? "INVALID_EXECUTION"
+        : pendingAcceptanceAfterExecutedReceipt
+        ? "PENDING_ACCEPTANCE"
         : (baseFinalStatus === "SUCCESS" && (!hasReceipt || !evidenceEvaluation.has_formal_evidence || !acceptanceCompleted))
         ? "PENDING_ACCEPTANCE"
         : baseFinalStatus;

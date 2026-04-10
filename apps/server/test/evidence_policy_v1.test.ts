@@ -86,3 +86,24 @@ test("evaluateEvidence: Case D executor success runtime_log is formal evidence",
   ]);
   assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
 });
+
+test("final_status: executed receipt + pending acceptance overrides transition FAILED when execution is valid", () => {
+  const out = projectOperationStateFromFacts([
+    fact("operation_plan_v1", { operation_plan_id: "op_e", act_task_id: "task_e" }, "2026-03-31T01:00:00.000Z", "f10"),
+    fact("operation_plan_transition_v1", { operation_plan_id: "op_e", status: "FAILED" }, "2026-03-31T01:00:30.000Z", "f11"),
+    fact("ao_act_receipt_v1", {
+      act_task_id: "task_e",
+      status: "executed",
+      metrics: [{ kind: "flow_rate", value: 1 }],
+    }, "2026-03-31T01:01:00.000Z", "f12"),
+    fact("acceptance_result_v1", {
+      operation_plan_id: "op_e",
+      act_task_id: "task_e",
+      verdict: "PENDING",
+    }, "2026-03-31T01:01:30.000Z", "f13"),
+  ]);
+
+  assert.equal(out[0].invalid_reason, null);
+  assert.equal(out[0].acceptance.status, "PENDING");
+  assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
+});
