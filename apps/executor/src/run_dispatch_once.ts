@@ -29,6 +29,7 @@ function parseArgs(argv) {
     };
     const baseUrl = get("baseUrl") ?? process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001";
     const token = get("token") ?? process.env.GEOX_AO_ACT_TOKEN ?? "";
+    const executor_token = get("executor_token") ?? process.env.GEOX_EXECUTOR_TOKEN ?? token;
     const tenant_id = get("tenant_id") ?? process.env.GEOX_TENANT_ID ?? "tenantA";
     const project_id = get("project_id") ?? process.env.GEOX_PROJECT_ID ?? "projectA";
     const group_id = get("group_id") ?? process.env.GEOX_GROUP_ID ?? "groupA";
@@ -41,7 +42,7 @@ function parseArgs(argv) {
     const auto_evaluate = parseBool(get("auto_evaluate") ?? process.env.GEOX_AUTO_EVALUATE, false);
     if (!token)
         throw new Error("missing token (set --token or GEOX_AO_ACT_TOKEN)");
-    return { baseUrl, token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id, auto_evaluate };
+    return { baseUrl, token, executor_token, tenant_id, project_id, group_id, executor_id, limit, lease_seconds, act_task_id, auto_evaluate };
 }
 async function httpJson(url, token, init) {
     const headers = {
@@ -362,10 +363,11 @@ async function runDispatchOnce(cliArgs) {
     const args = parseArgs(cliArgs ?? process.argv.slice(2));
     const terminalDedupeMs = parseTerminalDedupeMs();
     sweepExpiredTerminalDedupe(Date.now());
+    console.log(`INFO: executor token selected executor_token_present=${args.executor_token ? "true" : "false"}`);
     if (args.auto_evaluate) {
         console.log("WARN: auto_evaluate=true requested, but executor keeps acceptance decoupled and will not auto-evaluate.");
     }
-    const registry = (0, adapters_1.createAdapterRegistry)({ baseUrl: args.baseUrl, token: args.token, executor_id: args.executor_id });
+    const registry = (0, adapters_1.createAdapterRegistry)({ baseUrl: args.baseUrl, token: args.token, executor_token: args.executor_token, executor_id: args.executor_id });
     const claimed = await (0, claim_1.claimDispatchTasks)({
         baseUrl: args.baseUrl,
         token: args.token,
