@@ -51,9 +51,10 @@ services:
       - -lc
       - |
           set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
           export CI=1
           export PNPM_STORE_DIR=/pnpm-store
-          npm install -g pnpm@9.15.4
           pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
           pnpm --filter @geox/contracts build
           pnpm --filter @geox/server exec tsx src/server.ts
@@ -103,10 +104,12 @@ services:
       - -lc
       - |
           set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
           export CI=1
           export PNPM_STORE_DIR=/pnpm-store
-          npm install -g pnpm@9.15.4
           pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
           pnpm --filter @geox/telemetry-ingest start
     volumes:
       - ./:/app
@@ -142,10 +145,12 @@ services:
       - -lc
       - |
           set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
           export CI=1
           export PNPM_STORE_DIR=/pnpm-store
-          npm install -g pnpm@9.15.4
           pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
+          pnpm --filter @geox/contracts build
           pnpm --filter @geox/server exec tsx src/jobs/runtime.ts
     volumes:
       - ./:/app
@@ -181,9 +186,10 @@ services:
       - -lc
       - |
           set -e
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
           export CI=1
           export PNPM_STORE_DIR=/pnpm-store
-          npm install -g pnpm@9.15.4
           pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
           pnpm --filter @geox/contracts build
           pnpm --filter @geox/executor exec tsx src/runtime_loop.ts

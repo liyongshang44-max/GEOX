@@ -1,4 +1,4 @@
-import type { OperationPlanStatusV1 } from "./operation_plan_v1";
+import type { OperationPlanStatusV1 } from "./operation_plan_v1.js";
 
 export type OperationPlanTransitionV1 = {
   type: "operation_plan_transition_v1";
