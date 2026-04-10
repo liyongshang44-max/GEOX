@@ -13,6 +13,8 @@ const headers = {
   accept: "application/json",
   authorization: `Bearer ${TOKEN}`,
 };
+const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
+const ADAPTER_TYPE = "irrigation_simulator";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -52,19 +54,27 @@ async function ensureSkillBinding() {
   assert.ok(found, "skills/bindings 链路失败：未找到刚创建的 binding");
 }
 
-async function createOperation(actionType, parameters, suffix) {
+async function createOperation(actionType, suffix) {
   const commandId = `p1_skill_loop_${suffix}_${Date.now()}`;
+  const parameters = {
+    duration_sec: 30,
+  };
+  const body = {
+    tenant_id: tenant.tenant_id,
+    project_id: tenant.project_id,
+    group_id: tenant.group_id,
+    field_id: "field_p1_smoke",
+    device_id: DEVICE_ID,
+    action_type: actionType,
+    adapter_type: ADAPTER_TYPE,
+    parameters,
+    issuer: { kind: "human", id: "smoke_user", namespace: "qa" },
+    command_id: commandId,
+    meta: { smoke: "p1", case: suffix, device_id: DEVICE_ID, adapter_type: ADAPTER_TYPE },
+  };
   const out = await request("/api/v1/operations/manual", {
     method: "POST",
-    body: JSON.stringify({
-      ...tenant,
-      field_id: "field_p1_smoke",
-      action_type: actionType,
-      parameters,
-      issuer: { kind: "human", id: "smoke_user", namespace: "qa" },
-      command_id: commandId,
-      meta: { smoke: "p1", case: suffix },
-    }),
+    body: JSON.stringify(body),
   });
   assert.ok(out.operation_plan_id, "operation 创建失败：缺少 operation_plan_id");
   return { commandId, operationPlanId: out.operation_plan_id };
@@ -99,7 +109,7 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind) {
       meta: {
         idempotency_key: `idmp_${actTaskId}_${Date.now()}`,
         command_id: actTaskId,
-        device_id: "dev_smoke_01",
+        device_id: DEVICE_ID,
       },
     }),
   });
@@ -124,12 +134,12 @@ async function main() {
   console.log(`[p1-smoke] base=${BASE_URL}`);
   await ensureSkillBinding();
 
-  const successOp = await createOperation("IRRIGATE", { duration_sec: 30 }, "success");
+  const successOp = await createOperation("IRRIGATE", "success");
   const successTaskId = await waitForTask(successOp.operationPlanId);
   await submitReceipt(successOp.operationPlanId, successTaskId, "runtime_log");
   const successFinal = await waitForFinalState(successOp.operationPlanId);
 
-  const invalidOp = await createOperation("IRRIGATE", { duration_sec: 30 }, "invalid");
+  const invalidOp = await createOperation("IRRIGATE", "invalid");
   const invalidTaskId = await waitForTask(invalidOp.operationPlanId);
   await submitReceipt(invalidOp.operationPlanId, invalidTaskId, "sim_trace");
   const invalidFinal = await waitForFinalState(invalidOp.operationPlanId);

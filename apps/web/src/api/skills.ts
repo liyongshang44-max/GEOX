@@ -8,9 +8,9 @@ const PRIMARY_BINDING_OVERRIDE_ENDPOINT = "/api/v1/skills/bindings/override";
 
 export function resolveSkillClassification(input: any): string {
   const candidates = [
-    input?.classification,
     input?.category,
     input?.skill_type,
+    input?.classification,
     input?.stage,
     input?.trigger_stage,
     input?.type,
@@ -142,10 +142,12 @@ function normalizeList<T>(res: any): T[] {
 function normalizeSkillRegistryItem(item: SkillRegistryItem): SkillRegistryItem {
   const classification = resolveSkillClassification(item);
   const mappedSkillType = classification as SkillType;
+  const normalizedCategory = String(item.category ?? "").trim().toLowerCase();
+  const normalizedSkillType = String(item.skill_type ?? "").trim().toLowerCase();
   return {
     ...item,
-    skill_type: mappedSkillType,
-    category: mappedSkillType,
+    skill_type: (normalizedSkillType || mappedSkillType) as SkillType,
+    category: (normalizedCategory || mappedSkillType) as SkillType,
     status: normalizeRuntimeStatus(item.status),
     binding_scope: item.binding_scope == null ? item.binding_scope : normalizeScope(item.binding_scope),
   };
