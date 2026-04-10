@@ -231,6 +231,10 @@ async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_ty
     }
     const now = Date.now();
     const mappedStatus = receipt_status === "FAILED" ? "not_executed" : "executed";
+    const logsRefBase = raw_receipt_ref ?? `executor://run_dispatch_once/${task.act_task_id}`;
+    const logsRefs = receipt_status === "FAILED"
+        ? [{ kind: "stdout", ref: logsRefBase }]
+        : [{ kind: "runtime_log", ref: logsRefBase }];
     const operationPlanId = String(task.operation_plan_id ?? task.meta?.operation_plan_id ?? "").trim();
     const commandId = String(task.command_id ?? task.act_task_id).trim();
     if (!operationPlanId)
@@ -259,7 +263,7 @@ async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_ty
                     ref: String(task.meta?.field_id ?? task.meta?.target_ref ?? "executor_dispatch")
                 },
                 resource_usage: { fuel_l: 0, electric_kwh: 0, water_l: 0, chemical_ml: 0 },
-                logs_refs: [{ kind: "stdout", ref: raw_receipt_ref ?? `executor://run_dispatch_once/${task.act_task_id}` }],
+                logs_refs: logsRefs,
                 status: mappedStatus,
                 constraint_check: { violated: false, violations: [] },
                 observed_parameters: {},
