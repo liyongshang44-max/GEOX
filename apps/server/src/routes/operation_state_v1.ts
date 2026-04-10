@@ -1354,6 +1354,14 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     }
     if (acceptance || normalizedReceipt) {
       const acceptanceVerdict = String(acceptance?.record_json?.payload?.verdict ?? "").toUpperCase();
+      const acceptanceResultStatus =
+        !acceptanceVerdict || acceptanceVerdict === "PENDING_ACCEPTANCE"
+          ? "PENDING"
+          : acceptanceVerdict === "PASS"
+            ? "SUCCESS"
+            : "FAILED";
+      const acceptanceErrorCode =
+        acceptanceResultStatus === "FAILED" ? "ACCEPTANCE_NOT_PASS" : null;
       await ensureSkillRunFact({
         pool,
         tenant,
@@ -1363,8 +1371,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         bindTarget: "operation_acceptance",
         skillId: toText(acceptance?.record_json?.payload?.acceptance_skill_id ?? state.skill_trace?.acceptance_skill?.skill_id) ?? "acceptance_skill_v1",
         version: toText(acceptance?.record_json?.payload?.acceptance_skill_version ?? state.skill_trace?.acceptance_skill?.version) ?? "v1",
-        resultStatus: acceptanceVerdict && acceptanceVerdict !== "PASS" ? "FAILED" : "SUCCESS",
-        errorCode: acceptanceVerdict && acceptanceVerdict !== "PASS" ? "ACCEPTANCE_NOT_PASS" : null,
+        resultStatus: acceptanceResultStatus,
+        errorCode: acceptanceErrorCode,
         fieldId: toText(state.field_id),
         deviceId: toText(state.device_id),
       });
