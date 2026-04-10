@@ -1,8 +1,8 @@
 // ⚠️ DEPRECATED: legacy only, do not use in new flows
 import { z } from "zod";
-import { RawSampleV1Schema } from "./raw_sample_v1";
-import { GapV1Schema } from "./gaps_v1";
-import { OverlaySegmentSchema } from "./overlay_zod";
+import { RawSampleV1Schema } from "./raw_sample_v1.js";
+import { GapV1Schema } from "./gaps_v1.js";
+import { OverlaySegmentSchema } from "./overlay_zod.js";
 
 export const SeriesRangeV1Schema = z.object({
   startTs: z.number().finite(),

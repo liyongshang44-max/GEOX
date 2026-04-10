@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { isMarkerKind, type MarkerKind } from "./marker_v1";
-import { isCandidateKind, type CandidateKind } from "./candidate_overlay_v1";
+import { isMarkerKind, type MarkerKind } from "./marker_v1.js";
+import { isCandidateKind, type CandidateKind } from "./candidate_overlay_v1.js";
 
 export type OverlayKind = MarkerKind | CandidateKind;
 

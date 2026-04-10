@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { OverlaySegmentV1 } from "./overlay_v1";
+import { OverlaySegmentV1 } from "./overlay_v1.js";
 
 /**
  * ExplainOverlayV1

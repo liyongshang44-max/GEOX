@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AoActReceiptV1 } from "./ao_act_receipt_v1";
+import type { AoActReceiptV1 } from "./ao_act_receipt_v1.js";
 
 export const HumanWorkReceiptExceptionTypeValuesV1 = [
   "NONE",
