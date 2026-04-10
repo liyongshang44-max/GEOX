@@ -15,6 +15,7 @@ type OverrideFormState = {
   bind_target: string;
   skill_id: string;
   version: string;
+  category: "crop_skill" | "agronomy_skill" | "device_skill" | "acceptance_skill" | "sensing_skill";
   enabled: boolean;
   priority: number;
   config_patch: string;
@@ -25,6 +26,7 @@ const INITIAL_FORM_STATE: OverrideFormState = {
   bind_target: "",
   skill_id: "",
   version: "",
+  category: "agronomy_skill",
   enabled: true,
   priority: 100,
   config_patch: "{}",
@@ -120,7 +122,7 @@ export default function SkillBindingsPage(): React.ReactElement {
       await overrideSkillBinding({
         skill_id: formState.skill_id.trim(),
         version: formState.version.trim(),
-        category: "unknown",
+        category: formState.category,
         scope_type: formState.scope_type.trim(),
         bind_target: formState.bind_target.trim(),
         enabled: formState.enabled,
@@ -201,6 +203,19 @@ export default function SkillBindingsPage(): React.ReactElement {
                 value={formState.version}
                 onChange={(e) => setFormState((prev) => ({ ...prev, version: e.target.value }))}
               />
+            </label>
+            <label>
+              category
+              <select
+                value={formState.category}
+                onChange={(e) => setFormState((prev) => ({ ...prev, category: e.target.value as OverrideFormState["category"] }))}
+              >
+                <option value="crop_skill">crop_skill</option>
+                <option value="agronomy_skill">agronomy_skill</option>
+                <option value="device_skill">device_skill</option>
+                <option value="acceptance_skill">acceptance_skill</option>
+                <option value="sensing_skill">sensing_skill</option>
+              </select>
             </label>
             <label>
               enabled
