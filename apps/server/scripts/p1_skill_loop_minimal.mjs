@@ -13,6 +13,7 @@ const headers = {
   accept: "application/json",
   authorization: `Bearer ${TOKEN}`,
 };
+const DEVICE_ID = process.env.GEOX_DEVICE_ID ?? "dev_smoke_01";
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -67,11 +68,7 @@ async function createOperation(actionType, parameters, suffix) {
       parameters: normalizedParameters,
       issuer: { kind: "human", id: "smoke_user", namespace: "qa" },
       command_id: commandId,
-      meta: {
-        smoke: "p1",
-        case: suffix,
-        adapter_type: "irrigation_simulator",
-      },
+      meta: { smoke: "p1", case: suffix, device_id: DEVICE_ID },
     }),
   });
   assert.ok(out.operation_plan_id, "operation 创建失败：缺少 operation_plan_id");
@@ -107,7 +104,7 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKind) {
       meta: {
         idempotency_key: `idmp_${actTaskId}_${Date.now()}`,
         command_id: actTaskId,
-        device_id: "dev_smoke_01",
+        device_id: DEVICE_ID,
       },
     }),
   });
