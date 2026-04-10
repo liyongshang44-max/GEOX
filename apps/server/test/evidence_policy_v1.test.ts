@@ -65,3 +65,24 @@ test("evaluateEvidence: Case C human formal evidence with media/artifacts", () =
   ]);
   assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
 });
+
+test("evaluateEvidence: Case D executor success runtime_log is formal evidence", () => {
+  const ev = evaluateEvidence({
+    artifacts: [],
+    media: [],
+    metrics: [],
+    logs: [{ kind: "runtime_log" }],
+  });
+  assert.equal(ev.has_formal_evidence, true);
+  assert.equal(ev.reason, "formal_evidence");
+
+  const out = projectOperationStateFromFacts([
+    fact("operation_plan_v1", { operation_plan_id: "op_d", act_task_id: "task_d" }, "2026-03-31T01:00:00.000Z", "f8"),
+    fact("ao_act_receipt_v1", {
+      act_task_id: "task_d",
+      status: "executed",
+      logs_refs: [{ kind: "runtime_log", ref: "executor://run_dispatch_once/task_d" }],
+    }, "2026-03-31T01:01:00.000Z", "f9"),
+  ]);
+  assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
+});

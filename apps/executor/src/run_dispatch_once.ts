@@ -266,6 +266,10 @@ async function appendReceiptV1(args, task, attemptNo, receipt_status, adapter_ty
     }
     const now = Date.now();
     const mappedStatus = receipt_status === "FAILED" ? "not_executed" : "executed";
+    const logsRefBase = raw_receipt_ref ?? `executor://run_dispatch_once/${task.act_task_id}`;
+    const logsRefs = receipt_status === "FAILED"
+        ? [{ kind: "stdout", ref: logsRefBase }]
+        : [{ kind: "runtime_log", ref: logsRefBase }];
     const operationPlanId = String(task.operation_plan_id ?? task.meta?.operation_plan_id ?? "").trim();
     const commandId = String(task.command_id ?? task.act_task_id).trim();
     if (!operationPlanId)
