@@ -1053,31 +1053,42 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         return { name, type: "enum" as const, enum: [String(value)] };
       });
       if (parameterSchemaKeys.length < 1) return reply.status(400).send({ ok: false, error: "MISSING_PARAMETERS" });
+      const manual_input = {
+        parameters: body.parameters,
+        meta: body.meta ?? {}
+      };
+      const approval_request_payload = {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        field_id: body.field_id,
+        issuer: body.issuer,
+        action_type: String(body.action_type).trim().toUpperCase(),
+        target: { kind: "field", ref: body.field_id },
+        time_window: { start_ts: now, end_ts: now + 60 * 60 * 1000 },
+        parameter_schema: { keys: parameterSchemaKeys },
+        parameters: body.parameters,
+        constraints: {},
+        adapter_type: adapterTypeHint || undefined,
+        meta: {
+          ...(body.meta ?? {}),
+          device_id: body.device_id ?? (body.meta as any)?.device_id ?? null,
+          adapter_type: body.adapter_type ?? (body.meta as any)?.adapter_type ?? null,
+          operation_id,
+          command_id
+        }
+      };
+      console.debug("[AO_ACT_MANUAL_APPROVAL_DEBUG]", JSON.stringify({
+        manual_input_parameters: manual_input.parameters,
+        manual_input_meta: manual_input.meta,
+        approval_request_payload_parameters: approval_request_payload.parameters,
+        approval_request_payload_parameter_schema: approval_request_payload.parameter_schema
+      }, null, 2));
       const approvalRequest = await postJsonInternal(
         req,
         String((req.headers as any).authorization ?? ""),
         "/api/v1/approvals",
-        {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          field_id: body.field_id,
-          issuer: body.issuer,
-          action_type: String(body.action_type).trim().toUpperCase(),
-          target: { kind: "field", ref: body.field_id },
-          time_window: { start_ts: now, end_ts: now + 60 * 60 * 1000 },
-          parameter_schema: { keys: parameterSchemaKeys },
-          parameters: body.parameters,
-          constraints: {},
-          adapter_type: adapterTypeHint || undefined,
-          meta: {
-            ...(body.meta ?? {}),
-            device_id: body.device_id ?? (body.meta as any)?.device_id ?? null,
-            adapter_type: body.adapter_type ?? (body.meta as any)?.adapter_type ?? null,
-            operation_id,
-            command_id
-          }
-        }
+        approval_request_payload
       );
       if (!approvalRequest.ok || !approvalRequest.json?.ok || !approvalRequest.json?.request_id) {
         return reply.status(approvalRequest.status || 400).send(approvalRequest.json ?? { ok: false, error: "APPROVAL_REQUEST_CREATE_FAILED" });
