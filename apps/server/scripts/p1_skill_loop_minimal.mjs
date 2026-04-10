@@ -275,7 +275,7 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE", "COMPLETED"].includes(s);
+  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -312,7 +312,19 @@ async function main() {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
     success: { operation_plan_id: successOp.operationPlanId, final_status: successFinal },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
-  });
+  };
+
+  assert.ok(
+    isSuccessMapped(successFinal),
+    `断言失败：success case final_status 仅接受 SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(operationFinalStates)}`,
+  );
+  assert.equal(
+    invalidFinal,
+    "INVALID_EXECUTION",
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(operationFinalStates)}`,
+  );
+
+  console.log("[p1-smoke] done", operationFinalStates);
 }
 
 main().catch((err) => {

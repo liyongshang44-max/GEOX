@@ -1560,7 +1560,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const finalStatus = invalidExecution ? "INVALID_EXECUTION" : state.final_status;
     const invalidReason = invalidExecution
       ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
-      : null;
+      : (toText((state as any)?.invalid_reason) as "evidence_missing" | "evidence_invalid" | null) ?? null;
     const businessEffect = deriveBusinessEffect({
       reason_codes: Array.isArray(rec?.record_json?.payload?.reason_codes) ? rec.record_json.payload.reason_codes : [],
       action_type: task?.record_json?.payload?.action_type ?? state.action_type,

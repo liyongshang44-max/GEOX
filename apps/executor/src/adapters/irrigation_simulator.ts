@@ -1,6 +1,8 @@
 import type { Adapter, AdapterRuntimeContext, AoActTask } from "./index";
 import type { ExecutorApi } from "../lib/executor_api";
 
+const DEBUG_PREFIX = "[executor-smoke-debug]";
+
 function normalizeIrrigationAction(raw: unknown): string {
   const action = String(raw ?? "").trim().toLowerCase();
   if (!action) return "";
@@ -63,10 +65,21 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext, api
         }
       })
     });
+    const responseBody = await response.text();
+    console.log(
+      `${DEBUG_PREFIX} ${JSON.stringify({
+        event: "simulator_append_fertilize_receipt",
+        act_task_id: task.act_task_id,
+        operation_plan_id: operationPlanId,
+        response: {
+          status: response.status,
+          body: responseBody
+        }
+      })}`
+    );
 
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`FERTILIZE_RECEIPT_WRITE_FAILED:http ${response.status}: ${text}`);
+      throw new Error(`FERTILIZE_RECEIPT_WRITE_FAILED:http ${response.status}: ${responseBody}`);
     }
   }
 
@@ -96,6 +109,17 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext, api
       if (taskType === "FERTILIZE") {
         await sleep(1000);
         await appendFertilizeReceipt(ctx, task);
+        console.log(
+          `${DEBUG_PREFIX} ${JSON.stringify({
+            event: "simulator_execute",
+            act_task_id: task.act_task_id,
+            operation_plan_id: task.operation_plan_id ?? task.meta?.operation_plan_id ?? null,
+            response: {
+              status: 200,
+              body: "FERTILIZE_SIMULATED"
+            }
+          })}`
+        );
         return {
           status: "SUCCEEDED",
           meta: {
@@ -116,6 +140,17 @@ export function createIrrigationSimulatorAdapter(ctx: AdapterRuntimeContext, api
       }
 
       const out = await api.executeIrrigationSimulator(task);
+      console.log(
+        `${DEBUG_PREFIX} ${JSON.stringify({
+          event: "simulator_execute",
+          act_task_id: task.act_task_id,
+          operation_plan_id: task.operation_plan_id ?? task.meta?.operation_plan_id ?? null,
+          response: {
+            status: out?.status ?? 200,
+            body: out ?? null
+          }
+        })}`
+      );
       return {
         status: "SUCCEEDED",
         meta: {
