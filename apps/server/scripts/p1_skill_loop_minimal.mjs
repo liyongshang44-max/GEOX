@@ -227,6 +227,15 @@ function isSuccessMapped(status) {
   return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE", "COMPLETED"].includes(s);
 }
 
+function sanitizeParametersForSmoke(actionType, raw) {
+  const allowlistByActionType = {
+    IRRIGATE: new Set(["duration_sec"]),
+  };
+  const allowlist = allowlistByActionType[String(actionType ?? "").toUpperCase()] ?? new Set();
+  if (!raw || typeof raw !== "object") return {};
+  return Object.fromEntries(Object.entries(raw).filter(([key]) => allowlist.has(key)));
+}
+
 async function main() {
   console.log(`[p1-smoke] base=${BASE_URL}`);
   await ensureSkillBinding();

@@ -93,6 +93,29 @@ function parseTaskLocation(taskPayload: any): { lat: number; lon: number } | nul
   return null;
 }
 
+function extractFirstInvalidField(input: any): string | null {
+  if (!input) return null;
+  const directField = typeof input?.first_invalid_field === "string" ? input.first_invalid_field.trim() : "";
+  if (directField) return directField;
+  const candidateStrings = [
+    typeof input?.field === "string" ? input.field : "",
+    typeof input?.path === "string" ? input.path : "",
+    typeof input?.message === "string" ? input.message : "",
+    typeof input?.error === "string" ? input.error : "",
+    typeof input?.detail?.message === "string" ? input.detail.message : ""
+  ].filter(Boolean);
+  for (const item of candidateStrings) {
+    const match = String(item).match(/(?:parameter_schema|parameters|constraints|meta|target|time_window|issuer)\.?([a-zA-Z0-9_.-]+)?/);
+    if (match?.[0]) return match[0];
+  }
+  const issues = Array.isArray(input?.issues) ? input.issues : [];
+  const firstIssue = issues[0];
+  if (firstIssue && Array.isArray(firstIssue.path) && firstIssue.path.length > 0) {
+    return firstIssue.path.map((x: any) => String(x)).join(".");
+  }
+  return null;
+}
+
 async function listHumanExecutorResources(pool: Pool, tenant: TenantTriple): Promise<DispatchExecutorResource[]> {
   try {
     const q = await pool.query(
@@ -2205,6 +2228,11 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           approved_by_token_id: auth.token_id
         }
       });
+      console.debug("[AO_ACT_TASK_CREATE_PAYLOAD_DEBUG]", JSON.stringify({
+        operation_plan_proposal_parameters: proposal?.parameters ?? null,
+        task_create_payload_parameters: null,
+        task_create_payload_parameter_schema_keys: null
+      }, null, 2));
       const taskCreatePayload = {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -2229,10 +2257,25 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
             : (proposal?.meta?.adapter_type ?? null)
         }
       };
+      console.debug("[AO_ACT_TASK_CREATE_PAYLOAD_DEBUG]", JSON.stringify({
+        operation_plan_proposal_parameters: proposal?.parameters ?? null,
+        task_create_payload_parameters: taskCreatePayload.parameters ?? null,
+        task_create_payload_parameter_schema_keys: Array.isArray(taskCreatePayload?.parameter_schema?.keys)
+          ? taskCreatePayload.parameter_schema.keys
+          : null
+      }, null, 2));
       const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
       if (!delegated.ok || !delegated.json?.ok) {
+        const delegatedErrorCode = delegated.status === 400
+          ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
+          : null;
+        const delegatedFirstInvalidField = delegated.status === 400
+          ? extractFirstInvalidField(delegated.json)
+          : null;
         console.error("[AO_ACT_TASK_CREATE_FAILED_APPROVAL]", JSON.stringify({
           statusCode: delegated.status,
+          error_code: delegatedErrorCode,
+          first_invalid_field: delegatedFirstInvalidField,
           responseBody: delegated.json ?? null,
           requestPayload: taskCreatePayload,
         }, null, 2));
@@ -2410,6 +2453,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     }
     const adapterValidation = validateAdapterTask(adapterType, body);
     if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
+    const operationPlanProposal = operationPlan?.record_json?.payload?.proposal ?? null;
+    console.debug("[AO_ACT_TASK_CREATE_PAYLOAD_DEBUG]", JSON.stringify({
+      operation_plan_proposal_parameters: operationPlanProposal?.parameters ?? null,
+      task_create_payload_parameters: null,
+      task_create_payload_parameter_schema_keys: null
+    }, null, 2));
     const taskCreatePayload = {
       ...body,
       action_type: aoActActionType,
@@ -2426,10 +2475,25 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
       operation_plan_id,
       approval_request_id: String(body.approval_request_id ?? "").trim()
     };
+    console.debug("[AO_ACT_TASK_CREATE_PAYLOAD_DEBUG]", JSON.stringify({
+      operation_plan_proposal_parameters: operationPlanProposal?.parameters ?? null,
+      task_create_payload_parameters: taskCreatePayload.parameters ?? null,
+      task_create_payload_parameter_schema_keys: Array.isArray(taskCreatePayload?.parameter_schema?.keys)
+        ? taskCreatePayload.parameter_schema.keys
+        : null
+    }, null, 2));
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
     if (!delegated.ok || !delegated.json?.ok) {
+      const delegatedErrorCode = delegated.status === 400
+        ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
+        : null;
+      const delegatedFirstInvalidField = delegated.status === 400
+        ? extractFirstInvalidField(delegated.json)
+        : null;
       console.error("[AO_ACT_TASK_CREATE_FAILED_API]", JSON.stringify({
         statusCode: delegated.status,
+        error_code: delegatedErrorCode,
+        first_invalid_field: delegatedFirstInvalidField,
         responseBody: delegated.json ?? null,
         requestPayload: taskCreatePayload,
       }, null, 2));
