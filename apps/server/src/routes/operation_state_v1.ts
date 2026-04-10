@@ -1409,15 +1409,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
     if (acceptance || normalizedReceipt) {
-      const invalidExecutionFromState = String(state?.final_status ?? "").toUpperCase() === "INVALID_EXECUTION";
-      const acceptanceVerdict = String(acceptance?.record_json?.payload?.verdict ?? "").toUpperCase();
+      const acceptanceVerdict = String(acceptance?.record_json?.payload?.verdict ?? "").trim().toUpperCase();
       const acceptanceResultStatus =
-        invalidExecutionFromState
-          ? "FAILED"
+        acceptanceVerdict === "PASS"
+          ? "SUCCESS"
           : !acceptanceVerdict || acceptanceVerdict === "PENDING_ACCEPTANCE"
-          ? "PENDING"
-          : acceptanceVerdict === "PASS"
-            ? "SUCCESS"
+            ? "PENDING"
             : "FAILED";
       const acceptanceErrorCode =
         acceptanceResultStatus === "FAILED"
