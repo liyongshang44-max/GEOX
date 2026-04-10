@@ -222,6 +222,35 @@ export function mapOperationFinalStatusLabel(value?: string | null, locale: UiLo
   return localizeOperationStatus(value, locale);
 }
 
+export type NormalizedSkillRunStatus = "SUCCESS" | "FAILED" | "PENDING" | "RUNNING" | "UNKNOWN";
+
+export function normalizeSkillRunStatus(value?: string | null): NormalizedSkillRunStatus {
+  const raw = String(value ?? "").trim().toUpperCase();
+  if (!raw || raw === "PENDING_ACCEPTANCE") return "PENDING";
+  if (["PASS", "PASSED", "SUCCESS", "SUCCEEDED", "OK", "DONE", "COMPLETED"].includes(raw)) return "SUCCESS";
+  if (["FAIL", "FAILED", "ERROR", "REJECTED", "DENIED", "TIMEOUT", "CRASHED"].includes(raw)) return "FAILED";
+  if (["PENDING", "READY", "QUEUED", "CREATED"].includes(raw)) return "PENDING";
+  if (["RUNNING", "IN_PROGRESS", "DISPATCHED", "ACKED", "EXECUTING"].includes(raw)) return "RUNNING";
+  return "UNKNOWN";
+}
+
+export function mapSkillRunStatusLabel(value?: string | null, locale: UiLocale = "zh"): string {
+  const normalized = normalizeSkillRunStatus(value);
+  if (normalized === "SUCCESS") return locale === "en" ? "Success" : "成功";
+  if (normalized === "FAILED") return locale === "en" ? "Failed" : "失败";
+  if (normalized === "PENDING") return locale === "en" ? "Pending" : "待处理";
+  if (normalized === "RUNNING") return locale === "en" ? "Running" : "运行中";
+  return locale === "en" ? "Unknown" : "未知";
+}
+
+export function mapSkillRunStatusTone(value?: string | null): "success" | "danger" | "warning" | "neutral" {
+  const normalized = normalizeSkillRunStatus(value);
+  if (normalized === "SUCCESS") return "success";
+  if (normalized === "FAILED") return "danger";
+  if (normalized === "PENDING" || normalized === "RUNNING") return "warning";
+  return "neutral";
+}
+
 export function toBusinessExecutionNarrative(status?: string | null, locale: UiLocale = "zh"): string {
   const raw = String(status ?? "").trim().toUpperCase();
   if (locale === "en") {
