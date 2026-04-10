@@ -87,6 +87,40 @@ test("evaluateEvidence: Case D executor success runtime_log is formal evidence",
   assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
 });
 
+test("evaluateEvidence: formal evidence can come from formal log kinds only", () => {
+  const formalLogKinds = ["dispatch_ack", "valve_open_confirmation", "water_delivery_receipt"];
+
+  for (const kind of formalLogKinds) {
+    const ev = evaluateEvidence({
+      artifacts: [],
+      media: [],
+      metrics: [],
+      logs: [{ kind }],
+    });
+    assert.equal(ev.has_formal_evidence, true);
+    assert.equal(ev.reason, "formal_evidence");
+  }
+});
+
+test("operation_state_v1: executed receipt with formal log kinds should not become INVALID_EXECUTION", () => {
+  const formalLogKinds = ["dispatch_ack", "valve_open_confirmation", "water_delivery_receipt"];
+
+  for (const [index, kind] of formalLogKinds.entries()) {
+    const opId = `op_smoke_${index}`;
+    const taskId = `task_smoke_${index}`;
+    const out = projectOperationStateFromFacts([
+      fact("operation_plan_v1", { operation_plan_id: opId, act_task_id: taskId }, "2026-03-31T01:00:00.000Z", `sf_plan_${index}`),
+      fact("ao_act_receipt_v1", {
+        act_task_id: taskId,
+        status: "executed",
+        logs_refs: [{ kind, ref: `executor://success_smoke/${taskId}` }],
+      }, "2026-03-31T01:01:00.000Z", `sf_receipt_${index}`),
+    ]);
+    assert.equal(out[0].final_status, "PENDING_ACCEPTANCE");
+    assert.equal(out[0].invalid_reason, null);
+  }
+});
+
 test("final_status: executed receipt + pending acceptance overrides transition FAILED when execution is valid", () => {
   const out = projectOperationStateFromFacts([
     fact("operation_plan_v1", { operation_plan_id: "op_e", act_task_id: "task_e" }, "2026-03-31T01:00:00.000Z", "f10"),
