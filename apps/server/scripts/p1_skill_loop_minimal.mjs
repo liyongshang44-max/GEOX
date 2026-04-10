@@ -321,7 +321,7 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
+  return ["SUCCESS", "SUCCEEDED", "VALID", "PENDING_ACCEPTANCE"].includes(s);
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
