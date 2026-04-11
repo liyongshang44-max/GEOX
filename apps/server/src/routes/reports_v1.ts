@@ -3,7 +3,12 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { enforceFieldScopeOrDeny } from "../auth/route_role_authz";
 import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1";
-import { projectOperationReportV1, type OperationReportV1 } from "../projections/report_v1";
+import {
+  projectOperationReportV1,
+  type OperationReportFieldListResponseV1,
+  type OperationReportSingleResponseV1,
+  type OperationReportV1,
+} from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
 import { computeOperationCostV1 } from "../domain/cost_model";
@@ -163,7 +168,8 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     if (!enforceFieldScopeOrDeny(auth, state.field_id, reply, { asNotFound: true })) return;
 
     const operation_report_v1 = await projectReportV1({ pool, tenant, operationState: state });
-    return reply.send({ ok: true, operation_report_v1 });
+    const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1 };
+    return reply.send(payload);
   });
 
   app.get("/api/v1/reports/field/:field_id", async (req, reply) => {
@@ -186,6 +192,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       operationState: state,
     })));
 
-    return reply.send({ ok: true, field_id: fieldId, items });
+    const payload: OperationReportFieldListResponseV1 = { ok: true, items };
+    return reply.send(payload);
   });
 }

@@ -70,6 +70,16 @@ export type OperationReportV1 = {
   };
 };
 
+export type OperationReportSingleResponseV1 = {
+  ok: true;
+  operation_report_v1: OperationReportV1;
+};
+
+export type OperationReportFieldListResponseV1 = {
+  ok: true;
+  items: OperationReportV1[];
+};
+
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
 type AcceptanceInput = {

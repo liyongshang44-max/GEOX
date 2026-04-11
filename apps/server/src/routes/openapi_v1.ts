@@ -288,10 +288,9 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportFieldListResponse: {
           type: "object",
-          required: ["ok", "field_id", "items"],
+          required: ["ok", "items"],
           properties: {
             ok: { type: "boolean" },
-            field_id: { type: "string" },
             items: { type: "array", items: { '$ref': "#/components/schemas/OperationReportV1" } }
           }
         }

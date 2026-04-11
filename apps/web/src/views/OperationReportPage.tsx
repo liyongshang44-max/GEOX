@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchOperationReport, mapReportCode, type OperationReport } from "../api/reports";
+import { fetchOperationReport, mapReportCode, type OperationReportV1 } from "../api/reports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { PageHeader, SectionCard } from "../shared/ui";
@@ -14,7 +14,7 @@ export default function OperationReportPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
-  const [report, setReport] = React.useState<OperationReport | null>(null);
+  const [report, setReport] = React.useState<OperationReportV1 | null>(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -41,74 +41,73 @@ export default function OperationReportPage(): React.ReactElement {
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
-  const finalStatus = mapReportCode(report.summary?.final_status ?? report.execution_result?.final_status);
-  const errorCode = mapReportCode(report.execution_result?.error_code);
+  const finalStatus = mapReportCode(report.execution.final_status);
 
   return (
     <div className="demoDashboardPage">
       <PageHeader
         eyebrow="GEOX / 作业报告"
-        title={report.summary?.title || `作业报告 ${operationPlanId}`}
+        title={`作业报告 ${report.identifiers.operation_plan_id || operationPlanId}`}
         description={`状态：${finalStatus.label}`}
         actions={<Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>返回作业详情</Link>}
       />
 
       <SectionCard title="作业摘要">
         <div className="kvGrid2">
-          <div><strong>作业ID：</strong>{kv(report.operation_id || report.operation_plan_id || operationPlanId)}</div>
-          <div><strong>动作：</strong>{kv(report.summary?.action_type)}</div>
+          <div><strong>作业ID：</strong>{kv(report.identifiers.operation_id || report.identifiers.operation_plan_id)}</div>
+          <div><strong>动作：</strong>{kv(report.cost.action_type)}</div>
           <div><strong>状态：</strong>{finalStatus.label}</div>
-          <div><strong>操作人：</strong>{kv(report.summary?.operator)}</div>
+          <div><strong>任务ID：</strong>{kv(report.identifiers.act_task_id)}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="执行结果">
         <div className="kvGrid2">
           <div><strong>最终状态：</strong>{finalStatus.label}</div>
-          <div><strong>错误码：</strong>{errorCode.label}</div>
-          <div><strong>开始时间：</strong>{kv(report.summary?.started_at)}</div>
-          <div><strong>结束时间：</strong>{kv(report.summary?.finished_at)}</div>
+          <div><strong>无效执行：</strong>{report.execution.invalid_execution ? "是" : "否"}</div>
+          <div><strong>开始时间：</strong>{kv(report.execution.execution_started_at)}</div>
+          <div><strong>结束时间：</strong>{kv(report.execution.execution_finished_at)}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="验收">
         <div className="kvGrid2">
-          <div><strong>验收结论：</strong>{mapReportCode(report.acceptance?.verdict).label}</div>
-          <div><strong>验收人：</strong>{kv(report.acceptance?.accepted_by)}</div>
-          <div><strong>验收时间：</strong>{kv(report.acceptance?.accepted_at)}</div>
-          <div><strong>备注：</strong>{kv(report.acceptance?.notes)}</div>
+          <div><strong>验收状态：</strong>{mapReportCode(report.acceptance.status).label}</div>
+          <div><strong>验收结论：</strong>{kv(report.acceptance.verdict)}</div>
+          <div><strong>缺失证据：</strong>{report.acceptance.missing_evidence ? "是" : "否"}</div>
+          <div><strong>验收时间：</strong>{kv(report.acceptance.generated_at)}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="证据">
         <div className="kvGrid2">
-          <div><strong>证据数量：</strong>{kv(report.evidence?.count)}</div>
-          <div><strong>完整性：</strong>{mapReportCode(report.evidence?.completeness).label}</div>
-          <div><strong>最新时间：</strong>{kv(report.evidence?.latest_at)}</div>
+          <div><strong>Artifacts：</strong>{report.evidence.artifacts_count}</div>
+          <div><strong>Logs：</strong>{report.evidence.logs_count}</div>
+          <div><strong>Media：</strong>{report.evidence.media_count}</div>
+          <div><strong>Metrics：</strong>{report.evidence.metrics_count}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="成本">
         <div className="kvGrid2">
-          <div><strong>预计：</strong>{kv(report.cost?.estimated)}</div>
-          <div><strong>实际：</strong>{kv(report.cost?.actual)}</div>
-          <div><strong>币种：</strong>{kv(report.cost?.currency || "CNY")}</div>
+          <div><strong>预计：</strong>{kv(report.cost.estimated_total)}</div>
+          <div><strong>实际：</strong>{kv(report.cost.total)}</div>
+          <div><strong>币种：</strong>{kv(report.cost.currency)}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="SLA">
         <div className="kvGrid2">
-          <div><strong>目标（分钟）：</strong>{kv(report.sla?.target_minutes)}</div>
-          <div><strong>实际（分钟）：</strong>{kv(report.sla?.actual_minutes)}</div>
-          <div><strong>达成：</strong>{mapReportCode(report.sla?.status).label}</div>
+          <div><strong>响应耗时（ms）：</strong>{kv(report.sla.response_time_ms)}</div>
+          <div><strong>执行耗时（ms）：</strong>{kv(report.sla.execution_duration_ms)}</div>
+          <div><strong>验收耗时（ms）：</strong>{kv(report.sla.acceptance_latency_ms)}</div>
         </div>
       </SectionCard>
 
       <SectionCard title="风险">
         <div className="kvGrid2">
-          <div><strong>等级：</strong>{mapReportCode(report.risk?.level).label}</div>
-          <div><strong>标记：</strong>{(report.risk?.flags || []).map((x) => mapReportCode(x).label).join(" / ") || "--"}</div>
-          <div><strong>建议：</strong>{kv(report.risk?.advice)}</div>
+          <div><strong>等级：</strong>{mapReportCode(report.risk.level).label}</div>
+          <div><strong>标记：</strong>{report.risk.reasons.map((x) => mapReportCode(x).label).join(" / ") || "--"}</div>
         </div>
       </SectionCard>
     </div>
