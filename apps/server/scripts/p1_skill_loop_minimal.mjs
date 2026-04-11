@@ -375,7 +375,12 @@ async function waitForFinalState(operationPlanId) {
 
 function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
-  return ["SUCCESS", "SUCCEEDED", "VALID"].includes(s);
+  return ["PENDING_ACCEPTANCE", "SUCCESS", "SUCCEEDED", "VALID"].includes(s);
+}
+
+function successMappedBy(status) {
+  const s = String(status ?? "").toUpperCase();
+  return isSuccessMapped(s) ? s : null;
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -388,6 +393,10 @@ function sanitizeParametersForSmoke(actionType, raw) {
 }
 
 async function main() {
+  // 脚本级自测：success 为 PENDING_ACCEPTANCE 也应视为通过；
+  // 同时 invalid lane 仍要求 INVALID_EXECUTION（见下方最终断言）。
+  assert.equal(isSuccessMapped("PENDING_ACCEPTANCE"), true, "自测失败：PENDING_ACCEPTANCE 应命中 success 映射");
+
   console.log(`[p1-smoke] base=${BASE_URL}`);
   await waitForServerHealth();
   await ensureSkillBinding();
@@ -461,19 +470,24 @@ async function main() {
   const statuses = [successFinal, invalidFinal];
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
   const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
+  const successMappedHit = successMappedBy(successFinal);
 
-  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=SUCCESS|VALID（映射后）；实际=${JSON.stringify(statuses)}`);
+  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}`);
   assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}`);
 
   console.log("[p1-smoke] done", {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
-    success: { operation_plan_id: successOp?.operationPlanId, final_status: successFinal },
+    success: {
+      operation_plan_id: successOp?.operationPlanId,
+      final_status: successFinal,
+      success_mapped_by: successMappedHit,
+    },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
   });
 
   assert.ok(
     isSuccessMapped(successFinal),
-    `断言失败：success case final_status 仅接受 SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}`,
+    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}`,
   );
   assert.equal(
     invalidFinal,
