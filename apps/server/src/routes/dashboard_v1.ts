@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify"; // Fastify route host typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
+import { hasFieldAccess } from "../auth/route_role_authz";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
 import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine";
@@ -856,6 +857,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const group_id = String(auth.group_id ?? "");
     const operationStates = await projectOperationState({ tenant_id, project_id, group_id }).catch(() => []);
     const items: DashboardRecentExecutionItem[] = operationStates
+      .filter((row: any) => hasFieldAccess(auth, String(row?.field_id ?? "")))
       .sort((a: any, b: any) => Number(b?.last_event_ts ?? 0) - Number(a?.last_event_ts ?? 0))
       .slice(0, limit)
       .map((row: any) => {
