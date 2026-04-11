@@ -18,7 +18,7 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth hel
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
 import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz"; // Role + field scope helpers.
 import { projectAlertListV1, type AlertActionOverrideV1, type AlertListOperationInputV1 } from "../projections/alert_list_v1"; // Unified alert list projection.
-import type { AlertSeverity, AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1"; // Alert model.
+import type { AlertSeverity, AlertStatus as ProjectedAlertStatus, AlertV1 } from "../projections/alert_v1"; // Alert model.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
 import type { TelemetryHealthInput } from "../domain/alert_engine";
@@ -647,7 +647,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    let items = projectAlertListV1({
+    let items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -678,7 +678,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listTelemetryHealthInputsForAlertProjection(pool, auth),
       listAlertActionOverrides(pool, auth),
     ]);
-    const items = projectAlertListV1({
+    const items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -713,7 +713,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    const items = projectAlertListV1({
+    const items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -751,7 +751,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    const items = projectAlertListV1({
+    const items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -788,7 +788,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listTelemetryHealthInputsForAlertProjection(pool, auth),
       listAlertActionOverrides(pool, auth),
     ]);
-    let items = projectAlertListV1({
+    let items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
