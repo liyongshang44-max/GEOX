@@ -1,4 +1,11 @@
 import { apiRequest, withQuery } from "./client";
+import type {
+  OperationReportFieldListResponseV1,
+  OperationReportSingleResponseV1,
+  OperationReportV1,
+} from "../../../server/src/projections/report_v1";
+
+export type { OperationReportV1 };
 
 export type ReportCodeTone = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -29,93 +36,15 @@ export function mapReportCode(raw: unknown): { raw: string; label: string; tone:
   return { raw: key, label: key, tone: "neutral" };
 }
 
-export type OperationReportV1 = {
-  type: "operation_report_v1";
-  version: "v1";
-  generated_at: string;
-  identifiers: {
-    tenant_id: string;
-    project_id: string;
-    group_id: string;
-    operation_plan_id: string;
-    operation_id: string;
-    recommendation_id: string | null;
-    act_task_id: string | null;
-    receipt_id: string | null;
-  };
-  execution: {
-    final_status: string;
-    invalid_execution: boolean;
-    invalid_reason: string | null;
-    dispatched_at: string | null;
-    execution_started_at: string | null;
-    execution_finished_at: string | null;
-    response_time_ms: number | null;
-  };
-  acceptance: {
-    status: "PASS" | "FAIL" | "PENDING" | "NOT_AVAILABLE";
-    verdict: string | null;
-    missing_evidence: boolean;
-    missing_items: string[];
-    generated_at: string | null;
-  };
-  evidence: {
-    artifacts_count: number;
-    logs_count: number;
-    media_count: number;
-    metrics_count: number;
-    receipt_present: boolean;
-    acceptance_present: boolean;
-  };
-  cost: {
-    estimated_total: number;
-    actual_total?: number;
-    actual_water_cost?: number;
-    actual_electric_cost?: number;
-    actual_chemical_cost?: number;
-    estimated_water_cost?: number;
-    estimated_electric_cost?: number;
-    estimated_chemical_cost?: number;
-  };
-  sla: {
-    dispatch_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
-    execution_duration_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
-    acceptance_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
-    execution_success: boolean;
-    acceptance_pass: boolean;
-    response_time_ms: number | null;
-    dispatch_latency_ms?: number;
-    execution_duration_ms?: number;
-    acceptance_latency_ms?: number;
-    invalid_reasons: Array<
-      | "dispatch_latency_missing_start"
-      | "dispatch_latency_missing_end"
-      | "dispatch_latency_negative_duration"
-      | "execution_duration_missing_start"
-      | "execution_duration_missing_end"
-      | "execution_duration_negative_duration"
-      | "acceptance_latency_missing_start"
-      | "acceptance_latency_missing_end"
-      | "acceptance_latency_negative_duration"
-    >;
-    pending_acceptance_elapsed_ms: number | null;
-    pending_acceptance_over_30m: boolean;
-  };
-  risk: {
-    level: "LOW" | "MEDIUM" | "HIGH";
-    reasons: string[];
-  };
-};
+function unwrapOperationReport(payload: OperationReportSingleResponseV1 | OperationReportV1): OperationReportV1 {
+  if ("operation_report_v1" in payload) return payload.operation_report_v1;
+  return payload;
+}
 
-type OperationReportEnvelope = {
-  ok: true;
-  operation_report_v1: OperationReportV1;
-};
-
-type FieldReportEnvelope = {
-  ok: true;
-  items: OperationReportV1[];
-};
+function unwrapFieldReports(payload: OperationReportFieldListResponseV1 | OperationReportV1[]): OperationReportV1[] {
+  if (Array.isArray(payload)) return payload;
+  return payload.items;
+}
 
 type CustomerDashboardAggregateEnvelope = {
   ok: true;
@@ -222,13 +151,13 @@ export function aggregateCustomerDashboardReports(items: OperationReportV1[]): C
 }
 
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
-  const res = await apiRequest<OperationReportEnvelope>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
-  return res.operation_report_v1;
+  const res = await apiRequest<OperationReportSingleResponseV1 | OperationReportV1>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
+  return unwrapOperationReport(res);
 }
 
 export async function fetchFieldReport(fieldId: string): Promise<OperationReportV1[]> {
-  const res = await apiRequest<FieldReportEnvelope>(withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`));
-  return res.items;
+  const res = await apiRequest<OperationReportFieldListResponseV1 | OperationReportV1[]>(withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`));
+  return unwrapFieldReports(res);
 }
 
 export async function fetchCustomerDashboardAggregate(params: { fieldId?: string; limit?: number } = {}): Promise<CustomerDashboardAggregate> {
