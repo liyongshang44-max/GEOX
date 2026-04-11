@@ -84,7 +84,7 @@ export function buildCustomerDashboardViewModel(source: OperationReportV1[] | Cu
           topSignals: [],
         },
         cost: {
-          currentTotal: source.reduce((sum, item) => sum + Number(item.cost?.total ?? 0), 0),
+          currentTotal: source.reduce((sum, item) => sum + Number(item.cost?.actual_total ?? item.cost?.estimated_total ?? 0), 0),
           baselineTotal: null,
           trend: "NO_DATA",
           currency: "CNY",
