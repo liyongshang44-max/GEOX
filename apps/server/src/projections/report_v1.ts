@@ -57,6 +57,10 @@ export type OperationReportV1 = {
     execution_success: boolean;
     acceptance_pass: boolean;
     response_time_ms: number | null;
+    dispatch_latency_ms?: number;
+    execution_duration_ms?: number;
+    acceptance_latency_ms?: number;
+    invalid_reasons: string[];
     pending_acceptance_elapsed_ms: number | null;
     pending_acceptance_over_30m: boolean;
   };
@@ -108,6 +112,78 @@ function toFiniteNumber(v: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+type ReportV1SlaMetrics = {
+  dispatch_latency_ms?: number;
+  execution_duration_ms?: number;
+  acceptance_latency_ms?: number;
+  invalid_reasons: string[];
+};
+
+function computeNonNegativeDuration(params: {
+  startMs: number | null;
+  endMs: number | null;
+  missingReason: string;
+  negativeReason: string;
+  invalidReasons: string[];
+}): number | undefined {
+  const { startMs, endMs, missingReason, negativeReason, invalidReasons } = params;
+  if (startMs == null || endMs == null) {
+    invalidReasons.push(missingReason);
+    return undefined;
+  }
+  const delta = endMs - startMs;
+  if (delta < 0) {
+    invalidReasons.push(negativeReason);
+    return undefined;
+  }
+  return delta;
+}
+
+export function computeReportV1SlaMetrics(params: {
+  timeline: Array<{ ts: number; type: string }>;
+  receipt: ReceiptInput;
+  acceptance: AcceptanceInput;
+}): ReportV1SlaMetrics {
+  const invalidReasons: string[] = [];
+  const timelineCreatedAtMs = params.timeline.find((x) => x.type === "RECOMMENDATION_CREATED")?.ts ?? null;
+  const timelineDispatchedAtMs = params.timeline.find((x) => x.type === "TASK_CREATED")?.ts ?? null;
+  const receiptStartMs = toMs(params.receipt?.execution_started_at);
+  const receiptEndMs = toMs(params.receipt?.execution_finished_at);
+  const receiptTsMs = receiptEndMs ?? (params.timeline.find((x) => x.type === "RECEIPT_SUBMITTED")?.ts ?? null);
+  const acceptanceTsMs = toMs(params.acceptance?.generated_at);
+
+  const dispatchLatencyMs = computeNonNegativeDuration({
+    startMs: timelineCreatedAtMs,
+    endMs: timelineDispatchedAtMs,
+    missingReason: "dispatch_latency_missing_timestamp",
+    negativeReason: "dispatch_latency_negative_duration",
+    invalidReasons,
+  });
+
+  const executionDurationMs = computeNonNegativeDuration({
+    startMs: receiptStartMs,
+    endMs: receiptEndMs,
+    missingReason: "execution_duration_missing_timestamp",
+    negativeReason: "execution_duration_negative_duration",
+    invalidReasons,
+  });
+
+  const acceptanceLatencyMs = computeNonNegativeDuration({
+    startMs: receiptTsMs,
+    endMs: acceptanceTsMs,
+    missingReason: "acceptance_latency_missing_timestamp",
+    negativeReason: "acceptance_latency_negative_duration",
+    invalidReasons,
+  });
+
+  return {
+    dispatch_latency_ms: dispatchLatencyMs,
+    execution_duration_ms: executionDurationMs,
+    acceptance_latency_ms: acceptanceLatencyMs,
+    invalid_reasons: invalidReasons,
+  };
+}
+
 export function projectOperationReportV1(input: {
   tenant: TenantTriple;
   operation_plan_id: string;
@@ -148,6 +224,11 @@ export function projectOperationReportV1(input: {
   const dispatchedAtTs = input.operation_state.timeline.find((x) => x.type === "TASK_CREATED")?.ts ?? null;
 
   const receiptFinishedAtMs = toMs(input.receipt?.execution_finished_at);
+  const computedSlaMetrics = computeReportV1SlaMetrics({
+    timeline: input.operation_state.timeline,
+    receipt: input.receipt,
+    acceptance: input.acceptance,
+  });
   const pendingAnchorMs = receiptFinishedAtMs ?? input.operation_state.timeline.find((x) => x.type === "RECEIPT_SUBMITTED")?.ts ?? null;
   const pendingAcceptanceElapsedMs = finalStatus === "PENDING_ACCEPTANCE" && pendingAnchorMs != null
     ? Math.max(0, now.getTime() - pendingAnchorMs)
@@ -219,6 +300,10 @@ export function projectOperationReportV1(input: {
       execution_success: Boolean(input.sla.execution_success),
       acceptance_pass: Boolean(input.sla.acceptance_pass),
       response_time_ms: input.sla.response_time_ms ?? null,
+      dispatch_latency_ms: computedSlaMetrics.dispatch_latency_ms,
+      execution_duration_ms: computedSlaMetrics.execution_duration_ms,
+      acceptance_latency_ms: computedSlaMetrics.acceptance_latency_ms,
+      invalid_reasons: computedSlaMetrics.invalid_reasons,
       pending_acceptance_elapsed_ms: pendingAcceptanceElapsedMs,
       pending_acceptance_over_30m: pendingAcceptanceOver30m,
     },
