@@ -1,0 +1,10 @@
+截图尝试说明（2026-04-11）
+- 目标：对以下接口做可视化截图
+  1) /api/v1/reports/operation/:id
+  2) /api/v1/alerts
+  3) /api/v1/alerts/summary
+- 结果：当前任务环境不可用 browser_container / DevTools 截图能力，无法生成 PNG 截图。
+- 已保留可复核记录：
+  - reports_operation_op-demo-missing-evidence-high.json
+  - alerts.json
+  - alerts_summary.json

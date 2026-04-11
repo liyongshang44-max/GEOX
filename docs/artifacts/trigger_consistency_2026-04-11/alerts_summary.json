@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "summary": {
+    "total": 1,
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 1,
+      "MEDIUM": 0,
+      "LOW": 0
+    },
+    "by_status": {
+      "OPEN": 1,
+      "ACKED": 0,
+      "CLOSED": 0
+    },
+    "by_category": {
+      "ACCEPTANCE_FAILURE": 1
+    }
+  },
+  "top": [
+    {
+      "alert_id": "alert-op-demo-missing-evidence-high",
+      "severity": "HIGH",
+      "category": "ACCEPTANCE_FAILURE",
+      "reasons": ["MISSING_EVIDENCE", "evidence_artifact"]
+    }
+  ]
+}

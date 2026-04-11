@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "items": [
+    {
+      "alert_id": "alert-op-demo-missing-evidence-high",
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "category": "ACCEPTANCE_FAILURE",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "recommended_action": "补齐缺失证据并重新验收，若连续失败请暂停自动执行。",
+      "reasons": ["MISSING_EVIDENCE", "evidence_artifact"],
+      "triggered_at": "2026-04-11T10:00:00.000Z",
+      "object_type": "OPERATION",
+      "object_id": "op-demo-missing-evidence-high"
+    }
+  ]
+}
