@@ -152,9 +152,26 @@ Judge 的评估对象始终是 group。
 • 执行入口仅供 executor runtime 在已批准 task 上调用。
 • 宪法级约束：执行只能通过 approval → AO-ACT task → executor，任何 recommendation 不能直接触发执行。
 
-十五、P1 smoke（skills -> operation -> receipt/evidence -> operation_state）
+十五、P1 脚本分层说明（必须区分 3 类）
 ------------------------------------------------------------
-用于最小联调闭环脚本（同一租户上下文下，一条成功、一条 INVALID_EXECUTION）：
+
+### 1) 链路 smoke
+
+脚本：
+
+- `apps/server/scripts/p1_skill_loop_minimal.mjs`
+
+用途：
+
+- 验证主链路打通（skills -> operation -> receipt/evidence -> operation_state）。
+- `success lane` 可接受：`PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID`。
+- `invalid lane` 必须命中：`INVALID_EXECUTION`。
+
+注意：
+
+- 该脚本通过 **不代表 acceptance 最终通过**，它只证明链路打通。
+
+运行方式（示例）：
 
 ```bash
 node apps/server/scripts/p1_skill_loop_minimal.mjs
@@ -168,14 +185,58 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 - `GEOX_PROJECT_ID`（默认 `projectA`）
 - `GEOX_GROUP_ID`（默认 `groupA`）
 
-脚本会执行以下串联：
+### 2) 验收完成 smoke（只读断言）
 
-1. `POST/GET /api/v1/skills/bindings`
-2. `POST /api/v1/operations/manual` 创建两条 operation
-3. `POST /api/control/ao_act/receipt` 分别写入正式证据（runtime log）与无效证据（sim_trace）
-4. `GET /api/v1/operations` 查询最终 `final_status`
+脚本：
 
-最终断言：
+- `apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs`
 
-- 至少 1 条 `final_status` 被映射为 `SUCCESS|VALID`（系统口径兼容 `SUCCEEDED/PENDING_ACCEPTANCE/COMPLETED`）
-- 至少 1 条 `final_status=INVALID_EXECUTION`
+用途：
+
+- 验证 acceptance 最终 `PASS`。
+- 验证 `final_status` 进入成功终态（`SUCCESS|SUCCEEDED|VALID`）。
+- 只允许等待/读取/断言，不修改业务状态。
+
+运行方式（示例）：
+
+```bash
+node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
+```
+
+必填环境变量：
+
+- `GEOX_OPERATION_PLAN_ID`
+- `GEOX_TOKEN`
+
+### 3) 源码一致性自检（selfcheck）
+
+脚本：
+
+- `apps/server/scripts/p1_skill_loop_minimal_selfcheck.mjs`
+
+用途：
+
+- 检查 minimal 脚本内部是否保持单一 success 判定逻辑。
+- 检查关键函数定义是否唯一。
+- 不属于业务 smoke，不访问 API，不验证 operation 状态。
+
+运行方式（示例）：
+
+```bash
+pnpm run selfcheck:p1-skill-loop-minimal
+```
+
+### 示例
+
+示例 1：链路 smoke 正常通过（success lane 返回 `PENDING_ACCEPTANCE`）
+
+- 执行已完成
+- 证据已入链
+- 待验收
+- 结论：链路 smoke = 通过
+
+示例 2：验收完成 smoke 失败（长时间停留 `PENDING_ACCEPTANCE`）
+
+- 链路已通
+- 但验收未完成
+- 结论：验收 smoke = 失败
