@@ -18,14 +18,6 @@ function slaQualityLabel(quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER"): s
   return "异常";
 }
 
-function matchOperationAlert(item: AlertV1, operationPlanId: string, operationId: string): boolean {
-  if (item.object_type === "OPERATION" && [operationPlanId, operationId].includes(String(item.object_id))) return true;
-  return (item.source_refs || []).some((ref) => {
-    const type = String(ref.type || "").toUpperCase();
-    return type.includes("OPERATION") && [operationPlanId, operationId].includes(String(ref.id));
-  });
-}
-
 export default function OperationReportPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -37,17 +29,11 @@ export default function OperationReportPage(): React.ReactElement {
     let alive = true;
     setLoading(true);
     setError("");
-    void Promise.all([fetchOperationReport(operationPlanId), fetchAlerts({ status: "OPEN" }), fetchAlerts({ status: "ACKED" })])
-      .then(([res, openAlerts, ackedAlerts]) => {
+    void Promise.all([fetchOperationReport(operationPlanId), fetchAlerts({ object_type: "OPERATION", object_id: operationPlanId, status: ["OPEN", "ACKED"] })])
+      .then(([res, scopedAlerts]) => {
         if (!alive) return;
         setReport(res);
-        const merged = [...openAlerts, ...ackedAlerts];
-        const uniq = new Map<string, AlertV1>();
-        for (const a of merged) {
-          if (!matchOperationAlert(a, operationPlanId, String(res.identifiers.operation_id || ""))) continue;
-          uniq.set(a.alert_id, a);
-        }
-        setAlerts(Array.from(uniq.values()));
+        setAlerts(scopedAlerts);
       })
       .catch((e: unknown) => {
         if (!alive) return;
