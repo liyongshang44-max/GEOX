@@ -8,33 +8,7 @@ import type { CustomerDashboardAggregateV1 as CustomerDashboardAggregateV1Projec
 
 export type { OperationReportV1 };
 export type CustomerDashboardAggregateV1 = CustomerDashboardAggregateV1Projection;
-export type CustomerDashboardAggregate = {
-  generatedAt: string;
-  totals: {
-    total: number;
-    completed: number;
-    incomplete: number;
-  };
-  recentExecutions: Array<{
-    operationId: string;
-    title: string;
-    statusCode: string;
-    finishedAt: string | null;
-  }>;
-  risk: {
-    high: number;
-    medium: number;
-    low: number;
-    topSignals: string[];
-  };
-  cost: {
-    currentTotal: number;
-    baselineTotal: number | null;
-    trend: "UP" | "DOWN" | "FLAT" | "NO_DATA";
-    currency: "CNY";
-  };
-};
-
+// 历史上的 reports 前端聚合类型已废弃；dashboard 仅消费后端 aggregate v1。
 export type ReportCodeTone = "success" | "warning" | "danger" | "info" | "neutral";
 
 const REPORT_CODE_MAP: Record<string, { label: string; tone: ReportCodeTone }> = {

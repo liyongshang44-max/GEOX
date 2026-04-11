@@ -1,3 +1,10 @@
+/* eslint no-restricted-imports: ["error", { "patterns": ["../viewmodels/customerDashboardViewModel", "../viewmodels/*customer*Dashboard*", "../lib/*aggregate*"] }] */
+/**
+ * Dashboard 页面约束：
+ * - 禁止引入基于 reports 的业务聚合 util。
+ * - total_cost / risk level / trend / summary 必须直接使用后端聚合字段。
+ * - 仅允许列表排序、UI 过滤、展示格式化。
+ */
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { fetchCustomerDashboardAggregate, mapReportCode, type CustomerDashboardAggregateV1 } from "../api/reports";
