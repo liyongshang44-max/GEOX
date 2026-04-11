@@ -55,3 +55,11 @@
 - 创建规则：`POST /api/v1/alerts/rules`
 - 查询事件：`GET /api/v1/alerts/events`
 - 查询通知：`GET /api/v1/alerts/notifications`
+
+## AlertV1 定稿说明（2026-04）
+
+当前 AlertV1 模型按以下口径执行：
+
+1. **对象标识采用方案 B**：使用 `object_type + object_id` 作为统一对象标识。
+2. **告警终态固定为 `CLOSED`**：状态流转为 `OPEN -> ACKED -> CLOSED`，不使用 `RESOLVED`。
+3. **`source_refs` 仅作为补充上下文来源**：不再额外平铺 `field_id` / `device_id` / `operation_id` / `operation_plan_id` 四个顶层字段。

@@ -115,7 +115,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             type: { type: "string", enum: ["alert_v1"] },
             version: { type: "string", enum: ["v1"] },
             alert_id: { type: "string" },
-            category: { type: "string" },
+            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
             severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
             status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
             recommended_action: { type: "string" },
@@ -141,13 +141,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         AlertSummaryResponseV1: {
           type: "object",
-          required: ["ok", "total", "by_severity", "by_status", "by_category"],
+          required: ["ok", "total", "open", "acked", "closed"],
           properties: {
             ok: { type: "boolean" },
             total: { type: "integer" },
-            by_severity: { type: "object", additionalProperties: { type: "integer" } },
-            by_status: { type: "object", additionalProperties: { type: "integer" } },
-            by_category: { type: "object", additionalProperties: { type: "integer" } }
+            open: { type: "integer" },
+            acked: { type: "integer" },
+            closed: { type: "integer" }
           }
         },
         AlertAckRequestV1: {
@@ -178,8 +178,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           properties: {
             ok: { type: "boolean" },
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["CLOSED"] },
-            acted_at: { type: "integer", format: "int64" }
+            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
+            note: { type: "string" }
           }
         },
         DeviceSimulatorStartRequest: {
