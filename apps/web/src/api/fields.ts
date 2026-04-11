@@ -140,3 +140,29 @@ export async function createField(input: {
     }),
   });
 }
+
+
+export type FieldTagItem = {
+  tag: string;
+  created_at?: string;
+  created_by?: string;
+};
+
+export async function fetchFieldTags(fieldId: string): Promise<string[]> {
+  const res = await apiRequest<{ ok?: boolean; items?: Array<string | FieldTagItem>; tags?: Array<string | FieldTagItem> }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags`);
+  const raw = Array.isArray(res.items) ? res.items : (Array.isArray(res.tags) ? res.tags : []);
+  return raw.map((item) => (typeof item === "string" ? item : String(item?.tag ?? "").trim())).filter(Boolean);
+}
+
+export async function addFieldTag(fieldId: string, tag: string): Promise<{ ok?: boolean; error?: string }> {
+  return apiRequest<{ ok?: boolean; error?: string }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags`, {
+    method: "POST",
+    body: JSON.stringify({ tag }),
+  });
+}
+
+export async function removeFieldTag(fieldId: string, tag: string): Promise<{ ok?: boolean; error?: string }> {
+  return apiRequest<{ ok?: boolean; error?: string }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags/${encodeURIComponent(tag)}`, {
+    method: "DELETE",
+  });
+}
