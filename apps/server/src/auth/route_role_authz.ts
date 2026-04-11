@@ -37,6 +37,22 @@ export function enforceFieldScopeOrDeny(
   return false;
 }
 
+export async function enforceOperationFieldScope(
+  auth: AoActAuthContextV0,
+  operationId: string | null | undefined,
+  reply: FastifyReply,
+  resolveFieldId: (operationId: string) => Promise<string | null> | string | null,
+  opts: { asNotFound?: boolean } = {}
+): Promise<string | null> {
+  const opId = String(operationId ?? "").trim();
+  if (!opId) return null;
+  const fieldId = await resolveFieldId(opId);
+  const normalizedFieldId = String(fieldId ?? "").trim();
+  if (!normalizedFieldId) return null;
+  if (!enforceFieldScopeOrDeny(auth, normalizedFieldId, reply, opts)) return null;
+  return normalizedFieldId;
+}
+
 function collectRequestedFieldIds(req: FastifyRequest): string[] {
   const params: any = (req as any).params ?? {};
   const query: any = (req as any).query ?? {};

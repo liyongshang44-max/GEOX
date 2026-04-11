@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { enforceFieldScopeOrDeny } from "../auth/route_role_authz";
+import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz";
 import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1";
 import {
   projectOperationReportV1,
@@ -180,7 +180,17 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     const states = await projectOperationStateV1(pool, tenant);
     const state = states.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId) ?? null;
     if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!enforceFieldScopeOrDeny(auth, state.field_id, reply, { asNotFound: true })) return;
+    const scopedFieldId = await enforceOperationFieldScope(
+      auth,
+      operationId,
+      reply,
+      async (opId) => {
+        const matched = states.find((x) => x.operation_id === opId || x.operation_plan_id === opId) ?? null;
+        return matched ? String(matched.field_id ?? "").trim() || null : null;
+      },
+      { asNotFound: true }
+    );
+    if (!scopedFieldId) return;
 
     const operation_report_v1 = await projectReportV1({ pool, tenant, operationState: state });
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1 };
@@ -199,7 +209,9 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
 
     const states = await projectOperationStateV1(pool, tenant);
     if (!enforceFieldScopeOrDeny(auth, fieldId, reply, { asNotFound: true })) return;
-    const fieldStates = states.filter((x) => String(x.field_id ?? "") === fieldId);
+    const fieldStates = states
+      .filter((x) => String(x.field_id ?? "") === fieldId)
+      .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
 
     const items = await Promise.all(fieldStates.map((state) => projectReportV1({
       pool,
