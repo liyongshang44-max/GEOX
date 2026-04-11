@@ -152,25 +152,26 @@ Judge 的评估对象始终是 group。
 • 执行入口仅供 executor runtime 在已批准 task 上调用。
 • 宪法级约束：执行只能通过 approval → AO-ACT task → executor，任何 recommendation 不能直接触发执行。
 
-十五、P1 smoke 分层定义（skills -> operation -> receipt/evidence -> operation_state）
+十五、P1 脚本分层说明（必须区分 3 类）
 ------------------------------------------------------------
 
-### 1) 脚本定位（必须区分）
+### 1) 链路 smoke
 
-- `p1_skill_loop_minimal.mjs` = **链路 smoke**（只验证链路连通与状态机基础约束）。
-- `p1_skill_loop_acceptance_smoke.mjs` = **验收完成 smoke**（验证“执行完成 + 验收完成”的最终闭环）。
+脚本：
 
-### 2) 通过标准（必须区分）
+- `apps/server/scripts/p1_skill_loop_minimal.mjs`
 
-- **链路 smoke 通过 ≠ 验收最终通过**。
-  - `p1_skill_loop_minimal.mjs` 通过，只能说明：技能绑定、operation 创建、receipt/evidence 入链、状态投影等主链路可达。
-  - 在 success lane 中，`final_status=PENDING_ACCEPTANCE` 也算链路 smoke 的“正常通过”。
-- **验收 smoke 通过 = 闭环进入最终成功态**。
-  - `p1_skill_loop_acceptance_smoke.mjs` 通过，才代表验收结论已落地，闭环进入最终成功态（例如 PASS/SUCCESS 等验收后终态）。
+用途：
 
-### 3) `p1_skill_loop_minimal.mjs` 运行方式
+- 验证主链路打通（skills -> operation -> receipt/evidence -> operation_state）。
+- `success lane` 可接受：`PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID`。
+- `invalid lane` 必须命中：`INVALID_EXECUTION`。
 
-用于最小联调闭环脚本（同一租户上下文下，一条 success-mapped、一条 INVALID_EXECUTION）：
+注意：
+
+- 该脚本通过 **不代表 acceptance 最终通过**，它只证明链路打通。
+
+运行方式（示例）：
 
 ```bash
 node apps/server/scripts/p1_skill_loop_minimal.mjs
@@ -190,21 +191,19 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 - `GEOX_PROJECT_ID`（默认 `projectA`）
 - `GEOX_GROUP_ID`（默认 `groupA`）
 
-脚本会执行以下串联：
+### 2) 验收完成 smoke（只读断言）
 
-1. `POST/GET /api/v1/skills/bindings`
-2. `POST /api/v1/operations/manual` 创建两条 operation
-3. `POST /api/control/ao_act/receipt` 分别写入正式证据（runtime log）与无效证据（sim_trace）
-4. `GET /api/v1/operations` 查询最终 `final_status`
+脚本：
 
-最终断言（链路 smoke 口径）：
+- `apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs`
 
-- 至少 1 条 `final_status` 命中 success 映射：`PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID`
-- 至少 1 条 `final_status=INVALID_EXECUTION`
+用途：
 
-十六、P1 验收完成 smoke（只读断言）
-------------------------------------------------------------
-用于验证 success lane 最终进入验收通过终态（只允许等待/读取/断言，不修改业务状态）：
+- 验证 acceptance 最终 `PASS`。
+- 验证 `final_status` 进入成功终态（`SUCCESS|SUCCEEDED|VALID`）。
+- 只允许等待/读取/断言，不修改业务状态。
+
+运行方式（示例）：
 
 ```bash
 node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
@@ -215,8 +214,35 @@ node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
 - `GEOX_OPERATION_PLAN_ID`
 - `GEOX_TOKEN`
 
-P1 minimal 源码一致性自检命令（只做静态结构检查）：
+### 3) 源码一致性自检（selfcheck）
+
+脚本：
+
+- `apps/server/scripts/p1_skill_loop_minimal_selfcheck.mjs`
+
+用途：
+
+- 检查 minimal 脚本内部是否保持单一 success 判定逻辑。
+- 检查关键函数定义是否唯一。
+- 不属于业务 smoke，不访问 API，不验证 operation 状态。
+
+运行方式（示例）：
 
 ```bash
 pnpm run selfcheck:p1-skill-loop-minimal
 ```
+
+### 示例
+
+示例 1：链路 smoke 正常通过（success lane 返回 `PENDING_ACCEPTANCE`）
+
+- 执行已完成
+- 证据已入链
+- 待验收
+- 结论：链路 smoke = 通过
+
+示例 2：验收完成 smoke 失败（长时间停留 `PENDING_ACCEPTANCE`）
+
+- 链路已通
+- 但验收未完成
+- 结论：验收 smoke = 失败
