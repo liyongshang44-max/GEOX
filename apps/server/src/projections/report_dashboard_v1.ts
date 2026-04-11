@@ -34,7 +34,7 @@ const RISK_RANK: Record<OperationReportRiskLevel, number> = {
 };
 
 function resolveReportFieldId(report: OperationReportV1): string {
-  return String(report.identifiers.group_id ?? "").trim();
+  return String(report.identifiers.field_id ?? "").trim();
 }
 
 function toMs(v: string | null | undefined): number | null {

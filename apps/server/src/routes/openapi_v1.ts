@@ -198,11 +198,12 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             generated_at: { type: "string", format: "date-time" },
             identifiers: {
               type: "object",
-              required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "operation_id", "recommendation_id", "act_task_id", "receipt_id"],
+              required: ["tenant_id", "project_id", "group_id", "field_id", "operation_plan_id", "operation_id", "recommendation_id", "act_task_id", "receipt_id"],
               properties: {
                 tenant_id: { type: "string" },
                 project_id: { type: "string" },
                 group_id: { type: "string" },
+                field_id: { type: "string", nullable: true },
                 operation_plan_id: { type: "string" },
                 operation_id: { type: "string" },
                 recommendation_id: { type: "string", nullable: true },
