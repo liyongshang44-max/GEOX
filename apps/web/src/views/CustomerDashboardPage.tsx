@@ -7,7 +7,9 @@
  */
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
+import { fetchAlerts, fetchAlertSummary, type AlertV1 } from "../api/alerts";
 import { fetchCustomerDashboardAggregate, mapReportCode, type CustomerDashboardAggregateV1 } from "../api/reports";
+import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
@@ -31,6 +33,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const location = useLocation();
   const [aggregate, setAggregate] = React.useState<CustomerDashboardAggregateV1 | null>(null);
   const [error, setError] = React.useState<string>("");
+  const [openAlerts, setOpenAlerts] = React.useState<AlertV1[]>([]);
+  const [alertSummary, setAlertSummary] = React.useState<{ total: number; by_status: Record<string, number> }>({ total: 0, by_status: {} });
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -38,13 +42,21 @@ export default function CustomerDashboardPage(): React.ReactElement {
     const timeRangeRaw = String(params.get("time_range") ?? "").trim();
     const timeRange = timeRangeRaw === "7d" || timeRangeRaw === "30d" || timeRangeRaw === "season" ? timeRangeRaw : undefined;
 
-    void fetchCustomerDashboardAggregate({ fieldIds, timeRange })
-      .then((next) => {
-        setAggregate(next);
+    void Promise.all([
+      fetchCustomerDashboardAggregate({ fieldIds, timeRange }),
+      fetchAlertSummary(),
+      fetchAlerts({ status: "OPEN" }),
+    ])
+      .then(([nextAggregate, nextSummary, nextOpenAlerts]) => {
+        setAggregate(nextAggregate);
+        setAlertSummary({ total: Number(nextSummary.total ?? 0), by_status: nextSummary.by_status ?? {} });
+        setOpenAlerts(nextOpenAlerts.slice(0, 3));
         setError("");
       })
       .catch(() => {
         setAggregate(null);
+        setOpenAlerts([]);
+        setAlertSummary({ total: 0, by_status: {} });
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
   }, [location.search]);
@@ -55,7 +67,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         eyebrow="GEOX / 客户看板"
         title="客户看板"
         description="围绕经营结果、风险、成本与行动建议展示"
-        actions={<Link className="btn" to="/dashboard">切换平台控制台</Link>}
+        actions={<Link className="btn" to="/alerts">进入告警中心</Link>}
       />
 
       <SectionCard title="地块状态">
@@ -63,6 +75,22 @@ export default function CustomerDashboardPage(): React.ReactElement {
           共 {numberFmt.format(aggregate?.fields.total ?? 0)} 个地块，健康 {numberFmt.format(aggregate?.fields.healthy ?? 0)} 个，风险 {numberFmt.format(aggregate?.fields.at_risk ?? 0)} 个
         </div>
         <div className="muted">统计口径以聚合接口返回为准。</div>
+      </SectionCard>
+
+      <SectionCard title="告警摘要（/api/v1/alerts/summary）">
+        <div>总告警：{numberFmt.format(alertSummary.total)}</div>
+        <div className="muted">未处理：{numberFmt.format(Number(alertSummary.by_status.OPEN ?? 0))} · 已确认：{numberFmt.format(Number(alertSummary.by_status.ACKED ?? 0))} · 已关闭：{numberFmt.format(Number(alertSummary.by_status.CLOSED ?? 0))}</div>
+      </SectionCard>
+
+      <SectionCard title="未处理告警 Top3（/api/v1/alerts?status=OPEN）">
+        <div className="list" style={{ marginTop: 8 }}>
+          {openAlerts.map((item) => (
+            <div key={item.alert_id} className="item">
+              {alertCategoryLabel(item.category)} · {alertStatusLabel(item.status)} · {formatDateTime(item.triggered_at)}
+            </div>
+          ))}
+          {!openAlerts.length ? <div className="muted">暂无未处理告警</div> : null}
+        </div>
       </SectionCard>
 
       <SectionCard title="最近执行">
@@ -74,16 +102,6 @@ export default function CustomerDashboardPage(): React.ReactElement {
             </div>
           ))}
           {!aggregate?.recent_operations?.length ? <div className="muted">暂无最近执行记录</div> : null}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="风险告警">
-        <div>当前风险等级：{mapReportCode(aggregate?.risk_summary.level ?? "").label}</div>
-        <div className="list" style={{ marginTop: 8 }}>
-          {(aggregate?.risk_summary.top_reasons || []).map((signal, idx) => (
-            <div key={`${signal}-${idx}`} className="item">{signal}</div>
-          ))}
-          {!aggregate?.risk_summary.top_reasons?.length ? <div className="muted">暂无风险原因</div> : null}
         </div>
       </SectionCard>
 

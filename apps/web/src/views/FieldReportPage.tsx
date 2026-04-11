@@ -1,32 +1,47 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import { fetchAlerts, type AlertV1 } from "../api/alerts";
 import { fetchFieldReport, mapReportCode, type OperationReportV1 } from "../api/reports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
+import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 function sum(items: OperationReportV1[], picker: (item: OperationReportV1) => number): number {
   return items.reduce((acc, item) => acc + picker(item), 0);
 }
 
+function matchFieldAlert(item: AlertV1, fieldId: string): boolean {
+  if (item.object_type === "FIELD" && String(item.object_id) === fieldId) return true;
+  return (item.source_refs || []).some((ref) => String(ref.type || "").toUpperCase().includes("FIELD") && String(ref.id) === fieldId);
+}
+
 export default function FieldReportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<OperationReportV1[]>([]);
+  const [alerts, setAlerts] = React.useState<AlertV1[]>([]);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
-    void fetchFieldReport(fieldId)
-      .then((res) => {
+    void Promise.all([fetchFieldReport(fieldId), fetchAlerts({ status: "OPEN" }), fetchAlerts({ status: "ACKED" })])
+      .then(([reports, openAlerts, ackedAlerts]) => {
         if (!alive) return;
-        setItems(res);
+        setItems(reports);
+        const merged = [...openAlerts, ...ackedAlerts];
+        const uniq = new Map<string, AlertV1>();
+        for (const a of merged) {
+          if (!matchFieldAlert(a, fieldId)) continue;
+          uniq.set(a.alert_id, a);
+        }
+        setAlerts(Array.from(uniq.values()));
         setError("");
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         if (!alive) return;
-        setError(String(e?.message ?? "加载失败"));
+        setError(String(e instanceof Error ? e.message : "加载失败"));
       })
       .finally(() => {
         if (!alive) return;
@@ -52,6 +67,18 @@ export default function FieldReportPage(): React.ReactElement {
         description="展示地块 operation reports + 风险/成本汇总"
         actions={<Link className="btn" to={`/fields/${encodeURIComponent(fieldId)}`}>返回地块详情</Link>}
       />
+
+      <SectionCard title="未关闭关联告警">
+        <div className="list">
+          {alerts.map((alert) => (
+            <article key={alert.alert_id} className="item">
+              <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)}</div>
+              <div className="muted">告警ID：{alert.alert_id}</div>
+            </article>
+          ))}
+          {!alerts.length ? <div className="muted">暂无未关闭告警</div> : null}
+        </div>
+      </SectionCard>
 
       <SectionCard title="Operation Reports">
         <div className="list">

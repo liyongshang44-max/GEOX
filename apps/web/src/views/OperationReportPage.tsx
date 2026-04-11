@@ -1,8 +1,10 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
+import { fetchAlerts, type AlertV1 } from "../api/alerts";
 import { fetchOperationReport, mapReportCode, type OperationReportV1 } from "../api/reports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
+import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 function kv(value: unknown): string {
@@ -16,24 +18,40 @@ function slaQualityLabel(quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER"): s
   return "异常";
 }
 
+function matchOperationAlert(item: AlertV1, operationPlanId: string, operationId: string): boolean {
+  if (item.object_type === "OPERATION" && [operationPlanId, operationId].includes(String(item.object_id))) return true;
+  return (item.source_refs || []).some((ref) => {
+    const type = String(ref.type || "").toUpperCase();
+    return type.includes("OPERATION") && [operationPlanId, operationId].includes(String(ref.id));
+  });
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
+  const [alerts, setAlerts] = React.useState<AlertV1[]>([]);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
-    void fetchOperationReport(operationPlanId)
-      .then((res) => {
+    void Promise.all([fetchOperationReport(operationPlanId), fetchAlerts({ status: "OPEN" }), fetchAlerts({ status: "ACKED" })])
+      .then(([res, openAlerts, ackedAlerts]) => {
         if (!alive) return;
         setReport(res);
+        const merged = [...openAlerts, ...ackedAlerts];
+        const uniq = new Map<string, AlertV1>();
+        for (const a of merged) {
+          if (!matchOperationAlert(a, operationPlanId, String(res.identifiers.operation_id || ""))) continue;
+          uniq.set(a.alert_id, a);
+        }
+        setAlerts(Array.from(uniq.values()));
       })
-      .catch((e: any) => {
+      .catch((e: unknown) => {
         if (!alive) return;
-        setError(String(e?.message ?? "加载失败"));
+        setError(String(e instanceof Error ? e.message : "加载失败"));
       })
       .finally(() => {
         if (!alive) return;
@@ -59,6 +77,18 @@ export default function OperationReportPage(): React.ReactElement {
         description={`状态：${finalStatus.label}`}
         actions={<Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>返回作业详情</Link>}
       />
+
+      <SectionCard title="未关闭关联告警">
+        <div className="list">
+          {alerts.map((alert) => (
+            <article key={alert.alert_id} className="item">
+              <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)}</div>
+              <div className="muted">告警ID：{alert.alert_id}</div>
+            </article>
+          ))}
+          {!alerts.length ? <div className="muted">暂无未关闭关联告警</div> : null}
+        </div>
+      </SectionCard>
 
       <SectionCard title="作业摘要">
         <div className="kvGrid2">
