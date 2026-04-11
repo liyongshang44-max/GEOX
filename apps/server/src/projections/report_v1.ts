@@ -59,13 +59,16 @@ export type OperationReportV1 = {
     currency: "CNY";
   };
   sla: {
+    dispatch_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
+    execution_duration_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
+    acceptance_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
     execution_success: boolean;
     acceptance_pass: boolean;
     response_time_ms: number | null;
     dispatch_latency_ms?: number;
     execution_duration_ms?: number;
     acceptance_latency_ms?: number;
-    invalid_reasons: string[];
+    invalid_reasons: ReportV1SlaInvalidReason[];
     pending_acceptance_elapsed_ms: number | null;
     pending_acceptance_over_30m: boolean;
   };
@@ -128,30 +131,62 @@ function toFiniteNumber(v: unknown, fallback = 0): number {
 }
 
 type ReportV1SlaMetrics = {
+  dispatch_latency_quality: ReportV1SlaQuality;
+  execution_duration_quality: ReportV1SlaQuality;
+  acceptance_latency_quality: ReportV1SlaQuality;
   dispatch_latency_ms?: number;
   execution_duration_ms?: number;
   acceptance_latency_ms?: number;
-  invalid_reasons: string[];
+  invalid_reasons: ReportV1SlaInvalidReason[];
 };
 
-function computeNonNegativeDuration(params: {
+type ReportV1SlaQuality = "VALID" | "MISSING_DATA" | "INVALID_ORDER";
+type ReportV1SlaSource = "timeline" | "receipt" | "acceptance";
+type ReportV1SlaInvalidReason =
+  | "dispatch_latency_missing_start"
+  | "dispatch_latency_missing_end"
+  | "dispatch_latency_negative_duration"
+  | "execution_duration_missing_start"
+  | "execution_duration_missing_end"
+  | "execution_duration_negative_duration"
+  | "acceptance_latency_missing_start"
+  | "acceptance_latency_missing_end"
+  | "acceptance_latency_negative_duration";
+
+function resolveSlaTimestamp(params: {
+  timelineMs?: number | null;
+  receiptMs?: number | null;
+  acceptanceMs?: number | null;
+}): { value: number | null; source: ReportV1SlaSource | null } {
+  if (params.timelineMs != null) return { value: params.timelineMs, source: "timeline" };
+  if (params.receiptMs != null) return { value: params.receiptMs, source: "receipt" };
+  if (params.acceptanceMs != null) return { value: params.acceptanceMs, source: "acceptance" };
+  return { value: null, source: null };
+}
+
+function computeSlaDuration(params: {
   startMs: number | null;
   endMs: number | null;
-  missingReason: string;
-  negativeReason: string;
-  invalidReasons: string[];
-}): number | undefined {
-  const { startMs, endMs, missingReason, negativeReason, invalidReasons } = params;
-  if (startMs == null || endMs == null) {
-    invalidReasons.push(missingReason);
-    return undefined;
+  missingStartReason: ReportV1SlaInvalidReason;
+  missingEndReason: ReportV1SlaInvalidReason;
+  negativeReason: ReportV1SlaInvalidReason;
+  invalidReasons: ReportV1SlaInvalidReason[];
+}): { durationMs: number | undefined; quality: ReportV1SlaQuality } {
+  const { startMs, endMs, missingStartReason, missingEndReason, negativeReason, invalidReasons } = params;
+  if (startMs == null) {
+    invalidReasons.push(missingStartReason);
+    return { durationMs: undefined, quality: "MISSING_DATA" };
+  }
+  if (endMs == null) {
+    invalidReasons.push(missingEndReason);
+    return { durationMs: undefined, quality: "MISSING_DATA" };
   }
   const delta = endMs - startMs;
   if (delta < 0) {
     invalidReasons.push(negativeReason);
-    return undefined;
+    return { durationMs: undefined, quality: "INVALID_ORDER" };
   }
-  return delta;
+  return { durationMs: delta, quality: "VALID" };
 }
 
 export function computeReportV1SlaMetrics(params: {
@@ -159,42 +194,62 @@ export function computeReportV1SlaMetrics(params: {
   receipt: ReceiptInput;
   acceptance: AcceptanceInput;
 }): ReportV1SlaMetrics {
-  const invalidReasons: string[] = [];
+  const invalidReasons: ReportV1SlaInvalidReason[] = [];
   const timelineCreatedAtMs = params.timeline.find((x) => x.type === "RECOMMENDATION_CREATED")?.ts ?? null;
   const timelineDispatchedAtMs = params.timeline.find((x) => x.type === "TASK_CREATED")?.ts ?? null;
+  const timelineExecutionStartMs = params.timeline.find((x) => x.type === "EXECUTION_STARTED")?.ts ?? null;
+  const timelineExecutionEndMs = params.timeline.find((x) => x.type === "EXECUTION_FINISHED")?.ts ?? null;
+  const timelineReceiptSubmittedMs = params.timeline.find((x) => x.type === "RECEIPT_SUBMITTED")?.ts ?? null;
+  const timelineAcceptanceGeneratedMs = params.timeline.find((x) => x.type === "ACCEPTANCE_GENERATED")?.ts ?? null;
   const receiptStartMs = toMs(params.receipt?.execution_started_at);
   const receiptEndMs = toMs(params.receipt?.execution_finished_at);
-  const receiptTsMs = receiptEndMs ?? (params.timeline.find((x) => x.type === "RECEIPT_SUBMITTED")?.ts ?? null);
   const acceptanceTsMs = toMs(params.acceptance?.generated_at);
 
-  const dispatchLatencyMs = computeNonNegativeDuration({
-    startMs: timelineCreatedAtMs,
-    endMs: timelineDispatchedAtMs,
-    missingReason: "dispatch_latency_missing_timestamp",
+  const dispatchStart = resolveSlaTimestamp({ timelineMs: timelineCreatedAtMs });
+  const dispatchEnd = resolveSlaTimestamp({ timelineMs: timelineDispatchedAtMs });
+  const executionStart = resolveSlaTimestamp({ timelineMs: timelineExecutionStartMs, receiptMs: receiptStartMs });
+  const executionEnd = resolveSlaTimestamp({ timelineMs: timelineExecutionEndMs, receiptMs: receiptEndMs });
+  const acceptanceStart = resolveSlaTimestamp({
+    timelineMs: timelineReceiptSubmittedMs,
+    receiptMs: receiptEndMs,
+    acceptanceMs: acceptanceTsMs,
+  });
+  const acceptanceEnd = resolveSlaTimestamp({ timelineMs: timelineAcceptanceGeneratedMs, acceptanceMs: acceptanceTsMs });
+
+  const dispatchLatency = computeSlaDuration({
+    startMs: dispatchStart.value,
+    endMs: dispatchEnd.value,
+    missingStartReason: "dispatch_latency_missing_start",
+    missingEndReason: "dispatch_latency_missing_end",
     negativeReason: "dispatch_latency_negative_duration",
     invalidReasons,
   });
 
-  const executionDurationMs = computeNonNegativeDuration({
-    startMs: receiptStartMs,
-    endMs: receiptEndMs,
-    missingReason: "execution_duration_missing_timestamp",
+  const executionDuration = computeSlaDuration({
+    startMs: executionStart.value,
+    endMs: executionEnd.value,
+    missingStartReason: "execution_duration_missing_start",
+    missingEndReason: "execution_duration_missing_end",
     negativeReason: "execution_duration_negative_duration",
     invalidReasons,
   });
 
-  const acceptanceLatencyMs = computeNonNegativeDuration({
-    startMs: receiptTsMs,
-    endMs: acceptanceTsMs,
-    missingReason: "acceptance_latency_missing_timestamp",
+  const acceptanceLatency = computeSlaDuration({
+    startMs: acceptanceStart.value,
+    endMs: acceptanceEnd.value,
+    missingStartReason: "acceptance_latency_missing_start",
+    missingEndReason: "acceptance_latency_missing_end",
     negativeReason: "acceptance_latency_negative_duration",
     invalidReasons,
   });
 
   return {
-    dispatch_latency_ms: dispatchLatencyMs,
-    execution_duration_ms: executionDurationMs,
-    acceptance_latency_ms: acceptanceLatencyMs,
+    dispatch_latency_quality: dispatchLatency.quality,
+    execution_duration_quality: executionDuration.quality,
+    acceptance_latency_quality: acceptanceLatency.quality,
+    dispatch_latency_ms: dispatchLatency.durationMs,
+    execution_duration_ms: executionDuration.durationMs,
+    acceptance_latency_ms: acceptanceLatency.durationMs,
     invalid_reasons: invalidReasons,
   };
 }
@@ -322,6 +377,9 @@ export function projectOperationReportV1(input: {
       currency: "CNY",
     },
     sla: {
+      dispatch_latency_quality: computedSlaMetrics.dispatch_latency_quality,
+      execution_duration_quality: computedSlaMetrics.execution_duration_quality,
+      acceptance_latency_quality: computedSlaMetrics.acceptance_latency_quality,
       execution_success: Boolean(input.sla.execution_success),
       acceptance_pass: Boolean(input.sla.acceptance_pass),
       response_time_ms: input.sla.response_time_ms ?? null,

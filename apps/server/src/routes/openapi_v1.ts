@@ -259,11 +259,44 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             },
             sla: {
               type: "object",
-              required: ["execution_success", "acceptance_pass", "response_time_ms", "pending_acceptance_elapsed_ms", "pending_acceptance_over_30m"],
+              required: [
+                "dispatch_latency_quality",
+                "execution_duration_quality",
+                "acceptance_latency_quality",
+                "execution_success",
+                "acceptance_pass",
+                "response_time_ms",
+                "invalid_reasons",
+                "pending_acceptance_elapsed_ms",
+                "pending_acceptance_over_30m"
+              ],
               properties: {
+                dispatch_latency_quality: { type: "string", enum: ["VALID", "MISSING_DATA", "INVALID_ORDER"] },
+                execution_duration_quality: { type: "string", enum: ["VALID", "MISSING_DATA", "INVALID_ORDER"] },
+                acceptance_latency_quality: { type: "string", enum: ["VALID", "MISSING_DATA", "INVALID_ORDER"] },
                 execution_success: { type: "boolean" },
                 acceptance_pass: { type: "boolean" },
                 response_time_ms: { type: "number", nullable: true },
+                dispatch_latency_ms: { type: "number", nullable: true },
+                execution_duration_ms: { type: "number", nullable: true },
+                acceptance_latency_ms: { type: "number", nullable: true },
+                invalid_reasons: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                    enum: [
+                      "dispatch_latency_missing_start",
+                      "dispatch_latency_missing_end",
+                      "dispatch_latency_negative_duration",
+                      "execution_duration_missing_start",
+                      "execution_duration_missing_end",
+                      "execution_duration_negative_duration",
+                      "acceptance_latency_missing_start",
+                      "acceptance_latency_missing_end",
+                      "acceptance_latency_negative_duration"
+                    ]
+                  }
+                },
                 pending_acceptance_elapsed_ms: { type: "number", nullable: true },
                 pending_acceptance_over_30m: { type: "boolean" }
               }
