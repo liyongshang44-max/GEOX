@@ -10,6 +10,12 @@ function kv(value: unknown): string {
   return String(value);
 }
 
+function slaQualityLabel(quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER"): string {
+  if (quality === "VALID") return "有效";
+  if (quality === "MISSING_DATA") return "缺失";
+  return "异常";
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationPlanId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -99,8 +105,19 @@ export default function OperationReportPage(): React.ReactElement {
       <SectionCard title="SLA">
         <div className="kvGrid2">
           <div><strong>响应耗时（ms）：</strong>{kv(report.sla.response_time_ms)}</div>
-          <div><strong>执行耗时（ms）：</strong>{kv(report.sla.execution_duration_ms)}</div>
-          <div><strong>验收耗时（ms）：</strong>{kv(report.sla.acceptance_latency_ms)}</div>
+          <div>
+            <strong>派发耗时（ms）：</strong>
+            {report.sla.dispatch_latency_quality === "VALID" ? kv(report.sla.dispatch_latency_ms) : slaQualityLabel(report.sla.dispatch_latency_quality)}
+          </div>
+          <div>
+            <strong>执行耗时（ms）：</strong>
+            {report.sla.execution_duration_quality === "VALID" ? kv(report.sla.execution_duration_ms) : slaQualityLabel(report.sla.execution_duration_quality)}
+          </div>
+          <div>
+            <strong>验收耗时（ms）：</strong>
+            {report.sla.acceptance_latency_quality === "VALID" ? kv(report.sla.acceptance_latency_ms) : slaQualityLabel(report.sla.acceptance_latency_quality)}
+          </div>
+          <div><strong>SLA 异常码：</strong>{report.sla.invalid_reasons.join(" / ") || "--"}</div>
         </div>
       </SectionCard>
 

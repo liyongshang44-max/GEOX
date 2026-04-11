@@ -81,13 +81,26 @@ export type OperationReportV1 = {
     currency: "CNY";
   };
   sla: {
+    dispatch_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
+    execution_duration_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
+    acceptance_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
     execution_success: boolean;
     acceptance_pass: boolean;
     response_time_ms: number | null;
     dispatch_latency_ms?: number;
     execution_duration_ms?: number;
     acceptance_latency_ms?: number;
-    invalid_reasons: string[];
+    invalid_reasons: Array<
+      | "dispatch_latency_missing_start"
+      | "dispatch_latency_missing_end"
+      | "dispatch_latency_negative_duration"
+      | "execution_duration_missing_start"
+      | "execution_duration_missing_end"
+      | "execution_duration_negative_duration"
+      | "acceptance_latency_missing_start"
+      | "acceptance_latency_missing_end"
+      | "acceptance_latency_negative_duration"
+    >;
     pending_acceptance_elapsed_ms: number | null;
     pending_acceptance_over_30m: boolean;
   };

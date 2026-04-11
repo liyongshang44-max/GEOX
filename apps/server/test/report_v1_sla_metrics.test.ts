@@ -21,6 +21,9 @@ test("computes sla durations from timeline, receipt, and acceptance timestamps",
   assert.equal(metrics.dispatch_latency_ms, 5 * 60 * 1000);
   assert.equal(metrics.execution_duration_ms, 5 * 60 * 1000);
   assert.equal(metrics.acceptance_latency_ms, 10 * 60 * 1000);
+  assert.equal(metrics.dispatch_latency_quality, "VALID");
+  assert.equal(metrics.execution_duration_quality, "VALID");
+  assert.equal(metrics.acceptance_latency_quality, "VALID");
   assert.deepEqual(metrics.invalid_reasons, []);
 });
 
@@ -42,8 +45,11 @@ test("returns undefined and reasons for missing or negative durations", () => {
   assert.equal(metrics.dispatch_latency_ms, undefined);
   assert.equal(metrics.execution_duration_ms, undefined);
   assert.equal(metrics.acceptance_latency_ms, undefined);
+  assert.equal(metrics.dispatch_latency_quality, "MISSING_DATA");
+  assert.equal(metrics.execution_duration_quality, "INVALID_ORDER");
+  assert.equal(metrics.acceptance_latency_quality, "INVALID_ORDER");
   assert.deepEqual(metrics.invalid_reasons, [
-    "dispatch_latency_missing_timestamp",
+    "dispatch_latency_missing_start",
     "execution_duration_negative_duration",
     "acceptance_latency_negative_duration",
   ]);
