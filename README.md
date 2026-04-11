@@ -152,9 +152,25 @@ Judge 的评估对象始终是 group。
 • 执行入口仅供 executor runtime 在已批准 task 上调用。
 • 宪法级约束：执行只能通过 approval → AO-ACT task → executor，任何 recommendation 不能直接触发执行。
 
-十五、P1 smoke（skills -> operation -> receipt/evidence -> operation_state）
+十五、P1 smoke 分层定义（skills -> operation -> receipt/evidence -> operation_state）
 ------------------------------------------------------------
-用于最小联调闭环脚本（同一租户上下文下，一条成功、一条 INVALID_EXECUTION）：
+
+### 1) 脚本定位（必须区分）
+
+- `p1_skill_loop_minimal.mjs` = **链路 smoke**（只验证链路连通与状态机基础约束）。
+- `p1_skill_loop_acceptance_smoke.mjs` = **验收完成 smoke**（验证“执行完成 + 验收完成”的最终闭环）。
+
+### 2) 通过标准（必须区分）
+
+- **链路 smoke 通过 ≠ 验收最终通过**。
+  - `p1_skill_loop_minimal.mjs` 通过，只能说明：技能绑定、operation 创建、receipt/evidence 入链、状态投影等主链路可达。
+  - 在 success lane 中，`final_status=PENDING_ACCEPTANCE` 也算链路 smoke 的“正常通过”。
+- **验收 smoke 通过 = 闭环进入最终成功态**。
+  - `p1_skill_loop_acceptance_smoke.mjs` 通过，才代表验收结论已落地，闭环进入最终成功态（例如 PASS/SUCCESS 等验收后终态）。
+
+### 3) `p1_skill_loop_minimal.mjs` 运行方式
+
+用于最小联调闭环脚本（同一租户上下文下，一条 success-mapped、一条 INVALID_EXECUTION）：
 
 ```bash
 node apps/server/scripts/p1_skill_loop_minimal.mjs
@@ -175,7 +191,31 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 3. `POST /api/control/ao_act/receipt` 分别写入正式证据（runtime log）与无效证据（sim_trace）
 4. `GET /api/v1/operations` 查询最终 `final_status`
 
-最终断言：
+最终断言（链路 smoke 口径）：
 
-- 至少 1 条 `final_status` 被映射为 `SUCCESS|VALID`（系统口径兼容 `SUCCEEDED/PENDING_ACCEPTANCE/COMPLETED`）
+- 至少 1 条 `final_status` 命中 success 映射：`PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID`
 - 至少 1 条 `final_status=INVALID_EXECUTION`
+
+### 4) 示例输出（链路 smoke 正常通过，且 success lane 为 `PENDING_ACCEPTANCE`）
+
+```text
+[p1-smoke][success][waitFinal] {
+  attempt: 1,
+  operationPlanId: 'op_20260411_001',
+  finalStatus: 'PENDING_ACCEPTANCE'
+}
+[p1-smoke] done {
+  success: {
+    operation_plan_id: 'op_20260411_001',
+    final_status: 'PENDING_ACCEPTANCE',
+    success_mapped_by: 'PENDING_ACCEPTANCE'
+  },
+  invalid: {
+    operation_plan_id: 'op_20260411_002',
+    final_status: 'INVALID_EXECUTION'
+  }
+}
+[p1-smoke] done [ 'PENDING_ACCEPTANCE', 'INVALID_EXECUTION' ]
+```
+
+> 解释：该输出表示“链路 smoke 已通过”，但 success lane 仍处于待验收；这**不是**“验收最终通过”。
