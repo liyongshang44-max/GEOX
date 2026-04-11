@@ -160,6 +160,12 @@ Judge 的评估对象始终是 group。
 node apps/server/scripts/p1_skill_loop_minimal.mjs
 ```
 
+命名说明（避免与验收 smoke 混淆）：
+
+- `p1_skill_loop_minimal.mjs`：业务链路 smoke（会真实调用接口并校验状态）。
+- 若新增“源码一致性/结构自检”脚本，请使用 `*_selfcheck.mjs` 命名，不使用 `*_acceptance*.mjs`，避免与业务 smoke 混淆。
+- 若存在 `p1_skill_loop_minimal_acceptance.mjs`，它应仅作为源码一致性自检脚本，不属于业务 smoke 执行入口。
+
 可选环境变量（默认值如下）：
 
 - `GEOX_BASE_URL`（默认 `http://127.0.0.1:3001`）
@@ -179,3 +185,16 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 
 - 至少 1 条 `final_status` 被映射为 `SUCCESS|VALID`（系统口径兼容 `SUCCEEDED/PENDING_ACCEPTANCE/COMPLETED`）
 - 至少 1 条 `final_status=INVALID_EXECUTION`
+
+十六、P1 验收完成 smoke（只读断言）
+------------------------------------------------------------
+用于验证 success lane 最终进入验收通过终态（只允许等待/读取/断言，不修改业务状态）：
+
+```bash
+node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
+```
+
+必填环境变量：
+
+- `GEOX_OPERATION_PLAN_ID`
+- `GEOX_TOKEN`
