@@ -120,6 +120,110 @@ type FieldReportEnvelope = {
   items: OperationReportV1[];
 };
 
+type CustomerDashboardAggregateEnvelope = {
+  ok: true;
+  aggregate: CustomerDashboardAggregate;
+};
+
+export type CustomerDashboardAggregate = {
+  generatedAt: string;
+  totals: {
+    total: number;
+    completed: number;
+    incomplete: number;
+  };
+  recentExecutions: Array<{
+    operationId: string;
+    title: string;
+    statusCode: string;
+    finishedAt: string | null;
+  }>;
+  risk: {
+    high: number;
+    medium: number;
+    low: number;
+    topSignals: string[];
+  };
+  cost: {
+    currentTotal: number;
+    baselineTotal: number | null;
+    trend: "UP" | "DOWN" | "FLAT" | "NO_DATA";
+    currency: "CNY";
+  };
+};
+
+function normalizeStatus(status: string): string {
+  return String(status ?? "").trim().toUpperCase();
+}
+
+function pushReason(counter: Record<string, number>, key: string): void {
+  counter[key] = Number(counter[key] ?? 0) + 1;
+}
+
+export function aggregateCustomerDashboardReports(items: OperationReportV1[]): CustomerDashboardAggregate {
+  const reports = Array.isArray(items) ? items : [];
+  const sorted = reports
+    .slice()
+    .sort((a, b) => Date.parse(String(b.execution?.execution_finished_at ?? b.generated_at ?? "0")) - Date.parse(String(a.execution?.execution_finished_at ?? a.generated_at ?? "0")));
+
+  const completed = reports.filter((x) => ["SUCCESS", "SUCCEEDED"].includes(normalizeStatus(x.execution?.final_status ?? ""))).length;
+  const reasonCounter: Record<string, number> = {};
+
+  reports.forEach((item) => {
+    if (item.acceptance?.missing_evidence) pushReason(reasonCounter, "missing_evidence");
+    if (item.sla?.pending_acceptance_over_30m) pushReason(reasonCounter, "acceptance_timeout");
+    if (["FAILED", "ERROR"].includes(normalizeStatus(item.execution?.final_status ?? ""))) pushReason(reasonCounter, "execution_failure");
+    if (item.execution?.invalid_execution) pushReason(reasonCounter, "invalid_execution");
+  });
+
+  const totals = {
+    total: reports.length,
+    completed,
+    incomplete: Math.max(0, reports.length - completed),
+  };
+
+  const mid = reports.length > 1 ? Math.floor(reports.length / 2) : 0;
+  const currentSlice = mid > 0 ? sorted.slice(0, mid) : sorted;
+  const baselineSlice = mid > 0 ? sorted.slice(mid) : [];
+  const currentTotal = currentSlice.reduce((sum, item) => sum + Number(item.cost?.total ?? 0), 0);
+  const baselineTotal = baselineSlice.length
+    ? baselineSlice.reduce((sum, item) => sum + Number(item.cost?.total ?? 0), 0)
+    : null;
+  const trend = baselineTotal == null
+    ? "NO_DATA"
+    : currentTotal > baselineTotal
+      ? "UP"
+      : currentTotal < baselineTotal
+        ? "DOWN"
+        : "FLAT";
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totals,
+    recentExecutions: sorted.slice(0, 5).map((item) => ({
+      operationId: String(item.identifiers?.operation_id ?? item.identifiers?.operation_plan_id ?? ""),
+      title: String(item.identifiers?.operation_plan_id ?? item.identifiers?.operation_id ?? "作业"),
+      statusCode: String(item.execution?.final_status ?? "UNKNOWN"),
+      finishedAt: item.execution?.execution_finished_at ?? null,
+    })),
+    risk: {
+      high: reports.filter((x) => normalizeStatus(x.risk?.level ?? "") === "HIGH").length,
+      medium: reports.filter((x) => normalizeStatus(x.risk?.level ?? "") === "MEDIUM").length,
+      low: reports.filter((x) => normalizeStatus(x.risk?.level ?? "") === "LOW").length,
+      topSignals: Object.entries(reasonCounter)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([key]) => key),
+    },
+    cost: {
+      currentTotal,
+      baselineTotal,
+      trend,
+      currency: "CNY",
+    },
+  };
+}
+
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
   const res = await apiRequest<OperationReportEnvelope>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
   return res.operation_report_v1;
@@ -128,4 +232,19 @@ export async function fetchOperationReport(operationId: string): Promise<Operati
 export async function fetchFieldReport(fieldId: string): Promise<OperationReportV1[]> {
   const res = await apiRequest<FieldReportEnvelope>(withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`));
   return res.items;
+}
+
+export async function fetchCustomerDashboardAggregate(params: { fieldId?: string; limit?: number } = {}): Promise<CustomerDashboardAggregate> {
+  const fieldId = String(params.fieldId ?? "").trim();
+  if (fieldId) {
+    const reports = await fetchFieldReport(fieldId);
+    const aggregate = aggregateCustomerDashboardReports(reports);
+    if (Number.isFinite(params.limit) && (params.limit ?? 0) > 0) {
+      aggregate.recentExecutions = aggregate.recentExecutions.slice(0, Number(params.limit));
+    }
+    return aggregate;
+  }
+
+  const res = await apiRequest<CustomerDashboardAggregateEnvelope>(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
+  return res.aggregate;
 }
