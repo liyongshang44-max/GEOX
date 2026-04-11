@@ -45,6 +45,12 @@ export type OperationReportV1 = {
     water: number;
     electric: number;
     chemical: number;
+    estimated_total: number;
+    estimated_water_cost: number;
+    estimated_chemical_cost: number;
+    estimated_device_cost: number;
+    estimated_labor_cost: number;
+    action_type: string | null;
     currency: "CNY";
   };
   sla: {
@@ -109,7 +115,18 @@ export function projectOperationReportV1(input: {
   evidence_bundle: EvidenceBundleInput;
   acceptance: AcceptanceInput;
   receipt: ReceiptInput;
-  cost: { total?: unknown; water?: unknown; electric?: unknown; chemical?: unknown };
+  cost: {
+    total?: unknown;
+    water?: unknown;
+    electric?: unknown;
+    chemical?: unknown;
+    estimated_total?: unknown;
+    estimated_water_cost?: unknown;
+    estimated_chemical_cost?: unknown;
+    estimated_device_cost?: unknown;
+    estimated_labor_cost?: unknown;
+    action_type?: unknown;
+  };
   sla: { execution_success?: boolean; acceptance_pass?: boolean; response_time_ms?: number | null };
   now?: Date;
 }): OperationReportV1 {
@@ -190,6 +207,12 @@ export function projectOperationReportV1(input: {
       water: toFiniteNumber(input.cost.water),
       electric: toFiniteNumber(input.cost.electric),
       chemical: toFiniteNumber(input.cost.chemical),
+      estimated_total: toFiniteNumber(input.cost.estimated_total),
+      estimated_water_cost: toFiniteNumber(input.cost.estimated_water_cost),
+      estimated_chemical_cost: toFiniteNumber(input.cost.estimated_chemical_cost),
+      estimated_device_cost: toFiniteNumber(input.cost.estimated_device_cost),
+      estimated_labor_cost: toFiniteNumber(input.cost.estimated_labor_cost),
+      action_type: toText(input.cost.action_type),
       currency: "CNY",
     },
     sla: {

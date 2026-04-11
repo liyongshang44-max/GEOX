@@ -5,6 +5,7 @@ import { projectOperationStateV1, type OperationStateV1 } from "../projections/o
 import { projectOperationReportV1, type OperationReportV1 } from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
+import { computeOperationCostV1 } from "../domain/cost_model";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -95,6 +96,10 @@ export async function projectReportV1(params: {
     electric_kwh: normalizedReceipt?.electric_kwh,
     chemical_ml: normalizedReceipt?.chemical_ml,
   });
+  const estimatedCost = computeOperationCostV1(operationState.action_type, {
+    water_l: normalizedReceipt?.water_l,
+    chemical_ml: normalizedReceipt?.chemical_ml,
+  });
 
   const executionSuccess = ["SUCCESS", "SUCCEEDED"].includes(String(operationState.final_status ?? "").toUpperCase());
   const acceptancePass = String(acceptanceFact?.record_json?.payload?.verdict ?? "").toUpperCase().includes("PASS");
@@ -125,6 +130,12 @@ export async function projectReportV1(params: {
       water: cost.water_cost,
       electric: cost.electric_cost,
       chemical: cost.chemical_cost,
+      estimated_total: estimatedCost.estimated_total,
+      estimated_water_cost: estimatedCost.estimated_water_cost,
+      estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
+      estimated_device_cost: estimatedCost.estimated_device_cost,
+      estimated_labor_cost: estimatedCost.estimated_labor_cost,
+      action_type: estimatedCost.action_type,
     },
     sla: {
       execution_success: executionSuccess,
