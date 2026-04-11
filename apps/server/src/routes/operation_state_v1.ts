@@ -9,6 +9,7 @@ import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model";
+import { computeOperationCostV1 } from "../domain/cost_model";
 import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
 import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
@@ -1630,6 +1631,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       electric_kwh: normalizedReceipt?.electric_kwh,
       chemical_ml: normalizedReceipt?.chemical_ml,
     });
+    const estimatedCost = computeOperationCostV1(state.action_type, {
+      water_l: normalizedReceipt?.water_l,
+      chemical_ml: normalizedReceipt?.chemical_ml,
+    });
     const customerViewStatus = resolveCustomerViewStatus({
       final_status: finalStatus,
       has_approval: Boolean(approvalReq || approvalDecision),
@@ -1943,6 +1948,12 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         water: costBreakdown.water_cost,
         electric: costBreakdown.electric_cost,
         chemical: costBreakdown.chemical_cost,
+        estimated_total: estimatedCost.estimated_total,
+        estimated_water_cost: estimatedCost.estimated_water_cost,
+        estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
+        estimated_device_cost: estimatedCost.estimated_device_cost,
+        estimated_labor_cost: estimatedCost.estimated_labor_cost,
+        action_type: estimatedCost.action_type,
       },
       sla: {
         execution_success: executionSuccess,
@@ -2049,7 +2060,13 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           total: costBreakdown.total_cost,
           water: costBreakdown.water_cost,
           electric: costBreakdown.electric_cost,
-          chemical: costBreakdown.chemical_cost
+          chemical: costBreakdown.chemical_cost,
+          estimated_total: estimatedCost.estimated_total,
+          estimated_water_cost: estimatedCost.estimated_water_cost,
+          estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
+          estimated_device_cost: estimatedCost.estimated_device_cost,
+          estimated_labor_cost: estimatedCost.estimated_labor_cost,
+          action_type: estimatedCost.action_type
         },
         customer_view: customerView,
         operation_report_v1: operationReportV1
