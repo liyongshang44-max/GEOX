@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { enforceFieldScopeOrDeny } from "../auth/route_role_authz";
 import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1";
 import { projectOperationReportV1, type OperationReportV1 } from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
@@ -159,6 +160,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     const states = await projectOperationStateV1(pool, tenant);
     const state = states.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId) ?? null;
     if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, state.field_id, reply, { asNotFound: true })) return;
 
     const operation_report_v1 = await projectReportV1({ pool, tenant, operationState: state });
     return reply.send({ ok: true, operation_report_v1 });
@@ -175,6 +177,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     if (!fieldId) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
 
     const states = await projectOperationStateV1(pool, tenant);
+    if (!enforceFieldScopeOrDeny(auth, fieldId, reply, { asNotFound: true })) return;
     const fieldStates = states.filter((x) => String(x.field_id ?? "") === fieldId);
 
     const items = await Promise.all(fieldStates.map((state) => projectReportV1({
