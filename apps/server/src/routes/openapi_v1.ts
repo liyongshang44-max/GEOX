@@ -188,6 +188,112 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               items: { '$ref': "#/components/schemas/SkillRunV1" }
             }
           }
+        },
+        OperationReportV1: {
+          type: "object",
+          required: ["type", "version", "generated_at", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk"],
+          properties: {
+            type: { type: "string", enum: ["operation_report_v1"] },
+            version: { type: "string", enum: ["v1"] },
+            generated_at: { type: "string", format: "date-time" },
+            identifiers: {
+              type: "object",
+              required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "operation_id", "recommendation_id", "act_task_id", "receipt_id"],
+              properties: {
+                tenant_id: { type: "string" },
+                project_id: { type: "string" },
+                group_id: { type: "string" },
+                operation_plan_id: { type: "string" },
+                operation_id: { type: "string" },
+                recommendation_id: { type: "string", nullable: true },
+                act_task_id: { type: "string", nullable: true },
+                receipt_id: { type: "string", nullable: true }
+              }
+            },
+            execution: {
+              type: "object",
+              required: ["final_status", "invalid_execution", "invalid_reason", "dispatched_at", "execution_started_at", "execution_finished_at", "response_time_ms"],
+              properties: {
+                final_status: { type: "string" },
+                invalid_execution: { type: "boolean" },
+                invalid_reason: { type: "string", nullable: true },
+                dispatched_at: { type: "string", format: "date-time", nullable: true },
+                execution_started_at: { type: "string", format: "date-time", nullable: true },
+                execution_finished_at: { type: "string", format: "date-time", nullable: true },
+                response_time_ms: { type: "number", nullable: true }
+              }
+            },
+            acceptance: {
+              type: "object",
+              required: ["status", "verdict", "missing_evidence", "missing_items", "generated_at"],
+              properties: {
+                status: { type: "string", enum: ["PASS", "FAIL", "PENDING", "NOT_AVAILABLE"] },
+                verdict: { type: "string", nullable: true },
+                missing_evidence: { type: "boolean" },
+                missing_items: { type: "array", items: { type: "string" } },
+                generated_at: { type: "string", format: "date-time", nullable: true }
+              }
+            },
+            evidence: {
+              type: "object",
+              required: ["artifacts_count", "logs_count", "media_count", "metrics_count", "receipt_present", "acceptance_present"],
+              properties: {
+                artifacts_count: { type: "integer" },
+                logs_count: { type: "integer" },
+                media_count: { type: "integer" },
+                metrics_count: { type: "integer" },
+                receipt_present: { type: "boolean" },
+                acceptance_present: { type: "boolean" }
+              }
+            },
+            cost: {
+              type: "object",
+              required: ["total", "water", "electric", "chemical", "currency"],
+              properties: {
+                total: { type: "number" },
+                water: { type: "number" },
+                electric: { type: "number" },
+                chemical: { type: "number" },
+                currency: { type: "string", enum: ["CNY"] }
+              }
+            },
+            sla: {
+              type: "object",
+              required: ["execution_success", "acceptance_pass", "response_time_ms", "pending_acceptance_elapsed_ms", "pending_acceptance_over_30m"],
+              properties: {
+                execution_success: { type: "boolean" },
+                acceptance_pass: { type: "boolean" },
+                response_time_ms: { type: "number", nullable: true },
+                pending_acceptance_elapsed_ms: { type: "number", nullable: true },
+                pending_acceptance_over_30m: { type: "boolean" }
+              }
+            },
+            risk: {
+              type: "object",
+              required: ["level", "reasons"],
+              properties: {
+                level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+                reasons: { type: "array", items: { type: "string" } }
+              }
+            }
+          }
+        },
+        OperationReportSingleResponse: {
+          type: "object",
+          required: ["ok", "operation_report_v1"],
+          properties: {
+            ok: { type: "boolean" },
+            operation_report_v1: { '$ref': "#/components/schemas/OperationReportV1" }
+          }
+        },
+        OperationReportFieldListResponse: {
+          type: "object",
+          required: ["ok", "field_id", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            items: { type: "array", items: { '$ref': "#/components/schemas/OperationReportV1" } }
+          }
         }
       }
     },
@@ -708,6 +814,44 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           summary: "Read operations workbench aggregate",
           responses: {
             "200": { description: "Operations workbench returned successfully" }
+          }
+        }
+      },
+      "/api/v1/reports/operation/{operation_id}": {
+        get: {
+          tags: ["operations"],
+          summary: "Read frozen operation report v1 by operation id",
+          parameters: [
+            { name: "operation_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Operation report returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/OperationReportSingleResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/reports/field/{field_id}": {
+        get: {
+          tags: ["operations"],
+          summary: "Read frozen operation report v1 list by field id",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Field report list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/OperationReportFieldListResponse" }
+                }
+              }
+            }
           }
         }
       },
