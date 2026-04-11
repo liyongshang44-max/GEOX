@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 
-const target = path.resolve(process.cwd(), "apps/server/scripts/p1_skill_loop_minimal.mjs");
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const target = path.resolve(scriptDir, "p1_skill_loop_minimal.mjs");
 const source = fs.readFileSync(target, "utf8");
 
 function count(pattern) {
