@@ -127,9 +127,29 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           properties: {
             ok: { type: "boolean" },
             total: { type: "integer" },
-            by_severity: { type: "object", additionalProperties: { type: "integer" } },
-            by_status: { type: "object", additionalProperties: { type: "integer" } },
-            by_category: { type: "object", additionalProperties: { type: "integer" } }
+            by_severity: {
+              type: "object",
+              required: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+              properties: {
+                LOW: { type: "integer" },
+                MEDIUM: { type: "integer" },
+                HIGH: { type: "integer" },
+                CRITICAL: { type: "integer" }
+              }
+            },
+            by_status: {
+              type: "object",
+              required: ["OPEN", "ACKED", "CLOSED"],
+              properties: {
+                OPEN: { type: "integer" },
+                ACKED: { type: "integer" },
+                CLOSED: { type: "integer" }
+              }
+            },
+            by_category: {
+              type: "object",
+              additionalProperties: { type: "integer" }
+            }
           }
         },
         AlertActionRequest: {
