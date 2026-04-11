@@ -28,13 +28,16 @@ const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
+  if (pathname === "/dashboard/customer") return "客户看板";
   if (pathname.startsWith("/delivery/export-jobs")) return "导出报告";
   if (pathname === "/fields") return "田块";
   if (pathname === "/fields/new") return "新建田块";
+  if (pathname.startsWith("/fields/") && pathname.endsWith("/report")) return "地块报告";
   if (pathname.startsWith("/fields/")) return "田块详情";
   if (pathname === "/devices") return "设备";
   if (pathname === "/devices/onboarding") return "设备接入向导";
   if (pathname.startsWith("/devices/")) return "设备详情";
+  if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return "作业报告";
   if (pathname.startsWith("/operations/")) return "作业详情";
   if (pathname.startsWith("/operations")) return "作业";
   if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
@@ -59,13 +62,16 @@ function titleForPath(pathname: string): string {
 
 function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "以平台控制台为主入口，统一监控田块、设备、作业、技能与证据状态。";
+  if (pathname === "/dashboard/customer") return "面向客户的简化看板，仅展示4个关键区块。";
   if (pathname.startsWith("/delivery/export-jobs")) return "作为证据中心下的二级模块，集中查看导出批次与回执状态。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行管理。";
   if (pathname === "/fields/new") return "创建田块并开始开局链路。";
+  if (pathname.startsWith("/fields/") && pathname.endsWith("/report")) return "查看地块作业报告及风险、成本汇总。";
   if (pathname.startsWith("/fields/")) return "查看单个田块的边界、季节与绑定设备摘要。";
   if (pathname === "/devices") return "集中查看设备状态、最新遥测与田块绑定关系。";
   if (pathname === "/devices/onboarding") return "从注册到首条 telemetry 上传的标准接入流程。";
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
+  if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return "查看作业报告固定区块：摘要、执行、验收、证据、成本、SLA 与风险。";
   if (pathname.startsWith("/operations/")) return "查看作业状态、执行时间线与最新执行证据。";
   if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
   if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
@@ -91,13 +97,16 @@ function leadForPath(pathname: string): string {
 type BreadcrumbItem = AppBreadcrumbItem;
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "平台控制台" }];
+  if (pathname === "/dashboard/customer") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板" }];
   if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "证据中心", to: "/audit-export" }, { label: "导出报告" }];
   if (pathname === "/fields") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块" }];
   if (pathname === "/fields/new") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "新建田块" }];
+  if (pathname.startsWith("/fields/") && pathname.endsWith("/report")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "地块报告" }];
   if (pathname.startsWith("/fields/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "田块详情" }];
   if (pathname === "/devices") return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备" }];
   if (pathname === "/devices/onboarding") return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备接入向导" }];
   if (pathname.startsWith("/devices/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "设备", to: "/devices" }, { label: "设备详情" }];
+  if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "作业报告" }];
   if (pathname.startsWith("/operations/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "作业详情" }];
   if (pathname.startsWith("/operations")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业" }];
   if (pathname.startsWith("/human-assignments/")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "作业", to: "/operations" }, { label: "人工执行", to: "/human-assignments" }, { label: "任务详情" }];
@@ -122,10 +131,12 @@ function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
 
 function primaryActionForPath(pathname: string): { label: string; to: string } {
   if (pathname === "/" || pathname === "/dashboard") return { label: "新建田块", to: "/fields/new" };
+  if (pathname.startsWith("/fields/") && pathname.endsWith("/report")) return { label: "返回田块详情", to: pathname.replace(/\/report$/, "") };
   if (pathname.startsWith("/fields/")) return { label: "返回田块列表", to: "/fields" };
   if (pathname.startsWith("/fields")) return { label: "新建田块", to: "/fields/new" };
   if (pathname.startsWith("/devices/") && pathname !== "/devices/onboarding") return { label: "返回设备列表", to: "/devices" };
   if (pathname.startsWith("/devices")) return { label: "接入设备", to: "/devices/onboarding" };
+  if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return { label: "返回作业详情", to: pathname.replace(/\/report$/, "") };
   if (pathname.startsWith("/operations/")) return { label: "返回作业列表", to: "/operations" };
   if (pathname.startsWith("/operations")) return { label: "查看人工执行", to: "/human-assignments" };
   if (pathname.startsWith("/human-assignments/")) return { label: "返回人工执行列表", to: "/human-assignments" };
