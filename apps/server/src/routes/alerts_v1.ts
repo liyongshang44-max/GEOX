@@ -16,6 +16,12 @@ import type { Pool, PoolClient } from "pg"; // Postgres pool / transaction clien
 import { dispatchAlertNotifications } from "../alerts/notification_dispatcher_v1"; // Dispatch alert notifications through configured adapters.
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
+import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz"; // Role + field scope helpers.
+import { projectAlertListV1, type AlertActionOverrideV1, type AlertListOperationInputV1 } from "../projections/alert_list_v1"; // Unified alert list projection.
+import type { AlertSeverity, AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1"; // Alert model.
+import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
+import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
+import type { TelemetryHealthInput } from "../domain/alert_engine";
 
 type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
 type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
@@ -76,11 +82,145 @@ function normalizeRuleStatus(s: any): RuleStatus | null { // Helper: normalize r
   return null; // Invalid.
 } // End helper.
 
-function normalizeEventStatus(s: any): EventStatus | null { // Helper: normalize event status.
-  const t = String(s ?? "").trim().toUpperCase(); // Normalize.
-  if (t === "OPEN" || t === "ACKED" || t === "CLOSED") return t as EventStatus; // Allow.
-  return null; // Invalid.
-} // End helper.
+function normalizeAlertSeverity(s: any): AlertSeverity | null { // Helper: normalize projected alert severity.
+  const t = String(s ?? "").trim().toUpperCase();
+  if (t === "LOW" || t === "MEDIUM" || t === "HIGH" || t === "CRITICAL") return t as AlertSeverity;
+  return null;
+}
+
+function normalizeProjectedAlertStatus(s: any): ProjectedAlertStatus | null { // Helper: normalize projected alert status.
+  const t = String(s ?? "").trim().toUpperCase();
+  if (t === "OPEN" || t === "ACKED" || t === "CLOSED") return t as ProjectedAlertStatus;
+  return null;
+}
+
+function normalizeCsvList(v: any): string[] { // Normalize CSV/array query values into distinct list.
+  const raw: string[] = Array.isArray(v) ? v.map((x) => String(x ?? "")) : [String(v ?? "")];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const chunk of raw) {
+    for (const token of chunk.split(",")) {
+      const item = token.trim();
+      if (!item || seen.has(item)) continue;
+      seen.add(item);
+      out.push(item);
+    }
+  }
+  return out;
+}
+
+function enforceAlertActionRoleOrDeny(auth: AoActAuthContextV0, reply: any): boolean { // Role gate for ack/resolve.
+  if (auth.role === "operator" || auth.role === "admin") return true;
+  reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
+  return false;
+}
+
+async function listOperationInputsForAlertProjection(pool: Pool, auth: AoActAuthContextV0): Promise<AlertListOperationInputV1[]> { // Build operation inputs in tenant/project/group scope.
+  const states = await projectOperationStateV1(pool, {
+    tenant_id: auth.tenant_id,
+    project_id: auth.project_id,
+    group_id: auth.group_id,
+  });
+  const scoped = states.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
+  const reports = await Promise.all(scoped.map((state) => projectOperationReportV1({
+    pool,
+    tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+    operationState: state,
+  })));
+  return reports.map((report) => ({
+    operation_plan_id: String(report.identifiers.operation_plan_id ?? report.identifiers.operation_id ?? ""),
+    operation_state: {
+      operation_id: report.identifiers.operation_id,
+      operation_plan_id: report.identifiers.operation_plan_id,
+      tenant_id: report.identifiers.tenant_id,
+      project_id: report.identifiers.project_id,
+      group_id: report.identifiers.group_id,
+      field_id: report.identifiers.field_id,
+      device_id: report.identifiers.device_id,
+      action_type: report.execution.action_type,
+      status: report.execution.status,
+      final_status: report.execution.final_status,
+      acceptance: report.acceptance,
+      timeline: report.timeline,
+    },
+    evidence_bundle: report.evidence_bundle ?? {},
+    acceptance: report.acceptance ?? null,
+    receipt: report.receipt ?? null,
+    cost: report.cost ?? {},
+    generated_at: report.generated_at,
+  }));
+}
+
+async function listTelemetryHealthInputsForAlertProjection(pool: Pool, auth: AoActAuthContextV0): Promise<TelemetryHealthInput[]> { // Build telemetry-health inputs for alert projection.
+  const q = await pool.query(
+    `SELECT d.device_id,
+            COALESCE(d.field_id, b.field_id) AS field_id,
+            d.last_heartbeat_ts_ms,
+            d.last_telemetry_ts_ms,
+            d.battery_percent
+       FROM device_status_index_v1 d
+       LEFT JOIN device_binding_index_v1 b
+         ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+      WHERE d.tenant_id = $1`,
+    [auth.tenant_id]
+  );
+  const nowMs = Date.now();
+  const out: TelemetryHealthInput[] = [];
+  for (const row of q.rows ?? []) {
+    const field_id = isNonEmptyString(row.field_id) ? String(row.field_id) : null;
+    if (field_id && !hasFieldAccess(auth, field_id)) continue;
+    const lastHeartbeat = Number(row.last_heartbeat_ts_ms ?? 0);
+    const lastTelemetry = Number(row.last_telemetry_ts_ms ?? 0);
+    const batteryPercent = Number(row.battery_percent ?? 100);
+    out.push({
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      device_id: String(row.device_id ?? ""),
+      field_id,
+      heartbeat_lag_ms: Number.isFinite(lastHeartbeat) && lastHeartbeat > 0 ? Math.max(0, nowMs - lastHeartbeat) : null,
+      telemetry_lag_ms: Number.isFinite(lastTelemetry) && lastTelemetry > 0 ? Math.max(0, nowMs - lastTelemetry) : null,
+      packet_loss_ratio: null,
+      parser_error_ratio: null,
+      low_battery: Number.isFinite(batteryPercent) ? batteryPercent < 20 : null,
+    });
+  }
+  return out;
+}
+
+async function listAlertActionOverrides(pool: Pool, auth: AoActAuthContextV0): Promise<AlertActionOverrideV1[]> { // Load last action per alert.
+  const q = await pool.query(
+    `SELECT DISTINCT ON (alert_id) alert_id, status
+       FROM alert_actions_v1
+      WHERE tenant_id = $1
+      ORDER BY alert_id, acted_at DESC`,
+    [auth.tenant_id]
+  );
+  return (q.rows ?? [])
+    .map((row: any) => ({
+      alert_id: String(row.alert_id ?? ""),
+      status: normalizeProjectedAlertStatus(row.status),
+    }))
+    .filter((x: any): x is AlertActionOverrideV1 => Boolean(x.alert_id && x.status));
+}
+
+async function listDeviceFieldMap(pool: Pool, tenant_id: string): Promise<Map<string, string>> { // Resolve device->field bindings for filtering/authorization.
+  const q = await pool.query(
+    `SELECT d.device_id, COALESCE(d.field_id, b.field_id) AS field_id
+       FROM device_status_index_v1 d
+       LEFT JOIN device_binding_index_v1 b
+         ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+      WHERE d.tenant_id = $1`,
+    [tenant_id]
+  );
+  const map = new Map<string, string>();
+  for (const row of q.rows ?? []) {
+    const did = String(row.device_id ?? "").trim();
+    const fid = String(row.field_id ?? "").trim();
+    if (did && fid) map.set(did, fid);
+  }
+  return map;
+}
 
 function normalizeNotificationChannel(v: any): string | null { // Helper: normalize notification channel.
   const s = String(v ?? "").trim().toUpperCase(); // Normalize.
@@ -266,6 +406,18 @@ async function ensureAlertsV1Schema(pool: Pool): Promise<void> { // Ensure alert
     );
   `); // Notification projection table.
   await pool.query(`CREATE INDEX IF NOT EXISTS alert_notification_index_v1_lookup_idx ON alert_notification_index_v1 (tenant_id, event_id, rule_id, channel, created_ts_ms DESC);`); // Query support.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alert_actions_v1 (
+      tenant_id TEXT NOT NULL,
+      alert_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      acted_by TEXT NOT NULL,
+      acted_at BIGINT NOT NULL,
+      note TEXT NULL,
+      PRIMARY KEY (tenant_id, alert_id, acted_at)
+    );
+  `); // Persist explicit user actions for projected alerts.
+  await pool.query(`CREATE INDEX IF NOT EXISTS alert_actions_v1_lookup_idx ON alert_actions_v1 (tenant_id, alert_id, acted_at DESC);`); // Last action lookup.
 } // End helper.
 
 async function insertNotificationRecordsForEvent(clientConn: PoolClient, params: { // Insert minimal notification records for an event.
@@ -473,6 +625,180 @@ async function maybeRaiseImmediateMetricEvent(clientConn: PoolClient, params: { 
 
 export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Register alert endpoints.
   app.addHook("onReady", async () => { await ensureAlertsV1Schema(pool); }); // Ensure forward-compatible alert schema before serving.
+
+  app.get("/api/v1/alerts", async (req, reply) => { // Canonical v1 alert list endpoint.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read");
+    if (!auth) return;
+
+    const query: any = (req.query as any) ?? {};
+    const fieldIds = normalizeCsvList(query.field_ids ?? query["field_ids[]"]);
+    const severity = normalizeAlertSeverity(query.severity);
+    const status = normalizeProjectedAlertStatus(query.status);
+    const category = isNonEmptyString(query.category) ? String(query.category).trim().toUpperCase() : null;
+
+    if (fieldIds.length > 0) {
+      const allAllowed = fieldIds.every((fid) => enforceFieldScopeOrDeny(auth, fid, reply, { asNotFound: true }));
+      if (!allAllowed) return;
+    }
+
+    const [operations, telemetry_health, action_overrides, deviceFieldMap] = await Promise.all([
+      listOperationInputsForAlertProjection(pool, auth),
+      listTelemetryHealthInputsForAlertProjection(pool, auth),
+      listAlertActionOverrides(pool, auth),
+      listDeviceFieldMap(pool, auth.tenant_id),
+    ]);
+    let items = projectAlertListV1({
+      scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+      operations,
+      telemetry_health,
+      action_overrides,
+      nowMs: Date.now(),
+    });
+
+    if (fieldIds.length > 0) {
+      const set = new Set(fieldIds);
+      items = items.filter((item) => {
+        if (item.object_type === "FIELD") return set.has(String(item.object_id ?? ""));
+        if (item.object_type === "DEVICE") return set.has(String(deviceFieldMap.get(String(item.object_id ?? "")) ?? ""));
+        return false;
+      });
+    }
+    if (severity) items = items.filter((item) => item.severity === severity);
+    if (status) items = items.filter((item) => item.status === status);
+    if (category) items = items.filter((item) => String(item.category ?? "").toUpperCase() === category);
+    return reply.send({ ok: true, items });
+  });
+
+  app.get("/api/v1/alerts/summary", async (req, reply) => { // Summary endpoint grouped by severity/status/category.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read");
+    if (!auth) return;
+
+    const [operations, telemetry_health, action_overrides] = await Promise.all([
+      listOperationInputsForAlertProjection(pool, auth),
+      listTelemetryHealthInputsForAlertProjection(pool, auth),
+      listAlertActionOverrides(pool, auth),
+    ]);
+    const items = projectAlertListV1({
+      scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+      operations,
+      telemetry_health,
+      action_overrides,
+      nowMs: Date.now(),
+    });
+
+    const by_severity: Record<string, number> = {};
+    const by_status: Record<string, number> = {};
+    const by_category: Record<string, number> = {};
+    for (const item of items) {
+      by_severity[item.severity] = (by_severity[item.severity] ?? 0) + 1;
+      by_status[item.status] = (by_status[item.status] ?? 0) + 1;
+      const category = String(item.category ?? "");
+      by_category[category] = (by_category[category] ?? 0) + 1;
+    }
+    return reply.send({ ok: true, total: items.length, by_severity, by_status, by_category });
+  });
+
+  app.post("/api/v1/alerts/:alert_id/ack", async (req, reply) => { // Canonical v1 ack action on projected alert.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write");
+    if (!auth) return;
+    if (!enforceAlertActionRoleOrDeny(auth, reply)) return;
+
+    const alert_id = normalizeId((req.params as any)?.alert_id);
+    if (!alert_id) return notFound(reply);
+    const note = isNonEmptyString((req.body as any)?.note) ? String((req.body as any).note).trim().slice(0, 1000) : null;
+
+    const [operations, telemetry_health, action_overrides, deviceFieldMap] = await Promise.all([
+      listOperationInputsForAlertProjection(pool, auth),
+      listTelemetryHealthInputsForAlertProjection(pool, auth),
+      listAlertActionOverrides(pool, auth),
+      listDeviceFieldMap(pool, auth.tenant_id),
+    ]);
+    const items = projectAlertListV1({
+      scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+      operations,
+      telemetry_health,
+      action_overrides,
+      nowMs: Date.now(),
+    });
+    const target = items.find((item) => item.alert_id === alert_id) ?? null;
+    if (!target) return notFound(reply);
+    const scopedFieldId = target.object_type === "FIELD"
+      ? target.object_id
+      : (target.object_type === "DEVICE" ? (deviceFieldMap.get(target.object_id) ?? null) : null);
+    if (scopedFieldId && !enforceFieldScopeOrDeny(auth, scopedFieldId, reply, { asNotFound: true })) return;
+
+    const acted_at = Date.now();
+    await pool.query(
+      `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
+       VALUES ($1,$2,'ACKED',$3,$4,$5)`,
+      [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
+    );
+    return reply.send({ ok: true, alert_id, status: "ACKED", acted_at });
+  });
+
+  app.post("/api/v1/alerts/:alert_id/resolve", async (req, reply) => { // Canonical v1 resolve action on projected alert.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write");
+    if (!auth) return;
+    if (!enforceAlertActionRoleOrDeny(auth, reply)) return;
+
+    const alert_id = normalizeId((req.params as any)?.alert_id);
+    if (!alert_id) return notFound(reply);
+    const note = isNonEmptyString((req.body as any)?.note) ? String((req.body as any).note).trim().slice(0, 1000) : null;
+
+    const [operations, telemetry_health, action_overrides, deviceFieldMap] = await Promise.all([
+      listOperationInputsForAlertProjection(pool, auth),
+      listTelemetryHealthInputsForAlertProjection(pool, auth),
+      listAlertActionOverrides(pool, auth),
+      listDeviceFieldMap(pool, auth.tenant_id),
+    ]);
+    const items = projectAlertListV1({
+      scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+      operations,
+      telemetry_health,
+      action_overrides,
+      nowMs: Date.now(),
+    });
+    const target = items.find((item) => item.alert_id === alert_id) ?? null;
+    if (!target) return notFound(reply);
+    const scopedFieldId = target.object_type === "FIELD"
+      ? target.object_id
+      : (target.object_type === "DEVICE" ? (deviceFieldMap.get(target.object_id) ?? null) : null);
+    if (scopedFieldId && !enforceFieldScopeOrDeny(auth, scopedFieldId, reply, { asNotFound: true })) return;
+
+    const acted_at = Date.now();
+    await pool.query(
+      `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
+       VALUES ($1,$2,'CLOSED',$3,$4,$5)`,
+      [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
+    );
+    return reply.send({ ok: true, alert_id, status: "CLOSED", acted_at });
+  });
+
+  // DEPRECATED: Use GET /api/v1/alerts instead.
+  app.get("/api/v1/alerts/events", async (req, reply) => { // Legacy list event route kept for compatibility.
+    reply.header("Deprecation", "true");
+    reply.header("Sunset", "Fri, 31 Jul 2026 00:00:00 GMT");
+    reply.header("Link", "</api/v1/alerts>; rel=\"successor-version\"");
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read");
+    if (!auth) return;
+    const query: any = (req.query as any) ?? {};
+    const status = normalizeProjectedAlertStatus(query.status);
+    const [operations, telemetry_health, action_overrides] = await Promise.all([
+      listOperationInputsForAlertProjection(pool, auth),
+      listTelemetryHealthInputsForAlertProjection(pool, auth),
+      listAlertActionOverrides(pool, auth),
+    ]);
+    let items = projectAlertListV1({
+      scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
+      operations,
+      telemetry_health,
+      action_overrides,
+      nowMs: Date.now(),
+    });
+    if (status) items = items.filter((item) => item.status === status);
+    if (isNonEmptyString(query.object_id)) items = items.filter((item) => String(item.object_id ?? "") === String(query.object_id).trim());
+    return reply.send({ ok: true, events: items });
+  });
   app.post("/api/v1/alerts/rules", async (req, reply) => { // Create an alert rule.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
     if (!auth) return; // Auth responded.
@@ -671,32 +997,6 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
     } // End tx.
   }); // End disable route.
 
-  app.get("/api/v1/alerts/events", async (req, reply) => { // List alert events for tenant.
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read"); // Require alerts.read.
-    if (!auth) return; // Auth responded.
-
-    const query: any = (req.query as any) ?? {}; // Read query object.
-    const statusFilter = normalizeEventStatus(query.status); // Optional status filter.
-    const objectTypeFilter = normalizeObjectType(query.object_type); // Optional object type filter.
-    const objectIdFilter = normalizeId(query.object_id); // Optional object id filter.
-    const ruleIdFilter = normalizeId(query.rule_id); // Optional rule id filter.
-
-    const q = await pool.query( // Query events.
-      `SELECT event_id, rule_id, object_type, object_id, metric, status, raised_ts_ms, acked_ts_ms, closed_ts_ms, last_value_json
-         FROM alert_event_index_v1
-        WHERE tenant_id = $1
-          AND ($2::text IS NULL OR status = $2)
-          AND ($3::text IS NULL OR object_type = $3)
-          AND ($4::text IS NULL OR object_id = $4)
-          AND ($5::text IS NULL OR rule_id = $5)
-        ORDER BY raised_ts_ms DESC
-        LIMIT 1000`,
-      [auth.tenant_id, statusFilter, objectTypeFilter, objectIdFilter, ruleIdFilter]
-    ); // End query.
-
-    return reply.send({ ok: true, events: q.rows }); // Return events.
-  }); // End GET events.
-
   app.get("/api/v1/alerts/notifications", async (req, reply) => { // List notification records for tenant.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read"); // Require alerts.read.
     if (!auth) return;
@@ -722,8 +1022,12 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
   }); // End GET notifications.
 
   app.post("/api/v1/alerts/events/:event_id/ack", async (req, reply) => { // Acknowledge an alert event.
+    reply.header("Deprecation", "true");
+    reply.header("Sunset", "Fri, 31 Jul 2026 00:00:00 GMT");
+    reply.header("Link", "</api/v1/alerts/:alert_id/ack>; rel=\"successor-version\"");
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
     if (!auth) return; // Auth responded.
+    if (!enforceAlertActionRoleOrDeny(auth, reply)) return;
 
     const event_id = normalizeId((req.params as any)?.event_id); // Parse event id.
     if (!event_id) return notFound(reply); // Invalid => 404.
@@ -770,8 +1074,12 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
   }); // End ACK.
 
   app.post("/api/v1/alerts/events/:event_id/close", async (req, reply) => { // Close an alert event.
+    reply.header("Deprecation", "true");
+    reply.header("Sunset", "Fri, 31 Jul 2026 00:00:00 GMT");
+    reply.header("Link", "</api/v1/alerts/:alert_id/resolve>; rel=\"successor-version\"");
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.write"); // Require alerts.write.
     if (!auth) return; // Auth responded.
+    if (!enforceAlertActionRoleOrDeny(auth, reply)) return;
 
     const event_id = normalizeId((req.params as any)?.event_id); // Parse event id.
     if (!event_id) return notFound(reply); // Invalid => 404.
@@ -894,4 +1202,3 @@ export function startOfflineAlertWorker(pool: Pool, opts?: Partial<OfflineWorker
   const handle = setInterval(() => { tick().catch(() => void 0); }, interval_ms); // Schedule tick; swallow errors.
   (handle as any).unref?.(); // Allow process to exit if this is the only active timer.
 } // End startOfflineAlertWorker.
-
