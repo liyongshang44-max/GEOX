@@ -17,6 +17,15 @@ export const AlertStatus = {
 
 export type AlertStatus = (typeof AlertStatus)[keyof typeof AlertStatus];
 
+export type AlertObjectType = "OPERATION" | "DEVICE" | "FIELD" | "SYSTEM";
+
+export type AlertSourceRefV1 = {
+  type: string;
+  id: string;
+  uri?: string;
+  ts_ms?: number;
+};
+
 export type AlertV1 = {
   type: "alert_v1";
   version: "v1";
@@ -24,10 +33,13 @@ export type AlertV1 = {
   category: string;
   severity: AlertSeverity;
   status: AlertStatus;
+  title: string;
+  message: string;
   recommended_action: string;
   reasons: string[];
+  source_refs: AlertSourceRefV1[];
   triggered_at: string;
-  object_type: "OPERATION" | "DEVICE" | "FIELD" | "SYSTEM";
+  object_type: AlertObjectType;
   object_id: string;
   tenant_id: string;
   project_id: string;
@@ -52,11 +64,20 @@ export function buildStableAlertId(input: {
   return `alert_${hash}`;
 }
 
-export function createAlertV1(input: Omit<AlertV1, "type" | "version" | "status" | "reasons" | "alert_id"> & {
+export function createAlertV1(input: Omit<AlertV1, "type" | "version" | "status" | "reasons" | "alert_id" | "title" | "message" | "source_refs"> & {
   status?: AlertStatus;
+  title?: string;
+  message?: string;
   reasons?: string[] | null;
+  source_refs?: AlertSourceRefV1[] | null;
   alert_id?: string;
 }): AlertV1 {
+  const normalizedReasons = Array.isArray(input.reasons)
+    ? input.reasons.filter((x) => typeof x === "string" && x.trim().length > 0)
+    : [];
+  const title = String(input.title ?? input.category ?? "ALERT").trim() || "ALERT";
+  const message = String(input.message ?? input.recommended_action ?? title).trim() || title;
+
   return {
     type: "alert_v1",
     version: "v1",
@@ -71,8 +92,13 @@ export function createAlertV1(input: Omit<AlertV1, "type" | "version" | "status"
     category: input.category,
     severity: input.severity,
     status: input.status ?? AlertStatus.OPEN,
+    title,
+    message,
     recommended_action: input.recommended_action,
-    reasons: Array.isArray(input.reasons) ? input.reasons.filter((x) => typeof x === "string" && x.trim().length > 0) : [],
+    reasons: normalizedReasons,
+    source_refs: Array.isArray(input.source_refs)
+      ? input.source_refs.filter((x) => x && typeof x.type === "string" && typeof x.id === "string")
+      : [],
     triggered_at: input.triggered_at,
     object_type: input.object_type,
     object_id: input.object_id,
