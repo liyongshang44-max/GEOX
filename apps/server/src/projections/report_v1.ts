@@ -1,3 +1,4 @@
+import { evaluateRisk } from "../domain/risk_engine";
 import type { OperationStateV1 } from "./operation_state_v1";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -246,14 +247,12 @@ export function projectOperationReportV1(input: {
   const pendingAcceptanceOver30m = pendingAcceptanceElapsedMs != null && pendingAcceptanceElapsedMs > 30 * 60 * 1000;
 
   const missingEvidence = acceptanceMissingFlag;
-  const riskReasons: string[] = [];
-  if (isInvalidExecution) riskReasons.push("INVALID_EXECUTION");
-  if (missingEvidence) riskReasons.push("MISSING_EVIDENCE");
-  if (pendingAcceptanceOver30m) riskReasons.push("PENDING_ACCEPTANCE_OVER_30M");
-
-  const riskLevel: OperationReportRiskLevel = riskReasons.includes("INVALID_EXECUTION") || riskReasons.includes("MISSING_EVIDENCE")
-    ? "HIGH"
-    : (riskReasons.includes("PENDING_ACCEPTANCE_OVER_30M") ? "MEDIUM" : "LOW");
+  const computedRisk = evaluateRisk({
+    final_status: finalStatus,
+    missing_evidence: missingEvidence,
+    pending_acceptance_elapsed_ms: pendingAcceptanceElapsedMs,
+    pending_acceptance_over_30m: pendingAcceptanceOver30m,
+  });
 
   return {
     type: "operation_report_v1",
@@ -318,8 +317,8 @@ export function projectOperationReportV1(input: {
       pending_acceptance_over_30m: pendingAcceptanceOver30m,
     },
     risk: {
-      level: riskLevel,
-      reasons: riskReasons,
+      level: computedRisk.level as OperationReportRiskLevel,
+      reasons: computedRisk.reasons,
     },
   };
 }

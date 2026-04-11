@@ -11,6 +11,7 @@ import {
 } from "../projections/manual_execution_quality_v1";
 import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
+import { evaluateRisk } from "../domain/risk_engine";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -1056,27 +1057,36 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
       ).catch(() => ({ rows: [] })),
     ]);
 
-    const highItems: DashboardRiskSummaryItem[] = (highQ.rows ?? []).map((row: any, idx: number) => ({
-      id: `high_${String(row.id ?? idx)}`,
-      field_id: typeof row.field_id === "string" ? row.field_id : null,
-      title: "执行任务缺少回执",
-      level: "HIGH",
-      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
-    }));
-    const mediumItems: DashboardRiskSummaryItem[] = (mediumQ.rows ?? []).map((row: any, idx: number) => ({
-      id: `medium_${String(row.id ?? idx)}`,
-      field_id: typeof row.field_id === "string" ? row.field_id : null,
-      title: "执行任务超时",
-      level: "MEDIUM",
-      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
-    }));
-    const lowItems: DashboardRiskSummaryItem[] = (lowQ.rows ?? []).map((row: any, idx: number) => ({
-      id: `low_${String(row.id ?? idx)}`,
-      field_id: typeof row.field_id === "string" ? row.field_id : null,
-      title: String(row.metric ?? row.status ?? "弱告警"),
-      level: "LOW",
-      occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
-    }));
+    const highItems: DashboardRiskSummaryItem[] = (highQ.rows ?? []).map((row: any, idx: number) => {
+      const risk = evaluateRisk({ missing_evidence: true });
+      return {
+        id: `high_${String(row.id ?? idx)}`,
+        field_id: typeof row.field_id === "string" ? row.field_id : null,
+        title: "执行任务缺少回执",
+        level: risk.level,
+        occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+      };
+    });
+    const mediumItems: DashboardRiskSummaryItem[] = (mediumQ.rows ?? []).map((row: any, idx: number) => {
+      const risk = evaluateRisk({ final_status: "PENDING_ACCEPTANCE", pending_acceptance_elapsed_ms: overdueMs + 1 });
+      return {
+        id: `medium_${String(row.id ?? idx)}`,
+        field_id: typeof row.field_id === "string" ? row.field_id : null,
+        title: "执行任务超时",
+        level: risk.level,
+        occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+      };
+    });
+    const lowItems: DashboardRiskSummaryItem[] = (lowQ.rows ?? []).map((row: any, idx: number) => {
+      const risk = evaluateRisk({ final_status: "SUCCESS", missing_evidence: false });
+      return {
+        id: `low_${String(row.id ?? idx)}`,
+        field_id: typeof row.field_id === "string" ? row.field_id : null,
+        title: String(row.metric ?? row.status ?? "弱告警"),
+        level: risk.level,
+        occurred_at: row.occurred_at ? new Date(String(row.occurred_at)).toISOString() : null,
+      };
+    });
 
     const items = [...highItems, ...mediumItems, ...lowItems].slice(0, limit);
     return reply.send({ ok: true, items });
