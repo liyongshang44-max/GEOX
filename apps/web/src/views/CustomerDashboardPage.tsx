@@ -1,25 +1,43 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { fetchCustomerDashboardAggregate } from "../api/reports";
-import { buildCustomerDashboardViewModel, type CustomerDashboardViewModel } from "../viewmodels/customerDashboardViewModel";
+import { fetchCustomerDashboardAggregate, mapReportCode, type CustomerDashboardAggregateV1 } from "../api/reports";
 import { PageHeader, SectionCard } from "../shared/ui";
+
+const numberFmt = new Intl.NumberFormat("zh-CN");
+const currencyFmt = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 2 });
+
+function formatDateTime(v: string | null | undefined): string {
+  if (!v) return "时间未知";
+  const ms = Date.parse(v);
+  if (!Number.isFinite(ms)) return "时间未知";
+  return new Date(ms).toLocaleString("zh-CN", { hour12: false });
+}
+
+function formatDuration(v: number | null | undefined): string {
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return "耗时未知";
+  const minutes = Math.round(v / 60000);
+  if (minutes < 1) return "不足 1 分钟";
+  return `${numberFmt.format(minutes)} 分钟`;
+}
 
 export default function CustomerDashboardPage(): React.ReactElement {
   const location = useLocation();
-  const [vm, setVm] = React.useState<CustomerDashboardViewModel | null>(null);
+  const [aggregate, setAggregate] = React.useState<CustomerDashboardAggregateV1 | null>(null);
   const [error, setError] = React.useState<string>("");
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const fieldId = params.get("field_id") || "";
+    const fieldIds = params.getAll("field_id").map((x) => String(x ?? "").trim()).filter(Boolean);
+    const timeRangeRaw = String(params.get("time_range") ?? "").trim();
+    const timeRange = timeRangeRaw === "7d" || timeRangeRaw === "30d" || timeRangeRaw === "season" ? timeRangeRaw : undefined;
 
-    void fetchCustomerDashboardAggregate({ fieldId, limit: 5 })
-      .then((aggregate) => {
-        setVm(buildCustomerDashboardViewModel(aggregate));
+    void fetchCustomerDashboardAggregate({ fieldIds, timeRange })
+      .then((next) => {
+        setAggregate(next);
         setError("");
       })
       .catch(() => {
-        setVm(null);
+        setAggregate(null);
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
   }, [location.search]);
@@ -33,41 +51,41 @@ export default function CustomerDashboardPage(): React.ReactElement {
         actions={<Link className="btn" to="/dashboard">切换平台控制台</Link>}
       />
 
-      <SectionCard title={vm?.result.title || "结果（完成/未完成）"}>
-        <div>{vm?.result.summary || "本周期暂无结果数据"}</div>
-        <div className="muted">{vm?.result.detail || ""}</div>
+      <SectionCard title="地块状态">
+        <div>
+          共 {numberFmt.format(aggregate?.fields.total ?? 0)} 个地块，健康 {numberFmt.format(aggregate?.fields.healthy ?? 0)} 个，风险 {numberFmt.format(aggregate?.fields.at_risk ?? 0)} 个
+        </div>
+        <div className="muted">统计口径以聚合接口返回为准。</div>
+      </SectionCard>
+
+      <SectionCard title="最近执行">
+        <div>最近 {numberFmt.format(aggregate?.recent_operations.length ?? 0)} 条作业记录</div>
         <div className="list" style={{ marginTop: 8 }}>
-          {(vm?.result.recent || []).map((item, idx) => (
-            <div key={`${item.title}-${idx}`} className="item">
-              {item.title} · {item.statusText} · {item.whenText}
+          {(aggregate?.recent_operations || []).map((item, idx) => (
+            <div key={`${item.operation_id}-${idx}`} className="item">
+              计划 {item.operation_plan_id} · 作业 {item.operation_id} · 风险 {mapReportCode(item.risk_level).label} · {formatDateTime(item.executed_at)} · 预计成本 {currencyFmt.format(item.estimated_total_cost)} · {formatDuration(item.execution_duration_ms)}
             </div>
           ))}
-          {!vm?.result.recent?.length ? <div className="muted">暂无最近执行记录</div> : null}
+          {!aggregate?.recent_operations?.length ? <div className="muted">暂无最近执行记录</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title={vm?.riskImpact.title || "风险影响"}>
-        <div>{vm?.riskImpact.summary || "暂无风险数据"}</div>
-        <div className="muted">{vm?.riskImpact.detail || ""}</div>
+      <SectionCard title="风险告警">
+        <div>当前风险等级：{mapReportCode(aggregate?.risk_summary.level ?? "").label}</div>
         <div className="list" style={{ marginTop: 8 }}>
-          {(vm?.riskImpact.signals || []).map((signal, idx) => (
+          {(aggregate?.risk_summary.top_reasons || []).map((signal, idx) => (
             <div key={`${signal}-${idx}`} className="item">{signal}</div>
           ))}
+          {!aggregate?.risk_summary.top_reasons?.length ? <div className="muted">暂无风险原因</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title={vm?.costTrend.title || "成本趋势"}>
-        <div>{vm?.costTrend.summary || "暂无成本数据"}</div>
-        <div className="muted">{vm?.costTrend.detail || ""}</div>
-      </SectionCard>
-
-      <SectionCard title={vm?.actionAdvice.title || "本周期行动建议"}>
-        <div>{vm?.actionAdvice.summary || "暂无行动建议"}</div>
-        <div className="list" style={{ marginTop: 8 }}>
-          {(vm?.actionAdvice.items || []).map((item, idx) => (
-            <div key={`${item}-${idx}`} className="item">{idx + 1}. {item}</div>
-          ))}
+      <SectionCard title="本周期目标">
+        <div>
+          本周期累计执行 {numberFmt.format(aggregate?.period_summary.total_operations ?? 0)} 次，累计成本 {currencyFmt.format(aggregate?.period_summary.total_cost ?? 0)}，
+          平均 SLA {formatDuration(aggregate?.period_summary.avg_sla_ms)}
         </div>
+        <div className="muted">后端暂未返回目标文案时，先展示聚合摘要。</div>
       </SectionCard>
 
       {error ? <div className="muted" style={{ marginTop: 12 }}>{error}</div> : null}
