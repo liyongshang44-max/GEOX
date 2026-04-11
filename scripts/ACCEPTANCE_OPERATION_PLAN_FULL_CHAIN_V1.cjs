@@ -3,6 +3,7 @@
 
 const assert = require("node:assert/strict");
 const process = require("node:process");
+const { evaluateChainSmokeExitCode } = require("./acceptance/pending_acceptance_smoke_policy.cjs");
 
 function mustEnv(name) {
   const v = String(process.env[name] ?? "").trim();
@@ -108,7 +109,7 @@ async function waitForTerminalPlanStatus(baseUrl, operation_plan_id, tenant_id, 
     );
     last = plan;
     const status = String(plan.json?.item?.plan?.record_json?.payload?.status ?? "");
-    if (status === "SUCCEEDED" || status === "FAILED") {
+    if (evaluateChainSmokeExitCode(status) === 0) {
       return { plan, status };
     }
     await sleep(pollMs);
@@ -205,7 +206,7 @@ async function main() {
   assert.ok(item.approval, "APPROVAL_MISSING");
   assert.ok(item.task, "TASK_MISSING");
   assert.ok(item.receipt, "RECEIPT_MISSING");
-  assert.ok(status === "SUCCEEDED" || status === "FAILED", `FINAL_STATUS_INVALID:${status}`);
+  assert.equal(evaluateChainSmokeExitCode(status), 0, `FINAL_STATUS_INVALID:${status}`);
 
   console.log(JSON.stringify({
     ok: true,
