@@ -95,19 +95,37 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         AlertV1: {
           type: "object",
-          required: ["alert_id", "status", "severity", "title", "triggered_at_ts_ms"],
+          required: [
+            "type",
+            "version",
+            "alert_id",
+            "category",
+            "severity",
+            "status",
+            "recommended_action",
+            "reasons",
+            "triggered_at",
+            "object_type",
+            "object_id",
+            "tenant_id",
+            "project_id",
+            "group_id"
+          ],
           properties: {
+            type: { type: "string", enum: ["alert_v1"] },
+            version: { type: "string", enum: ["v1"] },
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
+            category: { type: "string" },
             severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
-            title: { type: "string" },
-            message: { type: "string" },
-            rule_id: { type: "string" },
-            field_id: { type: "string" },
-            device_id: { type: "string" },
-            triggered_at_ts_ms: { type: "integer", format: "int64" },
-            acked_at_ts_ms: { type: "integer", format: "int64", nullable: true },
-            resolved_at_ts_ms: { type: "integer", format: "int64", nullable: true }
+            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
+            recommended_action: { type: "string" },
+            reasons: { type: "array", items: { type: "string" } },
+            triggered_at: { type: "string", format: "date-time", description: "ISO-8601 timestamp string." },
+            object_type: { type: "string", enum: ["OPERATION", "DEVICE", "FIELD", "SYSTEM"] },
+            object_id: { type: "string" },
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" }
           }
         },
         AlertListResponseV1: {
@@ -123,29 +141,45 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         AlertSummaryResponseV1: {
           type: "object",
-          required: ["ok", "total", "open", "acked", "resolved"],
+          required: ["ok", "total", "by_severity", "by_status", "by_category"],
           properties: {
             ok: { type: "boolean" },
             total: { type: "integer" },
-            open: { type: "integer" },
-            acked: { type: "integer" },
-            resolved: { type: "integer" }
+            by_severity: { type: "object", additionalProperties: { type: "integer" } },
+            by_status: { type: "object", additionalProperties: { type: "integer" } },
+            by_category: { type: "object", additionalProperties: { type: "integer" } }
           }
         },
-        AlertActionRequest: {
+        AlertAckRequestV1: {
           type: "object",
           properties: {
-            note: { type: "string", description: "Optional operator note for ack/resolve action." }
+            note: { type: "string", description: "Optional operator note for ack action." }
           }
         },
-        AlertActionResponse: {
+        AlertResolveRequestV1: {
           type: "object",
-          required: ["ok", "alert_id", "status"],
+          properties: {
+            note: { type: "string", description: "Optional operator note for resolve action." }
+          }
+        },
+        AlertAckResponseV1: {
+          type: "object",
+          required: ["ok", "alert_id", "status", "acted_at"],
           properties: {
             ok: { type: "boolean" },
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
-            note: { type: "string" }
+            status: { type: "string", enum: ["ACKED"] },
+            acted_at: { type: "integer", format: "int64" }
+          }
+        },
+        AlertResolveResponseV1: {
+          type: "object",
+          required: ["ok", "alert_id", "status", "acted_at"],
+          properties: {
+            ok: { type: "boolean" },
+            alert_id: { type: "string" },
+            status: { type: "string", enum: ["CLOSED"] },
+            acted_at: { type: "integer", format: "int64" }
           }
         },
         DeviceSimulatorStartRequest: {
@@ -925,8 +959,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           requestBody: {
             required: false,
             content: {
-              "application/json": {
-                schema: { '$ref': "#/components/schemas/AlertActionRequest" }
+                "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertAckRequestV1" }
               }
             }
           },
@@ -935,7 +969,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               description: "Alert acknowledged successfully",
               content: {
                 "application/json": {
-                  schema: { '$ref': "#/components/schemas/AlertActionResponse" }
+                  schema: { '$ref': "#/components/schemas/AlertAckResponseV1" }
                 }
               }
             }
@@ -952,8 +986,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           requestBody: {
             required: false,
             content: {
-              "application/json": {
-                schema: { '$ref': "#/components/schemas/AlertActionRequest" }
+                "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertResolveRequestV1" }
               }
             }
           },
@@ -962,10 +996,36 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               description: "Alert resolved successfully",
               content: {
                 "application/json": {
-                  schema: { '$ref': "#/components/schemas/AlertActionResponse" }
+                  schema: { '$ref': "#/components/schemas/AlertResolveResponseV1" }
                 }
               }
             }
+          }
+        }
+      },
+      "/api/v1/alerts/events/{event_id}/ack": {
+        post: {
+          tags: ["alerts"],
+          summary: "Acknowledge a legacy alert event",
+          deprecated: true,
+          parameters: [
+            { name: "event_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Legacy endpoint acknowledged alert event" }
+          }
+        }
+      },
+      "/api/v1/alerts/events/{event_id}/close": {
+        post: {
+          tags: ["alerts"],
+          summary: "Close a legacy alert event",
+          deprecated: true,
+          parameters: [
+            { name: "event_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": { description: "Legacy endpoint closed alert event" }
           }
         }
       },
