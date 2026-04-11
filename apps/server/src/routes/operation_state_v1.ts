@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
@@ -1157,6 +1158,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
 
     let items = await projectOperationStateV1(pool, tenant);
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
+    items = items.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
     if (q.device_id) items = items.filter((x) => x.device_id === String(q.device_id));
     if (q.final_status) items = items.filter((x) => x.final_status === String(q.final_status));
     const mappedItems = items.slice(0, limit).map((op: any) => {
@@ -1205,6 +1207,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const items = await projectOperationStateV1(pool, tenant);
     const item = items.find((x) => x.operation_id === operation_id);
     if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, item.field_id, reply, { asNotFound: true })) return;
     return reply.send({ ok: true, item });
   });
 
@@ -1219,6 +1222,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const states = await projectOperationStateV1(pool, tenant);
     const state = states.find((x) => x.operation_id === operationId || x.operation_plan_id === operationId);
     if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, state.field_id, reply, { asNotFound: true })) return;
     const operationPlanId = String(state.operation_plan_id ?? state.operation_id ?? operationId);
     const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
     const latestByType = (type: string) => [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === type) ?? null;
@@ -1356,6 +1360,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const states = await projectOperationStateV1(pool, tenant);
     const state = states.find((x) => x.operation_id === operationPlanId || x.operation_plan_id === operationPlanId);
     if (!state) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, state.field_id, reply, { asNotFound: true })) return;
     const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
     const latestByType = (type: string) => [...facts].reverse().find((x) => String(x.record_json?.type ?? "") === type) ?? null;
     const rec = latestByType("decision_recommendation_v1");

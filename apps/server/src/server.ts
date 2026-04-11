@@ -60,6 +60,7 @@ import { registerSkillRulesV1Routes } from "./routes/skills_rules_v1"; // Stage 
 import { registerSkillsV1Routes } from "./routes/skills_v1"; // Stage 10: skill registry/bindings/runs APIs.
 import { registerSkillRunsV1Routes } from "./routes/skill_runs_v1"; // Stage 10+: taskbook-normalized skill run read API.
 import { registerReportsV1Routes } from "./routes/reports_v1"; // Operation report projection APIs (operation/field).
+import { enforceRouteRoleAuth } from "./auth/route_role_authz";
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -251,6 +252,21 @@ const API_CONTRACT_HEADERS = [
 ] as const; // 合约协商请求头（version 必需；required 用于强约束协商）。
 
 const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 }); // 初始化服务（限制 body）
+
+app.addHook("preHandler", async (req, reply) => {
+  const pathname = String((req.raw.url ?? "").split("?")[0] ?? "");
+  const resource = pathname.startsWith("/api/v1/reports/")
+    ? "reports"
+    : pathname.startsWith("/api/v1/operations/") || pathname === "/api/v1/operations"
+      ? "operations"
+      : pathname.startsWith("/api/v1/dashboard/")
+        ? "dashboard"
+        : null;
+  if (!resource) return;
+  const auth = enforceRouteRoleAuth(req, reply, resource, { asNotFound: resource !== "dashboard" });
+  if (!auth) return reply;
+  (req as any).auth = auth;
+});
 
 if (!GEOX_DISABLE_APPLE_II) { // 允许在非商用 profile 下显式启用 Apple II（默认）
   // Lazy-require: 避免在 Apple II 禁用时触发 better-sqlite3 native bindings 加载（Windows/Node ABI 兼容风险）。

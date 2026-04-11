@@ -4,6 +4,7 @@ import fs from "node:fs"; // Read token SSOT file for per-request authorization 
 import path from "node:path"; // Resolve repo-relative config file paths deterministically.
 import { fileURLToPath } from "node:url"; // Resolve ESM module path to filesystem path (stable repo root derivation).
 import type { FastifyReply, FastifyRequest } from "fastify"; // Fastify request/reply types.
+import type { AuthRole } from "../domain/auth/roles";
 
 export type AoActScopeV0 =
   | "ao_act.task.write"
@@ -23,7 +24,7 @@ export type AoActScopeV0 =
   | "evidence_export.read"
   | "evidence_export.write";
 
-export type AoActRoleV0 = "admin" | "operator";
+export type AoActRoleV0 = AuthRole | "executor";
 
 type TokenRecordV0 = {
   token: string; // Bearer token secret string used in Authorization header.
@@ -35,6 +36,7 @@ type TokenRecordV0 = {
   scopes: AoActScopeV0[]; // Allowed scopes for this token.
   revoked: boolean; // Revocation flag (true => deny immediately).
   role?: AoActRoleV0; // Optional role field for minimal Commercial v1 UI/authz.
+  allowed_field_ids?: string[]; // Optional field scope allowlist (client/read isolation).
 };
 
 type TokenFileV0 = {
@@ -50,6 +52,7 @@ export type AoActAuthContextV0 = {
   group_id: string;
   role: AoActRoleV0;
   scopes: AoActScopeV0[];
+  allowed_field_ids: string[];
 };
 
 function repoRootFromModule(): string {
@@ -83,7 +86,8 @@ function parseBearerToken(req: FastifyRequest): string | null {
 
 
 function roleFromRecord(rec: TokenRecordV0): AoActRoleV0 {
-  return rec.role === "operator" ? "operator" : "admin";
+  if (rec.role === "operator" || rec.role === "viewer" || rec.role === "client" || rec.role === "executor") return rec.role;
+  return "admin";
 }
 
 function authContextFromRecord(rec: TokenRecordV0): AoActAuthContextV0 {
@@ -94,7 +98,10 @@ function authContextFromRecord(rec: TokenRecordV0): AoActAuthContextV0 {
     project_id: rec.project_id,
     group_id: rec.group_id,
     role: roleFromRecord(rec),
-    scopes: Array.isArray(rec.scopes) ? rec.scopes.slice() : []
+    scopes: Array.isArray(rec.scopes) ? rec.scopes.slice() : [],
+    allowed_field_ids: Array.isArray(rec.allowed_field_ids)
+      ? rec.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)
+      : []
   };
 }
 
