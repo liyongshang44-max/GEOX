@@ -248,13 +248,16 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             },
             cost: {
               type: "object",
-              required: ["total", "water", "electric", "chemical", "currency"],
+              required: ["estimated_total"],
               properties: {
-                total: { type: "number" },
-                water: { type: "number" },
-                electric: { type: "number" },
-                chemical: { type: "number" },
-                currency: { type: "string", enum: ["CNY"] }
+                estimated_total: { type: "number" },
+                actual_total: { type: "number" },
+                actual_water_cost: { type: "number" },
+                actual_electric_cost: { type: "number" },
+                actual_chemical_cost: { type: "number" },
+                estimated_water_cost: { type: "number" },
+                estimated_electric_cost: { type: "number" },
+                estimated_chemical_cost: { type: "number" }
               }
             },
             sla: {

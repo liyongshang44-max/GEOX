@@ -42,21 +42,14 @@ export type OperationReportV1 = {
     acceptance_present: boolean;
   };
   cost: {
-    actual_total: number;
-    actual_water_cost: number;
-    actual_electric_cost: number;
-    actual_chemical_cost: number;
     estimated_total: number;
-    estimated_water_cost: number;
-    estimated_chemical_cost: number;
-    estimated_device_cost: number;
-    estimated_labor_cost: number;
-    action_type: "IRRIGATE" | "FERTILIZE";
-    action_resolution: "DIRECT" | "ALIAS" | "UNKNOWN_FALLBACK";
-    cost_quality: "ESTIMATED_WITH_ACTUAL" | "ESTIMATED_ONLY";
-    cost_notes: string[];
-    requested_action_type: string | null;
-    currency: "CNY";
+    actual_total?: number;
+    actual_water_cost?: number;
+    actual_electric_cost?: number;
+    actual_chemical_cost?: number;
+    estimated_water_cost?: number;
+    estimated_electric_cost?: number;
+    estimated_chemical_cost?: number;
   };
   sla: {
     dispatch_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
@@ -262,20 +255,14 @@ export function projectOperationReportV1(input: {
   acceptance: AcceptanceInput;
   receipt: ReceiptInput;
   cost: {
+    estimated_total?: unknown;
     actual_total?: unknown;
     actual_water_cost?: unknown;
     actual_electric_cost?: unknown;
     actual_chemical_cost?: unknown;
-    estimated_total?: unknown;
     estimated_water_cost?: unknown;
+    estimated_electric_cost?: unknown;
     estimated_chemical_cost?: unknown;
-    estimated_device_cost?: unknown;
-    estimated_labor_cost?: unknown;
-    action_type?: unknown;
-    action_resolution?: unknown;
-    cost_quality?: unknown;
-    cost_notes?: unknown;
-    requested_action_type?: unknown;
   };
   sla: { execution_success?: boolean; acceptance_pass?: boolean; response_time_ms?: number | null };
   now?: Date;
@@ -356,25 +343,28 @@ export function projectOperationReportV1(input: {
       acceptance_present: Boolean(input.acceptance),
     },
     cost: {
-      actual_total: toFiniteNumber(input.cost.actual_total),
-      actual_water_cost: toFiniteNumber(input.cost.actual_water_cost),
-      actual_electric_cost: toFiniteNumber(input.cost.actual_electric_cost),
-      actual_chemical_cost: toFiniteNumber(input.cost.actual_chemical_cost),
       estimated_total: toFiniteNumber(input.cost.estimated_total),
-      estimated_water_cost: toFiniteNumber(input.cost.estimated_water_cost),
-      estimated_chemical_cost: toFiniteNumber(input.cost.estimated_chemical_cost),
-      estimated_device_cost: toFiniteNumber(input.cost.estimated_device_cost),
-      estimated_labor_cost: toFiniteNumber(input.cost.estimated_labor_cost),
-      action_type: toText(input.cost.action_type) === "FERTILIZE" ? "FERTILIZE" : "IRRIGATE",
-      action_resolution: toText(input.cost.action_resolution) === "ALIAS"
-        ? "ALIAS"
-        : toText(input.cost.action_resolution) === "UNKNOWN_FALLBACK"
-          ? "UNKNOWN_FALLBACK"
-          : "DIRECT",
-      cost_quality: toText(input.cost.cost_quality) === "ESTIMATED_WITH_ACTUAL" ? "ESTIMATED_WITH_ACTUAL" : "ESTIMATED_ONLY",
-      cost_notes: Array.isArray(input.cost.cost_notes) ? input.cost.cost_notes.map((x) => String(x)).filter(Boolean) : [],
-      requested_action_type: toText(input.cost.requested_action_type),
-      currency: "CNY",
+      ...(typeof input.cost.actual_total === "number" && Number.isFinite(input.cost.actual_total)
+        ? { actual_total: input.cost.actual_total }
+        : {}),
+      ...(typeof input.cost.actual_water_cost === "number" && Number.isFinite(input.cost.actual_water_cost)
+        ? { actual_water_cost: input.cost.actual_water_cost }
+        : {}),
+      ...(typeof input.cost.actual_electric_cost === "number" && Number.isFinite(input.cost.actual_electric_cost)
+        ? { actual_electric_cost: input.cost.actual_electric_cost }
+        : {}),
+      ...(typeof input.cost.actual_chemical_cost === "number" && Number.isFinite(input.cost.actual_chemical_cost)
+        ? { actual_chemical_cost: input.cost.actual_chemical_cost }
+        : {}),
+      ...(typeof input.cost.estimated_water_cost === "number" && Number.isFinite(input.cost.estimated_water_cost)
+        ? { estimated_water_cost: input.cost.estimated_water_cost }
+        : {}),
+      ...(typeof input.cost.estimated_electric_cost === "number" && Number.isFinite(input.cost.estimated_electric_cost)
+        ? { estimated_electric_cost: input.cost.estimated_electric_cost }
+        : {}),
+      ...(typeof input.cost.estimated_chemical_cost === "number" && Number.isFinite(input.cost.estimated_chemical_cost)
+        ? { estimated_chemical_cost: input.cost.estimated_chemical_cost }
+        : {}),
     },
     sla: {
       dispatch_latency_quality: computedSlaMetrics.dispatch_latency_quality,

@@ -14,8 +14,7 @@ export type OperationCostV1 = {
   estimated_total: number;
   estimated_water_cost: number;
   estimated_chemical_cost: number;
-  estimated_device_cost: number;
-  estimated_labor_cost: number;
+  estimated_electric_cost: number;
   currency: "CNY";
 };
 
@@ -102,8 +101,7 @@ export function computeOperationCostV1(actionType: unknown, usage: OperationUsag
       estimated_total: round2(chemical + labor),
       estimated_water_cost: 0,
       estimated_chemical_cost: round2(chemical),
-      estimated_device_cost: 0,
-      estimated_labor_cost: round2(labor),
+      estimated_electric_cost: round2(labor),
       currency: "CNY",
     };
   }
@@ -118,8 +116,7 @@ export function computeOperationCostV1(actionType: unknown, usage: OperationUsag
     estimated_total: round2(water + device),
     estimated_water_cost: round2(water),
     estimated_chemical_cost: 0,
-    estimated_device_cost: round2(device),
-    estimated_labor_cost: 0,
+    estimated_electric_cost: round2(device),
     currency: "CNY",
   };
 }
