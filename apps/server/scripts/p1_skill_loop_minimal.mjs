@@ -385,40 +385,9 @@ function resolveSuccessFinalStatus(status) {
   return null;
 }
 
-function isSuccessMapped(status) {
-  return resolveSuccessFinalStatus(status) !== null;
-}
-
-function successStatusExpectationText() {
-  return "PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID";
-}
-
-function summarizeAcceptance(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  return {
-    status: raw.status ?? null,
-    verdict: raw.verdict ?? null,
-    expected_requirements_count: Array.isArray(raw.expected_requirements) ? raw.expected_requirements.length : null,
-    provided_kinds_count: Array.isArray(raw.provided_kinds) ? raw.provided_kinds.length : null,
-    missing_requirements_count: Array.isArray(raw.missing_requirements) ? raw.missing_requirements.length : null,
-  };
-}
-
-function buildMinimalDiagnostics({ successReceipt, successFinalState, invalidReceipt, invalidFinalState }) {
-  return {
-    success: {
-      receipt_status: successReceipt?.status ?? null,
-      final_status: successFinalState?.finalStatus ?? null,
-      invalid_reason: successFinalState?.item?.invalid_reason ?? null,
-      acceptance: summarizeAcceptance(successReceipt?.acceptance),
-    },
-    invalid: {
-      receipt_status: invalidReceipt?.status ?? null,
-      final_status: invalidFinalState?.finalStatus ?? null,
-      invalid_reason: invalidFinalState?.item?.invalid_reason ?? null,
-      acceptance: summarizeAcceptance(invalidReceipt?.acceptance),
-    },
-  };
+function resolveSuccessFinalStatus(status) {
+  const s = String(status ?? "").toUpperCase();
+  return isSuccessMapped(s) ? s : null;
 }
 
 function sanitizeParametersForSmoke(actionType, raw) {
@@ -434,6 +403,11 @@ function buildMinimalDiagnostics(input) {
   return {
     base_url: BASE_URL,
     tenant,
+    operation_plan_id: input?.operation_plan_id ?? null,
+    receipt_status: input?.receipt_status ?? null,
+    final_status: input?.final_status ?? null,
+    invalid_reason: input?.invalid_reason ?? null,
+    acceptance_summary: input?.acceptance_summary ?? null,
     smoke_bindings: {
       success: SMOKE_SUCCESS_BIND_TARGET,
       failure: SMOKE_FAILURE_BIND_TARGET,
@@ -463,6 +437,8 @@ async function main() {
   let successOp = null;
   let successFinal = "FAILED";
   let successAttempts = 0;
+  let successReceiptLast = null;
+  let successFinalStateLast = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     successAttempts = attempt;
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
@@ -508,7 +484,7 @@ async function main() {
       );
     }
     console.log("[p1-smoke][success][submitReceipt]", { attempt, ...successReceipt });
-    const successFinalState = await waitForSmokeFinalState(successOp.operationPlanId);
+    const successFinalState = await waitForAcceptanceResolution(successOp.operationPlanId);
     successFinalStateLast = successFinalState;
     successFinal = successFinalState.finalStatus;
     const successReportRefs = Array.isArray(successFinalState?.item?.report_json?.evidence_refs)
@@ -535,20 +511,23 @@ async function main() {
   const invalidTask = await waitForTask(invalidOp.operationPlanId);
   const invalidTaskId = invalidTask.taskId;
   await setDispatchState(invalidTaskId, "ACKED");
-  const invalidReceipt = await submitReceipt(
-    invalidOp.operationPlanId,
-    invalidTaskId,
-    ["sim_trace"],
-    SMOKE_FAILURE_BIND_TARGET,
-  );
+  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, ["sim_trace"], SMOKE_FAILURE_BIND_TARGET);
   const invalidFinalState = await waitForFinalState(invalidOp.operationPlanId);
   const invalidFinal = invalidFinalState.finalStatus;
 
   const statuses = [successFinal, invalidFinal];
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
   const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
-  const successMappedHit = successMappedBy(successFinal);
+  const successMappedHit = resolveSuccessFinalStatus(successFinal);
   const failureDiagnostics = buildMinimalDiagnostics({
+    operation_plan_id: successOp?.operationPlanId,
+    receipt_status: successReceiptLast?.status ?? successReceiptLast?.acceptance?.status ?? null,
+    final_status: successFinal,
+    invalid_reason: invalidFinalState?.item?.invalid_reason ?? invalidFinalState?.item?.acceptance?.invalid_reason ?? null,
+    acceptance_summary:
+      successFinalStateLast?.item?.acceptance?.summary
+      ?? successFinalStateLast?.item?.report_json?.summary
+      ?? null,
     success_operation_plan_id: successOp?.operationPlanId,
     success_final_status: successFinal,
     success_mapped_by: successMappedHit,
