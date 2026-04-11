@@ -150,6 +150,63 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             closed: { type: "integer" }
           }
         },
+        FieldPortfolioItemV1: {
+          type: "object",
+          required: ["field_id", "name", "risk_level", "has_open_alerts", "tags"],
+          properties: {
+            field_id: { type: "string" },
+            name: { type: "string" },
+            area_ha: { type: "number", nullable: true },
+            crop_code: { type: "string", nullable: true },
+            risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+            has_open_alerts: { type: "boolean" },
+            tags: { type: "array", items: { type: "string" } },
+            updated_at: { type: "string", format: "date-time", nullable: true }
+          }
+        },
+        FieldPortfolioListResponseV1: {
+          type: "object",
+          required: ["ok", "items", "page", "page_size", "total"],
+          properties: {
+            ok: { type: "boolean" },
+            page: { type: "integer", minimum: 1 },
+            page_size: { type: "integer", minimum: 1, maximum: 200 },
+            total: { type: "integer", minimum: 0 },
+            items: {
+              type: "array",
+              items: { '$ref': "#/components/schemas/FieldPortfolioItemV1" }
+            }
+          }
+        },
+        FieldPortfolioSummaryResponseV1: {
+          type: "object",
+          required: ["ok", "total_fields", "risk_summary", "with_open_alerts"],
+          properties: {
+            ok: { type: "boolean" },
+            total_fields: { type: "integer", minimum: 0 },
+            with_open_alerts: { type: "integer", minimum: 0 },
+            risk_summary: {
+              type: "object",
+              required: ["low", "medium", "high"],
+              properties: {
+                low: { type: "integer", minimum: 0 },
+                medium: { type: "integer", minimum: 0 },
+                high: { type: "integer", minimum: 0 }
+              }
+            }
+          }
+        },
+        FieldTagsResponseV1: {
+          type: "object",
+          required: ["ok", "field_id", "tags"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            tags: { type: "array", items: { type: "string" } },
+            action: { type: "string", enum: ["add", "remove"], nullable: true },
+            tag: { type: "string", nullable: true }
+          }
+        },
         AlertAckRequestV1: {
           type: "object",
           properties: {
@@ -819,6 +876,52 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/fields/portfolio": {
+        get: {
+          tags: ["fields"],
+          summary: "Read field portfolio list",
+          parameters: [
+            { name: "tags[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } }, style: "form", explode: true },
+            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } }, style: "form", explode: true },
+            { name: "has_open_alerts", in: "query", required: false, schema: { type: "boolean" } },
+            { name: "sort_by", in: "query", required: false, schema: { type: "string", enum: ["updated_at", "name", "risk_level"] } },
+            { name: "sort_order", in: "query", required: false, schema: { type: "string", enum: ["asc", "desc"] } },
+            { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
+            { name: "page_size", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 20 } }
+          ],
+          responses: {
+            "200": {
+              description: "Field portfolio list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldPortfolioListResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/portfolio/summary": {
+        get: {
+          tags: ["fields"],
+          summary: "Read field portfolio summary",
+          parameters: [
+            { name: "tags[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } }, style: "form", explode: true },
+            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } }, style: "form", explode: true },
+            { name: "has_open_alerts", in: "query", required: false, schema: { type: "boolean" } }
+          ],
+          responses: {
+            "200": {
+              description: "Field portfolio summary returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldPortfolioSummaryResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
       "/api/v1/fields/{field_id}": {
         put: {
           tags: ["fields"],
@@ -855,6 +958,76 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           ],
           responses: {
             "200": { description: "Field detail returned successfully" }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/tags": {
+        get: {
+          tags: ["fields"],
+          summary: "Read field tags",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Field tags returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldTagsResponseV1" }
+                }
+              }
+            }
+          }
+        },
+        post: {
+          tags: ["fields"],
+          summary: "Add field tag",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["tag"],
+                  properties: {
+                    tag: { type: "string" }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Field tag operation completed successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldTagsResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/tags/{tag}": {
+        delete: {
+          tags: ["fields"],
+          summary: "Delete field tag",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tag", in: "path", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Field tag deleted successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldTagsResponseV1" }
+                }
+              }
+            }
           }
         }
       },
