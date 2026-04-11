@@ -51,6 +51,7 @@ import { registerDecisionEngineV1Routes } from "./routes/decision_engine_v1"; //
 import { registerOperationStateV1Routes } from "./routes/operation_state_v1"; // Sprint B: unified operation state routes.
 import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // Sprint C: field timeline/replay route.
 import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
+import { registerFieldPortfolioV1Routes } from "./routes/field_portfolio_v1"; // Field portfolio projection APIs.
 import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program management + field/season scoped program routes.
 import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
 import { registerEvidenceBundleV1Routes } from "./routes/evidence_bundle_v1"; // Stage 3: operation evidence bundle API.
@@ -314,6 +315,7 @@ registerDecisionEngineV1Routes(app, pool); // Decision engine: recommendation ge
 registerOperationStateV1Routes(app, pool); // Sprint B: unified operations state projection API.
 registerFieldTimelineV1Routes(app, pool); // Sprint C: field timeline/replay API.
 registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program state projection API.
+registerFieldPortfolioV1Routes(app, pool); // Field portfolio projection APIs.
 registerProgramsV1Routes(app, pool); // Program management + field/season scoped program APIs.
 registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerEvidenceBundleV1Routes(app, pool); // Stage 3: aggregate operation evidence bundle for frontend consumption.
