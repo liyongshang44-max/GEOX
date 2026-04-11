@@ -11,6 +11,7 @@ export type OperationReportV1 = {
     tenant_id: string;
     project_id: string;
     group_id: string;
+    field_id: string | null;
     operation_plan_id: string;
     operation_id: string;
     recommendation_id: string | null;
@@ -312,6 +313,7 @@ export function projectOperationReportV1(input: {
       tenant_id: input.tenant.tenant_id,
       project_id: input.tenant.project_id,
       group_id: input.tenant.group_id,
+      field_id: toText(input.operation_state.field_id),
       operation_plan_id: input.operation_plan_id,
       operation_id: input.operation_state.operation_id,
       recommendation_id: toText(input.operation_state.recommendation_id),
