@@ -18,7 +18,8 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth hel
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
 import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz"; // Role + field scope helpers.
 import { projectAlertListV1, type AlertActionOverrideV1, type AlertListOperationInputV1 } from "../projections/alert_list_v1"; // Unified alert list projection.
-import type { AlertSeverity, AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1"; // Alert model.
+import { AlertSeverity, AlertStatus } from "../projections/alert_v1";
+import type { AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1"; // Alert model.
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
 import type { TelemetryHealthInput } from "../domain/alert_engine";
@@ -647,7 +648,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    let items = projectAlertListV1({
+    let items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -672,13 +673,23 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
   app.get("/api/v1/alerts/summary", async (req, reply) => { // Summary endpoint grouped by severity/status/category.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "alerts.read");
     if (!auth) return;
+    const query: any = (req.query as any) ?? {};
+    const fieldIds = normalizeCsvList(query.field_ids ?? query["field_ids[]"]);
+    const severity = normalizeAlertSeverity(query.severity);
+    const status = normalizeProjectedAlertStatus(query.status);
+    const category = isNonEmptyString(query.category) ? String(query.category).trim().toUpperCase() : null;
+    if (fieldIds.length > 0) {
+      const allAllowed = fieldIds.every((fid) => enforceFieldScopeOrDeny(auth, fid, reply, { asNotFound: true }));
+      if (!allAllowed) return;
+    }
 
-    const [operations, telemetry_health, action_overrides] = await Promise.all([
+    const [operations, telemetry_health, action_overrides, deviceFieldMap] = await Promise.all([
       listOperationInputsForAlertProjection(pool, auth),
       listTelemetryHealthInputsForAlertProjection(pool, auth),
       listAlertActionOverrides(pool, auth),
+      listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    const items = projectAlertListV1({
+    let items = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -686,8 +697,29 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       nowMs: Date.now(),
     });
 
-    const by_severity: Record<string, number> = {};
-    const by_status: Record<string, number> = {};
+    if (fieldIds.length > 0) {
+      const set = new Set(fieldIds);
+      items = items.filter((item) => {
+        if (item.object_type === "FIELD") return set.has(String(item.object_id ?? ""));
+        if (item.object_type === "DEVICE") return set.has(String(deviceFieldMap.get(String(item.object_id ?? "")) ?? ""));
+        return false;
+      });
+    }
+    if (severity) items = items.filter((item) => item.severity === severity);
+    if (status) items = items.filter((item) => item.status === status);
+    if (category) items = items.filter((item) => String(item.category ?? "").toUpperCase() === category);
+
+    const by_severity: Record<keyof typeof AlertSeverity, number> = {
+      LOW: 0,
+      MEDIUM: 0,
+      HIGH: 0,
+      CRITICAL: 0,
+    };
+    const by_status: Record<keyof typeof AlertStatus, number> = {
+      OPEN: 0,
+      ACKED: 0,
+      CLOSED: 0,
+    };
     const by_category: Record<string, number> = {};
     for (const item of items) {
       by_severity[item.severity] = (by_severity[item.severity] ?? 0) + 1;
@@ -713,7 +745,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    const items = projectAlertListV1({
+    const items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -751,7 +783,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    const items = projectAlertListV1({
+    const items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
@@ -788,7 +820,7 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listTelemetryHealthInputsForAlertProjection(pool, auth),
       listAlertActionOverrides(pool, auth),
     ]);
-    let items = projectAlertListV1({
+    let items: AlertV1[] = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,

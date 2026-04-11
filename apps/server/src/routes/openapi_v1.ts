@@ -993,7 +993,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": {
-              description: "Alert resolved successfully",
+              description: "Alert closed successfully",
               content: {
                 "application/json": {
                   schema: { '$ref': "#/components/schemas/AlertResolveResponseV1" }

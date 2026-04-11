@@ -34,6 +34,8 @@ export type AlertV1 = {
   category: string;
   severity: AlertSeverity;
   status: AlertStatus;
+  title: string;
+  message: string;
   recommended_action: string;
   reasons: string[];
   source_refs: AlertSourceRefV1[];
@@ -55,21 +57,25 @@ export type FetchAlertsParams = {
 export type AlertSummaryV1 = {
   ok: boolean;
   total: number;
-  by_severity: Record<string, number>;
-  by_status: Record<string, number>;
+  by_severity: {
+    LOW: number;
+    MEDIUM: number;
+    HIGH: number;
+    CRITICAL: number;
+  };
+  by_status: {
+    OPEN: number;
+    ACKED: number;
+    CLOSED: number;
+  };
   by_category: Record<string, number>;
 };
 
 export async function fetchAlerts(params: FetchAlertsParams = {}): Promise<AlertV1[]> {
-  const payload = await apiRequest<{ ok: boolean; items?: Array<AlertV1 & { source_refs?: AlertSourceRefV1[] }> }>(
+  const payload = await apiRequest<{ ok: boolean; items?: AlertV1[] }>(
     withQuery("/api/v1/alerts", params),
   );
-  return Array.isArray(payload.items)
-    ? payload.items.map((item) => ({
-      ...item,
-      source_refs: Array.isArray(item.source_refs) ? item.source_refs : [],
-    }))
-    : [];
+  return Array.isArray(payload.items) ? payload.items : [];
 }
 
 export async function fetchAlertSummary(params: FetchAlertsParams = {}): Promise<AlertSummaryV1> {
