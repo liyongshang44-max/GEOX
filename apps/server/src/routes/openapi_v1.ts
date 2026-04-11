@@ -93,6 +93,61 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             }
           }
         },
+        AlertV1: {
+          type: "object",
+          required: ["alert_id", "status", "severity", "title", "triggered_at_ts_ms"],
+          properties: {
+            alert_id: { type: "string" },
+            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
+            severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+            title: { type: "string" },
+            message: { type: "string" },
+            rule_id: { type: "string" },
+            field_id: { type: "string" },
+            device_id: { type: "string" },
+            triggered_at_ts_ms: { type: "integer", format: "int64" },
+            acked_at_ts_ms: { type: "integer", format: "int64", nullable: true },
+            resolved_at_ts_ms: { type: "integer", format: "int64", nullable: true }
+          }
+        },
+        AlertListResponseV1: {
+          type: "object",
+          required: ["ok", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            items: {
+              type: "array",
+              items: { '$ref': "#/components/schemas/AlertV1" }
+            }
+          }
+        },
+        AlertSummaryResponseV1: {
+          type: "object",
+          required: ["ok", "total", "open", "acked", "resolved"],
+          properties: {
+            ok: { type: "boolean" },
+            total: { type: "integer" },
+            open: { type: "integer" },
+            acked: { type: "integer" },
+            resolved: { type: "integer" }
+          }
+        },
+        AlertActionRequest: {
+          type: "object",
+          properties: {
+            note: { type: "string", description: "Optional operator note for ack/resolve action." }
+          }
+        },
+        AlertActionResponse: {
+          type: "object",
+          required: ["ok", "alert_id", "status"],
+          properties: {
+            ok: { type: "boolean" },
+            alert_id: { type: "string" },
+            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
+            note: { type: "string" }
+          }
+        },
         DeviceSimulatorStartRequest: {
           type: "object",
           description: "Start simulator runner for a device. profile_code is reserved for profile selection and currently optional.",
@@ -822,8 +877,95 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["alerts"],
           summary: "Read alert event list",
+          deprecated: true,
           responses: {
             "200": { description: "Alert event list returned successfully" }
+          }
+        }
+      },
+      "/api/v1/alerts": {
+        get: {
+          tags: ["alerts"],
+          summary: "Read alert list",
+          responses: {
+            "200": {
+              description: "Alert list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertListResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/summary": {
+        get: {
+          tags: ["alerts"],
+          summary: "Read alert summary",
+          responses: {
+            "200": {
+              description: "Alert summary returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertSummaryResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/ack": {
+        post: {
+          tags: ["alerts"],
+          summary: "Acknowledge an alert",
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertActionRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert acknowledged successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertActionResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/resolve": {
+        post: {
+          tags: ["alerts"],
+          summary: "Resolve an alert",
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertActionRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert resolved successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertActionResponse" }
+                }
+              }
+            }
           }
         }
       },
