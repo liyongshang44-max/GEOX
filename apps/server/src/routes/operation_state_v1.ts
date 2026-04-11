@@ -4,6 +4,7 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
 import { projectDeviceStateV1 } from "../projections/device_state_v1";
+import { projectOperationReportV1 } from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
@@ -1923,6 +1924,32 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       expectation: "暂无解释",
       risk: "暂无解释",
     };
+    const operationReportV1 = projectOperationReportV1({
+      tenant,
+      operation_plan_id: operationPlanId,
+      operation_state: state,
+      evidence_bundle: { artifacts, logs, media, metrics },
+      acceptance: acceptanceForResponse ? {
+        verdict: acceptanceForResponse.record_json?.payload?.verdict,
+        missing_evidence: acceptanceForResponse.record_json?.payload?.missing_evidence,
+        generated_at: acceptanceForResponse.record_json?.payload?.generated_at ?? acceptanceForResponse.occurred_at,
+      } : null,
+      receipt: normalizedReceipt ? {
+        execution_started_at: normalizedReceipt.execution_started_at,
+        execution_finished_at: normalizedReceipt.execution_finished_at,
+      } : null,
+      cost: {
+        total: costBreakdown.total_cost,
+        water: costBreakdown.water_cost,
+        electric: costBreakdown.electric_cost,
+        chemical: costBreakdown.chemical_cost,
+      },
+      sla: {
+        execution_success: executionSuccess,
+        acceptance_pass: acceptancePass,
+        response_time_ms: responseTimeMs,
+      },
+    });
 
     return reply.send({
       ok: true,
@@ -2024,8 +2051,10 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
           electric: costBreakdown.electric_cost,
           chemical: costBreakdown.chemical_cost
         },
-        customer_view: customerView
+        customer_view: customerView,
+        operation_report_v1: operationReportV1
       },
+      operation_report_v1: operationReportV1,
       explain: {
         system: stableExplainSystem,
         human: stableExplainHuman,
