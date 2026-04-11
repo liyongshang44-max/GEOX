@@ -67,6 +67,14 @@ function tenantFromReq(req: any, auth: any): TenantTriple {
   };
 }
 
+
+function normalizeTagFilters(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
+  const one = String(raw ?? "").trim();
+  if (!one) return [];
+  return one.split(",").map((x) => x.trim()).filter(Boolean);
+}
+
 function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply: any): boolean {
   if (auth.tenant_id !== tenant.tenant_id || auth.project_id !== tenant.project_id || auth.group_id !== tenant.group_id) {
     reply.status(404).send({ ok: false, error: "NOT_FOUND" });
@@ -185,6 +193,27 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
     if (q.status) items = items.filter((x) => x.status === String(q.status));
     if (q.next_action_priority) items = items.filter((x) => x.next_action_hint?.priority === String(q.next_action_priority).toUpperCase());
+
+    const tags = normalizeTagFilters(q.tags ?? q["tags[]"]);
+    if (tags.length > 0) {
+      const uniqueFieldIds = Array.from(new Set(items.map((x) => String(x.field_id ?? "").trim()).filter(Boolean)));
+      if (uniqueFieldIds.length > 0) {
+        const tagQ = await pool.query(
+          `SELECT field_id, tag
+             FROM field_tags_v1
+            WHERE tenant_id = $1
+              AND project_id = $2
+              AND group_id = $3
+              AND field_id = ANY($4::text[])
+              AND tag = ANY($5::text[])`,
+          [tenant.tenant_id, tenant.project_id, tenant.group_id, uniqueFieldIds, tags]
+        );
+        const matchedFieldIds = new Set((tagQ.rows ?? []).map((row: any) => String(row.field_id ?? "").trim()).filter(Boolean));
+        items = items.filter((x) => matchedFieldIds.has(String(x.field_id ?? "").trim()));
+      } else {
+        items = [];
+      }
+    }
 
     return reply.send({ ok: true, count: items.slice(0, limit).length, items: items.slice(0, limit) });
   });

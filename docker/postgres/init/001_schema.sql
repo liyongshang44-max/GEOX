@@ -33,6 +33,21 @@ CREATE TABLE IF NOT EXISTS field_polygon_v1 (
   PRIMARY KEY (tenant_id, field_id)
 );
 
+
+CREATE TABLE IF NOT EXISTS field_tags_v1 (
+  tenant_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  group_id TEXT NOT NULL,
+  field_id TEXT NOT NULL,
+  tag TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by TEXT NULL,
+  PRIMARY KEY (tenant_id, project_id, group_id, field_id, tag)
+);
+
+CREATE INDEX IF NOT EXISTS field_tags_v1_lookup_idx
+  ON field_tags_v1 (tenant_id, project_id, group_id, field_id, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS device_index_v1 (
   tenant_id TEXT NOT NULL,
   device_id TEXT NOT NULL,
