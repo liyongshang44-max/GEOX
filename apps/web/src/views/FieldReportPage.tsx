@@ -11,11 +11,6 @@ function sum(items: OperationReportV1[], picker: (item: OperationReportV1) => nu
   return items.reduce((acc, item) => acc + picker(item), 0);
 }
 
-function matchFieldAlert(item: AlertV1, fieldId: string): boolean {
-  if (item.object_type === "FIELD" && String(item.object_id) === fieldId) return true;
-  return (item.source_refs || []).some((ref) => String(ref.type || "").toUpperCase().includes("FIELD") && String(ref.id) === fieldId);
-}
-
 export default function FieldReportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -26,17 +21,11 @@ export default function FieldReportPage(): React.ReactElement {
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
-    void Promise.all([fetchFieldReport(fieldId), fetchAlerts({ status: "OPEN" }), fetchAlerts({ status: "ACKED" })])
-      .then(([reports, openAlerts, ackedAlerts]) => {
+    void Promise.all([fetchFieldReport(fieldId), fetchAlerts({ field_ids: [fieldId], status: ["OPEN", "ACKED"] })])
+      .then(([reports, scopedAlerts]) => {
         if (!alive) return;
         setItems(reports);
-        const merged = [...openAlerts, ...ackedAlerts];
-        const uniq = new Map<string, AlertV1>();
-        for (const a of merged) {
-          if (!matchFieldAlert(a, fieldId)) continue;
-          uniq.set(a.alert_id, a);
-        }
-        setAlerts(Array.from(uniq.values()));
+        setAlerts(scopedAlerts);
         setError("");
       })
       .catch((e: unknown) => {

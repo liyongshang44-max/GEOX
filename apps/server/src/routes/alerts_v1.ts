@@ -95,6 +95,12 @@ function normalizeProjectedAlertStatus(s: any): ProjectedAlertStatus | null { //
   return null;
 }
 
+function normalizeProjectedAlertObjectType(s: any): "OPERATION" | "DEVICE" | "FIELD" | "SYSTEM" | null { // Helper: normalize projected alert object type.
+  const t = String(s ?? "").trim().toUpperCase();
+  if (t === "OPERATION" || t === "DEVICE" || t === "FIELD" || t === "SYSTEM") return t;
+  return null;
+}
+
 function normalizeCsvList(v: any): string[] { // Normalize CSV/array query values into distinct list.
   const raw: string[] = Array.isArray(v) ? v.map((x) => String(x ?? "")) : [String(v ?? "")];
   const out: string[] = [];
@@ -633,9 +639,15 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
 
     const query: any = (req.query as any) ?? {};
     const fieldIds = normalizeCsvList(query.field_ids ?? query["field_ids[]"]);
-    const severity = normalizeAlertSeverity(query.severity);
-    const status = normalizeProjectedAlertStatus(query.status);
-    const category = isNonEmptyString(query.category) ? String(query.category).trim().toUpperCase() : null;
+    const severity = normalizeCsvList(query.severity ?? query["severity[]"])
+      .map((item) => normalizeAlertSeverity(item))
+      .filter((item): item is AlertSeverity => Boolean(item));
+    const status = normalizeCsvList(query.status ?? query["status[]"])
+      .map((item) => normalizeProjectedAlertStatus(item))
+      .filter((item): item is ProjectedAlertStatus => Boolean(item));
+    const category = normalizeCsvList(query.category ?? query["category[]"]).map((item) => String(item).trim().toUpperCase()).filter(Boolean);
+    const object_type = normalizeProjectedAlertObjectType(query.object_type);
+    const object_id = normalizeId(query.object_id);
 
     if (fieldIds.length > 0) {
       const allAllowed = fieldIds.every((fid) => enforceFieldScopeOrDeny(auth, fid, reply, { asNotFound: true }));
@@ -648,25 +660,22 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
       listAlertActionOverrides(pool, auth),
       listDeviceFieldMap(pool, auth.tenant_id),
     ]);
-    let items: AlertV1[] = projectAlertListV1({
+    const items = projectAlertListV1({
       scope: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
       operations,
       telemetry_health,
       action_overrides,
+      filter: {
+        field_ids: fieldIds,
+        object_type,
+        object_id,
+        severity,
+        status,
+        category,
+        device_field_map: deviceFieldMap,
+      },
       nowMs: Date.now(),
     });
-
-    if (fieldIds.length > 0) {
-      const set = new Set(fieldIds);
-      items = items.filter((item) => {
-        if (item.object_type === "FIELD") return set.has(String(item.object_id ?? ""));
-        if (item.object_type === "DEVICE") return set.has(String(deviceFieldMap.get(String(item.object_id ?? "")) ?? ""));
-        return false;
-      });
-    }
-    if (severity) items = items.filter((item) => item.severity === severity);
-    if (status) items = items.filter((item) => item.status === status);
-    if (category) items = items.filter((item) => String(item.category ?? "").toUpperCase() === category);
     return reply.send({ ok: true, items });
   });
 

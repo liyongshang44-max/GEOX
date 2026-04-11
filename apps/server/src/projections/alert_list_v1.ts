@@ -46,6 +46,16 @@ export type AlertActionOverrideV1 = {
   status: AlertStatus;
 };
 
+export type AlertListFilterV1 = {
+  field_ids?: string[];
+  object_type?: AlertV1["object_type"] | null;
+  object_id?: string | null;
+  status?: AlertStatus[];
+  severity?: AlertSeverity[];
+  category?: string[];
+  device_field_map?: Map<string, string>;
+};
+
 export function projectReportV1(input: {
   scope: AlertListScopeV1;
   operation: AlertListOperationInputV1;
@@ -75,6 +85,7 @@ export function projectAlertListV1(input: {
   operations: AlertListOperationInputV1[];
   telemetry_health: TelemetryHealthInput[];
   action_overrides?: AlertActionOverrideV1[];
+  filter?: AlertListFilterV1;
   nowMs: number;
 }): AlertV1[] {
   const merged = new Map<string, AlertV1>();
@@ -105,10 +116,32 @@ export function projectAlertListV1(input: {
   const statusOverrides = new Map<string, AlertStatus>();
   for (const item of input.action_overrides ?? []) statusOverrides.set(item.alert_id, item.status);
 
-  const items = Array.from(merged.values()).map((alert) => ({
+  let items = Array.from(merged.values()).map((alert) => ({
     ...alert,
     status: statusOverrides.get(alert.alert_id) ?? alert.status,
   }));
+
+  const fieldSet = new Set((input.filter?.field_ids ?? []).map((x) => String(x).trim()).filter(Boolean));
+  if (fieldSet.size > 0) {
+    const deviceFieldMap = input.filter?.device_field_map ?? new Map<string, string>();
+    items = items.filter((item) => {
+      if (item.object_type === "FIELD") return fieldSet.has(String(item.object_id ?? ""));
+      if (item.object_type === "DEVICE") return fieldSet.has(String(deviceFieldMap.get(String(item.object_id ?? "")) ?? ""));
+      return false;
+    });
+  }
+
+  if (input.filter?.object_type) items = items.filter((item) => item.object_type === input.filter?.object_type);
+  if (input.filter?.object_id) items = items.filter((item) => String(item.object_id) === String(input.filter?.object_id));
+
+  const statusSet = new Set(input.filter?.status ?? []);
+  if (statusSet.size > 0) items = items.filter((item) => statusSet.has(item.status));
+
+  const severitySet = new Set(input.filter?.severity ?? []);
+  if (severitySet.size > 0) items = items.filter((item) => severitySet.has(item.severity));
+
+  const categorySet = new Set((input.filter?.category ?? []).map((x) => String(x).trim().toUpperCase()).filter(Boolean));
+  if (categorySet.size > 0) items = items.filter((item) => categorySet.has(String(item.category ?? "").trim().toUpperCase()));
 
   items.sort((a, b) => {
     const bySeverity = severityRank(b.severity) - severityRank(a.severity);

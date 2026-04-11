@@ -49,9 +49,11 @@ export type AlertV1 = {
 
 export type FetchAlertsParams = {
   field_ids?: string[];
-  severity?: AlertSeverity;
-  status?: AlertStatus;
-  category?: string;
+  object_type?: AlertObjectType;
+  object_id?: string;
+  severity?: AlertSeverity | AlertSeverity[];
+  status?: AlertStatus | AlertStatus[];
+  category?: string | string[];
 };
 
 export type AlertSummaryV1 = {
