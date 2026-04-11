@@ -147,13 +147,7 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       }
     )).filter((report): report is NonNullable<typeof report> => Boolean(report));
 
-    const aggregate = projectCustomerDashboardAggregateV1({
-      reports,
-      allowedFieldIds: scopedFieldIds,
-      requestedFieldIds: requestedFieldIds.length > 0 ? intersectedFieldIds : undefined,
-      timeRange,
-      nowMs: Date.now(),
-    });
+    const aggregate = projectCustomerDashboardAggregateV1(reports);
 
     return reply.send({
       ok: true,
