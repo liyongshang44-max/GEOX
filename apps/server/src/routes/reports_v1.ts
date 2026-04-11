@@ -106,6 +106,17 @@ export async function projectReportV1(params: {
     water_l: normalizedReceipt?.water_l,
     chemical_ml: normalizedReceipt?.chemical_ml,
   });
+  const hasActualCostInput = [
+    normalizedReceipt?.water_l,
+    normalizedReceipt?.electric_kwh,
+    normalizedReceipt?.chemical_ml,
+  ].some((x) => typeof x === "number" && Number.isFinite(x));
+  const costNotes = [
+    "estimated_cost_source:computeOperationCostV1",
+    "actual_cost_source:computeCostBreakdown",
+  ];
+  if (!hasActualCostInput) costNotes.push("actual_cost_missing_usage_fallback_to_zero");
+  if (estimatedCost.normalization_note) costNotes.push(estimatedCost.normalization_note);
 
   const executionSuccess = ["SUCCESS", "SUCCEEDED"].includes(String(operationState.final_status ?? "").toUpperCase());
   const acceptancePass = String(acceptanceFact?.record_json?.payload?.verdict ?? "").toUpperCase().includes("PASS");
@@ -132,16 +143,20 @@ export async function projectReportV1(params: {
       execution_finished_at: normalizedReceipt.execution_finished_at,
     } : null,
     cost: {
-      total: cost.total_cost,
-      water: cost.water_cost,
-      electric: cost.electric_cost,
-      chemical: cost.chemical_cost,
+      actual_total: hasActualCostInput ? cost.total_cost : 0,
+      actual_water_cost: hasActualCostInput ? cost.water_cost : 0,
+      actual_electric_cost: hasActualCostInput ? cost.electric_cost : 0,
+      actual_chemical_cost: hasActualCostInput ? cost.chemical_cost : 0,
       estimated_total: estimatedCost.estimated_total,
       estimated_water_cost: estimatedCost.estimated_water_cost,
       estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
       estimated_device_cost: estimatedCost.estimated_device_cost,
       estimated_labor_cost: estimatedCost.estimated_labor_cost,
       action_type: estimatedCost.action_type,
+      action_resolution: estimatedCost.action_resolution,
+      requested_action_type: estimatedCost.requested_action_type,
+      cost_quality: hasActualCostInput ? "ESTIMATED_WITH_ACTUAL" : "ESTIMATED_ONLY",
+      cost_notes: costNotes,
     },
     sla: {
       execution_success: executionSuccess,
