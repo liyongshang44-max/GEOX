@@ -29,7 +29,6 @@
     "seed:p6.1-real-chain": "pnpm -w exec tsx apps/server/scripts/generate_p6_1_real_chain_sample.ts",
     "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts",
     "test:stage5:frontend": "pnpm -w exec tsx apps/server/scripts/stage5_frontend_acceptance.ts",
-    "test:p1:smoke-acceptance": "node apps/server/scripts/p1_skill_loop_minimal_acceptance.mjs",
     "test:sensing:closed-loop": "node --import tsx --test src/domain/sensing/fertility_precheck_e2e.test.ts",
     "check:smoke:param-keys": "node scripts/check_smoke_parameter_keys.mjs",
     "test:p1:smoke": "node scripts/p1_skill_loop_minimal.mjs",

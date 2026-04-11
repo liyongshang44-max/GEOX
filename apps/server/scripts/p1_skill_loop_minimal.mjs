@@ -378,7 +378,7 @@ async function waitForFinalState(operationPlanId) {
   throw new Error(`operation_state 查询失败：${operationPlanId} 无 final_status`);
 }
 
-function resolveSuccessFinalStatus(status) {
+function isSuccessMapped(status) {
   const s = String(status ?? "").toUpperCase();
   return SUCCESS_LANE_FINAL_STATUSES.includes(s);
 }
