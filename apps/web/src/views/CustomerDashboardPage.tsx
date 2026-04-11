@@ -1,49 +1,76 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import { fetchDashboardOverviewV2, fetchDashboardRecentExecutions } from "../api/dashboard";
-import { mapReportCode } from "../api/reports";
+import { Link, useLocation } from "react-router-dom";
+import { fetchCustomerDashboardAggregate } from "../api/reports";
+import { buildCustomerDashboardViewModel, type CustomerDashboardViewModel } from "../viewmodels/customerDashboardViewModel";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function CustomerDashboardPage(): React.ReactElement {
-  const [overview, setOverview] = React.useState<any>(null);
-  const [recent, setRecent] = React.useState<any[]>([]);
+  const location = useLocation();
+  const [vm, setVm] = React.useState<CustomerDashboardViewModel | null>(null);
+  const [error, setError] = React.useState<string>("");
 
   React.useEffect(() => {
-    void fetchDashboardOverviewV2().then(setOverview).catch(() => setOverview(null));
-    void fetchDashboardRecentExecutions(5).then((items) => setRecent(items || [])).catch(() => setRecent([]));
-  }, []);
+    const params = new URLSearchParams(location.search);
+    const fieldId = params.get("field_id") || "";
+
+    void fetchCustomerDashboardAggregate({ fieldId, limit: 5 })
+      .then((aggregate) => {
+        setVm(buildCustomerDashboardViewModel(aggregate));
+        setError("");
+      })
+      .catch(() => {
+        setVm(null);
+        setError("暂未获取到可展示的经营数据，请稍后刷新。");
+      });
+  }, [location.search]);
 
   return (
     <div className="demoDashboardPage">
       <PageHeader
         eyebrow="GEOX / 客户看板"
         title="客户看板"
-        description="仅保留关键4区块"
+        description="围绕经营结果、风险、成本与行动建议展示"
         actions={<Link className="btn" to="/dashboard">切换平台控制台</Link>}
       />
 
-      <SectionCard title="地块状态">
-        <div>正常：{overview?.field_status_summary?.normal ?? 0} · 风险：{overview?.field_status_summary?.risk ?? 0}</div>
-      </SectionCard>
-
-      <SectionCard title="最近执行">
-        <div className="list">
-          {recent.slice(0, 5).map((item, idx) => (
-            <div key={`${item?.operation_plan_id || idx}`} className="item">
-              {idx + 1}. {item?.title || item?.operation_plan_id || "--"}（{mapReportCode(item?.final_status).label}）
+      <SectionCard title={vm?.result.title || "结果（完成/未完成）"}>
+        <div>{vm?.result.summary || "本周期暂无结果数据"}</div>
+        <div className="muted">{vm?.result.detail || ""}</div>
+        <div className="list" style={{ marginTop: 8 }}>
+          {(vm?.result.recent || []).map((item, idx) => (
+            <div key={`${item.title}-${idx}`} className="item">
+              {item.title} · {item.statusText} · {item.whenText}
             </div>
           ))}
-          {!recent.length ? <div className="muted">暂无执行记录</div> : null}
+          {!vm?.result.recent?.length ? <div className="muted">暂无最近执行记录</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title="风险告警">
-        <div>高风险：{overview?.risk_alert_summary?.high ?? 0} · 中风险：{overview?.risk_alert_summary?.medium ?? 0}</div>
+      <SectionCard title={vm?.riskImpact.title || "风险影响"}>
+        <div>{vm?.riskImpact.summary || "暂无风险数据"}</div>
+        <div className="muted">{vm?.riskImpact.detail || ""}</div>
+        <div className="list" style={{ marginTop: 8 }}>
+          {(vm?.riskImpact.signals || []).map((signal, idx) => (
+            <div key={`${signal}-${idx}`} className="item">{signal}</div>
+          ))}
+        </div>
       </SectionCard>
 
-      <SectionCard title="本周期目标">
-        <div>{overview?.current_cycle_goal?.summary || "本周期目标尚未配置"}</div>
+      <SectionCard title={vm?.costTrend.title || "成本趋势"}>
+        <div>{vm?.costTrend.summary || "暂无成本数据"}</div>
+        <div className="muted">{vm?.costTrend.detail || ""}</div>
       </SectionCard>
+
+      <SectionCard title={vm?.actionAdvice.title || "本周期行动建议"}>
+        <div>{vm?.actionAdvice.summary || "暂无行动建议"}</div>
+        <div className="list" style={{ marginTop: 8 }}>
+          {(vm?.actionAdvice.items || []).map((item, idx) => (
+            <div key={`${item}-${idx}`} className="item">{idx + 1}. {item}</div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {error ? <div className="muted" style={{ marginTop: 12 }}>{error}</div> : null}
     </div>
   );
 }
