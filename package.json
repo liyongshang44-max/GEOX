@@ -38,7 +38,8 @@
     "ci:web:operation-detail-hooks": "pnpm --filter @geox/web lint:operation-detail-hooks",
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
     "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
-    "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs"
+    "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs",
+    "selfcheck:smoke:pending-acceptance": "node --test scripts/acceptance/__tests__/pending_acceptance_smoke_selfcheck.test.cjs"
   },
   "volta": {
     "node": "20.11.1"

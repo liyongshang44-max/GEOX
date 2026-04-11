@@ -392,6 +392,28 @@ function sanitizeParametersForSmoke(actionType, raw) {
   return Object.fromEntries(Object.entries(raw).filter(([key]) => allowlist.has(key)));
 }
 
+function buildMinimalDiagnostics(input) {
+  return {
+    base_url: BASE_URL,
+    tenant,
+    smoke_bindings: {
+      success: SMOKE_SUCCESS_BIND_TARGET,
+      failure: SMOKE_FAILURE_BIND_TARGET,
+    },
+    success: {
+      operation_plan_id: input?.success_operation_plan_id ?? null,
+      final_status: input?.success_final_status ?? null,
+      success_mapped_by: input?.success_mapped_by ?? null,
+      attempts: input?.success_attempts ?? null,
+    },
+    failure: {
+      operation_plan_id: input?.failure_operation_plan_id ?? null,
+      final_status: input?.failure_final_status ?? null,
+    },
+    statuses: Array.isArray(input?.statuses) ? input.statuses : [],
+  };
+}
+
 async function main() {
   // 脚本级自测：success 为 PENDING_ACCEPTANCE 也应视为通过；
   // 同时 invalid lane 仍要求 INVALID_EXECUTION（见下方最终断言）。
@@ -402,7 +424,9 @@ async function main() {
   await ensureSkillBinding();
   let successOp = null;
   let successFinal = "FAILED";
+  let successAttempts = 0;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    successAttempts = attempt;
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
     const successTask = await waitForTask(successOp.operationPlanId);
     const successTaskId = successTask.taskId;
@@ -471,9 +495,18 @@ async function main() {
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
   const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
   const successMappedHit = successMappedBy(successFinal);
+  const failureDiagnostics = buildMinimalDiagnostics({
+    success_operation_plan_id: successOp?.operationPlanId,
+    success_final_status: successFinal,
+    success_mapped_by: successMappedHit,
+    success_attempts: successAttempts,
+    failure_operation_plan_id: invalidOp?.operationPlanId,
+    failure_final_status: invalidFinal,
+    statuses,
+  });
 
-  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}`);
-  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}`);
+  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`);
+  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`);
 
   console.log("[p1-smoke] done", {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
@@ -487,18 +520,22 @@ async function main() {
 
   assert.ok(
     isSuccessMapped(successFinal),
-    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}`,
+    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
   );
   assert.equal(
     invalidFinal,
     "INVALID_EXECUTION",
-    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}`,
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
   );
 
   console.log("[p1-smoke] done", statuses);
 }
 
 main().catch((err) => {
+  const minimalDiagnostics = buildMinimalDiagnostics({
+    statuses: [],
+  });
+  console.error("[p1-smoke] minimal_diagnostics", minimalDiagnostics);
   console.error("[p1-smoke] failed", err);
   process.exitCode = 1;
 });
