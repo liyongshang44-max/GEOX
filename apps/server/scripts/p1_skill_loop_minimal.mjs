@@ -29,6 +29,8 @@ const SMOKE_FAILURE_ACCEPTANCE_CONFIG_PATCH = Object.freeze({
   strict_mode: true,
   min_evidence_count: 2,
 });
+const SUCCESS_LANE_FINAL_STATUSES = Object.freeze(["PENDING_ACCEPTANCE", "SUCCESS", "SUCCEEDED", "VALID"]);
+const SUCCESS_TERMINAL_FINAL_STATUSES = Object.freeze(["SUCCESS", "SUCCEEDED", "VALID"]);
 
 const AO_ACT_TASK_SCHEMA_RULES_V0 = Object.freeze({
   forbidden_keys: [
@@ -378,11 +380,7 @@ async function waitForFinalState(operationPlanId) {
 
 function resolveSuccessFinalStatus(status) {
   const s = String(status ?? "").toUpperCase();
-  if (s === "PENDING_ACCEPTANCE") return s;
-  if (s === "SUCCESS") return s;
-  if (s === "SUCCEEDED") return s;
-  if (s === "VALID") return s;
-  return null;
+  return SUCCESS_LANE_FINAL_STATUSES.includes(s);
 }
 
 function resolveSuccessFinalStatus(status) {
@@ -565,7 +563,7 @@ async function main() {
 
   if (successFinal === "PENDING_ACCEPTANCE") {
     console.log("[p1-smoke][success] 执行已完成，证据已入链，待验收；作为链路 smoke 判定：通过");
-  } else if (["SUCCESS", "SUCCEEDED", "VALID"].includes(successFinal)) {
+  } else if (SUCCESS_TERMINAL_FINAL_STATUSES.includes(successFinal)) {
     console.log("[p1-smoke][success] 已进入成功终态；链路 smoke：通过");
   }
   if (invalidFinal === "INVALID_EXECUTION") {

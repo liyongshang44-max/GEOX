@@ -180,7 +180,7 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 
 - `p1_skill_loop_minimal.mjs`：业务链路 smoke（会真实调用接口并校验状态）。
 - 若新增“源码一致性/结构自检”脚本，请使用 `*_selfcheck.mjs` 命名，不使用 `*_acceptance*.mjs`，避免与业务 smoke 混淆。
-- 若存在 `p1_skill_loop_minimal_acceptance.mjs`，它应仅作为源码一致性自检脚本，不属于业务 smoke 执行入口。
+- 对应源码一致性自检脚本为 `p1_skill_loop_minimal_selfcheck.mjs`（不是业务 smoke，不访问 API，不验证 operation 终态）。
 
 可选环境变量（默认值如下）：
 
@@ -214,3 +214,9 @@ node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
 
 - `GEOX_OPERATION_PLAN_ID`
 - `GEOX_TOKEN`
+
+P1 minimal 源码一致性自检命令（只做静态结构检查）：
+
+```bash
+pnpm run selfcheck:p1-skill-loop-minimal
+```
