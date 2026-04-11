@@ -400,29 +400,25 @@ function sanitizeParametersForSmoke(actionType, raw) {
 }
 
 function buildMinimalDiagnostics(input) {
+  const acceptance = input?.acceptance ?? {};
+  const evidenceBundle = input?.evidence_bundle ?? {};
   return {
-    base_url: BASE_URL,
-    tenant,
+    lane: input?.lane ?? "unknown",
     operation_plan_id: input?.operation_plan_id ?? null,
     receipt_status: input?.receipt_status ?? null,
     final_status: input?.final_status ?? null,
     invalid_reason: input?.invalid_reason ?? null,
-    acceptance_summary: input?.acceptance_summary ?? null,
-    smoke_bindings: {
-      success: SMOKE_SUCCESS_BIND_TARGET,
-      failure: SMOKE_FAILURE_BIND_TARGET,
+    acceptance: {
+      verdict: acceptance.verdict ?? null,
+      missing_evidence: acceptance.missing_evidence ?? [],
+      summary: acceptance.summary ?? null,
     },
-    success: {
-      operation_plan_id: input?.success_operation_plan_id ?? null,
-      final_status: input?.success_final_status ?? null,
-      success_mapped_by: input?.success_mapped_by ?? null,
-      attempts: input?.success_attempts ?? null,
+    evidence_bundle: {
+      logs_count: Number(evidenceBundle.logs_count ?? 0),
+      report_json_present: Boolean(evidenceBundle.report_json_present ?? false),
     },
-    failure: {
-      operation_plan_id: input?.failure_operation_plan_id ?? null,
-      final_status: input?.failure_final_status ?? null,
-    },
-    statuses: Array.isArray(input?.statuses) ? input.statuses : [],
+    base_url: BASE_URL,
+    tenant,
   };
 }
 
@@ -439,6 +435,7 @@ async function main() {
   let successAttempts = 0;
   let successReceiptLast = null;
   let successFinalStateLast = null;
+  let successDiagnostics = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     successAttempts = attempt;
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
@@ -519,26 +516,41 @@ async function main() {
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
   const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
   const successMappedHit = resolveSuccessFinalStatus(successFinal);
-  const failureDiagnostics = buildMinimalDiagnostics({
+  const invalidDiagnostics = buildMinimalDiagnostics({
+    lane: "invalid",
+    operation_plan_id: invalidOp?.operationPlanId ?? null,
+    receipt_status: "executed",
+    final_status: invalidFinal,
+    invalid_reason: invalidFinalState?.item?.invalid_reason ?? invalidFinalState?.item?.acceptance?.invalid_reason ?? null,
+    acceptance: {
+      verdict: invalidFinalState?.item?.acceptance?.verdict ?? invalidFinalState?.item?.acceptance?.status ?? null,
+      missing_evidence: invalidFinalState?.item?.acceptance?.missing_evidence ?? [],
+      summary: invalidFinalState?.item?.acceptance?.summary ?? null,
+    },
+    evidence_bundle: {
+      logs_count: 1,
+      report_json_present: Boolean(invalidFinalState?.item?.report_json),
+    },
+  });
+  successDiagnostics = buildMinimalDiagnostics({
+    lane: "success",
     operation_plan_id: successOp?.operationPlanId,
     receipt_status: successReceiptLast?.status ?? successReceiptLast?.acceptance?.status ?? null,
     final_status: successFinal,
-    invalid_reason: invalidFinalState?.item?.invalid_reason ?? invalidFinalState?.item?.acceptance?.invalid_reason ?? null,
-    acceptance_summary:
-      successFinalStateLast?.item?.acceptance?.summary
-      ?? successFinalStateLast?.item?.report_json?.summary
-      ?? null,
-    success_operation_plan_id: successOp?.operationPlanId,
-    success_final_status: successFinal,
-    success_mapped_by: successMappedHit,
-    success_attempts: successAttempts,
-    failure_operation_plan_id: invalidOp?.operationPlanId,
-    failure_final_status: invalidFinal,
-    statuses,
+    invalid_reason: null,
+    acceptance: {
+      verdict: successFinalStateLast?.item?.acceptance?.verdict ?? successFinalStateLast?.item?.acceptance?.status ?? null,
+      missing_evidence: successFinalStateLast?.item?.acceptance?.missing_evidence ?? [],
+      summary: successFinalStateLast?.item?.acceptance?.summary ?? successFinalStateLast?.item?.report_json?.summary ?? null,
+    },
+    evidence_bundle: {
+      logs_count: Array.isArray(successReceiptLast?.logs_refs) ? successReceiptLast.logs_refs.length : 0,
+      report_json_present: Boolean(successFinalStateLast?.item?.report_json),
+    },
   });
 
-  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`);
-  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`);
+  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；actual=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify({ success: successDiagnostics, invalid: invalidDiagnostics })}`);
+  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；actual=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify({ success: successDiagnostics, invalid: invalidDiagnostics })}`);
 
   console.log("[p1-smoke] done", {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
@@ -546,18 +558,28 @@ async function main() {
       operation_plan_id: successOp?.operationPlanId,
       final_status: successFinal,
       success_mapped_by: successMappedHit,
+      attempts: successAttempts,
     },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
   });
 
+  if (successFinal === "PENDING_ACCEPTANCE") {
+    console.log("[p1-smoke][success] 执行已完成，证据已入链，待验收；作为链路 smoke 判定：通过");
+  } else if (["SUCCESS", "SUCCEEDED", "VALID"].includes(successFinal)) {
+    console.log("[p1-smoke][success] 已进入成功终态；链路 smoke：通过");
+  }
+  if (invalidFinal === "INVALID_EXECUTION") {
+    console.log("[p1-smoke][invalid] 命中预期状态 INVALID_EXECUTION；负向路径验证通过");
+  }
+
   assert.ok(
     isSuccessMapped(successFinal),
-    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
+    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；actual=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(successDiagnostics)}`,
   );
   assert.equal(
     invalidFinal,
     "INVALID_EXECUTION",
-    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；actual=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(invalidDiagnostics)}`,
   );
 
   console.log("[p1-smoke] done", statuses);
@@ -565,7 +587,7 @@ async function main() {
 
 main().catch((err) => {
   const minimalDiagnostics = buildMinimalDiagnostics({
-    statuses: [],
+    lane: "unknown",
   });
   console.error("[p1-smoke] minimal_diagnostics", minimalDiagnostics);
   console.error("[p1-smoke] failed", err);
