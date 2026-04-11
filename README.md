@@ -177,6 +177,12 @@ Judge 的评估对象始终是 group。
 node apps/server/scripts/p1_skill_loop_minimal.mjs
 ```
 
+命名说明（避免与验收 smoke 混淆）：
+
+- `p1_skill_loop_minimal.mjs`：业务链路 smoke（会真实调用接口并校验状态）。
+- 若新增“源码一致性/结构自检”脚本，请使用 `*_selfcheck.mjs` 命名，不使用 `*_acceptance*.mjs`，避免与业务 smoke 混淆。
+- 对应源码一致性自检脚本为 `p1_skill_loop_minimal_selfcheck.mjs`（不是业务 smoke，不访问 API，不验证 operation 终态）。
+
 可选环境变量（默认值如下）：
 
 - `GEOX_BASE_URL`（默认 `http://127.0.0.1:3001`）
