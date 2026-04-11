@@ -1,0 +1,63 @@
+{
+  "ok": true,
+  "operation_report_v1": {
+    "type": "operation_report_v1",
+    "version": "v1",
+    "generated_at": "2026-04-11T10:00:00.000Z",
+    "identifiers": {
+      "tenant_id": "tenantA",
+      "project_id": "projectA",
+      "group_id": "groupA",
+      "field_id": "field-001",
+      "operation_plan_id": "op-plan-demo-001",
+      "operation_id": "op-demo-missing-evidence-high",
+      "recommendation_id": "rec-demo-001",
+      "act_task_id": "task-demo-001",
+      "receipt_id": "receipt-demo-001"
+    },
+    "execution": {
+      "final_status": "SUCCESS",
+      "invalid_execution": false,
+      "invalid_reason": null,
+      "dispatched_at": "2026-04-11T09:50:00.000Z",
+      "execution_started_at": "2026-04-11T09:52:00.000Z",
+      "execution_finished_at": "2026-04-11T09:56:00.000Z",
+      "response_time_ms": 360000
+    },
+    "acceptance": {
+      "status": "PENDING",
+      "verdict": null,
+      "missing_evidence": true,
+      "missing_items": ["evidence_artifact"],
+      "generated_at": null
+    },
+    "evidence": {
+      "artifacts_count": 0,
+      "logs_count": 1,
+      "media_count": 0,
+      "metrics_count": 1,
+      "receipt_present": true,
+      "acceptance_present": true
+    },
+    "cost": {
+      "estimated_total": 128
+    },
+    "sla": {
+      "dispatch_latency_quality": "VALID",
+      "execution_duration_quality": "VALID",
+      "acceptance_latency_quality": "MISSING_DATA",
+      "execution_success": true,
+      "acceptance_pass": false,
+      "response_time_ms": 360000,
+      "dispatch_latency_ms": 120000,
+      "execution_duration_ms": 240000,
+      "invalid_reasons": ["acceptance_latency_missing_end"],
+      "pending_acceptance_elapsed_ms": 240000,
+      "pending_acceptance_over_30m": false
+    },
+    "risk": {
+      "level": "HIGH",
+      "reasons": ["MISSING_EVIDENCE"]
+    }
+  }
+}

@@ -246,3 +246,9 @@ pnpm run selfcheck:p1-skill-loop-minimal
 - 链路已通
 - 但验收未完成
 - 结论：验收 smoke = 失败
+
+## 十六、任务交付产物（触发原因一致性 / 2026-04-11）
+
+- 交付文档：`docs/qa/trigger_consistency_delivery_2026-04-11.md`
+- 记录与截图尝试：`docs/artifacts/trigger_consistency_2026-04-11/`
+
