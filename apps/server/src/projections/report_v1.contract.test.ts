@@ -63,4 +63,9 @@ test("report v1 contract: risk.level and risk.reasons always exist", () => {
   assert.ok(["LOW", "MEDIUM", "HIGH"].includes(output.risk.level));
   assert.ok(Array.isArray(output.risk.reasons));
   assert.notEqual(output.risk.reasons, undefined);
+  assert.equal(output.cost.estimated_total, 0);
+  assert.equal(output.cost.currency, "CNY");
+  assert.equal(output.cost.action_type, "IRRIGATE");
+  assert.equal(output.cost.cost_quality, "ESTIMATED_ONLY");
+  assert.deepEqual(output.cost.cost_notes, []);
 });
