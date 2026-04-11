@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { enforceFieldScopeOrDeny, enforceRouteRoleAuth } from "../auth/route_role_authz";
 import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
 import { projectProgramStateV1 } from "../projections/program_state_v1";
 import { projectProgramPortfolioV1 } from "../projections/program_portfolio_v1";
@@ -73,6 +74,12 @@ function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply
     return false;
   }
   return true;
+}
+
+function normalizeAllowedFieldIds(auth: any): string[] {
+  return Array.isArray(auth?.allowed_field_ids)
+    ? Array.from(new Set(auth.allowed_field_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)))
+    : [];
 }
 
 async function insertFact(pool: Pool, source: string, record_json: any): Promise<string> {
@@ -173,6 +180,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
   });
 
   get("/api/v1/program-portfolio", async (req: any, reply: any) => {
+    if (!enforceRouteRoleAuth(req, reply, "portfolio")) return;
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);
@@ -180,8 +188,13 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const q: any = (req as any).query ?? {};
     const limit = Math.max(1, Math.min(Number(q.limit ?? 100) || 100, 300));
 
-    let items = await projectProgramPortfolioV1(pool, tenant);
-    if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
+    const allowedFieldIds = normalizeAllowedFieldIds(auth);
+    let items = (await projectProgramPortfolioV1(pool, tenant))
+      .filter((x) => allowedFieldIds.includes(String(x.field_id ?? "").trim()));
+    if (q.field_id) {
+      const requestedFieldId = String(q.field_id).trim();
+      items = items.filter((x) => x.field_id === requestedFieldId);
+    }
     if (q.season_id) items = items.filter((x) => x.season_id === String(q.season_id));
     if (q.status) items = items.filter((x) => x.status === String(q.status));
     if (q.next_action_priority) items = items.filter((x) => x.next_action_hint?.priority === String(q.next_action_priority).toUpperCase());
@@ -526,6 +539,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
   });
 
   post("/api/v1/programs/:program_id/notes", async (req: any, reply: any) => {
+    if (!enforceRouteRoleAuth(req, reply, "tags")) return;
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);
@@ -535,6 +549,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
 
     const existing = await loadLatestProgramFact(pool, program_id, tenant);
     if (!existing) return reply.status(404).send({ ok: false, error: "PROGRAM_NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, existing.payload?.field_id, reply, { asNotFound: true })) return;
 
     const body: any = (req as any).body ?? {};
     const note = String(body.note ?? "").trim();
@@ -648,6 +663,7 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
   });
 
   get("/api/v1/seasons/:season_id/program-portfolio", async (req: any, reply: any) => {
+    if (!enforceRouteRoleAuth(req, reply, "portfolio")) return;
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);
@@ -656,7 +672,10 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const season_id = String((req.params as any)?.season_id ?? "").trim();
     if (!season_id) return reply.status(400).send({ ok: false, error: "MISSING_SEASON_ID" });
 
-    const items = (await projectProgramPortfolioV1(pool, tenant)).filter((x) => x.season_id === season_id);
+    const allowedFieldIds = normalizeAllowedFieldIds(auth);
+    const items = (await projectProgramPortfolioV1(pool, tenant))
+      .filter((x) => x.season_id === season_id)
+      .filter((x) => allowedFieldIds.includes(String(x.field_id ?? "").trim()));
     return reply.send({ ok: true, season_id, count: items.length, items });
   });
 }

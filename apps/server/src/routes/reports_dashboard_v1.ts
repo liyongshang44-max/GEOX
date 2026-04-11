@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { enforceRouteRoleAuth } from "../auth/route_role_authz";
 import { projectCustomerDashboardAggregateV1 } from "../projections/report_dashboard_v1";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectReportV1 } from "./reports_v1";
@@ -97,6 +98,7 @@ async function queryScopedOperations(
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/reports/customer-dashboard/aggregate", async (req, reply) => {
+    if (!enforceRouteRoleAuth(req, reply, "summary")) return;
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
 
@@ -115,15 +117,11 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       ? Array.from(new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)))
       : [];
 
-    const intersectedFieldIds = requestedFieldIds.length > 0
+    const scopedFieldIds = requestedFieldIds.length > 0
       ? requestedFieldIds.filter((fieldId) => allowedFieldIds.includes(fieldId))
       : allowedFieldIds;
 
-    const scopedFieldIds = requestedFieldIds.length > 0
-      ? intersectedFieldIds
-      : allowedFieldIds;
-
-    const scopedOperations = (requestedFieldIds.length > 0 && intersectedFieldIds.length === 0)
+    const scopedOperations = scopedFieldIds.length === 0
       ? []
       : await queryScopedOperations(pool, tenant, scopedFieldIds);
 
