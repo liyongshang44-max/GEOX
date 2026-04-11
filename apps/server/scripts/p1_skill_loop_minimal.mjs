@@ -310,25 +310,11 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId)
   });
 }
 
-async function waitForAcceptanceResolution(operationPlanId) {
-  let seenPendingAcceptance = false;
-  for (let i = 0; i < 20; i += 1) {
-    const state = await waitForFinalState(operationPlanId);
-    const status = String(state.finalStatus ?? "").toUpperCase();
-    if (status === "PENDING_ACCEPTANCE") {
-      seenPendingAcceptance = true;
-      await sleep(300);
-      continue;
-    }
-    if (["SUCCESS", "SUCCEEDED", "VALID"].includes(status)) {
-      return { ...state, seenPendingAcceptance };
-    }
-    if (status) {
-      return { ...state, seenPendingAcceptance };
-    }
-    await sleep(300);
-  }
-  throw new Error(`operation ${operationPlanId} receipt 后未进入 SUCCESS/VALID`);
+async function waitForSmokeFinalState(operationPlanId) {
+  const state = await waitForFinalState(operationPlanId);
+  const status = String(state.finalStatus ?? "").toUpperCase();
+  if (!status) throw new Error(`operation ${operationPlanId} smoke 链路未获得 final_status`);
+  return state;
 }
 
 async function setDispatchState(actTaskId, state) {
@@ -383,6 +369,34 @@ function successMappedBy(status) {
   return isSuccessMapped(s) ? s : null;
 }
 
+function summarizeAcceptance(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  return {
+    status: raw.status ?? null,
+    verdict: raw.verdict ?? null,
+    expected_requirements_count: Array.isArray(raw.expected_requirements) ? raw.expected_requirements.length : null,
+    provided_kinds_count: Array.isArray(raw.provided_kinds) ? raw.provided_kinds.length : null,
+    missing_requirements_count: Array.isArray(raw.missing_requirements) ? raw.missing_requirements.length : null,
+  };
+}
+
+function buildMinimalDiagnostics({ successReceipt, successFinalState, invalidReceipt, invalidFinalState }) {
+  return {
+    success: {
+      receipt_status: successReceipt?.status ?? null,
+      final_status: successFinalState?.finalStatus ?? null,
+      invalid_reason: successFinalState?.item?.invalid_reason ?? null,
+      acceptance: summarizeAcceptance(successReceipt?.acceptance),
+    },
+    invalid: {
+      receipt_status: invalidReceipt?.status ?? null,
+      final_status: invalidFinalState?.finalStatus ?? null,
+      invalid_reason: invalidFinalState?.item?.invalid_reason ?? null,
+      acceptance: summarizeAcceptance(invalidReceipt?.acceptance),
+    },
+  };
+}
+
 function sanitizeParametersForSmoke(actionType, raw) {
   const allowlistByActionType = {
     IRRIGATE: new Set(["duration_sec"]),
@@ -393,8 +407,7 @@ function sanitizeParametersForSmoke(actionType, raw) {
 }
 
 async function main() {
-  // 脚本级自测：success 为 PENDING_ACCEPTANCE 也应视为通过；
-  // 同时 invalid lane 仍要求 INVALID_EXECUTION（见下方最终断言）。
+  // 脚本职责固定为“链路 smoke”：仅验证链路关键状态映射，不做“验收完成”判定。
   assert.equal(isSuccessMapped("PENDING_ACCEPTANCE"), true, "自测失败：PENDING_ACCEPTANCE 应命中 success 映射");
 
   console.log(`[p1-smoke] base=${BASE_URL}`);
@@ -402,6 +415,8 @@ async function main() {
   await ensureSkillBinding();
   let successOp = null;
   let successFinal = "FAILED";
+  let successReceiptLast = null;
+  let successFinalStateLast = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     successOp = await createOperation("IRRIGATE", `success_${attempt}`, SMOKE_SUCCESS_BIND_TARGET);
     const successTask = await waitForTask(successOp.operationPlanId);
@@ -426,6 +441,7 @@ async function main() {
       successEvidenceKinds,
       SMOKE_SUCCESS_BIND_TARGET,
     );
+    successReceiptLast = successReceipt;
     const expectedRequirements = Array.isArray(successReceipt?.expected_requirements)
       ? successReceipt.expected_requirements
       : Array.isArray(successReceipt?.acceptance?.expected_requirements)
@@ -445,7 +461,8 @@ async function main() {
       );
     }
     console.log("[p1-smoke][success][submitReceipt]", { attempt, ...successReceipt });
-    const successFinalState = await waitForAcceptanceResolution(successOp.operationPlanId);
+    const successFinalState = await waitForSmokeFinalState(successOp.operationPlanId);
+    successFinalStateLast = successFinalState;
     successFinal = successFinalState.finalStatus;
     const successReportRefs = Array.isArray(successFinalState?.item?.report_json?.evidence_refs)
       ? successFinalState.item.report_json.evidence_refs
@@ -454,7 +471,14 @@ async function main() {
       successReportRefs.length > 0,
       `success smoke 回归失败：report_json.evidence_refs 为空 operation=${successOp.operationPlanId}`,
     );
-    console.log("[p1-smoke][success][waitFinal]", { attempt, ...successFinalState });
+    console.log("[p1-smoke][success][waitFinal]", {
+      attempt,
+      ...successFinalState,
+      smoke_interpretation:
+        successFinal === "PENDING_ACCEPTANCE"
+          ? "执行已完成、证据已入链、待验收（链路 smoke 判定：通过）"
+          : null,
+    });
     if (isSuccessMapped(successFinal)) break;
     console.warn(`[p1-smoke][success] attempt=${attempt} final=${successFinal}, retrying success lane...`);
   }
@@ -464,16 +488,34 @@ async function main() {
   const invalidTask = await waitForTask(invalidOp.operationPlanId);
   const invalidTaskId = invalidTask.taskId;
   await setDispatchState(invalidTaskId, "ACKED");
-  await submitReceipt(invalidOp.operationPlanId, invalidTaskId, ["sim_trace"], SMOKE_FAILURE_BIND_TARGET);
-  const invalidFinal = (await waitForFinalState(invalidOp.operationPlanId)).finalStatus;
+  const invalidReceipt = await submitReceipt(
+    invalidOp.operationPlanId,
+    invalidTaskId,
+    ["sim_trace"],
+    SMOKE_FAILURE_BIND_TARGET,
+  );
+  const invalidFinalState = await waitForFinalState(invalidOp.operationPlanId);
+  const invalidFinal = invalidFinalState.finalStatus;
 
   const statuses = [successFinal, invalidFinal];
   const hasSuccessMapped = statuses.some((x) => isSuccessMapped(x));
   const hasInvalidExecution = statuses.some((x) => x === "INVALID_EXECUTION");
   const successMappedHit = successMappedBy(successFinal);
+  const failureDiagnostics = buildMinimalDiagnostics({
+    successReceipt: successReceiptLast,
+    successFinalState: successFinalStateLast ?? { finalStatus: successFinal, item: null },
+    invalidReceipt,
+    invalidFinalState,
+  });
 
-  assert.ok(hasSuccessMapped, `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}`);
-  assert.ok(hasInvalidExecution, `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}`);
+  assert.ok(
+    hasSuccessMapped,
+    `断言失败：至少 1 条 final_status=PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID（映射后）；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
+  );
+  assert.ok(
+    hasInvalidExecution,
+    `断言失败：至少 1 条 final_status=INVALID_EXECUTION；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
+  );
 
   console.log("[p1-smoke] done", {
     bindings: { success: SMOKE_SUCCESS_BIND_TARGET, failure: SMOKE_FAILURE_BIND_TARGET },
@@ -487,12 +529,12 @@ async function main() {
 
   assert.ok(
     isSuccessMapped(successFinal),
-    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}`,
+    `断言失败：success case final_status 仅接受 PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID；实际=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
   );
   assert.equal(
     invalidFinal,
     "INVALID_EXECUTION",
-    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}`,
+    `断言失败：failure case final_status 必须为 INVALID_EXECUTION；两条 operation 最终状态=${JSON.stringify(statuses)}；diagnostics=${JSON.stringify(failureDiagnostics)}`,
   );
 
   console.log("[p1-smoke] done", statuses);
