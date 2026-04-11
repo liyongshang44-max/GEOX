@@ -1,158 +1,125 @@
-import assert from "node:assert/strict";
-
 const BASE_URL = process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001";
-const TOKEN = process.env.GEOX_TOKEN ?? "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
-const OPERATION_PLAN_ID = process.env.GEOX_OPERATION_PLAN_ID ?? process.env.OPERATION_PLAN_ID ?? "";
-const TIMEOUT_MS = Number(process.env.GEOX_ACCEPTANCE_TIMEOUT_MS ?? 60_000);
-const POLL_INTERVAL_MS = Number(process.env.GEOX_ACCEPTANCE_POLL_INTERVAL_MS ?? 1_000);
+const TOKEN = process.env.GEOX_TOKEN ?? "";
+const tenant = {
+  tenant_id: process.env.GEOX_TENANT_ID ?? "tenantA",
+  project_id: process.env.GEOX_PROJECT_ID ?? "projectA",
+  group_id: process.env.GEOX_GROUP_ID ?? "groupA",
+};
+const OPERATION_PLAN_ID = String(process.env.GEOX_OPERATION_PLAN_ID ?? "").trim();
+const TIMEOUT_MS = Math.max(5_000, Number(process.env.GEOX_ACCEPTANCE_TIMEOUT_MS ?? 60_000));
+const POLL_MS = Math.max(200, Number(process.env.GEOX_ACCEPTANCE_POLL_MS ?? 1_000));
+
+if (!TOKEN) throw new Error("MISSING_ENV:GEOX_TOKEN");
+if (!OPERATION_PLAN_ID) throw new Error("MISSING_ENV:GEOX_OPERATION_PLAN_ID");
 
 const headers = {
   accept: "application/json",
   authorization: `Bearer ${TOKEN}`,
 };
 
-const SUCCESS_RULES = Object.freeze({
-  acceptanceVerdict: new Set(["PASS"]),
-  finalStatus: new Set(["SUCCESS", "SUCCEEDED", "VALID"]),
-});
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function readJsonSafe(raw) {
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return { raw };
-  }
+function normalizeFinalStatus(raw) {
+  return String(raw ?? "").trim().toUpperCase();
 }
 
-async function request(path) {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method: "GET",
-    headers,
-  });
+function normalizeVerdict(raw) {
+  return String(raw ?? "").trim().toUpperCase();
+}
+
+function buildDiagnostics(detail) {
+  const op = detail?.operation ?? detail?.item ?? detail ?? {};
+  const acceptance = op?.acceptance ?? {};
+  const receipt = op?.receipt ?? detail?.receipt ?? {};
+  const missingEvidence = Array.isArray(acceptance?.missing_evidence)
+    ? acceptance.missing_evidence
+    : Array.isArray(acceptance?.missingEvidence)
+      ? acceptance.missingEvidence
+      : [];
+  const logsRefs = Array.isArray(receipt?.logs_refs)
+    ? receipt.logs_refs
+    : Array.isArray(receipt?.payload?.logs_refs)
+      ? receipt.payload.logs_refs
+      : [];
+
+  return {
+    operation_plan_id: String(op?.operation_plan_id ?? OPERATION_PLAN_ID),
+    receipt_status: String(receipt?.status ?? op?.receipt_status ?? "").toUpperCase() || null,
+    final_status: normalizeFinalStatus(op?.final_status),
+    acceptance: {
+      verdict: normalizeVerdict(acceptance?.verdict ?? acceptance?.status ?? acceptance?.result_status),
+      missing_evidence: missingEvidence,
+    },
+    invalid_reason: String(op?.invalid_reason ?? acceptance?.invalid_reason ?? "") || null,
+    evidence_bundle: {
+      logs_count: logsRefs.length,
+      report_json_present: Boolean(op?.report_json),
+    },
+  };
+}
+
+function isPassing(diag) {
+  const allowedFinal = new Set(["SUCCESS", "SUCCEEDED", "VALID"]);
+  return diag.acceptance.verdict === "PASS" && allowedFinal.has(diag.final_status);
+}
+
+function isHardFailure(diag) {
+  const terminalBad = new Set(["INVALID_EXECUTION", "FAILED", "ERROR", "CANCELLED"]);
+  if (terminalBad.has(diag.final_status)) return true;
+  if (diag.acceptance.verdict === "FAIL") return true;
+  return false;
+}
+
+async function fetchOperationDetail() {
+  const query = new URLSearchParams(tenant).toString();
+  const url = `${BASE_URL}/api/v1/operations/${encodeURIComponent(OPERATION_PLAN_ID)}/detail?${query}`;
+  const res = await fetch(url, { method: "GET", headers });
   const text = await res.text();
-  const body = readJsonSafe(text);
+  let body = {};
+  try { body = text ? JSON.parse(text) : {}; } catch { body = { raw: text }; }
   if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${path}: ${JSON.stringify(body)}`);
+    throw new Error(`HTTP_${res.status}: ${text}`);
   }
   return body;
 }
 
-function compactEvidenceBundle(bundle) {
-  if (!bundle || typeof bundle !== "object") return null;
-  const refs = Array.isArray(bundle.evidence_refs) ? bundle.evidence_refs : [];
-  const kinds = refs.map((x) => x?.kind).filter(Boolean);
-  return {
-    evidence_count: refs.length,
-    evidence_kinds: Array.from(new Set(kinds)).slice(0, 20),
-    bundle_id: bundle.bundle_id ?? bundle.id ?? null,
-  };
-}
+async function main() {
+  const started = Date.now();
+  let last = null;
 
-function extractDiagnostics(detail, listItem) {
-  const operation = detail?.operation ?? {};
-  const acceptance = operation.acceptance ?? detail?.acceptance ?? {};
-  const receipt = operation.receipt ?? detail?.receipt ?? {};
-  const report = operation.report_json ?? detail?.report_json ?? {};
+  while (Date.now() - started < TIMEOUT_MS) {
+    const detail = await fetchOperationDetail();
+    const diag = buildDiagnostics(detail);
+    last = diag;
 
-  const finalStatusRaw = operation.final_status ?? detail?.final_status ?? listItem?.final_status ?? null;
+    console.log("[p1-acceptance-smoke][poll]", JSON.stringify(diag));
 
-  return {
-    receipt_status: receipt.status ?? operation.receipt_status ?? null,
-    final_status: finalStatusRaw ? String(finalStatusRaw).toUpperCase() : null,
-    acceptance: {
-      verdict: acceptance.verdict ? String(acceptance.verdict).toUpperCase() : null,
-      missing_evidence: acceptance.missing_evidence ?? null,
-      invalid_reason: acceptance.invalid_reason ?? null,
-    },
-    evidence_bundle: compactEvidenceBundle(report),
-  };
-}
-
-function isTerminalSuccess(diag) {
-  const verdict = diag.acceptance.verdict;
-  const finalStatus = diag.final_status;
-  return SUCCESS_RULES.acceptanceVerdict.has(verdict) && SUCCESS_RULES.finalStatus.has(finalStatus);
-}
-
-async function pollAcceptanceComplete(operationPlanId) {
-  const startedAt = Date.now();
-  let latest = null;
-
-  while (Date.now() - startedAt <= TIMEOUT_MS) {
-    const [detail, list] = await Promise.all([
-      request(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`),
-      request("/api/v1/operations"),
-    ]);
-
-    const listItem = (list.items ?? []).find(
-      (x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId,
-    );
-
-    latest = extractDiagnostics(detail, listItem);
-
-    if (isTerminalSuccess(latest)) {
-      return latest;
+    if (isPassing(diag)) {
+      console.log("[p1-acceptance-smoke] PASS: acceptance.verdict=PASS 且 final_status 命中 SUCCESS|SUCCEEDED|VALID");
+      return;
+    }
+    if (isHardFailure(diag)) {
+      console.error("[p1-acceptance-smoke] FAIL_HARD", JSON.stringify(diag));
+      process.exit(1);
     }
 
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(POLL_MS);
   }
 
-  const timeoutErr = new Error("acceptance smoke timeout before terminal success");
-  timeoutErr.diagnostics = latest;
-  throw timeoutErr;
-}
-
-async function main() {
-  assert.ok(OPERATION_PLAN_ID, "缺少 GEOX_OPERATION_PLAN_ID/OPERATION_PLAN_ID");
-
-  const result = await pollAcceptanceComplete(OPERATION_PLAN_ID);
-
-  assert.ok(
-    SUCCESS_RULES.acceptanceVerdict.has(result.acceptance.verdict),
-    `acceptance.verdict 非成功值: ${result.acceptance.verdict}`,
-  );
-  assert.ok(
-    SUCCESS_RULES.finalStatus.has(result.final_status),
-    `final_status 非成功终态: ${result.final_status}`,
-  );
-
-  console.log(
-    "[p1-acceptance-smoke] pass",
-    JSON.stringify(
-      {
-        operation_plan_id: OPERATION_PLAN_ID,
-        final_status: result.final_status,
-        acceptance_verdict: result.acceptance.verdict,
-      },
-      null,
-      2,
-    ),
-  );
+  console.error("[p1-acceptance-smoke] FAIL_TIMEOUT", JSON.stringify(last ?? {
+    operation_plan_id: OPERATION_PLAN_ID,
+    receipt_status: null,
+    final_status: null,
+    acceptance: { verdict: null, missing_evidence: [] },
+    invalid_reason: null,
+    evidence_bundle: { logs_count: 0, report_json_present: false },
+  }));
+  process.exit(1);
 }
 
 main().catch((err) => {
-  const diagnostics = err?.diagnostics ?? {};
-  console.error(
-    "[p1-acceptance-smoke] failed",
-    JSON.stringify(
-      {
-        operation_plan_id: OPERATION_PLAN_ID || null,
-        error: String(err?.message ?? err),
-        receipt_status: diagnostics.receipt_status ?? null,
-        final_status: diagnostics.final_status ?? null,
-        acceptance_verdict: diagnostics.acceptance?.verdict ?? null,
-        missing_evidence: diagnostics.acceptance?.missing_evidence ?? null,
-        invalid_reason: diagnostics.acceptance?.invalid_reason ?? null,
-        evidence_bundle: diagnostics.evidence_bundle ?? null,
-      },
-      null,
-      2,
-    ),
-  );
-  process.exitCode = 1;
+  console.error("[p1-acceptance-smoke] FAIL_EXCEPTION", err?.message ?? err);
+  process.exit(1);
 });

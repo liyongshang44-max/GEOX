@@ -202,26 +202,15 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 - 至少 1 条 `final_status` 命中 success 映射：`PENDING_ACCEPTANCE|SUCCESS|SUCCEEDED|VALID`
 - 至少 1 条 `final_status=INVALID_EXECUTION`
 
-### 4) 示例输出（链路 smoke 正常通过，且 success lane 为 `PENDING_ACCEPTANCE`）
+十六、P1 验收完成 smoke（只读断言）
+------------------------------------------------------------
+用于验证 success lane 最终进入验收通过终态（只允许等待/读取/断言，不修改业务状态）：
 
-```text
-[p1-smoke][success][waitFinal] {
-  attempt: 1,
-  operationPlanId: 'op_20260411_001',
-  finalStatus: 'PENDING_ACCEPTANCE'
-}
-[p1-smoke] done {
-  success: {
-    operation_plan_id: 'op_20260411_001',
-    final_status: 'PENDING_ACCEPTANCE',
-    success_mapped_by: 'PENDING_ACCEPTANCE'
-  },
-  invalid: {
-    operation_plan_id: 'op_20260411_002',
-    final_status: 'INVALID_EXECUTION'
-  }
-}
-[p1-smoke] done [ 'PENDING_ACCEPTANCE', 'INVALID_EXECUTION' ]
+```bash
+node apps/server/scripts/p1_skill_loop_acceptance_smoke.mjs
 ```
 
-> 解释：该输出表示“链路 smoke 已通过”，但 success lane 仍处于待验收；这**不是**“验收最终通过”。
+必填环境变量：
+
+- `GEOX_OPERATION_PLAN_ID`
+- `GEOX_TOKEN`
