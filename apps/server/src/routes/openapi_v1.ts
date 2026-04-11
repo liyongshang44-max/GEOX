@@ -326,6 +326,64 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             ok: { type: "boolean" },
             items: { type: "array", items: { '$ref': "#/components/schemas/OperationReportV1" } }
           }
+        },
+        CustomerDashboardAggregateResponse: {
+          type: "object",
+          required: ["ok", "aggregate"],
+          properties: {
+            ok: { type: "boolean" },
+            aggregate: {
+              type: "object",
+              required: ["fields", "recent_operations", "risk_summary", "period_summary"],
+              properties: {
+                fields: {
+                  type: "object",
+                  required: ["total", "healthy", "at_risk"],
+                  properties: {
+                    total: { type: "integer" },
+                    healthy: { type: "integer" },
+                    at_risk: { type: "integer" }
+                  }
+                },
+                recent_operations: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    required: ["operation_id", "operation_plan_id", "field_id", "executed_at", "risk_level", "risk_reasons", "estimated_total_cost", "execution_duration_ms"],
+                    properties: {
+                      operation_id: { type: "string" },
+                      operation_plan_id: { type: "string" },
+                      field_id: { type: "string" },
+                      executed_at: { type: "string", format: "date-time", nullable: true },
+                      risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+                      risk_reasons: { type: "array", items: { type: "string" } },
+                      estimated_total_cost: { type: "number" },
+                      execution_duration_ms: { type: "number", nullable: true }
+                    }
+                  }
+                },
+                risk_summary: {
+                  type: "object",
+                  required: ["level", "top_reasons"],
+                  properties: {
+                    level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+                    top_reasons: { type: "array", items: { type: "string" } }
+                  }
+                },
+                period_summary: {
+                  type: "object",
+                  required: ["total_operations", "total_cost", "avg_sla_ms"],
+                  properties: {
+                    total_operations: { type: "integer" },
+                    total_cost: { type: "number" },
+                    avg_sla_ms: { type: "number", nullable: true }
+                  }
+                }
+              },
+              additionalProperties: false
+            }
+          },
+          additionalProperties: false
         }
       }
     },
@@ -881,6 +939,26 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               content: {
                 "application/json": {
                   schema: { '$ref': "#/components/schemas/OperationReportFieldListResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/reports/customer-dashboard/aggregate": {
+        get: {
+          tags: ["dashboard"],
+          summary: "Read customer dashboard aggregate report",
+          parameters: [
+            { name: "field_ids[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } } },
+            { name: "time_range", in: "query", required: false, schema: { type: "string", enum: ["7d", "30d", "season"] } }
+          ],
+          responses: {
+            "200": {
+              description: "Customer dashboard aggregate returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/CustomerDashboardAggregateResponse" }
                 }
               }
             }
