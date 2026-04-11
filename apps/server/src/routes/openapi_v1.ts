@@ -98,7 +98,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           required: ["alert_id", "status", "severity", "title", "triggered_at_ts_ms"],
           properties: {
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
+            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
             severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
             title: { type: "string" },
             message: { type: "string" },
@@ -107,7 +107,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             device_id: { type: "string" },
             triggered_at_ts_ms: { type: "integer", format: "int64" },
             acked_at_ts_ms: { type: "integer", format: "int64", nullable: true },
-            resolved_at_ts_ms: { type: "integer", format: "int64", nullable: true }
+            closed_at_ts_ms: { type: "integer", format: "int64", nullable: true }
           }
         },
         AlertListResponseV1: {
@@ -123,13 +123,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         AlertSummaryResponseV1: {
           type: "object",
-          required: ["ok", "total", "open", "acked", "resolved"],
+          required: ["ok", "total", "by_severity", "by_status", "by_category"],
           properties: {
             ok: { type: "boolean" },
             total: { type: "integer" },
-            open: { type: "integer" },
-            acked: { type: "integer" },
-            resolved: { type: "integer" }
+            by_severity: { type: "object", additionalProperties: { type: "integer" } },
+            by_status: { type: "object", additionalProperties: { type: "integer" } },
+            by_category: { type: "object", additionalProperties: { type: "integer" } }
           }
         },
         AlertActionRequest: {
@@ -144,7 +144,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           properties: {
             ok: { type: "boolean" },
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["OPEN", "ACKED", "RESOLVED"] },
+            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
             note: { type: "string" }
           }
         },
@@ -959,7 +959,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           },
           responses: {
             "200": {
-              description: "Alert resolved successfully",
+              description: "Alert closed successfully",
               content: {
                 "application/json": {
                   schema: { '$ref': "#/components/schemas/AlertActionResponse" }
