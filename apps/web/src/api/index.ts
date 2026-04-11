@@ -11,3 +11,4 @@ export * from "./humanAssignments";
 export * from "./skills";
 export * from "./reports";
 export * from "./alerts";
+export * from "./fieldPortfolio";
