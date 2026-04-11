@@ -61,7 +61,6 @@ export default function OperationReportPage(): React.ReactElement {
       <SectionCard title="作业摘要">
         <div className="kvGrid2">
           <div><strong>作业ID：</strong>{kv(report.identifiers.operation_id || report.identifiers.operation_plan_id)}</div>
-          <div><strong>动作：</strong>{kv(report.cost.action_type)}</div>
           <div><strong>状态：</strong>{finalStatus.label}</div>
           <div><strong>任务ID：</strong>{kv(report.identifiers.act_task_id)}</div>
         </div>
@@ -97,8 +96,8 @@ export default function OperationReportPage(): React.ReactElement {
       <SectionCard title="成本">
         <div className="kvGrid2">
           <div><strong>预计：</strong>{kv(report.cost.estimated_total)}</div>
-          <div><strong>实际：</strong>{kv(report.cost.total)}</div>
-          <div><strong>币种：</strong>{kv(report.cost.currency)}</div>
+          <div><strong>实际：</strong>{kv(report.cost.actual_total)}</div>
+          <div><strong>预计水成本：</strong>{kv(report.cost.estimated_water_cost)}</div>
         </div>
       </SectionCard>
 

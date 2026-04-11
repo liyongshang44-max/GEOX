@@ -68,17 +68,14 @@ export type OperationReportV1 = {
     acceptance_present: boolean;
   };
   cost: {
-    total: number;
-    water: number;
-    electric: number;
-    chemical: number;
     estimated_total: number;
-    estimated_water_cost: number;
-    estimated_chemical_cost: number;
-    estimated_device_cost: number;
-    estimated_labor_cost: number;
-    action_type: string | null;
-    currency: "CNY";
+    actual_total?: number;
+    actual_water_cost?: number;
+    actual_electric_cost?: number;
+    actual_chemical_cost?: number;
+    estimated_water_cost?: number;
+    estimated_electric_cost?: number;
+    estimated_chemical_cost?: number;
   };
   sla: {
     dispatch_latency_quality: "VALID" | "MISSING_DATA" | "INVALID_ORDER";
@@ -185,9 +182,9 @@ export function aggregateCustomerDashboardReports(items: OperationReportV1[]): C
   const mid = reports.length > 1 ? Math.floor(reports.length / 2) : 0;
   const currentSlice = mid > 0 ? sorted.slice(0, mid) : sorted;
   const baselineSlice = mid > 0 ? sorted.slice(mid) : [];
-  const currentTotal = currentSlice.reduce((sum, item) => sum + Number(item.cost?.total ?? 0), 0);
+  const currentTotal = currentSlice.reduce((sum, item) => sum + Number(item.cost?.actual_total ?? item.cost?.estimated_total ?? 0), 0);
   const baselineTotal = baselineSlice.length
-    ? baselineSlice.reduce((sum, item) => sum + Number(item.cost?.total ?? 0), 0)
+    ? baselineSlice.reduce((sum, item) => sum + Number(item.cost?.actual_total ?? item.cost?.estimated_total ?? 0), 0)
     : null;
   const trend = baselineTotal == null
     ? "NO_DATA"

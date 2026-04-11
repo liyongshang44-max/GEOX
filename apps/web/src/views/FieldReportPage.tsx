@@ -72,8 +72,7 @@ export default function FieldReportPage(): React.ReactElement {
 
       <SectionCard title="成本汇总">
         <div>预计总成本：{sum(items, (item) => item.cost.estimated_total)}</div>
-        <div>实际总成本：{sum(items, (item) => item.cost.total)}</div>
-        <div>币种：CNY</div>
+        <div>实际总成本：{sum(items, (item) => item.cost.actual_total ?? 0)}</div>
       </SectionCard>
     </div>
   );
