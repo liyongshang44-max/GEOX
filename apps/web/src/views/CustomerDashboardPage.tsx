@@ -7,9 +7,8 @@
  */
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { fetchAlerts, fetchAlertSummary, type AlertV1 } from "../api/alerts";
+import { fetchAlertSummary, type AlertSummaryV1 } from "../api/alerts";
 import { fetchCustomerDashboardAggregate, mapReportCode, type CustomerDashboardAggregateV1 } from "../api/reports";
-import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
@@ -33,8 +32,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const location = useLocation();
   const [aggregate, setAggregate] = React.useState<CustomerDashboardAggregateV1 | null>(null);
   const [error, setError] = React.useState<string>("");
-  const [openAlerts, setOpenAlerts] = React.useState<AlertV1[]>([]);
-  const [alertSummary, setAlertSummary] = React.useState<{ total: number; by_status: Record<string, number> }>({ total: 0, by_status: {} });
+  const [alertSummary, setAlertSummary] = React.useState<AlertSummaryV1>({
+    ok: true,
+    total: 0,
+    by_status: { OPEN: 0, ACKED: 0, CLOSED: 0 },
+    by_severity: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+    by_category: {},
+  });
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -45,18 +49,21 @@ export default function CustomerDashboardPage(): React.ReactElement {
     void Promise.all([
       fetchCustomerDashboardAggregate({ fieldIds, timeRange }),
       fetchAlertSummary(),
-      fetchAlerts({ status: "OPEN" }),
     ])
-      .then(([nextAggregate, nextSummary, nextOpenAlerts]) => {
+      .then(([nextAggregate, nextSummary]) => {
         setAggregate(nextAggregate);
-        setAlertSummary({ total: Number(nextSummary.total ?? 0), by_status: nextSummary.by_status ?? {} });
-        setOpenAlerts(nextOpenAlerts.slice(0, 3));
+        setAlertSummary(nextSummary);
         setError("");
       })
       .catch(() => {
         setAggregate(null);
-        setOpenAlerts([]);
-        setAlertSummary({ total: 0, by_status: {} });
+        setAlertSummary({
+          ok: false,
+          total: 0,
+          by_status: { OPEN: 0, ACKED: 0, CLOSED: 0 },
+          by_severity: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
+          by_category: {},
+        });
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
   }, [location.search]);
@@ -79,18 +86,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <SectionCard title="告警摘要（/api/v1/alerts/summary）">
         <div>总告警：{numberFmt.format(alertSummary.total)}</div>
-        <div className="muted">未处理：{numberFmt.format(Number(alertSummary.by_status.OPEN ?? 0))} · 已确认：{numberFmt.format(Number(alertSummary.by_status.ACKED ?? 0))} · 已关闭：{numberFmt.format(Number(alertSummary.by_status.CLOSED ?? 0))}</div>
-      </SectionCard>
-
-      <SectionCard title="未处理告警 Top3（/api/v1/alerts?status=OPEN）">
-        <div className="list" style={{ marginTop: 8 }}>
-          {openAlerts.map((item) => (
-            <div key={item.alert_id} className="item">
-              {alertCategoryLabel(item.category)} · {alertStatusLabel(item.status)} · {formatDateTime(item.triggered_at)}
-            </div>
-          ))}
-          {!openAlerts.length ? <div className="muted">暂无未处理告警</div> : null}
-        </div>
+        <div className="muted">未处理：{numberFmt.format(alertSummary.by_status.OPEN)} · 已确认：{numberFmt.format(alertSummary.by_status.ACKED)} · 已关闭：{numberFmt.format(alertSummary.by_status.CLOSED)}</div>
       </SectionCard>
 
       <SectionCard title="最近执行">
