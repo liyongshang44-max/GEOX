@@ -97,6 +97,65 @@ async function queryScopedOperations(
 }
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/reports/customer-dashboard/field-portfolio-summary", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const q: any = (req as any).query ?? {};
+    const timeRange = parseTimeRange(q.time_range);
+    if (!timeRange) return reply.status(400).send({ ok: false, error: "INVALID_TIME_RANGE" });
+
+    const tenant: TenantTriple = {
+      tenant_id: String(auth.tenant_id),
+      project_id: String(auth.project_id),
+      group_id: String(auth.group_id),
+    };
+
+    const requestedFieldIds = parseRequestedFieldIds(q);
+    const allowedFieldIds = Array.isArray(auth.allowed_field_ids)
+      ? Array.from(new Set(auth.allowed_field_ids.map((x) => String(x ?? "").trim()).filter(Boolean)))
+      : [];
+
+    const intersectedFieldIds = requestedFieldIds.length > 0
+      ? requestedFieldIds.filter((fieldId) => allowedFieldIds.includes(fieldId))
+      : allowedFieldIds;
+
+    const scopedFieldIds = requestedFieldIds.length > 0
+      ? intersectedFieldIds
+      : allowedFieldIds;
+
+    const scopedOperations = (requestedFieldIds.length > 0 && intersectedFieldIds.length === 0)
+      ? []
+      : await queryScopedOperations(pool, tenant, scopedFieldIds);
+
+    const states = await projectOperationStateV1(pool, tenant);
+    const stateByOperationId = new Map<string, (typeof states)[number]>();
+    for (const state of states) {
+      const opId = String(state.operation_id ?? "").trim();
+      const planId = String(state.operation_plan_id ?? "").trim();
+      if (opId && !stateByOperationId.has(opId)) stateByOperationId.set(opId, state);
+      if (planId && !stateByOperationId.has(planId)) stateByOperationId.set(planId, state);
+    }
+
+    const reports = (await mapWithConcurrencyLimit(
+      scopedOperations,
+      DASHBOARD_REPORT_CONCURRENCY_LIMIT,
+      async (operation) => {
+        const state = stateByOperationId.get(operation.operation_id);
+        if (!state) return null;
+        if (scopedFieldIds.length > 0 && !scopedFieldIds.includes(String(state.field_id ?? "").trim())) return null;
+        return projectReportV1({ pool, tenant, operationState: state });
+      }
+    )).filter((report): report is NonNullable<typeof report> => Boolean(report));
+
+    const summary = projectFieldPortfolioSummaryV1(reports);
+
+    return reply.send({
+      ok: true,
+      summary,
+    });
+  });
+
   app.get("/api/v1/reports/customer-dashboard/aggregate", async (req, reply) => {
     if (!enforceRouteRoleAuth(req, reply, "summary")) return;
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");

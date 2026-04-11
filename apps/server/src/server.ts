@@ -30,6 +30,7 @@ import { registerTelemetryV1Routes } from "./routes/telemetry_v1"; // Sprint A1:
 import { registerDevicesV1Routes } from "./routes/devices_v1"; // Sprint A2: Devices registration + credentials routes (P0).
 import { registerHumanExecutorV1Routes, startAssignmentExpiryWorker } from "./routes/human_executors_v1"; // Human executor/service team/work-assignment domain routes.
 import { registerFieldsV1Routes } from "./routes/fields_v1"; // Sprint C1: Field/GIS + Device Binding routes.
+import { registerFieldTagsV1Routes } from "./routes/field_tags_v1"; // Field tags v1 routes (field scoped labels).
 import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
 import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
 import { registerAlertsV1Routes, startOfflineAlertWorker, startAlertNotificationWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
@@ -51,6 +52,7 @@ import { registerDecisionEngineV1Routes } from "./routes/decision_engine_v1"; //
 import { registerOperationStateV1Routes } from "./routes/operation_state_v1"; // Sprint B: unified operation state routes.
 import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // Sprint C: field timeline/replay route.
 import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
+import { registerFieldPortfolioV1Routes } from "./routes/field_portfolio_v1"; // Field portfolio projection APIs.
 import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program management + field/season scoped program routes.
 import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
 import { registerEvidenceBundleV1Routes } from "./routes/evidence_bundle_v1"; // Stage 3: operation evidence bundle API.
@@ -299,6 +301,7 @@ registerTelemetryV1Routes(app, pool); // legacy telemetry route registration onl
 registerDevicesV1Routes(app, pool); // Sprint A2: 注册设备注册/凭据路由（设备身份 P0）。
 registerHumanExecutorV1Routes(app, pool); // Human executor: register human/domain routes without altering device executor paths.
 registerFieldsV1Routes(app, pool); // Sprint C1: 注册 Field/GIS + Device Binding（地块化基座）。
+registerFieldTagsV1Routes(app, pool); // Field tags v1: 地块标签管理（含 field scope 校验）。
 registerDeviceHeartbeatV1Routes(app, pool); // Sprint C2: Register Device Heartbeat ingest (POST /api/v1/devices/:device_id/heartbeat).
 registerDeviceStatusV1Routes(app, pool); // Sprint C1: 注册 Device Status（心跳/在线状态）。
 registerSchedulingConflictV1Routes(app, pool); // Sprint F2: 注册 scheduling conflicts APIs（device/field/program intent conflicts）。
@@ -314,6 +317,7 @@ registerDecisionEngineV1Routes(app, pool); // Decision engine: recommendation ge
 registerOperationStateV1Routes(app, pool); // Sprint B: unified operations state projection API.
 registerFieldTimelineV1Routes(app, pool); // Sprint C: field timeline/replay API.
 registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program state projection API.
+registerFieldPortfolioV1Routes(app, pool); // Field portfolio projection APIs.
 registerProgramsV1Routes(app, pool); // Program management + field/season scoped program APIs.
 registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerEvidenceBundleV1Routes(app, pool); // Stage 3: aggregate operation evidence bundle for frontend consumption.

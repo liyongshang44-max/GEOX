@@ -1,18 +1,34 @@
 import React from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchAlerts, type AlertV1 } from "../api/alerts";
 import { fetchFieldReport, mapReportCode, type OperationReportV1 } from "../api/reports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
+import FieldTagEditor from "../components/fields/FieldTagEditor";
 
 function sum(items: OperationReportV1[], picker: (item: OperationReportV1) => number): number {
   return items.reduce((acc, item) => acc + picker(item), 0);
 }
 
+
+function resolveOverviewPath(locationSearch: string): string {
+  const params = new URLSearchParams(locationSearch);
+  const returnTo = String(params.get("return_to") || params.get("back_to") || "").trim();
+  if (returnTo.startsWith("/")) return returnTo;
+  const context = new URLSearchParams(locationSearch);
+  context.delete("return_to");
+  context.delete("back_to");
+  const query = context.toString();
+  return query ? `/fields?${query}` : "/fields";
+}
+
 export default function FieldReportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
+  const location = useLocation();
+  const detailHref = React.useMemo(() => (`/fields/${encodeURIComponent(fieldId)}${location.search || ""}`), [fieldId, location.search]);
+  const overviewHref = React.useMemo(() => resolveOverviewPath(location.search), [location.search]);
   const [loading, setLoading] = React.useState(true);
   const [items, setItems] = React.useState<OperationReportV1[]>([]);
   const [alerts, setAlerts] = React.useState<AlertV1[]>([]);
@@ -54,8 +70,10 @@ export default function FieldReportPage(): React.ReactElement {
         eyebrow="GEOX / 地块报告"
         title={`地块报告 ${fieldId}`}
         description="展示地块 operation reports + 风险/成本汇总"
-        actions={<Link className="btn" to={`/fields/${encodeURIComponent(fieldId)}`}>返回地块详情</Link>}
+        actions={(<><Link className="btn" to={detailHref}>返回地块详情</Link><Link className="btn" to={overviewHref}>返回多地块总览</Link></>)}
       />
+
+      <FieldTagEditor fieldId={fieldId} />
 
       <SectionCard title="未关闭关联告警">
         <div className="list">
