@@ -7,10 +7,11 @@ export type FieldPortfolioRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type FieldPortfolioItemV1 = {
   field_id: string;
   field_name: string | null;
-  group_id: string;
   tags: string[];
-  risk_level: FieldPortfolioRiskLevel;
-  risk_reasons: string[];
+  risk: {
+    level: FieldPortfolioRiskLevel;
+    reasons: string[];
+  };
   alert_summary: {
     open_total: number;
     by_severity: {
@@ -140,13 +141,11 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     itemsMap.set(fieldId, {
       field_id: fieldId,
       field_name: str((row as any).name) || null,
-      group_id: args.tenant.group_id,
       tags: [],
-      risk_level: "LOW",
-      risk_reasons: [],
-      alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
-      acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
-      operation_summary: { happened_at: null, action_type: null, status: null },
+      risk: { level: "LOW", reasons: [] },
+      alert_summary: { open_count: 0, high_or_above_count: 0 },
+      pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
+      latest_operation: { happened_at: null, action_type: null, status: null },
       cost_summary: { estimated_total: 0, actual_total: 0 },
       telemetry_summary: { latest_ts: null, device_offline: false },
       updated_at: null,
@@ -172,13 +171,11 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
       itemsMap.set(fieldId, {
         field_id: fieldId,
         field_name: null,
-        group_id: args.tenant.group_id,
         tags: [],
-        risk_level: "LOW",
-        risk_reasons: [],
-        alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
-        acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
-        operation_summary: { happened_at: null, action_type: null, status: null },
+        risk: { level: "LOW", reasons: [] },
+        alert_summary: { open_count: 0, high_or_above_count: 0 },
+        pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
+        latest_operation: { happened_at: null, action_type: null, status: null },
         cost_summary: { estimated_total: 0, actual_total: 0 },
         telemetry_summary: { latest_ts: null, device_offline: false },
         updated_at: null,
@@ -308,6 +305,29 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     if (lastTelemetryMs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(lastTelemetryMs);
   }
 
+  const fieldsInScope = [...itemsMap.keys()];
+  const fieldTagMap = new Map<string, string[]>();
+  if (fieldsInScope.length > 0) {
+    const tagQ = await args.pool.query(
+      `SELECT field_id, tag
+         FROM field_tags_v1
+        WHERE tenant_id = $1
+          AND ($2::text = '' OR project_id = $2)
+          AND ($3::text = '' OR group_id = $3)
+          AND field_id = ANY($4::text[])`,
+      [args.tenant.tenant_id, args.tenant.project_id, args.tenant.group_id, fieldsInScope]
+    ).catch(() => ({ rows: [] as any[] }));
+
+    for (const row of tagQ.rows ?? []) {
+      const fieldId = str((row as any).field_id);
+      const tag = str((row as any).tag);
+      if (!fieldId || !tag || !itemsMap.has(fieldId)) continue;
+      const current = fieldTagMap.get(fieldId) ?? [];
+      if (!current.includes(tag)) current.push(tag);
+      fieldTagMap.set(fieldId, current);
+    }
+  }
+
   const alertRiskByField = new Map<string, FieldPortfolioRiskLevel>();
   const alertReasonByField = new Map<string, Set<string>>();
   const alertTagByField = new Map<string, Set<string>>();
@@ -357,9 +377,11 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
     return {
       ...item,
-      tags: normalizeList(item.tags),
-      risk_level: alertLevel ?? reportRisk?.level ?? "LOW",
-      risk_reasons: reasons,
+      tags: fieldTagMap.get(item.field_id) ?? [],
+      risk: {
+        level: alertLevel ?? reportRisk?.level ?? "LOW",
+        reasons,
+      },
       cost_summary: {
         estimated_total: Number(item.cost_summary.estimated_total.toFixed(2)),
         actual_total: Number(item.cost_summary.actual_total.toFixed(2)),

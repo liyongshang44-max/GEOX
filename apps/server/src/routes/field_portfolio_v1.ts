@@ -39,65 +39,20 @@ function parseFieldIds(raw: unknown): string[] {
   return out;
 }
 
-function parseStringList(raw: unknown): string[] {
-  const asList = Array.isArray(raw) ? raw : [raw];
+function parseTags(raw: unknown): string[] {
+  const values = Array.isArray(raw) ? raw : [raw];
   const out: string[] = [];
   const seen = new Set<string>();
-  for (const chunk of asList) {
-    const parts = String(chunk ?? "").split(",");
-    for (const p of parts) {
-      const s = String(p ?? "").trim();
-      if (!s || seen.has(s)) continue;
-      seen.add(s);
-      out.push(s);
+  for (const value of values) {
+    const parts = String(value ?? "").split(",");
+    for (const part of parts) {
+      const normalized = String(part ?? "").trim();
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      out.push(normalized);
     }
   }
   return out;
-}
-
-function parseBoolean(raw: unknown): boolean | undefined {
-  if (typeof raw === "boolean") return raw;
-  const v = String(raw ?? "").trim().toLowerCase();
-  if (v === "true" || v === "1" || v === "yes") return true;
-  if (v === "false" || v === "0" || v === "no") return false;
-  return undefined;
-}
-
-function parseIntWithin(raw: unknown, fallback: number, min: number, max: number): number {
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return fallback;
-  return Math.max(min, Math.min(max, Math.floor(n)));
-}
-
-function parseSortBy(raw: unknown): "field_name" | "field_id" | "risk_level" | "open_alerts" | "pending_acceptance" | "latest_operation" | "estimated_total" | "actual_total" {
-  const v = String(raw ?? "").trim();
-  switch (v) {
-    case "field_name":
-    case "field_id":
-    case "open_alerts":
-    case "pending_acceptance":
-    case "latest_operation":
-    case "estimated_total":
-    case "actual_total":
-    case "risk_level":
-      return v;
-    default:
-      return "risk_level";
-  }
-}
-
-function parseSortOrder(raw: unknown): "asc" | "desc" {
-  const v = String(raw ?? "").trim().toLowerCase();
-  return v === "asc" ? "asc" : "desc";
-}
-
-function parseRiskLevels(raw: unknown): Array<"LOW" | "MEDIUM" | "HIGH"> {
-  const out: Array<"LOW" | "MEDIUM" | "HIGH"> = [];
-  for (const level of parseStringList(raw)) {
-    const v = level.toUpperCase();
-    if (v === "LOW" || v === "MEDIUM" || v === "HIGH") out.push(v);
-  }
-  return Array.from(new Set(out));
 }
 
 export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -145,7 +100,29 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
       page_size,
     });
 
-    return reply.send(payload);
+    const tags = parseTags(q.tags ?? q["tags[]"]);
+    if (tags.length === 0) return reply.send(payload);
+    const tagSet = new Set(tags);
+    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
+    return reply.send({
+      ...payload,
+      count: filteredItems.length,
+      items: filteredItems,
+      summary: {
+        total_fields: filteredItems.length,
+        by_risk: {
+          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
+          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
+          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
+        },
+        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
+        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
+        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
+        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
+        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
+      },
+    });
   });
 
   app.get("/api/v1/fields/portfolio/summary", async (req, reply) => {
@@ -174,6 +151,26 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
       nowMs: Date.now(),
     });
 
-    return reply.send({ ok: true, summary: payload.summary });
+    const tags = parseTags(q.tags ?? q["tags[]"]);
+    if (tags.length === 0) return reply.send({ ok: true, summary: payload.summary });
+    const tagSet = new Set(tags);
+    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
+    return reply.send({
+      ok: true,
+      summary: {
+        total_fields: filteredItems.length,
+        by_risk: {
+          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
+          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
+          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
+        },
+        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
+        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
+        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
+        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
+        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
+      },
+    });
   });
 }
