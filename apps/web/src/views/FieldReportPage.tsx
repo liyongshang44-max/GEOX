@@ -15,13 +15,21 @@ function sum(items: OperationReportV1[], picker: (item: OperationReportV1) => nu
 
 function resolveOverviewPath(locationSearch: string): string {
   const params = new URLSearchParams(locationSearch);
-  const returnTo = String(params.get("return_to") || params.get("back_to") || "").trim();
-  if (returnTo.startsWith("/")) return returnTo;
+  const preferredReturn = String(params.get("return_to") || "").trim();
+  if (preferredReturn.startsWith("/")) return preferredReturn;
+
+  const fallbackReturn = String(params.get("back_to") || "").trim();
+  if (fallbackReturn.startsWith("/")) return fallbackReturn;
+
   const context = new URLSearchParams();
-  ["query", "risk", "has_open_alerts", "has_pending_acceptance", "tags", "sort"].forEach((key) => {
+  ["query", "risk", "has_open_alerts", "has_pending_acceptance", "sort", "page", "page_size"].forEach((key) => {
     const value = params.get(key);
     if (value) context.set(key, value);
   });
+
+  const tags = params.getAll("tags").map((tag) => String(tag || "").trim()).filter(Boolean);
+  if (tags.length) context.set("tags", tags.join(","));
+
   const query = context.toString();
   return query ? `/fields/portfolio?${query}` : "/fields/portfolio";
 }

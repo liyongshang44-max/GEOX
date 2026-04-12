@@ -65,7 +65,16 @@ function toBackendParams(params: {
     sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
+    sort_order: "desc",
   };
+
+  if (params.sort === "updated_desc") {
+    next.sort_by = "updated_at";
+  } else if (params.sort === "cost_desc") {
+    next.sort_by = "cycle_cost";
+  } else {
+    next.sort_by = "business_priority";
+  }
 
   if (params.query.trim()) next.query = params.query.trim();
   if (params.risk) next.risk_levels = [params.risk];

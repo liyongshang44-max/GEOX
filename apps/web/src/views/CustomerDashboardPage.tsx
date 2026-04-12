@@ -8,7 +8,12 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { fetchAlertSummary, type AlertSummaryV1 } from "../api/alerts";
-import { type FieldPortfolioSummaryV1, fetchFieldPortfolioSummary } from "../api/fieldPortfolio";
+import {
+  type FieldPortfolioItemV1,
+  type FieldPortfolioSummaryV1,
+  fetchFieldPortfolio,
+  fetchFieldPortfolioSummary,
+} from "../api/fieldPortfolio";
 import { mapReportCode } from "../api/reports";
 import { PageHeader, SectionCard } from "../shared/ui";
 
@@ -29,9 +34,17 @@ function formatDuration(v: number | null | undefined): string {
   return `${numberFmt.format(minutes)} 分钟`;
 }
 
+function riskRank(value: unknown): number {
+  const normalized = String(value ?? "").trim().toUpperCase();
+  if (normalized === "HIGH") return 2;
+  if (normalized === "MEDIUM") return 1;
+  return 0;
+}
+
 export default function CustomerDashboardPage(): React.ReactElement {
   const location = useLocation();
   const [summary, setSummary] = React.useState<FieldPortfolioSummaryV1 | null>(null);
+  const [portfolioItems, setPortfolioItems] = React.useState<FieldPortfolioItemV1[]>([]);
   const [error, setError] = React.useState<string>("");
   const [alertSummary, setAlertSummary] = React.useState<AlertSummaryV1>({
     ok: true,
@@ -49,15 +62,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
     void Promise.all([
       fetchFieldPortfolioSummary({ fieldIds, timeRange }),
+      fetchFieldPortfolio({ fieldIds, timeRange, sort_by: "business_priority", sort_order: "desc", page: 1, page_size: 5 }),
       fetchAlertSummary(),
     ])
-      .then(([nextSummaryData, nextSummary]) => {
+      .then(([nextSummaryData, nextItems, nextSummary]) => {
         setSummary(nextSummaryData);
+        setPortfolioItems(nextItems);
         setAlertSummary(nextSummary);
         setError("");
       })
       .catch(() => {
         setSummary(null);
+        setPortfolioItems([]);
         setAlertSummary({
           ok: false,
           total: 0,
@@ -68,6 +84,20 @@ export default function CustomerDashboardPage(): React.ReactElement {
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
   }, [location.search]);
+
+  const topRiskFields = React.useMemo(() => {
+    return [...portfolioItems]
+      .sort((a, b) => {
+        const left = a as Record<string, unknown>;
+        const right = b as Record<string, unknown>;
+        const riskDiff = riskRank(right.risk_level) - riskRank(left.risk_level);
+        if (riskDiff !== 0) return riskDiff;
+        const updatedDiff = Date.parse(String(right.updated_at ?? "")) - Date.parse(String(left.updated_at ?? ""));
+        if (Number.isFinite(updatedDiff) && updatedDiff !== 0) return updatedDiff;
+        return String(left.field_id ?? "").localeCompare(String(right.field_id ?? ""));
+      })
+      .slice(0, 5);
+  }, [portfolioItems]);
 
   return (
     <div className="demoDashboardPage">
@@ -99,13 +129,24 @@ export default function CustomerDashboardPage(): React.ReactElement {
       {Number(summary?.fields.total ?? 0) > 1 ? (
         <SectionCard title="Top 风险地块">
           <div className="list">
-            {(summary?.top_risk_fields || []).map((item) => (
-              <div key={item.field_id} className="item">
-                地块 {item.field_id} · 风险 {mapReportCode(item.risk_level).label} · 作业 {numberFmt.format(item.operation_count)} 次 · 成本 {currencyFmt.format(item.total_estimated_cost)} · 最近执行 {formatDateTime(item.last_executed_at)}
-                {item.risk_reasons.length ? <div className="muted">风险原因：{item.risk_reasons.join("、")}</div> : null}
-              </div>
-            ))}
-            {!summary?.top_risk_fields?.length ? <div className="muted">暂无风险地块数据</div> : null}
+            {topRiskFields.map((item, idx) => {
+              const anyItem = item as Record<string, unknown>;
+              const fieldId = String(anyItem.field_id ?? anyItem.program_id ?? idx);
+              const name = String(anyItem.name ?? "").trim();
+              const riskLevel = String(anyItem.risk_level ?? "LOW").trim().toUpperCase();
+              const alertSummaryText = String(anyItem.alert_summary ?? "").trim();
+              const operationSummaryText = String(anyItem.operation_summary ?? "").trim();
+              const costSummaryText = String(anyItem.cost_summary ?? "").trim();
+              const updatedAt = String(anyItem.updated_at ?? "");
+              return (
+                <div key={fieldId} className="item">
+                  地块 {name || fieldId} · 风险 {mapReportCode(riskLevel).label} · 告警 {alertSummaryText || "-"} · 作业 {operationSummaryText || "-"} · 成本 {costSummaryText || "-"} · 最近更新 {formatDateTime(updatedAt)}
+                </div>
+              );
+            })}
+            {!topRiskFields.length ? (
+              <div className="muted">暂无风险地块数据</div>
+            ) : null}
           </div>
         </SectionCard>
       ) : null}

@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { hasFieldAccess } from "../auth/route_role_authz";
-import { projectFieldPortfolioListV1 } from "../projections/field_portfolio_v1";
+import { projectFieldPortfolioListV1, type FieldPortfolioRiskLevel, type FieldPortfolioSortBy } from "../projections/field_portfolio_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -23,14 +23,14 @@ function requireTenantMatchOr404(auth: TenantTriple, tenant: TenantTriple, reply
   return true;
 }
 
-function parseFieldIds(raw: unknown): string[] {
+function parseList(raw: unknown): string[] {
   const asList = Array.isArray(raw) ? raw : [raw];
   const out: string[] = [];
   const seen = new Set<string>();
   for (const chunk of asList) {
     const parts = String(chunk ?? "").split(",");
-    for (const p of parts) {
-      const s = String(p ?? "").trim();
+    for (const part of parts) {
+      const s = String(part ?? "").trim();
       if (!s || seen.has(s)) continue;
       seen.add(s);
       out.push(s);
@@ -39,20 +39,59 @@ function parseFieldIds(raw: unknown): string[] {
   return out;
 }
 
-function parseTags(raw: unknown): string[] {
-  const values = Array.isArray(raw) ? raw : [raw];
-  const out: string[] = [];
-  const seen = new Set<string>();
-  for (const value of values) {
-    const parts = String(value ?? "").split(",");
-    for (const part of parts) {
-      const normalized = String(part ?? "").trim();
-      if (!normalized || seen.has(normalized)) continue;
-      seen.add(normalized);
-      out.push(normalized);
+function parseBoolean(raw: unknown): boolean | undefined {
+  if (typeof raw === "boolean") return raw;
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (v === "true" || v === "1" || v === "yes") return true;
+  if (v === "false" || v === "0" || v === "no") return false;
+  return undefined;
+}
+
+function parseIntWithin(raw: unknown, fallback: number, min: number, max: number): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function parseRiskLevels(raw: unknown): FieldPortfolioRiskLevel[] {
+  const out: FieldPortfolioRiskLevel[] = [];
+  for (const lv of parseList(raw)) {
+    const normalized = lv.trim().toUpperCase();
+    if (normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" || normalized === "CRITICAL") {
+      if (!out.includes(normalized)) out.push(normalized);
     }
   }
   return out;
+}
+
+function parseSortBy(raw: unknown): FieldPortfolioSortBy {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "open_alerts") return "open_alerts";
+  if (value === "pending_acceptance") return "pending_acceptance";
+  if (value === "last_operation_at") return "last_operation_at";
+  if (value === "cost") return "cost";
+  if (value === "updated_at") return "updated_at";
+  if (value === "field_name") return "field_name";
+  return "risk";
+}
+
+function parseSortOrder(raw: unknown): "asc" | "desc" {
+  return String(raw ?? "").trim().toLowerCase() === "asc" ? "asc" : "desc";
+}
+
+function parseProjectionFilters(q: any) {
+  return {
+    windowMs: Number.isFinite(Number(q.window_ms)) ? Number(q.window_ms) : undefined,
+    tags: parseList(q.tags ?? q["tags[]"]),
+    risk_levels: parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]),
+    has_open_alerts: parseBoolean(q.has_open_alerts),
+    has_pending_acceptance: parseBoolean(q.has_pending_acceptance),
+    query: String(q.query ?? "").trim(),
+    sort_by: parseSortBy(q.sort_by),
+    sort_order: parseSortOrder(q.sort_order),
+    page: parseIntWithin(q.page, 1, 1, 1_000_000),
+    page_size: parseIntWithin(q.page_size, 20, 1, 200),
+  };
 }
 
 export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -64,65 +103,23 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const q: any = (req as any).query ?? {};
-    const requestedFieldIds = parseFieldIds(q.field_ids ?? q["field_ids[]"] ?? q.field_id);
+    const requestedFieldIds = parseList(q.field_ids ?? q["field_ids[]"] ?? q.field_id);
     const scopedFieldIds = requestedFieldIds.length > 0
       ? requestedFieldIds.filter((x) => hasFieldAccess(auth, x))
       : (Array.isArray(auth.allowed_field_ids)
         ? auth.allowed_field_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
         : []);
 
-    const windowMsRaw = Number(q.window_ms ?? "");
-    const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
-    const tags = parseStringList(q.tags ?? q["tags[]"]);
-    const risk_levels = parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]);
-    const has_open_alerts = parseBoolean(q.has_open_alerts);
-    const has_pending_acceptance = parseBoolean(q.has_pending_acceptance);
-    const query = String(q.query ?? "").trim();
-    const sort_by = parseSortBy(q.sort_by);
-    const sort_order = parseSortOrder(q.sort_order);
-    const page = parseIntWithin(q.page, 1, 1, 1_000_000);
-    const page_size = parseIntWithin(q.page_size, 20, 1, 200);
-
+    const filters = parseProjectionFilters(q);
     const payload = await projectFieldPortfolioListV1({
       pool,
       tenant,
       field_ids: scopedFieldIds,
-      windowMs,
       nowMs: Date.now(),
-      tags,
-      risk_levels,
-      has_open_alerts,
-      has_pending_acceptance,
-      query,
-      sort_by,
-      sort_order,
-      page,
-      page_size,
+      ...filters,
     });
 
-    const tags = parseTags(q.tags ?? q["tags[]"]);
-    if (tags.length === 0) return reply.send(payload);
-    const tagSet = new Set(tags);
-    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
-    return reply.send({
-      ...payload,
-      count: filteredItems.length,
-      items: filteredItems,
-      summary: {
-        total_fields: filteredItems.length,
-        by_risk: {
-          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
-          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
-          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
-        },
-        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
-        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
-        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
-        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
-        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
-        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
-      },
-    });
+    return reply.send(payload);
   });
 
   app.get("/api/v1/fields/portfolio/summary", async (req, reply) => {
@@ -133,44 +130,29 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const q: any = (req as any).query ?? {};
-    const requestedFieldIds = parseFieldIds(q.field_ids ?? q["field_ids[]"] ?? q.field_id);
+    const requestedFieldIds = parseList(q.field_ids ?? q["field_ids[]"] ?? q.field_id);
     const scopedFieldIds = requestedFieldIds.length > 0
       ? requestedFieldIds.filter((x) => hasFieldAccess(auth, x))
       : (Array.isArray(auth.allowed_field_ids)
         ? auth.allowed_field_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
         : []);
 
-    const windowMsRaw = Number(q.window_ms ?? "");
-    const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
-
+    const filters = parseProjectionFilters(q);
     const payload = await projectFieldPortfolioListV1({
       pool,
       tenant,
       field_ids: scopedFieldIds,
-      windowMs,
       nowMs: Date.now(),
+      windowMs: filters.windowMs,
+      tags: filters.tags,
+      risk_levels: filters.risk_levels,
+      has_open_alerts: filters.has_open_alerts,
+      has_pending_acceptance: filters.has_pending_acceptance,
+      query: filters.query,
+      sort_by: filters.sort_by,
+      sort_order: filters.sort_order,
     });
 
-    const tags = parseTags(q.tags ?? q["tags[]"]);
-    if (tags.length === 0) return reply.send({ ok: true, summary: payload.summary });
-    const tagSet = new Set(tags);
-    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
-    return reply.send({
-      ok: true,
-      summary: {
-        total_fields: filteredItems.length,
-        by_risk: {
-          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
-          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
-          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
-        },
-        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
-        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
-        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
-        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
-        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
-        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
-      },
-    });
+    return reply.send({ ok: true, summary: payload.summary });
   });
 }
