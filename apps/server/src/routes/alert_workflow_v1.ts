@@ -585,6 +585,41 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     return reply.send({ ok: true, items, total: items.length });
   });
 
+  app.get("/api/v1/alerts/workboard/summary", async (req, reply) => {
+    const auth = requireScope(req, reply, "alerts.read");
+    if (!auth) return reply;
+    if (!canRead(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
+    const query: any = (req.query ?? {});
+    const field_ids = normalizeCsv(query.field_ids ?? query.field_id ?? query.field ?? query.fieldId);
+    const filter = {
+      field_ids,
+      workflow_status: normalizeStatusList(query.workflow_status ?? query.workflowStatus),
+      assignee_actor_id: normalizeCsv(query.assignee_actor_id ?? query.assigneeActorId ?? query.assignee),
+      severity: normalizeSeverityList(query.severity),
+      category: normalizeCsv(query.category).map((x) => x.toUpperCase()),
+      priority_min: query.priority_min != null ? Number(query.priority_min) : null,
+      priority_max: query.priority_max != null ? Number(query.priority_max) : null,
+      sla_breached: query.sla_breached == null ? null : String(query.sla_breached).toLowerCase() === "true",
+      query: String(query.query ?? "").trim(),
+    };
+    const items = await projectWorkboardItems(auth, filter, { skipFieldScope: false });
+    const summary = items.reduce((acc, item) => {
+      acc.total += 1;
+      if (item.workflow_status === "OPEN") acc.unassigned += 1;
+      if (item.workflow_status === "IN_PROGRESS" || item.workflow_status === "ASSIGNED" || item.workflow_status === "ACKED") acc.in_progress += 1;
+      if (item.sla_breached) acc.sla_breached += 1;
+      if (item.workflow_status === "CLOSED") acc.closed_today += 1;
+      return acc;
+    }, {
+      total: 0,
+      unassigned: 0,
+      in_progress: 0,
+      sla_breached: 0,
+      closed_today: 0,
+    });
+    return reply.send({ ok: true, ...summary });
+  });
+
   const writeHandler = async (
     req: any,
     reply: any,
