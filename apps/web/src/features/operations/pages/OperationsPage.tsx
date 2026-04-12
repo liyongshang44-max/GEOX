@@ -8,7 +8,9 @@ import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../../../lib/operationLink";
 import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
+import { getOperationLabels } from "../../../lib/operationViewModel";
 import { resolveUnifiedOperationFinalStatus, toOperationsListGroup } from "../../../lib/operationStatusUnified";
+import { uuidv4 } from "../../../lib/uuid";
 
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
@@ -22,7 +24,8 @@ function groupOf(item: any): GroupKey {
 
 export default function OperationsPage(): React.ReactElement {
   const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
-  const labels = OP_LABELS.zh;
+  // operationViewModel 是唯一标签来源，页面不再维护本地 OP_LABELS。
+  const labels = getOperationLabels("zh");
   const [issuer, setIssuer] = React.useState("human");
   const [actionType, setActionType] = React.useState("IRRIGATE");
   const [targetText, setTargetText] = React.useState("");

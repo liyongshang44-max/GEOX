@@ -1,8 +1,8 @@
 import React from "react";
-import type { OperationLabels } from "../../lib/operationViewModel";
+import type { OperationQuickCreateLabels } from "../../lib/operationLabels";
 
 export default function OperationQuickCreate(props: {
-  labels: OperationLabels;
+  labels: OperationQuickCreateLabels;
   issuer: string;
   actionType: string;
   targetText: string;
