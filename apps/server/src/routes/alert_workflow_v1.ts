@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool, PoolClient } from "pg";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { hasFieldAccess } from "../auth/route_role_authz";
+import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz";
 import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1";
 import { projectAlertWorkboardV1, type AlertWorkflowStatusV1 } from "../projections/alert_workboard_v1";
@@ -313,6 +313,8 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   const canWrite = (auth: AoActAuthContextV0): boolean => auth.role === "operator" || auth.role === "admin";
+  const canRead = (auth: AoActAuthContextV0): boolean =>
+    auth.role === "client" || auth.role === "viewer" || auth.role === "operator" || auth.role === "admin";
   const parseId = (v: unknown): string | null => {
     const s = String(v ?? "").trim();
     if (!s) return null;
@@ -337,13 +339,28 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
       .map((x) => String(x).trim().toUpperCase())
       .filter((x): x is AlertWorkflowStatusV1 => isValidAlertWorkflowStatus(x));
 
-  const listOperationInputsForAlertProjection = async (auth: AoActAuthContextV0): Promise<AlertListOperationInputV1[]> => {
+  const requireScope = (
+    req: any,
+    reply: any,
+    scope: "alerts.read" | "alerts.write"
+  ): AoActAuthContextV0 | null => {
+    const injected = (app as any).alertWorkflowRequireScopeV0;
+    if (typeof injected === "function") return injected(req, reply, scope);
+    return requireAoActScopeV0(req, reply, scope);
+  };
+
+  const listOperationInputsForAlertProjection = async (
+    auth: AoActAuthContextV0,
+    opts: { skipFieldScope?: boolean } = {}
+  ): Promise<AlertListOperationInputV1[]> => {
     const states = await projectOperationStateV1(pool, {
       tenant_id: auth.tenant_id,
       project_id: auth.project_id,
       group_id: auth.group_id,
     });
-    const scoped = states.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
+    const scoped = opts.skipFieldScope
+      ? states
+      : states.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
     const reports = await Promise.all(scoped.map((state) => projectOperationReportV1({
       pool,
       tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
@@ -373,7 +390,10 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     }));
   };
 
-  const listTelemetryHealthInputsForAlertProjection = async (auth: AoActAuthContextV0): Promise<TelemetryHealthInput[]> => {
+  const listTelemetryHealthInputsForAlertProjection = async (
+    auth: AoActAuthContextV0,
+    opts: { skipFieldScope?: boolean } = {}
+  ): Promise<TelemetryHealthInput[]> => {
     const q = await pool.query(
       `SELECT d.device_id,
               COALESCE(d.field_id, b.field_id) AS field_id,
@@ -390,7 +410,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     const out: TelemetryHealthInput[] = [];
     for (const row of q.rows ?? []) {
       const field_id = String(row.field_id ?? "").trim() || null;
-      if (field_id && !hasFieldAccess(auth, field_id)) continue;
+      if (!opts.skipFieldScope && field_id && !hasFieldAccess(auth, field_id)) continue;
       const lastHeartbeat = Number(row.last_heartbeat_ts_ms ?? 0);
       const lastTelemetry = Number(row.last_telemetry_ts_ms ?? 0);
       const batteryPercent = Number(row.battery_percent ?? 100);
@@ -451,14 +471,40 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     return map;
   };
 
-  const projectWorkboardItems = async (auth: AoActAuthContextV0, filter: any = {}) => {
+  const buildOperationFieldMap = (operations: AlertListOperationInputV1[]): Map<string, string> => {
+    const out = new Map<string, string>();
+    for (const item of operations) {
+      const operationId = String(item.operation_state?.operation_id ?? item.operation_plan_id ?? "").trim();
+      const fieldId = String(item.operation_state?.field_id ?? "").trim();
+      if (operationId && fieldId) out.set(operationId, fieldId);
+    }
+    return out;
+  };
+
+  const buildOperationDeviceMap = (operations: AlertListOperationInputV1[]): Map<string, string> => {
+    const out = new Map<string, string>();
+    for (const item of operations) {
+      const operationId = String(item.operation_state?.operation_id ?? item.operation_plan_id ?? "").trim();
+      const deviceId = String(item.operation_state?.device_id ?? "").trim();
+      if (operationId && deviceId) out.set(operationId, deviceId);
+    }
+    return out;
+  };
+
+  const projectWorkboardItemsCore = async (
+    auth: AoActAuthContextV0,
+    filter: any = {},
+    opts: { skipFieldScope?: boolean } = {}
+  ) => {
     const [operations, telemetry_health, action_overrides, workflow, device_field_map] = await Promise.all([
-      listOperationInputsForAlertProjection(auth),
-      listTelemetryHealthInputsForAlertProjection(auth),
+      listOperationInputsForAlertProjection(auth, { skipFieldScope: opts.skipFieldScope }),
+      listTelemetryHealthInputsForAlertProjection(auth, { skipFieldScope: opts.skipFieldScope }),
       listAlertActionOverrides(auth),
       listWorkflowRows(auth),
       listDeviceFieldMap(auth.tenant_id),
     ]);
+    const operation_field_map = buildOperationFieldMap(operations);
+    const operation_device_map = buildOperationDeviceMap(operations);
 
     return projectAlertWorkboardV1({
       scope: {
@@ -480,21 +526,43 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
         last_note: row.last_note ?? null,
       })),
       device_field_map,
-      operation_field_map: new Map<string, string>(),
-      operation_device_map: new Map<string, string>(),
+      operation_field_map,
+      operation_device_map,
       filter,
       nowMs: Date.now(),
     });
   };
 
-  const findScopedAlert = async (auth: AoActAuthContextV0, alert_id: string) => {
-    const items = await projectWorkboardItems(auth);
-    return items.find((it) => it.alert_id === alert_id) ?? null;
+  const projectWorkboardItems = async (
+    auth: AoActAuthContextV0,
+    filter: any = {},
+    opts: { skipFieldScope?: boolean } = {}
+  ) => {
+    const injected = (app as any).alertWorkflowProjectWorkboardItems;
+    if (typeof injected === "function") return injected(auth, filter, opts);
+    return projectWorkboardItemsCore(auth, filter, opts);
+  };
+
+  const resolveAlertFieldId = async (auth: AoActAuthContextV0, alert_id: string): Promise<string | null> => {
+    const injected = (app as any).alertWorkflowResolveAlertFieldId;
+    if (typeof injected === "function") return injected(auth, alert_id);
+
+    const items = await projectWorkboardItemsCore(auth, { object_id: alert_id }, { skipFieldScope: true });
+    const target = items.find((it: any) => String(it.alert_id ?? "") === alert_id) ?? null;
+    if (!target) return null;
+    const objectType = String(target.object_type ?? "").toUpperCase();
+    const objectId = String(target.object_id ?? "").trim();
+    if (!objectId) return null;
+    if (objectType === "FIELD") return objectId;
+    if (objectType === "DEVICE") return String(target.field_id ?? "").trim() || null;
+    if (objectType === "OPERATION") return String(target.field_id ?? "").trim() || null;
+    return null;
   };
 
   app.get("/api/v1/alerts/workboard", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "alerts.read");
+    const auth = requireScope(req, reply, "alerts.read");
     if (!auth) return reply;
+    if (!canRead(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
     const query: any = (req.query ?? {});
     const filter = {
       workflow_status: normalizeStatusList(query.workflow_status ?? query.workflowStatus),
@@ -503,7 +571,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
       priority_max: query.priority_max != null ? Number(query.priority_max) : null,
       sla_breached: query.sla_breached == null ? null : String(query.sla_breached).toLowerCase() === "true",
     };
-    const items = await projectWorkboardItems(auth, filter);
+    const items = await projectWorkboardItems(auth, filter, { skipFieldScope: false });
     return reply.send({ ok: true, items, total: items.length });
   });
 
@@ -512,13 +580,17 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     reply: any,
     opts: { status: AlertWorkflowStatus; withAssignedAt?: boolean; withResolvedAt?: boolean; preserveStatus?: boolean }
   ) => {
-    const auth = requireAoActScopeV0(req, reply, "alerts.write");
+    const auth = requireScope(req, reply, "alerts.write");
     if (!auth) return reply;
     const alert_id = parseId((req.params as any)?.alert_id);
     if (!alert_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    const target = await findScopedAlert(auth, alert_id); // 1) alert existence + scope.
-    if (!target) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    const field_id = await resolveAlertFieldId(auth, alert_id); // 1) alert->field relation resolve.
+    if (!field_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+    if (!enforceFieldScopeOrDeny(auth, field_id, reply, { asNotFound: true })) return reply;
     if (!canWrite(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" }); // 2) role.
+    const targetItems = await projectWorkboardItems(auth, { object_id: alert_id }, { skipFieldScope: false });
+    const target = targetItems.find((it: any) => String(it.alert_id ?? "") === alert_id) ?? null;
+    if (!target) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const body: any = req.body ?? {};
     const now = Date.now();
