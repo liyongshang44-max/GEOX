@@ -7,11 +7,10 @@ export type FieldPortfolioRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export type FieldPortfolioItemV1 = {
   field_id: string;
   field_name: string | null;
+  group_id: string;
   tags: string[];
-  risk: {
-    level: FieldPortfolioRiskLevel;
-    reasons: string[];
-  };
+  risk_level: FieldPortfolioRiskLevel;
+  risk_reasons: string[];
   alert_summary: {
     open_total: number;
     by_severity: {
@@ -141,11 +140,13 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     itemsMap.set(fieldId, {
       field_id: fieldId,
       field_name: str((row as any).name) || null,
+      group_id: args.tenant.group_id,
       tags: [],
-      risk: { level: "LOW", reasons: [] },
-      alert_summary: { open_count: 0, high_or_above_count: 0 },
-      pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
-      latest_operation: { happened_at: null, action_type: null, status: null },
+      risk_level: "LOW",
+      risk_reasons: [],
+      alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
+      acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
+      operation_summary: { happened_at: null, action_type: null, status: null },
       cost_summary: { estimated_total: 0, actual_total: 0 },
       telemetry_summary: { latest_ts: null, device_offline: false },
       updated_at: null,
@@ -171,11 +172,13 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
       itemsMap.set(fieldId, {
         field_id: fieldId,
         field_name: null,
+        group_id: args.tenant.group_id,
         tags: [],
-        risk: { level: "LOW", reasons: [] },
-        alert_summary: { open_count: 0, high_or_above_count: 0 },
-        pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
-        latest_operation: { happened_at: null, action_type: null, status: null },
+        risk_level: "LOW",
+        risk_reasons: [],
+        alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
+        acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
+        operation_summary: { happened_at: null, action_type: null, status: null },
         cost_summary: { estimated_total: 0, actual_total: 0 },
         telemetry_summary: { latest_ts: null, device_offline: false },
         updated_at: null,
@@ -378,10 +381,8 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     return {
       ...item,
       tags: fieldTagMap.get(item.field_id) ?? [],
-      risk: {
-        level: alertLevel ?? reportRisk?.level ?? "LOW",
-        reasons,
-      },
+      risk_level: alertLevel ?? reportRisk?.level ?? "LOW",
+      risk_reasons: reasons,
       cost_summary: {
         estimated_total: Number(item.cost_summary.estimated_total.toFixed(2)),
         actual_total: Number(item.cost_summary.actual_total.toFixed(2)),
@@ -397,15 +398,15 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
       if (!hit) return false;
     }
 
-    if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk.level)) return false;
+    if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk_level)) return false;
 
     if (typeof args.has_open_alerts === "boolean") {
-      const hasOpenAlerts = item.alert_summary.open_count > 0;
+      const hasOpenAlerts = item.alert_summary.open_total > 0;
       if (hasOpenAlerts !== args.has_open_alerts) return false;
     }
 
     if (typeof args.has_pending_acceptance === "boolean") {
-      const hasPendingAcceptance = item.pending_acceptance_summary.pending_acceptance_count > 0;
+      const hasPendingAcceptance = item.acceptance_summary.pending_count > 0;
       if (hasPendingAcceptance !== args.has_pending_acceptance) return false;
     }
 
@@ -432,13 +433,13 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         cmp = cmpNullableString(a.field_id, b.field_id);
         break;
       case "open_alerts":
-        cmp = a.alert_summary.open_count - b.alert_summary.open_count;
+        cmp = a.alert_summary.open_total - b.alert_summary.open_total;
         break;
       case "pending_acceptance":
-        cmp = a.pending_acceptance_summary.pending_acceptance_count - b.pending_acceptance_summary.pending_acceptance_count;
+        cmp = a.acceptance_summary.pending_count - b.acceptance_summary.pending_count;
         break;
       case "latest_operation":
-        cmp = toMs(a.latest_operation.happened_at) - toMs(b.latest_operation.happened_at);
+        cmp = toMs(a.operation_summary.happened_at) - toMs(b.operation_summary.happened_at);
         break;
       case "estimated_total":
         cmp = a.cost_summary.estimated_total - b.cost_summary.estimated_total;
@@ -448,7 +449,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         break;
       case "risk_level":
       default:
-        cmp = RISK_RANK[a.risk.level] - RISK_RANK[b.risk.level];
+        cmp = RISK_RANK[a.risk_level] - RISK_RANK[b.risk_level];
         break;
     }
     if (cmp !== 0) return cmp * direction;
@@ -464,16 +465,17 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
   const summary = {
     total_fields: total,
     by_risk: {
-      low: sortedItems.filter((x) => x.risk.level === "LOW").length,
-      medium: sortedItems.filter((x) => x.risk.level === "MEDIUM").length,
-      high: sortedItems.filter((x) => x.risk.level === "HIGH").length,
+      low: sortedItems.filter((x) => x.risk_level === "LOW").length,
+      medium: sortedItems.filter((x) => x.risk_level === "MEDIUM").length,
+      high: sortedItems.filter((x) => x.risk_level === "HIGH").length,
+      critical: sortedItems.filter((x) => x.risk_level === "CRITICAL").length,
     },
-    total_open_alerts: sortedItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
-    total_pending_acceptance: sortedItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
-    total_invalid_execution: sortedItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+    total_open_alerts: sortedItems.reduce((s, x) => s + x.alert_summary.open_total, 0),
+    total_pending_acceptance: sortedItems.reduce((s, x) => s + x.acceptance_summary.pending_count, 0),
+    total_invalid_execution: sortedItems.reduce((s, x) => s + x.acceptance_summary.invalid_count, 0),
     total_estimated_cost: Number(sortedItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
     total_actual_cost: Number(sortedItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
-    offline_fields: sortedItems.filter((x) => x.telemetry.device_offline).length,
+    offline_fields: sortedItems.filter((x) => x.telemetry_summary.device_offline).length,
   };
 
   return { ok: true, count: total, total, items: pagedItems, summary };
