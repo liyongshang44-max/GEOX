@@ -152,58 +152,168 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         FieldPortfolioItemV1: {
           type: "object",
-          required: ["field_id", "name", "risk_level", "has_open_alerts", "tags"],
+          required: [
+            "field_id",
+            "field_name",
+            "risk",
+            "alert_summary",
+            "pending_acceptance_summary",
+            "latest_operation",
+            "cost_summary",
+            "telemetry"
+          ],
           properties: {
             field_id: { type: "string" },
-            name: { type: "string" },
-            area_ha: { type: "number", nullable: true },
-            crop_code: { type: "string", nullable: true },
-            risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
-            has_open_alerts: { type: "boolean" },
-            tags: { type: "array", items: { type: "string" } },
-            updated_at: { type: "string", format: "date-time", nullable: true }
+            field_name: { type: "string", nullable: true },
+            risk: {
+              type: "object",
+              required: ["level", "reasons"],
+              properties: {
+                level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+                reasons: { type: "array", items: { type: "string" } }
+              }
+            },
+            alert_summary: {
+              type: "object",
+              required: ["open_count", "high_or_above_count"],
+              properties: {
+                open_count: { type: "integer", minimum: 0 },
+                high_or_above_count: { type: "integer", minimum: 0 }
+              }
+            },
+            pending_acceptance_summary: {
+              type: "object",
+              required: ["pending_acceptance_count", "invalid_execution_count"],
+              properties: {
+                pending_acceptance_count: { type: "integer", minimum: 0 },
+                invalid_execution_count: { type: "integer", minimum: 0 }
+              }
+            },
+            latest_operation: {
+              type: "object",
+              required: ["happened_at", "action_type", "status"],
+              properties: {
+                happened_at: { type: "string", format: "date-time", nullable: true },
+                action_type: { type: "string", nullable: true },
+                status: { type: "string", nullable: true }
+              }
+            },
+            cost_summary: {
+              type: "object",
+              required: ["estimated_total", "actual_total"],
+              properties: {
+                estimated_total: { type: "number" },
+                actual_total: { type: "number" }
+              }
+            },
+            telemetry: {
+              type: "object",
+              required: ["last_telemetry_at", "device_offline"],
+              properties: {
+                last_telemetry_at: { type: "string", format: "date-time", nullable: true },
+                device_offline: { type: "boolean" }
+              }
+            }
           }
         },
         FieldPortfolioListResponseV1: {
           type: "object",
-          required: ["ok", "items", "page", "page_size", "total"],
+          required: ["ok", "count", "items", "summary"],
           properties: {
             ok: { type: "boolean" },
-            page: { type: "integer", minimum: 1 },
-            page_size: { type: "integer", minimum: 1, maximum: 200 },
-            total: { type: "integer", minimum: 0 },
+            count: { type: "integer", minimum: 0 },
             items: {
               type: "array",
               items: { '$ref': "#/components/schemas/FieldPortfolioItemV1" }
+            },
+            summary: {
+              type: "object",
+              required: [
+                "total_fields",
+                "by_risk",
+                "total_open_alerts",
+                "total_pending_acceptance",
+                "total_invalid_execution",
+                "total_estimated_cost",
+                "total_actual_cost",
+                "offline_fields"
+              ],
+              properties: {
+                total_fields: { type: "integer", minimum: 0 },
+                by_risk: {
+                  type: "object",
+                  required: ["low", "medium", "high"],
+                  properties: {
+                    low: { type: "integer", minimum: 0 },
+                    medium: { type: "integer", minimum: 0 },
+                    high: { type: "integer", minimum: 0 }
+                  }
+                },
+                total_open_alerts: { type: "integer", minimum: 0 },
+                total_pending_acceptance: { type: "integer", minimum: 0 },
+                total_invalid_execution: { type: "integer", minimum: 0 },
+                total_estimated_cost: { type: "number" },
+                total_actual_cost: { type: "number" },
+                offline_fields: { type: "integer", minimum: 0 }
+              }
             }
           }
         },
         FieldPortfolioSummaryResponseV1: {
           type: "object",
-          required: ["ok", "total_fields", "risk_summary", "with_open_alerts"],
+          required: ["ok", "summary"],
           properties: {
             ok: { type: "boolean" },
-            total_fields: { type: "integer", minimum: 0 },
-            with_open_alerts: { type: "integer", minimum: 0 },
-            risk_summary: {
+            summary: {
               type: "object",
-              required: ["low", "medium", "high"],
+              required: [
+                "total_fields",
+                "by_risk",
+                "total_open_alerts",
+                "total_pending_acceptance",
+                "total_invalid_execution",
+                "total_estimated_cost",
+                "total_actual_cost",
+                "offline_fields"
+              ],
               properties: {
-                low: { type: "integer", minimum: 0 },
-                medium: { type: "integer", minimum: 0 },
-                high: { type: "integer", minimum: 0 }
+                total_fields: { type: "integer", minimum: 0 },
+                by_risk: {
+                  type: "object",
+                  required: ["low", "medium", "high"],
+                  properties: {
+                    low: { type: "integer", minimum: 0 },
+                    medium: { type: "integer", minimum: 0 },
+                    high: { type: "integer", minimum: 0 }
+                  }
+                },
+                total_open_alerts: { type: "integer", minimum: 0 },
+                total_pending_acceptance: { type: "integer", minimum: 0 },
+                total_invalid_execution: { type: "integer", minimum: 0 },
+                total_estimated_cost: { type: "number" },
+                total_actual_cost: { type: "number" },
+                offline_fields: { type: "integer", minimum: 0 }
               }
             }
           }
         },
+        FieldTagItemV1: {
+          type: "object",
+          required: ["tag", "created_at", "created_by"],
+          properties: {
+            tag: { type: "string" },
+            created_at: { type: "string", format: "date-time", nullable: true },
+            created_by: { type: "string", nullable: true }
+          }
+        },
         FieldTagsResponseV1: {
           type: "object",
-          required: ["ok", "field_id", "tags"],
+          required: ["ok", "field_id"],
           properties: {
             ok: { type: "boolean" },
             field_id: { type: "string" },
-            tags: { type: "array", items: { type: "string" } },
-            action: { type: "string", enum: ["add", "remove"], nullable: true },
+            count: { type: "integer", minimum: 0 },
+            items: { type: "array", items: { '$ref': "#/components/schemas/FieldTagItemV1" } },
             tag: { type: "string", nullable: true }
           }
         },
@@ -881,10 +991,18 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           tags: ["fields"],
           summary: "Read field portfolio list",
           parameters: [
+            { name: "tenant_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "field_ids[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } }, style: "form", explode: true },
+            { name: "field_id", in: "query", required: false, schema: { type: "string" } },
+            { name: "window_ms", in: "query", required: false, schema: { type: "integer", minimum: 60000 } },
             { name: "tags[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } }, style: "form", explode: true },
-            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } }, style: "form", explode: true },
+            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] } }, style: "form", explode: true },
             { name: "has_open_alerts", in: "query", required: false, schema: { type: "boolean" } },
-            { name: "sort_by", in: "query", required: false, schema: { type: "string", enum: ["updated_at", "name", "risk_level"] } },
+            { name: "has_pending_acceptance", in: "query", required: false, schema: { type: "boolean" } },
+            { name: "query", in: "query", required: false, schema: { type: "string" } },
+            { name: "sort_by", in: "query", required: false, schema: { type: "string", enum: ["risk", "open_alerts", "pending_acceptance", "last_operation_at", "cost", "updated_at", "field_name"] } },
             { name: "sort_order", in: "query", required: false, schema: { type: "string", enum: ["asc", "desc"] } },
             { name: "page", in: "query", required: false, schema: { type: "integer", minimum: 1, default: 1 } },
             { name: "page_size", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 20 } }
@@ -907,7 +1025,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           summary: "Read field portfolio summary",
           parameters: [
             { name: "tags[]", in: "query", required: false, schema: { type: "array", items: { type: "string" } }, style: "form", explode: true },
-            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] } }, style: "form", explode: true },
+            { name: "risk_levels[]", in: "query", required: false, schema: { type: "array", items: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] } }, style: "form", explode: true },
             { name: "has_open_alerts", in: "query", required: false, schema: { type: "boolean" } }
           ],
           responses: {
