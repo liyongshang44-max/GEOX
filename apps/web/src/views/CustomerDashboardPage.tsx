@@ -44,7 +44,11 @@ export default function CustomerDashboardPage(): React.ReactElement {
     const params = new URLSearchParams(location.search);
     const fieldIds = params.getAll("field_id").map((x) => String(x ?? "").trim()).filter(Boolean);
     const timeRangeRaw = String(params.get("time_range") ?? "").trim();
-    const timeRange = timeRangeRaw === "7d" || timeRangeRaw === "30d" || timeRangeRaw === "season" ? timeRangeRaw : undefined;
+    const windowMs = timeRangeRaw === "7d"
+      ? 7 * 24 * 60 * 60 * 1000
+      : timeRangeRaw === "30d"
+        ? 30 * 24 * 60 * 60 * 1000
+        : undefined; // `season` is not mapped because field portfolio endpoints currently only support explicit window_ms.
 
     void Promise.all([
       fetchFieldPortfolioSummary({ fieldIds, timeRange }),

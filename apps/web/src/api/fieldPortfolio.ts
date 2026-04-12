@@ -36,7 +36,12 @@ export type FetchFieldPortfolioParams = {
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
+  fieldIds?: string[];
   field_ids?: string[];
+  /**
+   * Field portfolio APIs currently only consume `window_ms` as the time filter.
+   * Do not send `time_range` here unless backend support is added for these endpoints.
+   */
   window_ms?: number;
 };
 
@@ -74,7 +79,8 @@ const EMPTY_FIELD_PORTFOLIO_SUMMARY: FieldPortfolioSummaryV1 = {
 };
 
 function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unknown> {
-  const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+  const rawFieldIds = Array.isArray(params.fieldIds) ? params.fieldIds : params.field_ids;
+  const fieldIds = Array.isArray(rawFieldIds) ? rawFieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   return {
     "tags[]": params.tags,
     "risk_levels[]": params.risk_levels,
@@ -89,7 +95,7 @@ function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unk
     project_id: params.project_id,
     group_id: params.group_id,
     "field_ids[]": fieldIds.length ? fieldIds : undefined,
-    time_range: params.timeRange,
+    window_ms: params.window_ms,
   };
 }
 
@@ -99,12 +105,7 @@ export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}
 }
 
 export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioSummaryV1> {
-  const query: Record<string, unknown> = { ...params };
-  const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
-  delete query.fieldIds;
-  if (fieldIds.length) query["field_ids[]"] = fieldIds;
-  if (params.timeRange) query.time_range = params.timeRange;
-  delete query.timeRange;
+  const query = toPortfolioQuery(params);
   const res = await apiRequest<FieldPortfolioSummaryResponse>(withQuery("/api/v1/fields/portfolio/summary", query));
   return (res.summary && typeof res.summary === "object") ? res.summary : ({} as FieldPortfolioSummaryV1);
 }

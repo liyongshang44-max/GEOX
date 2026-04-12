@@ -12,6 +12,14 @@ type RiskLevel = "HIGH" | "MEDIUM" | "LOW";
 type SortMode = "business_priority" | "updated_desc" | "cost_desc";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const SORT_MODE_TO_BACKEND_SORT_BY: Record<SortMode, FetchFieldPortfolioParams["sort_by"]> = {
+  // 后端不支持 business_priority 这个字面值；当前使用 risk 作为“经营优先”近似排序入口。
+  business_priority: "risk",
+  // updated_desc 是 UI 语义，后端真实字段是 updated_at。
+  updated_desc: "updated_at",
+  // cost_desc 是 UI 语义，后端真实字段是 cost。
+  cost_desc: "cost",
+};
 
 function formatMoney(value: number): string {
   return `¥${new Intl.NumberFormat("zh-CN").format(value)}`;
@@ -40,16 +48,6 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-function toText(value: unknown): string {
-  const text = String(value ?? "").trim();
-  return text || "-";
-}
-
-function toTagList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((tag) => String(tag ?? "").trim()).filter(Boolean);
-}
-
 function toBackendParams(params: {
   query: string;
   risk: "" | RiskLevel;
@@ -61,20 +59,11 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
-    sort_by: params.sort,
+    sort_by: SORT_MODE_TO_BACKEND_SORT_BY[params.sort],
     sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
-    sort_order: "desc",
   };
-
-  if (params.sort === "updated_desc") {
-    next.sort_by = "updated_at";
-  } else if (params.sort === "cost_desc") {
-    next.sort_by = "cycle_cost";
-  } else {
-    next.sort_by = "business_priority";
-  }
 
   if (params.query.trim()) next.query = params.query.trim();
   if (params.risk) next.risk_levels = [params.risk];
@@ -232,27 +221,26 @@ export default function FieldPortfolioPage(): React.ReactElement {
               <tr><td colSpan={7}>正在加载...</td></tr>
             ) : null}
             {!loading && items.map((item, idx) => {
-              const anyItem = item as Record<string, unknown>;
-              const riskLevel = toText(anyItem.risk_level);
-              const alertSummary = toText(anyItem.alert_summary);
-              const acceptanceSummary = toText(anyItem.acceptance_summary);
-              const operationSummary = toText(anyItem.operation_summary);
-              const costSummary = toText(anyItem.cost_summary);
-              const tagsText = toTagList(anyItem.tags).join(" / ");
-              const updatedAt = String(anyItem.updated_at ?? "");
+              const title = item.field_name ?? item.field_id;
+              const tagsText = item.tags.join(" / ");
+              const riskText = `${riskLabel(item.risk_level)}${item.risk_reasons.length ? `（${item.risk_reasons.join("；")}）` : ""}`;
+              const alertSummaryText = `未关闭 ${item.alert_summary.open_count} · 高及以上 ${item.alert_summary.high_or_above_count}`;
+              const pendingAcceptanceText = `待验收 ${item.pending_acceptance_summary.pending_acceptance_count} · 无效作业 ${item.pending_acceptance_summary.invalid_execution_count}`;
+              const latestOperationText = `${item.latest_operation.happened_at ? formatTime(item.latest_operation.happened_at) : "-"} · ${item.latest_operation.action_type ?? "-"} · ${item.latest_operation.status ?? "-"}`;
+              const costSummaryText = `预估 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
 
               return (
-                <tr key={String(anyItem.field_id ?? anyItem.program_id ?? idx)}>
+                <tr key={item.field_id || String(idx)}>
                   <td>
-                    <div style={{ fontWeight: 700 }}>{toText(anyItem.name || anyItem.field_id)}</div>
-                    <div className="metaText">{toText(anyItem.field_id)}{tagsText ? ` · ${tagsText}` : ""}</div>
+                    <div style={{ fontWeight: 700 }}>{title}</div>
+                    <div className="metaText">{item.field_id}{tagsText ? ` · ${tagsText}` : ""}</div>
                   </td>
-                  <td>{riskLabel(riskLevel)}</td>
-                  <td>{alertSummary}</td>
-                  <td>{acceptanceSummary}</td>
-                  <td>{operationSummary}</td>
-                  <td>{costSummary}</td>
-                  <td>{formatTime(updatedAt)}</td>
+                  <td>{riskText}</td>
+                  <td>{alertSummaryText}</td>
+                  <td>{pendingAcceptanceText}</td>
+                  <td>{latestOperationText}</td>
+                  <td>{costSummaryText}</td>
+                  <td>{item.updated_at ? formatTime(item.updated_at) : "-"}</td>
                 </tr>
               );
             })}
