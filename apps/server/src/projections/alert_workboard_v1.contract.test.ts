@@ -179,3 +179,45 @@ test("alert workboard v1: supports operation_id filter", () => {
   assert.ok(items.length >= 1);
   assert.ok(items.every((item) => String(item.operation_plan_id ?? "") === operationPlanIdB));
 });
+
+test("alert workboard v1: uses linked alert-operation relation when present", () => {
+  const nowMs = Date.UTC(2026, 0, 1, 0, 0, 0);
+  const seed = projectAlertWorkboardV1({
+    scope,
+    operations: [],
+    telemetry_health: [
+      {
+        ...scope,
+        device_id: "d-3",
+        field_id: "f-3",
+        heartbeat_lag_ms: 16 * 60 * 1000,
+      },
+    ],
+    workflow: [],
+    nowMs,
+    device_field_map: new Map([["d-3", "f-3"]]),
+  });
+  const target = seed[0];
+  assert.ok(target?.alert_id);
+
+  const items = projectAlertWorkboardV1({
+    scope,
+    operations: [],
+    telemetry_health: [
+      {
+        ...scope,
+        device_id: "d-3",
+        field_id: "f-3",
+        heartbeat_lag_ms: 16 * 60 * 1000,
+      },
+    ],
+    workflow: [],
+    alert_operation_map: new Map([[String(target?.alert_id), { operation_id: "op-linked-1" }]]),
+    operation_field_map: new Map([["op-linked-1", "f-op"]]),
+    operation_device_map: new Map([["op-linked-1", "d-op"]]),
+    nowMs,
+  });
+  assert.equal(items[0]?.operation_plan_id, "op-linked-1");
+  assert.equal(items[0]?.field_id, "f-op");
+  assert.equal(items[0]?.device_id, "d-op");
+});

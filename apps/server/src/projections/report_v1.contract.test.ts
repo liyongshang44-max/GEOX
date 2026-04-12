@@ -67,3 +67,25 @@ test("report v1 contract: risk.level and risk.reasons always exist", () => {
   assert.equal(output.cost.actual_total, undefined);
   assert.equal(output.cost.estimated_water_cost, undefined);
 });
+
+test("report v1 contract: workflow exposes linked_alert_ids", () => {
+  const output = projectOperationReportV1({
+    tenant: { tenant_id: "t1", project_id: "p1", group_id: "g1" },
+    operation_plan_id: "plan-1",
+    operation_state: buildState("DONE"),
+    evidence_bundle: {},
+    acceptance: null,
+    receipt: null,
+    cost: {},
+    sla: {},
+    operation_workflow: {
+      owner_actor_id: "actor-1",
+      owner_name: "owner",
+      last_note: "note",
+      updated_at: Date.UTC(2026, 0, 1, 0, 0, 0),
+      updated_by: "actor-1",
+      linked_alert_ids: ["a-1", "a-2"],
+    },
+  });
+  assert.deepEqual(output.workflow.linked_alert_ids, ["a-1", "a-2"]);
+});

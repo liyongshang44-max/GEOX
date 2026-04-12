@@ -48,6 +48,7 @@ export type AlertWorkboardArgsV1 = {
   telemetry_health: TelemetryHealthInput[];
   action_overrides?: AlertActionOverrideV1[];
   workflow: AlertWorkflowRecordV1[];
+  alert_operation_map?: Map<string, { operation_id: string }>;
   device_field_map?: Map<string, string>;
   operation_field_map?: Map<string, string>;
   operation_device_map?: Map<string, string>;
@@ -73,6 +74,12 @@ function includesNeedle(value: unknown, needle: string): boolean {
 }
 
 function relationOf(alert: AlertV1, args: AlertWorkboardArgsV1): { field_id: string | null; operation_plan_id: string | null; device_id: string | null } {
+  const linkedOperationId = String(args.alert_operation_map?.get(String(alert.alert_id ?? ""))?.operation_id ?? "").trim() || null;
+  if (linkedOperationId) {
+    const field_id = String(args.operation_field_map?.get(linkedOperationId) ?? "") || null;
+    const device_id = String(args.operation_device_map?.get(linkedOperationId) ?? "") || null;
+    return { field_id, operation_plan_id: linkedOperationId, device_id };
+  }
   if (alert.object_type === "FIELD") {
     return {
       field_id: String(alert.object_id ?? "") || null,

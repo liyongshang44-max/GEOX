@@ -76,6 +76,7 @@ export type OperationReportV1 = {
     last_note: string | null;
     updated_at: string | null;
     updated_by: string | null;
+    linked_alert_ids?: string[];
   };
 };
 
@@ -279,6 +280,7 @@ export function projectOperationReportV1(input: {
     last_note?: unknown;
     updated_at?: unknown;
     updated_by?: unknown;
+    linked_alert_ids?: unknown;
   } | null;
   now?: Date;
 }): OperationReportV1 {
@@ -404,10 +406,13 @@ export function projectOperationReportV1(input: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
       owner_name: toText(input.operation_workflow?.owner_name),
       last_note: toText(input.operation_workflow?.last_note),
-      updated_at: Number.isFinite(Number(input.operation_workflow?.updated_at))
+      updated_at: Number.isFinite(Number(input.operation_workflow?.updated_at)) && Number(input.operation_workflow?.updated_at) > 0
         ? new Date(Number(input.operation_workflow?.updated_at)).toISOString()
         : null,
       updated_by: toText(input.operation_workflow?.updated_by),
+      linked_alert_ids: Array.isArray(input.operation_workflow?.linked_alert_ids)
+        ? input.operation_workflow?.linked_alert_ids.map((x) => String(x ?? "").trim()).filter(Boolean)
+        : [],
     },
   };
 }
