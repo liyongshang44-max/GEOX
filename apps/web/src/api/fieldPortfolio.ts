@@ -12,6 +12,15 @@ export type FetchFieldPortfolioParams = {
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
+
+  query?: string;
+  risk_level?: "HIGH" | "MEDIUM" | "LOW";
+  has_open_alerts?: boolean;
+  has_pending_acceptance?: boolean;
+  tags?: string[];
+  sort?: "business_priority" | "updated_desc" | "cost_desc";
+  page?: number;
+  page_size?: number;
 };
 
 export type FieldPortfolioSummaryV1 = Record<string, unknown>;
