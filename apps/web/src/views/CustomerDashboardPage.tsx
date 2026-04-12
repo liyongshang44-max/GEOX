@@ -1,7 +1,7 @@
 /* eslint no-restricted-imports: ["error", { "patterns": ["../viewmodels/customerDashboardViewModel", "../viewmodels/*customer*Dashboard*", "../lib/*aggregate*"] }] */
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchAlertSummary, type AlertSummaryV1 } from "../api/alerts";
+import { fetchAlertWorkboardSummary, type AlertWorkboardSummaryV1 } from "../api/alertWorkflow";
 import {
   type FieldPortfolioItemV1,
   type FieldPortfolioSummaryV1,
@@ -33,19 +33,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const [summary, setSummary] = React.useState<FieldPortfolioSummaryV1 | null>(null);
   const [portfolioItems, setPortfolioItems] = React.useState<FieldPortfolioItemV1[]>([]);
   const [error, setError] = React.useState<string>("");
-  const [alertSummary, setAlertSummary] = React.useState<AlertSummaryV1>({
-    ok: true,
+  const [alertSummary, setAlertSummary] = React.useState<AlertWorkboardSummaryV1>({
     total: 0,
-    by_status: { OPEN: 0, ACKED: 0, CLOSED: 0 },
-    by_severity: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
-    by_category: {},
+    unassigned: 0,
+    in_progress: 0,
+    sla_breached: 0,
   });
 
   React.useEffect(() => {
     void Promise.all([
       fetchFieldPortfolioSummary(),
       fetchFieldPortfolio({ sort_by: "risk", sort_order: "desc", page: 1, page_size: 5 }),
-      fetchAlertSummary(),
+      fetchAlertWorkboardSummary(),
     ])
       .then(([nextSummaryData, nextItems, nextAlertSummary]) => {
         setSummary(nextSummaryData);
@@ -57,11 +56,10 @@ export default function CustomerDashboardPage(): React.ReactElement {
         setSummary(null);
         setPortfolioItems([]);
         setAlertSummary({
-          ok: false,
           total: 0,
-          by_status: { OPEN: 0, ACKED: 0, CLOSED: 0 },
-          by_severity: { LOW: 0, MEDIUM: 0, HIGH: 0, CRITICAL: 0 },
-          by_category: {},
+          unassigned: 0,
+          in_progress: 0,
+          sla_breached: 0,
         });
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
@@ -107,9 +105,10 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div>预计成本：{currencyFmt.format(summary?.total_estimated_cost ?? 0)} · 实际成本：{currencyFmt.format(summary?.total_actual_cost ?? 0)}</div>
       </SectionCard>
 
-      <SectionCard title="告警摘要（/api/v1/alerts/summary）">
+      <SectionCard title="待处理事项（/api/v1/alerts/workboard summary）">
         <div>总告警：{numberFmt.format(alertSummary.total)}</div>
-        <div className="muted">未处理：{numberFmt.format(alertSummary.by_status.OPEN)} · 已确认：{numberFmt.format(alertSummary.by_status.ACKED)} · 已关闭：{numberFmt.format(alertSummary.by_status.CLOSED)}</div>
+        <div className="muted">未分配：{numberFmt.format(alertSummary.unassigned)} · 处理中：{numberFmt.format(alertSummary.in_progress)} · 已超时：{numberFmt.format(alertSummary.sla_breached)}</div>
+        <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
 
       <SectionCard title="Top 风险地块">

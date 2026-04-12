@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { fetchAlertWorkboard, type AlertWorkItemV1 } from "../api/alertWorkflow";
 import {
   fetchFieldPortfolio,
   fetchFieldPortfolioSummary,
@@ -75,6 +76,7 @@ export default function FieldPortfolioPage(): React.ReactElement {
   const [pageSize, setPageSize] = React.useState<number>(20);
 
   const [items, setItems] = React.useState<FieldPortfolioItemV1[]>([]);
+  const [workflowByField, setWorkflowByField] = React.useState<Record<string, { unassigned: number; breached: number }>>({});
   const [summary, setSummary] = React.useState<FieldPortfolioSummaryV1 | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -97,15 +99,32 @@ export default function FieldPortfolioPage(): React.ReactElement {
       fetchFieldPortfolio(backendParams),
       fetchFieldPortfolioSummary(backendParams),
     ])
-      .then(([nextItems, nextSummary]) => {
+      .then(async ([nextItems, nextSummary]) => {
         if (!active) return;
         setItems(nextItems);
         setSummary(nextSummary);
+        const fieldIds = nextItems.map((item) => item.field_id).filter(Boolean);
+        if (!fieldIds.length) {
+          setWorkflowByField({});
+          return;
+        }
+        const workflowItems = await fetchAlertWorkboard({ field_ids: fieldIds });
+        if (!active) return;
+        const nextMap = workflowItems.reduce<Record<string, { unassigned: number; breached: number }>>((acc, row: AlertWorkItemV1) => {
+          const key = String(row.field_id || "");
+          if (!key) return acc;
+          if (!acc[key]) acc[key] = { unassigned: 0, breached: 0 };
+          if (row.workflow_status === "OPEN") acc[key].unassigned += 1;
+          if (row.sla_breached) acc[key].breached += 1;
+          return acc;
+        }, {});
+        setWorkflowByField(nextMap);
       })
       .catch(() => {
         if (!active) return;
         setItems([]);
         setSummary(null);
+        setWorkflowByField({});
         setError("暂未获取到地块经营数据，请稍后重试。");
       })
       .finally(() => {
@@ -200,6 +219,7 @@ export default function FieldPortfolioPage(): React.ReactElement {
               <th>地块</th>
               <th>风险</th>
               <th>告警摘要</th>
+              <th>作业台待处理</th>
               <th>验收摘要</th>
               <th>作业摘要</th>
               <th>成本摘要</th>
@@ -209,11 +229,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8}>正在加载...</td></tr>
+              <tr><td colSpan={9}>正在加载...</td></tr>
             ) : null}
             {!loading && items.map((item) => {
               const tagsText = item.tags.join(" / ");
               const alertSummary = `OPEN ${item.alert_summary.open_total}`;
+              const fieldWorkflow = workflowByField[item.field_id] || { unassigned: 0, breached: 0 };
               const acceptanceSummary = `待验收 ${item.acceptance_summary.pending_count} · 无效 ${item.acceptance_summary.invalid_count}`;
               const operationSummary = `${formatTime(item.operation_summary.last_operation_at)} · ${item.operation_summary.last_action_type ?? "-"} · ${item.operation_summary.last_final_status ?? "-"}`;
               const costSummary = `预计 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
@@ -227,6 +248,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
                   </td>
                   <td>{riskLabel(item.risk_level)}{item.risk_reasons.length ? `（${item.risk_reasons.join("、")}）` : ""}</td>
                   <td>{alertSummary}</td>
+                  <td>
+                    未分配 {fieldWorkflow.unassigned} · 超时 {fieldWorkflow.breached}
+                    <div style={{ marginTop: 6 }}>
+                      <Link className="btn" to={`/operations/workboard?field=${encodeURIComponent(item.field_id)}`}>查看作业台</Link>
+                    </div>
+                  </td>
                   <td>{acceptanceSummary}</td>
                   <td>{operationSummary}</td>
                   <td>{costSummary}</td>
@@ -237,7 +264,7 @@ export default function FieldPortfolioPage(): React.ReactElement {
             })}
             {!loading && !items.length ? (
               <tr>
-                <td colSpan={8}>没有符合筛选条件的地块。</td>
+                <td colSpan={9}>没有符合筛选条件的地块。</td>
               </tr>
             ) : null}
           </tbody>

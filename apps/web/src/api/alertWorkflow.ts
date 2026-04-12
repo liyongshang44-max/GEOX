@@ -69,6 +69,28 @@ export async function fetchAlertWorkboard(params: FetchAlertWorkboardParams = {}
   return Array.isArray(res.items) ? res.items : [];
 }
 
+export type AlertWorkboardSummaryV1 = {
+  total: number;
+  unassigned: number;
+  in_progress: number;
+  sla_breached: number;
+};
+
+export function summarizeAlertWorkboard(items: AlertWorkItemV1[]): AlertWorkboardSummaryV1 {
+  return items.reduce<AlertWorkboardSummaryV1>((acc, item) => {
+    acc.total += 1;
+    if (item.workflow_status === "OPEN") acc.unassigned += 1;
+    if (item.workflow_status === "IN_PROGRESS" || item.workflow_status === "ASSIGNED" || item.workflow_status === "ACKED") acc.in_progress += 1;
+    if (item.sla_breached) acc.sla_breached += 1;
+    return acc;
+  }, { total: 0, unassigned: 0, in_progress: 0, sla_breached: 0 });
+}
+
+export async function fetchAlertWorkboardSummary(params: FetchAlertWorkboardParams = {}): Promise<AlertWorkboardSummaryV1> {
+  const items = await fetchAlertWorkboard(params);
+  return summarizeAlertWorkboard(items);
+}
+
 export async function assignAlert(alertId: string, payload: AlertWorkflowMutationPayload = {}): Promise<AlertWorkflowMutationResult> {
   return apiRequest<AlertWorkflowMutationResult>(`/api/v1/alerts/${encodeURIComponent(alertId)}/assign`, {
     method: "POST",
