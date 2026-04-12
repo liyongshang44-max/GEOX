@@ -1,6 +1,7 @@
 import type { TelemetryHealthInput } from "../domain/alert_engine";
 import { projectAlertListV1, type AlertActionOverrideV1, type AlertListFilterV1, type AlertListOperationInputV1, type AlertListScopeV1 } from "./alert_list_v1";
 import { AlertSeverity, type AlertV1 } from "./alert_v1";
+import { isSlaBreached } from "../domain/alert_sla";
 
 export const DEFAULT_WORKFLOW_STATUS_V1 = "OPEN" as const;
 export const DEFAULT_WORKFLOW_PRIORITY_V1 = 3;
@@ -135,7 +136,7 @@ export function projectAlertWorkboardV1(args: AlertWorkboardArgsV1): AlertWorkIt
       },
       priority,
       sla_due_at,
-      sla_breached: sla_due_at != null ? args.nowMs > sla_due_at : false,
+      sla_breached: isSlaBreached({ slaDueAt: sla_due_at, now: args.nowMs }),
       last_note: workflow?.last_note ?? null,
       field_id: rel.field_id,
       operation_plan_id: rel.operation_plan_id,
