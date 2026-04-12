@@ -11,6 +11,7 @@ import {
 } from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { computeOperationCostV1 } from "../domain/cost_model";
+import { listOperationWorkflowV1 } from "./alert_workflow_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -79,8 +80,15 @@ export async function projectReportV1(params: {
   pool: Pool;
   tenant: TenantTriple;
   operationState: OperationStateV1;
+  operationWorkflow?: {
+    owner_actor_id: string | null;
+    owner_name: string | null;
+    last_note: string | null;
+    updated_at: number;
+    updated_by: string;
+  } | null;
 }): Promise<OperationReportV1> {
-  const { pool, tenant, operationState } = params;
+  const { pool, tenant, operationState, operationWorkflow } = params;
   const operationPlanId = operationState.operation_plan_id || operationState.operation_id;
   const facts = await queryFactsForOperation(pool, tenant, operationPlanId);
 
@@ -135,6 +143,13 @@ export async function projectReportV1(params: {
       acceptance_pass: acceptancePass,
       response_time_ms: responseTimeMs,
     },
+    operation_workflow: operationWorkflow ? {
+      owner_actor_id: operationWorkflow.owner_actor_id,
+      owner_name: operationWorkflow.owner_name,
+      last_note: operationWorkflow.last_note,
+      updated_at: operationWorkflow.updated_at,
+      updated_by: operationWorkflow.updated_by,
+    } : null,
   });
 }
 
@@ -164,7 +179,16 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     );
     if (!scopedFieldId) return;
 
-    const operation_report_v1 = await projectReportV1({ pool, tenant, operationState: state });
+    const workflowMap = await listOperationWorkflowV1(pool, {
+      tenant_id: tenant.tenant_id,
+      operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean),
+    });
+    const operation_report_v1 = await projectReportV1({
+      pool,
+      tenant,
+      operationState: state,
+      operationWorkflow: workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null,
+    });
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1 };
     return reply.send(payload);
   });
@@ -185,10 +209,15 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       .filter((x) => String(x.field_id ?? "") === fieldId)
       .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
 
+    const workflowMap = await listOperationWorkflowV1(pool, {
+      tenant_id: tenant.tenant_id,
+      operation_ids: fieldStates.flatMap((state) => [state.operation_id, state.operation_plan_id]).filter(Boolean),
+    });
     const items = await Promise.all(fieldStates.map((state) => projectReportV1({
       pool,
       tenant,
       operationState: state,
+      operationWorkflow: workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null,
     })));
 
     const payload: OperationReportFieldListResponseV1 = { ok: true, items };

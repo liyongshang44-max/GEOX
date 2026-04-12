@@ -70,6 +70,13 @@ export type OperationReportV1 = {
     level: OperationReportRiskLevel;
     reasons: string[];
   };
+  workflow: {
+    owner_actor_id: string | null;
+    owner_name: string | null;
+    last_note: string | null;
+    updated_at: string | null;
+    updated_by: string | null;
+  };
 };
 
 export type OperationReportSingleResponseV1 = {
@@ -266,6 +273,13 @@ export function projectOperationReportV1(input: {
     estimated_chemical_cost?: unknown;
   };
   sla: { execution_success?: boolean; acceptance_pass?: boolean; response_time_ms?: number | null };
+  operation_workflow?: {
+    owner_actor_id?: unknown;
+    owner_name?: unknown;
+    last_note?: unknown;
+    updated_at?: unknown;
+    updated_by?: unknown;
+  } | null;
   now?: Date;
 }): OperationReportV1 {
   const now = input.now ?? new Date();
@@ -385,6 +399,15 @@ export function projectOperationReportV1(input: {
     risk: {
       level: computedRisk.level as OperationReportRiskLevel,
       reasons: computedRisk.reasons,
+    },
+    workflow: {
+      owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
+      owner_name: toText(input.operation_workflow?.owner_name),
+      last_note: toText(input.operation_workflow?.last_note),
+      updated_at: Number.isFinite(Number(input.operation_workflow?.updated_at))
+        ? new Date(Number(input.operation_workflow?.updated_at)).toISOString()
+        : null,
+      updated_by: toText(input.operation_workflow?.updated_by),
     },
   };
 }
