@@ -23,6 +23,7 @@ import type { AlertStatus as ProjectedAlertStatus } from "../projections/alert_v
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
 import type { TelemetryHealthInput } from "../domain/alert_engine";
+import { upsertAlertWorkflowV1 } from "./alert_workflow_v1";
 
 type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
 type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
@@ -769,12 +770,38 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
     if (scopedFieldId && !enforceFieldScopeOrDeny(auth, scopedFieldId, reply, { asNotFound: true })) return;
 
     const acted_at = Date.now();
-    await pool.query(
-      `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
-       VALUES ($1,$2,'ACKED',$3,$4,$5)`,
-      [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
-    );
-    return reply.send({ ok: true, alert_id, status: "ACKED", acted_at });
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+      await clientConn.query(
+        `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
+         VALUES ($1,$2,'ACKED',$3,$4,$5)`,
+        [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
+      );
+      const workflowResult = await upsertAlertWorkflowV1(clientConn, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        alert_id,
+        status: "ACKED",
+        acked_at: acted_at,
+        updated_at: acted_at,
+        updated_by: auth.actor_id,
+        last_note: note,
+        allow_cross_step: true,
+      });
+      if (!workflowResult.ok) {
+        await clientConn.query("ROLLBACK");
+        return reply.status(409).send({ ok: false, error: workflowResult.error, detail: workflowResult.detail ?? null });
+      }
+      await clientConn.query("COMMIT");
+      return reply.send({ ok: true, alert_id, status: "ACKED", acted_at });
+    } catch (e: any) {
+      await clientConn.query("ROLLBACK");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
   });
 
   app.post("/api/v1/alerts/:alert_id/resolve", async (req, reply) => { // Canonical v1 resolve action on projected alert.
@@ -807,12 +834,38 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
     if (scopedFieldId && !enforceFieldScopeOrDeny(auth, scopedFieldId, reply, { asNotFound: true })) return;
 
     const acted_at = Date.now();
-    await pool.query(
-      `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
-       VALUES ($1,$2,'CLOSED',$3,$4,$5)`,
-      [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
-    );
-    return reply.send({ ok: true, alert_id, status: "CLOSED", acted_at });
+    const clientConn = await pool.connect();
+    try {
+      await clientConn.query("BEGIN");
+      await clientConn.query(
+        `INSERT INTO alert_actions_v1 (tenant_id, alert_id, status, acted_by, acted_at, note)
+         VALUES ($1,$2,'CLOSED',$3,$4,$5)`,
+        [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
+      );
+      const workflowResult = await upsertAlertWorkflowV1(clientConn, {
+        tenant_id: auth.tenant_id,
+        project_id: auth.project_id,
+        group_id: auth.group_id,
+        alert_id,
+        status: "CLOSED",
+        resolved_at: acted_at,
+        updated_at: acted_at,
+        updated_by: auth.actor_id,
+        last_note: note,
+        allow_cross_step: true,
+      });
+      if (!workflowResult.ok) {
+        await clientConn.query("ROLLBACK");
+        return reply.status(409).send({ ok: false, error: workflowResult.error, detail: workflowResult.detail ?? null });
+      }
+      await clientConn.query("COMMIT");
+      return reply.send({ ok: true, alert_id, status: "CLOSED", acted_at });
+    } catch (e: any) {
+      await clientConn.query("ROLLBACK");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR", detail: String(e?.message ?? e) });
+    } finally {
+      clientConn.release();
+    }
   });
 
   // DEPRECATED: Use GET /api/v1/alerts instead.
