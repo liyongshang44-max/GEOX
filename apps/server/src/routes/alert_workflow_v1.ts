@@ -35,6 +35,27 @@ type UpdateAlertWorkflowParams = {
   expected_version?: number | null;
 };
 
+export type OperationWorkflowV1Row = {
+  operation_id: string;
+  owner_actor_id: string | null;
+  owner_name: string | null;
+  last_note: string | null;
+  updated_at: number;
+  updated_by: string;
+};
+
+type UpsertOperationWorkflowParams = {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  operation_id: string;
+  owner_actor_id?: string | null;
+  owner_name?: string | null;
+  last_note?: string | null;
+  updated_by: string;
+  updated_at: number;
+};
+
 function compareWorkflowStatus(a: AlertWorkflowStatus, b: AlertWorkflowStatus): number {
   return ALERT_WORKFLOW_STATUS_ORDER.indexOf(a) - ALERT_WORKFLOW_STATUS_ORDER.indexOf(b);
 }
@@ -81,6 +102,105 @@ export async function ensureAlertWorkflowV1Schema(pool: Pool): Promise<void> {
   await pool.query(`CREATE INDEX IF NOT EXISTS alert_workflow_v1_alert_lookup_idx ON alert_workflow_v1 (tenant_id, alert_id);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS alert_workflow_v1_status_updated_idx ON alert_workflow_v1 (tenant_id, status, updated_at DESC);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS alert_workflow_v1_assignee_idx ON alert_workflow_v1 (tenant_id, assignee_actor_id, updated_at DESC);`);
+}
+
+export async function ensureOperationWorkflowV1Schema(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS operation_workflow_v1 (
+      tenant_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
+      owner_actor_id TEXT NULL,
+      owner_name TEXT NULL,
+      last_note TEXT NULL,
+      updated_at BIGINT NOT NULL,
+      updated_by TEXT NOT NULL,
+      PRIMARY KEY (tenant_id, operation_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS operation_workflow_v1_lookup_idx ON operation_workflow_v1 (tenant_id, operation_id, updated_at DESC);`);
+}
+
+export async function upsertOperationWorkflowV1(clientConn: PoolClient, params: UpsertOperationWorkflowParams): Promise<void> {
+  const now_ms = Number.isFinite(params.updated_at) ? Math.trunc(params.updated_at) : Date.now();
+  await clientConn.query(
+    `INSERT INTO operation_workflow_v1
+      (tenant_id, project_id, group_id, operation_id, owner_actor_id, owner_name, last_note, updated_at, updated_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+     ON CONFLICT (tenant_id, operation_id)
+     DO UPDATE SET
+      project_id = EXCLUDED.project_id,
+      group_id = EXCLUDED.group_id,
+      owner_actor_id = EXCLUDED.owner_actor_id,
+      owner_name = EXCLUDED.owner_name,
+      last_note = EXCLUDED.last_note,
+      updated_at = EXCLUDED.updated_at,
+      updated_by = EXCLUDED.updated_by`,
+    [
+      params.tenant_id,
+      params.project_id,
+      params.group_id,
+      params.operation_id,
+      params.owner_actor_id ?? null,
+      params.owner_name ?? null,
+      params.last_note ?? null,
+      now_ms,
+      params.updated_by,
+    ]
+  );
+}
+
+export async function getOperationWorkflowV1(clientConn: PoolClient, params: {
+  tenant_id: string;
+  operation_id: string;
+}): Promise<OperationWorkflowV1Row | null> {
+  const q = await clientConn.query(
+    `SELECT operation_id, owner_actor_id, owner_name, last_note, updated_at, updated_by
+       FROM operation_workflow_v1
+      WHERE tenant_id = $1 AND operation_id = $2
+      LIMIT 1`,
+    [params.tenant_id, params.operation_id]
+  );
+  if ((q.rowCount ?? 0) === 0) return null;
+  const row = q.rows[0];
+  return {
+    operation_id: String(row.operation_id ?? ""),
+    owner_actor_id: row.owner_actor_id == null ? null : String(row.owner_actor_id),
+    owner_name: row.owner_name == null ? null : String(row.owner_name),
+    last_note: row.last_note == null ? null : String(row.last_note),
+    updated_at: Number(row.updated_at ?? 0),
+    updated_by: String(row.updated_by ?? ""),
+  };
+}
+
+export async function listOperationWorkflowV1(pool: Pool, params: {
+  tenant_id: string;
+  operation_ids: string[];
+}): Promise<Map<string, OperationWorkflowV1Row>> {
+  const ids = params.operation_ids.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (!ids.length) return new Map();
+  const q = await pool.query(
+    `SELECT operation_id, owner_actor_id, owner_name, last_note, updated_at, updated_by
+       FROM operation_workflow_v1
+      WHERE tenant_id = $1
+        AND operation_id = ANY($2::text[])`,
+    [params.tenant_id, ids]
+  );
+  const out = new Map<string, OperationWorkflowV1Row>();
+  for (const row of q.rows ?? []) {
+    const operation_id = String(row.operation_id ?? "").trim();
+    if (!operation_id) continue;
+    out.set(operation_id, {
+      operation_id,
+      owner_actor_id: row.owner_actor_id == null ? null : String(row.owner_actor_id),
+      owner_name: row.owner_name == null ? null : String(row.owner_name),
+      last_note: row.last_note == null ? null : String(row.last_note),
+      updated_at: Number(row.updated_at ?? 0),
+      updated_by: String(row.updated_by ?? ""),
+    });
+  }
+  return out;
 }
 
 export async function upsertAlertWorkflowV1(clientConn: PoolClient, params: UpdateAlertWorkflowParams): Promise<{ ok: true; status: AlertWorkflowStatus; version: number } | { ok: false; error: string; detail?: any }> {
@@ -187,7 +307,10 @@ export async function upsertAlertWorkflowV1(clientConn: PoolClient, params: Upda
 }
 
 export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool): void {
-  app.addHook("onReady", async () => { await ensureAlertWorkflowV1Schema(pool); });
+  app.addHook("onReady", async () => {
+    await ensureAlertWorkflowV1Schema(pool);
+    await ensureOperationWorkflowV1Schema(pool);
+  });
 
   const canWrite = (auth: AoActAuthContextV0): boolean => auth.role === "operator" || auth.role === "admin";
   const parseId = (v: unknown): string | null => {

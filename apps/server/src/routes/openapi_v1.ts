@@ -326,7 +326,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         AlertResolveRequestV1: {
           type: "object",
           properties: {
-            note: { type: "string", description: "Optional operator note for resolve action." }
+            note: { type: "string", description: "Optional operator note for resolve action." },
+            linked_operation_id: { type: "string", description: "Optional linked operation id for operation_workflow_v1 upsert and alert owner/note sync." },
+            operation_id: { type: "string", description: "Alias of linked_operation_id for compatibility." },
+            assignee_actor_id: { type: "string", description: "Optional owner actor id; when linked_operation_id is provided it will be stored into operation_workflow_v1." },
+            assignee_name: { type: "string", description: "Optional owner name; when linked_operation_id is provided it will be stored into operation_workflow_v1." }
           }
         },
         AlertAckResponseV1: {
@@ -447,7 +451,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk"],
+          required: ["type", "version", "generated_at", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk", "workflow"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -567,6 +571,17 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               properties: {
                 level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
                 reasons: { type: "array", items: { type: "string" } }
+              }
+            },
+            workflow: {
+              type: "object",
+              required: ["owner_actor_id", "owner_name", "last_note", "updated_at", "updated_by"],
+              properties: {
+                owner_actor_id: { type: "string", nullable: true },
+                owner_name: { type: "string", nullable: true },
+                last_note: { type: "string", nullable: true },
+                updated_at: { type: "string", format: "date-time", nullable: true },
+                updated_by: { type: "string", nullable: true }
               }
             }
           }

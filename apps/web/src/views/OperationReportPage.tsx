@@ -84,6 +84,15 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
+      <SectionCard title="当前处理负责人">
+        <div className="kvGrid2">
+          <div><strong>负责人ID：</strong>{kv(report.workflow.owner_actor_id)}</div>
+          <div><strong>负责人：</strong>{kv(report.workflow.owner_name)}</div>
+          <div><strong>最新备注：</strong>{kv(report.workflow.last_note)}</div>
+          <div><strong>更新时间：</strong>{kv(report.workflow.updated_at)}</div>
+        </div>
+      </SectionCard>
+
       <SectionCard title="执行结果">
         <div className="kvGrid2">
           <div><strong>最终状态：</strong>{finalStatus.label}</div>

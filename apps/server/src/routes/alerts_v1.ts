@@ -23,7 +23,7 @@ import type { AlertStatus as ProjectedAlertStatus } from "../projections/alert_v
 import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
 import type { TelemetryHealthInput } from "../domain/alert_engine";
-import { upsertAlertWorkflowV1 } from "./alert_workflow_v1";
+import { getOperationWorkflowV1, upsertAlertWorkflowV1, upsertOperationWorkflowV1 } from "./alert_workflow_v1";
 
 type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
 type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
@@ -811,7 +811,11 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
 
     const alert_id = normalizeId((req.params as any)?.alert_id);
     if (!alert_id) return notFound(reply);
-    const note = isNonEmptyString((req.body as any)?.note) ? String((req.body as any).note).trim().slice(0, 1000) : null;
+    const body: any = (req.body as any) ?? {};
+    const note = isNonEmptyString(body?.note) ? String(body.note).trim().slice(0, 1000) : null;
+    const linkedOperationId = normalizeId(body?.linked_operation_id ?? body?.operation_id);
+    const reqAssigneeActorId = normalizeId(body?.assignee_actor_id);
+    const reqAssigneeName = isNonEmptyString(body?.assignee_name) ? String(body.assignee_name).trim().slice(0, 200) : null;
 
     const [operations, telemetry_health, action_overrides, deviceFieldMap] = await Promise.all([
       listOperationInputsForAlertProjection(pool, auth),
@@ -842,6 +846,32 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
          VALUES ($1,$2,'CLOSED',$3,$4,$5)`,
         [auth.tenant_id, alert_id, auth.actor_id, acted_at, note]
       );
+      let workflowAssigneeActorId: string | null = reqAssigneeActorId;
+      let workflowAssigneeName: string | null = reqAssigneeName;
+      let workflowNote: string | null = note;
+      if (linkedOperationId) {
+        const existingOperationWorkflow = await getOperationWorkflowV1(clientConn, {
+          tenant_id: auth.tenant_id,
+          operation_id: linkedOperationId,
+        });
+        const operationOwnerActorId = reqAssigneeActorId ?? existingOperationWorkflow?.owner_actor_id ?? null;
+        const operationOwnerName = reqAssigneeName ?? existingOperationWorkflow?.owner_name ?? null;
+        const operationLastNote = note ?? existingOperationWorkflow?.last_note ?? null;
+        await upsertOperationWorkflowV1(clientConn, {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          operation_id: linkedOperationId,
+          owner_actor_id: operationOwnerActorId,
+          owner_name: operationOwnerName,
+          last_note: operationLastNote,
+          updated_by: auth.actor_id,
+          updated_at: acted_at,
+        });
+        workflowAssigneeActorId = operationOwnerActorId;
+        workflowAssigneeName = operationOwnerName;
+        workflowNote = operationLastNote;
+      }
       const workflowResult = await upsertAlertWorkflowV1(clientConn, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
@@ -851,7 +881,9 @@ export function registerAlertsV1Routes(app: FastifyInstance, pool: Pool) { // Re
         resolved_at: acted_at,
         updated_at: acted_at,
         updated_by: auth.actor_id,
-        last_note: note,
+        assignee_actor_id: workflowAssigneeActorId,
+        assignee_name: workflowAssigneeName,
+        last_note: workflowNote,
         allow_cross_step: true,
       });
       if (!workflowResult.ok) {
