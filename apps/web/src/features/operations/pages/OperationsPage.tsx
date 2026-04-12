@@ -119,7 +119,10 @@ export default function OperationsPage(): React.ReactElement {
             <h1 className="pageTitle">作业列表</h1>
             <div className="pageLead">页面聚焦“为什么执行、怎么执行、如何证明、产生什么影响”。</div>
           </div>
-          <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link className="btn" to="/operations/workboard">进入运营作业台</Link>
+            <button className="btn" onClick={() => void reload()} disabled={loading}>刷新</button>
+          </div>
         </div>
       </section>
 
