@@ -40,6 +40,7 @@ type FieldTagsResponse = {
 };
 
 function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unknown> {
+  const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   return {
     "tags[]": params.tags,
     "risk_levels[]": params.risk_levels,
@@ -53,6 +54,8 @@ function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unk
     tenant_id: params.tenant_id,
     project_id: params.project_id,
     group_id: params.group_id,
+    "field_ids[]": fieldIds.length ? fieldIds : undefined,
+    time_range: params.timeRange,
   };
 }
 
@@ -62,7 +65,7 @@ export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}
 }
 
 export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioSummaryV1> {
-  const query: Record<string, string | number | string[]> = { ...params };
+  const query: Record<string, string | number | boolean | string[]> = { ...params };
   const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   delete query.fieldIds;
   if (fieldIds.length) query["field_ids[]"] = fieldIds;
