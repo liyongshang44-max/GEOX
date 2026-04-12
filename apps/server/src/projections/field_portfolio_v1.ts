@@ -121,12 +121,14 @@ function maxRisk(a: FieldPortfolioRiskLevel, b: FieldPortfolioRiskLevel): FieldP
   return RISK_RANK[a] >= RISK_RANK[b] ? a : b;
 }
 
-function makeEmptyItem(fieldId: string, fieldName: string | null): FieldPortfolioItemV1 {
+function makeEmptyItem(fieldId: string, fieldName: string | null, groupId: string): FieldPortfolioItemV1 {
   return {
     field_id: fieldId,
     field_name: fieldName,
+    group_id: groupId,
     tags: [],
-    risk: { level: "LOW", reasons: [] },
+    risk_level: "LOW",
+    risk_reasons: [],
     alert_summary: { open_count: 0, high_or_above_count: 0 },
     pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
     latest_operation: { happened_at: null, action_type: null, status: null },
@@ -157,7 +159,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
   for (const row of fieldQ.rows ?? []) {
     const fieldId = str((row as any).field_id);
     if (!fieldId) continue;
-    itemsMap.set(fieldId, makeEmptyItem(fieldId, str((row as any).name) || null));
+    itemsMap.set(fieldId, makeEmptyItem(fieldId, str((row as any).name) || null, args.tenant.group_id));
   }
 
   const opQ = await args.pool.query(
@@ -174,7 +176,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
   for (const row of opQ.rows ?? []) {
     const fieldId = str((row as any).field_id);
     if (!fieldId) continue;
-    if (!itemsMap.has(fieldId)) itemsMap.set(fieldId, makeEmptyItem(fieldId, null));
+    if (!itemsMap.has(fieldId)) itemsMap.set(fieldId, makeEmptyItem(fieldId, null, args.tenant.group_id));
 
     const operationId = str((row as any).operation_id) || str((row as any).operation_plan_id);
     if (operationId) allOperationIds.push(operationId);
@@ -217,7 +219,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     const level = normalizeRiskLevel(rec?.risk?.level);
     const reasons = normalizeList(rec?.risk?.reasons);
     const prev = latestReportRiskByField.get(fieldId);
-    if (!prev || ts > prev.ts) latestReportRiskByField.set(fieldId, reportRisk);
+    if (!prev || ts > prev.ts) latestReportRiskByField.set(fieldId, { level, reasons, ts });
 
     if (ts < windowStartMs) continue;
 
@@ -338,6 +340,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
   const filteredItems = [...itemsMap.values()].map((item) => {
     const reportRisk = latestReportRiskByField.get(item.field_id);
+    const alertLevel = alertRiskByField.get(item.field_id) ?? "LOW";
     const reasonsFromAlerts = [...(alertReasonByField.get(item.field_id) ?? new Set<string>())];
     const reasons = Array.from(new Set([
       ...reasonsFromAlerts,
@@ -348,28 +351,23 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     return {
       ...item,
       tags: fieldTags,
-      risk: {
-        level: alertLevel ?? reportRisk?.level ?? "LOW",
-        reasons,
-      },
+      risk_level: maxRisk(alertLevel, reportRisk?.level ?? "LOW"),
+      risk_reasons: reasons,
       cost_summary: {
         estimated_total: Number(item.cost_summary.estimated_total.toFixed(2)),
         actual_total: Number(item.cost_summary.actual_total.toFixed(2)),
       },
     };
-    item.cost_summary.estimated_total = Number(item.cost_summary.estimated_total.toFixed(2));
-    item.cost_summary.actual_total = Number(item.cost_summary.actual_total.toFixed(2));
-    return item;
   }).filter((item) => {
     if (tagsFilter.size > 0) {
       const tagSet = new Set<string>(item.tags.map((tag) => str(tag).toLowerCase()).filter(Boolean));
       const hit = [...tagsFilter].some((tag) => tagSet.has(tag));
       if (!hit) return false;
     }
-    if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk.level)) return false;
+    if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk_level)) return false;
 
     if (typeof args.has_open_alerts === "boolean") {
-      const hasOpenAlerts = item.alert_summary.open_total > 0;
+      const hasOpenAlerts = item.alert_summary.open_count > 0;
       if (hasOpenAlerts !== args.has_open_alerts) return false;
     }
     if (typeof args.has_pending_acceptance === "boolean") {
@@ -394,10 +392,10 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         cmp = cmpNullableString(a.field_name, b.field_name);
         break;
       case "open_alerts":
-        cmp = a.alert_summary.open_total - b.alert_summary.open_total;
+        cmp = a.alert_summary.open_count - b.alert_summary.open_count;
         break;
       case "pending_acceptance":
-        cmp = a.acceptance_summary.pending_count - b.acceptance_summary.pending_count;
+        cmp = a.pending_acceptance_summary.pending_acceptance_count - b.pending_acceptance_summary.pending_acceptance_count;
         break;
       case "last_operation_at":
         cmp = toMs(a.latest_operation.happened_at) - toMs(b.latest_operation.happened_at);
@@ -433,10 +431,10 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     summary: {
       total_fields: total,
       by_risk: {
-        low: sortedItems.filter((x) => x.risk.level === "LOW").length,
-        medium: sortedItems.filter((x) => x.risk.level === "MEDIUM").length,
-        high: sortedItems.filter((x) => x.risk.level === "HIGH").length,
-        critical: sortedItems.filter((x) => x.risk.level === "CRITICAL").length,
+        low: sortedItems.filter((x) => x.risk_level === "LOW").length,
+        medium: sortedItems.filter((x) => x.risk_level === "MEDIUM").length,
+        high: sortedItems.filter((x) => x.risk_level === "HIGH").length,
+        critical: sortedItems.filter((x) => x.risk_level === "CRITICAL").length,
       },
       total_open_alerts: sortedItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
       total_pending_acceptance: sortedItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
