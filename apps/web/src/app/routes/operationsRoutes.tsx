@@ -11,12 +11,14 @@ const AlertsPage = React.lazy(() => import("../../features/operations/pages/Aler
 const ManualExecutionAnalysisPage = React.lazy(() => import("../../features/operations/pages/ManualExecutionAnalysisPage"));
 const HumanOpsAnalyticsPage = React.lazy(() => import("../../features/operations/pages/HumanOpsAnalyticsPage"));
 const OperationReportPage = React.lazy(() => import("../../views/OperationReportPage"));
+const OperationsWorkboardPage = React.lazy(() => import("../../views/OperationsWorkboardPage"));
 
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [
     <Route key="operations" path="/operations" element={<OperationsPage />} />,
     <Route key="operations-detail" path="/operations/:operationPlanId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
     <Route key="operations-report" path="/operations/:operationPlanId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
+    <Route key="operations-workboard" path="/operations/workboard" element={<OperationsWorkboardPage />} />,
     <Route key="human-assignments" path="/human-assignments" element={<HumanAssignmentsPage />} />,
     <Route key="human-assignments-detail" path="/human-assignments/:assignmentId" element={<RouteErrorBoundary><HumanAssignmentDetailPage /></RouteErrorBoundary>} />,
     <Route key="dispatch-workbench" path="/dispatch-workbench" element={<DispatchWorkbenchPage />} />,
