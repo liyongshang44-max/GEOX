@@ -102,8 +102,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             "category",
             "severity",
             "status",
+            "title",
+            "message",
             "recommended_action",
             "reasons",
+            "source_refs",
             "triggered_at",
             "object_type",
             "object_id",
@@ -115,11 +118,26 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             type: { type: "string", enum: ["alert_v1"] },
             version: { type: "string", enum: ["v1"] },
             alert_id: { type: "string" },
-            status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
+            category: { type: "string" },
             severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
             status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
+            title: { type: "string" },
+            message: { type: "string" },
             recommended_action: { type: "string" },
             reasons: { type: "array", items: { type: "string" } },
+            source_refs: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["type", "id"],
+                properties: {
+                  type: { type: "string" },
+                  id: { type: "string" },
+                  uri: { type: "string" },
+                  ts_ms: { type: "integer", format: "int64" }
+                }
+              }
+            },
             triggered_at: { type: "string", format: "date-time", description: "ISO-8601 timestamp string." },
             object_type: { type: "string", enum: ["OPERATION", "DEVICE", "FIELD", "SYSTEM"] },
             object_id: { type: "string" },
@@ -141,13 +159,101 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         AlertSummaryResponseV1: {
           type: "object",
-          required: ["ok", "total", "open", "acked", "closed"],
+          required: ["ok", "total", "by_severity", "by_status", "by_category"],
           properties: {
             ok: { type: "boolean" },
             total: { type: "integer" },
-            open: { type: "integer" },
-            acked: { type: "integer" },
-            closed: { type: "integer" }
+            by_severity: {
+              type: "object",
+              required: ["LOW", "MEDIUM", "HIGH", "CRITICAL"],
+              properties: {
+                LOW: { type: "integer", minimum: 0 },
+                MEDIUM: { type: "integer", minimum: 0 },
+                HIGH: { type: "integer", minimum: 0 },
+                CRITICAL: { type: "integer", minimum: 0 }
+              }
+            },
+            by_status: {
+              type: "object",
+              required: ["OPEN", "ACKED", "CLOSED"],
+              properties: {
+                OPEN: { type: "integer", minimum: 0 },
+                ACKED: { type: "integer", minimum: 0 },
+                CLOSED: { type: "integer", minimum: 0 }
+              }
+            },
+            by_category: {
+              type: "object",
+              additionalProperties: { type: "integer", minimum: 0 }
+            }
+          }
+        },
+        WorkflowStatusV1: {
+          type: "string",
+          enum: ["OPEN", "ASSIGNED", "IN_PROGRESS", "ACKED", "RESOLVED", "CLOSED"]
+        },
+        PriorityV1: {
+          type: "integer",
+          enum: [1, 2, 3, 4],
+          description: "Priority enum mapped as P1=1, P2=2, P3=3, P4=4."
+        },
+        AlertWorkItemV1: {
+          allOf: [
+            { '$ref': "#/components/schemas/AlertV1" },
+            {
+              type: "object",
+              required: ["workflow_status", "assignee", "priority", "sla_due_at", "sla_breached", "last_note", "field_id", "operation_plan_id", "device_id"],
+              properties: {
+                workflow_status: { '$ref': "#/components/schemas/WorkflowStatusV1" },
+                assignee: {
+                  type: "object",
+                  required: ["actor_id", "name"],
+                  properties: {
+                    actor_id: { type: "string", nullable: true },
+                    name: { type: "string", nullable: true }
+                  }
+                },
+                priority: { '$ref': "#/components/schemas/PriorityV1" },
+                sla_due_at: { type: "integer", format: "int64", nullable: true },
+                sla_breached: { type: "boolean" },
+                last_note: { type: "string", nullable: true },
+                field_id: { type: "string", nullable: true },
+                operation_plan_id: { type: "string", nullable: true },
+                device_id: { type: "string", nullable: true }
+              }
+            }
+          ]
+        },
+        AlertWorkboardListResponseV1: {
+          type: "object",
+          required: ["ok", "items", "total"],
+          properties: {
+            ok: { type: "boolean" },
+            items: { type: "array", items: { '$ref': "#/components/schemas/AlertWorkItemV1" } },
+            total: { type: "integer", minimum: 0 }
+          }
+        },
+        AlertWorkflowWriteRequestV1: {
+          type: "object",
+          properties: {
+            assignee_actor_id: { type: "string" },
+            assignee_name: { type: "string" },
+            priority: { '$ref': "#/components/schemas/PriorityV1" },
+            sla_due_at: { type: "integer", format: "int64", nullable: true },
+            note: { type: "string" },
+            expected_version: { type: "integer", minimum: 0 }
+          }
+        },
+        AlertWorkflowWriteResponseV1: {
+          type: "object",
+          required: ["ok", "alert_id", "workflow_status", "version", "updated_by", "updated_at"],
+          properties: {
+            ok: { type: "boolean" },
+            alert_id: { type: "string" },
+            workflow_status: { '$ref': "#/components/schemas/WorkflowStatusV1" },
+            version: { type: "integer", minimum: 0 },
+            updated_by: { type: "string" },
+            updated_at: { type: "integer", format: "int64" }
           }
         },
         FieldPortfolioItemV1: {
@@ -350,6 +456,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             ok: { type: "boolean" },
             alert_id: { type: "string" },
             status: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] },
+            acted_at: { type: "integer", format: "int64" },
             note: { type: "string" }
           }
         },
@@ -1227,6 +1334,16 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["alerts"],
           summary: "Read alert list",
+          description: "Requires Bearer token with `alerts.read` scope.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "field_ids", in: "query", required: false, schema: { type: "string" }, description: "Comma separated field ids or repeated field_ids[] query params." },
+            { name: "severity", in: "query", required: false, schema: { type: "string" }, description: "Comma separated severities: LOW,MEDIUM,HIGH,CRITICAL." },
+            { name: "status", in: "query", required: false, schema: { type: "string" }, description: "Comma separated statuses: OPEN,ACKED,CLOSED." },
+            { name: "category", in: "query", required: false, schema: { type: "string" } },
+            { name: "object_type", in: "query", required: false, schema: { type: "string", enum: ["OPERATION", "DEVICE", "FIELD", "SYSTEM"] } },
+            { name: "object_id", in: "query", required: false, schema: { type: "string" } }
+          ],
           responses: {
             "200": {
               description: "Alert list returned successfully",
@@ -1243,6 +1360,14 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["alerts"],
           summary: "Read alert summary",
+          description: "Requires Bearer token with `alerts.read` scope.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "field_ids", in: "query", required: false, schema: { type: "string" }, description: "Comma separated field ids or repeated field_ids[] query params." },
+            { name: "severity", in: "query", required: false, schema: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] } },
+            { name: "status", in: "query", required: false, schema: { type: "string", enum: ["OPEN", "ACKED", "CLOSED"] } },
+            { name: "category", in: "query", required: false, schema: { type: "string" } }
+          ],
           responses: {
             "200": {
               description: "Alert summary returned successfully",
@@ -1259,6 +1384,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         post: {
           tags: ["alerts"],
           summary: "Acknowledge an alert",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role.",
+          security: [{ bearerAuth: [] }],
           parameters: [
             { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -1286,6 +1413,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         post: {
           tags: ["alerts"],
           summary: "Resolve an alert",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role. In workflow mode this transitions to `RESOLVED`.",
+          security: [{ bearerAuth: [] }],
           parameters: [
             { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
           ],
@@ -1293,16 +1422,26 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             required: false,
             content: {
                 "application/json": {
-                schema: { '$ref': "#/components/schemas/AlertResolveRequestV1" }
+                schema: {
+                  oneOf: [
+                    { '$ref': "#/components/schemas/AlertResolveRequestV1" },
+                    { '$ref': "#/components/schemas/AlertWorkflowWriteRequestV1" }
+                  ]
+                }
               }
             }
           },
           responses: {
             "200": {
-              description: "Alert closed successfully",
+              description: "Alert resolved successfully",
               content: {
                 "application/json": {
-                  schema: { '$ref': "#/components/schemas/AlertResolveResponseV1" }
+                  schema: {
+                    oneOf: [
+                      { '$ref': "#/components/schemas/AlertResolveResponseV1" },
+                      { '$ref': "#/components/schemas/AlertWorkflowWriteResponseV1" }
+                    ]
+                  }
                 }
               }
             }
@@ -1339,8 +1478,151 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["alerts"],
           summary: "Read alert notification records",
+          description: "Requires Bearer token with `alerts.read` scope.",
+          security: [{ bearerAuth: [] }],
           responses: {
             "200": { description: "Alert notification records returned successfully" }
+          }
+        }
+      },
+      "/api/v1/alerts/workboard": {
+        get: {
+          tags: ["alerts"],
+          summary: "Read alert workboard list",
+          description: "Requires Bearer token with `alerts.read` scope.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "workflow_status", in: "query", required: false, schema: { type: "string" }, description: "Comma separated workflow statuses." },
+            { name: "assignee_actor_id", in: "query", required: false, schema: { type: "string" }, description: "Comma separated assignee actor ids." },
+            { name: "priority_min", in: "query", required: false, schema: { '$ref': "#/components/schemas/PriorityV1" } },
+            { name: "priority_max", in: "query", required: false, schema: { '$ref': "#/components/schemas/PriorityV1" } },
+            { name: "sla_breached", in: "query", required: false, schema: { type: "boolean" } }
+          ],
+          responses: {
+            "200": {
+              description: "Alert workboard list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertWorkboardListResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/assign": {
+        post: {
+          tags: ["alerts"],
+          summary: "Assign alert workflow",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertWorkflowWriteRequestV1" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert assigned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertWorkflowWriteResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/start": {
+        post: {
+          tags: ["alerts"],
+          summary: "Start alert workflow",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertWorkflowWriteRequestV1" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert workflow started successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertWorkflowWriteResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/note": {
+        post: {
+          tags: ["alerts"],
+          summary: "Add workflow note to alert",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertWorkflowWriteRequestV1" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert workflow note updated successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertWorkflowWriteResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/alerts/{alert_id}/close": {
+        post: {
+          tags: ["alerts"],
+          summary: "Close alert workflow",
+          description: "Requires Bearer token with `alerts.write` scope and alert write role.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { name: "alert_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: false,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/AlertWorkflowWriteRequestV1" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Alert workflow closed successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/AlertWorkflowWriteResponseV1" }
+                }
+              }
+            }
           }
         }
       },
