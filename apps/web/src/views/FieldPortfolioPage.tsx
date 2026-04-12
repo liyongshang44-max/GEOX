@@ -61,13 +61,14 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
-    sort: params.sort,
+    sort_by: params.sort,
+    sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
   };
 
   if (params.query.trim()) next.query = params.query.trim();
-  if (params.risk) next.risk_level = params.risk;
+  if (params.risk) next.risk_levels = [params.risk];
   if (params.hasOpenAlerts) next.has_open_alerts = params.hasOpenAlerts === "yes";
   if (params.hasPendingAcceptance) next.has_pending_acceptance = params.hasPendingAcceptance === "yes";
 
@@ -134,12 +135,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
     };
   }, [backendParams]);
 
-  const total = toNumber(summary?.total);
-  const riskCount = toNumber(summary?.risk_count);
-  const severeRiskCount = toNumber(summary?.severe_risk_count);
-  const openAlerts = toNumber(summary?.open_alerts);
-  const pendingAcceptance = toNumber(summary?.pending_acceptance);
-  const cycleCost = toNumber(summary?.cycle_cost);
+  const total = toNumber(summary?.fields?.total);
+  const riskCount = toNumber(summary?.fields?.at_risk);
+  const severeRiskCount = toNumber(summary?.top_risk_fields?.filter((item) => String(item?.risk_level ?? "").toUpperCase() === "HIGH").length);
+  const openAlerts = 0;
+  const pendingAcceptance = 0;
+  const cycleCost = toNumber(summary?.period_summary?.total_cost);
 
   return (
     <div className="consolePage">
