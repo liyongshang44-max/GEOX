@@ -9,7 +9,7 @@ import {
 } from "../api/fieldPortfolio";
 
 type RiskLevel = "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
-type SortMode = "risk" | "updated_at" | "cost";
+type SortMode = "risk" | "open_alerts" | "pending_acceptance" | "last_operation_at" | "cost" | "updated_at" | "field_name";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
 
@@ -168,8 +168,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
           <input className="input" placeholder="tags（逗号分隔，如 重点巡检,玉米）" value={tags} onChange={(e) => setTags(e.target.value)} />
           <select className="input" value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
             <option value="risk">sort：风险</option>
+            <option value="open_alerts">sort：未关闭告警（高→低）</option>
+            <option value="pending_acceptance">sort：待验收（高→低）</option>
+            <option value="last_operation_at">sort：最近作业（新→旧）</option>
             <option value="updated_at">sort：更新时间（新→旧）</option>
             <option value="cost">sort：周期成本（高→低）</option>
+            <option value="field_name">sort：地块名称（A→Z）</option>
           </select>
         </div>
       </section>
@@ -199,12 +203,13 @@ export default function FieldPortfolioPage(): React.ReactElement {
               <th>验收摘要</th>
               <th>作业摘要</th>
               <th>成本摘要</th>
+              <th>设备遥测</th>
               <th>更新时间</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7}>正在加载...</td></tr>
+              <tr><td colSpan={8}>正在加载...</td></tr>
             ) : null}
             {!loading && items.map((item) => {
               const tagsText = item.tags.join(" / ");
@@ -212,6 +217,7 @@ export default function FieldPortfolioPage(): React.ReactElement {
               const acceptanceSummary = `待验收 ${item.acceptance_summary.pending_count} · 无效 ${item.acceptance_summary.invalid_count}`;
               const operationSummary = `${formatTime(item.operation_summary.last_operation_at)} · ${item.operation_summary.last_action_type ?? "-"} · ${item.operation_summary.last_final_status ?? "-"}`;
               const costSummary = `预计 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
+              const telemetrySummary = `${formatTime(item.telemetry_summary.latest_ts)} · ${item.telemetry_summary.device_offline ? "设备离线" : "设备在线"}`;
 
               return (
                 <tr key={item.field_id}>
@@ -224,13 +230,14 @@ export default function FieldPortfolioPage(): React.ReactElement {
                   <td>{acceptanceSummary}</td>
                   <td>{operationSummary}</td>
                   <td>{costSummary}</td>
+                  <td>{telemetrySummary}</td>
                   <td>{formatTime(item.updated_at)}</td>
                 </tr>
               );
             })}
             {!loading && !items.length ? (
               <tr>
-                <td colSpan={7}>没有符合筛选条件的地块。</td>
+                <td colSpan={8}>没有符合筛选条件的地块。</td>
               </tr>
             ) : null}
           </tbody>

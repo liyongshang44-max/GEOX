@@ -19,11 +19,6 @@ export type FetchFieldPortfolioParams = {
   sort_order?: "asc" | "desc";
   page?: number;
   page_size?: number;
-  tenant_id?: string;
-  project_id?: string;
-  group_id?: string;
-  field_ids?: string[];
-  window_ms?: number;
 };
 
 type FieldPortfolioListResponse = {
@@ -44,7 +39,6 @@ type FieldTagsResponse = {
 };
 
 function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unknown> {
-  const fieldIds = Array.isArray(params.field_ids) ? params.field_ids.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   return {
     "tags[]": params.tags,
     "risk_levels[]": params.risk_levels,
@@ -55,11 +49,6 @@ function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unk
     sort_order: params.sort_order,
     page: params.page,
     page_size: params.page_size,
-    tenant_id: params.tenant_id,
-    project_id: params.project_id,
-    group_id: params.group_id,
-    "field_ids[]": fieldIds.length ? fieldIds : undefined,
-    window_ms: params.window_ms,
   };
 }
 

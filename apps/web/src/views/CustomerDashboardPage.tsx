@@ -1,6 +1,6 @@
 /* eslint no-restricted-imports: ["error", { "patterns": ["../viewmodels/customerDashboardViewModel", "../viewmodels/*customer*Dashboard*", "../lib/*aggregate*"] }] */
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { fetchAlertSummary, type AlertSummaryV1 } from "../api/alerts";
 import {
   type FieldPortfolioItemV1,
@@ -30,7 +30,6 @@ function riskRank(value: string): number {
 }
 
 export default function CustomerDashboardPage(): React.ReactElement {
-  const location = useLocation();
   const [summary, setSummary] = React.useState<FieldPortfolioSummaryV1 | null>(null);
   const [portfolioItems, setPortfolioItems] = React.useState<FieldPortfolioItemV1[]>([]);
   const [error, setError] = React.useState<string>("");
@@ -43,12 +42,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
   });
 
   React.useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const field_ids = params.getAll("field_id").map((x) => String(x ?? "").trim()).filter(Boolean);
-
     void Promise.all([
-      fetchFieldPortfolioSummary({ field_ids }),
-      fetchFieldPortfolio({ field_ids, sort_by: "risk", sort_order: "desc", page: 1, page_size: 5 }),
+      fetchFieldPortfolioSummary(),
+      fetchFieldPortfolio({ sort_by: "risk", sort_order: "desc", page: 1, page_size: 5 }),
       fetchAlertSummary(),
     ])
       .then(([nextSummaryData, nextItems, nextAlertSummary]) => {
@@ -69,7 +65,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         });
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
-  }, [location.search]);
+  }, []);
 
   const topRiskFields = React.useMemo(() => {
     return [...portfolioItems]
@@ -107,7 +103,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <SectionCard title="经营汇总（/api/v1/fields/portfolio/summary）">
         <div>未关闭告警：{numberFmt.format(summary?.total_open_alerts ?? 0)}</div>
-        <div>待验收：{numberFmt.format(summary?.total_pending_acceptance ?? 0)} · 无效执行：{numberFmt.format(summary?.total_invalid_execution ?? 0)}</div>
+        <div>待验收：{numberFmt.format(summary?.total_pending_acceptance ?? 0)}</div>
         <div>预计成本：{currencyFmt.format(summary?.total_estimated_cost ?? 0)} · 实际成本：{currencyFmt.format(summary?.total_actual_cost ?? 0)}</div>
       </SectionCard>
 
