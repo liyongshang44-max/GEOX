@@ -62,7 +62,7 @@ export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}
 }
 
 export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioSummaryV1> {
-  const query: Record<string, string | number | string[]> = { ...params };
+  const query: Record<string, unknown> = { ...params };
   const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   delete query.fieldIds;
   if (fieldIds.length) query["field_ids[]"] = fieldIds;
