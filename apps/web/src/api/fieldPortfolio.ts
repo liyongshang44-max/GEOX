@@ -1,11 +1,9 @@
 import { apiRequest, withQuery } from "./client";
-import type {
-  FieldPortfolioItemV1 as FieldPortfolioItemV1Projection,
-  FieldPortfolioListResponseV1 as FieldPortfolioListResponseV1Projection,
-} from "../../../server/src/projections/field_portfolio_v1";
+import type { ProgramPortfolioItemV1 as FieldPortfolioItemV1Projection } from "../../../server/src/projections/program_portfolio_v1";
+import type { FieldPortfolioSummaryV1 as FieldPortfolioSummaryV1Projection } from "../../../server/src/projections/report_dashboard_v1";
 
 export type FieldPortfolioItemV1 = FieldPortfolioItemV1Projection;
-export type FieldPortfolioSummaryV1 = FieldPortfolioListResponseV1Projection["summary"];
+export type FieldPortfolioSummaryV1 = FieldPortfolioSummaryV1Projection;
 
 export type FetchFieldPortfolioParams = {
   tags?: string[];
@@ -20,15 +18,8 @@ export type FetchFieldPortfolioParams = {
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
-
-  query?: string;
-  risk_level?: "HIGH" | "MEDIUM" | "LOW";
-  has_open_alerts?: boolean;
-  has_pending_acceptance?: boolean;
-  tags?: string[];
-  sort?: "business_priority" | "updated_desc" | "cost_desc";
-  page?: number;
-  page_size?: number;
+  fieldIds?: string[];
+  timeRange?: "7d" | "30d" | "season";
 };
 
 type FieldPortfolioListResponse = {
@@ -71,19 +62,14 @@ export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}
 }
 
 export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioSummaryV1> {
-  const res = await apiRequest<FieldPortfolioSummaryResponse>(withQuery("/api/v1/fields/portfolio/summary", toPortfolioQuery(params)));
-  return (res.summary && typeof res.summary === "object")
-    ? res.summary
-    : {
-      total_fields: 0,
-      by_risk: { low: 0, medium: 0, high: 0 },
-      total_open_alerts: 0,
-      total_pending_acceptance: 0,
-      total_invalid_execution: 0,
-      total_estimated_cost: 0,
-      total_actual_cost: 0,
-      offline_fields: 0,
-    };
+  const query: Record<string, string | number | string[]> = { ...params };
+  const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+  delete query.fieldIds;
+  if (fieldIds.length) query["field_ids[]"] = fieldIds;
+  if (params.timeRange) query.time_range = params.timeRange;
+  delete query.timeRange;
+  const res = await apiRequest<FieldPortfolioSummaryResponse>(withQuery("/api/v1/fields/portfolio/summary", query));
+  return (res.summary && typeof res.summary === "object") ? res.summary : ({} as FieldPortfolioSummaryV1);
 }
 
 export async function fetchFieldTags(fieldId: string): Promise<string[]> {
