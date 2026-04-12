@@ -609,6 +609,23 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
       if (item.workflow_status === "IN_PROGRESS" || item.workflow_status === "ASSIGNED" || item.workflow_status === "ACKED") acc.in_progress += 1;
       if (item.sla_breached) acc.sla_breached += 1;
       if (item.workflow_status === "CLOSED") acc.closed_today += 1;
+
+      const fieldId = String(item.field_id ?? "").trim();
+      if (fieldId) {
+        const byField = acc.by_field[fieldId] ?? {
+          total: 0,
+          unassigned: 0,
+          in_progress: 0,
+          sla_breached: 0,
+          closed_today: 0,
+        };
+        byField.total += 1;
+        if (item.workflow_status === "OPEN") byField.unassigned += 1;
+        if (item.workflow_status === "IN_PROGRESS" || item.workflow_status === "ASSIGNED" || item.workflow_status === "ACKED") byField.in_progress += 1;
+        if (item.sla_breached) byField.sla_breached += 1;
+        if (item.workflow_status === "CLOSED") byField.closed_today += 1;
+        acc.by_field[fieldId] = byField;
+      }
       return acc;
     }, {
       total: 0,
@@ -616,6 +633,13 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
       in_progress: 0,
       sla_breached: 0,
       closed_today: 0,
+      by_field: {} as Record<string, {
+        total: number;
+        unassigned: number;
+        in_progress: number;
+        sla_breached: number;
+        closed_today: number;
+      }>,
     });
     return reply.send({ ok: true, ...summary });
   });

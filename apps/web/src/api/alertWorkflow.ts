@@ -78,6 +78,13 @@ export type AlertWorkboardSummaryV1 = {
   in_progress: number;
   sla_breached: number;
   closed_today: number;
+  by_field?: Record<string, {
+    total: number;
+    unassigned: number;
+    in_progress: number;
+    sla_breached: number;
+    closed_today: number;
+  }>;
 };
 
 export function summarizeAlertWorkboard(items: AlertWorkItemV1[]): AlertWorkboardSummaryV1 {
@@ -99,13 +106,35 @@ export async function fetchAlertWorkboardSummary(params: FetchAlertWorkboardPara
     in_progress?: number;
     sla_breached?: number;
     closed_today?: number;
+    by_field?: Record<string, {
+      total?: number;
+      unassigned?: number;
+      in_progress?: number;
+      sla_breached?: number;
+      closed_today?: number;
+    }>;
   }>(withQuery("/api/v1/alerts/workboard/summary", params));
+  const byField = (res.by_field && typeof res.by_field === "object")
+    ? Object.entries(res.by_field).reduce<NonNullable<AlertWorkboardSummaryV1["by_field"]>>((acc, [fieldId, stats]) => {
+      const key = String(fieldId ?? "").trim();
+      if (!key || !stats || typeof stats !== "object") return acc;
+      acc[key] = {
+        total: Number(stats.total ?? 0),
+        unassigned: Number(stats.unassigned ?? 0),
+        in_progress: Number(stats.in_progress ?? 0),
+        sla_breached: Number(stats.sla_breached ?? 0),
+        closed_today: Number(stats.closed_today ?? 0),
+      };
+      return acc;
+    }, {})
+    : {};
   return {
     total: Number(res.total ?? 0),
     unassigned: Number(res.unassigned ?? 0),
     in_progress: Number(res.in_progress ?? 0),
     sla_breached: Number(res.sla_breached ?? 0),
     closed_today: Number(res.closed_today ?? 0),
+    by_field: byField,
   };
 }
 

@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchAlertWorkboard, type AlertWorkItemV1 } from "../api/alertWorkflow";
+import { fetchAlertWorkboardSummary } from "../api/alertWorkflow";
 import {
   fetchFieldPortfolio,
   fetchFieldPortfolioSummary,
@@ -108,14 +108,15 @@ export default function FieldPortfolioPage(): React.ReactElement {
           setWorkflowByField({});
           return;
         }
-        const workflowItems = await fetchAlertWorkboard({ field_ids: fieldIds });
+        const workflowSummary = await fetchAlertWorkboardSummary({ field_ids: fieldIds });
         if (!active) return;
-        const nextMap = workflowItems.reduce<Record<string, { unassigned: number; breached: number }>>((acc, row: AlertWorkItemV1) => {
-          const key = String(row.field_id || "");
+        const nextMap = Object.entries(workflowSummary.by_field ?? {}).reduce<Record<string, { unassigned: number; breached: number }>>((acc, [fieldId, stats]) => {
+          const key = String(fieldId ?? "").trim();
           if (!key) return acc;
-          if (!acc[key]) acc[key] = { unassigned: 0, breached: 0 };
-          if (row.workflow_status === "OPEN") acc[key].unassigned += 1;
-          if (row.sla_breached) acc[key].breached += 1;
+          acc[key] = {
+            unassigned: Number(stats?.unassigned ?? 0),
+            breached: Number(stats?.sla_breached ?? 0),
+          };
           return acc;
         }, {});
         setWorkflowByField(nextMap);
