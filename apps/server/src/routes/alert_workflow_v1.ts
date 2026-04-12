@@ -570,8 +570,10 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     if (!canRead(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
     const query: any = (req.query ?? {});
     const field_ids = normalizeCsv(query.field_ids ?? query.field_id ?? query.field ?? query.fieldId);
+    const operation_id = normalizeCsv(query.operation_id ?? query.operation_ids ?? query.operationId ?? query.operationPlanId ?? query.operation_plan_id);
     const filter = {
       field_ids,
+      operation_id,
       workflow_status: normalizeStatusList(query.workflow_status ?? query.workflowStatus),
       assignee_actor_id: normalizeCsv(query.assignee_actor_id ?? query.assigneeActorId ?? query.assignee),
       severity: normalizeSeverityList(query.severity),
@@ -591,8 +593,10 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     if (!canRead(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
     const query: any = (req.query ?? {});
     const field_ids = normalizeCsv(query.field_ids ?? query.field_id ?? query.field ?? query.fieldId);
+    const operation_id = normalizeCsv(query.operation_id ?? query.operation_ids ?? query.operationId ?? query.operationPlanId ?? query.operation_plan_id);
     const filter = {
       field_ids,
+      operation_id,
       workflow_status: normalizeStatusList(query.workflow_status ?? query.workflowStatus),
       assignee_actor_id: normalizeCsv(query.assignee_actor_id ?? query.assigneeActorId ?? query.assignee),
       severity: normalizeSeverityList(query.severity),

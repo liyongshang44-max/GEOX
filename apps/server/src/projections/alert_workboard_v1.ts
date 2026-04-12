@@ -34,6 +34,7 @@ export type AlertWorkItemV1 = AlertV1 & {
 };
 
 export type AlertWorkboardFilterV1 = AlertListFilterV1 & {
+  operation_id?: string[];
   workflow_status?: AlertWorkflowStatusV1[];
   assignee_actor_id?: string[];
   priority_min?: number | null;
@@ -153,6 +154,15 @@ export function projectAlertWorkboardV1(args: AlertWorkboardArgsV1): AlertWorkIt
 
   const assigneeSet = new Set((args.filter?.assignee_actor_id ?? []).map((x) => String(x).trim()).filter(Boolean));
   if (assigneeSet.size > 0) items = items.filter((item) => assigneeSet.has(String(item.assignee.actor_id ?? "")));
+
+  const operationIdSet = new Set((args.filter?.operation_id ?? []).map((x) => String(x).trim()).filter(Boolean));
+  if (operationIdSet.size > 0) {
+    items = items.filter((item) => {
+      const operationPlanId = String(item.operation_plan_id ?? "").trim();
+      const operationObjectId = item.object_type === "OPERATION" ? String(item.object_id ?? "").trim() : "";
+      return operationIdSet.has(operationPlanId) || operationIdSet.has(operationObjectId);
+    });
+  }
 
   if (args.filter?.priority_min != null && Number.isFinite(args.filter.priority_min)) {
     items = items.filter((item) => item.priority >= Math.trunc(Number(args.filter?.priority_min)));

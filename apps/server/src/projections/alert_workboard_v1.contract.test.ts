@@ -112,3 +112,70 @@ test("alert workboard v1: applies breached-first default sort and workflow filte
   assert.equal(items[0]?.workflow_status, "ASSIGNED");
   assert.equal(items[0]?.sla_breached, true);
 });
+
+test("alert workboard v1: supports operation_id filter", () => {
+  const nowMs = Date.UTC(2026, 0, 1, 0, 0, 0);
+  const operationPlanIdA = "opl_a";
+  const operationPlanIdB = "opl_b";
+  const items = projectAlertWorkboardV1({
+    scope,
+    operations: [
+      {
+        operation_plan_id: operationPlanIdA,
+        operation_state: {
+          operation_id: operationPlanIdA,
+          operation_plan_id: operationPlanIdA,
+          tenant_id: scope.tenant_id,
+          project_id: scope.project_id,
+          group_id: scope.group_id,
+          field_id: "f-1",
+          device_id: "d-1",
+          action_type: "IRRIGATE",
+          status: "DONE",
+          final_status: "DONE",
+          acceptance: null,
+          timeline: {},
+        } as any,
+        evidence_bundle: {},
+        acceptance: null,
+        receipt: null,
+        cost: {},
+      },
+      {
+        operation_plan_id: operationPlanIdB,
+        operation_state: {
+          operation_id: operationPlanIdB,
+          operation_plan_id: operationPlanIdB,
+          tenant_id: scope.tenant_id,
+          project_id: scope.project_id,
+          group_id: scope.group_id,
+          field_id: "f-2",
+          device_id: "d-2",
+          action_type: "IRRIGATE",
+          status: "FAILED",
+          final_status: "FAILED",
+          acceptance: null,
+          timeline: {},
+        } as any,
+        evidence_bundle: {},
+        acceptance: null,
+        receipt: null,
+        cost: {},
+      },
+    ],
+    telemetry_health: [],
+    workflow: [],
+    filter: { operation_id: [operationPlanIdB] },
+    nowMs,
+    operation_field_map: new Map([
+      [operationPlanIdA, "f-1"],
+      [operationPlanIdB, "f-2"],
+    ]),
+    operation_device_map: new Map([
+      [operationPlanIdA, "d-1"],
+      [operationPlanIdB, "d-2"],
+    ]),
+  });
+  assert.ok(items.length >= 1);
+  assert.ok(items.every((item) => String(item.operation_plan_id ?? "") === operationPlanIdB));
+});

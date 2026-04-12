@@ -54,6 +54,7 @@ export default function OperationReportPage(): React.ReactElement {
   const finalStatus = mapReportCode(report.execution.final_status);
   const acceptanceStatus = mapReportCode(report.acceptance.status);
   const riskLevel = mapReportCode(report.risk.level);
+  const workboardOperationId = String(report.identifiers.operation_plan_id || report.identifiers.operation_id || operationPlanId).trim();
 
   return (
     <div className="demoDashboardPage">
@@ -61,7 +62,12 @@ export default function OperationReportPage(): React.ReactElement {
         eyebrow="GEOX / 作业报告"
         title={`作业报告 ${report.identifiers.operation_id || operationPlanId}`}
         description={`状态：${finalStatus.label}`}
-        actions={<Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>返回作业详情</Link>}
+        actions={(
+          <>
+            <Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>返回作业详情</Link>
+            {workboardOperationId ? <Link className="btn" to={`/operations/workboard?operation_id=${encodeURIComponent(workboardOperationId)}`}>跳转到工作台处理</Link> : null}
+          </>
+        )}
       />
 
       <SectionCard title="关联告警 Workflow（/api/v1/alerts/workboard）">
