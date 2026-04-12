@@ -7,6 +7,7 @@ import { projectReportV1 as projectOperationReportV1 } from "./reports_v1";
 import { projectAlertWorkboardV1, type AlertWorkflowStatusV1 } from "../projections/alert_workboard_v1";
 import type { AlertActionOverrideV1, AlertListOperationInputV1 } from "../projections/alert_list_v1";
 import type { TelemetryHealthInput } from "../domain/alert_engine";
+import { deriveDefaultSlaDueAt } from "../domain/alert_sla";
 
 export type AlertWorkflowStatus = "OPEN" | "ASSIGNED" | "IN_PROGRESS" | "ACKED" | "RESOLVED" | "CLOSED";
 
@@ -398,6 +399,15 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
 
     const body: any = req.body ?? {};
     const now = Date.now();
+    const hasSlaDueAt = Object.prototype.hasOwnProperty.call(body, "sla_due_at");
+    const parsedSlaDueAt = hasSlaDueAt
+      ? (body.sla_due_at == null
+        ? null
+        : (Number.isFinite(Number(body.sla_due_at)) ? Math.trunc(Number(body.sla_due_at)) : null))
+      : null;
+    const derivedDefaultSlaDueAt = (!hasSlaDueAt && opts.status === "ASSIGNED")
+      ? deriveDefaultSlaDueAt({ severity: target.severity, triggeredAt: target.triggered_at })
+      : null;
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -416,7 +426,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
         assignee_actor_id: parseId(body.assignee_actor_id) ?? null,
         assignee_name: typeof body.assignee_name === "string" ? body.assignee_name.trim() || null : null,
         priority: body.priority == null ? null : Math.max(1, Math.trunc(Number(body.priority))),
-        sla_due_at: body.sla_due_at == null ? null : Math.trunc(Number(body.sla_due_at)),
+        sla_due_at: hasSlaDueAt ? parsedSlaDueAt : derivedDefaultSlaDueAt,
         assigned_at: opts.withAssignedAt ? now : null,
         resolved_at: opts.withResolvedAt ? now : null,
         last_note: typeof body.note === "string" ? body.note.trim() || null : null,
