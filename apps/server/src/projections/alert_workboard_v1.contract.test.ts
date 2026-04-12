@@ -1,0 +1,114 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { projectAlertWorkboardV1, DEFAULT_WORKFLOW_PRIORITY_V1, DEFAULT_WORKFLOW_STATUS_V1 } from "./alert_workboard_v1";
+
+const scope = {
+  tenant_id: "t-1",
+  project_id: "p-1",
+  group_id: "g-1",
+};
+
+test("alert workboard v1: merges workflow fields with defaults", () => {
+  const nowMs = Date.UTC(2026, 0, 1, 0, 0, 0);
+  const base = projectAlertWorkboardV1({
+    scope,
+    operations: [],
+    telemetry_health: [
+      {
+        ...scope,
+        device_id: "d-1",
+        field_id: "f-1",
+        heartbeat_lag_ms: 16 * 60 * 1000,
+      },
+    ],
+    workflow: [],
+    nowMs,
+    device_field_map: new Map([["d-1", "f-1"]]),
+  });
+
+  assert.equal(base.length, 1);
+  assert.equal(base[0]?.workflow_status, DEFAULT_WORKFLOW_STATUS_V1);
+  assert.equal(base[0]?.priority, DEFAULT_WORKFLOW_PRIORITY_V1);
+  assert.equal(base[0]?.sla_due_at, null);
+  assert.equal(base[0]?.sla_breached, false);
+  assert.equal(base[0]?.field_id, "f-1");
+  assert.equal(base[0]?.device_id, "d-1");
+});
+
+test("alert workboard v1: applies breached-first default sort and workflow filters", () => {
+  const nowMs = Date.UTC(2026, 0, 1, 0, 0, 0);
+  const seed = projectAlertWorkboardV1({
+    scope,
+    operations: [],
+    telemetry_health: [
+      {
+        ...scope,
+        device_id: "d-1",
+        field_id: "f-1",
+        heartbeat_lag_ms: 16 * 60 * 1000,
+      },
+      {
+        ...scope,
+        device_id: "d-2",
+        field_id: "f-2",
+        telemetry_lag_ms: 11 * 60 * 1000,
+      },
+    ],
+    workflow: [],
+    nowMs,
+    device_field_map: new Map([
+      ["d-1", "f-1"],
+      ["d-2", "f-2"],
+    ]),
+  });
+
+  const high = seed.find((x) => x.category === "DEVICE_HEARTBEAT_STALE");
+  const medium = seed.find((x) => x.category === "TELEMETRY_HEALTH_DEGRADED");
+  assert.ok(high?.alert_id);
+  assert.ok(medium?.alert_id);
+
+  const items = projectAlertWorkboardV1({
+    scope,
+    operations: [],
+    telemetry_health: [
+      {
+        ...scope,
+        device_id: "d-1",
+        field_id: "f-1",
+        heartbeat_lag_ms: 16 * 60 * 1000,
+      },
+      {
+        ...scope,
+        device_id: "d-2",
+        field_id: "f-2",
+        telemetry_lag_ms: 11 * 60 * 1000,
+      },
+    ],
+    workflow: [
+      {
+        alert_id: String(medium?.alert_id),
+        workflow_status: "ASSIGNED",
+        assignee_actor_id: "actor-1",
+        priority: 2,
+        sla_due_at: nowMs - 1,
+      },
+      {
+        alert_id: String(high?.alert_id),
+        workflow_status: "OPEN",
+        priority: 1,
+      },
+    ],
+    filter: { workflow_status: ["ASSIGNED"], sla_breached: true },
+    nowMs,
+    device_field_map: new Map([
+      ["d-1", "f-1"],
+      ["d-2", "f-2"],
+    ]),
+  });
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0]?.category, "TELEMETRY_HEALTH_DEGRADED");
+  assert.equal(items[0]?.workflow_status, "ASSIGNED");
+  assert.equal(items[0]?.sla_breached, true);
+});
