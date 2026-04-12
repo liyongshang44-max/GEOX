@@ -30,6 +30,27 @@ function formatDeadline(deadlineMs: number | null): string {
   return Number.isNaN(date.getTime()) ? "--" : date.toLocaleString("zh-CN", { hour12: false });
 }
 
+function readMultiSearchValues(searchParams: URLSearchParams, ...keys: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const key of keys) {
+    const values = searchParams.getAll(key);
+    if (!values.length) {
+      const one = searchParams.get(key);
+      if (one != null) values.push(one);
+    }
+    for (const raw of values) {
+      for (const token of String(raw).split(",")) {
+        const item = token.trim();
+        if (!item || seen.has(item)) continue;
+        seen.add(item);
+        out.push(item);
+      }
+    }
+  }
+  return out;
+}
+
 export default function OperationsWorkboardPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const [items, setItems] = React.useState<AlertWorkItemV1[]>([]);
@@ -45,13 +66,27 @@ export default function OperationsWorkboardPage(): React.ReactElement {
   const field = searchParams.get("field") || "";
   const onlyBreached = searchParams.get("sla_breached") === "true";
   const alertId = searchParams.get("alert_id") || "";
+  const query = searchParams.get("query") || "";
+  const workflowStatuses = readMultiSearchValues(searchParams, "workflow_status");
+  const fieldIds = readMultiSearchValues(searchParams, "field_ids", "field_id", "field");
+  const severities = readMultiSearchValues(searchParams, "severity");
+  const categories = readMultiSearchValues(searchParams, "category");
+  const assigneeActorId = searchParams.get("assignee_actor_id") || assignee;
 
   const loadWorkboard = React.useCallback(async (): Promise<AlertWorkItemV1[]> => {
     setLoading(true);
     setError("");
-    const rows = await fetchAlertWorkboard();
+    const rows = await fetchAlertWorkboard({
+      workflow_status: workflowStatuses.length ? workflowStatuses as AlertWorkflowStatus[] : (workflowStatus ? [workflowStatus as AlertWorkflowStatus] : undefined),
+      assignee_actor_id: assigneeActorId || undefined,
+      field_ids: fieldIds.length ? fieldIds : (field ? [field] : undefined),
+      severity: severities.length ? severities : undefined,
+      category: categories.length ? categories : undefined,
+      sla_breached: onlyBreached ? true : undefined,
+      query: query || alertId || undefined,
+    });
     return rows;
-  }, []);
+  }, [alertId, assigneeActorId, categories, field, fieldIds, onlyBreached, query, severities, workflowStatus, workflowStatuses]);
 
   React.useEffect(() => {
     let alive = true;
@@ -101,16 +136,7 @@ export default function OperationsWorkboardPage(): React.ReactElement {
     }
   }, [assigneeDrafts, loadWorkboard, noteDrafts]);
 
-  const filteredItems = React.useMemo(() => items.filter((item) => {
-    if (assignee && `${item.assignee.name || ""}${item.assignee.actor_id || ""}`.toLowerCase().includes(assignee.toLowerCase()) === false) return false;
-    if (workflowStatus && item.workflow_status !== (workflowStatus as AlertWorkflowStatus)) return false;
-    if (field && String(item.field_id || "").includes(field) === false) return false;
-    if (onlyBreached && !item.sla_breached) return false;
-    if (alertId && item.alert_id !== alertId) return false;
-    return true;
-  }), [alertId, assignee, field, items, onlyBreached, workflowStatus]);
-
-  const summary = React.useMemo(() => summarizeAlertWorkboard(filteredItems), [filteredItems]);
+  const summary = React.useMemo(() => summarizeAlertWorkboard(items), [items]);
 
   return (
     <div className="demoDashboardPage">
@@ -130,10 +156,10 @@ export default function OperationsWorkboardPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-      <SectionCard title={`工作项列表（${filteredItems.length}）`} subtitle="支持通过 query 参数跳转过滤视图：assignee / workflow_status / field / sla_breached / alert_id">
+      <SectionCard title={`工作项列表（${items.length}）`} subtitle="支持通过 query 参数跳转过滤视图：assignee / workflow_status / field / sla_breached / alert_id / query">
         <div className="list">
           {loading ? <div className="muted">正在加载...</div> : null}
-          {!loading && filteredItems.map((item) => (
+          {!loading && items.map((item) => (
             <article key={item.alert_id} className="item">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                 <div>
@@ -204,7 +230,7 @@ export default function OperationsWorkboardPage(): React.ReactElement {
               </div>
             </article>
           ))}
-          {!loading && !filteredItems.length ? <div className="muted">暂无匹配的工作项</div> : null}
+          {!loading && !items.length ? <div className="muted">暂无匹配的工作项</div> : null}
           {error ? <div className="muted">{error}</div> : null}
         </div>
       </SectionCard>

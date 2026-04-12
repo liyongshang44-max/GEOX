@@ -67,6 +67,10 @@ function normalizePositiveInt(v: unknown, fallback: number): number {
   return Math.max(1, Math.trunc(n));
 }
 
+function includesNeedle(value: unknown, needle: string): boolean {
+  return String(value ?? "").toLowerCase().includes(needle);
+}
+
 function relationOf(alert: AlertV1, args: AlertWorkboardArgsV1): { field_id: string | null; operation_plan_id: string | null; device_id: string | null } {
   if (alert.object_type === "FIELD") {
     return {
@@ -158,6 +162,19 @@ export function projectAlertWorkboardV1(args: AlertWorkboardArgsV1): AlertWorkIt
   }
   if (typeof args.filter?.sla_breached === "boolean") {
     items = items.filter((item) => item.sla_breached === args.filter?.sla_breached);
+  }
+  const queryNeedle = String(args.filter?.query ?? "").trim().toLowerCase();
+  if (queryNeedle) {
+    items = items.filter((item) => {
+      if (includesNeedle(item.assignee.actor_id, queryNeedle)) return true;
+      if (includesNeedle(item.assignee.name, queryNeedle)) return true;
+      if (includesNeedle(item.field_id, queryNeedle)) return true;
+      if (includesNeedle(item.operation_plan_id, queryNeedle)) return true;
+      if (includesNeedle(item.device_id, queryNeedle)) return true;
+      if (includesNeedle(item.workflow_status, queryNeedle)) return true;
+      if (includesNeedle(item.last_note, queryNeedle)) return true;
+      return false;
+    });
   }
 
   items.sort((a, b) => {

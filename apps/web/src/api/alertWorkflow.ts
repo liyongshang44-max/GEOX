@@ -41,9 +41,12 @@ export type FetchAlertWorkboardParams = {
   field_ids?: string[];
   workflow_status?: AlertWorkflowStatus | AlertWorkflowStatus[];
   assignee_actor_id?: string | string[];
+  severity?: string[];
+  category?: string[];
   priority_min?: AlertPriority;
   priority_max?: AlertPriority;
   sla_breached?: boolean;
+  query?: string;
 };
 
 export type AlertWorkflowMutationPayload = {

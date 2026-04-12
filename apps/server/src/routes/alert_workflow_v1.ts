@@ -6,6 +6,7 @@ import { projectOperationStateV1 } from "../projections/operation_state_v1";
 import { projectReportV1 as projectOperationReportV1 } from "./reports_v1";
 import { projectAlertWorkboardV1, type AlertWorkflowStatusV1 } from "../projections/alert_workboard_v1";
 import type { AlertActionOverrideV1, AlertListOperationInputV1 } from "../projections/alert_list_v1";
+import type { AlertSeverity } from "../projections/alert_v1";
 import type { TelemetryHealthInput } from "../domain/alert_engine";
 import { deriveDefaultSlaDueAt } from "../domain/alert_sla";
 
@@ -338,6 +339,10 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     normalizeCsv(v)
       .map((x) => String(x).trim().toUpperCase())
       .filter((x): x is AlertWorkflowStatusV1 => isValidAlertWorkflowStatus(x));
+  const normalizeSeverityList = (v: unknown): AlertSeverity[] =>
+    normalizeCsv(v)
+      .map((x) => String(x).trim().toUpperCase())
+      .filter((x): x is AlertSeverity => x === "LOW" || x === "MEDIUM" || x === "HIGH" || x === "CRITICAL");
 
   const requireScope = (
     req: any,
@@ -564,12 +569,17 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     if (!auth) return reply;
     if (!canRead(auth)) return reply.status(403).send({ ok: false, error: "AUTH_ROLE_DENIED" });
     const query: any = (req.query ?? {});
+    const field_ids = normalizeCsv(query.field_ids ?? query.field_id ?? query.field ?? query.fieldId);
     const filter = {
+      field_ids,
       workflow_status: normalizeStatusList(query.workflow_status ?? query.workflowStatus),
-      assignee_actor_id: normalizeCsv(query.assignee_actor_id ?? query.assigneeActorId),
+      assignee_actor_id: normalizeCsv(query.assignee_actor_id ?? query.assigneeActorId ?? query.assignee),
+      severity: normalizeSeverityList(query.severity),
+      category: normalizeCsv(query.category).map((x) => x.toUpperCase()),
       priority_min: query.priority_min != null ? Number(query.priority_min) : null,
       priority_max: query.priority_max != null ? Number(query.priority_max) : null,
       sla_breached: query.sla_breached == null ? null : String(query.sla_breached).toLowerCase() === "true",
+      query: String(query.query ?? "").trim(),
     };
     const items = await projectWorkboardItems(auth, filter, { skipFieldScope: false });
     return reply.send({ ok: true, items, total: items.length });

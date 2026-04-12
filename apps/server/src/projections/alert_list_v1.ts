@@ -54,6 +54,7 @@ export type AlertListFilterV1 = {
   severity?: AlertSeverity[];
   category?: string[];
   device_field_map?: Map<string, string>;
+  query?: string;
 };
 
 export function projectReportV1(input: {
@@ -78,6 +79,10 @@ function severityRank(severity: AlertSeverity): number {
   if (severity === AlertSeverity.HIGH) return 3;
   if (severity === AlertSeverity.MEDIUM) return 2;
   return 1;
+}
+
+function includesNeedle(value: unknown, needle: string): boolean {
+  return String(value ?? "").toLowerCase().includes(needle);
 }
 
 export function projectAlertListV1(input: {
@@ -142,6 +147,20 @@ export function projectAlertListV1(input: {
 
   const categorySet = new Set((input.filter?.category ?? []).map((x) => String(x).trim().toUpperCase()).filter(Boolean));
   if (categorySet.size > 0) items = items.filter((item) => categorySet.has(String(item.category ?? "").trim().toUpperCase()));
+
+  const queryNeedle = String(input.filter?.query ?? "").trim().toLowerCase();
+  if (queryNeedle) {
+    items = items.filter((item) => {
+      if (includesNeedle(item.alert_id, queryNeedle)) return true;
+      if (includesNeedle(item.category, queryNeedle)) return true;
+      if (includesNeedle(item.object_id, queryNeedle)) return true;
+      if (includesNeedle(item.title, queryNeedle)) return true;
+      if (includesNeedle(item.message, queryNeedle)) return true;
+      if (includesNeedle(item.recommended_action, queryNeedle)) return true;
+      if (item.reasons.some((reason) => includesNeedle(reason, queryNeedle))) return true;
+      return item.source_refs.some((source) => includesNeedle(source.id, queryNeedle) || includesNeedle(source.type, queryNeedle));
+    });
+  }
 
   items.sort((a, b) => {
     const bySeverity = severityRank(b.severity) - severityRank(a.severity);
