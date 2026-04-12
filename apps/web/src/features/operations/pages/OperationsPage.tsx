@@ -29,6 +29,7 @@ function groupOf(item: any): GroupKey {
 
 export default function OperationsPage(): React.ReactElement {
   const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
+  // operationViewModel 是唯一标签来源，页面不再维护本地 OP_LABELS。
   const labels = getOperationLabels("zh");
   const [issuer, setIssuer] = React.useState("human");
   const [actionType, setActionType] = React.useState("IRRIGATE");
