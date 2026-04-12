@@ -13,6 +13,11 @@ import { uuidv4 } from "../../../lib/uuid";
 
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 
+const OP_LABELS = {
+  zh: buildOperationQuickCreateLabels("zh"),
+  en: buildOperationQuickCreateLabels("en"),
+} as const;
+
 function normalizeStatus(item: any): string {
   return resolveUnifiedOperationFinalStatus(item);
 }
