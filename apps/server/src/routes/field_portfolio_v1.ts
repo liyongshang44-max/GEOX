@@ -73,6 +73,15 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
 
     const windowMsRaw = Number(q.window_ms ?? "");
     const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
+    const tags = parseStringList(q.tags ?? q["tags[]"]);
+    const risk_levels = parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]);
+    const has_open_alerts = parseBoolean(q.has_open_alerts);
+    const has_pending_acceptance = parseBoolean(q.has_pending_acceptance);
+    const query = String(q.query ?? "").trim();
+    const sort_by = parseSortBy(q.sort_by);
+    const sort_order = parseSortOrder(q.sort_order);
+    const page = parseIntWithin(q.page, 1, 1, 1_000_000);
+    const page_size = parseIntWithin(q.page_size, 20, 1, 200);
 
     const payload = await projectFieldPortfolioListV1({
       pool,
@@ -80,6 +89,15 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
       field_ids: scopedFieldIds,
       windowMs,
       nowMs: Date.now(),
+      tags,
+      risk_levels,
+      has_open_alerts,
+      has_pending_acceptance,
+      query,
+      sort_by,
+      sort_order,
+      page,
+      page_size,
     });
 
     const tags = parseTags(q.tags ?? q["tags[]"]);
