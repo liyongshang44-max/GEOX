@@ -69,6 +69,7 @@ export default function OperationsWorkboardPage(): React.ReactElement {
   const query = searchParams.get("query") || "";
   const workflowStatuses = readMultiSearchValues(searchParams, "workflow_status");
   const fieldIds = readMultiSearchValues(searchParams, "field_ids", "field_id", "field");
+  const operationIds = readMultiSearchValues(searchParams, "operation_id", "operation_ids", "operationPlanId", "operation_plan_id");
   const severities = readMultiSearchValues(searchParams, "severity");
   const categories = readMultiSearchValues(searchParams, "category");
   const assigneeActorId = searchParams.get("assignee_actor_id") || assignee;
@@ -80,13 +81,14 @@ export default function OperationsWorkboardPage(): React.ReactElement {
       workflow_status: workflowStatuses.length ? workflowStatuses as AlertWorkflowStatus[] : (workflowStatus ? [workflowStatus as AlertWorkflowStatus] : undefined),
       assignee_actor_id: assigneeActorId || undefined,
       field_ids: fieldIds.length ? fieldIds : (field ? [field] : undefined),
+      operation_id: operationIds.length ? operationIds : undefined,
       severity: severities.length ? severities : undefined,
       category: categories.length ? categories : undefined,
       sla_breached: onlyBreached ? true : undefined,
       query: query || alertId || undefined,
     });
     return rows;
-  }, [alertId, assigneeActorId, categories, field, fieldIds, onlyBreached, query, severities, workflowStatus, workflowStatuses]);
+  }, [alertId, assigneeActorId, categories, field, fieldIds, onlyBreached, operationIds, query, severities, workflowStatus, workflowStatuses]);
 
   React.useEffect(() => {
     let alive = true;
@@ -156,7 +158,7 @@ export default function OperationsWorkboardPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-      <SectionCard title={`工作项列表（${items.length}）`} subtitle="支持通过 query 参数跳转过滤视图：assignee / workflow_status / field / sla_breached / alert_id / query">
+      <SectionCard title={`工作项列表（${items.length}）`} subtitle="支持通过 query 参数跳转过滤视图：operation_id / assignee / workflow_status / field / sla_breached / alert_id / query">
         <div className="list">
           {loading ? <div className="muted">正在加载...</div> : null}
           {!loading && items.map((item) => (

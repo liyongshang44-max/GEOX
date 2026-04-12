@@ -39,6 +39,7 @@ export type AlertWorkItemV1 = AlertV1 & {
 
 export type FetchAlertWorkboardParams = {
   field_ids?: string[];
+  operation_id?: string | string[];
   workflow_status?: AlertWorkflowStatus | AlertWorkflowStatus[];
   assignee_actor_id?: string | string[];
   severity?: string[];
