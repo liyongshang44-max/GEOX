@@ -1,7 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchAuthMe } from "../../../api/auth";
-import { ackAlert, ALERT_SEVERITY, ALERT_STATUS, fetchAlerts, fetchAlertSummary, resolveAlert, type AlertStatus, type AlertV1 } from "../../../api/alerts";
+import { ackAlert, ALERT_SEVERITY, ALERT_STATUS, resolveAlert, type AlertStatus } from "../../../api/alerts";
+import { fetchAlertWorkboard, summarizeAlertWorkboard, type AlertWorkItemV1 } from "../../../api/alertWorkflow";
 import { alertCategoryLabel, alertStatusLabel } from "../../../lib/alertLabels";
 
 function fmtTs(iso: string | null | undefined): string {
@@ -21,7 +22,7 @@ function toObjectDetailPath(objectType: string, objectId: string): string | null
   return null;
 }
 
-function resolveRelatedLinks(item: AlertV1): Array<{ label: string; to: string }> {
+function resolveRelatedLinks(item: AlertWorkItemV1): Array<{ label: string; to: string }> {
   const links: Array<{ label: string; to: string }> = [];
   const seen = new Set<string>();
   const push = (label: string, to: string | null): void => {
@@ -41,7 +42,7 @@ function resolveRelatedLinks(item: AlertV1): Array<{ label: string; to: string }
 }
 
 export default function AlertsPage(): React.ReactElement {
-  const [items, setItems] = React.useState<AlertV1[]>([]);
+  const [items, setItems] = React.useState<AlertWorkItemV1[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [statusText, setStatusText] = React.useState("正在准备告警中心...");
   const [lastAction, setLastAction] = React.useState("-");
@@ -49,10 +50,11 @@ export default function AlertsPage(): React.ReactElement {
   const [statusFilter, setStatusFilter] = React.useState<"" | keyof typeof ALERT_STATUS>("");
   const [categoryFilter, setCategoryFilter] = React.useState("");
   const [role, setRole] = React.useState<string>("operator");
-  const [summary, setSummary] = React.useState<{ total: number; byStatus: Record<string, number>; bySeverity: Record<string, number> }>({
+  const [summary, setSummary] = React.useState<{ total: number; unassigned: number; inProgress: number; breached: number }>({
     total: 0,
-    byStatus: {},
-    bySeverity: {},
+    unassigned: 0,
+    inProgress: 0,
+    breached: 0,
   });
 
   const canResolve = role !== "operator";
@@ -61,18 +63,16 @@ export default function AlertsPage(): React.ReactElement {
     setBusy(true);
     setStatusText("正在同步 AlertV1 列表...");
     try {
-      const params = {
-        severity: severityFilter || undefined,
-        status: statusFilter || undefined,
-        category: categoryFilter.trim() || undefined,
-      };
-      const [nextItems, nextSummary] = await Promise.all([fetchAlerts(params), fetchAlertSummary(params)]);
-      setItems(nextItems);
-      setSummary({
-        total: Number(nextSummary.total ?? 0),
-        byStatus: nextSummary.by_status ?? {},
-        bySeverity: nextSummary.by_severity ?? {},
+      const allItems = await fetchAlertWorkboard();
+      const nextItems = allItems.filter((row) => {
+        if (severityFilter && row.severity !== severityFilter) return false;
+        if (statusFilter && row.workflow_status !== statusFilter) return false;
+        if (categoryFilter.trim() && String(row.category || "").toUpperCase().includes(categoryFilter.trim().toUpperCase()) === false) return false;
+        return true;
       });
+      const nextSummary = summarizeAlertWorkboard(nextItems);
+      setItems(nextItems);
+      setSummary({ total: nextSummary.total, unassigned: nextSummary.unassigned, inProgress: nextSummary.in_progress, breached: nextSummary.sla_breached });
       setStatusText(`已加载 ${nextItems.length} 条告警。`);
     } catch (e: unknown) {
       setStatusText(`读取失败：${e instanceof Error ? e.message : String(e)}`);
@@ -125,18 +125,19 @@ export default function AlertsPage(): React.ReactElement {
         <div>
           <div className="eyebrow">Alerts · V1</div>
           <h2 className="heroTitle">告警中心</h2>
-          <p className="heroText">摘要卡、筛选器、告警列表与角色化动作（Ack/Resolve）统一基于 /api/v1/alerts。</p>
+          <p className="heroText">摘要卡、筛选器、告警列表与角色化动作（Ack/Resolve）统一基于 /api/v1/alerts/workboard 读模型。</p>
         </div>
         <div className="heroActions">
           <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新告警</button>
+          <Link className="btn" to="/operations/workboard">进入作业台</Link>
         </div>
       </section>
 
       <div className="summaryGrid">
         <div className="metricCard card"><div className="metricLabel">告警总数</div><div className="metricValue">{summary.total}</div><div className="metricHint">当前筛选范围</div></div>
-        <div className="metricCard card"><div className="metricLabel">未处理</div><div className="metricValue">{Number(summary.byStatus.OPEN ?? 0)}</div><div className="metricHint">OPEN</div></div>
-        <div className="metricCard card"><div className="metricLabel">已确认</div><div className="metricValue">{Number(summary.byStatus.ACKED ?? 0)}</div><div className="metricHint">ACKED</div></div>
-        <div className="metricCard card"><div className="metricLabel">已关闭</div><div className="metricValue">{Number(summary.byStatus.CLOSED ?? 0)}</div><div className="metricHint">CLOSED</div></div>
+        <div className="metricCard card"><div className="metricLabel">未分配</div><div className="metricValue">{summary.unassigned}</div><div className="metricHint">workflow OPEN</div></div>
+        <div className="metricCard card"><div className="metricLabel">处理中</div><div className="metricValue">{summary.inProgress}</div><div className="metricHint">ASSIGNED/IN_PROGRESS/ACKED</div></div>
+        <div className="metricCard card"><div className="metricLabel">已超时</div><div className="metricValue">{summary.breached}</div><div className="metricHint">sla_breached</div></div>
       </div>
 
       <section className="card sectionBlock">
@@ -163,9 +164,13 @@ export default function AlertsPage(): React.ReactElement {
                   <span>对象：{item.object_type} / {item.object_id}</span>
                   <span>触发时间：{fmtTs(item.triggered_at)}</span>
                   <span>原因：{item.reasons?.length ? item.reasons.join(" / ") : "-"}</span>
+                  <span>assignee：{item.assignee.name || item.assignee.actor_id || "-"}</span>
+                  <span>workflow_status：{item.workflow_status}</span>
+                  <span>sla_breached：{item.sla_breached ? "是" : "否"}</span>
                 </div>
                 <div className="inlineActions" style={{ flexWrap: "wrap" }}>
                   {relatedLinks.map((lnk) => <Link key={`${item.alert_id}-${lnk.to}-${lnk.label}`} className="btn" to={lnk.to}>{lnk.label}</Link>)}
+                  <Link className="btn" to={`/operations/workboard?alert_id=${encodeURIComponent(item.alert_id)}`}>作业台视图</Link>
                 </div>
                 <div className="inlineActions"><button className="btn" onClick={() => void handleAck(item.alert_id)} disabled={busy || item.status === "CLOSED"}>确认</button><button className="btn" onClick={() => void handleResolve(item.alert_id)} disabled={busy || item.status === "CLOSED" || !canResolve}>关闭</button></div>
               </div>

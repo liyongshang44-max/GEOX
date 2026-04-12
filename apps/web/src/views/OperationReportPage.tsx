@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchAlerts, type AlertV1 } from "../api/alerts";
+import { fetchAlertWorkboard, type AlertWorkItemV1 } from "../api/alertWorkflow";
 import { fetchOperationReport, mapReportCode, type OperationReportV1 } from "../api/reports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
@@ -23,17 +23,17 @@ export default function OperationReportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
-  const [alerts, setAlerts] = React.useState<AlertV1[]>([]);
+  const [alerts, setAlerts] = React.useState<AlertWorkItemV1[]>([]);
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
-    void Promise.all([fetchOperationReport(operationPlanId), fetchAlerts({ object_type: "OPERATION", object_id: operationPlanId, status: ["OPEN", "ACKED"] })])
-      .then(([res, scopedAlerts]) => {
+    void Promise.all([fetchOperationReport(operationPlanId), fetchAlertWorkboard()])
+      .then(([res, workboardItems]) => {
         if (!alive) return;
         setReport(res);
-        setAlerts(scopedAlerts);
+        setAlerts(workboardItems.filter((item) => item.operation_plan_id === operationPlanId));
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -64,12 +64,12 @@ export default function OperationReportPage(): React.ReactElement {
         actions={<Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>返回作业详情</Link>}
       />
 
-      <SectionCard title="未关闭关联告警">
+      <SectionCard title="关联告警 Workflow（/api/v1/alerts/workboard）">
         <div className="list">
           {alerts.map((alert) => (
             <article key={alert.alert_id} className="item">
-              <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)}</div>
-              <div className="muted">告警ID：{alert.alert_id}</div>
+              <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)} · {alert.workflow_status}</div>
+              <div className="muted">告警ID：{alert.alert_id} · assignee：{alert.assignee.name || alert.assignee.actor_id || "--"} · {alert.sla_breached ? "已超时" : "SLA 正常"}</div>
             </article>
           ))}
           {!alerts.length ? <div className="muted">暂无未关闭关联告警</div> : null}
