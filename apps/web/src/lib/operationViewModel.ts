@@ -125,6 +125,10 @@ export const OP_LABELS: Record<OpsLang, OperationLabels> = {
   },
 };
 
+export function getOperationLabels(lang: OpsLang): OperationLabels {
+  return OP_LABELS[lang];
+}
+
 const ACTION_LABELS: Record<string, { zh: string; en: string }> = {
   IRRIGATE: { zh: "灌溉作业", en: "Irrigation" },
   SPRAY: { zh: "喷洒作业", en: "Spraying" },
