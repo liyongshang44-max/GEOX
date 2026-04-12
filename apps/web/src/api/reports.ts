@@ -4,11 +4,10 @@ import type {
   OperationReportSingleResponseV1,
   OperationReportV1,
 } from "../../../server/src/projections/report_v1";
-import type { CustomerDashboardAggregateV1 as CustomerDashboardAggregateV1Projection, FieldPortfolioSummaryV1 as FieldPortfolioSummaryV1Projection } from "../../../server/src/projections/report_dashboard_v1";
+import type { CustomerDashboardAggregateV1 as CustomerDashboardAggregateV1Projection } from "../../../server/src/projections/report_dashboard_v1";
 
 export type { OperationReportV1 };
 export type CustomerDashboardAggregateV1 = CustomerDashboardAggregateV1Projection;
-export type FieldPortfolioSummaryV1 = FieldPortfolioSummaryV1Projection;
 // 历史上的 reports 前端聚合类型已废弃；dashboard 仅消费后端 aggregate v1。
 export type ReportCodeTone = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -54,12 +53,6 @@ type CustomerDashboardAggregateEnvelope = {
   aggregate: CustomerDashboardAggregateV1;
 };
 
-type FieldPortfolioSummaryEnvelope = {
-  ok: true;
-  summary: FieldPortfolioSummaryV1;
-};
-
-
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
   const res = await apiRequest<OperationReportSingleResponseV1 | OperationReportV1>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
   return unwrapOperationReport(res);
@@ -78,14 +71,4 @@ export async function fetchCustomerDashboardAggregate(params: { fieldIds?: strin
 
   const res = await apiRequest<CustomerDashboardAggregateEnvelope>(withQuery("/api/v1/reports/customer-dashboard/aggregate", query));
   return res.aggregate;
-}
-
-export async function fetchFieldPortfolioSummary(params: { fieldIds?: string[]; timeRange?: "7d" | "30d" | "season" } = {}): Promise<FieldPortfolioSummaryV1> {
-  const fieldIds = Array.isArray(params.fieldIds) ? params.fieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
-  const query: Record<string, string | string[]> = {};
-  if (fieldIds.length) query["field_ids[]"] = fieldIds;
-  if (params.timeRange) query.time_range = params.timeRange;
-
-  const res = await apiRequest<FieldPortfolioSummaryEnvelope>(withQuery("/api/v1/reports/customer-dashboard/field-portfolio-summary", query));
-  return res.summary;
 }

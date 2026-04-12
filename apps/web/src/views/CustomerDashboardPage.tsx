@@ -8,7 +8,8 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { fetchAlertSummary, type AlertSummaryV1 } from "../api/alerts";
-import { fetchFieldPortfolioSummary, mapReportCode, type FieldPortfolioSummaryV1 } from "../api/reports";
+import { type FieldPortfolioSummaryV1, fetchFieldPortfolioSummary } from "../api/fieldPortfolio";
+import { mapReportCode } from "../api/reports";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
@@ -76,7 +77,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         description="围绕经营结果、风险、成本与行动建议展示"
         actions={
           <>
-            <Link className="btn" to="/fields">查看全部地块</Link>
+            <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
             <Link className="btn" to="/alerts">进入告警中心</Link>
           </>
         }
