@@ -40,16 +40,6 @@ function toNumber(value: unknown): number {
   return 0;
 }
 
-function toText(value: unknown): string {
-  const text = String(value ?? "").trim();
-  return text || "-";
-}
-
-function toTagList(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((tag) => String(tag ?? "").trim()).filter(Boolean);
-}
-
 function toBackendParams(params: {
   query: string;
   risk: "" | RiskLevel;
@@ -232,27 +222,26 @@ export default function FieldPortfolioPage(): React.ReactElement {
               <tr><td colSpan={7}>正在加载...</td></tr>
             ) : null}
             {!loading && items.map((item, idx) => {
-              const anyItem = item as Record<string, unknown>;
-              const riskLevel = toText(anyItem.risk_level);
-              const alertSummary = toText(anyItem.alert_summary);
-              const acceptanceSummary = toText(anyItem.acceptance_summary);
-              const operationSummary = toText(anyItem.operation_summary);
-              const costSummary = toText(anyItem.cost_summary);
-              const tagsText = toTagList(anyItem.tags).join(" / ");
-              const updatedAt = String(anyItem.updated_at ?? "");
+              const title = item.field_name ?? item.field_id;
+              const tagsText = item.tags.join(" / ");
+              const riskText = `${riskLabel(item.risk_level)}${item.risk_reasons.length ? `（${item.risk_reasons.join("；")}）` : ""}`;
+              const alertSummaryText = `未关闭 ${item.alert_summary.open_count} · 高及以上 ${item.alert_summary.high_or_above_count}`;
+              const pendingAcceptanceText = `待验收 ${item.pending_acceptance_summary.pending_acceptance_count} · 无效作业 ${item.pending_acceptance_summary.invalid_execution_count}`;
+              const latestOperationText = `${item.latest_operation.happened_at ? formatTime(item.latest_operation.happened_at) : "-"} · ${item.latest_operation.action_type ?? "-"} · ${item.latest_operation.status ?? "-"}`;
+              const costSummaryText = `预估 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
 
               return (
-                <tr key={String(anyItem.field_id ?? anyItem.program_id ?? idx)}>
+                <tr key={item.field_id || String(idx)}>
                   <td>
-                    <div style={{ fontWeight: 700 }}>{toText(anyItem.name || anyItem.field_id)}</div>
-                    <div className="metaText">{toText(anyItem.field_id)}{tagsText ? ` · ${tagsText}` : ""}</div>
+                    <div style={{ fontWeight: 700 }}>{title}</div>
+                    <div className="metaText">{item.field_id}{tagsText ? ` · ${tagsText}` : ""}</div>
                   </td>
-                  <td>{riskLabel(riskLevel)}</td>
-                  <td>{alertSummary}</td>
-                  <td>{acceptanceSummary}</td>
-                  <td>{operationSummary}</td>
-                  <td>{costSummary}</td>
-                  <td>{formatTime(updatedAt)}</td>
+                  <td>{riskText}</td>
+                  <td>{alertSummaryText}</td>
+                  <td>{pendingAcceptanceText}</td>
+                  <td>{latestOperationText}</td>
+                  <td>{costSummaryText}</td>
+                  <td>{item.updated_at ? formatTime(item.updated_at) : "-"}</td>
                 </tr>
               );
             })}
