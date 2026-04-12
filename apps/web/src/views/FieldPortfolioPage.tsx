@@ -61,13 +61,21 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
-    sort: params.sort,
     page: params.page,
     page_size: params.pageSize,
+    sort_order: "desc",
   };
 
+  if (params.sort === "updated_desc") {
+    next.sort_by = "updated_at";
+  } else if (params.sort === "cost_desc") {
+    next.sort_by = "cycle_cost";
+  } else {
+    next.sort_by = "business_priority";
+  }
+
   if (params.query.trim()) next.query = params.query.trim();
-  if (params.risk) next.risk_level = params.risk;
+  if (params.risk) next.risk_levels = [params.risk];
   if (params.hasOpenAlerts) next.has_open_alerts = params.hasOpenAlerts === "yes";
   if (params.hasPendingAcceptance) next.has_pending_acceptance = params.hasPendingAcceptance === "yes";
 
@@ -134,12 +142,13 @@ export default function FieldPortfolioPage(): React.ReactElement {
     };
   }, [backendParams]);
 
-  const total = toNumber(summary?.total);
-  const riskCount = toNumber(summary?.risk_count);
-  const severeRiskCount = toNumber(summary?.severe_risk_count);
-  const openAlerts = toNumber(summary?.open_alerts);
-  const pendingAcceptance = toNumber(summary?.pending_acceptance);
-  const cycleCost = toNumber(summary?.cycle_cost);
+  const summaryMetrics = (summary ?? {}) as Record<string, unknown>;
+  const total = toNumber(summaryMetrics.total);
+  const riskCount = toNumber(summaryMetrics.risk_count);
+  const severeRiskCount = toNumber(summaryMetrics.severe_risk_count);
+  const openAlerts = toNumber(summaryMetrics.open_alerts);
+  const pendingAcceptance = toNumber(summaryMetrics.pending_acceptance);
+  const cycleCost = toNumber(summaryMetrics.cycle_cost);
 
   return (
     <div className="consolePage">
