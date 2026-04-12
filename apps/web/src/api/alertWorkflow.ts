@@ -77,6 +77,7 @@ export type AlertWorkboardSummaryV1 = {
   unassigned: number;
   in_progress: number;
   sla_breached: number;
+  closed_today: number;
 };
 
 export function summarizeAlertWorkboard(items: AlertWorkItemV1[]): AlertWorkboardSummaryV1 {
@@ -85,13 +86,27 @@ export function summarizeAlertWorkboard(items: AlertWorkItemV1[]): AlertWorkboar
     if (item.workflow_status === "OPEN") acc.unassigned += 1;
     if (item.workflow_status === "IN_PROGRESS" || item.workflow_status === "ASSIGNED" || item.workflow_status === "ACKED") acc.in_progress += 1;
     if (item.sla_breached) acc.sla_breached += 1;
+    if (item.workflow_status === "CLOSED") acc.closed_today += 1;
     return acc;
-  }, { total: 0, unassigned: 0, in_progress: 0, sla_breached: 0 });
+  }, { total: 0, unassigned: 0, in_progress: 0, sla_breached: 0, closed_today: 0 });
 }
 
 export async function fetchAlertWorkboardSummary(params: FetchAlertWorkboardParams = {}): Promise<AlertWorkboardSummaryV1> {
-  const items = await fetchAlertWorkboard(params);
-  return summarizeAlertWorkboard(items);
+  const res = await apiRequest<{
+    ok?: boolean;
+    total?: number;
+    unassigned?: number;
+    in_progress?: number;
+    sla_breached?: number;
+    closed_today?: number;
+  }>(withQuery("/api/v1/alerts/workboard/summary", params));
+  return {
+    total: Number(res.total ?? 0),
+    unassigned: Number(res.unassigned ?? 0),
+    in_progress: Number(res.in_progress ?? 0),
+    sla_breached: Number(res.sla_breached ?? 0),
+    closed_today: Number(res.closed_today ?? 0),
+  };
 }
 
 export async function assignAlert(alertId: string, payload: AlertWorkflowMutationPayload = {}): Promise<AlertWorkflowMutationResult> {

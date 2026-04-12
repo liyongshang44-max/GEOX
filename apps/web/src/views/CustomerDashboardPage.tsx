@@ -38,6 +38,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
     unassigned: 0,
     in_progress: 0,
     sla_breached: 0,
+    closed_today: 0,
   });
 
   React.useEffect(() => {
@@ -60,6 +61,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
           unassigned: 0,
           in_progress: 0,
           sla_breached: 0,
+          closed_today: 0,
         });
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
@@ -107,7 +109,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <SectionCard title="待处理事项（/api/v1/alerts/workboard summary）">
         <div>总告警：{numberFmt.format(alertSummary.total)}</div>
-        <div className="muted">未分配：{numberFmt.format(alertSummary.unassigned)} · 处理中：{numberFmt.format(alertSummary.in_progress)} · 已超时：{numberFmt.format(alertSummary.sla_breached)}</div>
+        <div className="muted">未分配：{numberFmt.format(alertSummary.unassigned)} · 处理中：{numberFmt.format(alertSummary.in_progress)} · 已超时：{numberFmt.format(alertSummary.sla_breached)} · 今日关闭：{numberFmt.format(alertSummary.closed_today)}</div>
         <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
 
