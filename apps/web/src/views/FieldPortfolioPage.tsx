@@ -12,6 +12,14 @@ type RiskLevel = "HIGH" | "MEDIUM" | "LOW";
 type SortMode = "business_priority" | "updated_desc" | "cost_desc";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
+const SORT_MODE_TO_BACKEND_SORT_BY: Record<SortMode, FetchFieldPortfolioParams["sort_by"]> = {
+  // 后端不支持 business_priority 这个字面值；当前使用 risk 作为“经营优先”近似排序入口。
+  business_priority: "risk",
+  // updated_desc 是 UI 语义，后端真实字段是 updated_at。
+  updated_desc: "updated_at",
+  // cost_desc 是 UI 语义，后端真实字段是 cost。
+  cost_desc: "cost",
+};
 
 function formatMoney(value: number): string {
   return `¥${new Intl.NumberFormat("zh-CN").format(value)}`;
@@ -61,20 +69,11 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
-    sort_by: params.sort,
+    sort_by: SORT_MODE_TO_BACKEND_SORT_BY[params.sort],
     sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
-    sort_order: "desc",
   };
-
-  if (params.sort === "updated_desc") {
-    next.sort_by = "updated_at";
-  } else if (params.sort === "cost_desc") {
-    next.sort_by = "cycle_cost";
-  } else {
-    next.sort_by = "business_priority";
-  }
 
   if (params.query.trim()) next.query = params.query.trim();
   if (params.risk) next.risk_levels = [params.risk];
