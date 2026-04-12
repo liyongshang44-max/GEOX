@@ -213,9 +213,9 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     const rec = (row as any).record_json ?? {};
     const fieldId = str(rec?.identifiers?.field_id);
     if (!fieldId || !itemsMap.has(fieldId)) continue;
-
     const ts = toMs((row as any).occurred_at) || toMs(rec.generated_at);
-    const reportRisk = { level: normalizeRiskLevel(rec?.risk?.level), reasons: normalizeList(rec?.risk?.reasons), ts };
+    const level = normalizeRiskLevel(rec?.risk?.level);
+    const reasons = normalizeList(rec?.risk?.reasons);
     const prev = latestReportRiskByField.get(fieldId);
     if (!prev || ts > prev.ts) latestReportRiskByField.set(fieldId, reportRisk);
 
@@ -307,6 +307,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
   }
 
   const alertRiskByField = new Map<string, FieldPortfolioRiskLevel>();
+  const alertReasonByField = new Map<string, Set<string>>();
   for (const row of alertQ.rows ?? []) {
     const objectType = str((row as any).object_type).toUpperCase();
     const objectId = str((row as any).object_id);
@@ -322,8 +323,13 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     const riskFromAlert: FieldPortfolioRiskLevel = sev === "CRITICAL" ? "CRITICAL" : (sev === "HIGH" ? "HIGH" : (sev === "MEDIUM" ? "MEDIUM" : "LOW"));
     alertRiskByField.set(fieldId, maxRisk(alertRiskByField.get(fieldId) ?? "LOW", riskFromAlert));
 
-    const raisedMs = toNum((row as any).raised_ts_ms);
-    if (raisedMs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(raisedMs);
+    const reasonSet = alertReasonByField.get(fieldId) ?? new Set<string>();
+    for (const r of normalizeList((row as any).reasons)) {
+      if (reasonSet.size >= 3) break;
+      reasonSet.add(r);
+    }
+    alertReasonByField.set(fieldId, reasonSet);
+
   }
 
   const riskLevelFilter = new Set((args.risk_levels ?? []).map((x) => normalizeRiskLevel(x)));
@@ -332,18 +338,32 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
   const filteredItems = [...itemsMap.values()].map((item) => {
     const reportRisk = latestReportRiskByField.get(item.field_id);
-    const alertRisk = alertRiskByField.get(item.field_id);
-    item.tags = fieldTagMap.get(item.field_id) ?? [];
-    item.risk = {
-      level: alertRisk ?? reportRisk?.level ?? "LOW",
-      reasons: (reportRisk?.reasons ?? []).slice(0, 3),
+    const reasonsFromAlerts = [...(alertReasonByField.get(item.field_id) ?? new Set<string>())];
+    const reasons = Array.from(new Set([
+      ...reasonsFromAlerts,
+      ...(reportRisk?.reasons ?? []),
+    ])).slice(0, 3);
+
+    const fieldTags = fieldTagMap.get(item.field_id) ?? [];
+    return {
+      ...item,
+      tags: fieldTags,
+      risk: {
+        level: alertLevel ?? reportRisk?.level ?? "LOW",
+        reasons,
+      },
+      cost_summary: {
+        estimated_total: Number(item.cost_summary.estimated_total.toFixed(2)),
+        actual_total: Number(item.cost_summary.actual_total.toFixed(2)),
+      },
     };
     item.cost_summary.estimated_total = Number(item.cost_summary.estimated_total.toFixed(2));
     item.cost_summary.actual_total = Number(item.cost_summary.actual_total.toFixed(2));
     return item;
   }).filter((item) => {
     if (tagsFilter.size > 0) {
-      const hit = item.tags.some((tag) => tagsFilter.has(str(tag).toLowerCase()));
+      const tagSet = new Set<string>(item.tags.map((tag) => str(tag).toLowerCase()).filter(Boolean));
+      const hit = [...tagsFilter].some((tag) => tagSet.has(tag));
       if (!hit) return false;
     }
     if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk.level)) return false;
