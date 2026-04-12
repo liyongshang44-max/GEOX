@@ -44,6 +44,7 @@ export type FieldPortfolioItemV1 = {
 export type FieldPortfolioListResponseV1 = {
   ok: true;
   count: number;
+  total: number;
   items: FieldPortfolioItemV1[];
   summary: {
     total_fields: number;
@@ -63,6 +64,15 @@ export type ProjectFieldPortfolioListV1Args = {
   field_ids?: string[];
   nowMs?: number;
   windowMs?: number;
+  tags?: string[];
+  risk_levels?: FieldPortfolioRiskLevel[];
+  has_open_alerts?: boolean;
+  has_pending_acceptance?: boolean;
+  query?: string;
+  sort_by?: "field_name" | "field_id" | "risk_level" | "open_alerts" | "pending_acceptance" | "latest_operation" | "estimated_total" | "actual_total";
+  sort_order?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
 };
 
 const RISK_RANK: Record<FieldPortfolioRiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
@@ -100,6 +110,10 @@ function maxRisk(a: FieldPortfolioRiskLevel, b: FieldPortfolioRiskLevel): FieldP
 function normalizeList(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((x) => str(x)).filter(Boolean);
+}
+
+function cmpNullableString(a: string | null, b: string | null): number {
+  return String(a ?? "").localeCompare(String(b ?? ""), undefined, { sensitivity: "base" });
 }
 
 export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioListV1Args): Promise<FieldPortfolioListResponseV1> {
@@ -209,6 +223,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     : { rows: [] as any[] };
 
   const latestReportRiskByField = new Map<string, { level: FieldPortfolioRiskLevel; reasons: string[]; ts: number }>();
+  const reportReasonTagsByField = new Map<string, Set<string>>();
   for (const row of factQ.rows ?? []) {
     const rec = (row as any).record_json ?? {};
     const fieldId = str(rec?.identifiers?.field_id);
@@ -216,6 +231,11 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     const ts = toMs((row as any).occurred_at) || toMs(rec.generated_at);
     const level = normalizeRiskLevel(rec?.risk?.level);
     const reasons = normalizeList(rec?.risk?.reasons);
+    if (reasons.length > 0) {
+      const set = reportReasonTagsByField.get(fieldId) ?? new Set<string>();
+      for (const reason of reasons) set.add(str(reason).toLowerCase());
+      reportReasonTagsByField.set(fieldId, set);
+    }
 
     const prev = latestReportRiskByField.get(fieldId);
     if (!prev || ts > prev.ts) latestReportRiskByField.set(fieldId, { level, reasons, ts });
@@ -290,6 +310,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
   const alertRiskByField = new Map<string, FieldPortfolioRiskLevel>();
   const alertReasonByField = new Map<string, Set<string>>();
+  const alertTagByField = new Map<string, Set<string>>();
   for (const row of alertQ.rows ?? []) {
     const objectType = str((row as any).object_type).toUpperCase();
     const objectId = str((row as any).object_id);
@@ -314,11 +335,18 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     }
     alertReasonByField.set(fieldId, reasonSet);
 
-    const raisedTs = toNum((row as any).raised_ts_ms);
-    if (raisedTs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(raisedTs);
+    const tagSet = alertTagByField.get(fieldId) ?? new Set<string>();
+    const category = str((row as any).category).toLowerCase();
+    if (category) tagSet.add(category);
+    for (const r of normalizeList((row as any).reasons)) tagSet.add(str(r).toLowerCase());
+    alertTagByField.set(fieldId, tagSet);
   }
 
-  const resultItems: FieldPortfolioItemV1[] = [...itemsMap.values()].map((item) => {
+  const tagsFilter = new Set((args.tags ?? []).map((x) => str(x).toLowerCase()).filter(Boolean));
+  const riskLevelFilter = new Set((args.risk_levels ?? []).map((x) => normalizeRiskLevel(x)));
+  const queryNeedle = str(args.query).toLowerCase();
+
+  const filteredItems: FieldPortfolioItemV1[] = [...itemsMap.values()].map((item) => {
     const alertLevel = alertRiskByField.get(item.field_id) ?? null;
     const reportRisk = latestReportRiskByField.get(item.field_id);
     const reasonsFromAlerts = [...(alertReasonByField.get(item.field_id) ?? new Set<string>())];
@@ -337,27 +365,94 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         actual_total: Number(item.cost_summary.actual_total.toFixed(2)),
       },
     };
-  }).sort((a, b) => {
-    const byRisk = RISK_RANK[b.risk_level] - RISK_RANK[a.risk_level];
-    if (byRisk !== 0) return byRisk;
-    return toMs(b.operation_summary.happened_at) - toMs(a.operation_summary.happened_at);
+  }).filter((item) => {
+    if (tagsFilter.size > 0) {
+      const tagSet = new Set<string>([
+        ...(alertTagByField.get(item.field_id) ?? new Set<string>()),
+        ...(reportReasonTagsByField.get(item.field_id) ?? new Set<string>()),
+      ]);
+      const hit = [...tagsFilter].some((tag) => tagSet.has(tag));
+      if (!hit) return false;
+    }
+
+    if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk.level)) return false;
+
+    if (typeof args.has_open_alerts === "boolean") {
+      const hasOpenAlerts = item.alert_summary.open_count > 0;
+      if (hasOpenAlerts !== args.has_open_alerts) return false;
+    }
+
+    if (typeof args.has_pending_acceptance === "boolean") {
+      const hasPendingAcceptance = item.pending_acceptance_summary.pending_acceptance_count > 0;
+      if (hasPendingAcceptance !== args.has_pending_acceptance) return false;
+    }
+
+    if (queryNeedle) {
+      const haystackName = str(item.field_name).toLowerCase();
+      const haystackId = str(item.field_id).toLowerCase();
+      if (!haystackName.includes(queryNeedle) && !haystackId.includes(queryNeedle)) return false;
+    }
+
+    return true;
   });
 
+  const sortBy = args.sort_by ?? "risk_level";
+  const sortOrder = args.sort_order === "asc" ? "asc" : "desc";
+  const direction = sortOrder === "asc" ? 1 : -1;
+
+  const sortedItems = filteredItems.sort((a, b) => {
+    let cmp = 0;
+    switch (sortBy) {
+      case "field_name":
+        cmp = cmpNullableString(a.field_name, b.field_name);
+        break;
+      case "field_id":
+        cmp = cmpNullableString(a.field_id, b.field_id);
+        break;
+      case "open_alerts":
+        cmp = a.alert_summary.open_count - b.alert_summary.open_count;
+        break;
+      case "pending_acceptance":
+        cmp = a.pending_acceptance_summary.pending_acceptance_count - b.pending_acceptance_summary.pending_acceptance_count;
+        break;
+      case "latest_operation":
+        cmp = toMs(a.latest_operation.happened_at) - toMs(b.latest_operation.happened_at);
+        break;
+      case "estimated_total":
+        cmp = a.cost_summary.estimated_total - b.cost_summary.estimated_total;
+        break;
+      case "actual_total":
+        cmp = a.cost_summary.actual_total - b.cost_summary.actual_total;
+        break;
+      case "risk_level":
+      default:
+        cmp = RISK_RANK[a.risk.level] - RISK_RANK[b.risk.level];
+        break;
+    }
+    if (cmp !== 0) return cmp * direction;
+    return cmpNullableString(a.field_id, b.field_id);
+  });
+
+  const total = sortedItems.length;
+  const page = Number.isFinite(args.page) ? Math.max(1, Math.floor(Number(args.page))) : 1;
+  const pageSize = Number.isFinite(args.page_size) ? Math.max(1, Math.min(200, Math.floor(Number(args.page_size)))) : 20;
+  const start = (page - 1) * pageSize;
+  const pagedItems = sortedItems.slice(start, start + pageSize);
+
   const summary = {
-    total_fields: resultItems.length,
+    total_fields: total,
     by_risk: {
-      low: resultItems.filter((x) => x.risk_level === "LOW").length,
-      medium: resultItems.filter((x) => x.risk_level === "MEDIUM").length,
-      high: resultItems.filter((x) => x.risk_level === "HIGH").length,
-      critical: resultItems.filter((x) => x.risk_level === "CRITICAL").length,
+      low: sortedItems.filter((x) => x.risk.level === "LOW").length,
+      medium: sortedItems.filter((x) => x.risk.level === "MEDIUM").length,
+      high: sortedItems.filter((x) => x.risk.level === "HIGH").length,
     },
-    total_open_alerts: resultItems.reduce((s, x) => s + x.alert_summary.open_total, 0),
-    total_pending_acceptance: resultItems.reduce((s, x) => s + x.acceptance_summary.pending_count, 0),
-    total_invalid_execution: resultItems.reduce((s, x) => s + x.acceptance_summary.invalid_count, 0),
-    total_estimated_cost: Number(resultItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
-    total_actual_cost: Number(resultItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
-    offline_fields: resultItems.filter((x) => x.telemetry_summary.device_offline).length,
+    total_open_alerts: sortedItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
+    total_pending_acceptance: sortedItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
+    total_invalid_execution: sortedItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+    total_estimated_cost: Number(sortedItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
+    total_actual_cost: Number(sortedItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
+    offline_fields: sortedItems.filter((x) => x.telemetry.device_offline).length,
   };
 
-  return { ok: true, count: resultItems.length, items: resultItems, summary };
+  return { ok: true, count: total, total, items: pagedItems, summary };
 }
