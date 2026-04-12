@@ -29,11 +29,14 @@ export default function OperationReportPage(): React.ReactElement {
     let alive = true;
     setLoading(true);
     setError("");
-    void Promise.all([fetchOperationReport(operationPlanId), fetchAlertWorkboard()])
-      .then(([res, workboardItems]) => {
+    void fetchOperationReport(operationPlanId)
+      .then(async (res) => {
+        if (!alive) return;
+        const workboardOperationId = String(res.identifiers.operation_plan_id || res.identifiers.operation_id || operationPlanId).trim();
+        const workboardItems = await fetchAlertWorkboard(workboardOperationId ? { operation_id: workboardOperationId } : {});
         if (!alive) return;
         setReport(res);
-        setAlerts(workboardItems.filter((item) => item.operation_plan_id === operationPlanId));
+        setAlerts(workboardItems);
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -76,6 +79,7 @@ export default function OperationReportPage(): React.ReactElement {
             <article key={alert.alert_id} className="item">
               <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)} · {alert.workflow_status}</div>
               <div className="muted">告警ID：{alert.alert_id} · assignee：{alert.assignee.name || alert.assignee.actor_id || "--"} · {alert.sla_breached ? "已超时" : "SLA 正常"}</div>
+              <div className="muted">last_note：{kv(alert.last_note)}</div>
             </article>
           ))}
           {!alerts.length ? <div className="muted">暂无未关闭关联告警</div> : null}
