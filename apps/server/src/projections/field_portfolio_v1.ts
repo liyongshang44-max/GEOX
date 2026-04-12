@@ -2,24 +2,30 @@ import type { Pool } from "pg";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
-export type FieldPortfolioRiskLevel = "LOW" | "MEDIUM" | "HIGH";
+export type FieldPortfolioRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type FieldPortfolioItemV1 = {
   field_id: string;
   field_name: string | null;
-  risk: {
-    level: FieldPortfolioRiskLevel;
-    reasons: string[];
-  };
+  group_id: string;
+  tags: string[];
+  risk_level: FieldPortfolioRiskLevel;
+  risk_reasons: string[];
   alert_summary: {
-    open_count: number;
-    high_or_above_count: number;
+    open_total: number;
+    by_severity: {
+      low: number;
+      medium: number;
+      high: number;
+      critical: number;
+    };
   };
-  pending_acceptance_summary: {
-    pending_acceptance_count: number;
-    invalid_execution_count: number;
+  acceptance_summary: {
+    pending_count: number;
+    invalid_count: number;
+    last_acceptance_at: string | null;
   };
-  latest_operation: {
+  operation_summary: {
     happened_at: string | null;
     action_type: string | null;
     status: string | null;
@@ -28,10 +34,11 @@ export type FieldPortfolioItemV1 = {
     estimated_total: number;
     actual_total: number;
   };
-  telemetry: {
-    last_telemetry_at: string | null;
+  telemetry_summary: {
+    latest_ts: string | null;
     device_offline: boolean;
   };
+  updated_at: string | null;
 };
 
 export type FieldPortfolioListResponseV1 = {
@@ -41,7 +48,7 @@ export type FieldPortfolioListResponseV1 = {
   items: FieldPortfolioItemV1[];
   summary: {
     total_fields: number;
-    by_risk: { low: number; medium: number; high: number };
+    by_risk: { low: number; medium: number; high: number; critical: number };
     total_open_alerts: number;
     total_pending_acceptance: number;
     total_invalid_execution: number;
@@ -68,9 +75,7 @@ export type ProjectFieldPortfolioListV1Args = {
   page_size?: number;
 };
 
-const RISK_RANK: Record<FieldPortfolioRiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-const ALERT_SEVERITY_RANK: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
-
+const RISK_RANK: Record<FieldPortfolioRiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
 function str(v: unknown): string {
   return String(v ?? "").trim();
 }
@@ -92,6 +97,7 @@ function toIsoOrNull(ms: number): string | null {
 
 function normalizeRiskLevel(raw: unknown): FieldPortfolioRiskLevel {
   const v = str(raw).toUpperCase();
+  if (v === "CRITICAL") return "CRITICAL";
   if (v === "HIGH") return "HIGH";
   if (v === "MEDIUM") return "MEDIUM";
   return "LOW";
@@ -134,12 +140,16 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     itemsMap.set(fieldId, {
       field_id: fieldId,
       field_name: str((row as any).name) || null,
-      risk: { level: "LOW", reasons: [] },
-      alert_summary: { open_count: 0, high_or_above_count: 0 },
-      pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
-      latest_operation: { happened_at: null, action_type: null, status: null },
+      group_id: args.tenant.group_id,
+      tags: [],
+      risk_level: "LOW",
+      risk_reasons: [],
+      alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
+      acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
+      operation_summary: { happened_at: null, action_type: null, status: null },
       cost_summary: { estimated_total: 0, actual_total: 0 },
-      telemetry: { last_telemetry_at: null, device_offline: false },
+      telemetry_summary: { latest_ts: null, device_offline: false },
+      updated_at: null,
     });
   }
 
@@ -162,12 +172,16 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
       itemsMap.set(fieldId, {
         field_id: fieldId,
         field_name: null,
-        risk: { level: "LOW", reasons: [] },
-        alert_summary: { open_count: 0, high_or_above_count: 0 },
-        pending_acceptance_summary: { pending_acceptance_count: 0, invalid_execution_count: 0 },
-        latest_operation: { happened_at: null, action_type: null, status: null },
+        group_id: args.tenant.group_id,
+        tags: [],
+        risk_level: "LOW",
+        risk_reasons: [],
+        alert_summary: { open_total: 0, by_severity: { low: 0, medium: 0, high: 0, critical: 0 } },
+        acceptance_summary: { pending_count: 0, invalid_count: 0, last_acceptance_at: null },
+        operation_summary: { happened_at: null, action_type: null, status: null },
         cost_summary: { estimated_total: 0, actual_total: 0 },
-        telemetry: { last_telemetry_at: null, device_offline: false },
+        telemetry_summary: { latest_ts: null, device_offline: false },
+        updated_at: null,
       });
     }
 
@@ -180,14 +194,15 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
     const opUpdatedMs = toNum((row as any).updated_ts_ms);
     const item = itemsMap.get(fieldId)!;
-    const curLatestMs = toMs(item.latest_operation.happened_at);
+    const curLatestMs = toMs(item.operation_summary.happened_at);
     if (opUpdatedMs >= curLatestMs) {
-      item.latest_operation = {
+      item.operation_summary = {
         happened_at: toIsoOrNull(opUpdatedMs),
         action_type: str((row as any).action_type) || null,
         status: str((row as any).status) || null,
       };
     }
+    if (opUpdatedMs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(opUpdatedMs);
   }
 
   const factQ = allOperationIds.length > 0
@@ -228,21 +243,25 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     if (ts >= windowStartMs) {
       const item = itemsMap.get(fieldId)!;
       const finalStatus = str(rec?.execution?.final_status).toUpperCase();
-      if (finalStatus === "PENDING_ACCEPTANCE") item.pending_acceptance_summary.pending_acceptance_count += 1;
-      if (finalStatus === "INVALID_EXECUTION") item.pending_acceptance_summary.invalid_execution_count += 1;
+      if (finalStatus === "PENDING_ACCEPTANCE") item.acceptance_summary.pending_count += 1;
+      if (finalStatus === "INVALID_EXECUTION") item.acceptance_summary.invalid_count += 1;
       item.cost_summary.estimated_total += toNum(rec?.cost?.estimated_total);
       item.cost_summary.actual_total += toNum(rec?.cost?.actual_total);
 
       const opFinished = toMs(rec?.execution?.execution_finished_at);
       const opGenerated = toMs(rec?.generated_at);
       const opTs = opFinished || opGenerated;
-      if (opTs >= toMs(item.latest_operation.happened_at)) {
-        item.latest_operation = {
+      if (opTs >= toMs(item.operation_summary.happened_at)) {
+        item.operation_summary = {
           happened_at: toIsoOrNull(opTs),
-          action_type: str(rec?.execution?.action_type) || item.latest_operation.action_type,
-          status: finalStatus || item.latest_operation.status,
+          action_type: str(rec?.execution?.action_type) || item.operation_summary.action_type,
+          status: finalStatus || item.operation_summary.status,
         };
       }
+      if (finalStatus === "ACCEPTED" && opTs >= toMs(item.acceptance_summary.last_acceptance_at)) {
+        item.acceptance_summary.last_acceptance_at = toIsoOrNull(opTs);
+      }
+      if (opTs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(opTs);
     }
   }
 
@@ -279,13 +298,14 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     deviceToField.set(deviceId, fieldId);
 
     const item = itemsMap.get(fieldId)!;
-    const lastTelemetryMs = toNum((row as any).last_telemetry_ts_ms);
-    if (lastTelemetryMs >= toMs(item.telemetry.last_telemetry_at)) {
-      item.telemetry.last_telemetry_at = toIsoOrNull(lastTelemetryMs);
+    const lastTelemetryMs = Math.max(toNum((row as any).last_telemetry_ts_ms), toNum((row as any).last_heartbeat_ts_ms));
+    if (lastTelemetryMs >= toMs(item.telemetry_summary.latest_ts)) {
+      item.telemetry_summary.latest_ts = toIsoOrNull(lastTelemetryMs);
     }
     const lastHeartbeatMs = toNum((row as any).last_heartbeat_ts_ms);
     const isOffline = !(lastHeartbeatMs > 0 && (nowMs - lastHeartbeatMs) <= 15 * 60 * 1000);
-    item.telemetry.device_offline = item.telemetry.device_offline || isOffline;
+    item.telemetry_summary.device_offline = item.telemetry_summary.device_offline || isOffline;
+    if (lastTelemetryMs >= toMs(item.updated_at)) item.updated_at = toIsoOrNull(lastTelemetryMs);
   }
 
   const alertRiskByField = new Map<string, FieldPortfolioRiskLevel>();
@@ -298,11 +318,14 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     if (!fieldId || !itemsMap.has(fieldId)) continue;
 
     const item = itemsMap.get(fieldId)!;
-    item.alert_summary.open_count += 1;
+    item.alert_summary.open_total += 1;
     const sev = str((row as any).severity).toUpperCase();
-    if ((ALERT_SEVERITY_RANK[sev] ?? 0) >= ALERT_SEVERITY_RANK.HIGH) item.alert_summary.high_or_above_count += 1;
+    if (sev === "LOW") item.alert_summary.by_severity.low += 1;
+    if (sev === "MEDIUM") item.alert_summary.by_severity.medium += 1;
+    if (sev === "HIGH") item.alert_summary.by_severity.high += 1;
+    if (sev === "CRITICAL") item.alert_summary.by_severity.critical += 1;
 
-    const riskFromAlert: FieldPortfolioRiskLevel = (sev === "CRITICAL" || sev === "HIGH") ? "HIGH" : (sev === "MEDIUM" ? "MEDIUM" : "LOW");
+    const riskFromAlert: FieldPortfolioRiskLevel = (sev === "CRITICAL") ? "CRITICAL" : ((sev === "HIGH") ? "HIGH" : (sev === "MEDIUM" ? "MEDIUM" : "LOW"));
     alertRiskByField.set(fieldId, maxRisk(alertRiskByField.get(fieldId) ?? "LOW", riskFromAlert));
 
     const reasonSet = alertReasonByField.get(fieldId) ?? new Set<string>();
@@ -334,10 +357,9 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
     return {
       ...item,
-      risk: {
-        level: alertLevel ?? reportRisk?.level ?? "LOW",
-        reasons,
-      },
+      tags: normalizeList(item.tags),
+      risk_level: alertLevel ?? reportRisk?.level ?? "LOW",
+      risk_reasons: reasons,
       cost_summary: {
         estimated_total: Number(item.cost_summary.estimated_total.toFixed(2)),
         actual_total: Number(item.cost_summary.actual_total.toFixed(2)),
