@@ -2,8 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
 import { hasFieldAccess } from "../auth/route_role_authz";
-import type { FieldPortfolioRiskLevel } from "../projections/field_portfolio_v1";
-import { projectFieldPortfolioListV1 } from "../projections/field_portfolio_v1";
+import { projectFieldPortfolioListV1, type FieldPortfolioRiskLevel, type FieldPortfolioSortBy } from "../projections/field_portfolio_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -30,8 +29,8 @@ function parseList(raw: unknown): string[] {
   const seen = new Set<string>();
   for (const chunk of asList) {
     const parts = String(chunk ?? "").split(",");
-    for (const p of parts) {
-      const s = String(p ?? "").trim();
+    for (const part of parts) {
+      const s = String(part ?? "").trim();
       if (!s || seen.has(s)) continue;
       seen.add(s);
       out.push(s);
@@ -42,9 +41,9 @@ function parseList(raw: unknown): string[] {
 
 function parseBoolean(raw: unknown): boolean | undefined {
   if (typeof raw === "boolean") return raw;
-  const normalized = String(raw ?? "").trim().toLowerCase();
-  if (["1", "true", "yes", "y"].includes(normalized)) return true;
-  if (["0", "false", "no", "n"].includes(normalized)) return false;
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (v === "true" || v === "1" || v === "yes") return true;
+  if (v === "false" || v === "0" || v === "no") return false;
   return undefined;
 }
 
@@ -55,31 +54,44 @@ function parseIntWithin(raw: unknown, fallback: number, min: number, max: number
 }
 
 function parseRiskLevels(raw: unknown): FieldPortfolioRiskLevel[] {
-  const levels = parseList(raw).map((v) => v.toUpperCase());
   const out: FieldPortfolioRiskLevel[] = [];
-  const seen = new Set<FieldPortfolioRiskLevel>();
-  for (const level of levels) {
-    if (level !== "LOW" && level !== "MEDIUM" && level !== "HIGH" && level !== "CRITICAL") continue;
-    if (seen.has(level)) continue;
-    seen.add(level);
-    out.push(level);
+  for (const lv of parseList(raw)) {
+    const normalized = lv.trim().toUpperCase();
+    if (normalized === "LOW" || normalized === "MEDIUM" || normalized === "HIGH" || normalized === "CRITICAL") {
+      if (!out.includes(normalized)) out.push(normalized);
+    }
   }
   return out;
 }
 
-function parseSortBy(raw: unknown): "field_name" | "field_id" | "risk_level" | "open_alerts" | "pending_acceptance" | "latest_operation" | "estimated_total" | "actual_total" | undefined {
-  const value = String(raw ?? "").trim();
-  if (!value) return undefined;
-  if (["field_name", "field_id", "risk_level", "open_alerts", "pending_acceptance", "latest_operation", "estimated_total", "actual_total"].includes(value)) {
-    return value as any;
-  }
-  return undefined;
+function parseSortBy(raw: unknown): FieldPortfolioSortBy {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "open_alerts") return "open_alerts";
+  if (value === "pending_acceptance") return "pending_acceptance";
+  if (value === "last_operation_at") return "last_operation_at";
+  if (value === "cost") return "cost";
+  if (value === "updated_at") return "updated_at";
+  if (value === "field_name") return "field_name";
+  return "risk";
 }
 
-function parseSortOrder(raw: unknown): "asc" | "desc" | undefined {
-  const value = String(raw ?? "").trim().toLowerCase();
-  if (value === "asc" || value === "desc") return value;
-  return undefined;
+function parseSortOrder(raw: unknown): "asc" | "desc" {
+  return String(raw ?? "").trim().toLowerCase() === "asc" ? "asc" : "desc";
+}
+
+function parseProjectionFilters(q: any) {
+  return {
+    windowMs: Number.isFinite(Number(q.window_ms)) ? Number(q.window_ms) : undefined,
+    tags: parseList(q.tags ?? q["tags[]"]),
+    risk_levels: parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]),
+    has_open_alerts: parseBoolean(q.has_open_alerts),
+    has_pending_acceptance: parseBoolean(q.has_pending_acceptance),
+    query: String(q.query ?? "").trim(),
+    sort_by: parseSortBy(q.sort_by),
+    sort_order: parseSortOrder(q.sort_order),
+    page: parseIntWithin(q.page, 1, 1, 1_000_000),
+    page_size: parseIntWithin(q.page_size, 20, 1, 200),
+  };
 }
 
 export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -98,24 +110,13 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
         ? auth.allowed_field_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
         : []);
 
-    const windowMsRaw = Number(q.window_ms ?? "");
-    const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
-
+    const filters = parseProjectionFilters(q);
     const payload = await projectFieldPortfolioListV1({
       pool,
       tenant,
       field_ids: scopedFieldIds,
-      windowMs,
       nowMs: Date.now(),
-      tags: parseList(q.tags ?? q["tags[]"]),
-      risk_levels: parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]),
-      has_open_alerts: parseBoolean(q.has_open_alerts),
-      has_pending_acceptance: parseBoolean(q.has_pending_acceptance),
-      query: String(q.query ?? "").trim(),
-      sort_by: parseSortBy(q.sort_by),
-      sort_order: parseSortOrder(q.sort_order),
-      page: parseIntWithin(q.page, 1, 1, 1_000_000),
-      page_size: parseIntWithin(q.page_size, 20, 1, 200),
+      ...filters,
     });
 
     return reply.send(payload);
@@ -136,20 +137,20 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
         ? auth.allowed_field_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
         : []);
 
-    const windowMsRaw = Number(q.window_ms ?? "");
-    const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
-
+    const filters = parseProjectionFilters(q);
     const payload = await projectFieldPortfolioListV1({
       pool,
       tenant,
       field_ids: scopedFieldIds,
-      windowMs,
       nowMs: Date.now(),
-      tags: parseList(q.tags ?? q["tags[]"]),
-      risk_levels: parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]),
-      has_open_alerts: parseBoolean(q.has_open_alerts),
-      has_pending_acceptance: parseBoolean(q.has_pending_acceptance),
-      query: String(q.query ?? "").trim(),
+      windowMs: filters.windowMs,
+      tags: filters.tags,
+      risk_levels: filters.risk_levels,
+      has_open_alerts: filters.has_open_alerts,
+      has_pending_acceptance: filters.has_pending_acceptance,
+      query: filters.query,
+      sort_by: filters.sort_by,
+      sort_order: filters.sort_order,
     });
 
     return reply.send({ ok: true, summary: payload.summary });
