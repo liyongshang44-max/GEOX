@@ -8,7 +8,6 @@ import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../../../lib/operationLink";
 import {
-  buildOperationQuickCreateLabels,
   buildOperationSummary,
   mapDeviceDisplayName,
   mapFieldDisplayName,
@@ -31,7 +30,7 @@ function groupOf(item: any): GroupKey {
 
 export default function OperationsPage(): React.ReactElement {
   const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
-  const labels = OP_LABELS.zh ?? getOperationLabels("zh");
+  const labels = getOperationLabels("zh");
   const [issuer, setIssuer] = React.useState("human");
   const [actionType, setActionType] = React.useState("IRRIGATE");
   const [targetText, setTargetText] = React.useState("");

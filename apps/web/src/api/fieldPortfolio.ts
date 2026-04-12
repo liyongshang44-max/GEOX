@@ -1,27 +1,13 @@
 import { apiRequest, withQuery } from "./client";
 import type {
-  FieldPortfolioItemV1 as FieldPortfolioItemV1Projection,
+  FieldPortfolioItemV1,
+  FieldPortfolioListResponseV1,
   FieldPortfolioRiskLevel,
-  ProjectFieldPortfolioListV1Args,
+  FieldPortfolioSortBy,
 } from "../../../server/src/projections/field_portfolio_v1";
 
-export type FieldPortfolioItemV1 = FieldPortfolioItemV1Projection;
-
-export type FieldPortfolioSummaryV1 = {
-  total_fields: number;
-  by_risk: {
-    low: number;
-    medium: number;
-    high: number;
-    critical: number;
-  };
-  total_open_alerts: number;
-  total_pending_acceptance: number;
-  total_invalid_execution: number;
-  total_estimated_cost: number;
-  total_actual_cost: number;
-  offline_fields: number;
-};
+export type { FieldPortfolioItemV1 };
+export type FieldPortfolioSummaryV1 = FieldPortfolioListResponseV1["summary"];
 
 export type FetchFieldPortfolioParams = {
   tags?: string[];
@@ -29,19 +15,14 @@ export type FetchFieldPortfolioParams = {
   has_open_alerts?: boolean;
   has_pending_acceptance?: boolean;
   query?: string;
-  sort_by?: ProjectFieldPortfolioListV1Args["sort_by"];
-  sort_order?: ProjectFieldPortfolioListV1Args["sort_order"];
+  sort_by?: FieldPortfolioSortBy;
+  sort_order?: "asc" | "desc";
   page?: number;
   page_size?: number;
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
-  fieldIds?: string[];
   field_ids?: string[];
-  /**
-   * Field portfolio APIs currently only consume `window_ms` as the time filter.
-   * Do not send `time_range` here unless backend support is added for these endpoints.
-   */
   window_ms?: number;
 };
 
@@ -62,25 +43,8 @@ type FieldTagsResponse = {
   tags?: string[];
 };
 
-const EMPTY_FIELD_PORTFOLIO_SUMMARY: FieldPortfolioSummaryV1 = {
-  total_fields: 0,
-  by_risk: {
-    low: 0,
-    medium: 0,
-    high: 0,
-    critical: 0,
-  },
-  total_open_alerts: 0,
-  total_pending_acceptance: 0,
-  total_invalid_execution: 0,
-  total_estimated_cost: 0,
-  total_actual_cost: 0,
-  offline_fields: 0,
-};
-
 function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unknown> {
-  const rawFieldIds = Array.isArray(params.fieldIds) ? params.fieldIds : params.field_ids;
-  const fieldIds = Array.isArray(rawFieldIds) ? rawFieldIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+  const fieldIds = Array.isArray(params.field_ids) ? params.field_ids.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
   return {
     "tags[]": params.tags,
     "risk_levels[]": params.risk_levels,
@@ -105,9 +69,17 @@ export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}
 }
 
 export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioSummaryV1> {
-  const query = toPortfolioQuery(params);
-  const res = await apiRequest<FieldPortfolioSummaryResponse>(withQuery("/api/v1/fields/portfolio/summary", query));
-  return (res.summary && typeof res.summary === "object") ? res.summary : ({} as FieldPortfolioSummaryV1);
+  const res = await apiRequest<FieldPortfolioSummaryResponse>(withQuery("/api/v1/fields/portfolio/summary", toPortfolioQuery(params)));
+  return (res.summary && typeof res.summary === "object") ? res.summary : {
+    total_fields: 0,
+    by_risk: { low: 0, medium: 0, high: 0, critical: 0 },
+    total_open_alerts: 0,
+    total_pending_acceptance: 0,
+    total_invalid_execution: 0,
+    total_estimated_cost: 0,
+    total_actual_cost: 0,
+    offline_fields: 0,
+  };
 }
 
 export async function fetchFieldTags(fieldId: string): Promise<string[]> {

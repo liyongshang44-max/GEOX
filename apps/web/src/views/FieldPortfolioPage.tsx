@@ -8,24 +8,17 @@ import {
   type FetchFieldPortfolioParams,
 } from "../api/fieldPortfolio";
 
-type RiskLevel = "HIGH" | "MEDIUM" | "LOW";
-type SortMode = "business_priority" | "updated_desc" | "cost_desc";
+type RiskLevel = "HIGH" | "MEDIUM" | "LOW" | "CRITICAL";
+type SortMode = "risk" | "updated_at" | "cost";
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50] as const;
-const SORT_MODE_TO_BACKEND_SORT_BY: Record<SortMode, FetchFieldPortfolioParams["sort_by"]> = {
-  // 后端不支持 business_priority 这个字面值；当前使用 risk 作为“经营优先”近似排序入口。
-  business_priority: "risk",
-  // updated_desc 是 UI 语义，后端真实字段是 updated_at。
-  updated_desc: "updated_at",
-  // cost_desc 是 UI 语义，后端真实字段是 cost。
-  cost_desc: "cost",
-};
 
 function formatMoney(value: number): string {
   return `¥${new Intl.NumberFormat("zh-CN").format(value)}`;
 }
 
-function formatTime(iso: string): string {
+function formatTime(iso: string | null): string {
+  if (!iso) return "-";
   const ts = Date.parse(iso);
   if (!Number.isFinite(ts)) return "-";
   return new Date(ts).toLocaleString("zh-CN", { hour12: false });
@@ -33,19 +26,11 @@ function formatTime(iso: string): string {
 
 function riskLabel(risk: string): string {
   const normalized = String(risk ?? "").toUpperCase();
+  if (normalized === "CRITICAL") return "严重";
   if (normalized === "HIGH") return "高";
   if (normalized === "MEDIUM") return "中";
   if (normalized === "LOW") return "低";
   return "-";
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
 }
 
 function toBackendParams(params: {
@@ -59,7 +44,7 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
-    sort_by: SORT_MODE_TO_BACKEND_SORT_BY[params.sort],
+    sort_by: params.sort,
     sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
@@ -85,7 +70,7 @@ export default function FieldPortfolioPage(): React.ReactElement {
   const [hasOpenAlerts, setHasOpenAlerts] = React.useState<"" | "yes" | "no">("");
   const [hasPendingAcceptance, setHasPendingAcceptance] = React.useState<"" | "yes" | "no">("");
   const [tags, setTags] = React.useState("");
-  const [sort, setSort] = React.useState<SortMode>("business_priority");
+  const [sort, setSort] = React.useState<SortMode>("risk");
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState<number>(20);
 
@@ -133,12 +118,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
     };
   }, [backendParams]);
 
-  const total = toNumber(summary?.fields?.total);
-  const riskCount = toNumber(summary?.fields?.at_risk);
-  const severeRiskCount = toNumber(summary?.top_risk_fields?.filter((item) => String(item?.risk_level ?? "").toUpperCase() === "HIGH").length);
-  const openAlerts = 0;
-  const pendingAcceptance = 0;
-  const cycleCost = toNumber(summary?.period_summary?.total_cost);
+  const total = summary?.total_fields ?? 0;
+  const riskCount = (summary?.by_risk.high ?? 0) + (summary?.by_risk.critical ?? 0);
+  const severeRiskCount = summary?.by_risk.critical ?? 0;
+  const openAlerts = summary?.total_open_alerts ?? 0;
+  const pendingAcceptance = summary?.total_pending_acceptance ?? 0;
+  const cycleCost = summary?.total_estimated_cost ?? 0;
 
   return (
     <div className="consolePage">
@@ -165,25 +150,26 @@ export default function FieldPortfolioPage(): React.ReactElement {
           <input className="input" placeholder="query（名称/ID/标签）" value={query} onChange={(e) => setQuery(e.target.value)} />
           <select className="input" value={risk} onChange={(e) => setRisk(e.target.value as "" | RiskLevel)}>
             <option value="">risk：全部</option>
+            <option value="CRITICAL">严重风险</option>
             <option value="HIGH">高风险</option>
             <option value="MEDIUM">中风险</option>
             <option value="LOW">低风险</option>
           </select>
-          <select className="input" value={hasOpenAlerts} onChange={(e) => setHasOpenAlerts(e.target.value as "" | "yes" | "no")}>
+          <select className="input" value={hasOpenAlerts} onChange={(e) => setHasOpenAlerts(e.target.value as "" | "yes" | "no") }>
             <option value="">has_open_alerts：全部</option>
             <option value="yes">有未关闭告警</option>
             <option value="no">无未关闭告警</option>
           </select>
-          <select className="input" value={hasPendingAcceptance} onChange={(e) => setHasPendingAcceptance(e.target.value as "" | "yes" | "no")}>
+          <select className="input" value={hasPendingAcceptance} onChange={(e) => setHasPendingAcceptance(e.target.value as "" | "yes" | "no") }>
             <option value="">has_pending_acceptance：全部</option>
             <option value="yes">有待验收</option>
             <option value="no">无待验收</option>
           </select>
           <input className="input" placeholder="tags（逗号分隔，如 重点巡检,玉米）" value={tags} onChange={(e) => setTags(e.target.value)} />
           <select className="input" value={sort} onChange={(e) => setSort(e.target.value as SortMode)}>
-            <option value="business_priority">sort：经营优先（风险→告警→待验收→更新时间）</option>
-            <option value="updated_desc">sort：更新时间（新→旧）</option>
-            <option value="cost_desc">sort：周期成本（高→低）</option>
+            <option value="risk">sort：风险</option>
+            <option value="updated_at">sort：更新时间（新→旧）</option>
+            <option value="cost">sort：周期成本（高→低）</option>
           </select>
         </div>
       </section>
@@ -220,27 +206,25 @@ export default function FieldPortfolioPage(): React.ReactElement {
             {loading ? (
               <tr><td colSpan={7}>正在加载...</td></tr>
             ) : null}
-            {!loading && items.map((item, idx) => {
-              const title = item.field_name ?? item.field_id;
+            {!loading && items.map((item) => {
               const tagsText = item.tags.join(" / ");
-              const riskText = `${riskLabel(item.risk_level)}${item.risk_reasons.length ? `（${item.risk_reasons.join("；")}）` : ""}`;
-              const alertSummaryText = `未关闭 ${item.alert_summary.open_count} · 高及以上 ${item.alert_summary.high_or_above_count}`;
-              const pendingAcceptanceText = `待验收 ${item.pending_acceptance_summary.pending_acceptance_count} · 无效作业 ${item.pending_acceptance_summary.invalid_execution_count}`;
-              const latestOperationText = `${item.latest_operation.happened_at ? formatTime(item.latest_operation.happened_at) : "-"} · ${item.latest_operation.action_type ?? "-"} · ${item.latest_operation.status ?? "-"}`;
-              const costSummaryText = `预估 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
+              const alertSummary = `OPEN ${item.alert_summary.open_total}`;
+              const acceptanceSummary = `待验收 ${item.acceptance_summary.pending_count} · 无效 ${item.acceptance_summary.invalid_count}`;
+              const operationSummary = `${formatTime(item.operation_summary.last_operation_at)} · ${item.operation_summary.last_action_type ?? "-"} · ${item.operation_summary.last_final_status ?? "-"}`;
+              const costSummary = `预计 ${formatMoney(item.cost_summary.estimated_total)} · 实际 ${formatMoney(item.cost_summary.actual_total)}`;
 
               return (
-                <tr key={item.field_id || String(idx)}>
+                <tr key={item.field_id}>
                   <td>
-                    <div style={{ fontWeight: 700 }}>{title}</div>
+                    <div style={{ fontWeight: 700 }}>{item.field_name || item.field_id}</div>
                     <div className="metaText">{item.field_id}{tagsText ? ` · ${tagsText}` : ""}</div>
                   </td>
-                  <td>{riskText}</td>
-                  <td>{alertSummaryText}</td>
-                  <td>{pendingAcceptanceText}</td>
-                  <td>{latestOperationText}</td>
-                  <td>{costSummaryText}</td>
-                  <td>{item.updated_at ? formatTime(item.updated_at) : "-"}</td>
+                  <td>{riskLabel(item.risk_level)}{item.risk_reasons.length ? `（${item.risk_reasons.join("、")}）` : ""}</td>
+                  <td>{alertSummary}</td>
+                  <td>{acceptanceSummary}</td>
+                  <td>{operationSummary}</td>
+                  <td>{costSummary}</td>
+                  <td>{formatTime(item.updated_at)}</td>
                 </tr>
               );
             })}
