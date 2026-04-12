@@ -11,7 +11,7 @@ import {
 } from "../projections/report_v1";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence";
 import { computeOperationCostV1 } from "../domain/cost_model";
-import { listOperationWorkflowV1 } from "./alert_workflow_v1";
+import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -86,6 +86,7 @@ export async function projectReportV1(params: {
     last_note: string | null;
     updated_at: number;
     updated_by: string;
+    linked_alert_ids?: string[];
   } | null;
 }): Promise<OperationReportV1> {
   const { pool, tenant, operationState, operationWorkflow } = params;
@@ -149,6 +150,7 @@ export async function projectReportV1(params: {
       last_note: operationWorkflow.last_note,
       updated_at: operationWorkflow.updated_at,
       updated_by: operationWorkflow.updated_by,
+      linked_alert_ids: operationWorkflow.linked_alert_ids ?? [],
     } : null,
   });
 }
@@ -183,11 +185,29 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       tenant_id: tenant.tenant_id,
       operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean),
     });
+    const relationMapByOperation = await listAlertOperationRelationV1ByOperation(pool, {
+      tenant_id: tenant.tenant_id,
+      operation_ids: [state.operation_id, state.operation_plan_id].filter(Boolean),
+    });
+    const workflow = workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null;
+    const linkedAlerts = relationMapByOperation.get(state.operation_id) ?? relationMapByOperation.get(state.operation_plan_id) ?? [];
     const operation_report_v1 = await projectReportV1({
       pool,
       tenant,
       operationState: state,
-      operationWorkflow: workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null,
+      operationWorkflow: workflow ? {
+        ...workflow,
+        linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
+      } : (linkedAlerts.length > 0
+        ? {
+          owner_actor_id: null,
+          owner_name: null,
+          last_note: null,
+          updated_at: 0,
+          updated_by: "",
+          linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
+        }
+        : null),
     });
     const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1 };
     return reply.send(payload);
@@ -213,11 +233,27 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       tenant_id: tenant.tenant_id,
       operation_ids: fieldStates.flatMap((state) => [state.operation_id, state.operation_plan_id]).filter(Boolean),
     });
+    const relationMapByOperation = await listAlertOperationRelationV1ByOperation(pool, {
+      tenant_id: tenant.tenant_id,
+      operation_ids: fieldStates.flatMap((state) => [state.operation_id, state.operation_plan_id]).filter(Boolean),
+    });
     const items = await Promise.all(fieldStates.map((state) => projectReportV1({
       pool,
       tenant,
       operationState: state,
-      operationWorkflow: workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null,
+      operationWorkflow: (() => {
+        const workflow = workflowMap.get(state.operation_id) ?? workflowMap.get(state.operation_plan_id) ?? null;
+        const linkedAlerts = relationMapByOperation.get(state.operation_id) ?? relationMapByOperation.get(state.operation_plan_id) ?? [];
+        if (!workflow && linkedAlerts.length === 0) return null;
+        return {
+          owner_actor_id: workflow?.owner_actor_id ?? null,
+          owner_name: workflow?.owner_name ?? null,
+          last_note: workflow?.last_note ?? null,
+          updated_at: workflow?.updated_at ?? 0,
+          updated_by: workflow?.updated_by ?? "",
+          linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
+        };
+      })(),
     })));
 
     const payload: OperationReportFieldListResponseV1 = { ok: true, items };

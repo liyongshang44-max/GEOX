@@ -57,6 +57,23 @@ type UpsertOperationWorkflowParams = {
   updated_at: number;
 };
 
+export type AlertOperationRelationV1Row = {
+  alert_id: string;
+  operation_id: string;
+  updated_at: number;
+  updated_by: string;
+};
+
+type UpsertAlertOperationRelationV1Params = {
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  alert_id: string;
+  operation_id: string;
+  updated_by: string;
+  updated_at: number;
+};
+
 function compareWorkflowStatus(a: AlertWorkflowStatus, b: AlertWorkflowStatus): number {
   return ALERT_WORKFLOW_STATUS_ORDER.indexOf(a) - ALERT_WORKFLOW_STATUS_ORDER.indexOf(b);
 }
@@ -123,6 +140,23 @@ export async function ensureOperationWorkflowV1Schema(pool: Pool): Promise<void>
   await pool.query(`CREATE INDEX IF NOT EXISTS operation_workflow_v1_lookup_idx ON operation_workflow_v1 (tenant_id, operation_id, updated_at DESC);`);
 }
 
+export async function ensureAlertOperationRelationV1Schema(pool: Pool): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS alert_operation_relation_v1 (
+      tenant_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      group_id TEXT NOT NULL,
+      alert_id TEXT NOT NULL,
+      operation_id TEXT NOT NULL,
+      updated_at BIGINT NOT NULL,
+      updated_by TEXT NOT NULL,
+      PRIMARY KEY (tenant_id, alert_id)
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS alert_operation_relation_v1_alert_idx ON alert_operation_relation_v1 (tenant_id, alert_id, updated_at DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS alert_operation_relation_v1_operation_idx ON alert_operation_relation_v1 (tenant_id, operation_id, updated_at DESC);`);
+}
+
 export async function upsertOperationWorkflowV1(clientConn: PoolClient, params: UpsertOperationWorkflowParams): Promise<void> {
   const now_ms = Number.isFinite(params.updated_at) ? Math.trunc(params.updated_at) : Date.now();
   await clientConn.query(
@@ -173,6 +207,88 @@ export async function getOperationWorkflowV1(clientConn: PoolClient, params: {
     updated_at: Number(row.updated_at ?? 0),
     updated_by: String(row.updated_by ?? ""),
   };
+}
+
+export async function upsertAlertOperationRelationV1(clientConn: PoolClient, params: UpsertAlertOperationRelationV1Params): Promise<void> {
+  const now_ms = Number.isFinite(params.updated_at) ? Math.trunc(params.updated_at) : Date.now();
+  await clientConn.query(
+    `INSERT INTO alert_operation_relation_v1
+      (tenant_id, project_id, group_id, alert_id, operation_id, updated_at, updated_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)
+     ON CONFLICT (tenant_id, alert_id)
+     DO UPDATE SET
+      project_id = EXCLUDED.project_id,
+      group_id = EXCLUDED.group_id,
+      operation_id = EXCLUDED.operation_id,
+      updated_at = EXCLUDED.updated_at,
+      updated_by = EXCLUDED.updated_by`,
+    [
+      params.tenant_id,
+      params.project_id,
+      params.group_id,
+      params.alert_id,
+      params.operation_id,
+      now_ms,
+      params.updated_by,
+    ]
+  );
+}
+
+export async function listAlertOperationRelationV1ByAlert(pool: Pool, params: {
+  tenant_id: string;
+  alert_ids: string[];
+}): Promise<Map<string, AlertOperationRelationV1Row>> {
+  const ids = params.alert_ids.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (!ids.length) return new Map();
+  const q = await pool.query(
+    `SELECT alert_id, operation_id, updated_at, updated_by
+       FROM alert_operation_relation_v1
+      WHERE tenant_id = $1
+        AND alert_id = ANY($2::text[])`,
+    [params.tenant_id, ids]
+  );
+  const out = new Map<string, AlertOperationRelationV1Row>();
+  for (const row of q.rows ?? []) {
+    const alert_id = String(row.alert_id ?? "").trim();
+    if (!alert_id) continue;
+    out.set(alert_id, {
+      alert_id,
+      operation_id: String(row.operation_id ?? "").trim(),
+      updated_at: Number(row.updated_at ?? 0),
+      updated_by: String(row.updated_by ?? ""),
+    });
+  }
+  return out;
+}
+
+export async function listAlertOperationRelationV1ByOperation(pool: Pool, params: {
+  tenant_id: string;
+  operation_ids: string[];
+}): Promise<Map<string, AlertOperationRelationV1Row[]>> {
+  const ids = params.operation_ids.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (!ids.length) return new Map();
+  const q = await pool.query(
+    `SELECT alert_id, operation_id, updated_at, updated_by
+       FROM alert_operation_relation_v1
+      WHERE tenant_id = $1
+        AND operation_id = ANY($2::text[])
+      ORDER BY updated_at DESC`,
+    [params.tenant_id, ids]
+  );
+  const out = new Map<string, AlertOperationRelationV1Row[]>();
+  for (const row of q.rows ?? []) {
+    const operation_id = String(row.operation_id ?? "").trim();
+    if (!operation_id) continue;
+    const list = out.get(operation_id) ?? [];
+    list.push({
+      alert_id: String(row.alert_id ?? "").trim(),
+      operation_id,
+      updated_at: Number(row.updated_at ?? 0),
+      updated_by: String(row.updated_by ?? ""),
+    });
+    out.set(operation_id, list);
+  }
+  return out;
 }
 
 export async function listOperationWorkflowV1(pool: Pool, params: {
@@ -311,6 +427,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
   app.addHook("onReady", async () => {
     await ensureAlertWorkflowV1Schema(pool);
     await ensureOperationWorkflowV1Schema(pool);
+    await ensureAlertOperationRelationV1Schema(pool);
   });
 
   const canWrite = (auth: AoActAuthContextV0): boolean => auth.role === "operator" || auth.role === "admin";
@@ -508,6 +625,11 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
       listWorkflowRows(auth),
       listDeviceFieldMap(auth.tenant_id),
     ]);
+    const alert_ids = workflow.map((row: any) => String(row.alert_id ?? "").trim()).filter(Boolean);
+    const relationMap = await listAlertOperationRelationV1ByAlert(pool, {
+      tenant_id: auth.tenant_id,
+      alert_ids,
+    });
     const operation_field_map = buildOperationFieldMap(operations);
     const operation_device_map = buildOperationDeviceMap(operations);
 
@@ -530,6 +652,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
         sla_due_at: row.sla_due_at == null ? null : Number(row.sla_due_at),
         last_note: row.last_note ?? null,
       })),
+      alert_operation_map: relationMap,
       device_field_map,
       operation_field_map,
       operation_device_map,
@@ -666,6 +789,10 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     if (!target) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const body: any = req.body ?? {};
+    const linkedOperationId = parseId(body.linked_operation_id ?? body.operation_id);
+    if (linkedOperationId == null && (body.linked_operation_id != null || body.operation_id != null)) {
+      return reply.status(400).send({ ok: false, error: "INVALID_OPERATION_ID" });
+    }
     const now = Date.now();
     const hasSlaDueAt = Object.prototype.hasOwnProperty.call(body, "sla_due_at");
     const parsedSlaDueAt = hasSlaDueAt
@@ -680,24 +807,32 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     try {
       await client.query("BEGIN");
       const cur = await client.query(
-        `SELECT status, version FROM alert_workflow_v1 WHERE tenant_id = $1 AND alert_id = $2 LIMIT 1`,
+        `SELECT status, version, assignee_actor_id, assignee_name, last_note
+           FROM alert_workflow_v1
+          WHERE tenant_id = $1 AND alert_id = $2 LIMIT 1`,
         [auth.tenant_id, alert_id]
       );
       const currentStatus = String(cur.rows?.[0]?.status ?? "OPEN").trim().toUpperCase() as AlertWorkflowStatus;
       const currentVersion = Number(cur.rows?.[0]?.version ?? 0);
+      const currentAssigneeActorId = cur.rows?.[0]?.assignee_actor_id == null ? null : String(cur.rows?.[0]?.assignee_actor_id);
+      const currentAssigneeName = cur.rows?.[0]?.assignee_name == null ? null : String(cur.rows?.[0]?.assignee_name);
+      const currentLastNote = cur.rows?.[0]?.last_note == null ? null : String(cur.rows?.[0]?.last_note);
+      const reqAssigneeActorId = parseId(body.assignee_actor_id) ?? null;
+      const reqAssigneeName = typeof body.assignee_name === "string" ? body.assignee_name.trim() || null : null;
+      const reqNote = typeof body.note === "string" ? body.note.trim() || null : null;
       const result = await upsertAlertWorkflowV1(client, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
         alert_id,
         status: opts.preserveStatus ? currentStatus : opts.status,
-        assignee_actor_id: parseId(body.assignee_actor_id) ?? null,
-        assignee_name: typeof body.assignee_name === "string" ? body.assignee_name.trim() || null : null,
+        assignee_actor_id: reqAssigneeActorId,
+        assignee_name: reqAssigneeName,
         priority: body.priority == null ? null : Math.max(1, Math.trunc(Number(body.priority))),
         sla_due_at: hasSlaDueAt ? parsedSlaDueAt : derivedDefaultSlaDueAt,
         assigned_at: opts.withAssignedAt ? now : null,
         resolved_at: opts.withResolvedAt ? now : null,
-        last_note: typeof body.note === "string" ? body.note.trim() || null : null,
+        last_note: reqNote,
         updated_by: auth.actor_id,
         updated_at: now,
         expected_version: body.expected_version == null ? currentVersion : Number(body.expected_version),
@@ -706,6 +841,32 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
         await client.query("ROLLBACK");
         const code = result.error === "WORKFLOW_VERSION_CONFLICT" ? 409 : 400;
         return reply.status(code).send({ ok: false, error: result.error, detail: result.detail ?? null });
+      }
+      if (linkedOperationId && opts.status === "RESOLVED") {
+        await upsertAlertOperationRelationV1(client, {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          alert_id,
+          operation_id: linkedOperationId,
+          updated_by: auth.actor_id,
+          updated_at: now,
+        });
+        const existingOperationWorkflow = await getOperationWorkflowV1(client, {
+          tenant_id: auth.tenant_id,
+          operation_id: linkedOperationId,
+        });
+        await upsertOperationWorkflowV1(client, {
+          tenant_id: auth.tenant_id,
+          project_id: auth.project_id,
+          group_id: auth.group_id,
+          operation_id: linkedOperationId,
+          owner_actor_id: reqAssigneeActorId ?? currentAssigneeActorId ?? existingOperationWorkflow?.owner_actor_id ?? null,
+          owner_name: reqAssigneeName ?? currentAssigneeName ?? existingOperationWorkflow?.owner_name ?? null,
+          last_note: reqNote ?? currentLastNote ?? existingOperationWorkflow?.last_note ?? null,
+          updated_by: auth.actor_id,
+          updated_at: now,
+        });
       }
       await client.query("COMMIT");
       return reply.send({
