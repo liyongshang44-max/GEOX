@@ -7,8 +7,10 @@ import { useOperationsListQuery } from "../../../features/operations/queries/use
 import { RelativeTime } from "../../../components/RelativeTime";
 import EmptyState from "../../../components/common/EmptyState";
 import { resolveOperationPlanId, toOperationDetailPath } from "../../../lib/operationLink";
+import { OP_LABELS } from "../../../lib/operationViewModel";
 import { buildOperationSummary, mapDeviceDisplayName, mapFieldDisplayName, mapOperationActionLabel, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
 import { resolveUnifiedOperationFinalStatus, toOperationsListGroup } from "../../../lib/operationStatusUnified";
+import { uuidv4 } from "../../../lib/uuid";
 
 type GroupKey = "TODO" | "PENDING_ACCEPTANCE" | "DONE_OR_EXCEPTION";
 

@@ -15,11 +15,10 @@ export type FieldPortfolioSortBy =
 export type FieldPortfolioItemV1 = {
   field_id: string;
   field_name: string | null;
+  group_id: string;
   tags: string[];
-  risk: {
-    level: FieldPortfolioRiskLevel;
-    reasons: string[];
-  };
+  risk_level: FieldPortfolioRiskLevel;
+  risk_reasons: string[];
   alert_summary: {
     open_count: number;
     high_or_above_count: number;
@@ -350,7 +349,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     if (riskLevelFilter.size > 0 && !riskLevelFilter.has(item.risk.level)) return false;
 
     if (typeof args.has_open_alerts === "boolean") {
-      const hasOpenAlerts = item.alert_summary.open_count > 0;
+      const hasOpenAlerts = item.alert_summary.open_total > 0;
       if (hasOpenAlerts !== args.has_open_alerts) return false;
     }
     if (typeof args.has_pending_acceptance === "boolean") {
@@ -375,10 +374,10 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         cmp = cmpNullableString(a.field_name, b.field_name);
         break;
       case "open_alerts":
-        cmp = a.alert_summary.open_count - b.alert_summary.open_count;
+        cmp = a.alert_summary.open_total - b.alert_summary.open_total;
         break;
       case "pending_acceptance":
-        cmp = a.pending_acceptance_summary.pending_acceptance_count - b.pending_acceptance_summary.pending_acceptance_count;
+        cmp = a.acceptance_summary.pending_count - b.acceptance_summary.pending_count;
         break;
       case "last_operation_at":
         cmp = toMs(a.latest_operation.happened_at) - toMs(b.latest_operation.happened_at);
@@ -391,7 +390,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
         break;
       case "risk":
       default:
-        cmp = RISK_RANK[a.risk.level] - RISK_RANK[b.risk.level];
+        cmp = RISK_RANK[a.risk_level] - RISK_RANK[b.risk_level];
         break;
     }
     if (cmp !== 0) return cmp * direction;
