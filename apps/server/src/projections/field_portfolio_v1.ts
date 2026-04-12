@@ -220,7 +220,6 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     : { rows: [] as any[] };
 
   const latestReportRiskByField = new Map<string, { level: FieldPortfolioRiskLevel; reasons: string[]; ts: number }>();
-  const reportReasonTagsByField = new Map<string, Set<string>>();
   for (const row of factQ.rows ?? []) {
     const rec = (row as any).record_json ?? {};
     const fieldId = str(rec?.identifiers?.field_id);
@@ -228,12 +227,6 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     const ts = toMs((row as any).occurred_at) || toMs(rec.generated_at);
     const level = normalizeRiskLevel(rec?.risk?.level);
     const reasons = normalizeList(rec?.risk?.reasons);
-    if (reasons.length > 0) {
-      const set = reportReasonTagsByField.get(fieldId) ?? new Set<string>();
-      for (const reason of reasons) set.add(str(reason).toLowerCase());
-      reportReasonTagsByField.set(fieldId, set);
-    }
-
     const prev = latestReportRiskByField.get(fieldId);
     if (!prev || ts > prev.ts) latestReportRiskByField.set(fieldId, { level, reasons, ts });
 
@@ -330,7 +323,6 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
 
   const alertRiskByField = new Map<string, FieldPortfolioRiskLevel>();
   const alertReasonByField = new Map<string, Set<string>>();
-  const alertTagByField = new Map<string, Set<string>>();
   for (const row of alertQ.rows ?? []) {
     const objectType = str((row as any).object_type).toUpperCase();
     const objectId = str((row as any).object_id);
@@ -355,11 +347,6 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     }
     alertReasonByField.set(fieldId, reasonSet);
 
-    const tagSet = alertTagByField.get(fieldId) ?? new Set<string>();
-    const category = str((row as any).category).toLowerCase();
-    if (category) tagSet.add(category);
-    for (const r of normalizeList((row as any).reasons)) tagSet.add(str(r).toLowerCase());
-    alertTagByField.set(fieldId, tagSet);
   }
 
   const tagsFilter = new Set((args.tags ?? []).map((x) => str(x).toLowerCase()).filter(Boolean));
@@ -375,9 +362,10 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
       ...(reportRisk?.reasons ?? []),
     ])).slice(0, 3);
 
+    const fieldTags = fieldTagMap.get(item.field_id) ?? [];
     return {
       ...item,
-      tags: fieldTagMap.get(item.field_id) ?? [],
+      tags: fieldTags,
       risk: {
         level: alertLevel ?? reportRisk?.level ?? "LOW",
         reasons,
@@ -389,10 +377,7 @@ export async function projectFieldPortfolioListV1(args: ProjectFieldPortfolioLis
     };
   }).filter((item) => {
     if (tagsFilter.size > 0) {
-      const tagSet = new Set<string>([
-        ...(alertTagByField.get(item.field_id) ?? new Set<string>()),
-        ...(reportReasonTagsByField.get(item.field_id) ?? new Set<string>()),
-      ]);
+      const tagSet = new Set<string>(item.tags.map((tag) => str(tag).toLowerCase()).filter(Boolean));
       const hit = [...tagsFilter].some((tag) => tagSet.has(tag));
       if (!hit) return false;
     }
