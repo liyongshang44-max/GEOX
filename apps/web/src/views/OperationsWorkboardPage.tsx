@@ -4,10 +4,12 @@ import {
   assignAlert,
   closeAlert,
   fetchAlertWorkboard,
+  fetchAlertWorkboardSummary,
   noteAlert,
   resolveAlert,
   startAlert,
-  summarizeAlertWorkboard,
+  type AlertWorkboardSummaryV1,
+  type FetchAlertWorkboardParams,
   type AlertWorkItemV1,
   type AlertWorkflowMutationPayload,
   type AlertWorkflowStatus,
@@ -54,6 +56,13 @@ function readMultiSearchValues(searchParams: URLSearchParams, ...keys: string[])
 export default function OperationsWorkboardPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const [items, setItems] = React.useState<AlertWorkItemV1[]>([]);
+  const [summary, setSummary] = React.useState<AlertWorkboardSummaryV1>({
+    total: 0,
+    unassigned: 0,
+    in_progress: 0,
+    sla_breached: 0,
+    closed_today: 0,
+  });
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [assigneeDrafts, setAssigneeDrafts] = React.useState<Record<string, string>>({});
@@ -74,32 +83,42 @@ export default function OperationsWorkboardPage(): React.ReactElement {
   const categories = readMultiSearchValues(searchParams, "category");
   const assigneeActorId = searchParams.get("assignee_actor_id") || assignee;
 
-  const loadWorkboard = React.useCallback(async (): Promise<AlertWorkItemV1[]> => {
+  const queryParams = React.useMemo<FetchAlertWorkboardParams>(() => ({
+    workflow_status: workflowStatuses.length ? workflowStatuses as AlertWorkflowStatus[] : (workflowStatus ? [workflowStatus as AlertWorkflowStatus] : undefined),
+    assignee_actor_id: assigneeActorId || undefined,
+    severity: severities.length ? severities : undefined,
+    category: categories.length ? categories : undefined,
+    sla_breached: onlyBreached ? true : undefined,
+    field_ids: fieldIds.length ? fieldIds : (field ? [field] : undefined),
+    operation_id: operationIds.length ? operationIds : undefined,
+    query: query || alertId || undefined,
+  }), [alertId, assigneeActorId, categories, field, fieldIds, onlyBreached, operationIds, query, severities, workflowStatus, workflowStatuses]);
+
+  const loadWorkboard = React.useCallback(async (): Promise<{
+    items: AlertWorkItemV1[];
+    summary: AlertWorkboardSummaryV1;
+  }> => {
     setLoading(true);
     setError("");
-    const rows = await fetchAlertWorkboard({
-      workflow_status: workflowStatuses.length ? workflowStatuses as AlertWorkflowStatus[] : (workflowStatus ? [workflowStatus as AlertWorkflowStatus] : undefined),
-      assignee_actor_id: assigneeActorId || undefined,
-      field_ids: fieldIds.length ? fieldIds : (field ? [field] : undefined),
-      operation_id: operationIds.length ? operationIds : undefined,
-      severity: severities.length ? severities : undefined,
-      category: categories.length ? categories : undefined,
-      sla_breached: onlyBreached ? true : undefined,
-      query: query || alertId || undefined,
-    });
-    return rows;
-  }, [alertId, assigneeActorId, categories, field, fieldIds, onlyBreached, operationIds, query, severities, workflowStatus, workflowStatuses]);
+    const [workItems, summaryData] = await Promise.all([
+      fetchAlertWorkboard(queryParams),
+      fetchAlertWorkboardSummary(queryParams),
+    ]);
+    return { items: workItems, summary: summaryData };
+  }, [queryParams]);
 
   React.useEffect(() => {
     let alive = true;
     void loadWorkboard()
-      .then((rows) => {
+      .then(({ items: rows, summary: summaryData }) => {
         if (!alive) return;
         setItems(rows);
+        setSummary(summaryData);
       })
       .catch((e: unknown) => {
         if (!alive) return;
         setItems([]);
+        setSummary({ total: 0, unassigned: 0, in_progress: 0, sla_breached: 0, closed_today: 0 });
         setError(String(e instanceof Error ? e.message : "加载失败"));
       })
       .finally(() => {
@@ -129,16 +148,15 @@ export default function OperationsWorkboardPage(): React.ReactElement {
       if (action === "note") await noteAlert(item.alert_id, payload);
       if (action === "resolve") await resolveAlert(item.alert_id, payload);
       if (action === "close") await closeAlert(item.alert_id, payload);
-      const rows = await loadWorkboard();
-      setItems(rows);
+      const latest = await loadWorkboard();
+      setItems(latest.items);
+      setSummary(latest.summary);
     } catch (e: unknown) {
       setActionErrors((prev) => ({ ...prev, [item.alert_id]: String(e instanceof Error ? e.message : "操作失败") }));
     } finally {
       setPendingActions((prev) => ({ ...prev, [actionKey]: false }));
     }
   }, [assigneeDrafts, loadWorkboard, noteDrafts]);
-
-  const summary = React.useMemo(() => summarizeAlertWorkboard(items), [items]);
 
   return (
     <div className="demoDashboardPage">
@@ -154,7 +172,7 @@ export default function OperationsWorkboardPage(): React.ReactElement {
           <div><strong>未分配：</strong>{summary.unassigned}</div>
           <div><strong>处理中：</strong>{summary.in_progress}</div>
           <div><strong>已超时：</strong>{summary.sla_breached}</div>
-          <div><strong>总数：</strong>{summary.total}</div>
+          <div><strong>今日关闭：</strong>{summary.closed_today}</div>
         </div>
       </SectionCard>
 
