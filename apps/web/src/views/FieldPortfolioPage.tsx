@@ -61,6 +61,8 @@ function toBackendParams(params: {
   pageSize: number;
 }): FetchFieldPortfolioParams {
   const next: FetchFieldPortfolioParams = {
+    sort_by: params.sort,
+    sort_order: "desc",
     page: params.page,
     page_size: params.pageSize,
     sort_order: "desc",
@@ -142,13 +144,12 @@ export default function FieldPortfolioPage(): React.ReactElement {
     };
   }, [backendParams]);
 
-  const summaryMetrics = (summary ?? {}) as Record<string, unknown>;
-  const total = toNumber(summaryMetrics.total);
-  const riskCount = toNumber(summaryMetrics.risk_count);
-  const severeRiskCount = toNumber(summaryMetrics.severe_risk_count);
-  const openAlerts = toNumber(summaryMetrics.open_alerts);
-  const pendingAcceptance = toNumber(summaryMetrics.pending_acceptance);
-  const cycleCost = toNumber(summaryMetrics.cycle_cost);
+  const total = toNumber(summary?.fields?.total);
+  const riskCount = toNumber(summary?.fields?.at_risk);
+  const severeRiskCount = toNumber(summary?.top_risk_fields?.filter((item) => String(item?.risk_level ?? "").toUpperCase() === "HIGH").length);
+  const openAlerts = 0;
+  const pendingAcceptance = 0;
+  const cycleCost = toNumber(summary?.period_summary?.total_cost);
 
   return (
     <div className="consolePage">

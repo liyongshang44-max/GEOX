@@ -187,6 +187,36 @@ export function mapOperationStatusLabel(value?: string | null, locale: UiLocale 
   return localizeOperationStatus(value, locale);
 }
 
+export type OperationQuickCreateLabels = {
+  createOperation: string;
+  initiator: string;
+  operationTemplate: string;
+  targetField: string;
+  targetDevice: string;
+  executionParameters: string;
+};
+
+export function buildOperationQuickCreateLabels(locale: UiLocale = "zh"): OperationQuickCreateLabels {
+  if (locale === "en") {
+    return {
+      createOperation: "Create Operation",
+      initiator: "Initiator",
+      operationTemplate: "Operation Template",
+      targetField: "Target Field",
+      targetDevice: "Target Device",
+      executionParameters: "Execution Parameters",
+    };
+  }
+  return {
+    createOperation: "新建作业",
+    initiator: "发起方式",
+    operationTemplate: "作业模板",
+    targetField: "目标地块",
+    targetDevice: "目标设备",
+    executionParameters: "执行参数",
+  };
+}
+
 export type NormalizedOperationFinalStatus =
   | "PENDING"
   | "RUNNING"
