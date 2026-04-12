@@ -30,7 +30,10 @@ function groupOf(item: any): GroupKey {
 
 export default function OperationsPage(): React.ReactElement {
   const { data: items = [], isLoading: loading, refetch } = useOperationsListQuery();
+
+  // ✅ 修复点：不再使用 OP_LABELS
   const labels = getOperationLabels("zh");
+
   const [issuer, setIssuer] = React.useState("human");
   const [actionType, setActionType] = React.useState("IRRIGATE");
   const [targetText, setTargetText] = React.useState("");
@@ -55,22 +58,26 @@ export default function OperationsPage(): React.ReactElement {
 
   const onCreate = React.useCallback(async () => {
     if (isCreating) return;
+
     const normalizedCommandId = String(commandId ?? "").trim();
     if (!normalizedCommandId) {
       setCreateError("幂等键/参数错误：缺少 command_id。");
       return;
     }
+
     let parsedParameters: Record<string, unknown> = {};
     try {
       const parsed = JSON.parse(parametersText || "{}");
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("invalid parameters");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error();
       parsedParameters = parsed as Record<string, unknown>;
     } catch {
       setCreateError("幂等键/参数错误：参数必须是 JSON 对象。");
       return;
     }
+
     setCreateError("");
     setIsCreating(true);
+
     try {
       const res = await createManualOperation({
         command_id: normalizedCommandId,
@@ -80,8 +87,10 @@ export default function OperationsPage(): React.ReactElement {
         request_device_id: requestDeviceId.trim() || undefined,
         parameters: parsedParameters,
       });
+
       const jumpId = String(res?.operation_id ?? res?.operation_plan_id ?? "").trim();
       if (!jumpId) throw new Error("missing operation id");
+
       window.location.assign(`/operations/${encodeURIComponent(jumpId)}`);
     } catch (error) {
       const bodyText = error instanceof ApiError ? error.bodyText : "";
@@ -140,6 +149,7 @@ export default function OperationsPage(): React.ReactElement {
             <h2>{group.title}</h2>
             <span>{group.lead}（{grouped[group.key].length}）</span>
           </div>
+
           <div className="operationsCardGrid">
             {grouped[group.key].map((x) => {
               const normalized = normalizeStatus(x);
@@ -147,32 +157,41 @@ export default function OperationsPage(): React.ReactElement {
               const fieldLabel = mapFieldDisplayName(x.field_name, x.field_id);
               const deviceLabel = mapDeviceDisplayName(x.device_name, x.device_id);
               const planId = resolveOperationPlanId(x);
+
               return (
                 <article key={planId || x.operation_id} className="card operationsSummaryCard">
                   <div className="operationsSummaryTop">
                     <div>
                       <div className="operationsSummaryTitle">{actionLabel}</div>
-                      <div className="operationsSummaryLead">{buildOperationSummary(x.final_status, x.action_type)}</div>
+                      <div className="operationsSummaryLead">
+                        {buildOperationSummary(x.final_status, x.action_type)}
+                      </div>
                     </div>
                     <span className="statusTag tone-neutral">{group.title}</span>
                   </div>
 
                   <div className="operationsSummaryGrid">
-                    <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">田块</span><strong>{fieldLabel}</strong></div>
-                    <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备</span><strong>{deviceLabel}</strong></div>
-                    <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务状态</span><strong>{toBusinessExecutionNarrative(normalized)}</strong></div>
-                    <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">更新时间</span><strong><RelativeTime value={Number(x.last_event_ts || x.updated_ts_ms || 0)} /></strong></div>
+                    <div className="operationsSummaryMetric"><span>田块</span><strong>{fieldLabel}</strong></div>
+                    <div className="operationsSummaryMetric"><span>设备</span><strong>{deviceLabel}</strong></div>
+                    <div className="operationsSummaryMetric"><span>业务状态</span><strong>{toBusinessExecutionNarrative(normalized)}</strong></div>
+                    <div className="operationsSummaryMetric"><span>更新时间</span><strong><RelativeTime value={Number(x.last_event_ts || x.updated_ts_ms || 0)} /></strong></div>
                   </div>
 
                   <div className="operationsSummaryActions">
                     <Link className="btn" to={toOperationDetailPath(x)}>查看完整故事</Link>
-                    {group.key === "TODO" ? <Link className="btn" to="/agronomy/recommendations">回到建议池</Link> : null}
-                    {group.key === "PENDING_ACCEPTANCE" ? <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(planId || ""))}`}>查看证据</Link> : null}
                   </div>
                 </article>
               );
             })}
-            {!loading && !grouped[group.key].length ? <EmptyState title={`${group.title}为空`} description="当前分组暂无作业。" actionText="返回总览" onAction={() => { window.location.assign("/dashboard"); }} /> : null}
+
+            {!loading && !grouped[group.key].length ? (
+              <EmptyState
+                title={`${group.title}为空`}
+                description="当前分组暂无作业。"
+                actionText="返回总览"
+                onAction={() => { window.location.assign("/dashboard"); }}
+              />
+            ) : null}
           </div>
         </section>
       ))}
