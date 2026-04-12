@@ -1,8 +1,18 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchAuthMe } from "../../../api/auth";
-import { ackAlert, ALERT_SEVERITY, ALERT_STATUS, resolveAlert, type AlertStatus } from "../../../api/alerts";
-import { fetchAlertWorkboard, summarizeAlertWorkboard, type AlertWorkItemV1 } from "../../../api/alertWorkflow";
+import {
+  ALERT_WORKFLOW_STATUS,
+  assignAlert,
+  closeAlert,
+  fetchAlertWorkboard,
+  noteAlert,
+  resolveAlert,
+  startAlert,
+  summarizeAlertWorkboard,
+  type AlertWorkItemV1,
+  type AlertWorkflowStatus,
+} from "../../../api/alertWorkflow";
 import { alertCategoryLabel, alertStatusLabel } from "../../../lib/alertLabels";
 
 function fmtTs(iso: string | null | undefined): string {
@@ -46,10 +56,14 @@ export default function AlertsPage(): React.ReactElement {
   const [busy, setBusy] = React.useState(false);
   const [statusText, setStatusText] = React.useState("正在准备告警中心...");
   const [lastAction, setLastAction] = React.useState("-");
-  const [severityFilter, setSeverityFilter] = React.useState<"" | keyof typeof ALERT_SEVERITY>("");
-  const [statusFilter, setStatusFilter] = React.useState<"" | keyof typeof ALERT_STATUS>("");
+  const [severityFilter, setSeverityFilter] = React.useState<"" | AlertWorkItemV1["severity"]>("");
+  const [workflowStatusFilter, setWorkflowStatusFilter] = React.useState<"" | AlertWorkflowStatus>("");
   const [categoryFilter, setCategoryFilter] = React.useState("");
+  const [assigneeFilter, setAssigneeFilter] = React.useState("");
+  const [slaBreachedFilter, setSlaBreachedFilter] = React.useState<"" | "true" | "false">("");
   const [role, setRole] = React.useState<string>("operator");
+  const [currentActorId, setCurrentActorId] = React.useState<string>("");
+  const [currentActorName, setCurrentActorName] = React.useState<string>("");
   const [summary, setSummary] = React.useState<{ total: number; unassigned: number; inProgress: number; breached: number }>({
     total: 0,
     unassigned: 0,
@@ -57,18 +71,16 @@ export default function AlertsPage(): React.ReactElement {
     breached: 0,
   });
 
-  const canResolve = role !== "operator";
-
   async function refresh(): Promise<void> {
     setBusy(true);
     setStatusText("正在同步 AlertV1 列表...");
     try {
-      const allItems = await fetchAlertWorkboard();
-      const nextItems = allItems.filter((row) => {
-        if (severityFilter && row.severity !== severityFilter) return false;
-        if (statusFilter && row.workflow_status !== statusFilter) return false;
-        if (categoryFilter.trim() && String(row.category || "").toUpperCase().includes(categoryFilter.trim().toUpperCase()) === false) return false;
-        return true;
+      const nextItems = await fetchAlertWorkboard({
+        severity: severityFilter ? [severityFilter] : undefined,
+        workflow_status: workflowStatusFilter || undefined,
+        category: categoryFilter.trim() ? [categoryFilter.trim()] : undefined,
+        assignee_actor_id: assigneeFilter.trim() || undefined,
+        sla_breached: slaBreachedFilter === "" ? undefined : slaBreachedFilter === "true",
       });
       const nextSummary = summarizeAlertWorkboard(nextItems);
       setItems(nextItems);
@@ -81,41 +93,55 @@ export default function AlertsPage(): React.ReactElement {
     }
   }
 
-  async function handleAck(alertId: string): Promise<void> {
+  async function runWorkflowAction(item: AlertWorkItemV1, action: "assign" | "start" | "note" | "resolve" | "close"): Promise<void> {
+    const alertId = item.alert_id;
     setBusy(true);
-    setLastAction(`正在确认 ${alertId} ...`);
+    setLastAction(`正在执行 ${action.toUpperCase()}：${alertId} ...`);
     try {
-      await ackAlert(alertId);
-      setLastAction(`已确认：${alertId}`);
+      if (action === "assign") {
+        await assignAlert(alertId, {
+          assignee_actor_id: currentActorId || role || "operator",
+          assignee_name: currentActorName || role || "operator",
+        });
+      } else if (action === "start") {
+        await startAlert(alertId, {});
+      } else if (action === "note") {
+        await noteAlert(alertId, { note: `操作员 ${currentActorName || role} 在 Alerts 页面记录跟进。` });
+      } else if (action === "resolve") {
+        await resolveAlert(alertId, {});
+      } else {
+        await closeAlert(alertId, {});
+      }
+      setLastAction(`已执行 ${action.toUpperCase()}：${alertId}`);
       await refresh();
     } catch (e: unknown) {
-      setLastAction(`确认失败：${e instanceof Error ? e.message : String(e)}`);
+      setLastAction(`${action.toUpperCase()} 失败：${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }
   }
 
-  async function handleResolve(alertId: string): Promise<void> {
-    if (!canResolve) {
-      setLastAction("当前角色无关闭权限（仅管理员可关闭）。");
-      return;
-    }
-    setBusy(true);
-    setLastAction(`正在关闭 ${alertId} ...`);
-    try {
-      await resolveAlert(alertId);
-      setLastAction(`已关闭：${alertId}`);
-      await refresh();
-    } catch (e: unknown) {
-      setLastAction(`关闭失败：${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setBusy(false);
-    }
+  function getWorkflowActions(status: AlertWorkflowStatus): Array<{ key: "assign" | "start" | "note" | "resolve" | "close"; label: string; enabled: boolean }> {
+    return [
+      { key: "assign", label: "分配", enabled: status === ALERT_WORKFLOW_STATUS.OPEN },
+      { key: "start", label: "开始处理", enabled: status === ALERT_WORKFLOW_STATUS.ASSIGNED || status === ALERT_WORKFLOW_STATUS.ACKED },
+      { key: "note", label: "记录备注", enabled: status !== ALERT_WORKFLOW_STATUS.CLOSED },
+      { key: "resolve", label: "解决", enabled: status === ALERT_WORKFLOW_STATUS.IN_PROGRESS || status === ALERT_WORKFLOW_STATUS.ACKED || status === ALERT_WORKFLOW_STATUS.ASSIGNED },
+      { key: "close", label: "关闭", enabled: status === ALERT_WORKFLOW_STATUS.RESOLVED },
+    ];
   }
 
   React.useEffect(() => {
     void refresh();
-    void fetchAuthMe().then((me) => setRole(String(me.role || "operator"))).catch(() => setRole("operator"));
+    void fetchAuthMe().then((me) => {
+      setRole(String(me.role || "operator"));
+      setCurrentActorId(String(me.actor_id || "operator"));
+      setCurrentActorName(String(me.actor_id || me.role || "operator"));
+    }).catch(() => {
+      setRole("operator");
+      setCurrentActorId("operator");
+      setCurrentActorName("operator");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -125,7 +151,7 @@ export default function AlertsPage(): React.ReactElement {
         <div>
           <div className="eyebrow">Alerts · V1</div>
           <h2 className="heroTitle">告警中心</h2>
-          <p className="heroText">摘要卡、筛选器、告警列表与角色化动作（Ack/Resolve）统一基于 /api/v1/alerts/workboard 读模型。</p>
+          <p className="heroText">摘要卡、筛选器、告警列表与工作流动作（Assign/Start/Note/Resolve/Close）统一基于 /api/v1/alerts/workboard 读模型。</p>
         </div>
         <div className="heroActions">
           <button className="btn primary" onClick={() => void refresh()} disabled={busy}>刷新告警</button>
@@ -141,11 +167,13 @@ export default function AlertsPage(): React.ReactElement {
       </div>
 
       <section className="card sectionBlock">
-        <div className="sectionHeader"><div><div className="sectionTitle">筛选</div><div className="sectionDesc">按严重度/状态/分类过滤告警。</div></div></div>
+        <div className="sectionHeader"><div><div className="sectionTitle">筛选</div><div className="sectionDesc">按严重度、分类、工作流状态、assignee、SLA 超时过滤告警（后端参数）。</div></div></div>
         <div className="formGridTwo">
-          <label className="field">严重度<select className="input" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value as "" | keyof typeof ALERT_SEVERITY)}><option value="">全部</option><option value="LOW">LOW</option><option value="MEDIUM">MEDIUM</option><option value="HIGH">HIGH</option><option value="CRITICAL">CRITICAL</option></select></label>
-          <label className="field">状态<select className="input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "" | AlertStatus)}><option value="">全部</option><option value="OPEN">未处理</option><option value="ACKED">已确认</option><option value="CLOSED">已关闭</option></select></label>
+          <label className="field">严重度<select className="input" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value as "" | AlertWorkItemV1["severity"])}><option value="">全部</option><option value="LOW">LOW</option><option value="MEDIUM">MEDIUM</option><option value="HIGH">HIGH</option><option value="CRITICAL">CRITICAL</option></select></label>
+          <label className="field">工作流状态<select className="input" value={workflowStatusFilter} onChange={(e) => setWorkflowStatusFilter(e.target.value as "" | AlertWorkflowStatus)}><option value="">全部</option><option value="OPEN">OPEN</option><option value="ASSIGNED">ASSIGNED</option><option value="IN_PROGRESS">IN_PROGRESS</option><option value="ACKED">ACKED</option><option value="RESOLVED">RESOLVED</option><option value="CLOSED">CLOSED</option></select></label>
           <label className="field">分类<input className="input" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} placeholder="如 EVIDENCE_MISSING" /></label>
+          <label className="field">Assignee<input className="input" value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)} placeholder="actor_id" /></label>
+          <label className="field">SLA 超时<select className="input" value={slaBreachedFilter} onChange={(e) => setSlaBreachedFilter(e.target.value as "" | "true" | "false")}><option value="">全部</option><option value="true">是</option><option value="false">否</option></select></label>
         </div>
         <div className="inlineActions"><button className="btn" onClick={() => void refresh()} disabled={busy}>应用筛选</button></div>
         <div className="devBanner">当前角色：{role}；最近动作：{lastAction}</div>
@@ -164,15 +192,19 @@ export default function AlertsPage(): React.ReactElement {
                   <span>对象：{item.object_type} / {item.object_id}</span>
                   <span>触发时间：{fmtTs(item.triggered_at)}</span>
                   <span>原因：{item.reasons?.length ? item.reasons.join(" / ") : "-"}</span>
-                  <span>assignee：{item.assignee.name || item.assignee.actor_id || "-"}</span>
-                  <span>workflow_status：{item.workflow_status}</span>
-                  <span>sla_breached：{item.sla_breached ? "是" : "否"}</span>
+                  <span>assignee：<strong>{item.assignee.name || item.assignee.actor_id || "未分配"}</strong></span>
+                  <span>workflow_status：<strong>{item.workflow_status}</strong></span>
+                  <span>sla_breached：<strong style={{ color: item.sla_breached ? "var(--danger-600, #d32f2f)" : undefined }}>{item.sla_breached ? "是" : "否"}</strong></span>
                 </div>
                 <div className="inlineActions" style={{ flexWrap: "wrap" }}>
                   {relatedLinks.map((lnk) => <Link key={`${item.alert_id}-${lnk.to}-${lnk.label}`} className="btn" to={lnk.to}>{lnk.label}</Link>)}
                   <Link className="btn" to={`/operations/workboard?alert_id=${encodeURIComponent(item.alert_id)}`}>作业台视图</Link>
                 </div>
-                <div className="inlineActions"><button className="btn" onClick={() => void handleAck(item.alert_id)} disabled={busy || item.status === "CLOSED"}>确认</button><button className="btn" onClick={() => void handleResolve(item.alert_id)} disabled={busy || item.status === "CLOSED" || !canResolve}>关闭</button></div>
+                <div className="inlineActions">
+                  {getWorkflowActions(item.workflow_status).map((action) => (
+                    <button key={`${item.alert_id}-${action.key}`} className="btn" onClick={() => void runWorkflowAction(item, action.key)} disabled={busy || !action.enabled}>{action.label}</button>
+                  ))}
+                </div>
               </div>
             );
           })}
