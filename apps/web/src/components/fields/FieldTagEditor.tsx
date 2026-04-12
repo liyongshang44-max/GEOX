@@ -1,6 +1,6 @@
 import React from "react";
 import { fetchAuthMe } from "../../api/auth";
-import { addFieldTag, fetchFieldTags, removeFieldTag } from "../../api/fields";
+import { addFieldTag, fetchFieldTags, removeFieldTag } from "../../api/fieldPortfolio";
 
 type RoleType = "viewer" | "client" | "operator" | "admin" | "unknown";
 

@@ -17,11 +17,13 @@ function resolveOverviewPath(locationSearch: string): string {
   const params = new URLSearchParams(locationSearch);
   const returnTo = String(params.get("return_to") || params.get("back_to") || "").trim();
   if (returnTo.startsWith("/")) return returnTo;
-  const context = new URLSearchParams(locationSearch);
-  context.delete("return_to");
-  context.delete("back_to");
+  const context = new URLSearchParams();
+  ["query", "risk", "has_open_alerts", "has_pending_acceptance", "tags", "sort"].forEach((key) => {
+    const value = params.get(key);
+    if (value) context.set(key, value);
+  });
   const query = context.toString();
-  return query ? `/fields?${query}` : "/fields";
+  return query ? `/fields/portfolio?${query}` : "/fields/portfolio";
 }
 
 export default function FieldReportPage(): React.ReactElement {
