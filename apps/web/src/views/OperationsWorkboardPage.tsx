@@ -1,6 +1,17 @@
 import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { fetchAlertWorkboard, summarizeAlertWorkboard, type AlertWorkItemV1, type AlertWorkflowStatus } from "../api/alertWorkflow";
+import {
+  assignAlert,
+  closeAlert,
+  fetchAlertWorkboard,
+  noteAlert,
+  resolveAlert,
+  startAlert,
+  summarizeAlertWorkboard,
+  type AlertWorkItemV1,
+  type AlertWorkflowMutationPayload,
+  type AlertWorkflowStatus,
+} from "../api/alertWorkflow";
 import { alertCategoryLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 
@@ -24,6 +35,10 @@ export default function OperationsWorkboardPage(): React.ReactElement {
   const [items, setItems] = React.useState<AlertWorkItemV1[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
+  const [assigneeDrafts, setAssigneeDrafts] = React.useState<Record<string, string>>({});
+  const [noteDrafts, setNoteDrafts] = React.useState<Record<string, string>>({});
+  const [pendingActions, setPendingActions] = React.useState<Record<string, boolean>>({});
+  const [actionErrors, setActionErrors] = React.useState<Record<string, string>>({});
 
   const assignee = searchParams.get("assignee") || "";
   const workflowStatus = searchParams.get("workflow_status") || "";
@@ -31,11 +46,16 @@ export default function OperationsWorkboardPage(): React.ReactElement {
   const onlyBreached = searchParams.get("sla_breached") === "true";
   const alertId = searchParams.get("alert_id") || "";
 
-  React.useEffect(() => {
-    let alive = true;
+  const loadWorkboard = React.useCallback(async (): Promise<AlertWorkItemV1[]> => {
     setLoading(true);
     setError("");
-    void fetchAlertWorkboard()
+    const rows = await fetchAlertWorkboard();
+    return rows;
+  }, []);
+
+  React.useEffect(() => {
+    let alive = true;
+    void loadWorkboard()
       .then((rows) => {
         if (!alive) return;
         setItems(rows);
@@ -52,7 +72,34 @@ export default function OperationsWorkboardPage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [loadWorkboard]);
+
+  const runAction = React.useCallback(async (item: AlertWorkItemV1, action: "assign" | "start" | "note" | "resolve" | "close") => {
+    const actionKey = `${item.alert_id}:${action}`;
+    const assigneeActorId = (assigneeDrafts[item.alert_id] || "").trim();
+    const note = (noteDrafts[item.alert_id] || "").trim();
+    const payload: AlertWorkflowMutationPayload = {};
+
+    if (assigneeActorId) payload.assignee_actor_id = assigneeActorId;
+    if (note) payload.note = note;
+
+    setPendingActions((prev) => ({ ...prev, [actionKey]: true }));
+    setActionErrors((prev) => ({ ...prev, [item.alert_id]: "" }));
+
+    try {
+      if (action === "assign") await assignAlert(item.alert_id, payload);
+      if (action === "start") await startAlert(item.alert_id, payload);
+      if (action === "note") await noteAlert(item.alert_id, payload);
+      if (action === "resolve") await resolveAlert(item.alert_id, payload);
+      if (action === "close") await closeAlert(item.alert_id, payload);
+      const rows = await loadWorkboard();
+      setItems(rows);
+    } catch (e: unknown) {
+      setActionErrors((prev) => ({ ...prev, [item.alert_id]: String(e instanceof Error ? e.message : "操作失败") }));
+    } finally {
+      setPendingActions((prev) => ({ ...prev, [actionKey]: false }));
+    }
+  }, [assigneeDrafts, loadWorkboard, noteDrafts]);
 
   const filteredItems = React.useMemo(() => items.filter((item) => {
     if (assignee && `${item.assignee.name || ""}${item.assignee.actor_id || ""}`.toLowerCase().includes(assignee.toLowerCase()) === false) return false;
@@ -100,6 +147,60 @@ export default function OperationsWorkboardPage(): React.ReactElement {
                 <div><strong>workflow_status：</strong>{item.workflow_status}</div>
                 <div><strong>SLA：</strong>{formatDeadline(item.sla_due_at)}</div>
                 <div><strong>最后备注：</strong>{item.last_note || "--"}</div>
+              </div>
+              <div style={{ marginTop: 12, borderTop: "1px solid #eee", paddingTop: 12 }}>
+                <div className="kvGrid2">
+                  <label>
+                    <strong>assignee_actor_id：</strong>
+                    <input
+                      value={assigneeDrafts[item.alert_id] ?? ""}
+                      onChange={(event) => {
+                        const nextValue = event.currentTarget.value;
+                        setAssigneeDrafts((prev) => ({ ...prev, [item.alert_id]: nextValue }));
+                      }}
+                      placeholder="输入要指派的 actor_id"
+                      disabled={Object.keys(pendingActions).some((key) => key.startsWith(`${item.alert_id}:`) && pendingActions[key])}
+                    />
+                  </label>
+                  <label>
+                    <strong>备注：</strong>
+                    <input
+                      value={noteDrafts[item.alert_id] ?? ""}
+                      onChange={(event) => {
+                        const nextValue = event.currentTarget.value;
+                        setNoteDrafts((prev) => ({ ...prev, [item.alert_id]: nextValue }));
+                      }}
+                      placeholder="输入备注内容"
+                      disabled={Object.keys(pendingActions).some((key) => key.startsWith(`${item.alert_id}:`) && pendingActions[key])}
+                    />
+                  </label>
+                </div>
+                <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {([
+                    { key: "assign", label: "指派" },
+                    { key: "start", label: "开始处理" },
+                    { key: "note", label: "备注" },
+                    { key: "resolve", label: "解决" },
+                    { key: "close", label: "关闭" },
+                  ] as const).map((action) => {
+                    const isPending = pendingActions[`${item.alert_id}:${action.key}`] === true;
+                    const itemBusy = Object.keys(pendingActions).some((key) => key.startsWith(`${item.alert_id}:`) && pendingActions[key]);
+                    return (
+                      <button
+                        key={action.key}
+                        type="button"
+                        className="btn"
+                        disabled={itemBusy}
+                        onClick={() => {
+                          void runAction(item, action.key);
+                        }}
+                      >
+                        {isPending ? `${action.label}中...` : action.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {actionErrors[item.alert_id] ? <div className="muted" style={{ marginTop: 8, color: "#b42318" }}>{actionErrors[item.alert_id]}</div> : null}
               </div>
             </article>
           ))}
