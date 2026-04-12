@@ -6,11 +6,15 @@ export type FieldPortfolioItemV1 = FieldPortfolioItemV1Projection;
 export type FieldPortfolioSummaryV1 = FieldPortfolioSummaryV1Projection;
 
 export type FetchFieldPortfolioParams = {
-  field_id?: string;
-  season_id?: string;
-  status?: string;
-  next_action_priority?: "LOW" | "MEDIUM" | "HIGH";
-  limit?: number;
+  tags?: string[];
+  risk_levels?: Array<"LOW" | "MEDIUM" | "HIGH">;
+  has_open_alerts?: boolean;
+  has_pending_acceptance?: boolean;
+  query?: string;
+  sort_by?: string;
+  sort_order?: "asc" | "desc";
+  page?: number;
+  page_size?: number;
   tenant_id?: string;
   project_id?: string;
   group_id?: string;
@@ -35,8 +39,25 @@ type FieldTagsResponse = {
   tags?: string[];
 };
 
+function toPortfolioQuery(params: FetchFieldPortfolioParams): Record<string, unknown> {
+  return {
+    "tags[]": params.tags,
+    "risk_levels[]": params.risk_levels,
+    has_open_alerts: params.has_open_alerts,
+    has_pending_acceptance: params.has_pending_acceptance,
+    query: params.query,
+    sort_by: params.sort_by,
+    sort_order: params.sort_order,
+    page: params.page,
+    page_size: params.page_size,
+    tenant_id: params.tenant_id,
+    project_id: params.project_id,
+    group_id: params.group_id,
+  };
+}
+
 export async function fetchFieldPortfolio(params: FetchFieldPortfolioParams = {}): Promise<FieldPortfolioItemV1[]> {
-  const res = await apiRequest<FieldPortfolioListResponse>(withQuery("/api/v1/field-portfolio", params));
+  const res = await apiRequest<FieldPortfolioListResponse>(withQuery("/api/v1/fields/portfolio", toPortfolioQuery(params)));
   return Array.isArray(res.items) ? res.items : [];
 }
 
@@ -52,12 +73,12 @@ export async function fetchFieldPortfolioSummary(params: FetchFieldPortfolioPara
 }
 
 export async function fetchFieldTags(fieldId: string): Promise<string[]> {
-  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/field-portfolio/${encodeURIComponent(fieldId)}/tags`));
+  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags`));
   return Array.isArray(res.tags) ? res.tags.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
 }
 
 export async function addFieldTag(fieldId: string, tag: string): Promise<string[]> {
-  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/field-portfolio/${encodeURIComponent(fieldId)}/tags`), {
+  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags`), {
     method: "POST",
     body: JSON.stringify({ tag }),
   });
@@ -65,9 +86,8 @@ export async function addFieldTag(fieldId: string, tag: string): Promise<string[
 }
 
 export async function removeFieldTag(fieldId: string, tag: string): Promise<string[]> {
-  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/field-portfolio/${encodeURIComponent(fieldId)}/tags`), {
+  const res = await apiRequest<FieldTagsResponse>(withQuery(`/api/v1/fields/${encodeURIComponent(fieldId)}/tags/${encodeURIComponent(tag)}`), {
     method: "DELETE",
-    body: JSON.stringify({ tag }),
   });
   return Array.isArray(res.tags) ? res.tags.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
 }

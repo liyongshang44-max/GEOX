@@ -39,6 +39,22 @@ function parseFieldIds(raw: unknown): string[] {
   return out;
 }
 
+function parseTags(raw: unknown): string[] {
+  const values = Array.isArray(raw) ? raw : [raw];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const parts = String(value ?? "").split(",");
+    for (const part of parts) {
+      const normalized = String(part ?? "").trim();
+      if (!normalized || seen.has(normalized)) continue;
+      seen.add(normalized);
+      out.push(normalized);
+    }
+  }
+  return out;
+}
+
 export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/fields/portfolio", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
@@ -57,6 +73,15 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
 
     const windowMsRaw = Number(q.window_ms ?? "");
     const windowMs = Number.isFinite(windowMsRaw) ? windowMsRaw : undefined;
+    const tags = parseStringList(q.tags ?? q["tags[]"]);
+    const risk_levels = parseRiskLevels(q.risk_levels ?? q["risk_levels[]"]);
+    const has_open_alerts = parseBoolean(q.has_open_alerts);
+    const has_pending_acceptance = parseBoolean(q.has_pending_acceptance);
+    const query = String(q.query ?? "").trim();
+    const sort_by = parseSortBy(q.sort_by);
+    const sort_order = parseSortOrder(q.sort_order);
+    const page = parseIntWithin(q.page, 1, 1, 1_000_000);
+    const page_size = parseIntWithin(q.page_size, 20, 1, 200);
 
     const payload = await projectFieldPortfolioListV1({
       pool,
@@ -64,9 +89,40 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
       field_ids: scopedFieldIds,
       windowMs,
       nowMs: Date.now(),
+      tags,
+      risk_levels,
+      has_open_alerts,
+      has_pending_acceptance,
+      query,
+      sort_by,
+      sort_order,
+      page,
+      page_size,
     });
 
-    return reply.send(payload);
+    const tags = parseTags(q.tags ?? q["tags[]"]);
+    if (tags.length === 0) return reply.send(payload);
+    const tagSet = new Set(tags);
+    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
+    return reply.send({
+      ...payload,
+      count: filteredItems.length,
+      items: filteredItems,
+      summary: {
+        total_fields: filteredItems.length,
+        by_risk: {
+          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
+          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
+          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
+        },
+        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
+        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
+        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
+        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
+        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
+      },
+    });
   });
 
   app.get("/api/v1/fields/portfolio/summary", async (req, reply) => {
@@ -95,6 +151,26 @@ export function registerFieldPortfolioV1Routes(app: FastifyInstance, pool: Pool)
       nowMs: Date.now(),
     });
 
-    return reply.send({ ok: true, summary: payload.summary });
+    const tags = parseTags(q.tags ?? q["tags[]"]);
+    if (tags.length === 0) return reply.send({ ok: true, summary: payload.summary });
+    const tagSet = new Set(tags);
+    const filteredItems = payload.items.filter((item) => item.tags.some((tag) => tagSet.has(tag)));
+    return reply.send({
+      ok: true,
+      summary: {
+        total_fields: filteredItems.length,
+        by_risk: {
+          low: filteredItems.filter((x) => x.risk.level === "LOW").length,
+          medium: filteredItems.filter((x) => x.risk.level === "MEDIUM").length,
+          high: filteredItems.filter((x) => x.risk.level === "HIGH").length,
+        },
+        total_open_alerts: filteredItems.reduce((s, x) => s + x.alert_summary.open_count, 0),
+        total_pending_acceptance: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.pending_acceptance_count, 0),
+        total_invalid_execution: filteredItems.reduce((s, x) => s + x.pending_acceptance_summary.invalid_execution_count, 0),
+        total_estimated_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.estimated_total, 0).toFixed(2)),
+        total_actual_cost: Number(filteredItems.reduce((s, x) => s + x.cost_summary.actual_total, 0).toFixed(2)),
+        offline_fields: filteredItems.filter((x) => x.telemetry.device_offline).length,
+      },
+    });
   });
 }
