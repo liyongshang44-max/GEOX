@@ -34,6 +34,7 @@ import { registerFieldTagsV1Routes } from "./routes/field_tags_v1"; // Field tag
 import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
 import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
 import { registerAlertsV1Routes, startOfflineAlertWorker, startAlertNotificationWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
+import { registerAlertWorkflowV1Routes } from "./routes/alert_workflow_v1"; // Alert workflow schema initialization + write-layer helper registration.
 import { registerEvidenceExportJobsV1Routes } from "./routes/evidence_export_jobs_v1"; // Sprint C1: Persisted evidence export jobs.
 import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
 import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
@@ -306,6 +307,7 @@ registerDeviceHeartbeatV1Routes(app, pool); // Sprint C2: Register Device Heartb
 registerDeviceStatusV1Routes(app, pool); // Sprint C1: 注册 Device Status（心跳/在线状态）。
 registerSchedulingConflictV1Routes(app, pool); // Sprint F2: 注册 scheduling conflicts APIs（device/field/program intent conflicts）。
 registerAlertsV1Routes(app, pool); // Sprint C1: 注册 Alerts（告警规则 + 事件）。
+registerAlertWorkflowV1Routes(app, pool); // Alert workflow v1: initialize workflow projection schema and indexes.
 registerEvidenceExportJobsV1Routes(app, pool); // Sprint C1: 注册 Evidence Export Jobs（持久化作业）。
 
 registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
