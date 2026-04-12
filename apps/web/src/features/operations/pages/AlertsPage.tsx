@@ -6,10 +6,10 @@ import {
   assignAlert,
   closeAlert,
   fetchAlertWorkboard,
+  fetchAlertWorkboardSummary,
   noteAlert,
   resolveAlert,
   startAlert,
-  summarizeAlertWorkboard,
   type AlertWorkItemV1,
   type AlertWorkflowStatus,
 } from "../../../api/alertWorkflow";
@@ -64,27 +64,37 @@ export default function AlertsPage(): React.ReactElement {
   const [role, setRole] = React.useState<string>("operator");
   const [currentActorId, setCurrentActorId] = React.useState<string>("");
   const [currentActorName, setCurrentActorName] = React.useState<string>("");
-  const [summary, setSummary] = React.useState<{ total: number; unassigned: number; inProgress: number; breached: number }>({
+  const [summary, setSummary] = React.useState<{ total: number; unassigned: number; inProgress: number; breached: number; closedToday: number }>({
     total: 0,
     unassigned: 0,
     inProgress: 0,
     breached: 0,
+    closedToday: 0,
   });
 
   async function refresh(): Promise<void> {
     setBusy(true);
     setStatusText("正在同步 AlertV1 列表...");
     try {
-      const nextItems = await fetchAlertWorkboard({
+      const queryParams = {
         severity: severityFilter ? [severityFilter] : undefined,
         workflow_status: workflowStatusFilter || undefined,
         category: categoryFilter.trim() ? [categoryFilter.trim()] : undefined,
         assignee_actor_id: assigneeFilter.trim() || undefined,
         sla_breached: slaBreachedFilter === "" ? undefined : slaBreachedFilter === "true",
-      });
-      const nextSummary = summarizeAlertWorkboard(nextItems);
+      };
+      const [nextItems, nextSummary] = await Promise.all([
+        fetchAlertWorkboard(queryParams),
+        fetchAlertWorkboardSummary(queryParams),
+      ]);
       setItems(nextItems);
-      setSummary({ total: nextSummary.total, unassigned: nextSummary.unassigned, inProgress: nextSummary.in_progress, breached: nextSummary.sla_breached });
+      setSummary({
+        total: nextSummary.total,
+        unassigned: nextSummary.unassigned,
+        inProgress: nextSummary.in_progress,
+        breached: nextSummary.sla_breached,
+        closedToday: nextSummary.closed_today,
+      });
       setStatusText(`已加载 ${nextItems.length} 条告警。`);
     } catch (e: unknown) {
       setStatusText(`读取失败：${e instanceof Error ? e.message : String(e)}`);
@@ -164,6 +174,7 @@ export default function AlertsPage(): React.ReactElement {
         <div className="metricCard card"><div className="metricLabel">未分配</div><div className="metricValue">{summary.unassigned}</div><div className="metricHint">workflow OPEN</div></div>
         <div className="metricCard card"><div className="metricLabel">处理中</div><div className="metricValue">{summary.inProgress}</div><div className="metricHint">ASSIGNED/IN_PROGRESS/ACKED</div></div>
         <div className="metricCard card"><div className="metricLabel">已超时</div><div className="metricValue">{summary.breached}</div><div className="metricHint">sla_breached</div></div>
+        <div className="metricCard card"><div className="metricLabel">今日关闭</div><div className="metricValue">{summary.closedToday}</div><div className="metricHint">closed_today</div></div>
       </div>
 
       <section className="card sectionBlock">
