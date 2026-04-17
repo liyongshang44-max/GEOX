@@ -7,7 +7,7 @@ Scope
 
 Deliverables
 1) `scripts/EXECUTOR_AOSENSE_DEMO.ps1`
-- Implements: poll `GET /api/control/ao_sense/next_task` → write executor audit marker → write receipt referencing marker.
+- Implements: poll `GET /api/v1/sense/next-task` → write executor audit marker → write receipt referencing marker.
 - Uses retry to tolerate server warmup (`curl: (52)`).
 - `-DryRun` supported (fetch-only).
 
@@ -27,3 +27,5 @@ Frozen audit encoding (no marker contract change)
 Operational intent
 - This sprint establishes a minimal "pull-execute-receipt" loop suitable for human or device agents,
   without implying identity guarantees, authorization, or agronomy/value judgment.
+
+Legacy compatibility note: old /api/control/ao_sense/* endpoints remain compatibility-only and are deprecated.

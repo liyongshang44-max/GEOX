@@ -5,7 +5,7 @@ Scope
 - No new mutable tables; no updates/deletes; no scheduling semantics.
 
 New endpoints (Sprint 3)
-1) GET /api/control/ao_sense/tasks
+1) GET /api/v1/sense/tasks
 - Data source: facts where record_json.type == "ao_sense_task_v1"
 - Optional filters:
   - projectId
@@ -13,7 +13,7 @@ New endpoints (Sprint 3)
   - limit (default 20, max 200)
 - Response: { ok: true, items: [{ fact_id, occurred_at, source, record_json }] }
 
-2) GET /api/control/ao_sense/receipts
+2) GET /api/v1/sense/receipts
 - Data source: facts where record_json.type == "ao_sense_receipt_v1"
 - Optional filters:
   - task_id
@@ -25,3 +25,5 @@ Acceptance update
   - created task appears in GET /tasks projection
   - created receipt appears in GET /receipts projection filtered by task_id
 - Judge rerun remains non-regression only.
+
+Legacy compatibility note: old /api/control/ao_sense/* endpoints remain compatibility-only and are deprecated.

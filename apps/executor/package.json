@@ -2,7 +2,7 @@
   "name": "@geox/executor",
   "version": "0.1.0",
   "private": true,
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "once": "tsx src/run_once.ts",
     "dispatch-once": "tsx src/run_dispatch_once.ts",
@@ -12,11 +12,12 @@
     "receipt-uplink-once": "tsx src/run_mqtt_receipt_uplink_once.ts"
   },
   "dependencies": {
-    "mqtt": "^5.15.0"
+    "@geox/contracts": "workspace:*",
+    "pg": "^8.12.0"
   },
   "devDependencies": {
-    "@types/node": "^20.14.10",
     "tsx": "^4.21.0",
-    "typescript": "^5.4.5"
+    "typescript": "^5.4.5",
+    "@types/node": "^20"
   }
 }

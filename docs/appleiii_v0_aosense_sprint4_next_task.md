@@ -5,7 +5,7 @@ Sprint 4 goals
 - Preserve v0 contracts: AO_SENSE_TASK_v1 and AO_SENSE_RECEIPT_v1 remain unchanged.
 - Preserve append-only: no updates/deletes, no mutable state.
 
-1) New endpoint: GET /api/control/ao_sense/next_task
+1) New endpoint: GET /api/v1/sense/next-task
 
 Query params (required)
 - projectId
@@ -45,3 +45,5 @@ Receipt evidence linkage
 - scripts/ACCEPTANCE_APPLEIII_AOSENSE.ps1 MUST assert:
   1) next_task returns the created task before receipt exists.
   2) after receipt is created, next_task returns 204.
+
+Legacy compatibility note: old /api/control/ao_sense/* endpoints remain compatibility-only and are deprecated.
