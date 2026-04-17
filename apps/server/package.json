@@ -38,6 +38,7 @@
     "test:sensing:closed-loop": "node --import tsx --test src/domain/sensing/fertility_precheck_e2e.test.ts",
 
     "check:smoke:param-keys": "node scripts/check_smoke_parameter_keys.mjs",
+    "test:evidence-export:s3-smoke": "node scripts/evidence_export_s3_smoke.mjs",
 
     "test:p1:smoke": "node scripts/p1_skill_loop_minimal.mjs",
     "test:p1:acceptance-smoke": "node scripts/p1_skill_loop_acceptance_smoke.mjs",
