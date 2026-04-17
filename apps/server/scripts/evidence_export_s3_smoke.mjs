@@ -1,13 +1,55 @@
 #!/usr/bin/env node
 
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const BASE_URL = process.env.GEOX_BASE_URL || "http://127.0.0.1:3001";
-const AUTH_HEADER = process.env.GEOX_AUTH_HEADER || "Bearer x";
 const POLL_INTERVAL_MS = Number(process.env.GEOX_SMOKE_POLL_INTERVAL_MS || 2000);
 const TIMEOUT_MS = Number(process.env.GEOX_SMOKE_TIMEOUT_MS || 120000);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const TOKEN_CANDIDATE_FILES = [
+  path.join(REPO_ROOT, "config/auth/example_tokens.json"),
+  path.join(REPO_ROOT, "config/auth/ao_act_tokens_v0.json"),
+];
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
+
+function parseTokenFile(tokenFilePath) {
+  if (!fs.existsSync(tokenFilePath)) return null;
+  const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
+  const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
+  for (const row of tokens) {
+    const token = typeof row?.token === "string" ? row.token.trim() : "";
+    const scopes = Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [];
+    const revoked = Boolean(row?.revoked);
+    if (!token || revoked) continue;
+    if (token.includes("set-via-env-or-external-secret-file")) continue;
+    if (!scopes.includes("evidence_export.read") || !scopes.includes("evidence_export.write")) continue;
+    return token;
+  }
+  return null;
+}
+
+function resolveAoActToken() {
+  const fromEnv = String(process.env.GEOX_AO_ACT_TOKEN || "").trim();
+  if (fromEnv) return fromEnv;
+
+  for (const tokenFilePath of TOKEN_CANDIDATE_FILES) {
+    const candidate = parseTokenFile(tokenFilePath);
+    if (candidate) return candidate;
+  }
+  throw new Error(
+    `MISSING_GEOX_AO_ACT_TOKEN: set GEOX_AO_ACT_TOKEN or provide a valid token in one of ${TOKEN_CANDIDATE_FILES.join(", ")}`
+  );
+}
+
+const AO_ACT_TOKEN = resolveAoActToken();
+const AUTH_HEADER = process.env.GEOX_AUTH_HEADER || `Bearer ${AO_ACT_TOKEN}`;
 
 async function sleep(ms) {
   await new Promise((resolve) => setTimeout(resolve, ms));

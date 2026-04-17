@@ -51,12 +51,15 @@ importers:
 
   apps/executor:
     dependencies:
-      mqtt:
-        specifier: ^5.15.0
-        version: 5.15.0
+      '@geox/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      pg:
+        specifier: ^8.12.0
+        version: 8.18.0
     devDependencies:
       '@types/node':
-        specifier: ^20.14.10
+        specifier: ^20
         version: 20.19.33
       tsx:
         specifier: ^4.21.0
@@ -139,17 +142,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/contracts
       mqtt:
-        specifier: ^5.10.4
+        specifier: ^5
         version: 5.15.0
       pg:
         specifier: ^8.12.0
         version: 8.18.0
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
     devDependencies:
       '@types/node':
-        specifier: ^20.14.10
+        specifier: ^20
         version: 20.19.33
       tsx:
         specifier: ^4.21.0
