@@ -1,5 +1,5 @@
 -- P1 minimum closed-loop seed: append demo skill definitions into facts.
--- Target tenant/project/group must match config/auth/ao_act_tokens_v0.json default dev token scope.
+-- Target tenant/project/group must match config/auth/example_tokens.json default dev token scope.
 INSERT INTO facts (fact_id, occurred_at, source, record_json)
 VALUES
   (
