@@ -19,7 +19,7 @@
 ## A. 产品与交付边界层
 
 1) **SaaS 多租户“用户体系”不足**（高优先级）  
-当前 token 体系是静态文件驱动（SSOT JSON），仅支持 bearer + role/scopes；缺少真正的用户目录、登录会话、密码/IdP 对接、租户内用户管理 UI/API。  
+当前 token 体系是静态文件驱动（canonical reference JSON），仅支持 bearer + role/scopes；缺少真正的用户目录、登录会话、密码/IdP 对接、租户内用户管理 UI/API。  
 影响：很难作为标准 SaaS 商业交付（特别是客户要求 SSO/账号审计时）。
 
 2) **私有化“一键商用编排”未到位**（高优先级）  
@@ -50,7 +50,7 @@
 
 9) **Devices API 与蓝图存在路径偏差**（中优先级）  
 - 设备注册主入口为 `POST /api/v1/devices/:device_id`（而非蓝图建议的 `POST /api/v1/devices`）。
-- credential/revoke 主要挂在 `/api/devices/...` 兼容路径，`/api/v1` 命名不完整。
+- Compatibility note：历史上 credential/revoke 挂在 `/api/devices/...` 兼容路径；当前主入口应收敛到 `/api/v1/devices/*`。
 - 绑定接口为 `POST /api/v1/devices/:device_id/bind-field`，与蓝图建议 `.../bindings` 不一致。
 
 10) **Telemetry API 缺“field 维度自动聚合查询”**（中优先级）  

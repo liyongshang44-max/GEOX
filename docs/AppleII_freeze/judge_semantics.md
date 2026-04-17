@@ -230,7 +230,7 @@ Judge 是证据可用性裁判（Evidence Availability Judge）。
 
 三，必须能够被：
 SQL 验证
-SSOT 配置表达
+规范配置表达
 文档解释清楚
 
 否则不得进入 Judge Pipeline。

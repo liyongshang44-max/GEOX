@@ -2,14 +2,14 @@
 
 本文与 `scripts/judge_acceptance.ps1` 绑定，解释验收脚本中几个最容易产生争议的“口径”与其冻结来源。本文不引入任何 Judge 新语义，仅阐明脚本如何计算与断言。
 
-## 1. expected_interval_ms 的来源（SSOT）
+## 1. expected_interval_ms 的来源（canonical reference）
 
-`expected_interval_ms` 必须且只能来自单一真值源（SSOT）：
+`expected_interval_ms` 必须且只能来自单一真值源（canonical reference）：
 
 - 文件：`config/judge/default.json`
 - 路径：`time_coverage.expected_interval_ms`
 
-脚本只读取该路径；数据侧的 `p50_dt_ms` 仅用于观测与对比，不用于推导 SSOT。
+脚本只读取该路径；数据侧的 `p50_dt_ms` 仅用于观测与对比，不用于推导规范来源。
 
 ## 2. points_present 的定义（窗口内点数）
 
@@ -23,7 +23,7 @@
 
 ## 3. expected_points / min_points 的定义（与 expected_interval_ms 绑定）
 
-脚本将“窗口内应该看到多少个采样点”与 SSOT 绑定：
+脚本将“窗口内应该看到多少个采样点”与 canonical reference 绑定：
 
 - `expected_points = floor(hours * 3600000 / expected_interval_ms)`
 - `min_points = ceil(expected_points * 0.9)`（容忍 10% 边界裁剪/少量缺失）

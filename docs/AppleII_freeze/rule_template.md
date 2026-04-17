@@ -80,7 +80,7 @@ The SQL result MUST match the Judge in-memory computation.
 If SQL equivalence is not possible, the rule is invalid.
 
 ——————————————
-	7.	Configuration Compatibility (SSOT)
+	7.	Configuration Compatibility (Canonical Reference)
 
 All rule parameters MUST be expressible via config/judge/*.json.
 

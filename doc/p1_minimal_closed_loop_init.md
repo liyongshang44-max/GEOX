@@ -7,9 +7,9 @@
 - `tenant_id`: `tenantA`
 - `project_id`: `projectA`
 - `group_id`: `groupA`
-- 认证 token（示例）：`config/auth/ao_act_tokens_v0.json` 中 `tok_dev_ao_act_admin_v0`
+- 认证 token（示例）：`config/auth/example_tokens.json` 中的示例 admin 记录（或外部 secret 文件中的实际 admin token）
 
-> 说明：seed 数据与默认 dev token 的租户三元组保持一致，避免出现跨租户 404。
+> 说明：seed 数据与示例 admin token 的租户三元组保持一致，避免出现跨租户 404。
 
 ## 2) 初始化写入内容（skill_definition_v1）
 
@@ -34,7 +34,7 @@
 
 ```bash
 curl -sS 'http://127.0.0.1:8787/api/v1/skills?tenant_id=tenantA&project_id=projectA&group_id=groupA' \
-  -H 'Authorization: Bearer geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4' \
+  -H 'Authorization: Bearer ${GEOX_TOKEN}' \
   -H 'Accept: application/json'
 ```
 
