@@ -1,5 +1,5 @@
 const TOKEN_KEY = "geox_ao_act_token";
-const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4";
+const DEFAULT_AO_ACT_TOKEN = "";
 const TENANT_KEY = "geox_tenant_context";
 
 export type TenantContext = { tenant_id: string; project_id: string; group_id: string };

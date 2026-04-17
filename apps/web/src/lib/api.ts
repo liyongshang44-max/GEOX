@@ -20,7 +20,7 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_AO_ACT_TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4"; // Default dev token for local acceptance and demo flows.
+const DEFAULT_AO_ACT_TOKEN = ""; // Default dev token for local acceptance and demo flows.
 
 export function readStoredAoActToken(): string { // Read the AO-ACT token from shared browser storage with a safe dev fallback.
   try {
@@ -577,7 +577,7 @@ export async function registerDeviceOnboarding(token: string, body: { device_id:
     });
   } catch (e3: unknown) {
     if (!isNotFoundApiError(e3)) throw e3;
-    await requestJson<any>(`/api/devices`, {
+    await requestJson<any>(`/api/v1/devices`, {
       method: "POST",
       headers: authHeaders(token),
       body: JSON.stringify({

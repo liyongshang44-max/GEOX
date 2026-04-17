@@ -371,7 +371,7 @@ export async function fetchApprovalRequests(params: {
   limit?: number;
 }): Promise<ApprovalRequestItem[]> {
   const res = await apiRequest<{ ok?: boolean; items?: ApprovalRequestItem[] }>(
-    withQuery("/api/control/approval_request/v1/requests", params),
+    withQuery("/api/v1/approvals/requests", params),
   );
   return Array.isArray(res.items) ? res.items : [];
 }
@@ -389,14 +389,14 @@ export async function createApprovalRequest(body: {
   constraints: Record<string, unknown>;
   meta: Record<string, unknown>;
 }): Promise<{ ok?: boolean; request_id?: string; error?: string }> {
-  return apiRequest<{ ok?: boolean; request_id?: string; error?: string }>("/api/control/approval_request/v1/request", {
+  return apiRequest<{ ok?: boolean; request_id?: string; error?: string }>("/api/v1/approvals/request", {
     method: "POST",
     body: JSON.stringify(body),
   });
 }
 
 export async function approveApprovalRequest(requestId: string): Promise<{ ok?: boolean; act_task_id?: string; error?: string }> {
-  return apiRequest<{ ok?: boolean; act_task_id?: string; error?: string }>("/api/control/approval_request/v1/approve", {
+  return apiRequest<{ ok?: boolean; act_task_id?: string; error?: string }>("/api/v1/approvals/approve", {
     method: "POST",
     body: JSON.stringify({ request_id: requestId }),
   });
