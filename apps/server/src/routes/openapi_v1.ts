@@ -3,7 +3,7 @@
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
 
 function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
-  return {
+  const spec = {
     openapi: "3.0.3",
     info: {
       title: "GEOX Commercial API",
@@ -41,20 +41,6 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             device_mode: { type: "string", enum: ["real", "simulator"], description: "Device onboarding mode contract." },
             device_template: { type: "string", description: "Unified device template field (preferred)." },
             template_code: { type: "string", description: "Legacy alias of device_template; kept for compatibility." }
-          }
-        },
-        DeviceCredentialIssueResponse: {
-          type: "object",
-          properties: {
-            ok: { type: "boolean" },
-            tenant_id: { type: "string" },
-            device_id: { type: "string" },
-            credential_id: { type: "string" },
-            credential_secret: {
-              type: "string",
-              description: "One-time secret returned only at issuance time."
-            },
-            credential_hash: { type: "string" }
           }
         },
         HeartbeatRequest: {
@@ -841,114 +827,6 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
-      "/api/devices": {
-        post: {
-          tags: ["devices"],
-          summary: "Register a device",
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: { '$ref': "#/components/schemas/DeviceRegistrationRequest" }
-              }
-            }
-          },
-          responses: {
-            "200": { description: "Device registered successfully" }
-          }
-        }
-      },
-      "/api/devices/{device_id}/credentials": {
-        post: {
-          tags: ["devices"],
-          summary: "Issue a device credential",
-          parameters: [
-            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          responses: {
-            "200": {
-              description: "Credential issued successfully",
-              content: {
-                "application/json": {
-                  schema: { '$ref': "#/components/schemas/DeviceCredentialIssueResponse" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/devices/{device_id}/credentials": {
-        post: {
-          tags: ["devices"],
-          summary: "Issue a device credential via v1 alias",
-          parameters: [
-            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          responses: {
-            "200": {
-              description: "Credential issued successfully",
-              content: {
-                "application/json": {
-                  schema: { '$ref': "#/components/schemas/DeviceCredentialIssueResponse" }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/devices/{device_id}/heartbeat": {
-        post: {
-          tags: ["telemetry"],
-          summary: "Write a device heartbeat",
-          parameters: [
-            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          requestBody: {
-            required: false,
-            content: {
-              "application/json": {
-                schema: { '$ref': "#/components/schemas/HeartbeatRequest" }
-              }
-            }
-          },
-          responses: {
-            "200": { description: "Heartbeat accepted" }
-          }
-        }
-      },
-      "/api/v1/devices": {
-        get: {
-          tags: ["devices"],
-          summary: "Read device list",
-          responses: {
-            "200": { description: "Device list returned successfully" }
-          }
-        }
-      },
-      "/api/v1/devices/{device_id}": {
-        get: {
-          tags: ["devices"],
-          summary: "Read device detail",
-          parameters: [
-            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          responses: {
-            "200": { description: "Device detail returned successfully" }
-          }
-        }
-      },
-      "/api/v1/devices/{device_id}/console": {
-        get: {
-          tags: ["devices"],
-          summary: "Read device integration and execution console",
-          parameters: [
-            { name: "device_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          responses: {
-            "200": { description: "Device console returned successfully" }
-          }
-        }
-      },
       "/api/v1/devices/{id}/simulator/start": {
         post: {
           tags: ["devices"],
@@ -1692,15 +1570,6 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
-      "/api/v1/operations/console": {
-        get: {
-          tags: ["operations"],
-          summary: "Read operations workbench aggregate",
-          responses: {
-            "200": { description: "Operations workbench returned successfully" }
-          }
-        }
-      },
       "/api/v1/reports/operation/{operation_id}": {
         get: {
           tags: ["operations"],
@@ -1759,59 +1628,6 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
-      "/api/v1/approval-requests": {
-        post: {
-          tags: ["operations"],
-          summary: "Create approval request",
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: { type: "object" }
-              }
-            }
-          },
-          responses: {
-            "200": { description: "Approval request created successfully" }
-          }
-        },
-        get: {
-          tags: ["operations"],
-          summary: "Read approval request list",
-          responses: {
-            "200": { description: "Approval request list returned successfully" }
-          }
-        }
-      },
-      "/api/v1/approval-requests/{request_id}/approve": {
-        post: {
-          tags: ["operations"],
-          summary: "Approve or reject an approval request",
-          parameters: [
-            { name: "request_id", in: "path", required: true, schema: { type: "string" } }
-          ],
-          requestBody: {
-            required: false,
-            content: {
-              "application/json": {
-                schema: { type: "object" }
-              }
-            }
-          },
-          responses: {
-            "200": { description: "Approval request decision recorded successfully" }
-          }
-        }
-      },
-      "/api/v1/control/approval-requests": {
-        post: {
-          tags: ["operations"],
-          summary: "Create an approval request via legacy control path",
-          responses: {
-            "200": { description: "Approval request created successfully" }
-          }
-        }
-      },
       "/api/v1/ao-act/tasks/{act_task_id}/retry": {
         post: {
           tags: ["operations"],
@@ -1825,8 +1641,855 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         }
       }
     }
-  }; // Return the OpenAPI object.
+  };
+  return applyP13OpenApiAlignment(spec);
 } // End helper.
+
+function ref(name: string) {
+  return { "$ref": `#/components/schemas/${name}` };
+}
+
+function jsonResponse(schema: any, description = "Success") {
+  return {
+    description,
+    content: {
+      "application/json": {
+        schema,
+      },
+    },
+  };
+}
+
+function pathParam(name: string, description?: string) {
+  return { name, in: "path", required: true, schema: { type: "string" }, ...(description ? { description } : {}) };
+}
+
+function queryParam(name: string, schema: any, required = false) {
+  return { name, in: "query", required, schema };
+}
+
+function applyP13OpenApiAlignment(spec: any) {
+  const components = spec.components ?? (spec.components = {});
+  const schemas = components.schemas ?? (components.schemas = {});
+  Object.assign(schemas, {
+    GenericOkResponse: {
+      type: "object",
+      properties: { ok: { type: "boolean" } },
+      additionalProperties: true,
+    },
+    AuthMeResponse: {
+      type: "object",
+      required: ["ok", "actor_id", "token_id", "tenant_id", "project_id", "group_id", "scopes"],
+      properties: {
+        ok: { type: "boolean" },
+        actor_id: { type: "string" },
+        token_id: { type: "string" },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        role: { type: ["string", "null"] },
+        scopes: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+    AuthLoginRequest: {
+      type: "object",
+      required: ["token"],
+      properties: { token: { type: "string" } },
+      additionalProperties: false,
+    },
+    AuthLoginResponse: {
+      type: "object",
+      required: ["ok", "token", "provider", "actor_id", "token_id", "tenant_id", "project_id", "group_id", "role", "scopes"],
+      properties: {
+        ok: { type: "boolean" },
+        token: { type: "string" },
+        provider: { type: "string" },
+        actor_id: { type: "string" },
+        token_id: { type: "string" },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        role: { type: "string" },
+        scopes: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+    ProvidersResponse: {
+      type: "object",
+      properties: {
+        ok: { type: "boolean" },
+        mode: { type: "string" },
+        idp_login_url: { type: ["string", "null"] },
+        idp_logout_url: { type: ["string", "null"] },
+        login_path: { type: "string" },
+        logout_path: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+  });
+
+
+  delete spec.paths["/api/v1/operations/console"];
+  delete spec.paths["/api/v1/approval-requests"];
+  delete spec.paths["/api/v1/approval-requests/{request_id}/approve"];
+
+  Object.assign(schemas, {
+    JsonPrimitive: { oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    PrimitiveRecord: {
+      type: "object",
+      additionalProperties: { oneOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+    },
+    StringArray: { type: "array", items: { type: "string" } },
+    TenantTriple: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    HumanIssuer: {
+      type: "object",
+      required: ["kind", "id", "namespace"],
+      properties: {
+        kind: { type: "string", enum: ["human"] },
+        id: { type: "string" },
+        namespace: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    TargetRef: {
+      type: "object",
+      required: ["kind", "ref"],
+      properties: {
+        kind: { type: "string", enum: ["field", "area", "path", "device"] },
+        ref: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    TimeWindow: {
+      type: "object",
+      required: ["start_ts", "end_ts"],
+      properties: {
+        start_ts: { type: "number" },
+        end_ts: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+    ParameterSchemaKey: {
+      type: "object",
+      required: ["name", "type"],
+      properties: {
+        name: { type: "string" },
+        type: { type: "string", enum: ["number", "boolean", "enum"] },
+        min: { type: "number" },
+        max: { type: "number" },
+        enum: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+    ParameterSchema: {
+      type: "object",
+      required: ["keys"],
+      properties: { keys: { type: "array", minItems: 1, items: ref("ParameterSchemaKey") } },
+      additionalProperties: false,
+    },
+    DeviceRef: {
+      type: "object",
+      required: ["kind", "ref"],
+      properties: {
+        kind: { type: "string", enum: ["device_ref_fact"] },
+        ref: { type: "string" },
+        note: { type: ["string", "null"] },
+      },
+      additionalProperties: false,
+    },
+    EvidenceLogRef: {
+      type: "object",
+      required: ["kind", "ref"],
+      properties: { kind: { type: "string" }, ref: { type: "string" } },
+      additionalProperties: false,
+    },
+    ExecutionActor: {
+      type: "object",
+      required: ["kind", "id", "namespace"],
+      properties: {
+        kind: { type: "string", enum: ["human", "script", "device"] },
+        id: { type: "string" },
+        namespace: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    ExecutionCoverage: {
+      type: "object",
+      required: ["kind", "ref"],
+      properties: {
+        kind: { type: "string", enum: ["area", "path", "field"] },
+        ref: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    ResourceUsage: {
+      type: "object",
+      required: ["fuel_l", "electric_kwh", "water_l", "chemical_ml"],
+      properties: {
+        fuel_l: { type: ["number", "null"] },
+        electric_kwh: { type: ["number", "null"] },
+        water_l: { type: ["number", "null"] },
+        chemical_ml: { type: ["number", "null"] },
+      },
+      additionalProperties: false,
+    },
+    ConstraintCheck: {
+      type: "object",
+      required: ["violated", "violations"],
+      properties: { violated: { type: "boolean" }, violations: ref("StringArray") },
+      additionalProperties: false,
+    },
+    EvidenceTrace: {
+      type: "object",
+      required: ["expected_requirements", "provided_kinds", "missing_requirements"],
+      properties: {
+        expected_requirements: ref("StringArray"),
+        provided_kinds: ref("StringArray"),
+        missing_requirements: ref("StringArray"),
+      },
+      additionalProperties: false,
+    },
+    ActionTaskRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "approval_request_id", "issuer", "action_type", "target", "time_window", "parameter_schema", "parameters", "constraints"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        approval_request_id: { type: "string" },
+        program_id: { type: "string" },
+        field_id: { type: "string" },
+        season_id: { type: "string" },
+        issuer: ref("HumanIssuer"),
+        action_type: { type: "string" },
+        target: ref("TargetRef"),
+        time_window: ref("TimeWindow"),
+        parameter_schema: ref("ParameterSchema"),
+        parameters: ref("PrimitiveRecord"),
+        constraints: ref("PrimitiveRecord"),
+        device_refs: { type: "array", items: ref("DeviceRef") },
+        meta: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    ActionTaskResponse: {
+      type: "object",
+      required: ["ok", "fact_id", "act_task_id", "precheck"],
+      properties: {
+        ok: { type: "boolean" },
+        fact_id: { type: "string" },
+        act_task_id: { type: "string" },
+        precheck: {
+          type: "object",
+          required: ["action_hints", "reason_codes", "reason_details", "source"],
+          properties: {
+            action_hints: ref("StringArray"),
+            reason_codes: ref("StringArray"),
+            reason_details: { type: "array", items: { type: "object", additionalProperties: true } },
+            source: { type: "string" },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+    ActionReceiptRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "act_task_id", "executor_id", "execution_time", "execution_coverage", "resource_usage", "logs_refs", "constraint_check", "observed_parameters"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        act_task_id: { type: "string" },
+        executor_id: ref("ExecutionActor"),
+        execution_time: ref("TimeWindow"),
+        execution_coverage: ref("ExecutionCoverage"),
+        resource_usage: ref("ResourceUsage"),
+        logs_refs: { type: "array", minItems: 1, items: ref("EvidenceLogRef") },
+        status: { type: "string", enum: ["executed", "not_executed"] },
+        constraint_check: ref("ConstraintCheck"),
+        observed_parameters: ref("PrimitiveRecord"),
+        device_refs: { type: "array", items: ref("DeviceRef") },
+        meta: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    ActionReceiptResponse: {
+      type: "object",
+      required: ["ok", "fact_id", "evidence_trace"],
+      properties: {
+        ok: { type: "boolean" },
+        fact_id: { type: "string" },
+        terminal_deduped: { type: "boolean" },
+        operation_plan_transition_fact_id: { type: "string" },
+        operation_plan_fact_id: { type: "string" },
+        evidence_trace: ref("EvidenceTrace"),
+      },
+      additionalProperties: false,
+    },
+    ActionExecutePlan: {
+      type: "object",
+      required: ["action_type", "target", "parameters", "execution_mode", "safe_guard", "failure_strategy", "idempotency_key"],
+      properties: {
+        action_type: { type: "string" },
+        target: ref("TargetRef"),
+        parameters: { type: "object", minProperties: 1, additionalProperties: true },
+        execution_mode: { type: "string", enum: ["AUTO", "MANUAL"] },
+        safe_guard: {
+          type: "object",
+          required: ["requires_approval"],
+          properties: { requires_approval: { type: "boolean" } },
+          additionalProperties: false,
+        },
+        failure_strategy: {
+          type: "object",
+          required: ["retryable", "max_retries"],
+          properties: {
+            retryable: { type: "boolean" },
+            max_retries: { type: "integer", minimum: 0, maximum: 5 },
+            fallback_action: { type: "string" },
+          },
+          additionalProperties: false,
+        },
+        device_capability_check: {
+          type: "object",
+          properties: { supported: { type: "boolean" }, reason: { type: "string" } },
+          required: ["supported"],
+          additionalProperties: false,
+        },
+        time_window: {
+          type: "object",
+          properties: { start_ts: { type: "number" }, end_ts: { type: "number" } },
+          additionalProperties: false,
+        },
+        idempotency_key: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    ActionExecuteRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "operation_id", "execution_plan"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        operation_id: { type: "string" },
+        execution_plan: ref("ActionExecutePlan"),
+      },
+      additionalProperties: false,
+    },
+    ActionExecuteResponse: {
+      type: "object",
+      required: ["ok"],
+      properties: {
+        ok: { type: "boolean" },
+        act_task_id: { type: "string" },
+        idempotent: { type: "boolean" },
+        expected_evidence_requirements: ref("StringArray"),
+        capability_resolution: { type: ["object", "null"], additionalProperties: true },
+        fallback_state: { type: "object", additionalProperties: true },
+        fallback_action: { type: "string" },
+        error: { type: "string" },
+        detail: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    OperationManualRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "field_id", "action_type", "parameters", "issuer", "command_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        field_id: { type: "string" },
+        device_id: { type: "string" },
+        action_type: { type: "string" },
+        adapter_type: { type: "string" },
+        parameters: ref("PrimitiveRecord"),
+        issuer: ref("HumanIssuer"),
+        command_id: { type: "string" },
+        meta: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    OperationManualResponse: {
+      type: "object",
+      required: ["ok", "operation_id", "operation_plan_id", "command_id"],
+      properties: {
+        ok: { type: "boolean" },
+        operation_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        command_id: { type: "string" },
+        reused: { type: "boolean" },
+      },
+      additionalProperties: false,
+    },
+    ApprovalRequestCreateBody: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "issuer", "action_type", "target", "time_window", "parameter_schema", "parameters", "constraints"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        field_id: { type: "string" },
+        issuer: ref("HumanIssuer"),
+        action_type: { type: "string" },
+        target: { oneOf: [ref("TargetRef"), { type: "string" }] },
+        time_window: ref("TimeWindow"),
+        parameter_schema: { type: "object", additionalProperties: true },
+        parameters: ref("PrimitiveRecord"),
+        constraints: { type: "object", additionalProperties: true },
+        meta: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    ApprovalRequestCreateResponse: {
+      type: "object",
+      required: ["ok", "fact_id", "request_id"],
+      properties: { ok: { type: "boolean" }, fact_id: { type: "string" }, request_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    ApprovalRequestListItem: {
+      type: "object",
+      required: ["request_id"],
+      properties: {
+        request_id: { type: "string" }, tenant_id: { type: ["string", "null"] }, project_id: { type: ["string", "null"] }, group_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, status: { type: ["string", "null"] },
+        target: { type: "object", properties: { device_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] } }, additionalProperties: false },
+        parameters: { type: "object", properties: { amount_mm: { type: ["number", "null"] }, duration_sec: { type: ["number", "null"] } }, additionalProperties: false },
+        constraints: { type: "object", properties: { requires_online_device: { type: ["boolean", "null"] }, requires_recent_telemetry: { type: ["boolean", "null"] } }, additionalProperties: false },
+        created_at_ts: { type: ["number", "null"] },
+      },
+      additionalProperties: false,
+    },
+
+    ApprovalRequestListResponse: {
+      type: "object",
+      required: ["ok", "items"],
+      properties: { ok: { type: "boolean" }, items: { type: "array", items: ref("ApprovalRequestListItem") } },
+      additionalProperties: false,
+    },
+    ApprovalApproveBody: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "request_id", "approved"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        request_id: { type: "string" },
+        approved: { type: "boolean" },
+        reason: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    ApprovalApproveResponse: {
+      type: "object",
+      required: ["ok", "request_id", "decision_id", "decision_fact_id"],
+      properties: {
+        ok: { type: "boolean" },
+        request_id: { type: "string" },
+        decision_id: { type: "string" },
+        act_task_id: { type: "string" },
+        ao_act_fact_id: { type: "string" },
+        decision_fact_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    RecommendationGenerateBody: {
+      type: "object",
+      required: ["device_id", "field_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        device_id: { type: "string" },
+        field_id: { type: "string" },
+        crop_code: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    RecommendationGenerateResponse: { type: "object", required: ["ok", "recommendations", "fact_ids"], properties: { ok: { type: "boolean" }, recommendations: { type: "array", items: { type: "object", properties: { recommendation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, recommendation_type: { type: ["string", "null"] }, title: { type: ["string", "null"] } }, additionalProperties: false } }, fact_ids: { type: "array", items: { type: "string" } } }, additionalProperties: false },
+
+    RecommendationSubmitApprovalBody: {
+      type: "object",
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    RecommendationSubmitApprovalResponse: {
+      type: "object",
+      required: ["ok", "recommendation_id", "approval_request_id", "approval_fact_id", "mapping_fact_id", "operation_plan_id", "operation_plan_fact_id"],
+      properties: {
+        ok: { type: "boolean" },
+        recommendation_id: { type: "string" },
+        approval_request_id: { type: "string" },
+        approval_fact_id: { type: "string" },
+        mapping_fact_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        operation_plan_fact_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    DeviceUpsertRequest: {
+      type: "object",
+      required: ["device_template"],
+      properties: {
+        device_id: { type: "string" },
+        display_name: { type: "string" },
+        device_mode: { type: "string", enum: ["real", "simulator"] },
+        device_template: { type: "string" },
+        template_code: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    DeviceSkillBindingSummary: {
+      type: "object",
+      required: ["skill_id", "version", "category", "status", "bind_target", "trigger_stage"],
+      properties: {
+        skill_id: { type: "string" },
+        version: { type: "string" },
+        category: { type: "string" },
+        status: { type: "string" },
+        bind_target: { type: "string" },
+        trigger_stage: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+
+    DeviceUpsertResponse: {
+      type: "object",
+      required: ["ok", "tenant_id", "device_id", "device_mode", "device_template", "template_code", "fact_id", "skill_bindings"],
+      properties: {
+        ok: { type: "boolean" },
+        tenant_id: { type: "string" },
+        device_id: { type: "string" },
+        display_name: { type: ["string", "null"] },
+        device_mode: { type: "string" },
+        device_template: { type: "string" },
+        template_code: { type: "string" },
+        fact_id: { type: "string" },
+        skill_bindings: { type: "array", items: ref("DeviceSkillBindingSummary") },
+      },
+      additionalProperties: false,
+    },
+    DevicesListItem: {
+      type: "object",
+      required: ["device_id", "display_name", "device_mode", "device_template", "last_credential_id", "last_credential_status", "telemetry_status", "last_telemetry_ts_ms"],
+      properties: {
+        device_id: { type: "string" },
+        display_name: { type: ["string", "null"] },
+        device_mode: { type: "string" },
+        device_template: { type: ["string", "null"] },
+        last_credential_id: { type: ["string", "null"] },
+        last_credential_status: { type: ["string", "null"] },
+        telemetry_status: { type: ["string", "null"] },
+        last_telemetry_ts_ms: { type: ["number", "null"] },
+        field_id: { type: ["string", "null"] },
+        field_name: { type: ["string", "null"] },
+        bound_ts_ms: { type: ["number", "null"] },
+        last_heartbeat_ts_ms: { type: ["number", "null"] },
+        battery_percent: { type: ["number", "null"] },
+        rssi_dbm: { type: ["number", "null"] },
+        fw_ver: { type: ["string", "null"] },
+        binding_status: { type: ["string", "null"] },
+        missing_required_observation_skills: { type: "array", items: { type: "string" } },
+        connection_status: { type: ["string", "null"] },
+      },
+      additionalProperties: false,
+    },
+
+    DevicesListResponse: {
+      type: "object",
+      required: ["ok", "devices"],
+      properties: { ok: { type: "boolean" }, devices: { type: "array", items: ref("DevicesListItem") } },
+      additionalProperties: false,
+    },
+    DeviceDetailResponse: {
+      type: "object",
+      required: ["ok", "item"],
+      properties: {
+        ok: { type: "boolean" },
+        item: {
+          type: ["object", "null"],
+          properties: {
+            device_id: { type: "string" }, tenant_id: { type: ["string", "null"] }, display_name: { type: ["string", "null"] }, device_mode: { type: ["string", "null"] }, created_ts_ms: { type: ["number", "null"] },
+            last_credential_id: { type: ["string", "null"] }, last_credential_status: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, field_name: { type: ["string", "null"] },
+            last_telemetry_ts_ms: { type: ["number", "null"] }, last_heartbeat_ts_ms: { type: ["number", "null"] }, battery_percent: { type: ["number", "null"] }, rssi_dbm: { type: ["number", "null"] }, fw_ver: { type: ["string", "null"] },
+            connection_status: { type: ["string", "null"] }, binding_status: { type: ["string", "null"] }, missing_required_observation_skills: { type: "array", items: { type: "string" } },
+            access_info: { type: "object", properties: { device_id: { type: "string" }, tenant_id: { type: "string" }, mqtt_client_id: { type: "string" }, telemetry_topic: { type: "string" }, heartbeat_topic: { type: "string" }, downlink_topic: { type: "string" }, receipt_topic: { type: "string" }, cmd_topic: { type: "string" }, ack_topic: { type: "string" }, payload_contract_version: { type: "string" }, auth_mode: { type: "string" }, secret_warning: { type: "string" } }, additionalProperties: false },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+
+    DeviceCredentialIssueRequest: {
+      type: "object",
+      properties: { credential_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    DeviceCredentialIssueResponse: {
+      type: "object",
+      required: ["ok", "tenant_id", "device_id", "credential_id", "credential_secret", "credential_hash", "fact_id", "access_info"],
+      properties: {
+        ok: { type: "boolean" }, tenant_id: { type: "string" }, device_id: { type: "string" }, credential_id: { type: "string" }, credential_secret: { type: "string" }, credential_hash: { type: "string" }, fact_id: { type: "string" },
+        access_info: { type: "object", properties: { device_id: { type: "string" }, tenant_id: { type: "string" }, mqtt_client_id: { type: "string" }, telemetry_topic: { type: "string" }, heartbeat_topic: { type: "string" }, downlink_topic: { type: "string" }, receipt_topic: { type: "string" }, cmd_topic: { type: "string" }, ack_topic: { type: "string" }, payload_contract_version: { type: "string" }, auth_mode: { type: "string" }, secret_warning: { type: "string" } }, additionalProperties: false }
+      },
+      additionalProperties: false,
+    },
+
+    DeviceCredentialRevokeRequest: { type: "object", properties: {}, additionalProperties: false },
+    DeviceCredentialRevokeResponse: {
+      type: "object",
+      required: ["ok", "tenant_id", "device_id", "credential_id", "fact_id", "revoked_ts_ms"],
+      properties: { ok: { type: "boolean" }, tenant_id: { type: "string" }, device_id: { type: "string" }, credential_id: { type: "string" }, fact_id: { type: "string" }, revoked_ts_ms: { type: "number" } },
+      additionalProperties: false,
+    },
+    DeviceCapabilitiesRequest: {
+      type: "object",
+      required: ["capabilities"],
+      properties: { capabilities: { type: "array", items: { type: "string", enum: ["irrigation", "valve"] } } },
+      additionalProperties: false,
+    },
+    DeviceCapabilitiesResponse: {
+      type: "object",
+      required: ["ok", "tenant_id", "device_id", "capabilities", "updated_ts_ms"],
+      properties: { ok: { type: "boolean" }, tenant_id: { type: "string" }, device_id: { type: "string" }, capabilities: { type: "array", items: { type: "string" } }, updated_ts_ms: { type: "number" }, fact_id: { type: "string" } },
+      additionalProperties: false,
+    },
+    DeviceSkillBindingsReconcileRequest: { type: "object", properties: {}, additionalProperties: false },
+    DeviceSkillBindingsReconcileResponse: {
+      type: "object",
+      required: ["ok", "device_id", "binding_status", "missing_required_observation_skills"],
+      properties: { ok: { type: "boolean" }, device_id: { type: "string" }, binding_status: { type: ["string", "null"] }, missing_required_observation_skills: { type: "array", items: { type: "string" } }, fact_id: { type: ["string", "null"] } },
+      additionalProperties: false,
+    },
+
+    DeviceOnboardingStatusResponse: {
+      type: "object",
+      required: ["ok", "tenant_id", "device_id", "display_name", "device_mode", "registration_completed", "credential_ready", "first_telemetry_uploaded", "created_ts_ms", "last_credential_id", "last_credential_status", "last_heartbeat_ts_ms", "last_telemetry_ts_ms", "access_info"],
+      properties: {
+        ok: { type: "boolean" }, tenant_id: { type: "string" }, device_id: { type: "string" }, display_name: { type: ["string", "null"] }, device_mode: { type: "string" }, registration_completed: { type: "boolean" }, credential_ready: { type: "boolean" }, first_telemetry_uploaded: { type: "boolean" }, created_ts_ms: { type: ["number", "null"] }, last_credential_id: { type: ["string", "null"] }, last_credential_status: { type: ["string", "null"] }, last_heartbeat_ts_ms: { type: ["number", "null"] }, last_telemetry_ts_ms: { type: ["number", "null"] }, access_info: { type: "object", additionalProperties: true }
+      },
+      additionalProperties: false,
+    },
+    SenseSubjectRef: {
+      type: "object",
+      required: ["projectId", "groupId"],
+      properties: { projectId: { type: "string" }, groupId: { type: "string" } },
+      additionalProperties: false,
+    },
+    SenseWindow: {
+      type: "object",
+      required: ["startTs", "endTs"],
+      properties: { startTs: { type: "integer" }, endTs: { type: "integer" } },
+      additionalProperties: false,
+    },
+    SenseTaskRequest: {
+      type: "object",
+      required: ["subjectRef", "window", "priority", "supporting_problem_state_id", "supporting_determinism_hash", "supporting_effective_config_hash"],
+      properties: {
+        subjectRef: ref("SenseSubjectRef"),
+        window: ref("SenseWindow"),
+        sense_kind: { type: "string" },
+        sense_focus: { type: "string" },
+        kind: { type: "string" },
+        focus: { type: "string" },
+        priority: { type: "string" },
+        supporting_problem_state_id: { type: "string" },
+        supporting_determinism_hash: { type: "string" },
+        supporting_effective_config_hash: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    SenseTaskResponse: { type: "object", required: ["ok", "task_id", "fact_id"], properties: { ok: { type: "boolean" }, task_id: { type: "string" }, fact_id: { type: "string" } }, additionalProperties: false },
+    SenseEvidenceRef: { type: "object", required: ["kind", "ref_id"], properties: { kind: { type: "string", enum: ["raw_sample_v1", "marker_v1", "import_run_v1", "fact_id"] }, ref_id: { type: "string" } }, additionalProperties: false },
+    SenseReceiptRequest: {
+      type: "object",
+      required: ["task_id", "executed_at_ts", "result", "evidence_refs"],
+      properties: {
+        task_id: { type: "string" },
+        executed_at_ts: { type: "integer" },
+        result: { type: "string", enum: ["success", "fail", "partial"] },
+        evidence_refs: { type: "array", minItems: 1, items: ref("SenseEvidenceRef") },
+      },
+      additionalProperties: false,
+    },
+    SenseReceiptResponse: { type: "object", required: ["ok", "receipt_id", "fact_id"], properties: { ok: { type: "boolean" }, receipt_id: { type: "string" }, fact_id: { type: "string" } }, additionalProperties: false },
+    SenseTasksResponse: { type: "object", required: ["ok", "items"], properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { task_id: { type: "string" }, subject_ref: ref("SenseSubjectRef"), window: ref("SenseWindow"), sense_kind: { type: ["string", "null"] }, sense_focus: { type: ["string", "null"] }, priority: { type: ["string", "null"] }, status: { type: ["string", "null"] }, occurred_at: { type: ["string", "null"] } }, additionalProperties: false } } }, additionalProperties: false },
+
+    SenseReceiptsResponse: { type: "object", required: ["ok", "items"], properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { receipt_id: { type: "string" }, task_id: { type: ["string", "null"] }, result: { type: ["string", "null"] }, executed_at_ts: { type: ["integer", "null"] }, occurred_at: { type: ["string", "null"] } }, additionalProperties: false } } }, additionalProperties: false },
+
+    SenseNextTaskResponse: { type: "object", required: ["ok", "item"], properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], properties: { task_id: { type: "string" }, subject_ref: ref("SenseSubjectRef"), window: ref("SenseWindow"), sense_kind: { type: ["string", "null"] }, sense_focus: { type: ["string", "null"] }, priority: { type: ["string", "null"] }, status: { type: ["string", "null"] }, occurred_at: { type: ["string", "null"] } }, additionalProperties: false } }, additionalProperties: false },
+
+    SkillBindingCreateRequest: {
+      type: "object",
+      required: ["skill_id", "version", "category", "bind_target"],
+      properties: {
+        tenant_id: { type: "string" }, project_id: { type: "string" }, group_id: { type: "string" }, binding_id: { type: "string" }, skill_id: { type: "string" }, version: { type: "string" }, category: { type: "string" }, enabled: { type: "boolean" }, scope_type: { type: "string" }, trigger_stage: { type: "string" }, bind_target: { type: "string" }, rollout_mode: { type: "string" }, crop_code: { type: "string" }, device_type: { type: "string" }, priority: { type: "number" }, config_patch: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    SkillBindingWriteResponse: {
+      type: "object",
+      required: ["ok", "fact_id", "occurred_at", "binding", "api_contract_version"],
+      properties: {
+        ok: { type: "boolean" }, fact_id: { type: "string" }, occurred_at: { type: "string" }, api_contract_version: { type: "string" },
+        binding: { type: "object", properties: { binding_id: { type: ["string", "null"] }, skill_id: { type: "string" }, version: { type: "string" }, category: { type: "string" }, status: { type: ["string", "null"] }, scope_type: { type: ["string", "null"] }, rollout_mode: { type: ["string", "null"] }, trigger_stage: { type: ["string", "null"] }, bind_target: { type: "string" }, crop_code: { type: ["string", "null"] }, device_type: { type: ["string", "null"] }, priority: { type: ["number", "null"] } }, additionalProperties: false }
+      },
+      additionalProperties: false,
+    },
+
+    SkillBindingOverrideRequest: {
+      type: "object",
+      required: ["skill_id", "version", "category", "bind_target"],
+      properties: {
+        tenant_id: { type: "string" }, project_id: { type: "string" }, group_id: { type: "string" }, binding_id: { type: "string" }, skill_id: { type: "string" }, version: { type: "string" }, category: { type: "string" }, enabled: { type: "boolean" }, scope_type: { type: "string" }, trigger_stage: { type: "string" }, bind_target: { type: "string" }, rollout_mode: { type: "string" }, crop_code: { type: "string" }, device_type: { type: "string" }, priority: { type: "number" }, config_patch: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    SkillsListResponse: {
+      type: "object",
+      required: ["ok", "page", "page_size", "total", "items", "api_contract_version"],
+      properties: { ok: { type: "boolean" }, page: { type: "integer" }, page_size: { type: "integer" }, total: { type: "integer" }, api_contract_version: { type: "string" }, items: { type: "array", items: { type: "object", properties: { skill_id: { type: "string" }, version: { type: "string" }, display_name: { type: ["string", "null"] }, category: { type: ["string", "null"] }, legacy_category: { type: ["string", "null"] }, skill_type: { type: ["string", "null"] }, status: { type: ["string", "null"] }, trigger_stage: { type: ["string", "null"] }, scope_type: { type: ["string", "null"] }, rollout_mode: { type: ["string", "null"] }, crop_code: { type: ["string", "null"] }, device_type: { type: ["string", "null"] }, binding_status: { type: ["string", "null"] } }, additionalProperties: false } } },
+      additionalProperties: false,
+    },
+
+    SkillDetailResponse: { type: "object", properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], additionalProperties: true }, api_contract_version: { type: "string" } }, required: ["ok", "item", "api_contract_version"], additionalProperties: false },
+    SkillBindingsResponse: { type: "object", properties: { ok: { type: "boolean" }, items_effective: { type: "array", items: { type: "object", properties: { binding_id: { type: ["string", "null"] }, skill_id: { type: "string" }, version: { type: "string" }, category: { type: ["string", "null"] }, status: { type: ["string", "null"] }, scope_type: { type: ["string", "null"] }, rollout_mode: { type: ["string", "null"] }, trigger_stage: { type: ["string", "null"] }, bind_target: { type: ["string", "null"] }, crop_code: { type: ["string", "null"] }, device_type: { type: ["string", "null"] }, priority: { type: ["number", "null"] } }, additionalProperties: false } }, items_history: { type: "array", items: { type: "object", properties: { binding_id: { type: ["string", "null"] }, skill_id: { type: "string" }, version: { type: "string" }, category: { type: ["string", "null"] }, status: { type: ["string", "null"] }, occurred_at: { type: ["string", "null"] }, bind_target: { type: ["string", "null"] } }, additionalProperties: false } }, overrides: { type: "array", items: { type: "object", properties: { binding_id: { type: ["string", "null"] }, skill_id: { type: "string" }, version: { type: "string" }, status: { type: ["string", "null"] }, bind_target: { type: ["string", "null"] } }, additionalProperties: false } }, api_contract_version: { type: "string" } }, required: ["ok", "items_effective", "items_history", "overrides", "api_contract_version"], additionalProperties: false },
+
+    SkillRunsResponse: { type: "object", properties: { ok: { type: "boolean" }, page: { type: "integer" }, page_size: { type: "integer" }, total: { type: "integer" }, items: { type: "array", items: { type: "object", properties: { run_id: { type: "string" }, operation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, skill_id: { type: ["string", "null"] }, version: { type: ["string", "null"] }, category: { type: ["string", "null"] }, bind_target: { type: ["string", "null"] }, trigger_stage: { type: ["string", "null"] }, result_status: { type: ["string", "null"] }, occurred_at: { type: ["string", "null"] } }, additionalProperties: false } }, api_contract_version: { type: "string" } }, required: ["ok", "page", "page_size", "total", "items", "api_contract_version"], additionalProperties: false },
+
+    OperationListResponse: { type: "object", properties: { ok: { type: "boolean" }, count: { type: "integer" }, items: { type: "array", items: { type: "object", properties: { operation_id: { type: ["string", "null"] }, operation_plan_id: { type: ["string", "null"] }, recommendation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, final_status: { type: ["string", "null"] }, title: { type: ["string", "null"] }, created_at: { type: ["string", "null"] }, updated_at: { type: ["string", "null"] }, expected_effect: { type: ["string", "null"] } }, additionalProperties: false } }, recommendation_states: { type: "array", items: { type: "object", properties: { recommendation_id: { type: ["string", "null"] }, operation_id: { type: ["string", "null"] }, status: { type: ["string", "null"] } }, additionalProperties: false } }, device_states: { type: "array", items: { type: "object", properties: { device_id: { type: ["string", "null"] }, status: { type: ["string", "null"] }, last_telemetry_ts_ms: { type: ["number", "null"] } }, additionalProperties: false } } }, required: ["ok", "count", "items", "recommendation_states", "device_states"], additionalProperties: false },
+
+    OperationDetailResponse: { type: "object", properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], properties: { operation_id: { type: ["string", "null"] }, operation_plan_id: { type: ["string", "null"] }, recommendation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, final_status: { type: ["string", "null"] }, title: { type: ["string", "null"] }, expected_effect: { type: ["string", "null"] }, report_json: { type: ["object", "null"], properties: { type: { type: ["string", "null"] }, summary: { type: ["string", "null"] }, root_cause: { type: ["string", "null"] }, risk: { type: ["string", "null"] }, recommendation: { type: ["string", "null"] }, evidence_refs: { type: "array", items: { type: "string" } } }, additionalProperties: false } }, additionalProperties: false } }, required: ["ok", "item"], additionalProperties: false },
+
+    OperationEvidenceResponse: { type: "object", properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], properties: { operation_plan_id: { type: ["string", "null"] }, operation_id: { type: ["string", "null"] }, recommendation: { type: ["object", "null"], properties: { recommendation_id: { type: ["string", "null"] }, title: { type: ["string", "null"] }, status: { type: ["string", "null"] } }, additionalProperties: false }, approval_decision: { type: ["object", "null"], properties: { decision_id: { type: ["string", "null"] }, approved: { type: ["boolean", "null"] }, reason: { type: ["string", "null"] } }, additionalProperties: false }, operation_plan: { type: ["object", "null"], properties: { operation_plan_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, status: { type: ["string", "null"] } }, additionalProperties: false }, task: { type: ["object", "null"], properties: { task_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, device_id: { type: ["string", "null"] } }, additionalProperties: false }, receipt: { type: ["object", "null"], properties: { receipt_id: { type: ["string", "null"] }, status: { type: ["string", "null"] }, device_id: { type: ["string", "null"] } }, additionalProperties: false }, acceptance: { type: ["object", "null"], properties: { verdict: { type: ["string", "null"] }, missing_evidence: { type: ["boolean", "null"] } }, additionalProperties: false } }, additionalProperties: false } }, required: ["ok", "item"], additionalProperties: false },
+
+    OperationDetailPageResponse: { type: "object", properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], properties: { operation: { type: ["object", "null"], properties: { operation_id: { type: ["string", "null"] }, operation_plan_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, final_status: { type: ["string", "null"] } }, additionalProperties: false }, recommendation: { type: ["object", "null"], properties: { recommendation_id: { type: ["string", "null"] }, title: { type: ["string", "null"] }, subtitle: { type: ["string", "null"] } }, additionalProperties: false }, approval: { type: ["object", "null"], properties: { request_id: { type: ["string", "null"] }, decision_id: { type: ["string", "null"] }, approved: { type: ["boolean", "null"] } }, additionalProperties: false }, execution: { type: ["object", "null"], properties: { task_id: { type: ["string", "null"] }, receipt_id: { type: ["string", "null"] }, executor_label: { type: ["string", "null"] } }, additionalProperties: false }, acceptance: { type: ["object", "null"], properties: { verdict: { type: ["string", "null"] }, missing_evidence: { type: ["boolean", "null"] } }, additionalProperties: false }, timeline: { type: "array", items: { type: "object", properties: { id: { type: ["string", "null"] }, type: { type: ["string", "null"] }, title: { type: ["string", "null"] }, ts_label: { type: ["string", "null"] } }, additionalProperties: false } } }, additionalProperties: false } }, required: ["ok", "item"], additionalProperties: false },
+
+    ActionIndexResponse: { type: "object", properties: { ok: { type: "boolean" }, rows: { type: "array", items: { type: "object", properties: { act_task_id: { type: ["string", "null"] }, action_type: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, state: { type: ["string", "null"] }, ts_ms: { type: ["number", "null"] } }, additionalProperties: false } }, note: { type: "string" } }, required: ["ok", "rows", "note"], additionalProperties: false },
+
+    RecommendationsListResponse: { type: "object", properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { recommendation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, title: { type: ["string", "null"] }, recommendation_type: { type: ["string", "null"] }, status: { type: ["string", "null"] } }, additionalProperties: false } }, count: { type: "integer" }, summary: { type: "object", properties: { total: { type: ["integer", "null"] }, pending: { type: ["integer", "null"] }, approved: { type: ["integer", "null"] }, rejected: { type: ["integer", "null"] } }, additionalProperties: false } }, required: ["ok"], additionalProperties: false },
+
+    RecommendationDetailResponse: { type: "object", properties: { ok: { type: "boolean" }, item: { type: ["object", "null"], properties: { recommendation_id: { type: ["string", "null"] }, field_id: { type: ["string", "null"] }, device_id: { type: ["string", "null"] }, title: { type: ["string", "null"] }, recommendation_type: { type: ["string", "null"] }, status: { type: ["string", "null"] }, latest_derived_sensing_states: { type: "array", items: { type: "object", properties: { key: { type: ["string", "null"] }, value: { type: ["string", "number", "boolean", "null"] } }, additionalProperties: false } } }, additionalProperties: false } }, required: ["ok", "item"], additionalProperties: false },
+
+    RecommendationControlPlaneResponse: { type: "object", properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { recommendation_id: { type: ["string", "null"] }, title: { type: ["string", "null"] }, status: { type: ["string", "null"] }, action_type: { type: ["string", "null"] } }, additionalProperties: false } }, summary: { type: "object", properties: { total: { type: ["integer", "null"] }, actionable: { type: ["integer", "null"] } }, additionalProperties: false } }, required: ["ok"], additionalProperties: false },
+
+    RulePerformanceResponse: { type: "object", properties: { ok: { type: "boolean" }, items: { type: "array", items: { type: "object", properties: { rule_id: { type: ["string", "null"] }, execution_count: { type: ["integer", "null"] }, success_count: { type: ["integer", "null"] }, failure_count: { type: ["integer", "null"] }, avg_duration_ms: { type: ["number", "null"] } }, additionalProperties: false } }, item: { type: ["object", "null"], properties: { rule_id: { type: ["string", "null"] }, execution_count: { type: ["integer", "null"] }, success_count: { type: ["integer", "null"] }, failure_count: { type: ["integer", "null"] }, avg_duration_ms: { type: ["number", "null"] } }, additionalProperties: false } }, required: ["ok"], additionalProperties: false },
+
+  });
+
+
+  Object.assign(spec.paths, {
+    "/api/v1/actions/index": {
+      get: { tags: ["operations"], summary: "Read AO-ACT task index", parameters: [queryParam("tenant_id", { type: "string" }), queryParam("project_id", { type: "string" }), queryParam("group_id", { type: "string" }), queryParam("status", { type: "string" })], responses: { "200": jsonResponse(ref("ActionIndexResponse"), "AO-ACT task index") } }
+    },
+    "/api/v1/operations": {
+      get: { tags: ["operations"], summary: "List operations", responses: { "200": jsonResponse(ref("OperationListResponse"), "Operations list") } }
+    },
+    "/api/v1/operations/{operation_id}": {
+      get: { tags: ["operations"], summary: "Read operation summary", parameters: [pathParam("operation_id")], responses: { "200": jsonResponse(ref("OperationDetailResponse"), "Operation summary") } }
+    },
+    "/api/v1/operations/{operation_id}/evidence": {
+      get: { tags: ["operations"], summary: "Read operation evidence bundle", parameters: [pathParam("operation_id")], responses: { "200": jsonResponse(ref("OperationEvidenceResponse"), "Operation evidence") } }
+    },
+    "/api/v1/operations/{operationPlanId}/detail": {
+      get: { tags: ["operations"], summary: "Read operation detail page model", parameters: [pathParam("operationPlanId")], responses: { "200": jsonResponse(ref("OperationDetailPageResponse"), "Operation detail page model") } }
+    },
+    "/api/v1/operations/{operationPlanId}/evidence-export": {
+      get: { tags: ["operations"], summary: "Export operation evidence package", parameters: [pathParam("operationPlanId")], responses: { "200": jsonResponse(ref("GenericOkResponse"), "Operation evidence export") } }
+    },
+    "/api/v1/skills/registry": {
+      get: { tags: ["operations"], summary: "Legacy skills registry redirect", deprecated: true, responses: { "301": jsonResponse(ref("GenericOkResponse"), "Redirect to /api/v1/skills") } }
+    },
+    "/api/v1/skills": {
+      get: { tags: ["operations"], summary: "List skills", responses: { "200": jsonResponse(ref("SkillsListResponse"), "Skills list") } }
+    },
+    "/api/v1/skills/{skill_id}": {
+      get: { tags: ["operations"], summary: "Read skill detail", parameters: [pathParam("skill_id")], responses: { "200": jsonResponse(ref("SkillDetailResponse"), "Skill detail") } }
+    },
+    "/api/v1/skills/runs": {
+      get: { tags: ["operations"], summary: "List skill runs", responses: { "200": jsonResponse(ref("SkillRunsResponse"), "Skill runs") } }
+    },
+    "/api/v1/skills/{skill_id}/enable": {
+      post: { tags: ["operations"], summary: "Enable skill", parameters: [pathParam("skill_id")], responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill enabled") } }
+    },
+    "/api/v1/skills/{skill_id}/disable": {
+      post: { tags: ["operations"], summary: "Disable skill", parameters: [pathParam("skill_id")], responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill disabled") } }
+    },
+    "/api/v1/agronomy/rule-performance": {
+      get: { tags: ["operations"], summary: "Read agronomy rule performance list", responses: { "200": jsonResponse(ref("RulePerformanceResponse"), "Rule performance list") } }
+    },
+    "/api/v1/agronomy/rule-performance/{rule_id}": {
+      get: { tags: ["operations"], summary: "Read agronomy rule performance detail", parameters: [pathParam("rule_id")], responses: { "200": jsonResponse(ref("RulePerformanceResponse"), "Rule performance detail") } }
+    },
+    "/api/v1/agronomy/recommendations": {
+      get: { tags: ["operations"], summary: "List agronomy recommendations", responses: { "200": jsonResponse(ref("RecommendationsListResponse"), "Recommendations list") } }
+    },
+    "/api/v1/agronomy/recommendations/{recommendation_id}": {
+      get: { tags: ["operations"], summary: "Read agronomy recommendation", parameters: [pathParam("recommendation_id")], responses: { "200": jsonResponse(ref("RecommendationDetailResponse"), "Recommendation detail") } }
+    },
+    "/api/v1/agronomy/recommendations/control-plane": {
+      get: { tags: ["operations"], summary: "Read agronomy recommendations control-plane projection", responses: { "200": jsonResponse(ref("RecommendationControlPlaneResponse"), "Recommendation control-plane projection") } }
+    },
+    "/api/v1/agronomy/recommendations/{recommendation_id}/control-plane": {
+      get: { tags: ["operations"], summary: "Read agronomy recommendation control-plane projection", parameters: [pathParam("recommendation_id")], responses: { "200": jsonResponse(ref("RecommendationControlPlaneResponse"), "Recommendation control-plane detail") } }
+    },
+    "/api/v1/simulators/irrigation/execute": {
+      post: { tags: ["operations"], summary: "Execute irrigation simulator", responses: { "200": jsonResponse(ref("GenericOkResponse"), "Simulator execution result") } }
+    },
+  });
+
+
+  Object.assign(spec.paths, {
+    "/api/v1/actions/task": { post: { tags: ["operations"], summary: "Create AO-ACT task", requestBody: { required: true, content: { "application/json": { schema: ref("ActionTaskRequest") } } }, responses: { "200": jsonResponse(ref("ActionTaskResponse"), "AO-ACT task accepted") } } },
+    "/api/v1/actions/receipt": { post: { tags: ["operations"], summary: "Submit AO-ACT receipt", requestBody: { required: true, content: { "application/json": { schema: ref("ActionReceiptRequest") } } }, responses: { "200": jsonResponse(ref("ActionReceiptResponse"), "AO-ACT receipt accepted") } } },
+    "/api/v1/actions/execute": { post: { tags: ["operations"], summary: "Execute action via control plane", requestBody: { required: true, content: { "application/json": { schema: ref("ActionExecuteRequest") } } }, responses: { "200": jsonResponse(ref("ActionExecuteResponse"), "Action execution accepted") } } },
+    "/api/v1/operations/manual": { post: { tags: ["operations"], summary: "Create manual operation", requestBody: { required: true, content: { "application/json": { schema: ref("OperationManualRequest") } } }, responses: { "200": jsonResponse(ref("OperationManualResponse"), "Manual operation created") } } },
+    "/api/v1/approvals/request": { post: { tags: ["operations"], summary: "Create approval request", requestBody: { required: true, content: { "application/json": { schema: ref("ApprovalRequestCreateBody") } } }, responses: { "200": jsonResponse(ref("ApprovalRequestCreateResponse"), "Approval request created") } } },
+    "/api/v1/approvals/requests": { get: { tags: ["operations"], summary: "List approval requests", responses: { "200": jsonResponse(ref("ApprovalRequestListResponse"), "Approval request list") } } },
+    "/api/v1/approvals/approve": { post: { tags: ["operations"], summary: "Approve or reject an approval request", requestBody: { required: false, content: { "application/json": { schema: ref("ApprovalApproveBody") } } }, responses: { "200": jsonResponse(ref("ApprovalApproveResponse"), "Approval decision recorded") } } },
+    "/api/v1/recommendations/generate": { post: { tags: ["operations"], summary: "Generate agronomy recommendation", requestBody: { required: true, content: { "application/json": { schema: ref("RecommendationGenerateBody") } } }, responses: { "200": jsonResponse(ref("RecommendationGenerateResponse"), "Recommendation generation result") } } },
+    "/api/v1/recommendations/{recommendation_id}/submit-approval": { post: { tags: ["operations"], summary: "Submit recommendation for approval", parameters: [pathParam("recommendation_id")], requestBody: { required: false, content: { "application/json": { schema: ref("RecommendationSubmitApprovalBody") } } }, responses: { "200": jsonResponse(ref("RecommendationSubmitApprovalResponse"), "Recommendation approval submitted") } } },
+    "/api/v1/devices": { post: { tags: ["devices"], summary: "Register or upsert device", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device upsert result") } }, get: { tags: ["devices"], summary: "List devices", responses: { "200": jsonResponse(ref("DevicesListResponse"), "Devices list") } } },
+    "/api/v1/devices/{device_id}": { get: { tags: ["devices"], summary: "Read device detail", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceDetailResponse"), "Device detail") } }, post: { tags: ["devices"], summary: "Update device metadata", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device updated") } } },
+    "/api/v1/devices/{device_id}/capabilities": { get: { tags: ["devices"], summary: "Read device capabilities", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities") } }, put: { tags: ["devices"], summary: "Update device capabilities", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceCapabilitiesRequest") } } }, responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities updated") } } },
+    "/api/v1/devices/{device_id}/heartbeat": { post: { tags: ["telemetry"], summary: "Write a device heartbeat", parameters: [pathParam("device_id")], requestBody: { required: false, content: { "application/json": { schema: ref("HeartbeatRequest") } } }, responses: { "200": jsonResponse(ref("GenericOkResponse"), "Heartbeat accepted") } } },
+    "/api/v1/devices/{device_id}/console": { get: { tags: ["devices"], summary: "Read device console view", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceConsoleResponse"), "Device console view") } } },
+    "/api/v1/devices/{device_id}/control-plane": { get: { tags: ["devices"], summary: "Read device control-plane view", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceControlPlaneResponse"), "Device control-plane view") } } },
+    "/api/v1/devices/onboarding/register": { post: { tags: ["devices"], summary: "Register device onboarding flow", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device onboarding registration result") } } },
+    "/api/v1/devices/register": { post: { tags: ["devices"], summary: "Register device (compatibility v1 alias)", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device registration result") } } },
+    "/api/v1/devices/{device_id}/credentials": { post: { tags: ["devices"], summary: "Issue device credential", parameters: [pathParam("device_id")], requestBody: { required: false, content: { "application/json": { schema: ref("DeviceCredentialIssueRequest") } } }, responses: { "200": jsonResponse(ref("DeviceCredentialIssueResponse"), "Device credential issued") } } },
+    "/api/v1/devices/{device_id}/credentials/{credential_id}/revoke": { post: { tags: ["devices"], summary: "Revoke device credential", parameters: [pathParam("device_id"), pathParam("credential_id")], requestBody: { required: false, content: { "application/json": { schema: ref("DeviceCredentialRevokeRequest") } } }, responses: { "200": jsonResponse(ref("DeviceCredentialRevokeResponse"), "Device credential revoked") } } },
+    "/api/v1/devices/{device_id}/skill-bindings/reconcile": { post: { tags: ["devices"], summary: "Reconcile device skill bindings", parameters: [pathParam("device_id")], requestBody: { required: false, content: { "application/json": { schema: ref("DeviceSkillBindingsReconcileRequest") } } }, responses: { "200": jsonResponse(ref("DeviceSkillBindingsReconcileResponse"), "Device skill bindings reconciled") } } },
+    "/api/v1/devices/{device_id}/onboarding-status": { get: { tags: ["devices"], summary: "Read device onboarding status", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceOnboardingStatusResponse"), "Device onboarding status") } } },
+    "/api/v1/sense/task": { post: { tags: ["operations"], summary: "Create sensing task", requestBody: { required: true, content: { "application/json": { schema: ref("SenseTaskRequest") } } }, responses: { "200": jsonResponse(ref("SenseTaskResponse"), "Sensing task created") } } },
+    "/api/v1/sense/receipt": { post: { tags: ["operations"], summary: "Submit sensing receipt", requestBody: { required: true, content: { "application/json": { schema: ref("SenseReceiptRequest") } } }, responses: { "200": jsonResponse(ref("SenseReceiptResponse"), "Sensing receipt accepted") } } },
+    "/api/v1/sense/tasks": { get: { tags: ["operations"], summary: "List sensing tasks", responses: { "200": jsonResponse(ref("SenseTasksResponse"), "Sensing tasks") } } },
+    "/api/v1/sense/receipts": { get: { tags: ["operations"], summary: "List sensing receipts", responses: { "200": jsonResponse(ref("SenseReceiptsResponse"), "Sensing receipts") } } },
+    "/api/v1/sense/next-task": { get: { tags: ["operations"], summary: "Read next sensing task", responses: { "200": jsonResponse(ref("SenseNextTaskResponse"), "Next sensing task") } } },
+    "/api/v1/skills/bindings": { get: { tags: ["operations"], summary: "Read effective skill bindings", responses: { "200": jsonResponse(ref("SkillBindingsResponse"), "Skill bindings") } }, post: { tags: ["operations"], summary: "Create skill binding", requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingCreateRequest") } } }, responses: { "201": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding created") } } },
+    "/api/v1/skills/bindings/override": { post: { tags: ["operations"], summary: "Append override-only skill binding", requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingOverrideRequest") } } }, responses: { "201": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding override appended") } } },
+  });
+
+  return spec;
+}
 
 export function registerOpenApiV1Routes(app: FastifyInstance) { // Register OpenAPI export route.
   app.get("/api/v1/openapi.json", async (_req, reply) => { // Serve OpenAPI JSON.
