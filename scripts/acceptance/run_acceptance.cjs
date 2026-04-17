@@ -54,9 +54,39 @@ ensureOutputDir(outputDir);
 (async () => {
   const startedAt = new Date();
   const results = [];
+  const runtimeContext = {
+    operationPlanIdFromP1: '',
+  };
 
   for (const step of STEP_DEFINITIONS) {
-    const result = await runStep(step);
+    const envOverrides = {};
+    if (step.id === 'P1_ACCEPTANCE_SMOKE') {
+      if (!runtimeContext.operationPlanIdFromP1) {
+        results.push({
+          id: step.id,
+          passed: false,
+          command: step.command,
+          duration_ms: 0,
+          evidence: '',
+          notes: 'Missing required GEOX_OPERATION_PLAN_ID from previous P1_SMOKE output; step was not executed.'
+        });
+        continue;
+      }
+      envOverrides.GEOX_OPERATION_PLAN_ID = runtimeContext.operationPlanIdFromP1;
+    }
+
+    const result = await runStep(step, envOverrides);
+
+    if (step.id === 'P1_SMOKE' && result.passed) {
+      const operationPlanId = extractOperationPlanIdFromP1Output(result.output);
+      if (operationPlanId) {
+        runtimeContext.operationPlanIdFromP1 = operationPlanId;
+        console.log(`[acceptance] derived GEOX_OPERATION_PLAN_ID=${operationPlanId} from P1_SMOKE`);
+      } else {
+        console.warn('[acceptance] failed to derive GEOX_OPERATION_PLAN_ID from P1_SMOKE output');
+      }
+    }
+    delete result.output;
     results.push(result);
   }
 
@@ -100,11 +130,12 @@ function ensureOutputDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function runStep(step) {
+function runStep(step, envOverrides = {}) {
   const stepStarted = Date.now();
   const logPath = path.join(outputDir, step.logFile);
 
   return new Promise((resolve) => {
+    let outputBuffer = '';
     const logStream = fs.createWriteStream(logPath, { flags: 'w' });
     logStream.write(`# ${step.id}\n`);
     logStream.write(`# command: ${step.command}\n`);
@@ -115,18 +146,20 @@ function runStep(step) {
 
     const child = spawn('bash', ['-lc', step.command], {
       cwd: repoRoot,
-      env: process.env,
+      env: { ...process.env, ...envOverrides },
       stdio: ['ignore', 'pipe', 'pipe']
     });
 
     child.stdout.on('data', (chunk) => {
       process.stdout.write(chunk);
       logStream.write(chunk);
+      outputBuffer += String(chunk);
     });
 
     child.stderr.on('data', (chunk) => {
       process.stderr.write(chunk);
       logStream.write(chunk);
+      outputBuffer += String(chunk);
     });
 
     child.on('close', (code, signal) => {
@@ -153,7 +186,8 @@ function runStep(step) {
         command: step.command,
         duration_ms: finishedAt - stepStarted,
         evidence: path.relative(repoRoot, logPath),
-        notes: notes.join(' | ')
+        notes: notes.join(' | '),
+        output: outputBuffer
       });
     });
 
@@ -179,10 +213,26 @@ function runStep(step) {
         command: step.command,
         duration_ms: finishedAt - stepStarted,
         evidence: path.relative(repoRoot, logPath),
-        notes: notes.join(' | ')
+        notes: notes.join(' | '),
+        output: outputBuffer
       });
     });
   });
+}
+
+function extractOperationPlanIdFromP1Output(output) {
+  const text = String(output || '');
+  const lines = text.split(/\r?\n/).reverse();
+  for (const line of lines) {
+    const m = line.match(/\[p1-smoke\]\s+RESULT_JSON\s+(\{.*\})\s*$/);
+    if (!m) continue;
+    try {
+      const parsed = JSON.parse(m[1]);
+      const operationPlanId = String(parsed?.success_operation_plan_id || '').trim();
+      if (operationPlanId) return operationPlanId;
+    } catch {}
+  }
+  return '';
 }
 
 function buildHtml(summary) {

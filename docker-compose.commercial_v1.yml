@@ -80,6 +80,8 @@ services:
       GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY: minioadmin
       GEOX_EVIDENCE_S3_FORCE_PATH_STYLE: "true"
       GEOX_EVIDENCE_S3_PRESIGN_TTL_SEC: "900"
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
+      GEOX_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
     ports:
       - "3001:3000"
     depends_on:

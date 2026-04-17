@@ -14,6 +14,9 @@ const TOKEN_CANDIDATE_FILES = [
   path.join(REPO_ROOT, "config/auth/example_tokens.json"),
   path.join(REPO_ROOT, "config/auth/ao_act_tokens_v0.json"),
 ];
+const EXPECTED_TENANT = String(process.env.GEOX_TENANT_ID ?? "tenantA").trim() || "tenantA";
+const EXPECTED_PROJECT = String(process.env.GEOX_PROJECT_ID ?? "projectA").trim() || "projectA";
+const EXPECTED_GROUP = String(process.env.GEOX_GROUP_ID ?? "groupA").trim() || "groupA";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -26,9 +29,13 @@ function parseTokenFile(tokenFilePath) {
   for (const row of tokens) {
     const token = typeof row?.token === "string" ? row.token.trim() : "";
     const scopes = Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [];
+    const tenant = String(row?.tenant_id ?? "").trim();
+    const project = String(row?.project_id ?? "").trim();
+    const group = String(row?.group_id ?? "").trim();
     const revoked = Boolean(row?.revoked);
     if (!token || revoked) continue;
     if (token.includes("set-via-env-or-external-secret-file")) continue;
+    if (tenant !== EXPECTED_TENANT || project !== EXPECTED_PROJECT || group !== EXPECTED_GROUP) continue;
     if (!scopes.includes("evidence_export.read") || !scopes.includes("evidence_export.write")) continue;
     return token;
   }
