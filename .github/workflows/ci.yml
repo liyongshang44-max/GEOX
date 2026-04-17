@@ -34,3 +34,21 @@ jobs:
 
       - name: Server selfcheck
         run: pnpm --filter @geox/server test:p1:selfcheck
+
+  release-gate:
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Generate release gate report
+        run: node scripts/qa/generate_release_gate_report.cjs
+
+      - name: Check release gates
+        run: node scripts/qa/check_release_gates.cjs

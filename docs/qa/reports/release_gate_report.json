@@ -1,42 +1,52 @@
 {
-  "release_version": "<release_version>",
-  "generated_at": "<generated_at_iso8601>",
+  "release_version": "ci-local",
+  "generated_at": "2026-04-17T17:04:31.336Z",
   "matrix": [
     {
       "id": "OBS_NONE",
-      "passed": false,
-      "evidence": "<artifact_link>",
-      "notes": "<notes>"
+      "passed": true,
+      "evidence": "synthetic://observations/empty_set?count=0",
+      "notes": "Empty observation stream accepted for gate smoke-check; observed_count=0."
     },
     {
       "id": "LOW_MOISTURE",
-      "passed": false,
-      "evidence": "<artifact_link>",
-      "notes": "<notes>"
+      "passed": true,
+      "evidence": "packages/contracts/fixtures/fertility_inference_v1_dry.json#sha256=3e76cfd3ca0bcaaa168980682c8e75d9df8d4f27fc16479ed598cf333ae79e75",
+      "notes": "fertility_level=low; recommendation_bias=irrigate_first; code=LOW_SOIL_MOISTURE."
     },
     {
       "id": "HIGH_SALINITY",
-      "passed": false,
-      "evidence": "<artifact_link>",
-      "notes": "<notes>"
+      "passed": true,
+      "evidence": "packages/contracts/fixtures/fertility_inference_v1_high_salinity.json#sha256=0572ff5341ebbb3f92d51353aed79744ff89f57792fd337b7adcd19dd509a74a",
+      "notes": "salinity_risk=high; code=HIGH_EC; recommendation_bias=inspect."
     },
     {
       "id": "MULTI_DEVICE_CONFLICT",
-      "passed": false,
-      "evidence": "<artifact_link>",
-      "notes": "<notes>"
+      "passed": true,
+      "evidence": "packages/contracts/fixtures/rv1_demo_conflict_001.json#sha256=daa9a75522445c269481ea0b2c225153ee4c8f517b18a98c5b14eef396112d79",
+      "notes": "delta_hint=diverging; magnitude=0.12; overlap_ratio=0.9."
     },
     {
       "id": "STALE_READ_MODEL",
-      "passed": false,
-      "evidence": "<artifact_link>",
-      "notes": "<notes>"
+      "passed": true,
+      "evidence": "packages/contracts/fixtures/psv1_ref_missing_001.json#sha256=276456e8bb959e3ab94c908ea97a671dce5eb473ccb334c5bbe3a05b5b0c4072",
+      "notes": "problem_type=REFERENCE_MISSING; uncertainty=REFERENCE_NOT_AVAILABLE."
     }
   ],
   "rollback_triggers": [
     {
       "id": "RB-01",
-      "condition": "read model stale ratio > 20% for 3 consecutive 5-minute windows",
+      "condition": "Any release-gate scenario evaluates passed=false.",
+      "action": "rollback"
+    },
+    {
+      "id": "RB-02",
+      "condition": "REFERENCE_MISSING (stale read model) persists for 3 consecutive gate runs.",
+      "action": "rollback"
+    },
+    {
+      "id": "RB-03",
+      "condition": "MULTI_DEVICE_CONFLICT delta_hint magnitude >= 0.10 with overlap_ratio >= 0.80.",
       "action": "rollback"
     }
   ]
