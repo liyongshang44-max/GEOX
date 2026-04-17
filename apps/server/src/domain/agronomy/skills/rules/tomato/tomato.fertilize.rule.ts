@@ -1,4 +1,4 @@
-import type { AgronomyRuleSkill } from "../../types";
+import type { AgronomyRuleSkill } from "../../types.js";
 
 export const tomatoFertilizeRule: AgronomyRuleSkill = {
   id: "tomato_fertilize",

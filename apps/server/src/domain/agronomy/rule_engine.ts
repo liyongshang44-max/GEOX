@@ -1,7 +1,7 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
-import type { AgronomyContext } from "./types";
-import { cropSkills, ruleSkills } from "./skills";
-import type { CropStage } from "./skills/types";
+import type { AgronomyContext } from "./types.js";
+import { cropSkills, ruleSkills } from "./skills/index.js";
+import type { CropStage } from "./skills/types.js";
 
 function normalizeSkillStage(stage: string): CropStage {
   const s = String(stage ?? "").trim().toLowerCase();

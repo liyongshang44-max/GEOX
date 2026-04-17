@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1";
-import { composeFieldFertilityStateFromDerivedRowsV1 } from "../../projections/field_fertility_state_v1";
-import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../decision_engine_v1";
+import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1.js";
+import { composeFieldFertilityStateFromDerivedRowsV1 } from "../../projections/field_fertility_state_v1.js";
+import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../decision_engine_v1.js";
 
 type E2EScenarioInput = {
   soil_moisture_pct?: number | null;

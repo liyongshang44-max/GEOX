@@ -1,4 +1,4 @@
-import type { AppleIReader } from "./applei_reader"; // Import Judge's Postgres ledger reader
+import type { AppleIReader } from "./applei_reader.js"; // Import Judge's Postgres ledger reader
 
 // Sprint 12 (AO-ACT ReadModel v0): read-only mirror for explain/debug only. // Must not affect judgment output
 

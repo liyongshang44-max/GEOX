@@ -1,4 +1,4 @@
-import type { AcceptanceSkill } from "../types";
+import type { AcceptanceSkill } from "../types.js";
 
 export const irrigationAcceptance: AcceptanceSkill = {
   id: "irrigation_acceptance",

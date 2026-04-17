@@ -1,6 +1,5 @@
-import fs from "node:fs";
 import type { FastifyInstance } from "fastify";
-import { defaultAoActTokenFilePathV0, requireAoActAuthV0 } from "../auth/ao_act_authz_v0";
+import { defaultAoActTokenFilePathV0, readTokenFileV0, requireAoActAuthV0 } from "../auth/ao_act_authz_v0.js";
 
 type TokenRecord = {
   token: string;
@@ -19,15 +18,8 @@ function isNonEmptyString(v: unknown): v is string {
 }
 
 function readTokenRecords(): TokenRecord[] {
-  const fp = defaultAoActTokenFilePathV0();
-  if (!fs.existsSync(fp)) return [];
-  try {
-    const parsed = JSON.parse(fs.readFileSync(fp, "utf8"));
-    if (!Array.isArray(parsed?.tokens)) return [];
-    return parsed.tokens as TokenRecord[];
-  } catch {
-    return [];
-  }
+  const fp = process.env.GEOX_TOKENS_FILE || process.env.GEOX_TOKEN_SSOT_PATH || defaultAoActTokenFilePathV0();
+  return readTokenFileV0(fp).tokens as TokenRecord[];
 }
 
 function hostBase(req: any): string {

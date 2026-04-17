@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { ensureHumanOpsKpiProjectionV1, refreshHumanOpsKpiProjectionV1, shouldRunLowPeakRefresh } from "../projections/human_ops_kpi_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { ensureHumanOpsKpiProjectionV1, refreshHumanOpsKpiProjectionV1, shouldRunLowPeakRefresh } from "../projections/human_ops_kpi_v1.js";
 
 function toMs(raw: unknown, fallback: number): number {
   const n = Number(raw);

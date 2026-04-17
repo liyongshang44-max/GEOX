@@ -1,4 +1,4 @@
-import { PgStore } from "./pg_store";
+import { PgStore } from "./pg_store.js";
 
 export type Store =
   | { kind: "pg"; pg: PgStore };

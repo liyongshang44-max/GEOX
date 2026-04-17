@@ -1,4 +1,4 @@
-import { getCropProfile } from "./crop_catalog";
+import { getCropProfile } from "./crop_catalog.js";
 
 type Input = {
   crop_code: string;

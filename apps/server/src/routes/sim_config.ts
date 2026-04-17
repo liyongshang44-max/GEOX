@@ -1,3 +1,4 @@
+// Route classification: internal / experimental
 // GEOX/apps/server/src/routes/sim_config.ts
 //
 // Simulator Config Manifest + Patch preview endpoint.
@@ -10,27 +11,29 @@
 
 import type { FastifyInstance } from "fastify";
 
-import { stableStringify } from "../../../judge/src/util";
+import { stableStringify } from "../../../judge/src/util.js";
 
 import {
   loadDefaultSimConfig,
   getSimManifest,
   computeSimSsotHash,
   validateEffectiveSimConfig,
-} from "../../../judge/src/sim_config/ssot";
+} from "../../../judge/src/sim_config/ssot.js";
 
-import type { SimConfigPatchV1 } from "../../../judge/src/sim_config/patch";
+import type { SimConfigPatchV1 } from "../../../judge/src/sim_config/patch.js";
 import {
   applyPatch,
   computeEffectiveSimConfigHash,
   validatePatchEnvelopeStrict,
   validatePatchStrict,
-} from "../../../judge/src/sim_config/patch";
+} from "../../../judge/src/sim_config/patch.js";
 
 export function registerSimConfigRoutes(app: FastifyInstance): void {
   // GET /api/sim/config
   // Returns SSOT fingerprint + editable manifest for simulator config.
+  // @deprecated - use /api/v1/*
   app.get("/api/sim/config", async (_req, reply) => {
+    reply.header("X-Deprecated", "true");
     const ssotCfg = loadDefaultSimConfig();
     const manifest = getSimManifest(ssotCfg);
     return reply.send(manifest);
@@ -39,7 +42,9 @@ export function registerSimConfigRoutes(app: FastifyInstance): void {
   // POST /api/sim/config/patch
   // Validates and previews patch (dryRun=true) or validates+applies (dryRun=false, no storage in v1).
   // Unlike JudgeConfig, we return `effective_config` in preview to help generate simulator commands.
+  // @deprecated - use /api/v1/*
   app.post("/api/sim/config/patch", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
     const body = (req.body ?? {}) as any;
 
     // Step-1: validate request envelope shape + reject unknown keys.

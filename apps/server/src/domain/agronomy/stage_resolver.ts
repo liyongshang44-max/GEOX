@@ -1,5 +1,5 @@
-import { resolveCornStage } from "./crops/corn/stages";
-import { resolveTomatoStage } from "./crops/tomato/stages";
+import { resolveCornStage } from "./crops/corn/stages.js";
+import { resolveTomatoStage } from "./crops/tomato/stages.js";
 
 const CROP_STAGE_ALLOWLIST: Record<string, Set<string>> = {
   corn: new Set(["seed", "vegetative", "reproductive", "maturity"]),

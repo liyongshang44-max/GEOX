@@ -1,17 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz";
-import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz.js";
+import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1.js";
 import {
   projectOperationReportV1,
   type OperationReportFieldListResponseV1,
   type OperationReportSingleResponseV1,
   type OperationReportV1,
-} from "../projections/report_v1";
-import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { computeOperationCostV1 } from "../domain/cost_model";
-import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1";
+} from "../projections/report_v1.js";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
+import { computeOperationCostV1 } from "../domain/cost_model.js";
+import { listAlertOperationRelationV1ByOperation, listOperationWorkflowV1 } from "./alert_workflow_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -157,7 +157,7 @@ export async function projectReportV1(params: {
 
 export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/reports/operation/:operation_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "operations.read");
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
 
     const tenant = tenantFromReq(req as any, auth);
@@ -214,7 +214,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
   });
 
   app.get("/api/v1/reports/field/:field_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "operations.read");
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
 
     const tenant = tenantFromReq(req as any, auth);

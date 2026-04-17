@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import { detectSchedulingConflictsV1, type SchedulingConflictV1 } from "./conflict_detector_v1";
-import { projectProgramPortfolioV1, type ProgramPortfolioItemV1 } from "../../projections/program_portfolio_v1";
+import { detectSchedulingConflictsV1, type SchedulingConflictV1 } from "./conflict_detector_v1.js";
+import { projectProgramPortfolioV1, type ProgramPortfolioItemV1 } from "../../projections/program_portfolio_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

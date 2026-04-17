@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
 import GeoxContracts from "@geox/contracts";
-import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1";
+import { deriveProgramFeedbackV1 } from "../domain/program/program_feedback_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

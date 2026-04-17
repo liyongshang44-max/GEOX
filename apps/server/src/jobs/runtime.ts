@@ -1,8 +1,8 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { Pool } from "pg";
-import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1";
-import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1";
-import { runAgronomyAgentOnce } from "./agronomy_agent";
+import { fetchPendingJobs, markJobFailed, runQueuedEvidenceExportJob } from "../routes/delivery_evidence_export_v1.js";
+import { fetchPendingEvidenceReportJobs, markEvidenceReportJobFailed, runQueuedEvidenceReportJob } from "../routes/evidence_report_v1.js";
+import { runAgronomyAgentOnce } from "./agronomy_agent.js";
 
 const DEFAULT_INTERVAL_MS = 5000;
 

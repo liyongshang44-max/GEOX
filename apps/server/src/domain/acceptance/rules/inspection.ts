@@ -1,5 +1,5 @@
-import { buildGeoMetrics } from "./geo";
-import type { AcceptanceRule } from "./types";
+import { buildGeoMetrics } from "./geo.js";
+import type { AcceptanceRule } from "./types.js";
 
 export const inspectionRule: AcceptanceRule = {
   task_type: "INSPECT",

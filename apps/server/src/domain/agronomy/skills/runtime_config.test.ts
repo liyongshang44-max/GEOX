@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { evaluateRulesByInput } from "../rule_engine";
-import { listFallbackSkillSwitches, resetFallbackSkillSwitches } from "./runtime_config";
+import { evaluateRulesByInput } from "../rule_engine.js";
+import { listFallbackSkillSwitches, resetFallbackSkillSwitches } from "./runtime_config.js";
 
 function evaluateCorn(tenant_id: string): Promise<ReturnType<typeof evaluateRulesByInput> extends Promise<infer T> ? T : never> {
   return evaluateRulesByInput({
@@ -22,7 +22,7 @@ function evaluateCorn(tenant_id: string): Promise<ReturnType<typeof evaluateRule
 test("stage6 fallback_config: priority selects v2 when v1/v2 are both enabled", async () => {
   process.env.GEOX_DISABLE_LEGACY_SKILLS = "false";
   process.env.GEOX_ENABLE_AGRONOMY_SKILL_FALLBACK = "1";
-  const { getRuleSkills } = await import("./registry");
+  const { getRuleSkills } = await import("./registry.js");
   resetFallbackSkillSwitches();
   const rules = await getRuleSkills({ crop_code: "corn", tenant_id: "tenantA" });
   assert.equal(rules[0]?.version, "v2");

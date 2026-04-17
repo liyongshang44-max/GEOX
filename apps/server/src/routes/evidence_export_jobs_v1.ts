@@ -25,8 +25,8 @@ import { randomUUID } from "node:crypto"; // UUIDs for job ids and fact ids.
 import type { FastifyInstance } from "fastify"; // Fastify instance.
 import type { Pool } from "pg"; // Postgres pool.
 
-import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Auth helper.
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
+import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Auth helper.
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context.
 
 type JobStatus = "QUEUED" | "RUNNING" | "DONE" | "ERROR"; // Job status enum.
 

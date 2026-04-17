@@ -12,12 +12,12 @@ import crypto from "node:crypto"; // Node crypto for deterministic hashes used i
 import type { FastifyInstance } from "fastify"; // Fastify app instance type.
 import type { Pool } from "pg"; // Postgres pool type.
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Token/scope auth helper.
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type.
-import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
-import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
-import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1";
-import { reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Token/scope auth helper.
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context type.
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
+import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1.js";
+import { reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1.js";
 
 function isNonEmptyString(v: any): v is string { // Helper: check for non-empty strings.
   return typeof v === "string" && v.trim().length > 0; // True only when string has visible content.

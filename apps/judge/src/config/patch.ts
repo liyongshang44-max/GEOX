@@ -8,8 +8,8 @@
 // - unknown keys are rejected (static refusal)
 // - ssot_hash mismatch is 409
 
-import { sha256Hex, stableStringify } from "../util";
-import type { JudgeConfigManifestV1, JudgeConfigEditableItem } from "./ssot";
+import { sha256Hex, stableStringify } from "../util.js";
+import type { JudgeConfigManifestV1, JudgeConfigEditableItem } from "./ssot.js";
 
 export type JudgeConfigPatchOpV1 = {
   op: "replace";

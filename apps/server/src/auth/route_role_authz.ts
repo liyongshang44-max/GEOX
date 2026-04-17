@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { requireAoActAuthV0, type AoActAuthContextV0 } from "./ao_act_authz_v0";
-import { isRoleAllowed, methodToAction, type AuthResource } from "../domain/auth/roles";
+import { requireAoActAuthV0, type AoActAuthContextV0 } from "./ao_act_authz_v0.js";
+import { isRoleAllowed, methodToAction, type AuthResource } from "../domain/auth/roles.js";
 
 function deny(reply: FastifyReply, asNotFound: boolean, code = "AUTH_ROLE_DENIED"): null {
   if (asNotFound) {
@@ -76,7 +76,8 @@ export function enforceRouteRoleAuth(
   const auth = requireAoActAuthV0(req, reply);
   if (!auth) return null;
   const action = methodToAction(req.method);
-  if (!isRoleAllowed(auth.role, resource, action)) return deny(reply, Boolean(opts.asNotFound));
+  const normalizedRole = auth.role === "executor" ? "operator" : auth.role;
+  if (!isRoleAllowed(normalizedRole, resource, action)) return deny(reply, Boolean(opts.asNotFound));
 
   const requestedFields = collectRequestedFieldIds(req);
   if (requestedFields.length > 0) {

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateAgronomyRecommendation } from "./engine";
-import { resolveCropStage } from "./stage_resolver";
+import { generateAgronomyRecommendation } from "./engine.js";
+import { resolveCropStage } from "./stage_resolver.js";
 
 test("stage_resolver can produce crop stage for corn and tomato", () => {
   const now = Date.now();

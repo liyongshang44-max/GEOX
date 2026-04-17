@@ -1,5 +1,5 @@
-import { resolveCropStage } from "./stage_resolver";
-import type { AgronomyContext } from "./types";
+import { resolveCropStage } from "./stage_resolver.js";
+import type { AgronomyContext } from "./types.js";
 
 export async function buildAgronomyContext(input: {
   tenantId: string;

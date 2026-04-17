@@ -19,7 +19,7 @@ test("dashboard routes derive statuses from final_status only", async () => {
   registerDashboardV1Routes(app, pool);
 
   const authHeader = {
-    authorization: "Bearer geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4",
+    authorization: "Bearer ${GEOX_TOKEN}",
   };
 
   const overviewRes = await app.inject({

@@ -4,9 +4,9 @@ import type {
   RecommendationBiasV1,
   SalinityRiskV1,
 } from "@geox/contracts";
-import { inferFertilityFromDeviceObservationV1 } from "./fertility_inference_core_v1";
-import { pumpControllerV1 } from "./pump_controller_v1";
-import { sprayerUnitV1 } from "./sprayer_unit_v1";
+import { inferFertilityFromDeviceObservationV1, inferFertilityFromObservationAggregateV1 } from "./fertility_inference_core_v1.js";
+import { pumpControllerV1 } from "./pump_controller_v1.js";
+import { sprayerUnitV1 } from "./sprayer_unit_v1.js";
 
 export type DeviceSkillCategory = "device" | "sensing_inference";
 export type TriggerStage = "before_recommendation" | "before_dispatch" | "before_acceptance" | "after_acceptance" | "after_recommendation";
@@ -468,6 +468,8 @@ export function checkCapabilityCompatibilityMatrix(input: {
   };
 }
 
-export * from "./fertility_inference_core_v1";
-export * from "./pump_controller_v1";
-export * from "./sprayer_unit_v1";
+export { inferFertilityFromDeviceObservationV1, inferFertilityFromObservationAggregateV1 } from "./fertility_inference_core_v1.js";
+export type { DeviceObservationV1Input, SensingObservationAggregateV1 } from "./fertility_inference_core_v1.js";
+export * from "./fertility_inference_core_v1.js";
+export * from "./pump_controller_v1.js";
+export * from "./sprayer_unit_v1.js";

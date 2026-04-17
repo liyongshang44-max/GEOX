@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { projectFieldPortfolioListV1 } from "./field_portfolio_v1";
+import { projectFieldPortfolioListV1 } from "./field_portfolio_v1.js";
 
 class FakePool {
   async query(sql: string): Promise<{ rows: any[] }> {
@@ -101,8 +101,8 @@ test("field portfolio v1: uses unified risk/filter/sort/summary fields", async (
   assert.equal(output.items[0]?.field_id, "f-1");
   assert.equal(output.items[0]?.risk_level, "CRITICAL");
   assert.deepEqual(output.items[0]?.risk_reasons, ["alert-critical", "report-medium"]);
-  assert.equal(output.items[0]?.alert_summary.open_count, 1);
-  assert.equal(output.items[0]?.pending_acceptance_summary.pending_acceptance_count, 1);
+  assert.equal(output.items[0]?.alert_summary.open_total, 1);
+  assert.equal(output.items[0]?.acceptance_summary.pending_count, 1);
 
   assert.equal(output.summary.by_risk.critical, 1);
   assert.equal(output.summary.by_risk.low, 1);

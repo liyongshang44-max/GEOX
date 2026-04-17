@@ -1,6 +1,6 @@
-import type { JudgeConfigV1 } from "../config";
-import type { RawSample } from "../evidence";
-import { clamp01 } from "../util";
+import type { JudgeConfigV1 } from "../config.js";
+import type { RawSample } from "../evidence.js";
+import { clamp01 } from "../util.js";
 
 export type QCMix = { ok_pct?: number; suspect_pct?: number; bad_pct?: number };
 

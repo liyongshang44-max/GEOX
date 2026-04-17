@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { enforceRouteRoleAuth } from "../auth/route_role_authz";
-import { projectCustomerDashboardAggregateV1 } from "../projections/report_dashboard_v1";
-import { projectOperationStateV1 } from "../projections/operation_state_v1";
-import { projectReportV1 } from "./reports_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { enforceRouteRoleAuth } from "../auth/route_role_authz.js";
+import { projectCustomerDashboardAggregateV1, projectFieldPortfolioSummaryV1 } from "../projections/report_dashboard_v1.js";
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
+import { projectReportV1 } from "./reports_v1.js";
 
 type TimeRange = "7d" | "30d" | "season";
 

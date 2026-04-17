@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
 
 type AuditObjectType = "ALL" | "EXPORT" | "ALERT" | "RECEIPT" | "APPROVAL" | "DISPATCH";
 

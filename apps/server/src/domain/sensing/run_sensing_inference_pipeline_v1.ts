@@ -5,12 +5,12 @@ import type {
   WaterFlowInferenceV1Result,
 } from "@geox/contracts";
 import type { Pool, PoolClient } from "pg";
-import { appendDerivedSensingStateV1, type DerivedSensingStateTypeV1 } from "../../services/derived_sensing_state_v1";
-import { appendSkillRunFact, digestJson } from "../skill_registry/facts";
-import { inferCanopyTemperatureFromObservationAggregateV1 } from "./canopy_temperature_inference_v1";
-import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1";
-import { inferSensorQualityFromObservationAggregateV1 } from "./sensor_quality_inference_v1";
-import { inferWaterFlowFromObservationAggregateV1 } from "./water_flow_inference_v1";
+import { appendDerivedSensingStateV1, type DerivedSensingStateTypeV1 } from "../../services/derived_sensing_state_v1.js";
+import { appendSkillRunFact, digestJson } from "../skill_registry/facts.js";
+import { inferCanopyTemperatureFromObservationAggregateV1 } from "./canopy_temperature_inference_v1.js";
+import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1.js";
+import { inferSensorQualityFromObservationAggregateV1 } from "./sensor_quality_inference_v1.js";
+import { inferWaterFlowFromObservationAggregateV1 } from "./water_flow_inference_v1.js";
 
 type DbConn = Pool | PoolClient;
 

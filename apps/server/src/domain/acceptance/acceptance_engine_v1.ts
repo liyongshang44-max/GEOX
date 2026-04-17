@@ -1,5 +1,5 @@
-import { evaluateAcceptance } from "./acceptance_rules_v1";
-import type { AcceptanceResultV1 } from "./types";
+import { evaluateAcceptance } from "./acceptance_rules_v1.js";
+import type { AcceptanceResultV1 } from "./types.js";
 
 export function buildAcceptanceResult(input: {
   operation_plan_id: string;

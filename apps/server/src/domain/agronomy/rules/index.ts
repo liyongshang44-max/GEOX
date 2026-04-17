@@ -1,6 +1,6 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
-import { cornRules } from "./corn_rules";
-import { tomatoRules } from "./tomato_rules";
+import { cornRules } from "./corn_rules.js";
+import { tomatoRules } from "./tomato_rules.js";
 
 export type AgronomyRule = {
   rule_id: string;

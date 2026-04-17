@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { appendSkillBindingFact } from "../domain/skill_registry/facts";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
-import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
+import { appendSkillBindingFact } from "../domain/skill_registry/facts.js";
+import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
   const deprecatedSwitchHint = {

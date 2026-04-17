@@ -10,7 +10,7 @@
 // - docs/controlplane/constitution/GEOX-ControlConstitution-AllowedInputs-v0.md
 // - docs/controlplane/constitution/GEOX-ControlConstitution-AllowedInputPaths-v0.md
 
-import { ALLOWED_INPUT_PATHS_SET_V0, type CanonicalFieldPath } from "./allowed_input_paths";
+import { ALLOWED_INPUT_PATHS_SET_V0, type CanonicalFieldPath } from "./allowed_input_paths.js";
 
 /**
  * FieldMap is the only data structure the Control Kernel is allowed to read.

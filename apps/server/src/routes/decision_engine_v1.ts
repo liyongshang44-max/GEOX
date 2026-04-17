@@ -3,19 +3,19 @@ import type { Pool } from "pg";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine";
-import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
-import { resolveCropStage } from "../domain/agronomy/stage_resolver";
-import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine";
-import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine";
-import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1";
-import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
+import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine.js";
+import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
+import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine.js";
+import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine.js";
+import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import {
   ensureDerivedSensingStateProjectionV1,
   getLatestDerivedSensingStatesByFieldV1
-} from "../services/derived_sensing_state_v1";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
+} from "../services/derived_sensing_state_v1.js";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -1326,7 +1326,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const adapterTypeRaw = typeof rec?.suggested_action?.adapter_type === "string" ? String(rec.suggested_action.adapter_type).trim() : "";
     const adapter_type = adapterTypeRaw || ((String(actionType).toLowerCase() === "irrigation.start" || String(actionType).toLowerCase() === "irrigate") ? "irrigation_simulator" : "mqtt");
 
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/approval_request/v1/request`, String((req.headers as any).authorization ?? ""), {
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
@@ -1496,7 +1496,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const idempotency_key = `irrigation_sim_${randomUUID().replace(/-/g, "")}`;
     const logRef = `sim://irrigation/${act_task_id}/${startTs}`;
 
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/receipt`, String((req.headers as any).authorization ?? ""), {
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/receipt`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,

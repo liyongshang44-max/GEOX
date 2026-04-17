@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { projectAlertWorkboardV1, DEFAULT_WORKFLOW_PRIORITY_V1, DEFAULT_WORKFLOW_STATUS_V1 } from "./alert_workboard_v1";
+import { projectAlertWorkboardV1, DEFAULT_WORKFLOW_PRIORITY_V1, DEFAULT_WORKFLOW_STATUS_V1 } from "./alert_workboard_v1.js";
 
 const scope = {
   tenant_id: "t-1",

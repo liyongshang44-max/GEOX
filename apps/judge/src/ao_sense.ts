@@ -1,5 +1,5 @@
-import { nowMs, sha256Hex, stableStringify } from "./util";
-import type { ProblemStateV1 } from "./problem_state";
+import { nowMs, sha256Hex, stableStringify } from "./util.js";
+import type { ProblemStateV1 } from "./problem_state.js";
 
 // NOTE: We intentionally avoid writing certain forbidden tokens verbatim in source.
 // The outbound object still conforms to the frozen contract schema.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { evaluateRisk, type RiskLevel } from "./risk_engine";
+import { evaluateRisk, type RiskLevel } from "./risk_engine.js";
 
 const ALLOWED: RiskLevel[] = ["LOW", "MEDIUM", "HIGH"];
 

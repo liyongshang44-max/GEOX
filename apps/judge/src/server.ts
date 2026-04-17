@@ -1,8 +1,8 @@
 import Fastify from "fastify";
 
-import { AppleIReader } from "./applei_reader";
-import { JudgeRuntime } from "./runtime";
-import { registerJudgeRoutes } from "./routes";
+import { AppleIReader } from "./applei_reader.js";
+import { JudgeRuntime } from "./runtime.js";
+import { registerJudgeRoutes } from "./routes.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

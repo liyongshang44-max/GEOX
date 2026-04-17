@@ -6,7 +6,7 @@ import {
   listDispatchStrategyConfig,
   resetDispatchStrategyConfig,
   setDispatchStrategyConfig,
-} from "./dispatch_decision_strategy";
+} from "./dispatch_decision_strategy.js";
 
 test("dispatch strategy contract: default composition returns sorted candidates with explain", () => {
   resetDispatchStrategyConfig();

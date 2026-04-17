@@ -2,9 +2,9 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
 import * as GeoxContracts from "@geox/contracts";
-import { runAgronomyInferenceV1, type InferenceTaskTypeV1 } from "../services/agronomy_inference_service_v1";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
+import { runAgronomyInferenceV1, type InferenceTaskTypeV1 } from "../services/agronomy_inference_service_v1.js";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
+import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1.js";
 const { TELEMETRY_METRIC_CATALOG_V1, isTelemetryMetricNameV1 } = GeoxContracts;
 function normalizeString(v: unknown, maxLen = 128): string | null {
   if (typeof v !== "string") return null;

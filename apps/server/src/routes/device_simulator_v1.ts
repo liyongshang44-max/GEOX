@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
+import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1.js";
 
 type SimulatorRunner = {
   key: string;

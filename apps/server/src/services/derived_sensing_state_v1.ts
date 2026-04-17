@@ -1,1 +1,1 @@
-export * from "./derived_sensing_state_service_v1";
+export * from "./derived_sensing_state_service_v1.js";

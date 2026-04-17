@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
 
 type ObservationTypeV1 = "DISEASE_SPOT" | "PEST" | "CROP_VIGOR" | "LODGING" | "MISSING_SEEDLINGS";
 type AgriMediaTypeV1 = "LEAF_IMAGE" | "FIELD_IMAGE" | "FIELD_VIDEO" | "UAV_SCOUT_IMAGE" | "UAV_SCOUT_VIDEO";

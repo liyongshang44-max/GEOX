@@ -1,3 +1,4 @@
+// Route classification: internal / experimental
 // GEOX/apps/server/src/routes/judge_config.ts
 //
 // Judge Config Manifest + Patch preview endpoint (Frozen Manifest v1).
@@ -10,19 +11,21 @@
 
 import type { FastifyInstance } from "fastify";
 
-import { loadDefaultConfig, getManifest, computeSsotHash, validateEffectiveConfig } from "../../../judge/src/config/ssot";
-import type { JudgeConfigPatchV1 } from "../../../judge/src/config/patch";
+import { loadDefaultConfig, getManifest, computeSsotHash, validateEffectiveConfig } from "../../../judge/src/config/ssot.js";
+import type { JudgeConfigPatchV1 } from "../../../judge/src/config/patch.js";
 import {
   applyPatch,
   computeEffectiveConfigHash,
   validatePatchEnvelopeStrict,
   validatePatchStrict,
-} from "../../../judge/src/config/patch";
+} from "../../../judge/src/config/patch.js";
 
 export function registerJudgeConfigRoutes(app: FastifyInstance): void {
   // GET /api/judge/config
   // Returns SSOT fingerprint + editable manifest (machine-readable) for frontend.
+  // @deprecated - use /api/v1/*
   app.get("/api/judge/config", async (_req, reply) => {
+    reply.header("X-Deprecated", "true");
     const ssotCfg = loadDefaultConfig();
     const manifest = getManifest(ssotCfg);
     return reply.send(manifest);
@@ -30,7 +33,9 @@ export function registerJudgeConfigRoutes(app: FastifyInstance): void {
 
   // POST /api/judge/config/patch
   // Validates and previews patch (dryRun=true) or validates+applies (dryRun=false, no storage in v1).
+  // @deprecated - use /api/v1/*
   app.post("/api/judge/config/patch", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
     const body = (req.body ?? {}) as any;
 
     // Step-1: validate request envelope shape + reject unknown keys.

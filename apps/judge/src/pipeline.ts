@@ -1,25 +1,25 @@
 // apps/judge/src/pipeline.ts
 
-import type { AppleIReader } from "./applei_reader"; // 确保导入正确
-import { loadDefaultConfig, computeSsotHash, getManifest, validateEffectiveConfig } from "./config/ssot";
-import type { JudgeConfigPatchV1 } from "./config/patch";
-import { applyPatch as applyConfigPatch, computeEffectiveConfigHash, validatePatchStrict, JudgeConfigPatchRejected } from "./config/patch";
-import { sha256Hex, stableStringify } from "./util";
-import { splitEvidence } from "./evidence";
-import { checkSufficiency } from "./rules/stage2_sufficiency";
-import { computeTimeCoverage } from "./rules/stage3_time_coverage";
-import { evaluateQC } from "./rules/stage4_qc";
-import { detectEvidenceConflict, detectReferenceConflict } from "./rules/stage6_conflict";
-import { checkMarkers } from "./rules/stage8_marker";
-import { buildHistoryReference, type ReferenceViewV1 } from "./reference/reference_builder";
-import { makeProblemStateBase, type ProblemStateV1, type EvidenceRef } from "./problem_state";
-import { deriveAoSense, type AoSenseV1 } from "./ao_sense";
-import { deriveLBCandidates, type LBCandidateV1 } from "./lb_candidate";
+import type { AppleIReader } from "./applei_reader.js"; // 确保导入正确
+import { loadDefaultConfig, computeSsotHash, getManifest, validateEffectiveConfig } from "./config/ssot.js";
+import type { JudgeConfigPatchV1 } from "./config/patch.js";
+import { applyPatch as applyConfigPatch, computeEffectiveConfigHash, validatePatchStrict, JudgeConfigPatchRejected } from "./config/patch.js";
+import { sha256Hex, stableStringify } from "./util.js";
+import { splitEvidence } from "./evidence.js";
+import { checkSufficiency } from "./rules/stage2_sufficiency.js";
+import { computeTimeCoverage } from "./rules/stage3_time_coverage.js";
+import { evaluateQC } from "./rules/stage4_qc.js";
+import { detectEvidenceConflict, detectReferenceConflict } from "./rules/stage6_conflict.js";
+import { checkMarkers } from "./rules/stage8_marker.js";
+import { buildHistoryReference, type ReferenceViewV1 } from "./reference/reference_builder.js";
+import { makeProblemStateBase, type ProblemStateV1, type EvidenceRef } from "./problem_state.js";
+import { deriveAoSense, type AoSenseV1 } from "./ao_sense.js";
+import { deriveLBCandidates, type LBCandidateV1 } from "./lb_candidate.js";
 import {
   queryAoActLatestReceiptIndexV0,
   shouldExplainAoActReadModelV0,
   summarizeAoActIndexForLogV0,
-} from "./ao_act_readmodel"; 
+} from "./ao_act_readmodel.js"; 
 
 export type JudgeRunInput = {
   subjectRef: any;

@@ -1,4 +1,4 @@
-import { computeCostBreakdown } from "../agronomy/cost_model";
+import { computeCostBreakdown } from "../agronomy/cost_model.js";
 
 export type BillingResultV1 = {
   billable: boolean;

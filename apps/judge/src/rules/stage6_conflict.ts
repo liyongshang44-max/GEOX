@@ -1,7 +1,7 @@
 // apps/judge/src/rules/stage6_conflict.ts
-import type { JudgeConfigV1 } from "../config";
-import type { RawSample } from "../evidence";
-import type { ReferenceViewV1 } from "../reference/reference_builder";
+import type { JudgeConfigV1 } from "../config.js";
+import type { RawSample } from "../evidence.js";
+import type { ReferenceViewV1 } from "../reference/reference_builder.js";
 
 /* ---------------------------------------------
  * Types (pipeline-aligned)

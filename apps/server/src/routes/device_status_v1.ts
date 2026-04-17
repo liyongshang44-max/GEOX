@@ -11,7 +11,7 @@
 
 import type { FastifyInstance } from "fastify"; // Fastify types.
 import type { Pool } from "pg"; // Postgres pool.
-import * as authz from "../auth/ao_act_authz_v0"; // Auth helpers (export names may differ between repos).
+import * as authz from "../auth/ao_act_authz_v0.js"; // Auth helpers (export names may differ between repos).
 
 type FactsAuth = {
   tenant_id: string; // Tenant id.

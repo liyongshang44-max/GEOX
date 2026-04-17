@@ -1,19 +1,19 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz";
-import { projectOperationStateV1 } from "../projections/operation_state_v1";
-import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1";
-import { projectDeviceStateV1 } from "../projections/device_state_v1";
-import { projectOperationReportV1 } from "../projections/report_v1";
-import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy";
-import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
-import { computeCostBreakdown } from "../domain/agronomy/cost_model";
-import { computeOperationCostV1 } from "../domain/cost_model";
-import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine";
-import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz.js";
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
+import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1.js";
+import { projectDeviceStateV1 } from "../projections/device_state_v1.js";
+import { projectOperationReportV1 } from "../projections/report_v1.js";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
+import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy.js";
+import { deriveBusinessEffect } from "../domain/agronomy/business_effect.js";
+import { computeCostBreakdown } from "../domain/agronomy/cost_model.js";
+import { computeOperationCostV1 } from "../domain/cost_model.js";
+import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine.js";
+import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver.js";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -1989,8 +1989,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         estimated_chemical_cost: estimatedCost.estimated_chemical_cost,
       },
       sla: {
-        execution_success: executionSuccess,
-        acceptance_pass: acceptancePass,
+        execution_success: executionSuccess ?? undefined,
+        acceptance_pass: acceptancePass ?? undefined,
         response_time_ms: responseTimeMs,
       },
     });
@@ -2138,8 +2138,8 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         group_id: tenant.group_id,
       },
       sla_snapshot: {
-        execution_success: executionSuccess,
-        acceptance_pass: acceptancePass,
+        execution_success: executionSuccess ?? undefined,
+        acceptance_pass: acceptancePass ?? undefined,
         response_time_ms: responseTimeMs,
         sla_inclusion: {
           execution: executionInclusion,

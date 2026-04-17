@@ -1,7 +1,7 @@
-import type { AlertNotificationPayload } from "./adapters/alert_notification_adapter_v1";
-import { webhookAdapterV1 } from "./adapters/webhook_adapter_v1";
-import { emailAdapterV1 } from "./adapters/email_adapter_v1";
-import { dingtalkAdapterV1 } from "./adapters/dingtalk_adapter_v1";
+import type { AlertNotificationPayload } from "./adapters/alert_notification_adapter_v1.js";
+import { webhookAdapterV1 } from "./adapters/webhook_adapter_v1.js";
+import { emailAdapterV1 } from "./adapters/email_adapter_v1.js";
+import { dingtalkAdapterV1 } from "./adapters/dingtalk_adapter_v1.js";
 
 const registry: Record<string, any> = {
   webhook: webhookAdapterV1,

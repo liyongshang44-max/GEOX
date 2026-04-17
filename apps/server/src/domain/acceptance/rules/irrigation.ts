@@ -1,5 +1,5 @@
-import { buildGeoMetrics } from "./geo";
-import type { AcceptanceRule } from "./types";
+import { buildGeoMetrics } from "./geo.js";
+import type { AcceptanceRule } from "./types.js";
 
 function resolvePassRatioMin(policyRef: string | null): number {
   const ref = String(policyRef ?? "").toLowerCase();

@@ -1,7 +1,7 @@
 import type { Pool } from "pg";
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
-import { resolveCropStage } from "../domain/agronomy/stage_resolver";
+import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

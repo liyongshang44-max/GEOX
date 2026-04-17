@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { hasFieldAccess } from "../auth/route_role_authz";
-import { projectFieldPortfolioListV1, type FieldPortfolioRiskLevel, type FieldPortfolioSortBy } from "../projections/field_portfolio_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { hasFieldAccess } from "../auth/route_role_authz.js";
+import { projectFieldPortfolioListV1, type FieldPortfolioRiskLevel, type FieldPortfolioSortBy } from "../projections/field_portfolio_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

@@ -1,5 +1,5 @@
-import { newId, nowMs } from "./util";
-import type { ProblemStateV1 } from "./problem_state";
+import { newId, nowMs } from "./util.js";
+import type { ProblemStateV1 } from "./problem_state.js";
 
 export type LBCandidateV1 = {
   type: "lb_candidate_v1";

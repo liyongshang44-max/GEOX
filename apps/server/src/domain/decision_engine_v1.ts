@@ -1,5 +1,5 @@
-import { evaluateAgronomy } from "./agronomy/agronomy_engine";
-import { getCropProfile } from "./agronomy/crop_catalog";
+import { evaluateAgronomy } from "./agronomy/agronomy_engine.js";
+import { getCropProfile } from "./agronomy/crop_catalog.js";
 
 export type DecisionEngineInputV1 = {
   crop_code: string;

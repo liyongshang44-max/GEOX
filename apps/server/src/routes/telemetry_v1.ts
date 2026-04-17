@@ -5,8 +5,8 @@
 import type { FastifyInstance } from "fastify"; // Fastify app instance for route registration.
 import type { Pool } from "pg"; // Postgres connection pool for query execution.
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth for tenant isolation (Sprint A1).
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context for tenant_id filtering.
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse Sprint 19 token/scope auth for tenant isolation (Sprint A1).
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context for tenant_id filtering.
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string query parameters.
   return typeof v === "string" && v.trim().length > 0; // Non-empty trimmed string.

@@ -4,7 +4,7 @@ import fs from "node:fs"; // Read token SSOT file for per-request authorization 
 import path from "node:path"; // Resolve repo-relative config file paths deterministically.
 import { fileURLToPath } from "node:url"; // Resolve ESM module path to filesystem path (stable repo root derivation).
 import type { FastifyReply, FastifyRequest } from "fastify"; // Fastify request/reply types.
-import type { AuthRole } from "../domain/auth/roles";
+import type { AuthRole } from "../domain/auth/roles.js";
 
 export type AoActScopeV0 =
   | "ao_act.task.write"
@@ -62,17 +62,81 @@ function repoRootFromModule(): string {
 } // End block.
 
 export function defaultAoActTokenFilePathV0(): string {
-  return path.join(repoRootFromModule(), "config", "auth", "ao_act_tokens_v0.json"); // SSOT location for AO-ACT token allowlist.
+  return path.join(repoRootFromModule(), "config", "auth", "example_tokens.json"); // Example-only fallback path; real credentials must come from env or an external file.
 }
 
-function readTokenFileV0(fp: string): TokenFileV0 {
-  if (!fs.existsSync(fp)) return { version: "ao_act_tokens_v0", tokens: [] }; // Missing file => deny-all.
-  const raw = fs.readFileSync(fp, "utf8").replace(/^\uFEFF/, ""); // Strip optional UTF-8 BOM before JSON parse.
-  const parsed = JSON.parse(raw); // Parse JSON token allowlist.
+function defaultScopesFromEnv(): AoActScopeV0[] {
+  return [
+    "alerts.read",
+    "alerts.write",
+    "ao_act.index.read",
+    "ao_act.receipt.write",
+    "ao_act.task.write",
+    "devices.bind",
+    "devices.credentials.revoke",
+    "devices.credentials.write",
+    "devices.read",
+    "devices.status.read",
+    "devices.write",
+    "evidence_export.read",
+    "evidence_export.write",
+    "fields.read",
+    "fields.write",
+    "telemetry.read",
+  ];
+}
+
+function parseTokenFileV0(raw: string): TokenFileV0 {
+  const parsed = JSON.parse(raw);
   if (!parsed || parsed.version !== "ao_act_tokens_v0" || !Array.isArray(parsed.tokens)) {
-    return { version: "ao_act_tokens_v0", tokens: [] }; // Any invalid structure => deny-all.
+    return { version: "ao_act_tokens_v0", tokens: [] };
   }
-  return parsed as TokenFileV0; // Return parsed token file.
+  return parsed as TokenFileV0;
+}
+
+function tokenFileFromEnv(): TokenFileV0 | null {
+  const inline = String(process.env.GEOX_TOKENS_JSON ?? "").trim();
+  if (inline) {
+    try { return parseTokenFileV0(inline); } catch { return { version: "ao_act_tokens_v0", tokens: [] }; }
+  }
+
+  const secretFile = String(process.env.GEOX_TOKENS_FILE ?? process.env.GEOX_TOKEN_SSOT_PATH ?? "").trim();
+  if (secretFile) {
+    if (!fs.existsSync(secretFile)) return { version: "ao_act_tokens_v0", tokens: [] };
+    try {
+      const raw = fs.readFileSync(secretFile, "utf8").replace(/^﻿/, "");
+      return parseTokenFileV0(raw);
+    } catch {
+      return { version: "ao_act_tokens_v0", tokens: [] };
+    }
+  }
+
+  const singleToken = String(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? process.env.AO_ACT_TOKEN ?? "").trim();
+  if (!singleToken) return null;
+
+  const tenant_id = String(process.env.GEOX_TENANT_ID ?? "tenantA").trim() || "tenantA";
+  const project_id = String(process.env.GEOX_PROJECT_ID ?? "projectA").trim() || "projectA";
+  const group_id = String(process.env.GEOX_GROUP_ID ?? "groupA").trim() || "groupA";
+  const actor_id = String(process.env.GEOX_ACTOR_ID ?? "env_actor").trim() || "env_actor";
+  const token_id = String(process.env.GEOX_TOKEN_ID ?? "tok_env_default").trim() || "tok_env_default";
+  const role = (String(process.env.GEOX_ROLE ?? "admin").trim() || "admin") as AoActRoleV0;
+  const scopes = String(process.env.GEOX_SCOPES ?? "").trim()
+    ? String(process.env.GEOX_SCOPES).split(",").map((x) => x.trim()).filter(Boolean) as AoActScopeV0[]
+    : defaultScopesFromEnv();
+
+  return {
+    version: "ao_act_tokens_v0",
+    tokens: [{ token: singleToken, token_id, actor_id, tenant_id, project_id, group_id, scopes, revoked: false, role }]
+  };
+}
+
+export function readTokenFileV0(fp?: string): TokenFileV0 {
+  const envBacked = tokenFileFromEnv();
+  if (envBacked) return envBacked;
+  const resolved = fp ?? defaultAoActTokenFilePathV0();
+  if (!fs.existsSync(resolved)) return { version: "ao_act_tokens_v0", tokens: [] };
+  const raw = fs.readFileSync(resolved, "utf8").replace(/^﻿/, "");
+  return parseTokenFileV0(raw);
 }
 
 function parseBearerToken(req: FastifyRequest): string | null {

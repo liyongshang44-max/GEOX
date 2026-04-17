@@ -1,4 +1,4 @@
-import { newId, nowMs } from "./util";
+import { newId, nowMs } from "./util.js";
 
 export type EvidenceRef = {
   kind: "ledger_slice" | "state_vector" | "reference_view" | "qc_summary";

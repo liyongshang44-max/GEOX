@@ -9,12 +9,12 @@
     "@fastify/multipart": "^8.3.1",
     "@fastify/static": "^7.0.4",
     "@geox/contracts": "workspace:*",
+    "@geox/device-skills": "workspace:*",
+    "@geox/skill-registry": "workspace:*",
     "fastify": "^4.28.1",
     "nanoid": "^5.0.7",
     "pg": "^8.12.0",
-    "zod": "3",
-    "@geox/device-skills": "workspace:*",
-    "@geox/skill-registry": "workspace:*"
+    "zod": "3"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
@@ -24,15 +24,24 @@
   },
   "scripts": {
     "dev": "pnpm -w exec tsx watch apps/server/src/server.ts",
-    "build": "pnpm -w exec tsc -p apps/server/tsconfig.json",
+
+    "build": "pnpm -w exec tsc -p apps/server/tsconfig.json && node scripts/write_dist_entries.cjs",
+
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json",
-    "seed:p6.1-real-chain": "pnpm -w exec tsx apps/server/scripts/generate_p6_1_real_chain_sample.ts",
+
+    "seed:p6.1-real-chain": "pnpm -w exec tsx scripts/generate_p6_1_real_chain_sample.ts",
+
     "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts",
-    "test:stage5:frontend": "pnpm -w exec tsx apps/server/scripts/stage5_frontend_acceptance.ts",
+
+    "test:stage5:frontend": "pnpm -w exec tsx scripts/stage5_frontend_acceptance.ts",
+
     "test:sensing:closed-loop": "node --import tsx --test src/domain/sensing/fertility_precheck_e2e.test.ts",
+
     "check:smoke:param-keys": "node scripts/check_smoke_parameter_keys.mjs",
+
     "test:p1:smoke": "node scripts/p1_skill_loop_minimal.mjs",
     "test:p1:acceptance-smoke": "node scripts/p1_skill_loop_acceptance_smoke.mjs",
-    "test:p1:selfcheck": "node scripts/p1_skill_loop_minimal_selfcheck.mjs"
+    "test:p1:selfcheck": "node scripts/p1_skill_loop_minimal_selfcheck.mjs",
+    "test:p1:openapi-selfcheck": "node scripts/p1_3_openapi_alignment_selfcheck.mjs"
   }
 }

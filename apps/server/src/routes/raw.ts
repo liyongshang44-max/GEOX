@@ -1,3 +1,4 @@
+// Route classification: legacy compatibility
 // ⚠️ DEPRECATED: legacy monitoring route
 // replaced by operation_state_v1 / dashboard_v1 / program_v1
 // DO NOT use in new flows
@@ -44,7 +45,9 @@ export function registerRawRoutes(app: FastifyInstance, pool: Pool) {
 
   // POST /api/raw
   // Body: { fact_id?, occurred_at_iso?, source, record_json }
+  // @deprecated - use /api/v1/*
   app.post("/api/raw", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
     if ((req.query as any)?.__internal__ !== "true") {
       return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
     }

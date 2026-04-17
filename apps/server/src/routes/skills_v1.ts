@@ -1,12 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   appendSkillBindingFact,
   appendSkillDefinitionFact,
   type SkillDefinitionFactPayload,
-} from "../domain/skill_registry/facts";
-import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1";
+} from "../domain/skill_registry/facts.js";
+import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";

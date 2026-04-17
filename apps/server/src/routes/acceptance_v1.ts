@@ -6,9 +6,9 @@ import { z } from "zod";
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 

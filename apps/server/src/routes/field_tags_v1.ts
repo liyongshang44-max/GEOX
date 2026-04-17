@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { enforceFieldScopeOrDeny } from "../auth/route_role_authz";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { enforceFieldScopeOrDeny } from "../auth/route_role_authz.js";
 
 const TagCreateBodySchema = z.object({
   tag: z.string().min(1).max(64)

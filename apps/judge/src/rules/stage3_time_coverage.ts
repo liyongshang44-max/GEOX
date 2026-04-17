@@ -1,5 +1,5 @@
-import type { JudgeConfigV1 } from "../config";
-import type { RawSample } from "../evidence";
+import type { JudgeConfigV1 } from "../config.js";
+import type { RawSample } from "../evidence.js";
 
 export type TimeCoverageResult =
   | { ok: true; maxGapMs: number; coverageRatio: number; expectedIntervalMs: number }

@@ -13,10 +13,10 @@
 //
 // No IO. No side effects. No execution. No explanation.
 
-import type { ProblemStateLike, UncertaintyEnvelopeLike, PermissionSetLike } from "./inputs/projector";
-import { projectInputsToFieldMapV0 } from "./inputs/projector";
-import type { ControlRuleSetV0, ControlVerdictV0 } from "./ruleset/types";
-import { evaluateRuleSetV0 } from "./ruleset/evaluator";
+import type { ProblemStateLike, UncertaintyEnvelopeLike, PermissionSetLike } from "./inputs/projector.js";
+import { projectInputsToFieldMapV0 } from "./inputs/projector.js";
+import type { ControlRuleSetV0, ControlVerdictV0 } from "./ruleset/types.js";
+import { evaluateRuleSetV0 } from "./ruleset/evaluator.js";
 
 /**
  * Evaluates control rulesets deterministically against the provided inputs.

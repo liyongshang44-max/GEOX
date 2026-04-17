@@ -5,7 +5,7 @@
 //   GEOX/config/judge/ruleset_v1.json
 //
 // Pipeline imports:
-//   import { loadJudgeConfig } from "./config";
+//   import { loadJudgeConfig } from "./config.js";
 
 import fs from "node:fs";
 import path from "node:path";

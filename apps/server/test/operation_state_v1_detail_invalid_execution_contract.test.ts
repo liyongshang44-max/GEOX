@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { registerOperationStateV1Routes } from "../src/routes/operation_state_v1";
 
-const TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
+const TOKEN = process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || "";
 
 test("contract: detail must not expose acceptance PENDING when final_status is INVALID_EXECUTION", async () => {
   const operationPlanId = "op_invalid_contract";

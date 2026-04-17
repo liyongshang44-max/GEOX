@@ -1,18 +1,18 @@
 import type { FastifyInstance } from "fastify"; // Fastify route host typing.
 import type { Pool } from "pg"; // Postgres pool typing.
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT bearer auth helper.
-import { hasFieldAccess } from "../auth/route_role_authz";
-import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization source used by export and dashboard.
-import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Reuse operation state projection for dashboard performance metrics.
-import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT bearer auth helper.
+import { hasFieldAccess } from "../auth/route_role_authz.js";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js"; // Shared receipt normalization source used by export and dashboard.
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js"; // Reuse operation state projection for dashboard performance metrics.
+import { buildPolicySuggestionsFromStats } from "../domain/agronomy/rule_engine.js";
 import {
   projectManualExecutionQualityV1,
   listManualExecutionQualityTaskDetailsV1,
   type ManualExecutionQualityDimension
-} from "../projections/manual_execution_quality_v1";
-import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1";
-import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1";
-import { evaluateRisk } from "../domain/risk_engine";
+} from "../projections/manual_execution_quality_v1.js";
+import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1.js";
+import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
+import { evaluateRisk } from "../domain/risk_engine.js";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.

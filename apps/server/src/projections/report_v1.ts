@@ -1,5 +1,5 @@
-import { evaluateRisk } from "../domain/risk_engine";
-import type { OperationStateV1 } from "./operation_state_v1";
+import { evaluateRisk } from "../domain/risk_engine.js";
+import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
 

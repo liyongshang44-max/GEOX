@@ -1,7 +1,7 @@
-import { deriveAlertsFromOperationReport, deriveAlertsFromTelemetryHealth, type TelemetryHealthInput } from "../domain/alert_engine";
-import { projectOperationReportV1, type OperationReportV1 } from "./report_v1";
-import type { OperationStateV1 } from "./operation_state_v1";
-import { AlertSeverity, type AlertStatus, type AlertV1 } from "./alert_v1";
+import { deriveAlertsFromOperationReport, deriveAlertsFromTelemetryHealth, type TelemetryHealthInput } from "../domain/alert_engine.js";
+import { projectOperationReportV1, type OperationReportV1 } from "./report_v1.js";
+import type { OperationStateV1 } from "./operation_state_v1.js";
+import { AlertSeverity, type AlertStatus, type AlertV1 } from "./alert_v1.js";
 
 export type AlertListScopeV1 = {
   tenant_id: string;
@@ -70,7 +70,8 @@ export function projectReportV1(input: {
     acceptance: input.operation.acceptance,
     receipt: input.operation.receipt,
     cost: input.operation.cost ?? {},
-    now_ms: input.nowMs,
+    sla: {},
+    now: new Date(input.nowMs),
   });
 }
 

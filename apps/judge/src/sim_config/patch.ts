@@ -8,8 +8,8 @@
 // - unknown keys rejected
 // - ssot_hash mismatch => 409 (handled by server)
 
-import { sha256Hex, stableStringify } from "../util";
-import type { SimConfigManifestV1, SimConfigEditableItem } from "./ssot";
+import { sha256Hex, stableStringify } from "../util.js";
+import type { SimConfigManifestV1, SimConfigEditableItem } from "./ssot.js";
 
 export type SimConfigPatchOpV1 = {
   op: "replace";

@@ -1,4 +1,4 @@
-import type { DeviceSkillDefinition } from "./index";
+import type { DeviceSkillDefinition } from "./index.js";
 
 function finite(input: unknown): number | null {
   const n = Number(input);

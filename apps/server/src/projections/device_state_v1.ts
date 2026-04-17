@@ -1,4 +1,4 @@
-import type { OperationStateV1 } from "./operation_state_v1";
+import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type DeviceStateV1 = {
   device_id: string;

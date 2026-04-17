@@ -1,6 +1,6 @@
-import { buildGeoMetrics } from "./rules/geo";
-import type { AcceptanceEvaluationOutput } from "./rules/types";
-import { acceptanceSkillRegistryV1 } from "./skills";
+import { buildGeoMetrics } from "./rules/geo.js";
+import type { AcceptanceEvaluationOutput } from "./rules/types.js";
+import { acceptanceSkillRegistryV1 } from "./skills.js";
 
 type EvaluateInput = {
   action_type: string;

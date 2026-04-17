@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import { projectProgramCostFromFacts } from "./program_cost_v1";
-import { projectProgramSlaFromFacts } from "./program_sla_v1";
+import { projectProgramCostFromFacts } from "./program_cost_v1.js";
+import { projectProgramSlaFromFacts } from "./program_sla_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };
@@ -41,9 +41,9 @@ export function projectProgramEfficiencyFromFacts(rows: FactRow[]): ProgramEffic
   const costs = projectProgramCostFromFacts(facts);
   const slas = projectProgramSlaFromFacts(facts);
 
-  const slaByProgram = new Map(slas.map((x) => [x.program_id, x]));
+  const slaByProgram = new Map<string, any>(slas.map((x: any) => [x.program_id, x]));
 
-  const out: ProgramEfficiencyV1[] = costs.map((cost) => {
+  const out: ProgramEfficiencyV1[] = costs.map((cost: any) => {
     const sla = slaByProgram.get(cost.program_id);
     const hasCostFacts = cost.record_count > 0;
     const hasUsageFacts = cost.resource_record_count > 0;

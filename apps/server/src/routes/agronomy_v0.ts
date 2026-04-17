@@ -1,3 +1,4 @@
+// Route classification: legacy compatibility
 // ⚠️ DEPRECATED: legacy monitoring route
 // replaced by operation_state_v1 / dashboard_v1 / program_v1
 // DO NOT use in new flows
@@ -292,7 +293,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
       return false;
     };
 
-    app.get("/api/agronomy/v0/report", async (req, reply) => { // Provide full deterministic agronomy report for a window.
+    // @deprecated - use /api/v1/*
+    app.get("/api/agronomy/v0/report", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Provide full deterministic agronomy report for a window.
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch for consistent 400 errors.
         const q: any = (req as any).query ?? {}; // Read query object.
@@ -317,7 +320,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
       } // End catch.
     }); // End /report route.
 
-    app.get("/api/agronomy/v0/summary", async (req, reply) => { // Provide stable report_id/hash and counts for a window.
+    // @deprecated - use /api/v1/*
+    app.get("/api/agronomy/v0/summary", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Provide stable report_id/hash and counts for a window.
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q: any = (req as any).query ?? {}; // Read query.
@@ -351,7 +356,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
       } // End catch.
     }); // End /summary route.
 
-    app.get("/api/agronomy/v0/evidence_refs", async (req, reply) => { // Provide pointer-only evidence refs for a window.
+    // @deprecated - use /api/v1/*
+    app.get("/api/agronomy/v0/evidence_refs", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Provide pointer-only evidence refs for a window.
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q: any = (req as any).query ?? {}; // Read query.
@@ -384,7 +391,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
       } // End catch.
     }); // End /evidence_refs route.
 
-    app.post("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: write a read-only interpretation fact derived from an AO-ACT receipt fact (no AO-ACT mutation).
+    // @deprecated - use /api/v1/*
+    app.post("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Sprint 13: write a read-only interpretation fact derived from an AO-ACT receipt fact (no AO-ACT mutation).
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const body = z.object({ // Define input schema.
@@ -432,7 +441,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
       } // End catch.
     }); // End Sprint 13 write route.
 
-    app.get("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => { // Sprint 13: read interpretations by interpretation_id (read-only).
+    // @deprecated - use /api/v1/*
+    app.get("/api/agronomy/v0/ao_act/interpretation", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Sprint 13: read interpretations by interpretation_id (read-only).
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q = z.object({ // Define query schema.
@@ -463,7 +474,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End Sprint 13 read route.
 
     // Sprint 14: agronomy_interpretation_v1 minimal append-only write endpoint (contract: explain-only, non-executing semantics).
-    app.post("/api/agronomy/interpretation_v1/append", async (req, reply) => { // Append an agronomy_interpretation_v1 fact into the ledger.
+    // @deprecated - use /api/v1/*
+    app.post("/api/agronomy/interpretation_v1/append", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Append an agronomy_interpretation_v1 fact into the ledger.
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch for consistent 400 errors.
         const bodyRaw = (req as any).body ?? {}; // Read raw request body (Fastify JSON).
@@ -514,7 +527,9 @@ export function buildAgronomyV0Routes(pool: Pool): FastifyPluginAsync { // Build
     }); // End Sprint 14 append route.
 
     // Sprint 14: explain-only read endpoint (read-only; returns interpretations for a group, newest first).
-    app.get("/api/agronomy/interpretation_v1/explain", async (req, reply) => { // Return explain-only interpretations without executable semantics.
+    // @deprecated - use /api/v1/*
+    app.get("/api/agronomy/interpretation_v1/explain", async (req, reply) => {
+      reply.header("X-Deprecated", "true"); // Return explain-only interpretations without executable semantics.
       if (denyDeprecated(req, reply)) return;
       try { // Guard with try/catch.
         const q = z.object({ // Define query schema.

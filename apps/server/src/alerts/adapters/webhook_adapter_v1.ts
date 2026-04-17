@@ -1,4 +1,4 @@
-import type { AlertNotificationAdapter, AlertNotificationPayload } from "./alert_notification_adapter_v1";
+import type { AlertNotificationAdapter, AlertNotificationPayload } from "./alert_notification_adapter_v1.js";
 
 export const webhookAdapterV1: AlertNotificationAdapter = {
   channel: "webhook",

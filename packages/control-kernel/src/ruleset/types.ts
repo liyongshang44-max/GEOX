@@ -5,7 +5,7 @@
 // - docs/controlplane/constitution/GEOX-ControlConstitution-RuleTemplates-v0.md
 // - docs/controlplane/constitution/GEOX-ControlKernel-AllowedOutputs-v0.md
 
-import type { TemplateExprV0, TemplateIdV0 } from "../templates/template_engine";
+import type { TemplateExprV0, TemplateIdV0 } from "../templates/template_engine.js";
 
 /**
  * Frozen combine strategies in RuleSet Skeleton v0.

@@ -1,4 +1,4 @@
-import type { AgronomyContext, AgronomyRule } from "../../types";
+import type { AgronomyContext, AgronomyRule } from "../../types.js";
 
 export const tomatoRules: AgronomyRule[] = [
   {

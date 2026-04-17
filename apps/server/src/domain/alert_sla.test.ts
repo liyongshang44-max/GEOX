@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { deriveDefaultSlaDueAt, isSlaBreached } from "./alert_sla";
+import { deriveDefaultSlaDueAt, isSlaBreached } from "./alert_sla.js";
 
 test("deriveDefaultSlaDueAt: derives due time by severity", () => {
   const triggeredAt = Date.UTC(2026, 0, 1, 0, 0, 0);

@@ -1,14 +1,14 @@
 import path from "node:path";
 
-import type { AppleIReader } from "./applei_reader";
-import { newRunId, nowMs, stableStringify } from "./util";
-import { JudgePipelineV1, type JudgeRunInput, type JudgeRunOutput } from "./pipeline";
-import { JudgeSqliteStore } from "./store/sqlite_store";
-import type { ProblemStateV1 } from "./problem_state";
-import type { AoSenseV1 } from "./ao_sense";
-import type { LBCandidateV1 } from "./lb_candidate";
-import type { ReferenceViewV1 } from "./reference/reference_builder";
-import { referenceNaturalKey } from "./reference/reference_builder";
+import type { AppleIReader } from "./applei_reader.js";
+import { newRunId, nowMs, stableStringify } from "./util.js";
+import { JudgePipelineV1, type JudgeRunInput, type JudgeRunOutput } from "./pipeline.js";
+import { JudgeSqliteStore } from "./store/sqlite_store.js";
+import type { ProblemStateV1 } from "./problem_state.js";
+import type { AoSenseV1 } from "./ao_sense.js";
+import type { LBCandidateV1 } from "./lb_candidate.js";
+import type { ReferenceViewV1 } from "./reference/reference_builder.js";
+import { referenceNaturalKey } from "./reference/reference_builder.js";
 
 const REPO_ROOT = path.resolve(process.cwd());
 

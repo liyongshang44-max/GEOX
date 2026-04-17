@@ -3,12 +3,12 @@ import path from "node:path";
 import crypto from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { projectOperationStateV1 } from "../projections/operation_state_v1";
-import { normalizeReceiptEvidence } from "../services/receipt_evidence";
-import { evaluateEvidence, inferEvidenceLevel } from "../domain/acceptance/evidence_policy";
-import { deriveBusinessEffect } from "../domain/agronomy/business_effect";
-import { computeCostBreakdown } from "../domain/agronomy/cost_model";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
+import { evaluateEvidence, inferEvidenceLevel } from "../domain/acceptance/evidence_policy.js";
+import { deriveBusinessEffect } from "../domain/agronomy/business_effect.js";
+import { computeCostBreakdown } from "../domain/agronomy/cost_model.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type ReportJobStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";

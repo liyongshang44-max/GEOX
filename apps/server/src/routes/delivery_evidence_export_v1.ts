@@ -11,9 +11,9 @@ import { z } from "zod"; // Zod schema validation for request parsing.
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope authorization (read-only scope).
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context type for tenant triple checks.
-import { normalizeReceiptEvidence } from "../services/receipt_evidence"; // Shared receipt normalization for export/dashboard consistency.
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope authorization (read-only scope).
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context type for tenant triple checks.
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js"; // Shared receipt normalization for export/dashboard consistency.
 
 type ExportJobState = "queued" | "running" | "done" | "error"; // Evidence export job state machine (in-memory).
 type ExportJob = { // Evidence export job record stored in memory.

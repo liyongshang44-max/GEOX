@@ -12,8 +12,8 @@
 // - No sorting
 // - No text matching
 
-import type { FieldMap } from "../inputs/projector";
-import { assertAllowedInputPathV0 } from "../inputs/allowed_input_paths";
+import type { FieldMap } from "../inputs/projector.js";
+import { assertAllowedInputPathV0 } from "../inputs/allowed_input_paths.js";
 
 /**
  * Frozen template identifiers in Rule Templates v0.

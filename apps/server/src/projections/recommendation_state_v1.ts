@@ -1,4 +1,4 @@
-import type { OperationStateV1 } from "./operation_state_v1";
+import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type RecommendationStateV1 = {
   recommendation_id: string;

@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { findRepoRoot, nowMs, sha256Hex, stableStringify } from "../util";
+import { findRepoRoot, nowMs, sha256Hex, stableStringify } from "../util.js";
 
 export type ManifestValueType = "int" | "number" | "bool" | "enum_list";
 

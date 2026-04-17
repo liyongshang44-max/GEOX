@@ -8,8 +8,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify"; // Fastify types for route handlers.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { createHash, randomUUID } from "node:crypto"; // Stable unique ids for wrapper facts + payload hashing.
-import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0"; // Reuse existing token/scope auth.
-import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy";
+import { requireAoActScopeV0, requireAoActAdminV0, type AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js"; // Reuse existing token/scope auth.
+import { decideDispatchCandidates, type DispatchExecutorResource } from "./dispatch_decision_strategy.js";
 import {
   checkCapabilityCompatibilityMatrix,
   resolveTaskCapabilityViaDeviceSkillsResult,
@@ -2140,7 +2140,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!requireTenantFieldsPresentOr400(tenant, reply)) return;
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/approval_request/v1/request`, String((req.headers as any).authorization ?? ""), {
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
       ...body,
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
@@ -2322,7 +2322,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           ? proposal.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
           : []
       }));
-      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
+      const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
       if (!delegated.ok || !delegated.json?.ok) {
         const delegatedErrorCode = delegated.status === 400
           ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
@@ -2539,7 +2539,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         ? body.parameter_schema.keys.map((x: any) => x?.name).filter(Boolean)
         : []
     }));
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/task`, String((req.headers as any).authorization ?? ""), taskCreatePayload);
     if (!delegated.ok || !delegated.json?.ok) {
       const delegatedErrorCode = delegated.status === 400
         ? String(delegated.json?.error_code ?? delegated.json?.error ?? "UNKNOWN_400").trim()
@@ -3642,7 +3642,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
     if (!operationPlan) return reply.status(404).send({ ok: false, error: "OPERATION_PLAN_NOT_FOUND" });
     const planActTaskId = String(operationPlan.record_json?.payload?.act_task_id ?? "").trim();
     if (planActTaskId && planActTaskId !== task_id) return badRequest(reply, "OPERATION_PLAN_TASK_ID_MISMATCH");
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/control/ao_act/receipt`, String((req.headers as any).authorization ?? ""), {
+    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/actions/receipt`, String((req.headers as any).authorization ?? ""), {
       ...body,
       act_task_id: task_id,
       operation_plan_id,

@@ -8,12 +8,12 @@
 // - referenced input paths must be declared in inputs_used
 // - referenced input paths must be in Allowed Input Paths v0
 
-import { assertValidAoActionCodeV0 } from "../taxonomy/action_taxonomy";
-import { assertAllowedInputPathV0 } from "../inputs/allowed_input_paths";
-import type { FieldMap, PermissionSetLike } from "../inputs/projector";
-import { evalTemplateV0, collectFieldPathsFromTemplateV0 } from "../templates/template_engine";
-import type { ControlRuleSetV0, ControlVerdictV0, VerdictV0 } from "./types";
-import type { TemplateExprV0, TemplateIdV0 } from "../templates/template_engine";
+import { assertValidAoActionCodeV0 } from "../taxonomy/action_taxonomy.js";
+import { assertAllowedInputPathV0 } from "../inputs/allowed_input_paths.js";
+import type { FieldMap, PermissionSetLike } from "../inputs/projector.js";
+import { evalTemplateV0, collectFieldPathsFromTemplateV0 } from "../templates/template_engine.js";
+import type { ControlRuleSetV0, ControlVerdictV0, VerdictV0 } from "./types.js";
+import type { TemplateExprV0, TemplateIdV0 } from "../templates/template_engine.js";
 
 /**
  * Evaluates a ruleset and produces a single ControlVerdict v0.

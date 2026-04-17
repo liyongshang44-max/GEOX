@@ -1,4 +1,4 @@
-import type { AgronomyRuleSkill } from "../../types";
+import type { AgronomyRuleSkill } from "../../types.js";
 
 export const cornWaterRuleV2: AgronomyRuleSkill = {
   id: "corn_water_balance",

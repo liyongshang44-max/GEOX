@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { assertString } from "./util";
+import { assertString } from "./util.js";
 
 export type JudgeConfigV1 = {
   schema_version: string;

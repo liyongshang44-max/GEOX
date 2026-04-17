@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { HumanWorkReceiptV1Schema } from "@geox/contracts";
 
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
 
 type AssignmentStatus = "ASSIGNED" | "ACCEPTED" | "ARRIVED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
 type AssignmentTimeoutStatus = "ON_TRACK" | "AT_RISK" | "OVERDUE" | "NONE";
@@ -807,6 +807,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
       token_id: "internal_auto_fallback",
       role: "admin",
       scopes: ["ao_act.task.write", "ao_act.index.read"],
+      allowed_field_ids: [],
     };
     const audit_id = randomUUID();
     await pool.query(
@@ -1860,7 +1861,7 @@ export function registerHumanExecutorV1Routes(app: FastifyInstance, pool: Pool) 
 
     const delegated = await app.inject({
       method: "POST",
-      url: "/api/control/ao_act/receipt",
+      url: "/api/v1/actions/receipt",
       headers: {
         authorization: String((req.headers as any)?.authorization ?? ""),
       },

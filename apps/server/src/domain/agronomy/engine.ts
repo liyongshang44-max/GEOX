@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { evaluateRules, pickBestRule } from "./rule_engine";
-import type { AgronomyContext, AgronomyRecommendationPayload } from "./types";
+import { evaluateRules, pickBestRule } from "./rule_engine.js";
+import type { AgronomyContext, AgronomyRecommendationPayload } from "./types.js";
 
 export async function generateAgronomyRecommendation(ctx: AgronomyContext): Promise<AgronomyRecommendationPayload | null> {
   const matched = await evaluateRules(ctx);

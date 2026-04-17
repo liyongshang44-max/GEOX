@@ -1,4 +1,4 @@
-import type { CropSkill } from "../../types";
+import type { CropSkill } from "../../types.js";
 
 export const tomatoCrop: CropSkill = {
   id: "tomato_crop",

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { registerSkillsV1Routes } from "../src/routes/skills_v1";
 
-const TOKEN = "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
+const TOKEN = process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || "";
 
 test("POST /api/v1/skills/bindings/override returns 400 when payload includes effective", async () => {
   const app = Fastify();

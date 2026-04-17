@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const BASE_URL = process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001";
-const TOKEN = process.env.GEOX_TOKEN ?? "geox_dev_MqF24b9NHfB6AkBNjKJaxP_T0CnL0XZykhdmSyoQvg4";
+const TOKEN = process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "";
 const tenant = {
   tenant_id: process.env.GEOX_TENANT_ID ?? "tenantA",
   project_id: process.env.GEOX_PROJECT_ID ?? "projectA",

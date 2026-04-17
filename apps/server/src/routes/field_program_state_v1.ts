@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { projectFieldProgramStateV1 } from "../projections/field_program_state_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

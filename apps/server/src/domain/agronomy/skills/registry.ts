@@ -4,4 +4,4 @@ if (process.env.GEOX_DISABLE_LEGACY_SKILLS !== "false") {
   throw new Error("DO_NOT_USE_LEGACY_AGRONOMY_SKILLS_IN_RUNTIME");
 }
 
-export * from "../../skill_registry/agronomy_rule_registry";
+export * from "../../skill_registry/agronomy_rule_registry.js";

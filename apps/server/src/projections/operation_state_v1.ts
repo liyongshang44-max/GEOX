@@ -1,6 +1,6 @@
 import type { Pool } from "pg";
-import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1";
-import { evaluateEvidence } from "../domain/acceptance/evidence_policy";
+import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1.js";
+import { evaluateEvidence } from "../domain/acceptance/evidence_policy.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; record_json: any };

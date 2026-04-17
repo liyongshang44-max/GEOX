@@ -1,4 +1,4 @@
-import type { OperationReportRiskLevel, OperationReportV1 } from "./report_v1";
+import type { OperationReportRiskLevel, OperationReportV1 } from "./report_v1.js";
 
 export type CustomerDashboardAggregateV1 = {
   fields: {

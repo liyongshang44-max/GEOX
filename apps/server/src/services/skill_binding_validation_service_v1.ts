@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 
-import { resolveDeviceTemplateV1, type DeviceTemplateSkillBindingV1 } from "../domain/device_templates/device_templates_v1";
-import { appendSkillBindingFact } from "../domain/skill_registry/facts";
+import { resolveDeviceTemplateV1, type DeviceTemplateSkillBindingV1 } from "../domain/device_templates/device_templates_v1.js";
+import { appendSkillBindingFact } from "../domain/skill_registry/facts.js";
 
 type TenantTriple = {
   tenant_id: string;

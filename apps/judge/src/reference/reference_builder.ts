@@ -1,6 +1,6 @@
-import type { JudgeConfigV1 } from "../config";
-import type { RawSample } from "../evidence";
-import { clamp01, sha256Hex, stableStringify, nowMs } from "../util";
+import type { JudgeConfigV1 } from "../config.js";
+import type { RawSample } from "../evidence.js";
+import { clamp01, sha256Hex, stableStringify, nowMs } from "../util.js";
 
 export type EvidenceRef = { kind: "ledger_slice" | "series_query" | "qc_summary"; ref_id: string; note?: string|null; time_range?: { startTs: number; endTs: number } | null };
 

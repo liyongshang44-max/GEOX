@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { projectProgramStateFromFacts, type ProgramStateProjectionFactRow, type ProgramStateProgressV1, type ProgramAcceptanceResultV1 } from "./program_state_v1";
+import { projectProgramStateFromFacts, type ProgramStateProjectionFactRow, type ProgramStateProgressV1, type ProgramAcceptanceResultV1 } from "./program_state_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

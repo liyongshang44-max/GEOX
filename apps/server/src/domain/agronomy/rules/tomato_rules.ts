@@ -1,6 +1,6 @@
 import type { AgronomyRuleInput } from "@geox/contracts";
-import type { AgronomyRule } from "./index";
-import { makeRecommendation } from "./helpers";
+import type { AgronomyRule } from "./index.js";
+import { makeRecommendation } from "./helpers.js";
 
 const TOMATO_EC_THRESHOLD = 1.8;
 

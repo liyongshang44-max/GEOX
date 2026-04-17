@@ -1,4 +1,4 @@
-import type { AcceptanceRule } from "./types";
+import type { AcceptanceRule } from "./types.js";
 
 export const manualRule: AcceptanceRule = {
   task_type: "MANUAL",

@@ -1,5 +1,5 @@
 import type { Pool } from "pg";
-import { projectProgramStateV1, type ProgramStateV1 } from "../../projections/program_state_v1";
+import { projectProgramStateV1, type ProgramStateV1 } from "../../projections/program_state_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 

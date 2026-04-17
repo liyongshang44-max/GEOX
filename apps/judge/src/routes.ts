@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import type { JudgeRuntime } from "./runtime";
-import { assertInt, assertString } from "./util";
-import type { JudgeConfigPatchV1 } from "./config/patch";
-import { JudgeConfigPatchRejected } from "./config/patch";
+import type { JudgeRuntime } from "./runtime.js";
+import { assertInt, assertString } from "./util.js";
+import type { JudgeConfigPatchV1 } from "./config/patch.js";
+import { JudgeConfigPatchRejected } from "./config/patch.js";
 
 export function registerJudgeRoutes(app: FastifyInstance, runtime: JudgeRuntime): void {
 

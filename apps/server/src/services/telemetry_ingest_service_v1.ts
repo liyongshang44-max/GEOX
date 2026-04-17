@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 
 import type { Pool, PoolClient } from "pg";
 
-import { writeObservationRunPipelineAndRefreshFieldV1 } from "./device_observation_service_v1";
+import { writeObservationRunPipelineAndRefreshFieldV1 } from "./device_observation_service_v1.js";
 
 export type TelemetryIngressPayloadV1 = {
   tenant_id: string;

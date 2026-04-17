@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { projectOperationReportV1 } from "./report_v1";
-import type { OperationStateV1 } from "./operation_state_v1";
+import { projectOperationReportV1 } from "./report_v1.js";
+import type { OperationStateV1 } from "./operation_state_v1.js";
 
 function buildState(finalStatus: OperationStateV1["final_status"]): OperationStateV1 {
   return {
@@ -72,7 +72,7 @@ test("report v1 contract: workflow exposes linked_alert_ids", () => {
   const output = projectOperationReportV1({
     tenant: { tenant_id: "t1", project_id: "p1", group_id: "g1" },
     operation_plan_id: "plan-1",
-    operation_state: buildState("DONE"),
+    operation_state: buildState("SUCCESS"),
     evidence_bundle: {},
     acceptance: null,
     receipt: null,

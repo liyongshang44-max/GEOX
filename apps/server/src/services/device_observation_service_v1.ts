@@ -8,8 +8,8 @@ import {
   type DeviceObservationQualityFlagV1
 } from "@geox/contracts";
 import type { PoolClient } from "pg";
-import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1";
-import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1";
+import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
+import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
 export type DeviceObservationServiceV1Input = {
   tenant_id: string;

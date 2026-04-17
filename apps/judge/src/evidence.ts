@@ -16,7 +16,7 @@
 //   (b) there is a marker_v1(kind='MISSING_VALUE') for the same (metric, minute_ts)
 //   This matches your simulator behavior (writes marker + carried-forward raw with quality=bad).
 
-import type { ReplayRow } from "./applei_reader";
+import type { ReplayRow } from "./applei_reader.js";
 
 export type RawSample = {
   fact_id: string;

@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { projectOperationStateV1 } from "../projections/operation_state_v1";
-import { normalizeReceiptEvidence } from "../services/receipt_evidence";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
+import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type SlaSummary = {

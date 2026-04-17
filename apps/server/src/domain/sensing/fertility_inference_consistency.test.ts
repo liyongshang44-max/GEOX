@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { inferDerivedSensingStateViaDeviceSkills } from "@geox/device-skills";
-import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1";
+import { inferFertilityFromObservationAggregateV1 } from "./fertility_inference_v1.js";
 
 type ComparableResult = Pick<ReturnType<typeof inferFertilityFromObservationAggregateV1>,
   "fertility_level" | "recommendation_bias" | "salinity_risk" | "confidence" | "explanation_codes">;

@@ -1,5 +1,5 @@
-import type { OperationReportV1 } from "../projections/report_v1";
-import { AlertSeverity, createAlertV1, type AlertV1 } from "../projections/alert_v1";
+import type { OperationReportV1 } from "../projections/report_v1.js";
+import { AlertSeverity, createAlertV1, type AlertV1 } from "../projections/alert_v1.js";
 
 type TenantScope = { tenant_id: string; project_id: string; group_id: string };
 

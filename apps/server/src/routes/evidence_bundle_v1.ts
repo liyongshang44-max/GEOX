@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0";
-import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1";
-import { inferEvidenceLevel, type EvidenceLevel } from "../domain/acceptance/evidence_policy";
-import { projectOperationStateFromFacts, type OperationProjectionFactRow } from "../projections/operation_state_v1";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1.js";
+import { inferEvidenceLevel, type EvidenceLevel } from "../domain/acceptance/evidence_policy.js";
+import { projectOperationStateFromFacts, type OperationProjectionFactRow } from "../projections/operation_state_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };

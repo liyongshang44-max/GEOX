@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Pool } from "pg";
-import { buildAgronomyContext } from "../domain/agronomy/context_builder";
-import { generateAgronomyRecommendation } from "../domain/agronomy/engine";
+import { buildAgronomyContext } from "../domain/agronomy/context_builder.js";
+import { generateAgronomyRecommendation } from "../domain/agronomy/engine.js";
 
 type TenantTriple = {
   tenant_id: string;

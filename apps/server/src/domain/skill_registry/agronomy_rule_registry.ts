@@ -1,6 +1,6 @@
 import { createSkillRegistry, type SkillBindingRecord, type SkillBindingSource } from "@geox/skill-registry";
-import { appendSkillBindingFact } from "./facts";
-import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../../projections/skill_registry_read_v1";
+import { appendSkillBindingFact } from "./facts.js";
+import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../../projections/skill_registry_read_v1.js";
 
 if (process.env.GEOX_DISABLE_LEGACY_SKILLS !== "false") {
   throw new Error("LEGACY_AGRONOMY_SKILLS_DISABLED");

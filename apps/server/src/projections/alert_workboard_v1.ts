@@ -1,7 +1,7 @@
-import type { TelemetryHealthInput } from "../domain/alert_engine";
-import { projectAlertListV1, type AlertActionOverrideV1, type AlertListFilterV1, type AlertListOperationInputV1, type AlertListScopeV1 } from "./alert_list_v1";
-import { AlertSeverity, type AlertV1 } from "./alert_v1";
-import { isSlaBreached } from "../domain/alert_sla";
+import type { TelemetryHealthInput } from "../domain/alert_engine.js";
+import { projectAlertListV1, type AlertActionOverrideV1, type AlertListFilterV1, type AlertListOperationInputV1, type AlertListScopeV1 } from "./alert_list_v1.js";
+import { AlertSeverity, type AlertV1 } from "./alert_v1.js";
+import { isSlaBreached } from "../domain/alert_sla.js";
 
 export const DEFAULT_WORKFLOW_STATUS_V1 = "OPEN" as const;
 export const DEFAULT_WORKFLOW_PRIORITY_V1 = 3;

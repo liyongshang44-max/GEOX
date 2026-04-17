@@ -1,5 +1,5 @@
-import type { JudgeConfigV1 } from "../config";
-import type { Marker } from "../evidence";
+import type { JudgeConfigV1 } from "../config.js";
+import type { Marker } from "../evidence.js";
 
 export type MarkerResult =
   | { ok: true }

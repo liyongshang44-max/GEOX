@@ -1,5 +1,5 @@
-import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
-import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1";
+import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1.js";
+import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1.js";
 import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
@@ -177,25 +177,26 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     refreshWithFallback({
       key: `sensing_overview:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
       refresher: () => refreshFieldSensingOverviewV1(db, base),
-      resolveFreshness: (payload) => payload.freshness,
+      resolveFreshness: (payload) => (payload as Record<string, any>).freshness,
       hasData: (payload) => {
-        if (Array.isArray(payload.soil_indicators_json) && payload.soil_indicators_json.length > 0) return true;
+        const p = payload as Record<string, any>;
+        if (Array.isArray(p.soil_indicators_json) && p.soil_indicators_json.length > 0) return true;
         return Boolean(
-          payload.canopy_temp_status
-          || payload.evapotranspiration_risk
-          || payload.sensor_quality
-          || payload.irrigation_effectiveness
-          || payload.leak_risk
-          || payload.computed_at_ts_ms
-          || payload.source_observed_at_ts_ms
+          (payload as Record<string, any>).canopy_temp_status
+          || (payload as Record<string, any>).evapotranspiration_risk
+          || (payload as Record<string, any>).sensor_quality
+          || (payload as Record<string, any>).irrigation_effectiveness
+          || (payload as Record<string, any>).leak_risk
+          || (payload as Record<string, any>).computed_at_ts_ms
+          || (payload as Record<string, any>).source_observed_at_ts_ms
         );
       },
     }),
     refreshWithFallback({
       key: `fertility_state:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
       refresher: () => refreshFieldFertilityStateV1(db, base),
-      resolveFreshness: (payload, nowMs) => fertilityFreshnessFromComputedAt(payload.computed_at_ts_ms, nowMs),
-      hasData: (payload) => Boolean(payload.fertility_level || payload.salinity_risk || payload.recommendation_bias || payload.computed_at_ts_ms),
+      resolveFreshness: (payload, nowMs) => fertilityFreshnessFromComputedAt((payload as Record<string, any>).computed_at_ts_ms, nowMs),
+      hasData: (payload) => Boolean((payload as Record<string, any>).fertility_level || (payload as Record<string, any>).salinity_risk || (payload as Record<string, any>).recommendation_bias || (payload as Record<string, any>).computed_at_ts_ms),
     }),
   ]);
 
