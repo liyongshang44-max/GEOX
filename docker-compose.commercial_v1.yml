@@ -41,35 +41,24 @@ services:
       - geox_v1_minio_data:/data
 
   server:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
     container_name: geox-v1-server
     working_dir: /app
     init: true
     restart: unless-stopped
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-          corepack enable
-          corepack prepare pnpm@9.15.4 --activate
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-          pnpm --filter @geox/server exec tsx src/server.ts
-    volumes:
-      - ./:/app
-      - geox_v1_node_modules:/app/node_modules
-      - geox_v1_pnpm_store:/pnpm-store
-      - geox_v1_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/server/dist/server.js"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
       DB_STRICT: "1"
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
-      GEOX_INTERNAL_BASE_URL: http://server:3000  # Container-internal calls use server:3000; host entrypoint is http://127.0.0.1:3001
+      GEOX_INTERNAL_BASE_URL: http://server:3000
       ALERT_WEBHOOK_URL: ""
       ALERT_WECHAT_WEBHOOK_URL: ""
       ALERT_DINGTALK_WEBHOOK_URL: ""
@@ -94,28 +83,17 @@ services:
         condition: service_started
 
   telemetry-ingest:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/telemetry-ingest build
+    image: geox/telemetry-ingest-runtime:local
     container_name: geox-v1-telemetry-ingest
     working_dir: /app
     init: true
     restart: unless-stopped
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-          corepack enable
-          corepack prepare pnpm@9.15.4 --activate
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-          pnpm --filter @geox/telemetry-ingest start
-    volumes:
-      - ./:/app
-      - geox_v1_node_modules:/app/node_modules
-      - geox_v1_pnpm_store:/pnpm-store
-      - geox_v1_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/telemetry-ingest/dist/main.js"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
@@ -123,7 +101,7 @@ services:
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
@@ -135,28 +113,17 @@ services:
         condition: service_started
 
   jobs:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/server build
+    image: geox/jobs-runtime:local
     container_name: geox-v1-jobs
     working_dir: /app
     init: true
     restart: unless-stopped
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-          corepack enable
-          corepack prepare pnpm@9.15.4 --activate
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-          pnpm --filter @geox/server exec tsx src/jobs/runtime.ts
-    volumes:
-      - ./:/app
-      - geox_v1_node_modules:/app/node_modules
-      - geox_v1_pnpm_store:/pnpm-store
-      - geox_v1_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/server/dist/jobs/runtime.js"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
@@ -164,7 +131,7 @@ services:
       NODE_ENV: development
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
@@ -177,27 +144,16 @@ services:
         condition: service_started
 
   executor:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/device-skills build && pnpm --filter @geox/executor build
+    image: geox/executor-runtime:local
     working_dir: /app
     init: true
     restart: unless-stopped
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-          corepack enable
-          corepack prepare pnpm@9.15.4 --activate
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-          pnpm --filter @geox/executor exec tsx src/runtime_loop.ts
-    volumes:
-      - ./:/app
-      - geox_v1_node_modules:/app/node_modules
-      - geox_v1_pnpm_store:/pnpm-store
-      - geox_v1_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/executor/dist/runtime_loop.js"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
@@ -206,7 +162,7 @@ services:
       GEOX_SYSTEM_PROFILE: commercial_v1
       GEOX_INTERNAL_BASE_URL: http://server:3000
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: geox_exec_tenantA_runtime_v1
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: tenantA
       GEOX_PROJECT_ID: projectA
       GEOX_GROUP_ID: groupA
@@ -228,29 +184,12 @@ services:
         condition: service_started
 
   web:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    image: geox/web-runtime:local
     container_name: geox-v1-web
-    working_dir: /app
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-          corepack enable
-          corepack prepare pnpm@9.15.4 --activate
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/web dev -- --host 0.0.0.0 --port 5173
-    volumes:
-      - ./:/app
-      - geox_v1_node_modules:/app/node_modules
-      - geox_v1_pnpm_store:/pnpm-store
-      - geox_v1_pnpm_vstore:/pnpm-vstore
-    environment:
-      VITE_API_BASE_URL: /api
-      GEOX_WEB_PROXY_TARGET: http://server:3000
-      GEOX_SYSTEM_PROFILE: commercial_v1
+    restart: unless-stopped
     ports:
       - "5173:5173"
     depends_on:
@@ -259,6 +198,3 @@ services:
 volumes:
   geox_v1_pgdata:
   geox_v1_minio_data:
-  geox_v1_node_modules:
-  geox_v1_pnpm_store:
-  geox_v1_pnpm_vstore:
