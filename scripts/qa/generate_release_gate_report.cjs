@@ -149,15 +149,50 @@ function ensureDirFor(filePath) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function readAcceptanceEvidence() {
+  const relativePath = 'acceptance-output/report.json';
+  const resolved = path.resolve(process.cwd(), relativePath);
+
+  if (!fs.existsSync(resolved)) {
+    return {
+      source: relativePath,
+      acceptance_ok: null,
+      found: false,
+      notes: 'acceptance report not found in workspace.'
+    };
+  }
+
+  const raw = fs.readFileSync(resolved, 'utf8');
+  const data = JSON.parse(raw);
+  const normalizedStatus = typeof data.status === 'string' ? data.status.toLowerCase() : '';
+  const passedFlags = [
+    data.acceptance_ok === true,
+    data.ok === true,
+    normalizedStatus === 'pass',
+    normalizedStatus === 'passed',
+    normalizedStatus === 'ok',
+    normalizedStatus === 'success'
+  ];
+
+  return {
+    source: `${relativePath}#sha256=${sha256(raw)}`,
+    acceptance_ok: passedFlags.some(Boolean),
+    found: true,
+    notes: `status=${String(data.status || 'N/A')}`
+  };
+}
+
 function main() {
   const args = parseArgs(process.argv);
   const matrix = buildScenarioMatrix();
+  const acceptance = readAcceptanceEvidence();
 
   const report = {
     release_version: resolveReleaseVersion(args.releaseVersion),
     generated_at: new Date().toISOString(),
     matrix,
-    rollback_triggers: buildRollbackTriggers()
+    rollback_triggers: buildRollbackTriggers(),
+    acceptance
   };
 
   ensureDirFor(args.output);
@@ -169,6 +204,7 @@ function main() {
   console.log(`版本: ${report.release_version}`);
   console.log(`场景数: ${matrix.length}`);
   console.log(`失败场景: ${failed.length > 0 ? failed.join(', ') : '无'}`);
+  console.log(`Acceptance: ${acceptance.found ? `found (${acceptance.notes})` : 'missing'}`);
 }
 
 try {

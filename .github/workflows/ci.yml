@@ -35,9 +35,62 @@ jobs:
       - name: Server selfcheck
         run: pnpm --filter @geox/server test:p1:selfcheck
 
-  release-gate:
+  acceptance:
     runs-on: ubuntu-latest
     needs: build-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Start acceptance runtime dependencies
+        env:
+          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
+        run: docker compose -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
+
+      - name: Wait for acceptance services ready
+        run: |
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
+          docker compose -f docker-compose.commercial_v1.yml ps
+
+      - name: Run acceptance suite
+        run: pnpm run test:acceptance
+
+      - name: Upload acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-output
+          path: |
+            acceptance-output/report.json
+            acceptance-output/report.html
+            acceptance-output/*.log
+          if-no-files-found: warn
+
+      - name: Stop acceptance runtime dependencies
+        if: always()
+        env:
+          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
+        run: docker compose -f docker-compose.commercial_v1.yml down --remove-orphans
+
+  release-gate:
+    runs-on: ubuntu-latest
+    needs:
+      - build-test
+      - acceptance
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +99,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Download acceptance artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: acceptance-output
+          path: acceptance-output
 
       - name: Generate release gate report
         run: node scripts/qa/generate_release_gate_report.cjs
