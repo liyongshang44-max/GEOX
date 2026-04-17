@@ -50,6 +50,48 @@ docker compose logs --tail 120 postgres
 docker compose down
 ```
 
+### 2.4 Commercial v1（S3_COMPAT）启动与 smoke
+
+Step2 收口后，commercial 基线要求证据导出走 `S3_COMPAT` 对象存储链路。
+
+#### 前置：token 来源与注入
+
+`docker-compose.commercial_v1.yml` 中多个服务要求 `GEOX_AO_ACT_TOKEN`，必须在启动前提供。
+
+推荐方式：
+
+1. 复制模板并填写 token：
+
+```bash
+cp .env.example .env
+```
+
+2. 从以下任一来源填入 `GEOX_AO_ACT_TOKEN`：
+   - CI / Secret Manager 下发
+   - 本地 auth SSOT：`config/auth/ao_act_tokens_v0.json` 中具备 `evidence_export.read` + `evidence_export.write` scope 的非 revoked token
+   - 示例文件：`config/auth/example_tokens.json`（需替换占位值）
+
+#### 启动 commercial compose
+
+```bash
+docker compose -f docker-compose.commercial_v1.yml --env-file .env up -d --build
+docker compose -f docker-compose.commercial_v1.yml ps
+```
+
+#### 执行证据导出 S3 smoke
+
+```bash
+pnpm --filter @geox/server run test:evidence-export:s3-smoke
+```
+
+#### PASS 标准
+
+- export job 最终状态为 `DONE`
+- job detail 中 `evidence_pack.delivery.storage_mode === \"S3_COMPAT\"`
+- `evidence_pack.delivery.object_store_key` 非空
+- `bundle` / `manifest` / `checksums` 三个 part 下载均成功（S3 presigned redirect 可用）
+- smoke 不出现 `AUTH_INVALID`；如 token 缺失应明确报 `MISSING_GEOX_AO_ACT_TOKEN`
+
 ## 3. 健康检查
 
 ### 3.1 API 就绪检查
