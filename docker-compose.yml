@@ -18,34 +18,17 @@ services:
       retries: 20
 
   server:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/contracts build && pnpm --filter @geox/server build
+    image: geox/server-runtime:local
     container_name: geox-server
     working_dir: /app
     init: true
     restart: unless-stopped
-
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-
-          npm install -g pnpm@9.15.4
-
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-
-          # 不跑 tsc，直接 tsx 运行（避免 TS 编译错误导致容器循环重启）
-          pnpm --filter @geox/server exec tsx src/server.ts
-
-    volumes:
-      - ./:/app
-      - geox_node_modules:/app/node_modules
-      - geox_pnpm_store:/pnpm-store
-      - geox_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/server/dist/server.js"]
 
     environment:
       DB_DRIVER: postgres
@@ -77,36 +60,22 @@ services:
       start_period: 10s
 
   executor:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/runtime.Dockerfile
+      args:
+        BUILD_COMMAND: pnpm --filter @geox/executor build
+    image: geox/executor-runtime:local
     working_dir: /app
     init: true
     restart: unless-stopped
-    command:
-      - sh
-      - -lc
-      - |
-          set -e
-
-          export CI=1
-          export PNPM_STORE_DIR=/pnpm-store
-
-          npm install -g pnpm@9.15.4
-
-          pnpm -r install --no-frozen-lockfile --store-dir=/pnpm-store --virtual-store-dir=/pnpm-vstore
-          pnpm --filter @geox/contracts build
-
-          node apps/executor/src/runtime_loop.ts
-    volumes:
-      - ./:/app
-      - geox_node_modules:/app/node_modules
-      - geox_pnpm_store:/pnpm-store
-      - geox_pnpm_vstore:/pnpm-vstore
+    command: ["node", "apps/executor/dist/runtime_loop.js"]
     environment:
       NODE_ENV: development
       CI: "1"
       PNPM_STORE_DIR: /pnpm-store
       GEOX_BASE_URL: http://server:3000
-      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:-}
+      GEOX_AO_ACT_TOKEN: ${GEOX_AO_ACT_TOKEN:?GEOX_AO_ACT_TOKEN is required}
       GEOX_TENANT_ID: ${GEOX_TENANT_ID:-tenantA}
       GEOX_PROJECT_ID: ${GEOX_PROJECT_ID:-projectA}
       GEOX_GROUP_ID: ${GEOX_GROUP_ID:-groupA}
@@ -119,6 +88,3 @@ services:
 
 volumes:
   landos_pgdata:
-  geox_pnpm_store:
-  geox_pnpm_vstore:
-  geox_node_modules:

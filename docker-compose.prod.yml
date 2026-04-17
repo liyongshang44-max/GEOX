@@ -3,7 +3,7 @@ services:
     environment:
       GEOX_RUNTIME_ENV: prod
       GEOX_EXPORTS_ROOT: /app/runtime/exports/prod
-      GEOX_TOKEN_SSOT_PATH: /run/secrets/geox_ao_act_tokens_prod.json
+      GEOX_TOKENS_FILE: /run/secrets/geox_ao_act_tokens_prod.json
       NODE_ENV: production
     ports:
       - "3201:3000"
