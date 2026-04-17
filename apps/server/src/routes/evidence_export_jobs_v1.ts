@@ -181,6 +181,11 @@ type EvidencePackDeliverySummary = { // Delivery metadata for current and future
   object_store_key: string;
   object_store_presign_supported: boolean;
   object_store_download_url: string | null;
+  object_store_part_download_urls?: {
+    bundle: string | null;
+    manifest: string | null;
+    checksums: string | null;
+  };
 };
 
 type EvidencePackSummary = { // Evidence pack summary exposed via list/detail endpoints.
@@ -331,6 +336,17 @@ function buildObjectStoreDownloadPath(job_id_raw: string | null | undefined, par
   return `/api/v1/evidence-export/jobs/${encodeURIComponent(String(job_id_raw ?? ""))}/download?source=object_store&part=${encodeURIComponent(part)}`; // Authorized API path.
 } // End helper.
 
+function objectStorePartKeysFromRow(row: any, export_format: ExportFormat): { bundleKey: string; manifestKey: string; checksumsKey: string } { // Helper: derive S3 object keys for all evidence-pack parts.
+  const keyFromRow = typeof row?.pack_object_store_key === "string" && row.pack_object_store_key.trim()
+    ? row.pack_object_store_key.trim()
+    : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format);
+  const keyPrefix = keyFromRow.split("/").slice(0, -1).join("/");
+  const bundleKey = keyFromRow;
+  const manifestKey = `${keyPrefix}/manifest.json`;
+  const checksumsKey = `${keyPrefix}/sha256.txt`;
+  return { bundleKey, manifestKey, checksumsKey };
+} // End helper.
+
 function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null { // Helper: derive evidence pack summary from canonical artifact path plus optional pack index metadata.
   const artifact_path = typeof row?.artifact_path === "string" ? row.artifact_path : null; // Runtime artifact path.
   if (!artifact_path) return null; // Missing path => no summary.
@@ -355,13 +371,27 @@ function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null 
 
   const storage_mode_raw = String(row?.pack_storage_mode ?? "LOCAL_FILE").trim().toUpperCase(); // Storage mode from pack index.
   const storage_mode: "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT" = storage_mode_raw === "LOCAL_MIRROR" ? "LOCAL_MIRROR" : storage_mode_raw === "S3_COMPAT" ? "S3_COMPAT" : "LOCAL_FILE";
-  const object_store_key = typeof row?.pack_object_store_key === "string" && row.pack_object_store_key.trim() ? row.pack_object_store_key.trim() : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format); // Stable object store key.
+  const { bundleKey, manifestKey, checksumsKey } = objectStorePartKeysFromRow(row, export_format); // Stable object store keys.
+  const object_store_key = bundleKey; // Backward-compatible alias for bundle key.
   const s3cfg = storage_mode === "S3_COMPAT" ? getS3CompatConfig() : null; // S3 config for presigned URLs.
   const object_store_download_url = storage_mode === "LOCAL_MIRROR"
     ? buildObjectStoreDownloadPath(row?.job_id, "bundle")
     : storage_mode === "S3_COMPAT" && s3cfg
-      ? buildS3PresignedGetUrl(s3cfg, object_store_key)
+      ? buildS3PresignedGetUrl(s3cfg, bundleKey)
       : null; // Authorized download URL.
+  const object_store_part_download_urls = storage_mode === "LOCAL_MIRROR"
+    ? {
+      bundle: buildObjectStoreDownloadPath(row?.job_id, "bundle"),
+      manifest: buildObjectStoreDownloadPath(row?.job_id, "manifest"),
+      checksums: buildObjectStoreDownloadPath(row?.job_id, "checksums"),
+    }
+    : storage_mode === "S3_COMPAT" && s3cfg
+      ? {
+        bundle: buildS3PresignedGetUrl(s3cfg, bundleKey),
+        manifest: buildS3PresignedGetUrl(s3cfg, manifestKey),
+        checksums: buildS3PresignedGetUrl(s3cfg, checksumsKey),
+      }
+      : { bundle: null, manifest: null, checksums: null };
 
   return {
     format,
@@ -373,6 +403,7 @@ function buildPackSummaryFromArtifactPath(row: any): EvidencePackSummary | null 
       object_store_key,
       object_store_presign_supported: storage_mode === "S3_COMPAT",
       object_store_download_url,
+      object_store_part_download_urls,
     },
     files: [
       { name: bundle_name, sha256: sha256FileHex(bundle_path), content_type: bundleContentTypeForFormat(export_format), size_bytes: getFileSizeMaybe(bundle_path), download_part: "bundle" },
@@ -1596,6 +1627,7 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     const q = await pool.query(
       `SELECT j.artifact_path, j.status,
               p.storage_mode AS pack_storage_mode,
+              p.object_store_key AS pack_object_store_key,
               p.object_store_bundle_path,
               p.object_store_manifest_path,
               p.object_store_checksums_path
@@ -1613,6 +1645,17 @@ export function registerEvidenceExportJobsV1Routes(app: FastifyInstance, pool: P
     const partRaw = String((req.query as any)?.part ?? "bundle").trim().toLowerCase(); // Requested file within the evidence pack.
     const sourceRaw = String((req.query as any)?.source ?? "local").trim().toLowerCase(); // Optional source selector.
     const pack_dir = path.dirname(String(artifact_path)); // Pack directory for sidecar files.
+    const storage_mode = String(q.rows[0]?.pack_storage_mode ?? "").trim().toUpperCase(); // Delivery backend for this job.
+    const export_format = normalizeExportFormat(path.extname(String(artifact_path)).replace(/^\./, "")); // Infer format from bundle extension.
+
+    if (storage_mode === "S3_COMPAT") { // Commercial delivery: issue presigned object-store URL for all parts.
+      const s3cfg = getS3CompatConfig(); // Load runtime S3 config.
+      if (!s3cfg) return reply.status(503).send({ ok: false, error: "S3_CONFIG_MISSING" }); // Missing env contract.
+      const { bundleKey, manifestKey, checksumsKey } = objectStorePartKeysFromRow(q.rows[0], export_format); // Resolve all part keys.
+      const key = partRaw === "manifest" ? manifestKey : (partRaw === "checksums" || partRaw === "sha256") ? checksumsKey : bundleKey; // Target part key.
+      return reply.redirect(302, buildS3PresignedGetUrl(s3cfg, key)); // Redirect client to object storage for download.
+    }
+
     const useObjectStore = sourceRaw === "object_store" && String(q.rows[0]?.pack_storage_mode ?? "") === "LOCAL_MIRROR"; // Mirror path allowed when configured.
 
     let download_path = useObjectStore ? String(q.rows[0]?.object_store_bundle_path ?? artifact_path) : String(artifact_path); // Default keeps backward compatibility (bundle.*).
