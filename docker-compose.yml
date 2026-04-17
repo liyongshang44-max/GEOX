@@ -18,6 +18,10 @@ services:
       retries: 20
 
   server:
+    # Server container listens on 3000 internally.
+    # Host entrypoint is http://127.0.0.1:3001 via 3001:3000 port mapping.
+    # Inter-container calls must use http://server:3000.
+    # Healthcheck must probe container-internal port 3000.
     build:
       context: .
       dockerfile: docker/runtime.Dockerfile
@@ -52,7 +56,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:3001/api/v1/fields',{headers:{authorization:'Bearer x'}}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))\""
+          "node -e \"fetch('http://127.0.0.1:3000/api/v1/fields',{headers:{authorization:'Bearer x'}}).then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))\""
         ]
       interval: 10s
       timeout: 3s
