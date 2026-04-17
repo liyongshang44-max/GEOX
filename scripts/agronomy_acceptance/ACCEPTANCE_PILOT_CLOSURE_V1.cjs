@@ -10,7 +10,7 @@ const execFileAsync = promisify(execFile);
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 function tokenFilePath() {
-  return path.join(process.cwd(), 'config', 'auth', 'ao_act_tokens_v0.json');
+  return path.join(process.cwd(), 'config', 'auth', 'example_tokens.json');
 }
 
 function readTokenFile() {

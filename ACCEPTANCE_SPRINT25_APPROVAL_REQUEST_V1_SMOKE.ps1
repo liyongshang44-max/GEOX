@@ -71,7 +71,7 @@ function Get-PropAny([object]$o, [string[]]$names) {
 Info ("using baseUrl=" + $baseUrl)
 Ensure-ApiReachable $baseUrl
 
-$token = "dev_ao_act_admin_v0"
+$token = $(if ($env:GEOX_AO_ACT_TOKEN) { $env:GEOX_AO_ACT_TOKEN } else { "" })
 
 Info "guardrail ok: no decision_plan_v0 list/query API detected."
 Info "decision_plan_v0 insertion skipped (no public append endpoint by design)."
@@ -81,7 +81,7 @@ Info "Sprint16 guardrail ok."
 $createReq = @{
   issuer = @{
     kind = "human"
-    id = "dev_ao_act_admin_v0"
+    id = "env_admin"
     namespace = "ao_act_tokens_v0"
   }
   tenant_id = "tenantA"

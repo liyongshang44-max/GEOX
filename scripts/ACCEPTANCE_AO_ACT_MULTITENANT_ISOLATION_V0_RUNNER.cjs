@@ -28,8 +28,23 @@ console.log(`[INFO] Sprint22 MultiTenant Isolation acceptance (baseUrl=${baseUrl
 const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Tenant A triple.
 const tenantB = { tenant_id: "tenantB", project_id: "projectB", group_id: "groupB" }; // Tenant B triple.
 
-const tokenA = String(process.env.GEOX_AO_ACT_TOKEN_A || "dev_ao_act_admin_v0"); // Token bound to tenantA.
-const tokenB = String(process.env.GEOX_AO_ACT_TOKEN_B || "dev_ao_act_admin_tenantB_v0"); // Token bound to tenantB.
+function loadExampleTokens() { // Load example token records without hardcoded secrets.
+  try {
+    const p = new URL('../config/auth/example_tokens.json', `file://${__filename}`).pathname; // Example config path.
+    const raw = require('node:fs').readFileSync(p, 'utf8'); // Read JSON.
+    const j = JSON.parse(raw); // Parse JSON.
+    return Array.isArray(j.tokens) ? j.tokens : []; // Normalize tokens array.
+  } catch {
+    return []; // Missing example file is allowed.
+  }
+}
+function pickTokenByTenant(tokens, tenantId) { // Pick non-placeholder token for a tenant.
+  const rec = tokens.find((t) => String(t.tenant_id || '') === tenantId && t.revoked !== true && String(t.token || '').trim() && String(t.token).trim() !== 'set-via-env-or-external-secret-file');
+  return rec ? String(rec.token).trim() : '';
+}
+const __exampleTokens = loadExampleTokens(); // Reuse parsed example records.
+const tokenA = String(process.env.GEOX_AO_ACT_TOKEN_A || pickTokenByTenant(__exampleTokens, 'tenantA')); // Token bound to tenantA.
+const tokenB = String(process.env.GEOX_AO_ACT_TOKEN_B || pickTokenByTenant(__exampleTokens, 'tenantB')); // Token bound to tenantB.
 
 function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
   const h = { "content-type": "application/json" }; // Always send JSON content-type.

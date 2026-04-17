@@ -19,7 +19,7 @@ function mustEnv(name, fallback = '') {
 }
 
 function loadDefaultAoActToken() {
-  const tokenFile = path.resolve('config/auth/ao_act_tokens_v0.json');
+  const tokenFile = path.resolve('config/auth/example_tokens.json');
   try {
     const raw = fs.readFileSync(tokenFile, 'utf8');
     const parsed = JSON.parse(raw);

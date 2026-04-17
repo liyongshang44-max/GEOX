@@ -18,20 +18,15 @@ function Get-Token {
   if ($token -and $token.Trim() -ne "") { return $token.Trim() }
   if ($env:GEOX_AO_ACT_TOKEN -and $env:GEOX_AO_ACT_TOKEN.Trim() -ne "") { return $env:GEOX_AO_ACT_TOKEN.Trim() }
 
-  $p = Join-Path $PSScriptRoot "..\config\auth\ao_act_tokens_v0.json"
+  $p = Join-Path $PSScriptRoot "..\config\auth\example_tokens.json"
   if (!(Test-Path $p)) { return "" }
   $j = Get-Content $p -Raw | ConvertFrom-Json
 
-  if (Has-Prop $j "dev_ao_act_admin_v0") {
-    $t = [string]$j.dev_ao_act_admin_v0
-    if (-not [string]::IsNullOrWhiteSpace($t)) { return $t.Trim() }
-  }
-
   if (Has-Prop $j "tokens" -and $j.tokens) {
     foreach ($rec in $j.tokens) {
-      if (Has-Prop $rec "token") {
+      if ((Has-Prop $rec "token") -and (Has-Prop $rec "scopes")) {
         $t = [string]$rec.token
-        if (-not [string]::IsNullOrWhiteSpace($t)) { return $t.Trim() }
+        if ((-not [string]::IsNullOrWhiteSpace($t)) -and ($t -ne "set-via-env-or-external-secret-file")) { return $t.Trim() }
       }
     }
   }
@@ -54,7 +49,7 @@ function Curl-PostJsonFile([string]$url, [string]$jsonPath, [string]$t){
 }
 
 $tok = Get-Token
-if ($tok -eq "") { Fail "no token found (set -token or GEOX_AO_ACT_TOKEN or config/auth/ao_act_tokens_v0.json)" }
+if ($tok -eq "") { Fail "no token found (set -token or GEOX_AO_ACT_TOKEN or config/auth/example_tokens.json)" }
 
 Info ("[acceptance] BASE_URL=" + $baseUrl)
 Info ("using token=" + $tok + " (len=" + $tok.Length + ")")

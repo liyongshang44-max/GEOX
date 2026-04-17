@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const Fastify = require('fastify');
 
 const BASE_URL = String(process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
-const TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.AO_ACT_TOKEN || 'geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4').trim();
+const TOKEN = String(process.env.GEOX_AO_ACT_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || "").trim();
 
 function id(prefix) {
   return `${prefix}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;

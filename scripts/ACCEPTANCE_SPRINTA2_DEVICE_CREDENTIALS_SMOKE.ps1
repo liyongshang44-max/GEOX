@@ -37,7 +37,7 @@ function ReadJsonFile([string]$path) {                       # Read JSON file ->
 function PickToken() {                                       # Pick AO-ACT token for auth
   if ($env:GEOX_AO_ACT_TOKEN) { return $env:GEOX_AO_ACT_TOKEN }  # Prefer env override
 
-  $cfgPath = Join-Path $PSScriptRoot "..\config\auth\ao_act_tokens_v0.json"    # Token config path
+  $cfgPath = Join-Path $PSScriptRoot "..\config\auth\example_tokens.json"    # Token config path
   $cfgPath = (Resolve-Path -LiteralPath $cfgPath).Path        # Resolve absolute path
   $cfg = ReadJsonFile $cfgPath                                # Load config JSON
   if (-not $cfg) { Fail("no usable token found (config missing) at $cfgPath") } # Must exist

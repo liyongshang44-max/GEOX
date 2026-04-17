@@ -18,7 +18,7 @@ function Get-Token {
   if ($token -ne "") { return $token }
   if ($env:GEOX_AO_ACT_TOKEN -and $env:GEOX_AO_ACT_TOKEN.Trim() -ne "") { return $env:GEOX_AO_ACT_TOKEN.Trim() }
 
-  $p = Join-Path $PSScriptRoot "..\config\auth\ao_act_tokens_v0.json"
+  $p = Join-Path $PSScriptRoot "..\config\auth\example_tokens.json"
   if (!(Test-Path $p)) { return "" }
 
   $j = Get-Content $p -Raw | ConvertFrom-Json
@@ -70,7 +70,7 @@ function Get-ShaValue($obj){
 }
 
 $tok = Get-Token
-if ($tok -eq "") { Fail "no token found (set -token or GEOX_AO_ACT_TOKEN or config/auth/ao_act_tokens_v0.json)" }
+if ($tok -eq "") { Fail "no token found (set -token or GEOX_AO_ACT_TOKEN or config/auth/example_tokens.json)" }
 Info ("[acceptance] BASE_URL=" + $baseUrl)
 Info ("using token=" + $tok + " (len=" + $tok.Length + ")")
 

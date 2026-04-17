@@ -27,7 +27,7 @@ function Get-Token {
   if ($token -ne "") { return $token }
   if ($env:GEOX_AO_ACT_TOKEN -and $env:GEOX_AO_ACT_TOKEN.Trim() -ne "") { return $env:GEOX_AO_ACT_TOKEN.Trim() }
 
-  $p = Join-Path $PSScriptRoot "..\config\auth\ao_act_tokens_v0.json"
+  $p = Join-Path $PSScriptRoot "..\config\auth\example_tokens.json"
   if (!(Test-Path $p)) { return "" }
 
   $j = Get-Content $p -Raw | ConvertFrom-Json

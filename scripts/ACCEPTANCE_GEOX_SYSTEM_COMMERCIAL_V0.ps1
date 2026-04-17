@@ -109,7 +109,7 @@ function Wait-HealthUnusable {
 }
 
 function Get-AoActReceiptWriteToken {
-  $p = Join-Path $repoRoot "config\auth\ao_act_tokens_v0.json" # Token config path.
+  $p = Join-Path $repoRoot "config\auth\example_tokens.json" # Token config path.
   if (-not (Test-Path $p)) { return $null } # Missing token file => no token.
   $raw = Get-Content $p -Raw # Read JSON.
   try { $j = $raw | ConvertFrom-Json } catch { return $null } # Parse JSON.
@@ -183,7 +183,7 @@ try {
 try {
   Write-Host "[INFO] Step 04: AO-ACT receipt must NOT accept ProblemState fields (FORBIDDEN_KEY:problem_state_id)" # Log.
   $token = Get-AoActReceiptWriteToken # Read token.
-  if (-not $token) { throw "S04_missing_token ao_act.receipt.write not found in config/auth/ao_act_tokens_v0.json" } # Missing token.
+  if (-not $token) { throw "S04_missing_token ao_act.receipt.write not found in config/auth/example_tokens.json" } # Missing token.
   $payload = @{ # Minimal receipt with forbidden field injection.
     receipt_id = "r_demo" # Dummy receipt id.
     task_id = "t_demo" # Dummy task id.

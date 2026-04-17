@@ -27,7 +27,21 @@ console.log(`[INFO] Sprint21 Device Adapter acceptance (baseUrl=${baseUrl})`); /
 
 const tenantA = { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" }; // Sprint 22: default tenant triple for acceptance.
 
-const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || "dev_ao_act_admin_v0"); // Token with ao_act.task.write + ao_act.receipt.write.
+function loadExampleTokens() { // Load example token records without hardcoded secrets.
+  try { // Best-effort local example read.
+    const p = new URL('../config/auth/example_tokens.json', `file://${__filename}`).pathname; // Example config path.
+    const raw = require('node:fs').readFileSync(p, 'utf8'); // Read JSON.
+    const j = JSON.parse(raw); // Parse JSON.
+    return Array.isArray(j.tokens) ? j.tokens : []; // Normalize tokens array.
+  } catch {
+    return []; // Missing example file is allowed.
+  }
+}
+function pickAdminToken(tokens) { // Pick admin token from example records.
+  const rec = tokens.find((t) => Array.isArray(t.scopes) && t.scopes.includes('ao_act.task.write') && t.scopes.includes('ao_act.receipt.write') && t.revoked !== true && String(t.token || '').trim() && String(t.token).trim() !== 'set-via-env-or-external-secret-file');
+  return rec ? String(rec.token).trim() : '';
+}
+const adminToken = String(process.env.GEOX_AO_ACT_TOKEN || pickAdminToken(loadExampleTokens())); // Token with ao_act.task.write + ao_act.receipt.write.
 
 function buildHeaders(token) { // Build request headers; omit Authorization unless token is non-empty.
   const h = { "content-type": "application/json" }; // Always send JSON content-type.

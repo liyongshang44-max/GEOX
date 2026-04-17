@@ -69,7 +69,7 @@ async function fetchJsonWithRetry(url, opts) { // Retry wrapper.
 } // End fetchJsonWithRetry.
 
 function readTokenConfig(repoRoot) { // Load token config.
-  const p = path.join(repoRoot, "config", "auth", "ao_act_tokens_v0.json"); // Path.
+  const p = path.join(repoRoot, "config", "auth", "example_tokens.json"); // Path.
   const raw = fs.readFileSync(p, "utf8"); // Read.
   const j = JSON.parse(raw); // Parse.
   return Array.isArray(j.tokens) ? j.tokens : []; // Return tokens.

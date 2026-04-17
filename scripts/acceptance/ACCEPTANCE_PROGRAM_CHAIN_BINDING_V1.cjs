@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const base = process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001';
-const token = process.env.GEOX_TOKEN || process.env.AO_ACT_TOKEN || 'geox_dev_MqF24b9NHfB6AkBNjKaxP_T0CnL0XZykhdmSyoQvg4';
+const token = process.env.GEOX_TOKEN || process.env.AO_ACT_TOKEN || process.env.GEOX_TOKEN || process.env.GEOX_AO_ACT_TOKEN || "";
 
 async function api(path, opts = {}) {
   const r = await fetch(`${base}${path}`, {
