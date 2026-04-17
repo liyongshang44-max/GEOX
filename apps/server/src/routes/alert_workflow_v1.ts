@@ -1,14 +1,13 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool, PoolClient } from "pg";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0";
-import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz";
-import { projectOperationStateV1 } from "../projections/operation_state_v1";
-import { projectReportV1 as projectOperationReportV1 } from "./reports_v1";
-import { projectAlertWorkboardV1, type AlertWorkflowStatusV1 } from "../projections/alert_workboard_v1";
-import type { AlertActionOverrideV1, AlertListOperationInputV1 } from "../projections/alert_list_v1";
-import type { AlertSeverity } from "../projections/alert_v1";
-import type { TelemetryHealthInput } from "../domain/alert_engine";
-import { deriveDefaultSlaDueAt } from "../domain/alert_sla";
+import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
+import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz.js";
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
+import { projectAlertWorkboardV1, type AlertWorkflowStatusV1 } from "../projections/alert_workboard_v1.js";
+import type { AlertActionOverrideV1, AlertListOperationInputV1 } from "../projections/alert_list_v1.js";
+import type { AlertSeverity } from "../projections/alert_v1.js";
+import type { TelemetryHealthInput } from "../domain/alert_engine.js";
+import { deriveDefaultSlaDueAt } from "../domain/alert_sla.js";
 
 export type AlertWorkflowStatus = "OPEN" | "ASSIGNED" | "IN_PROGRESS" | "ACKED" | "RESOLVED" | "CLOSED";
 
@@ -483,32 +482,18 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
     const scoped = opts.skipFieldScope
       ? states
       : states.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
-    const reports = await Promise.all(scoped.map((state) => projectOperationReportV1({
-      pool,
-      tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
-      operationState: state,
-    })));
-    return reports.map((report) => ({
-      operation_plan_id: String(report.identifiers.operation_plan_id ?? report.identifiers.operation_id ?? ""),
-      operation_state: {
-        operation_id: report.identifiers.operation_id,
-        operation_plan_id: report.identifiers.operation_plan_id,
-        tenant_id: report.identifiers.tenant_id,
-        project_id: report.identifiers.project_id,
-        group_id: report.identifiers.group_id,
-        field_id: report.identifiers.field_id,
-        device_id: report.identifiers.device_id,
-        action_type: report.execution.action_type,
-        status: report.execution.status,
-        final_status: report.execution.final_status,
-        acceptance: report.acceptance,
-        timeline: report.timeline,
-      },
-      evidence_bundle: report.evidence_bundle ?? {},
-      acceptance: report.acceptance ?? null,
-      receipt: report.receipt ?? null,
-      cost: report.cost ?? {},
-      generated_at: report.generated_at,
+    return scoped.map((state) => ({
+      operation_plan_id: String(state.operation_plan_id ?? state.operation_id ?? ""),
+      operation_state: state,
+      evidence_bundle: {},
+      acceptance: state.acceptance ? {
+        verdict: state.acceptance.status,
+        missing_evidence: state.acceptance.missing,
+        status: state.acceptance.status,
+      } : null,
+      receipt: null,
+      cost: {},
+      generated_at: new Date().toISOString(),
     }));
   };
 
@@ -888,6 +873,7 @@ export function registerAlertWorkflowV1Routes(app: FastifyInstance, pool: Pool):
   app.post("/api/v1/alerts/:alert_id/assign", async (req, reply) => writeHandler(req, reply, { status: "ASSIGNED", withAssignedAt: true }));
   app.post("/api/v1/alerts/:alert_id/start", async (req, reply) => writeHandler(req, reply, { status: "IN_PROGRESS" }));
   app.post("/api/v1/alerts/:alert_id/note", async (req, reply) => writeHandler(req, reply, { status: "OPEN", preserveStatus: true }));
-  app.post("/api/v1/alerts/:alert_id/resolve", async (req, reply) => writeHandler(req, reply, { status: "RESOLVED", withResolvedAt: true }));
+// resolve is owned by alerts_v1.ts as the canonical projected-alert action
+// app.post("/api/v1/alerts/:alert_id/resolve", async (req, reply) => writeHandler(req, reply, { status: "RESOLVED", withResolvedAt: true }));
   app.post("/api/v1/alerts/:alert_id/close", async (req, reply) => writeHandler(req, reply, { status: "CLOSED" }));
 }

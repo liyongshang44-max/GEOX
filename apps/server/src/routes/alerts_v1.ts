@@ -13,17 +13,16 @@ import { randomUUID } from "node:crypto"; // UUID helper for rule_id and fact_id
 import type { FastifyInstance } from "fastify"; // Fastify instance type.
 import type { Pool, PoolClient } from "pg"; // Postgres pool / transaction client types.
 
-import { dispatchAlertNotifications } from "../alerts/notification_dispatcher_v1"; // Dispatch alert notifications through configured adapters.
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Scope auth helper.
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context.
-import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz"; // Role + field scope helpers.
-import { projectAlertListV1, type AlertActionOverrideV1, type AlertListOperationInputV1 } from "../projections/alert_list_v1"; // Unified alert list projection.
-import { AlertSeverity, AlertStatus } from "../projections/alert_v1";
-import type { AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1"; // Alert model.
-import { projectOperationStateV1 } from "../projections/operation_state_v1"; // Operation state projection.
-import { projectReportV1 as projectOperationReportV1 } from "./reports_v1"; // Operation report projection used by alert list.
-import type { TelemetryHealthInput } from "../domain/alert_engine";
-import { getOperationWorkflowV1, upsertAlertWorkflowV1, upsertOperationWorkflowV1 } from "./alert_workflow_v1";
+import { dispatchAlertNotifications } from "../alerts/notification_dispatcher_v1.js"; // Dispatch alert notifications through configured adapters.
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Scope auth helper.
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context.
+import { enforceFieldScopeOrDeny, hasFieldAccess } from "../auth/route_role_authz.js"; // Role + field scope helpers.
+import { projectAlertListV1, type AlertActionOverrideV1, type AlertListOperationInputV1 } from "../projections/alert_list_v1.js"; // Unified alert list projection.
+import { AlertSeverity, AlertStatus, type AlertV1 } from "../projections/alert_v1.js";
+import type { AlertStatus as ProjectedAlertStatus } from "../projections/alert_v1.js"; // Alert model.
+import { projectOperationStateV1 } from "../projections/operation_state_v1.js"; // Operation state projection.
+import type { TelemetryHealthInput } from "../domain/alert_engine.js";
+import { getOperationWorkflowV1, upsertAlertWorkflowV1, upsertOperationWorkflowV1 } from "./alert_workflow_v1.js";
 
 type RuleStatus = "ACTIVE" | "DISABLED"; // Rule lifecycle.
 type EventStatus = "OPEN" | "ACKED" | "CLOSED"; // Event lifecycle.
@@ -130,32 +129,18 @@ async function listOperationInputsForAlertProjection(pool: Pool, auth: AoActAuth
     group_id: auth.group_id,
   });
   const scoped = states.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
-  const reports = await Promise.all(scoped.map((state) => projectOperationReportV1({
-    pool,
-    tenant: { tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id },
-    operationState: state,
-  })));
-  return reports.map((report) => ({
-    operation_plan_id: String(report.identifiers.operation_plan_id ?? report.identifiers.operation_id ?? ""),
-    operation_state: {
-      operation_id: report.identifiers.operation_id,
-      operation_plan_id: report.identifiers.operation_plan_id,
-      tenant_id: report.identifiers.tenant_id,
-      project_id: report.identifiers.project_id,
-      group_id: report.identifiers.group_id,
-      field_id: report.identifiers.field_id,
-      device_id: report.identifiers.device_id,
-      action_type: report.execution.action_type,
-      status: report.execution.status,
-      final_status: report.execution.final_status,
-      acceptance: report.acceptance,
-      timeline: report.timeline,
-    },
-    evidence_bundle: report.evidence_bundle ?? {},
-    acceptance: report.acceptance ?? null,
-    receipt: report.receipt ?? null,
-    cost: report.cost ?? {},
-    generated_at: report.generated_at,
+  return scoped.map((state) => ({
+    operation_plan_id: String(state.operation_plan_id ?? state.operation_id ?? ""),
+    operation_state: state,
+    evidence_bundle: {},
+    acceptance: state.acceptance ? {
+      verdict: state.acceptance.status,
+      missing_evidence: state.acceptance.missing,
+      status: state.acceptance.status,
+    } : null,
+    receipt: null,
+    cost: {},
+    generated_at: new Date().toISOString(),
   }));
 }
 

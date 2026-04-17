@@ -6,13 +6,13 @@ import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
 import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0"; // Sprint 19: AO-ACT token/scope authorization.
-import { computeEffect } from "../domain/agronomy/effect_engine";
-import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1";
-import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1";
-import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts";
-import { loadManualOperationByCommandId } from "../domain/controlplane/task_service";
+import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Sprint 19: AO-ACT token/scope authorization.
+import { computeEffect } from "../domain/agronomy/effect_engine.js";
+import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1.js";
+import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
+import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1.js";
+import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import { loadManualOperationByCommandId } from "../domain/controlplane/task_service.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -512,11 +512,16 @@ async function assertAllDeviceRefsExistAndMatchTenantV0(
   } // End loop.
 } // End assertAllDeviceRefsExistAndMatchTenantV0.
 
-export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
-  // No shared helper here; audit facts are written via writeAoActAuthzAuditFactV0(...) to keep schema stable.
 
-  // POST /api/control/ao_act/task
-  app.post("/api/control/ao_act/task", async (req, reply) => {
+function logLegacyAoActWarning(app: FastifyInstance, req: any, path: string): void {
+  app.log.warn({ path, method: req.method, actor: String((req.headers as any)?.authorization ?? '').slice(0, 24), warning: 'deprecated legacy AO-ACT route' }, 'deprecated legacy AO-ACT route used');
+}
+
+async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
+  if (deprecated) {
+    reply.header("X-Deprecated", "true");
+    logLegacyAoActWarning(app, req, "/api/control/ao_act/task");
+  }
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
@@ -680,8 +685,460 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
     }
-  });
+}
 
+async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
+  if (deprecated) {
+    reply.header("X-Deprecated", "true");
+    logLegacyAoActWarning(app, req, "/api/control/ao_act/receipt");
+  }
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+      if (!auth) return;
+
+      const hit = scanForForbiddenKeys(req.body);
+      if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
+
+      const body = z
+        .object({
+          tenant_id: z.string().min(1),
+          project_id: z.string().min(1),
+          group_id: z.string().min(1),
+          operation_plan_id: z.string().min(1),
+          act_task_id: z.string().min(1),
+          executor_id: z.object({ kind: z.enum(["human", "script", "device"]), id: z.string().min(1), namespace: z.string().min(1) }),
+          execution_time: z.object({ start_ts: z.number(), end_ts: z.number() }),
+          execution_coverage: z.object({ kind: z.enum(["area", "path", "field"]), ref: z.string().min(1) }),
+          resource_usage: z.object({
+            fuel_l: z.number().nullable(),
+            electric_kwh: z.number().nullable(),
+            water_l: z.number().nullable(),
+            chemical_ml: z.number().nullable()
+          }),
+          logs_refs: z
+            .array(z.object({ kind: z.string().min(1), ref: z.string().min(1) }))
+            .min(1),
+          status: z.enum(["executed", "not_executed"]).optional(),
+          constraint_check: z.object({ violated: z.boolean(), violations: z.array(z.string()) }),
+          observed_parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
+          device_refs: z
+            .array(
+              z.object({
+                kind: z.literal("device_ref_fact"),
+                ref: z.string().min(8),
+                note: z.string().max(280).optional().nullable()
+              })
+            )
+            .optional(),
+          meta: z.record(z.any()).optional()
+        })
+        
+  .parse(req.body);
+
+
+const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
+if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
+
+
+const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim(); // Read executor-generated idempotency key from receipt meta.
+if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
+  return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
+} // End idempotency key guard.
+const commandId = String((body.meta as any)?.command_id ?? body.act_task_id).trim(); // Reuse command_id trace key without changing frozen top-level payload schema.
+if (!commandId) {
+  return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
+}
+if (commandId !== body.act_task_id) {
+  return reply.status(400).send({ ok: false, error: "COMMAND_TASK_ID_MISMATCH" });
+}
+
+if (body.execution_time.start_ts > body.execution_time.end_ts) {
+
+        return reply.status(400).send({ ok: false, error: "EXECUTION_TIME_INVALID" });
+      }
+
+      // Enforce constraint_check consistency (v0 freeze)
+      if (body.constraint_check.violated === false && body.constraint_check.violations.length > 0) {
+        return reply.status(400).send({ ok: false, error: "CONSTRAINT_CHECK_INCONSISTENT" });
+      }
+
+      // v0：observed_parameters 的 string(enum) 必须由 task.parameter_schema 定义（冻结规则 0.2）
+      
+const task = await findAoActTaskByActTaskId(pool, body.act_task_id, tenant);
+if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+const taskActionType = String(task?.payload?.action_type ?? "").trim().toUpperCase();
+const expectedEvidenceRequirements = Array.isArray(task?.payload?.meta?.expected_evidence_requirements)
+  ? (task.payload.meta.expected_evidence_requirements as unknown[]).map((x) => String(x)).filter((x) => x.length > 0)
+  : resolveExpectedEvidenceRequirementsV1(taskActionType, null);
+const providedEvidenceKinds = (Array.isArray(body.logs_refs) ? body.logs_refs : [])
+  .map((x) => String(x?.kind ?? "").trim())
+  .filter((x) => x.length > 0);
+const missingEvidenceRequirements = expectedEvidenceRequirements.filter((reqItem) => !providedEvidenceKinds.includes(reqItem));
+
+// Sprint 21: device_refs are pointer-only. Validate existence only; never parse referenced content.
+if (Array.isArray((body as any).device_refs) && (body as any).device_refs.length > 0) {
+  await assertAllDeviceRefsExistAndMatchTenantV0(pool, (body as any).device_refs, tenant);
+}
+
+const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
+  tenant_id: tenant.tenant_id,
+  project_id: tenant.project_id,
+  group_id: tenant.group_id,
+  act_task_id: body.act_task_id, // Dedupe within this act_task_id.
+  executor_kind: body.executor_id.kind, // Dedupe scope: executor kind.
+  executor_id: body.executor_id.id, // Dedupe scope: executor id.
+  executor_namespace: body.executor_id.namespace, // Dedupe scope: executor namespace.
+  idempotency_key: idempotencyKey // Dedupe key: executor-generated idempotency key.
+});
+if (dup) { // If a duplicate exists, reject to avoid semantic pollution from retries.
+  return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT", existing_fact_id: dup.fact_id });
+}
+
+      const schemaKeys = (task?.payload?.parameter_schema?.keys ?? []) as ParamDef[];
+      if (!Array.isArray(schemaKeys) || schemaKeys.length === 0) {
+        return reply.status(400).send({ ok: false, error: "TASK_PARAMETER_SCHEMA_MISSING" });
+      }
+
+      assertNoObjectsOrArrays(body.observed_parameters, "observed_parameters");
+
+      // v0：observed_parameters 只能使用 task.parameter_schema.keys[] 中已声明的 key；并按类型/界限/枚举校验。
+      validateObservedParametersSubset(schemaKeys, body.observed_parameters, "observed_parameters");
+
+      const receiptDeviceId = String(
+        body?.meta?.device_id
+        ?? task?.payload?.meta?.device_id
+        ?? task?.payload?.device_id
+        ?? ""
+      ).trim();
+      const beforeTsMs = Number(body.execution_time.start_ts);
+      const receiptTsMs = Number(body.execution_time.end_ts);
+      const afterWindowEndTsMs = receiptTsMs + 20 * 60 * 1000;
+      let beforeMetrics: EffectMetricSnapshot = {};
+      let afterMetrics: EffectMetricSnapshot = {};
+      let computedEffect: { type: string; value: number } | null = null;
+      if (receiptDeviceId && Number.isFinite(beforeTsMs) && Number.isFinite(receiptTsMs)) {
+        const beforeQ = await pool.query(
+          `SELECT metric, value_num, ts
+             FROM telemetry_index_v1
+            WHERE tenant_id = $1
+              AND device_id = $2
+              AND metric = ANY($3::text[])
+              AND ts <= to_timestamp($4::double precision / 1000.0)
+            ORDER BY ts DESC
+            LIMIT 20`,
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], beforeTsMs]
+        ).catch(() => ({ rows: [] as any[] }));
+        const afterQ = await pool.query(
+          `SELECT metric, value_num, ts
+             FROM telemetry_index_v1
+            WHERE tenant_id = $1
+              AND device_id = $2
+              AND metric = ANY($3::text[])
+              AND ts >= to_timestamp($4::double precision / 1000.0)
+              AND ts <= to_timestamp($5::double precision / 1000.0)
+            ORDER BY ts ASC
+            LIMIT 100`,
+          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], receiptTsMs, afterWindowEndTsMs]
+        ).catch(() => ({ rows: [] as any[] }));
+        beforeMetrics = buildEffectMetricSnapshot(beforeQ.rows ?? []);
+        afterMetrics = buildEffectMetricSnapshot(afterQ.rows ?? []);
+        computedEffect = computeEffect(beforeMetrics, afterMetrics);
+      }
+
+      const created_at_ts = Date.now();
+      const record_json = {
+        type: "ao_act_receipt_v0",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          operation_plan_id: body.operation_plan_id,
+          act_task_id: body.act_task_id,
+          executor_id: body.executor_id,
+          execution_time: body.execution_time,
+          execution_coverage: body.execution_coverage,
+          resource_usage: body.resource_usage,
+          logs_refs: body.logs_refs,
+          status: body.status,
+          constraint_check: body.constraint_check,
+          observed_parameters: body.observed_parameters,
+          device_refs: (body as any).device_refs,
+          effect_snapshot: {
+            before_metrics: beforeMetrics,
+            after_metrics: afterMetrics,
+            effect: computedEffect
+          },
+          created_at_ts,
+          meta: {
+            ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
+            command_id: commandId,
+            evidence_trace: {
+              expected_requirements: expectedEvidenceRequirements,
+              provided_kinds: providedEvidenceKinds,
+              missing_requirements: missingEvidenceRequirements
+            }
+          }
+        }
+      };
+
+      const fact_id = randomUUID();
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]
+      );
+
+      await writeAoActAuthzAuditFactV0(pool, {
+        event: "receipt_write",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        target_fact_id: fact_id,
+        act_task_id: body.act_task_id
+      });
+
+      const latestPlanSql = `
+        SELECT fact_id, (record_json::jsonb) AS record_json
+        FROM facts
+        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+          AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+          AND (record_json::jsonb#>>'{payload,project_id}') = $3
+          AND (record_json::jsonb#>>'{payload,group_id}') = $4
+        ORDER BY occurred_at DESC, fact_id DESC
+        LIMIT 1
+      `;
+      const latestPlanRes = await pool.query(latestPlanSql, [body.operation_plan_id, tenant.tenant_id, tenant.project_id, tenant.group_id]);
+      if ((latestPlanRes.rowCount ?? 0) === 0) throw new Error("PLAN_NOT_FOUND");
+      const latestPlan = latestPlanRes.rows[0]?.record_json ?? {};
+      const planPayload = latestPlan?.payload ?? {};
+      const currentStatus = String(planPayload.status ?? "").trim().toUpperCase();
+      if (currentStatus === "SUCCEEDED" || currentStatus === "FAILED") {
+        return reply.send({
+          ok: true,
+          fact_id,
+          terminal_deduped: true,
+          evidence_trace: {
+            expected_requirements: expectedEvidenceRequirements,
+            provided_kinds: providedEvidenceKinds,
+            missing_requirements: missingEvidenceRequirements
+          }
+        });
+      }
+
+      const receiptStatus = String(body.status ?? "").toLowerCase();
+      const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
+
+      const transitionFactId = randomUUID();
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [transitionFactId, FACT_SOURCE_AO_ACT_V0, {
+          type: "operation_plan_transition_v1",
+          payload: {
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: body.operation_plan_id,
+            from_status: currentStatus || "ACKED",
+            status: terminalState,
+            trigger: "receipt",
+            act_task_id: body.act_task_id,
+            receipt_fact_id: fact_id,
+            created_ts: Date.now()
+          }
+        }]
+      );
+
+      const planFactId = randomUUID();
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [planFactId, FACT_SOURCE_AO_ACT_V0, {
+          type: "operation_plan_v1",
+          payload: {
+            ...planPayload,
+            tenant_id: tenant.tenant_id,
+            project_id: tenant.project_id,
+            group_id: tenant.group_id,
+            operation_plan_id: body.operation_plan_id,
+            act_task_id: body.act_task_id,
+            status: terminalState,
+            receipt_fact_id: fact_id,
+            before_metrics: beforeMetrics,
+            after_metrics: afterMetrics,
+            actual_effect: computedEffect,
+            updated_ts: Date.now()
+          }
+        }]
+      );
+
+      return reply.send({
+        ok: true,
+        fact_id,
+        operation_plan_transition_fact_id: transitionFactId,
+        operation_plan_fact_id: planFactId,
+        evidence_trace: {
+          expected_requirements: expectedEvidenceRequirements,
+          provided_kinds: providedEvidenceKinds,
+          missing_requirements: missingEvidenceRequirements
+        }
+      });
+    } catch (e: any) {
+      const msg = String(e?.message ?? "BAD_REQUEST"); // Normalize error message.
+      if (msg === "NOT_FOUND") return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Enforce non-enumerable cross-tenant failure.
+      return reply.status(400).send({ ok: false, error: msg });
+    }
+}
+
+async function handleAoActIndexV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
+  if (deprecated) {
+    reply.header("X-Deprecated", "true");
+    logLegacyAoActWarning(app, req, "/api/control/ao_act/index");
+  }
+    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Enforce token scope for index reads.
+    if (!auth) return; // Halt if missing/invalid/insufficient.
+
+    const q = z
+      .object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), act_task_id: z.string().optional() })
+      .strict()
+      .parse((req as any).query ?? {});
+
+
+
+const tenant = assertTenantFieldsPresentV0(q, "query"); // Extract tenant triple from parsed query.
+if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
+
+
+// Sprint 22: always compute index inline and filter by tenant triple to avoid cross-tenant leakage via shared views.
+const inlineSql = q.act_task_id
+  ? `WITH act_tasks AS (
+       SELECT
+         f.fact_id AS task_fact_id,
+         f.occurred_at AS task_occurred_at,
+         f.source AS task_source,
+         (f.record_json::jsonb) AS task_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     act_receipts AS (
+       SELECT
+         f.fact_id AS receipt_fact_id,
+         f.occurred_at AS receipt_occurred_at,
+         f.source AS receipt_source,
+         (f.record_json::jsonb) AS receipt_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'status') AS status
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     latest_receipt AS (
+       SELECT DISTINCT ON (r.act_task_id)
+         r.act_task_id,
+         r.receipt_fact_id,
+         r.receipt_occurred_at,
+         r.receipt_source,
+         r.status,
+         r.receipt_record_json
+       FROM act_receipts r
+       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
+     )
+     SELECT
+       t.act_task_id,
+       t.action_type,
+       t.task_fact_id,
+       t.task_occurred_at,
+       t.task_source,
+       lr.receipt_fact_id,
+       lr.receipt_occurred_at,
+       lr.receipt_source,
+       lr.status,
+       t.task_record_json AS task_record_json,
+       lr.receipt_record_json AS receipt_record_json
+     FROM act_tasks t
+     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
+     WHERE t.act_task_id = $4
+     ORDER BY t.act_task_id ASC`
+  : `WITH act_tasks AS (
+       SELECT
+         f.fact_id AS task_fact_id,
+         f.occurred_at AS task_occurred_at,
+         f.source AS task_source,
+         (f.record_json::jsonb) AS task_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     act_receipts AS (
+       SELECT
+         f.fact_id AS receipt_fact_id,
+         f.occurred_at AS receipt_occurred_at,
+         f.source AS receipt_source,
+         (f.record_json::jsonb) AS receipt_record_json,
+         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
+         ((f.record_json::jsonb)->'payload'->>'status') AS status
+       FROM facts f
+       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
+         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
+         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
+         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
+     ),
+     latest_receipt AS (
+       SELECT DISTINCT ON (r.act_task_id)
+         r.act_task_id,
+         r.receipt_fact_id,
+         r.receipt_occurred_at,
+         r.receipt_source,
+         r.status,
+         r.receipt_record_json
+       FROM act_receipts r
+       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
+     )
+     SELECT
+       t.act_task_id,
+       t.action_type,
+       t.task_fact_id,
+       t.task_occurred_at,
+       t.task_source,
+       lr.receipt_fact_id,
+       lr.receipt_occurred_at,
+       lr.receipt_source,
+       lr.status,
+       t.task_record_json AS task_record_json,
+       lr.receipt_record_json AS receipt_record_json
+     FROM act_tasks t
+     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
+     ORDER BY t.act_task_id ASC`;
+
+const inlineArgs = q.act_task_id
+  ? [tenant.tenant_id, tenant.project_id, tenant.group_id, q.act_task_id]
+  : [tenant.tenant_id, tenant.project_id, tenant.group_id];
+
+const out = await pool.query(inlineSql, inlineArgs); // Execute tenant-filtered inline index query.
+
+await writeAoActAuthzAuditFactV0(pool, {
+  event: "index_read",
+  actor_id: auth.actor_id,
+  token_id: auth.token_id,
+  act_task_id: q.act_task_id
+});
+
+return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
+
+}
+
+export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
+  app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
+  app.get("/api/v1/actions/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, false));
   app.post("/api/v1/actions/execute", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
@@ -1134,444 +1591,19 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
     }
   });
 
-  // POST /api/control/ao_act/receipt
-  app.post("/api/control/ao_act/receipt", async (req, reply) => {
-    try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
-      if (!auth) return;
-
-      const hit = scanForForbiddenKeys(req.body);
-      if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
-
-      const body = z
-        .object({
-          tenant_id: z.string().min(1),
-          project_id: z.string().min(1),
-          group_id: z.string().min(1),
-          operation_plan_id: z.string().min(1),
-          act_task_id: z.string().min(1),
-          executor_id: z.object({ kind: z.enum(["human", "script", "device"]), id: z.string().min(1), namespace: z.string().min(1) }),
-          execution_time: z.object({ start_ts: z.number(), end_ts: z.number() }),
-          execution_coverage: z.object({ kind: z.enum(["area", "path", "field"]), ref: z.string().min(1) }),
-          resource_usage: z.object({
-            fuel_l: z.number().nullable(),
-            electric_kwh: z.number().nullable(),
-            water_l: z.number().nullable(),
-            chemical_ml: z.number().nullable()
-          }),
-          logs_refs: z
-            .array(z.object({ kind: z.string().min(1), ref: z.string().min(1) }))
-            .min(1),
-          status: z.enum(["executed", "not_executed"]).optional(),
-          constraint_check: z.object({ violated: z.boolean(), violations: z.array(z.string()) }),
-          observed_parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
-          device_refs: z
-            .array(
-              z.object({
-                kind: z.literal("device_ref_fact"),
-                ref: z.string().min(8),
-                note: z.string().max(280).optional().nullable()
-              })
-            )
-            .optional(),
-          meta: z.record(z.any()).optional()
-        })
-        
-  .parse(req.body);
-
-
-const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
-if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
-
-
-const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim(); // Read executor-generated idempotency key from receipt meta.
-if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
-  return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
-} // End idempotency key guard.
-const commandId = String((body.meta as any)?.command_id ?? body.act_task_id).trim(); // Reuse command_id trace key without changing frozen top-level payload schema.
-if (!commandId) {
-  return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
-}
-if (commandId !== body.act_task_id) {
-  return reply.status(400).send({ ok: false, error: "COMMAND_TASK_ID_MISMATCH" });
 }
 
-if (body.execution_time.start_ts > body.execution_time.end_ts) {
-
-        return reply.status(400).send({ ok: false, error: "EXECUTION_TIME_INVALID" });
-      }
-
-      // Enforce constraint_check consistency (v0 freeze)
-      if (body.constraint_check.violated === false && body.constraint_check.violations.length > 0) {
-        return reply.status(400).send({ ok: false, error: "CONSTRAINT_CHECK_INCONSISTENT" });
-      }
-
-      // v0：observed_parameters 的 string(enum) 必须由 task.parameter_schema 定义（冻结规则 0.2）
-      
-const task = await findAoActTaskByActTaskId(pool, body.act_task_id, tenant);
-if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
-const taskActionType = String(task?.payload?.action_type ?? "").trim().toUpperCase();
-const expectedEvidenceRequirements = Array.isArray(task?.payload?.meta?.expected_evidence_requirements)
-  ? (task.payload.meta.expected_evidence_requirements as unknown[]).map((x) => String(x)).filter((x) => x.length > 0)
-  : resolveExpectedEvidenceRequirementsV1(taskActionType, null);
-const providedEvidenceKinds = (Array.isArray(body.logs_refs) ? body.logs_refs : [])
-  .map((x) => String(x?.kind ?? "").trim())
-  .filter((x) => x.length > 0);
-const missingEvidenceRequirements = expectedEvidenceRequirements.filter((reqItem) => !providedEvidenceKinds.includes(reqItem));
-
-// Sprint 21: device_refs are pointer-only. Validate existence only; never parse referenced content.
-if (Array.isArray((body as any).device_refs) && (body as any).device_refs.length > 0) {
-  await assertAllDeviceRefsExistAndMatchTenantV0(pool, (body as any).device_refs, tenant);
+export function registerAoActLegacyRoutes(app: FastifyInstance, pool: Pool): void {
+  // @deprecated - use /api/v1/*
+  app.post("/api/control/ao_act/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, true));
+  // @deprecated - use /api/v1/*
+  app.post("/api/control/ao_act/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, true));
+  // @deprecated - use /api/v1/*
+  app.get("/api/control/ao_act/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, true));
 }
 
-const dup = await findDuplicateAoActReceiptByIdempotencyKey(pool, {
-  tenant_id: tenant.tenant_id,
-  project_id: tenant.project_id,
-  group_id: tenant.group_id,
-  act_task_id: body.act_task_id, // Dedupe within this act_task_id.
-  executor_kind: body.executor_id.kind, // Dedupe scope: executor kind.
-  executor_id: body.executor_id.id, // Dedupe scope: executor id.
-  executor_namespace: body.executor_id.namespace, // Dedupe scope: executor namespace.
-  idempotency_key: idempotencyKey // Dedupe key: executor-generated idempotency key.
-});
-if (dup) { // If a duplicate exists, reject to avoid semantic pollution from retries.
-  return reply.status(409).send({ ok: false, error: "DUPLICATE_RECEIPT", existing_fact_id: dup.fact_id });
-}
-
-      const schemaKeys = (task?.payload?.parameter_schema?.keys ?? []) as ParamDef[];
-      if (!Array.isArray(schemaKeys) || schemaKeys.length === 0) {
-        return reply.status(400).send({ ok: false, error: "TASK_PARAMETER_SCHEMA_MISSING" });
-      }
-
-      assertNoObjectsOrArrays(body.observed_parameters, "observed_parameters");
-
-      // v0：observed_parameters 只能使用 task.parameter_schema.keys[] 中已声明的 key；并按类型/界限/枚举校验。
-      validateObservedParametersSubset(schemaKeys, body.observed_parameters, "observed_parameters");
-
-      const receiptDeviceId = String(
-        body?.meta?.device_id
-        ?? task?.payload?.meta?.device_id
-        ?? task?.payload?.device_id
-        ?? ""
-      ).trim();
-      const beforeTsMs = Number(body.execution_time.start_ts);
-      const receiptTsMs = Number(body.execution_time.end_ts);
-      const afterWindowEndTsMs = receiptTsMs + 20 * 60 * 1000;
-      let beforeMetrics: EffectMetricSnapshot = {};
-      let afterMetrics: EffectMetricSnapshot = {};
-      let computedEffect: { type: string; value: number } | null = null;
-      if (receiptDeviceId && Number.isFinite(beforeTsMs) && Number.isFinite(receiptTsMs)) {
-        const beforeQ = await pool.query(
-          `SELECT metric, value_num, ts
-             FROM telemetry_index_v1
-            WHERE tenant_id = $1
-              AND device_id = $2
-              AND metric = ANY($3::text[])
-              AND ts <= to_timestamp($4::double precision / 1000.0)
-            ORDER BY ts DESC
-            LIMIT 20`,
-          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], beforeTsMs]
-        ).catch(() => ({ rows: [] as any[] }));
-        const afterQ = await pool.query(
-          `SELECT metric, value_num, ts
-             FROM telemetry_index_v1
-            WHERE tenant_id = $1
-              AND device_id = $2
-              AND metric = ANY($3::text[])
-              AND ts >= to_timestamp($4::double precision / 1000.0)
-              AND ts <= to_timestamp($5::double precision / 1000.0)
-            ORDER BY ts ASC
-            LIMIT 100`,
-          [tenant.tenant_id, receiptDeviceId, ["soil_moisture", "temperature", "air_temperature", "humidity", "air_humidity", "soil_temperature", "soil_temp", "soil_temp_c"], receiptTsMs, afterWindowEndTsMs]
-        ).catch(() => ({ rows: [] as any[] }));
-        beforeMetrics = buildEffectMetricSnapshot(beforeQ.rows ?? []);
-        afterMetrics = buildEffectMetricSnapshot(afterQ.rows ?? []);
-        computedEffect = computeEffect(beforeMetrics, afterMetrics);
-      }
-
-      const created_at_ts = Date.now();
-      const record_json = {
-        type: "ao_act_receipt_v0",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          operation_plan_id: body.operation_plan_id,
-          act_task_id: body.act_task_id,
-          executor_id: body.executor_id,
-          execution_time: body.execution_time,
-          execution_coverage: body.execution_coverage,
-          resource_usage: body.resource_usage,
-          logs_refs: body.logs_refs,
-          status: body.status,
-          constraint_check: body.constraint_check,
-          observed_parameters: body.observed_parameters,
-          device_refs: (body as any).device_refs,
-          effect_snapshot: {
-            before_metrics: beforeMetrics,
-            after_metrics: afterMetrics,
-            effect: computedEffect
-          },
-          created_at_ts,
-          meta: {
-            ...(body.meta && typeof body.meta === "object" ? body.meta : {}),
-            command_id: commandId,
-            evidence_trace: {
-              expected_requirements: expectedEvidenceRequirements,
-              provided_kinds: providedEvidenceKinds,
-              missing_requirements: missingEvidenceRequirements
-            }
-          }
-        }
-      };
-
-      const fact_id = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [fact_id, FACT_SOURCE_AO_ACT_V0, record_json]
-      );
-
-      await writeAoActAuthzAuditFactV0(pool, {
-        event: "receipt_write",
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        target_fact_id: fact_id,
-        act_task_id: body.act_task_id
-      });
-
-      const latestPlanSql = `
-        SELECT fact_id, (record_json::jsonb) AS record_json
-        FROM facts
-        WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
-          AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
-          AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
-          AND (record_json::jsonb#>>'{payload,project_id}') = $3
-          AND (record_json::jsonb#>>'{payload,group_id}') = $4
-        ORDER BY occurred_at DESC, fact_id DESC
-        LIMIT 1
-      `;
-      const latestPlanRes = await pool.query(latestPlanSql, [body.operation_plan_id, tenant.tenant_id, tenant.project_id, tenant.group_id]);
-      if ((latestPlanRes.rowCount ?? 0) === 0) throw new Error("PLAN_NOT_FOUND");
-      const latestPlan = latestPlanRes.rows[0]?.record_json ?? {};
-      const planPayload = latestPlan?.payload ?? {};
-      const currentStatus = String(planPayload.status ?? "").trim().toUpperCase();
-      if (currentStatus === "SUCCEEDED" || currentStatus === "FAILED") {
-        return reply.send({
-          ok: true,
-          fact_id,
-          terminal_deduped: true,
-          evidence_trace: {
-            expected_requirements: expectedEvidenceRequirements,
-            provided_kinds: providedEvidenceKinds,
-            missing_requirements: missingEvidenceRequirements
-          }
-        });
-      }
-
-      const receiptStatus = String(body.status ?? "").toLowerCase();
-      const terminalState = receiptStatus === "executed" ? "SUCCEEDED" : "FAILED";
-
-      const transitionFactId = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [transitionFactId, FACT_SOURCE_AO_ACT_V0, {
-          type: "operation_plan_transition_v1",
-          payload: {
-            tenant_id: tenant.tenant_id,
-            project_id: tenant.project_id,
-            group_id: tenant.group_id,
-            operation_plan_id: body.operation_plan_id,
-            from_status: currentStatus || "ACKED",
-            status: terminalState,
-            trigger: "receipt",
-            act_task_id: body.act_task_id,
-            receipt_fact_id: fact_id,
-            created_ts: Date.now()
-          }
-        }]
-      );
-
-      const planFactId = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [planFactId, FACT_SOURCE_AO_ACT_V0, {
-          type: "operation_plan_v1",
-          payload: {
-            ...planPayload,
-            tenant_id: tenant.tenant_id,
-            project_id: tenant.project_id,
-            group_id: tenant.group_id,
-            operation_plan_id: body.operation_plan_id,
-            act_task_id: body.act_task_id,
-            status: terminalState,
-            receipt_fact_id: fact_id,
-            before_metrics: beforeMetrics,
-            after_metrics: afterMetrics,
-            actual_effect: computedEffect,
-            updated_ts: Date.now()
-          }
-        }]
-      );
-
-      return reply.send({
-        ok: true,
-        fact_id,
-        operation_plan_transition_fact_id: transitionFactId,
-        operation_plan_fact_id: planFactId,
-        evidence_trace: {
-          expected_requirements: expectedEvidenceRequirements,
-          provided_kinds: providedEvidenceKinds,
-          missing_requirements: missingEvidenceRequirements
-        }
-      });
-    } catch (e: any) {
-      const msg = String(e?.message ?? "BAD_REQUEST"); // Normalize error message.
-      if (msg === "NOT_FOUND") return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Enforce non-enumerable cross-tenant failure.
-      return reply.status(400).send({ ok: false, error: msg });
-    }
-  });
-
-  app.get("/api/control/ao_act/index", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Enforce token scope for index reads.
-    if (!auth) return; // Halt if missing/invalid/insufficient.
-
-    const q = z
-      .object({ tenant_id: z.string().min(1), project_id: z.string().min(1), group_id: z.string().min(1), act_task_id: z.string().optional() })
-      .strict()
-      .parse((req as any).query ?? {});
-
-
-
-const tenant = assertTenantFieldsPresentV0(q, "query"); // Extract tenant triple from parsed query.
-if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
-
-
-// Sprint 22: always compute index inline and filter by tenant triple to avoid cross-tenant leakage via shared views.
-const inlineSql = q.act_task_id
-  ? `WITH act_tasks AS (
-       SELECT
-         f.fact_id AS task_fact_id,
-         f.occurred_at AS task_occurred_at,
-         f.source AS task_source,
-         (f.record_json::jsonb) AS task_record_json,
-         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
-       FROM facts f
-       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
-         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
-         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
-         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
-     ),
-     act_receipts AS (
-       SELECT
-         f.fact_id AS receipt_fact_id,
-         f.occurred_at AS receipt_occurred_at,
-         f.source AS receipt_source,
-         (f.record_json::jsonb) AS receipt_record_json,
-         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-         ((f.record_json::jsonb)->'payload'->>'status') AS status
-       FROM facts f
-       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
-         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
-         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
-         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
-     ),
-     latest_receipt AS (
-       SELECT DISTINCT ON (r.act_task_id)
-         r.act_task_id,
-         r.receipt_fact_id,
-         r.receipt_occurred_at,
-         r.receipt_source,
-         r.status,
-         r.receipt_record_json
-       FROM act_receipts r
-       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
-     )
-     SELECT
-       t.act_task_id,
-       t.action_type,
-       t.task_fact_id,
-       t.task_occurred_at,
-       t.task_source,
-       lr.receipt_fact_id,
-       lr.receipt_occurred_at,
-       lr.receipt_source,
-       lr.status,
-       t.task_record_json AS task_record_json,
-       lr.receipt_record_json AS receipt_record_json
-     FROM act_tasks t
-     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
-     WHERE t.act_task_id = $4
-     ORDER BY t.act_task_id ASC`
-  : `WITH act_tasks AS (
-       SELECT
-         f.fact_id AS task_fact_id,
-         f.occurred_at AS task_occurred_at,
-         f.source AS task_source,
-         (f.record_json::jsonb) AS task_record_json,
-         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-         ((f.record_json::jsonb)->'payload'->>'action_type') AS action_type
-       FROM facts f
-       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_task_v0'
-         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
-         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
-         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
-     ),
-     act_receipts AS (
-       SELECT
-         f.fact_id AS receipt_fact_id,
-         f.occurred_at AS receipt_occurred_at,
-         f.source AS receipt_source,
-         (f.record_json::jsonb) AS receipt_record_json,
-         ((f.record_json::jsonb)->'payload'->>'act_task_id') AS act_task_id,
-         ((f.record_json::jsonb)->'payload'->>'status') AS status
-       FROM facts f
-       WHERE (f.record_json::jsonb)->>'type' = 'ao_act_receipt_v0'
-         AND (f.record_json::jsonb)#>> '{payload,tenant_id}' = $1
-         AND (f.record_json::jsonb)#>> '{payload,project_id}' = $2
-         AND (f.record_json::jsonb)#>> '{payload,group_id}' = $3
-     ),
-     latest_receipt AS (
-       SELECT DISTINCT ON (r.act_task_id)
-         r.act_task_id,
-         r.receipt_fact_id,
-         r.receipt_occurred_at,
-         r.receipt_source,
-         r.status,
-         r.receipt_record_json
-       FROM act_receipts r
-       ORDER BY r.act_task_id, r.receipt_occurred_at DESC, r.receipt_fact_id DESC
-     )
-     SELECT
-       t.act_task_id,
-       t.action_type,
-       t.task_fact_id,
-       t.task_occurred_at,
-       t.task_source,
-       lr.receipt_fact_id,
-       lr.receipt_occurred_at,
-       lr.receipt_source,
-       lr.status,
-       t.task_record_json AS task_record_json,
-       lr.receipt_record_json AS receipt_record_json
-     FROM act_tasks t
-     LEFT JOIN latest_receipt lr ON lr.act_task_id = t.act_task_id
-     ORDER BY t.act_task_id ASC`;
-
-const inlineArgs = q.act_task_id
-  ? [tenant.tenant_id, tenant.project_id, tenant.group_id, q.act_task_id]
-  : [tenant.tenant_id, tenant.project_id, tenant.group_id];
-
-const out = await pool.query(inlineSql, inlineArgs); // Execute tenant-filtered inline index query.
-
-await writeAoActAuthzAuditFactV0(pool, {
-  event: "index_read",
-  actor_id: auth.actor_id,
-  token_id: auth.token_id,
-  act_task_id: q.act_task_id
-});
-
-return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
-
-  });
+// @deprecated - compatibility-only combined registrar; prefer explicit v1/legacy registration from server.ts.
+export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
+  registerAoActV1Routes(app, pool);
+  registerAoActLegacyRoutes(app, pool);
 }

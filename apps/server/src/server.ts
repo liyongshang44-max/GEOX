@@ -1,4 +1,4 @@
-﻿// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
+// ⚠️ DEPRECATED: replaced by operation_state_v1 / program_v1
 // DO NOT use in new flows
 // GEOX/apps/server/src/server.ts
 
@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto"; // 生成 UUID（导入任务等）
 import { spawn } from "node:child_process"; // 启动子进程（跑 loadfact.ts）
 import { pipeline } from "node:stream/promises"; // 流式写文件（multipart 上传）
 
-import Fastify from "fastify"; // Fastify 主框架
+import Fastify, { type FastifyInstance } from "fastify"; // Fastify 主框架
 import multipart from "@fastify/multipart"; // multipart/form-data 支持（curl -F）
 import fastifyStatic from "@fastify/static"; // 静态文件服务（/media /acceptance）
 import { createRequire } from "node:module"; // ESM 中创建 require
@@ -20,51 +20,55 @@ import type {
 } from "@geox/contracts";
 
 
-import { registerSimConfigRoutes } from "./routes/sim_config"; // sim config 路由
-import { registerDeviceSimulatorV1Routes } from "./routes/device_simulator_v1"; // Device simulator routes: /api/v1/devices/:id/simulator/* + deprecated simulator-runner compatibility.
-import { registerControlAoSenseRoutes } from "./routes/control_ao_sense"; // AO-SENSE 控制路由
-import { registerControlAoActRoutes } from "./routes/control_ao_act"; // AO-ACT 控制路由
-import { registerControlApprovalRequestV1Routes } from "./routes/control_approval_request_v1"; // Sprint 25: Approval runtime v1 routes.
-import { registerDeliveryEvidenceExportV1Routes } from "./routes/delivery_evidence_export_v1"; // Sprint 26: Evidence export API v1 (async jobs).
-import { registerTelemetryV1Routes } from "./routes/telemetry_v1"; // Sprint A1: Telemetry query routes (read-only).
-import { registerDevicesV1Routes } from "./routes/devices_v1"; // Sprint A2: Devices registration + credentials routes (P0).
-import { registerHumanExecutorV1Routes, startAssignmentExpiryWorker } from "./routes/human_executors_v1"; // Human executor/service team/work-assignment domain routes.
-import { registerFieldsV1Routes } from "./routes/fields_v1"; // Sprint C1: Field/GIS + Device Binding routes.
-import { registerFieldTagsV1Routes } from "./routes/field_tags_v1"; // Field tags v1 routes (field scoped labels).
-import { registerDeviceStatusV1Routes } from "./routes/device_status_v1"; // Sprint C1: Device heartbeat/status read routes.
-import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1"; // Sprint C2: Device heartbeat ingest routes.
-import { registerAlertsV1Routes, startOfflineAlertWorker, startAlertNotificationWorker } from "./routes/alerts_v1"; // Sprint C1: Alerts API + offline worker.
-import { registerAlertWorkflowV1Routes } from "./routes/alert_workflow_v1"; // Alert workflow schema initialization + write-layer helper registration.
-import { registerEvidenceExportJobsV1Routes } from "./routes/evidence_export_jobs_v1"; // Sprint C1: Persisted evidence export jobs.
-import { registerRawRoutes } from "./routes/raw"; // raw 写入路由
-import { registerAgronomyV0Routes } from "./routes/agronomy_v0"; // 农艺 v0 路由
-import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1"; // 农艺解释 v1 路由
-import { registerControlPlaneV1Routes } from "./routes/controlplane_v1"; // Control-2: stable Commercial REST v1 wrappers + dispatch outbox.
-import { registerAuditExportV1Routes } from "./routes/audit_export_v1"; // Sprint W1: unified audit/export overview.
-import { registerAuthV1Routes } from "./routes/auth_v1"; // Sprint R1: auth/session info route.
-import { registerDashboardV1Routes } from "./routes/dashboard_v1"; // Sprint P2: commercial dashboard overview route.
-import { registerHumanOpsV1Routes, startHumanOpsKpiRefreshWorker } from "./routes/human_ops_v1"; // Human ops analytics routes + low-peak refresh worker.
-import { registerSlaV1Routes } from "./routes/sla_v1"; // SLA summary routes.
-import { registerBillingV1Routes } from "./routes/billing_v1"; // Billing v1 routes.
-import { registerOpenApiV1Routes } from "./routes/openapi_v1"; // Sprint Docs1: exported OpenAPI JSON route.
-import { registerAgronomyMediaV1Routes } from "./routes/agronomy_media_v1"; // Agronomy media ingest + normalized observation routes.
-import { registerAgronomyInferenceV1Routes } from "./routes/agronomy_inference_v1"; // Agronomy inference + aggregated inputs routes.
-import { registerDecisionEngineV1Routes } from "./routes/decision_engine_v1"; // Decision engine recommendations + simulator routes.
-import { registerOperationStateV1Routes } from "./routes/operation_state_v1"; // Sprint B: unified operation state routes.
-import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1"; // Sprint C: field timeline/replay route.
-import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1"; // Program-centric state projection API.
-import { registerFieldPortfolioV1Routes } from "./routes/field_portfolio_v1"; // Field portfolio projection APIs.
-import { registerProgramsV1Routes } from "./routes/programs_v1"; // Program management + field/season scoped program routes.
-import { registerAcceptanceV1Routes } from "./routes/acceptance_v1"; // Stage C2: acceptance evaluation API routes.
-import { registerEvidenceBundleV1Routes } from "./routes/evidence_bundle_v1"; // Stage 3: operation evidence bundle API.
-import { registerSchedulingConflictV1Routes } from "./routes/scheduling_conflicts_v1"; // Scheduling conflict detector API routes.
-import { registerEvidenceReportV1Routes } from "./routes/evidence_report_v1"; // Stage 5: Commercial evidence report jobs.
-import { registerSkillRulesV1Routes } from "./routes/skills_rules_v1"; // Stage 6: runtime skill rules switch/list APIs.
-import { registerSkillsV1Routes } from "./routes/skills_v1"; // Stage 10: skill registry/bindings/runs APIs.
-import { registerSkillRunsV1Routes } from "./routes/skill_runs_v1"; // Stage 10+: taskbook-normalized skill run read API.
-import { registerReportsV1Routes } from "./routes/reports_v1"; // Operation report projection APIs (operation/field).
-import { registerReportsDashboardV1Routes } from "./routes/reports_dashboard_v1"; // Customer dashboard aggregate reports route.
-import { enforceRouteRoleAuth } from "./auth/route_role_authz";
+import { registerSimConfigRoutes } from "./routes/sim_config.js"; // sim config 路由
+import { registerDeviceSimulatorV1Routes } from "./routes/device_simulator_v1.js"; // Device simulator routes: /api/v1/devices/:id/simulator/* + deprecated simulator-runner compatibility.
+import { registerSenseV1PrimaryRoutes } from "./routes/v1/sense.js"; // AO-SENSE v1 主入口路由（主实现）。
+import { registerSenseLegacyCompatibilityRoutes } from "./routes/legacy/sense.js"; // AO-SENSE legacy 兼容层路由（仅兼容）。
+import { registerAoActV1PrimaryRoutes } from "./routes/v1/ao_act.js"; // AO-ACT v1 主入口路由（主实现）。
+import { registerAoActLegacyCompatibilityRoutes } from "./routes/legacy/ao_act.js"; // AO-ACT legacy 兼容层路由（仅兼容）。
+import { registerApprovalsV1PrimaryRoutes } from "./routes/v1/approvals.js"; // Approvals v1 主入口路由（主实现）。
+import { registerApprovalsLegacyCompatibilityRoutes } from "./routes/legacy/approvals.js"; // Approvals legacy 兼容层路由（仅兼容）。
+import { registerDeliveryEvidenceExportV1Routes } from "./routes/delivery_evidence_export_v1.js"; // Sprint 26: Evidence export API v1 (async jobs).
+import { registerTelemetryV1Routes } from "./routes/telemetry_v1.js"; // Sprint A1: Telemetry query routes (read-only).
+import { registerDevicesV1PrimaryCompatibilityRoutes } from "./routes/v1/devices.js"; // Devices v1 主入口路由（主实现）。
+import { registerDevicesLegacyCompatibilityRoutesOnly } from "./routes/legacy/devices.js"; // Devices legacy 兼容层路由（仅兼容）。
+import { registerHumanExecutorV1Routes, startAssignmentExpiryWorker } from "./routes/human_executors_v1.js"; // Human executor/service team/work-assignment domain routes.
+import { registerFieldsV1Routes } from "./routes/fields_v1.js"; // Sprint C1: Field/GIS + Device Binding routes.
+import { registerFieldTagsV1Routes } from "./routes/field_tags_v1.js"; // Field tags v1 routes (field scoped labels).
+import { registerDeviceStatusV1Routes } from "./routes/device_status_v1.js"; // Sprint C1: Device heartbeat/status read routes.
+import { registerDeviceHeartbeatV1Routes } from "./routes/device_heartbeat_v1.js"; // Sprint C2: Device heartbeat ingest routes.
+import { registerAlertsV1Routes, startOfflineAlertWorker, startAlertNotificationWorker } from "./routes/alerts_v1.js"; // Sprint C1: Alerts API + offline worker.
+import { registerAlertWorkflowV1Routes } from "./routes/alert_workflow_v1.js"; // Alert workflow schema initialization + write-layer helper registration.
+import { registerEvidenceExportJobsV1Routes } from "./routes/evidence_export_jobs_v1.js"; // Sprint C1: Persisted evidence export jobs.
+import { registerRawRoutes } from "./routes/raw.js"; // raw 写入路由
+import { registerAgronomyV0Routes } from "./routes/agronomy_v0.js"; // 农艺 v0 路由
+import { registerAgronomyInterpretationV1Routes } from "./routes/agronomy_interpretation_v1.js"; // 农艺解释 v1 路由
+import { registerControlPlaneV1Routes } from "./routes/controlplane_v1.js"; // Control-2: stable Commercial REST v1 wrappers + dispatch outbox.
+import { registerAuditExportV1Routes } from "./routes/audit_export_v1.js"; // Sprint W1: unified audit/export overview.
+import { registerAuthV1Routes } from "./routes/auth_v1.js"; // Sprint R1: auth/session info route.
+import { registerDashboardV1Routes } from "./routes/dashboard_v1.js"; // Sprint P2: commercial dashboard overview route.
+import { registerHumanOpsV1Routes, startHumanOpsKpiRefreshWorker } from "./routes/human_ops_v1.js"; // Human ops analytics routes + low-peak refresh worker.
+import { registerSlaV1Routes } from "./routes/sla_v1.js"; // SLA summary routes.
+import { registerBillingV1Routes } from "./routes/billing_v1.js"; // Billing v1 routes.
+import { registerOpenApiV1Routes } from "./routes/openapi_v1.js"; // Sprint Docs1: exported OpenAPI JSON route.
+import { registerAgronomyMediaV1Routes } from "./routes/agronomy_media_v1.js"; // Agronomy media ingest + normalized observation routes.
+import { registerAgronomyInferenceV1Routes } from "./routes/agronomy_inference_v1.js"; // Agronomy inference + aggregated inputs routes.
+import { registerDecisionEngineV1Routes } from "./routes/decision_engine_v1.js"; // Decision engine recommendations + simulator routes.
+import { registerOperationStateV1Routes } from "./routes/operation_state_v1.js"; // Sprint B: unified operation state routes.
+import { registerFieldTimelineV1Routes } from "./routes/field_timeline_v1.js"; // Sprint C: field timeline/replay route.
+import { registerFieldProgramStateV1Routes } from "./routes/field_program_state_v1.js"; // Program-centric state projection API.
+import { registerFieldPortfolioV1Routes } from "./routes/field_portfolio_v1.js"; // Field portfolio projection APIs.
+import { registerProgramsV1Routes } from "./routes/programs_v1.js"; // Program management + field/season scoped program routes.
+import { registerAcceptanceV1Routes } from "./routes/acceptance_v1.js"; // Stage C2: acceptance evaluation API routes.
+import { registerEvidenceBundleV1Routes } from "./routes/evidence_bundle_v1.js"; // Stage 3: operation evidence bundle API.
+import { registerSchedulingConflictV1Routes } from "./routes/scheduling_conflicts_v1.js"; // Scheduling conflict detector API routes.
+import { registerEvidenceReportV1Routes } from "./routes/evidence_report_v1.js"; // Stage 5: Commercial evidence report jobs.
+import { registerSkillRulesV1Routes } from "./routes/skills_rules_v1.js"; // Stage 6: runtime skill rules switch/list APIs.
+import { registerSkillsV1Routes } from "./routes/skills_v1.js"; // Stage 10: skill registry/bindings/runs APIs.
+import { registerSkillRunsV1Routes } from "./routes/skill_runs_v1.js"; // Stage 10+: taskbook-normalized skill run read API.
+import { registerReportsV1Routes } from "./routes/reports_v1.js"; // Operation report projection APIs (operation/field).
+import { registerReportsDashboardV1Routes } from "./routes/reports_dashboard_v1.js"; // Customer dashboard aggregate reports route.
+import { enforceRouteRoleAuth } from "./auth/route_role_authz.js";
 type FactsSource = "device" | "gateway" | "system" | "human"; // facts.source 合法枚举
 type QcQuality = "unknown" | "ok" | "suspect" | "bad"; // qc.quality 合法枚举
 type OverlayConfidence = "low" | "med" | "high";
@@ -245,6 +249,49 @@ if (!DATABASE_URL) {
 }
 const pool = new Pool({ connectionString: DATABASE_URL }); // 创建 pg 连接池
 
+function registerV1Routes(app: FastifyInstance, pool: Pool): void {
+  // AO-ACT + approvals primary route layer.
+  // v1 is the business-authoritative entry for these groups.
+  registerAoActV1PrimaryRoutes(app, pool);
+  registerApprovalsV1PrimaryRoutes(app, pool);
+  registerDevicesV1PrimaryCompatibilityRoutes(app, pool);
+  registerSenseV1PrimaryRoutes(app, pool);
+}
+
+function registerLegacyRoutes(app: FastifyInstance, pool: Pool): void {
+  // legacy compatibility routes only
+  // do not add new business endpoints here
+  registerAoActLegacyCompatibilityRoutes(app, pool);
+  registerApprovalsLegacyCompatibilityRoutes(app, pool);
+  registerDevicesLegacyCompatibilityRoutesOnly(app, pool);
+  registerSenseLegacyCompatibilityRoutes(app, pool);
+}
+const REQUIRED_SCHEMA = {
+  tables: [
+    "facts",
+    "raw_samples",
+    "markers",
+    "sensor_groups",
+    "sensor_group_members",
+  ],
+  views: ["facts_replay_v1"],
+} as const;
+
+async function runSqlMigrations(pool: Pool): Promise<void> {
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  const migrationsDir = path.resolve(__dirname, "..", "db", "migrations");
+  if (!fs.existsSync(migrationsDir)) return;
+  const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith('.sql')).sort();
+  for (const name of files) {
+    const fullPath = path.join(migrationsDir, name);
+    const sql = fs.readFileSync(fullPath, 'utf8').replace(/^﻿/, '').trim();
+    if (!sql) continue;
+    await pool.query(sql);
+  }
+}
+
+
 const TENANT_HEADERS = [
   "x-tenant-id",
   "x-project-id",
@@ -299,7 +346,6 @@ registerDeviceSimulatorV1Routes(app, pool); // Device simulator v1: canonical de
 // ⚠️ LEGACY ROUTES: kept only for compatibility; DO NOT wire any new page/flow to these endpoints.
 registerRawRoutes(app, pool); // legacy monitoring route registration only.
 registerTelemetryV1Routes(app, pool); // legacy telemetry route registration only.
-registerDevicesV1Routes(app, pool); // Sprint A2: 注册设备注册/凭据路由（设备身份 P0）。
 registerHumanExecutorV1Routes(app, pool); // Human executor: register human/domain routes without altering device executor paths.
 registerFieldsV1Routes(app, pool); // Sprint C1: 注册 Field/GIS + Device Binding（地块化基座）。
 registerFieldTagsV1Routes(app, pool); // Field tags v1: 地块标签管理（含 field scope 校验）。
@@ -310,9 +356,8 @@ registerAlertsV1Routes(app, pool); // Sprint C1: 注册 Alerts（告警规则 + 
 registerAlertWorkflowV1Routes(app, pool); // Alert workflow v1: initialize workflow projection schema and indexes.
 registerEvidenceExportJobsV1Routes(app, pool); // Sprint C1: 注册 Evidence Export Jobs（持久化作业）。
 
-registerControlAoSenseRoutes(app, pool); // 注册 AO-SENSE 控制路由
-registerControlAoActRoutes(app, pool); // 注册 AO-ACT 控制路由
-registerControlApprovalRequestV1Routes(app, pool); // Sprint 25: 注册 Approval runtime v1（人类在环审批）路由。
+registerV1Routes(app, pool); // AO-ACT 主实现层：先注册 /api/v1/actions/*
+registerLegacyRoutes(app, pool); // AO-ACT + approvals legacy compatibility routes only.
 registerDeliveryEvidenceExportV1Routes(app, pool); // Sprint 26: 注册 Evidence Export API v1（异步作业）路由。
 registerControlPlaneV1Routes(app, pool); // Control-2: 注册 Commercial REST v1（审批/任务/dispatch outbox/receipt 查询）路由。
 registerDecisionEngineV1Routes(app, pool); // Decision engine: recommendation generation, approval mapping, and irrigation simulator.
@@ -429,46 +474,30 @@ function occurredAtToMs(occurred_at: unknown): number {
 app.get("/health", async () => ({ ok: true })); // 简单健康检查
 app.get("/api/health", async () => ({ ok: true })); // /api 兼容健康检查（用于 acceptance runner）
 
-app.get("/api/admin/healthz", async (req, reply) => {
-  const requiredTables = ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members"]; // 必需表
-  const requiredViews = ["facts_replay_v1"]; // 必需视图
-
-  const db = {
-    ok: false, // db 是否可用
-    now: null as string | null, // db 当前时间
-    version: null as string | null, // db 版本
-  };
+app.get("/api/admin/healthz", async (_req, reply) => {
+  const missing_tables: string[] = [];
+  const missing_views: string[] = [];
 
   try {
-    const r1 = await pool.query("select now() as now, version() as version"); // 探测连接
-    db.ok = true; // 标记 OK
-    db.now = String((r1.rows?.[0] as any)?.now ?? ""); // 取 now
-    db.version = String((r1.rows?.[0] as any)?.version ?? ""); // 取 version
-  } catch (e: any) {
-    return reply.code(200).send({
-      ok: false, // db 不可用
-      db, // 返回 db 状态
-      bootstrap: { requiredTables, requiredViews, missingTables: requiredTables, missingViews: requiredViews }, // 全部缺失
-    });
+    await pool.query("select now() as now, version() as version");
+  } catch {
+    return reply.code(200).send({ ok: false, missing_tables: [...REQUIRED_SCHEMA.tables], missing_views: [...REQUIRED_SCHEMA.views] });
   }
 
-  const missingTables: string[] = []; // 缺失表
-  for (const t of requiredTables) {
-    const r = await pool.query("select to_regclass($1) as reg", [`public.${t}`]); // 检查是否存在
-    if (!r.rows?.[0]?.reg) missingTables.push(t); // 不存在则加入缺失
+  for (const t of REQUIRED_SCHEMA.tables) {
+    const r = await pool.query("select to_regclass($1) as reg", [`public.${t}`]);
+    if (!r.rows?.[0]?.reg) missing_tables.push(t);
   }
 
-  const missingViews: string[] = []; // 缺失视图
-  for (const v of requiredViews) {
-    const r = await pool.query("select to_regclass($1) as reg", [`public.${v}`]); // 检查是否存在
-    if (!r.rows?.[0]?.reg) missingViews.push(v); // 不存在则加入缺失
+  for (const v of REQUIRED_SCHEMA.views) {
+    const r = await pool.query("select to_regclass($1) as reg", [`public.${v}`]);
+    if (!r.rows?.[0]?.reg) missing_views.push(v);
   }
 
-  const ok = db.ok && missingTables.length === 0 && missingViews.length === 0; // 全满足才 ok
   return reply.send({
-    ok, // 返回总状态
-    db, // 返回 db 信息
-    bootstrap: { requiredTables, requiredViews, missingTables, missingViews }, // 返回缺失项
+    ok: missing_tables.length === 0 && missing_views.length === 0,
+    missing_tables,
+    missing_views,
   });
 });
 
@@ -1760,6 +1789,8 @@ app.get("/api/overlays/explain", async (req, reply) => {
 });
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3000; // 端口
+
+await runSqlMigrations(pool); // 启动前自动执行 migration，确保新环境无需手工补表。
 
 startOfflineAlertWorker(pool); // Sprint C1: 启动离线告警后台扫描（DEVICE_OFFLINE）。
 startAlertNotificationWorker(pool); // Sprint C3: 启动告警通知分发后台任务（短信/邮件/企业微信/钉钉/WEBHOOK）。

@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 
-import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
+import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 
 type TenantTriple = {
   tenant_id: string; // Tenant isolation SSOT field.
@@ -140,302 +140,304 @@ function buildInternalBaseUrl(req: any): string {
   return `${proto}://127.0.0.1:${localPort}`; // Loop back into the same server instance.
 }
 
-export function registerControlApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
-  // POST /api/control/approval_request/v1/request
-  // Creates approval_request_v1 fact (append-only). This is Sprint 25's "human-in-the-loop" runtime.
-  app.post("/api/control/approval_request/v1/request", async (req, reply) => {
-    try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write"); // Approval write requires the ability to write tasks.
-      if (!auth) return;
-      if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
-      if (!auth) return;
 
-      const body: any = req.body ?? {};
-      // Approval API decision input uses APPROVE/REJECT; persisted plan status remains APPROVED-like internal states.
-      const tenant = assertTenantTriple(body);
-      if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+function logLegacyApprovalWarning(req: any, legacyPath: string): void {
+  try {
+    req.log?.warn?.({
+      path: legacyPath,
+      method: String(req?.method ?? ""),
+      actor_id: String((req as any)?.auth?.actor_id ?? ""),
+      token_id: String((req as any)?.auth?.token_id ?? ""),
+      warning: "deprecated legacy approval API used"
+    }, "deprecated legacy approval API used");
+  } catch {
+    // ignore logging failures on compatibility path
+  }
+}
 
-      // Minimal required proposal fields mirror AO-ACT task input.
-      const required = ["issuer", "action_type", "target", "time_window", "parameter_schema", "parameters", "constraints"];
-      for (const k of required) {
-        if (body[k] === undefined) return badRequest(reply, `MISSING_FIELD:${k}`);
-      }
-
-      if (!hasMeaningfulIssuer(body.issuer)) return badRequest(reply, "MISSING_OR_INVALID:issuer");
-      if (!isNonEmptyString(body.action_type)) return badRequest(reply, "MISSING_OR_INVALID:action_type");
-      if (!hasMeaningfulTarget(body.target)) return badRequest(reply, "MISSING_OR_INVALID:target");
-
-      const win = body.time_window;
-      if (win === null || typeof win !== "object") return badRequest(reply, "MISSING_OR_INVALID:time_window");
-      const start_ts = Number(win.start_ts);
-      const end_ts = Number(win.end_ts);
-      if (!Number.isFinite(start_ts) || !Number.isFinite(end_ts)) return badRequest(reply, "MISSING_OR_INVALID:time_window");
-      if (start_ts > end_ts) return badRequest(reply, "TIME_WINDOW_INVALID");
-
-      const request_id = `apr_${randomUUID().replace(/-/g, "")}`;
-      const created_at_ts = Date.now();
-
-      const record_json = {
-        type: "approval_request_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          program_id: body.program_id ?? body.meta?.program_id ?? null,
-          field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
-          season_id: body.season_id ?? body.meta?.season_id ?? null,
-          request_id,
-          status: "PENDING",
-          actor_id: auth.actor_id,
-          token_id: auth.token_id,
-          created_at_ts,
-          proposal: {
-            issuer: body.issuer,
-            action_type: body.action_type,
-            target: body.target,
-            time_window: { start_ts, end_ts },
-            parameter_schema: body.parameter_schema,
-            parameters: body.parameters,
-            constraints: body.constraints,
-            meta: body.meta ?? null
-          }
-        }
-      };
-
-      const fact_id = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [fact_id, "api/control/approval_request/v1", record_json]
-      );
-
-      return reply.send({ ok: true, fact_id, request_id });
-    } catch (e: any) {
-      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
-    }
-  });
-
-  // GET /api/control/approval_request/v1/requests
-  // Lists approval_request_v1 facts for a tenant triple.
-  app.get("/api/control/approval_request/v1/requests", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
+  try {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
+    (req as any).auth = auth;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
-    const q: any = (req as any).query ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: isNonEmptyString(q.tenant_id) ? q.tenant_id : "",
-      project_id: isNonEmptyString(q.project_id) ? q.project_id : "",
-      group_id: isNonEmptyString(q.group_id) ? q.group_id : ""
-    };
-    if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) return badRequest(reply, "MISSING_TENANT_TRIPLE");
+    const body: any = req.body ?? {};
+    const tenant = assertTenantTriple(body);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
-    const limit = parseLimit(q.limit, 20, 200);
+    const required = ["issuer", "action_type", "target", "time_window", "parameter_schema", "parameters", "constraints"];
+    for (const k of required) {
+      if (body[k] === undefined) return badRequest(reply, `MISSING_FIELD:${k}`);
+    }
 
-    const sql = `
-      SELECT fact_id, occurred_at, source, record_json
-      FROM facts
-      WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
-        AND (record_json::jsonb->'payload'->>'tenant_id') = $1
-        AND (record_json::jsonb->'payload'->>'project_id') = $2
-        AND (record_json::jsonb->'payload'->>'group_id') = $3
-      ORDER BY occurred_at DESC
-      LIMIT $4
-    `;
+    if (!hasMeaningfulIssuer(body.issuer)) return badRequest(reply, "MISSING_OR_INVALID:issuer");
+    if (!isNonEmptyString(body.action_type)) return badRequest(reply, "MISSING_OR_INVALID:action_type");
+    if (!hasMeaningfulTarget(body.target)) return badRequest(reply, "MISSING_OR_INVALID:target");
 
-    const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
-    const items = (res.rows ?? []).map((r: any) => ({
-      fact_id: r.fact_id,
-      occurred_at: r.occurred_at,
-      source: r.source,
-      record_json: parseRecordJsonMaybe(r.record_json) ?? r.record_json
-    }));
+    const win = body.time_window;
+    if (win === null || typeof win !== "object") return badRequest(reply, "MISSING_OR_INVALID:time_window");
+    const start_ts = Number(win.start_ts);
+    const end_ts = Number(win.end_ts);
+    if (!Number.isFinite(start_ts) || !Number.isFinite(end_ts)) return badRequest(reply, "MISSING_OR_INVALID:time_window");
+    if (start_ts > end_ts) return badRequest(reply, "TIME_WINDOW_INVALID");
 
-    return reply.send({ ok: true, items });
-  });
-
-  // POST /api/control/approval_request/v1/approve
-  // Approves an existing request and issues an AO-ACT task via the existing AO-ACT endpoint (preserves AO-ACT audit behavior).
-  app.post("/api/control/approval_request/v1/approve", async (req, reply) => {
-    try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
-      if (!auth) return;
-      if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
-
-      const body: any = req.body ?? {};
-      // Approval API decision input uses APPROVE/REJECT; persisted plan status remains APPROVED-like internal states.
-      if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");
-      const request_id = body.request_id;
-
-      // Load request fact.
-      const res = await pool.query(
-        `
-        SELECT fact_id, record_json
-        FROM facts
-        WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
-          AND (record_json::jsonb->'payload'->>'request_id') = $1
-        ORDER BY occurred_at DESC
-        LIMIT 1
-        `,
-        [request_id]
-      );
-      if (!res.rows || res.rows.length < 1) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-
-      const recRaw = res.rows[0].record_json;
-      const rec = parseRecordJsonMaybe(recRaw);
-      const payload = rec?.payload ?? null;
-      if (!payload) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
-
-      const tenant: TenantTriple = {
-        tenant_id: String(payload.tenant_id ?? ""),
-        project_id: String(payload.project_id ?? ""),
-        group_id: String(payload.group_id ?? "")
-      };
-      if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
-      if (String(payload.status ?? "") !== "PENDING") {
-        return badRequest(reply, "REQUEST_NOT_PENDING");
-      }
-
-      const proposal = payload.proposal ?? null;
-      if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
-
-      const approvedRequestRecord = {
-        type: "approval_request_v1",
-        payload: {
-          ...payload,
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          program_id: body.program_id ?? body.meta?.program_id ?? null,
-          field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
-          season_id: body.season_id ?? body.meta?.season_id ?? null,
-          request_id,
-          status: "APPROVED",
-          approved_at_ts: Date.now(),
-          approved_by_actor_id: auth.actor_id,
-          approved_by_token_id: auth.token_id
-        }
-      };
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [randomUUID(), "api/control/approval_request/v1", approvedRequestRecord]
-      );
-
-      // Issue AO-ACT task by calling the existing endpoint with the same Authorization header.
-      const url = `${buildInternalBaseUrl(req)}/api/control/ao_act/task`;
-      const authz = String((req.headers as any)["authorization"] ?? "");
-
-      const aoActBody = {
+    const request_id = `apr_${randomUUID().replace(/-/g, "")}`;
+    const created_at_ts = Date.now();
+    const record_json = {
+      type: "approval_request_v1",
+      payload: {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        approval_request_id: request_id,
-        program_id: payload.program_id ?? proposal?.meta?.program_id ?? null,
-        field_id: payload.field_id ?? proposal?.meta?.field_id ?? proposal?.target?.ref ?? null,
-        season_id: payload.season_id ?? proposal?.meta?.season_id ?? null,
-        issuer: normalizeAoActIssuer(auth, proposal.issuer),
-        action_type: proposal.action_type,
-        target: normalizeAoActTarget(proposal.target),
-        time_window: proposal.time_window,
-        parameter_schema: normalizeAoActParameterSchema(proposal.parameters, proposal.parameter_schema),
-        parameters: (proposal.parameters && typeof proposal.parameters === "object") ? proposal.parameters : {},
-        constraints: normalizeAoActConstraints(proposal.constraints),
-        meta: normalizeAoActMeta(proposal.meta)
-      };
-
-      const aoResp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "authorization": authz
-        },
-        body: JSON.stringify(aoActBody)
-      });
-      const aoJson: any = await aoResp.json().catch(() => null);
-      if (!aoResp.ok || !aoJson?.ok) {
-        return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_ISSUE_FAILED", detail: aoJson ?? null });
-      }
-
-      const act_task_id = String(aoJson.act_task_id ?? "");
-      const ao_fact_id = String(aoJson.fact_id ?? "");
-
-      // Write approval decision fact (append-only).
-      const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
-      const created_at_ts = Date.now();
-      const decision_record = {
-        type: "approval_decision_v1",
-        payload: {
-          tenant_id: tenant.tenant_id,
-          project_id: tenant.project_id,
-          group_id: tenant.group_id,
-          decision_id,
-          request_id,
-          decision: "APPROVED",
-          act_task_id,
-          ao_act_fact_id: ao_fact_id,
-          actor_id: auth.actor_id,
-          token_id: auth.token_id,
-          created_at_ts
+        program_id: body.program_id ?? body.meta?.program_id ?? null,
+        field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
+        season_id: body.season_id ?? body.meta?.season_id ?? null,
+        request_id,
+        status: "PENDING",
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        created_at_ts,
+        proposal: {
+          issuer: body.issuer,
+          action_type: body.action_type,
+          target: body.target,
+          time_window: { start_ts, end_ts },
+          parameter_schema: body.parameter_schema,
+          parameters: body.parameters,
+          constraints: body.constraints,
+          meta: body.meta ?? null
         }
-      };
+      }
+    };
 
-      const decision_fact_id = randomUUID();
-      await pool.query(
-        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-        [decision_fact_id, "api/control/approval_request/v1", decision_record]
-      );
+    const fact_id = randomUUID();
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [fact_id, "api/v1/approvals/request", record_json]
+    );
 
-      // NOTE: We intentionally do NOT mutate the original request record; state is represented by separate facts.
-      return reply.send({ ok: true, request_id, decision_id, act_task_id, ao_act_fact_id: ao_fact_id, decision_fact_id });
-    } catch (e: any) {
-      return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
-    }
-  });
+    return reply.send({ ok: true, fact_id, request_id });
+  } catch (e: any) {
+    return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+  }
+}
 
-  // /api/v1 aliases to keep naming consistent without breaking legacy control path.
-  app.post("/api/v1/approval-requests", async (req, reply) => {
-    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/request`, {
+async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
+  const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+  if (!auth) return;
+  (req as any).auth = auth;
+
+  const q: any = (req as any).query ?? {};
+  const tenant: TenantTriple = {
+    tenant_id: isNonEmptyString(q.tenant_id) ? q.tenant_id : "",
+    project_id: isNonEmptyString(q.project_id) ? q.project_id : "",
+    group_id: isNonEmptyString(q.group_id) ? q.group_id : ""
+  };
+  if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) return badRequest(reply, "MISSING_TENANT_TRIPLE");
+  if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+  const limit = parseLimit(q.limit, 20, 200);
+  const sql = `
+    SELECT fact_id, occurred_at, source, record_json
+    FROM facts
+    WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+      AND (record_json::jsonb->'payload'->>'tenant_id') = $1
+      AND (record_json::jsonb->'payload'->>'project_id') = $2
+      AND (record_json::jsonb->'payload'->>'group_id') = $3
+    ORDER BY occurred_at DESC
+    LIMIT $4
+  `;
+  const res = await pool.query(sql, [tenant.tenant_id, tenant.project_id, tenant.group_id, limit]);
+  const items = (res.rows ?? []).map((r: any) => ({
+    fact_id: r.fact_id,
+    occurred_at: r.occurred_at,
+    source: r.source,
+    record_json: parseRecordJsonMaybe(r.record_json) ?? r.record_json
+  }));
+
+  return reply.send({ ok: true, items });
+}
+
+async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
+  try {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+    (req as any).auth = auth;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+
+    const body: any = req.body ?? {};
+    if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");
+    const request_id = body.request_id;
+
+    const res = await pool.query(`
+      SELECT fact_id, record_json
+      FROM facts
+      WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
+        AND (record_json::jsonb->'payload'->>'request_id') = $1
+      ORDER BY occurred_at DESC
+      LIMIT 1
+    `, [request_id]);
+    if (!res.rows || res.rows.length < 1) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
+
+    const rec = parseRecordJsonMaybe(res.rows[0].record_json);
+    const payload = rec?.payload ?? null;
+    if (!payload) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
+
+    const tenant: TenantTriple = {
+      tenant_id: String(payload.tenant_id ?? ""),
+      project_id: String(payload.project_id ?? ""),
+      group_id: String(payload.group_id ?? "")
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+    if (String(payload.status ?? "") !== "PENDING") return badRequest(reply, "REQUEST_NOT_PENDING");
+
+    const proposal = payload.proposal ?? null;
+    if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
+
+    const approvedRequestRecord = {
+      type: "approval_request_v1",
+      payload: {
+        ...payload,
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id: body.program_id ?? body.meta?.program_id ?? null,
+        field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
+        season_id: body.season_id ?? body.meta?.season_id ?? null,
+        request_id,
+        status: "APPROVED",
+        approved_at_ts: Date.now(),
+        approved_by_actor_id: auth.actor_id,
+        approved_by_token_id: auth.token_id
+      }
+    };
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [randomUUID(), "api/v1/approvals/approve", approvedRequestRecord]
+    );
+
+    const aoActBody = {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      approval_request_id: request_id,
+      program_id: payload.program_id ?? proposal?.meta?.program_id ?? null,
+      field_id: payload.field_id ?? proposal?.meta?.field_id ?? proposal?.target?.ref ?? null,
+      season_id: payload.season_id ?? proposal?.meta?.season_id ?? null,
+      issuer: normalizeAoActIssuer(auth, proposal.issuer),
+      action_type: proposal.action_type,
+      target: normalizeAoActTarget(proposal.target),
+      time_window: proposal.time_window,
+      parameter_schema: normalizeAoActParameterSchema(proposal.parameters, proposal.parameter_schema),
+      parameters: (proposal.parameters && typeof proposal.parameters === "object") ? proposal.parameters : {},
+      constraints: normalizeAoActConstraints(proposal.constraints),
+      meta: normalizeAoActMeta(proposal.meta)
+    };
+
+    const aoResp = await fetch(`${buildInternalBaseUrl(req)}/api/v1/actions/task`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        authorization: String((req.headers as any)?.authorization ?? ""),
+        "authorization": String((req.headers as any)["authorization"] ?? "")
       },
-      body: JSON.stringify((req as any).body ?? {}),
+      body: JSON.stringify(aoActBody)
     });
-    const text = await delegated.text();
-    let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
-    return reply.status(delegated.status).send(parsed);
+    const aoJson: any = await aoResp.json().catch(() => null);
+    if (!aoResp.ok || !aoJson?.ok) {
+      return reply.status(400).send({ ok: false, error: "AO_ACT_TASK_ISSUE_FAILED", detail: aoJson ?? null });
+    }
+
+    const act_task_id = String(aoJson.act_task_id ?? "");
+    const ao_fact_id = String(aoJson.fact_id ?? "");
+    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+    const created_at_ts = Date.now();
+    const decision_record = {
+      type: "approval_decision_v1",
+      payload: {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        decision_id,
+        request_id,
+        decision: "APPROVED",
+        act_task_id,
+        ao_act_fact_id: ao_fact_id,
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+        created_at_ts
+      }
+    };
+
+    const decision_fact_id = randomUUID();
+    await pool.query(
+      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+      [decision_fact_id, "api/v1/approvals/approve", decision_record]
+    );
+
+    return reply.send({ ok: true, request_id, decision_id, act_task_id, ao_act_fact_id: ao_fact_id, decision_fact_id });
+  } catch (e: any) {
+    return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
+  }
+}
+
+export function registerApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
+  app.post("/api/v1/approvals/request", async (req, reply) => handleApprovalRequest(req, reply, pool));
+  app.get("/api/v1/approvals/requests", async (req, reply) => handleApprovalRequestsList(req, reply, pool));
+  app.post("/api/v1/approvals/approve", async (req, reply) => {
+    const request_id = String(((req as any).body ?? {}).request_id ?? "").trim();
+    if (!request_id) return badRequest(reply, "MISSING_OR_INVALID:request_id");
+    return handleApprovalApprove(req, reply, pool);
+  });
+  registerDeprecatedApprovalRequestAliases(app, pool);
+}
+
+export function registerApprovalRequestLegacyRoutes(app: FastifyInstance, pool: Pool) {
+  // POST /api/control/approval_request/v1/request
+  // @deprecated - use /api/v1/approvals/*
+  app.post("/api/control/approval_request/v1/request", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    logLegacyApprovalWarning(req, "/api/control/approval_request/v1/request");
+    return handleApprovalRequest(req, reply, pool);
   });
 
+  // GET /api/control/approval_request/v1/requests
+  // @deprecated - use /api/v1/approvals/*
+  app.get("/api/control/approval_request/v1/requests", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    logLegacyApprovalWarning(req, "/api/control/approval_request/v1/requests");
+    return handleApprovalRequestsList(req, reply, pool);
+  });
+
+  // POST /api/control/approval_request/v1/approve
+  // @deprecated - use /api/v1/approvals/*
+  app.post("/api/control/approval_request/v1/approve", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    logLegacyApprovalWarning(req, "/api/control/approval_request/v1/approve");
+    return handleApprovalApprove(req, reply, pool);
+  });
+}
+
+export function registerControlApprovalRequestV1Routes(app: FastifyInstance, pool: Pool) {
+  registerApprovalRequestV1Routes(app, pool);
+  registerApprovalRequestLegacyRoutes(app, pool);
+}
+
+// @deprecated - use /api/v1/approvals/*
+export function registerDeprecatedApprovalRequestAliases(app: FastifyInstance, pool: Pool) {
+  app.post("/api/v1/approval-requests", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    return handleApprovalRequest(req, reply, pool);
+  });
   app.get("/api/v1/approval-requests", async (req, reply) => {
-    const qs = new URLSearchParams((req.query as any) ?? {}).toString();
-    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/requests${qs ? `?${qs}` : ""}`, {
-      method: "GET",
-      headers: {
-        authorization: String((req.headers as any)?.authorization ?? ""),
-      },
-    });
-    const text = await delegated.text();
-    let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
-    return reply.status(delegated.status).send(parsed);
+    reply.header("X-Deprecated", "true");
+    return handleApprovalRequestsList(req, reply, pool);
   });
-
   app.post("/api/v1/approval-requests/:request_id/approve", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
     const request_id = String((req.params as any)?.request_id ?? "").trim();
     if (!request_id) return badRequest(reply, "MISSING_OR_INVALID:request_id");
-    const delegated = await fetch(`${buildInternalBaseUrl(req)}/api/control/approval_request/v1/approve`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: String((req.headers as any)?.authorization ?? ""),
-      },
-      body: JSON.stringify({ ...((req as any).body ?? {}), request_id }),
-    });
-    const text = await delegated.text();
-    let parsed: any = {};
-    try { parsed = text ? JSON.parse(text) : {}; } catch { parsed = { raw: text }; }
-    return reply.status(delegated.status).send(parsed);
+    (req as any).body = { ...((req as any).body ?? {}), request_id };
+    return handleApprovalApprove(req, reply, pool);
   });
 }

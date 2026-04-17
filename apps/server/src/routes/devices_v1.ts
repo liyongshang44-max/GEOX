@@ -4,11 +4,11 @@ import crypto from "node:crypto"; // Node crypto for deterministic ids and crede
 import type { FastifyInstance } from "fastify"; // Fastify app instance for route registration.
 import type { Pool } from "pg"; // Postgres connection pool for db access.
 
-import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
-import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0"; // Auth context includes tenant/project/group ids.
-import { getDeviceTemplateOrThrow } from "../domain/device_templates/device_templates_v1";
-import { ensureDeviceSkillBindings } from "../services/device_skill_bindings";
-import { ensureDeviceSkillBindingStatusRuntimeV1, reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1";
+import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse Sprint 19 token/scope auth (tenant isolation + scopes).
+import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context includes tenant/project/group ids.
+import { getDeviceTemplateOrThrow } from "../domain/device_templates/device_templates_v1.js";
+import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
+import { ensureDeviceSkillBindingStatusRuntimeV1, reconcileDeviceTemplateSkillBindingsV1 } from "../services/skill_binding_validation_service_v1.js";
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string.
   return typeof v === "string" && v.trim().length > 0; // Return true only for non-empty trimmed string.
@@ -48,6 +48,32 @@ function badRequest(reply: any, error: string) { // Helper: 400 response.
 function notFound(reply: any) { // Helper: 404 response.
   return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Standard envelope.
 } // End helper.
+
+function actorFromAuth(auth: AoActAuthContextV0 | null): string | null {
+  return auth?.actor_id ?? null;
+}
+
+function tokenFromAuth(auth: AoActAuthContextV0 | null): string | null {
+  return auth?.token_id ?? null;
+}
+
+function writeLegacyWarning(app: FastifyInstance, req: any, auth: AoActAuthContextV0 | null) {
+  req.log?.warn?.({
+    path: req.routerPath ?? req.url ?? null,
+    method: req.method ?? null,
+    actor_id: actorFromAuth(auth),
+    token_id: tokenFromAuth(auth),
+    warning: "legacy compatibility route invoked",
+  }, "deprecated legacy device route");
+}
+
+function legacyWritesAllowed(): boolean {
+  return String(process.env.ALLOW_LEGACY_WRITE_APIS ?? "true").toLowerCase() !== "false";
+}
+
+function rejectLegacyWrite(reply: any) {
+  return reply.status(410).send({ ok: false, error: "LEGACY_WRITE_API_DISABLED" });
+}
 
 function randomSecret(): string { // Helper: generate a credential secret for device ingest auth.
   const b = crypto.randomBytes(24); // 24 bytes => 32 chars-ish in base64url.
@@ -152,6 +178,162 @@ async function ensureDeviceModeRuntime(pool: Pool): Promise<void> {
   await ensureDeviceModeRuntimePromise;
 }
 
+async function handleCreateDevice(pool: Pool, req: any, reply: any, auth: AoActAuthContextV0, explicitDeviceId?: string | null) {
+  const body: any = req.body ?? {};
+  const device_id = explicitDeviceId ? normalizeId(explicitDeviceId) : normalizeId(body.device_id);
+  if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+  const device_mode = normalizeDeviceMode(body.device_mode);
+  if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
+  const device_template = parseDeviceTemplateOrReply(body, reply);
+  if (!device_template) return;
+  const display_name = isNonEmptyString(body.display_name) ? String(body.display_name).trim().slice(0, 256) : null;
+  const created_ts_ms = Date.now();
+  const occurredAtIso = new Date(created_ts_ms).toISOString();
+  const telemetry_id = sha256Hex(`device_registered_v1|${auth.tenant_id}|${device_id}`);
+  const fact_id = `devreg_${telemetry_id}`;
+  const record = {
+    type: "device_registered_v1",
+    entity: { tenant_id: auth.tenant_id, device_id },
+    payload: { display_name, device_mode, device_template, created_ts_ms, actor_id: auth.actor_id, token_id: auth.token_id },
+  };
+  await ensureDeviceModeRuntime(pool);
+  const clientConn = await pool.connect();
+  try {
+    await clientConn.query("BEGIN");
+    await clientConn.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json)
+       VALUES ($1, $2::timestamptz, $3, $4)
+       ON CONFLICT (fact_id) DO NOTHING`,
+      [fact_id, occurredAtIso, "control", JSON.stringify(record)]
+    );
+    await clientConn.query(
+      `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
+       VALUES ($1, $2, $3, $4, $5, NULL, NULL)
+       ON CONFLICT (tenant_id, device_id)
+       DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode`,
+      [auth.tenant_id, device_id, display_name, device_mode, created_ts_ms]
+    );
+    await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
+      tenant_id: auth.tenant_id, project_id: auth.project_id, group_id: auth.group_id, device_id, template_code: device_template, missing_required_mode: "autofill",
+    });
+    await clientConn.query("COMMIT");
+  } catch (e: any) {
+    try { await clientConn.query("ROLLBACK"); } catch {}
+    return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) });
+  } finally {
+    clientConn.release();
+  }
+  const skillBindings = await ensureDeviceSkillBindings({
+    pool,
+    tenant_id: auth.tenant_id,
+    project_id: auth.project_id,
+    group_id: auth.group_id,
+    device_id,
+    trigger: "DEVICE_CREATED",
+    allow_write: true,
+  });
+  return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template, template_code: device_template, fact_id, skill_bindings: skillBindings });
+}
+
+async function handleLegacyCreateDevice(app: FastifyInstance, pool: Pool, req: any, reply: any) {
+  reply.header("X-Deprecated", "true");
+  // @deprecated - use /api/v1/*
+  const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+  if (!auth) return;
+  writeLegacyWarning(app, req, auth);
+  if (!legacyWritesAllowed()) return rejectLegacyWrite(reply);
+  return handleCreateDevice(pool, req, reply, auth);
+}
+
+async function handleIssueDeviceCredential(pool: Pool, req: any, reply: any, auth: AoActAuthContextV0) {
+  const params: any = req.params ?? {};
+  const body: any = req.body ?? {};
+  const device_id = normalizeDeviceId(params.device_id);
+  if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+  const credential_id = normalizeId(body.credential_id) ?? `cred_${sha256Hex(`${auth.tenant_id}|${device_id}|${Date.now()}|${Math.random()}`).slice(0, 16)}`;
+  const secret = randomSecret();
+  const credential_hash = sha256Hex(secret);
+  const issued_ts_ms = Date.now();
+  const occurred_iso = nowIso(issued_ts_ms);
+  const fact_id = `devcred_${sha256Hex(`device_credential_issued_v1|${auth.tenant_id}|${device_id}|${credential_id}|${credential_hash}`)}`;
+  const existsQ = await pool.query(`SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, [auth.tenant_id, device_id]);
+  if ((existsQ.rowCount ?? 0) < 1) return notFound(reply);
+  const record = {
+    type: "device_credential_issued_v1",
+    entity: { tenant_id: auth.tenant_id, device_id },
+    payload: { credential_id, credential_hash, issued_ts_ms, status: "ACTIVE", actor_id: auth.actor_id, token_id: auth.token_id },
+  };
+  const clientConn = await pool.connect();
+  try {
+    await clientConn.query("BEGIN");
+    await clientConn.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4) ON CONFLICT (fact_id) DO NOTHING`,
+      [fact_id, occurred_iso, "control", JSON.stringify(record)]
+    );
+    await clientConn.query(
+      `INSERT INTO device_credential_index_v1 (tenant_id, device_id, credential_id, credential_hash, status, issued_ts_ms, revoked_ts_ms)
+       VALUES ($1, $2, $3, $4, 'ACTIVE', $5, NULL)
+       ON CONFLICT (tenant_id, device_id, credential_id)
+       DO UPDATE SET credential_hash = EXCLUDED.credential_hash, status = 'ACTIVE', issued_ts_ms = EXCLUDED.issued_ts_ms, revoked_ts_ms = NULL`,
+      [auth.tenant_id, device_id, credential_id, credential_hash, issued_ts_ms]
+    );
+    await clientConn.query(
+      `UPDATE device_index_v1 SET last_credential_id = $3, last_credential_status = 'ACTIVE' WHERE tenant_id = $1 AND device_id = $2`,
+      [auth.tenant_id, device_id, credential_id]
+    );
+    await clientConn.query("COMMIT");
+  } catch (e: any) {
+    try { await clientConn.query("ROLLBACK"); } catch {}
+    return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) });
+  } finally {
+    clientConn.release();
+  }
+  return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, credential_id, credential_secret: secret, credential_hash, fact_id, access_info: buildAccessInfo(auth.tenant_id, device_id) });
+}
+
+async function handleRevokeDeviceCredential(pool: Pool, req: any, reply: any, auth: AoActAuthContextV0) {
+  const params: any = req.params ?? {};
+  const device_id = normalizeDeviceId(params.device_id);
+  const credential_id = normalizeId(params.credential_id);
+  if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+  if (!credential_id) return badRequest(reply, "MISSING_OR_INVALID:credential_id");
+  const revoked_ts_ms = Date.now();
+  const occurred_iso = nowIso(revoked_ts_ms);
+  const fact_id = `devcredrevoke_${sha256Hex(`device_credential_revoked_v1|${auth.tenant_id}|${device_id}|${credential_id}|${revoked_ts_ms}`)}`;
+  const record = {
+    type: "device_credential_revoked_v1",
+    entity: { tenant_id: auth.tenant_id, device_id },
+    payload: { credential_id, revoked_ts_ms, status: "REVOKED", actor_id: auth.actor_id, token_id: auth.token_id },
+  };
+  const clientConn = await pool.connect();
+  try {
+    await clientConn.query("BEGIN");
+    const updated = await clientConn.query(
+      `UPDATE device_credential_index_v1 SET status = 'REVOKED', revoked_ts_ms = $4 WHERE tenant_id = $1 AND device_id = $2 AND credential_id = $3`,
+      [auth.tenant_id, device_id, credential_id, revoked_ts_ms]
+    );
+    if ((updated.rowCount ?? 0) < 1) {
+      await clientConn.query("ROLLBACK");
+      return notFound(reply);
+    }
+    await clientConn.query(
+      `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, $2::timestamptz, $3, $4) ON CONFLICT (fact_id) DO NOTHING`,
+      [fact_id, occurred_iso, "control", JSON.stringify(record)]
+    );
+    await clientConn.query(
+      `UPDATE device_index_v1 SET last_credential_id = $3, last_credential_status = 'REVOKED' WHERE tenant_id = $1 AND device_id = $2`,
+      [auth.tenant_id, device_id, credential_id]
+    );
+    await clientConn.query("COMMIT");
+  } catch (e: any) {
+    try { await clientConn.query("ROLLBACK"); } catch {}
+    return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) });
+  } finally {
+    clientConn.release();
+  }
+  return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, credential_id, fact_id, revoked_ts_ms });
+}
+
 /**
  * Sprint A2: Devices P0 (registration + credentials)
  *
@@ -160,251 +342,40 @@ async function ensureDeviceModeRuntime(pool: Pool): Promise<void> {
  * - Device credentials are issued and revoked via append-only facts, with projections for fast lookup.
  * - Tenant isolation uses ao_act_tokens_v0 (tenant_id from token is authoritative).
  */
-export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // Route registration entry.
-  app.post("/api/devices", async (req, reply) => { // Register a device under the caller's tenant.
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write"); // Enforce devices.write scope.
-    if (!auth) return; // Auth helper already responded.
-
-    const body: any = (req as any).body ?? {}; // Read JSON body.
-    const device_id = normalizeId(body.device_id); // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
-    const device_mode = normalizeDeviceMode(body.device_mode);
-    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const device_template = parseDeviceTemplateOrReply(body, reply);
-    if (!device_template) return;
-
-    const display_name = isNonEmptyString(body.display_name) ? String(body.display_name).trim().slice(0, 256) : null; // Optional display name.
-
-    const created_ts_ms = Date.now(); // Use server time for created_ts_ms (auditable, deterministic enough for projection).
-    const occurredAtIso = new Date(created_ts_ms).toISOString(); // ISO for occurred_at.
-
-    const telemetry_id = sha256Hex(`device_registered_v1|${auth.tenant_id}|${device_id}`); // Deterministic id for idempotency.
-    const fact_id = `devreg_${telemetry_id}`; // Deterministic fact id.
-
-    const record = { // Ledger record_json.
-      type: "device_registered_v1", // Fact type.
-      entity: { // Entity envelope.
-        tenant_id: auth.tenant_id, // Tenant scope.
-        device_id, // Device scope.
-      }, // End entity.
-      payload: { // Payload.
-        display_name, // Optional human name.
-        device_mode,
-        device_template,
-        created_ts_ms, // Creation timestamp in ms.
-        actor_id: auth.actor_id, // Actor for audit.
-        token_id: auth.token_id, // Token id for audit.
-      }, // End payload.
-    }; // End record.
-    await ensureDeviceModeRuntime(pool);
-
-    const clientConn = await pool.connect(); // Acquire db connection.
-    try { // Begin transaction.
-      await clientConn.query("BEGIN"); // Start tx.
-
-      await clientConn.query( // Insert append-only fact.
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
-      ); // End insert.
-
-      await clientConn.query( // Upsert device projection.
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, $5, NULL, NULL)
-         ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode`,
-        [auth.tenant_id, device_id, display_name, device_mode, created_ts_ms]
-      ); // End upsert.
-      await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
-        tenant_id: auth.tenant_id,
-        project_id: auth.project_id,
-        group_id: auth.group_id,
-        device_id,
-        template_code: device_template,
-        missing_required_mode: "autofill",
-      });
-
-      await clientConn.query("COMMIT"); // Commit.
-    } catch (e: any) { // Error handler.
-      try { await clientConn.query("ROLLBACK"); } catch {} // Rollback best-effort.
-      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) }); // Surface error (dev-only).
-    } finally { // Release connection.
-      clientConn.release(); // Release back to pool.
-    } // End tx.
-
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, display_name, device_mode, device_template, template_code: device_template, fact_id }); // Return success.
+export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool, options: { includeV1?: boolean; includeLegacy?: boolean } = {}) { // Route registration entry.
+  const includeV1 = options.includeV1 !== false;
+  const includeLegacy = options.includeLegacy !== false;
+  if (includeLegacy) {
+  // @deprecated - use /api/v1/*
+  app.post("/api/devices", async (req, reply) => {
+    return handleLegacyCreateDevice(app, pool, req, reply);
   }); // End register device route.
 
-  app.post("/api/devices/:device_id/credentials", async (req, reply) => { // Issue a new credential for a registered device.
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write"); // Enforce credential write scope.
+  // @deprecated - use /api/v1/*
+  app.post("/api/devices/:device_id/credentials", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    // @deprecated - use /api/v1/*
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write");
     if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_DEVICE_CREDENTIAL_ADMIN_REQUIRED" })) return; // Auth helper already responded.
-
-    const params: any = (req as any).params ?? {}; // Read path params.
-    const device_id = normalizeId(params.device_id); // Device id from path.
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
-
-    const body: any = (req as any).body ?? {}; // Read JSON body.
-    const requested_credential_id = normalizeId(body.credential_id); // Optional caller-specified credential id.
-    const credential_id = requested_credential_id ?? `cred_${sha256Hex(`${auth.tenant_id}|${device_id}|${Date.now()}|${Math.random()}`).slice(0, 16)}`; // Generate id if missing.
-
-    const secret = randomSecret(); // Generate one-time secret (returned only once).
-    const credential_hash = sha256Hex(secret); // Store hash only (never store secret in DB).
-
-    const issued_ts_ms = Date.now(); // Issue time.
-    const occurredAtIso = new Date(issued_ts_ms).toISOString(); // occurred_at.
-
-    const det = sha256Hex(`device_credential_issued_v1|${auth.tenant_id}|${device_id}|${credential_id}|${credential_hash}`); // Deterministic id.
-    const fact_id = `devcred_${det}`; // Deterministic fact id.
-
-    const record = { // Ledger record_json.
-      type: "device_credential_issued_v1", // Fact type.
-      entity: { // Entity.
-        tenant_id: auth.tenant_id, // Tenant.
-        device_id, // Device.
-      }, // End entity.
-      payload: { // Payload.
-        credential_id, // Credential id.
-        credential_hash, // Credential hash (sha256 hex).
-        issued_ts_ms, // Issue time.
-        status: "ACTIVE", // Issued status.
-        actor_id: auth.actor_id, // Actor audit.
-        token_id: auth.token_id, // Token audit.
-      }, // End payload.
-    }; // End record.
-
-    const clientConn = await pool.connect(); // Acquire db connection.
-    try { // Tx scope.
-      await clientConn.query("BEGIN"); // Begin.
-
-      const exists = await clientConn.query( // Ensure device exists (projection gate).
-        `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
-        [auth.tenant_id, device_id]
-      ); // End query.
-      if ((exists.rows ?? []).length < 1) { // Not registered.
-        await clientConn.query("ROLLBACK"); // Rollback.
-        return notFound(reply); // Hide enumeration across tenants (tenant already isolated).
-      } // End gate.
-
-      await clientConn.query( // Insert append-only fact.
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
-      ); // End insert.
-
-      await clientConn.query( // Upsert credential projection (ACTIVE).
-        `INSERT INTO device_credential_index_v1 (tenant_id, device_id, credential_id, credential_hash, status, issued_ts_ms, revoked_ts_ms)
-         VALUES ($1, $2, $3, $4, 'ACTIVE', $5, NULL)
-         ON CONFLICT (tenant_id, device_id, credential_id)
-         DO UPDATE SET credential_hash = EXCLUDED.credential_hash, status = 'ACTIVE', issued_ts_ms = EXCLUDED.issued_ts_ms, revoked_ts_ms = NULL`,
-        [auth.tenant_id, device_id, credential_id, credential_hash, issued_ts_ms]
-      ); // End upsert.
-
-      await clientConn.query( // Update device_index_v1 last credential pointers.
-        `UPDATE device_index_v1
-         SET last_credential_id = $3, last_credential_status = 'ACTIVE'
-         WHERE tenant_id = $1 AND device_id = $2`,
-        [auth.tenant_id, device_id, credential_id]
-      ); // End update.
-
-      await clientConn.query("COMMIT"); // Commit.
-    } catch (e: any) { // Error handler.
-      try { await clientConn.query("ROLLBACK"); } catch {} // Rollback best-effort.
-      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) }); // Return 500.
-    } finally { // Release.
-      clientConn.release(); // Release connection.
-    } // End tx.
-
-    return reply.send({ // Response includes secret (one-time).
-      ok: true, // Success.
-      tenant_id: auth.tenant_id, // Tenant.
-      device_id, // Device.
-      credential_id, // Credential id.
-      credential_secret: secret, // One-time secret (caller must store securely).
-      credential_hash, // Hash for debugging (dev-only).
-      fact_id, // Ledger fact id.
-    }); // End response.
+    writeLegacyWarning(app, req, auth);
+    if (!legacyWritesAllowed()) return rejectLegacyWrite(reply);
+    return handleIssueDeviceCredential(pool, req, reply, auth);
   }); // End issue credential route.
 
-  app.post("/api/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => { // Revoke a device credential.
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.revoke"); // Enforce revoke scope.
+  // @deprecated - use /api/v1/*
+  app.post("/api/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => {
+    reply.header("X-Deprecated", "true");
+    // @deprecated - use /api/v1/*
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.revoke");
     if (!auth) return;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_DEVICE_CREDENTIAL_ADMIN_REQUIRED" })) return; // Auth helper already responded.
-
-    const params: any = (req as any).params ?? {}; // Params.
-    const device_id = normalizeId(params.device_id); // Device id.
-    const credential_id = normalizeId(params.credential_id); // Credential id.
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
-    if (!credential_id) return badRequest(reply, "MISSING_OR_INVALID:credential_id"); // Validate.
-
-    const revoked_ts_ms = Date.now(); // Revoke time.
-    const occurredAtIso = new Date(revoked_ts_ms).toISOString(); // occurred_at.
-
-    const det = sha256Hex(`device_credential_revoked_v1|${auth.tenant_id}|${device_id}|${credential_id}|${revoked_ts_ms}`); // Deterministic-ish.
-    const fact_id = `devrevoke_${det}`; // Fact id.
-
-    const record = { // Record.
-      type: "device_credential_revoked_v1", // Fact type.
-      entity: { // Entity.
-        tenant_id: auth.tenant_id, // Tenant.
-        device_id, // Device.
-      }, // End entity.
-      payload: { // Payload.
-        credential_id, // Credential.
-        revoked_ts_ms, // Revoke time.
-        actor_id: auth.actor_id, // Actor.
-        token_id: auth.token_id, // Token.
-      }, // End payload.
-    }; // End record.
-
-    const clientConn = await pool.connect(); // DB conn.
-    try { // Tx.
-      await clientConn.query("BEGIN"); // Begin.
-
-      const exists = await clientConn.query( // Ensure credential exists in projection.
-        `SELECT status FROM device_credential_index_v1 WHERE tenant_id = $1 AND device_id = $2 AND credential_id = $3 LIMIT 1`,
-        [auth.tenant_id, device_id, credential_id]
-      ); // End query.
-      if ((exists.rows ?? []).length < 1) { // Not found.
-        await clientConn.query("ROLLBACK"); // Rollback.
-        return notFound(reply); // 404.
-      } // End gate.
-
-      await clientConn.query( // Insert revoke fact.
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [fact_id, occurredAtIso, "control", JSON.stringify(record)]
-      ); // End insert.
-
-      await clientConn.query( // Mark projection as revoked.
-        `UPDATE device_credential_index_v1
-         SET status = 'REVOKED', revoked_ts_ms = $4
-         WHERE tenant_id = $1 AND device_id = $2 AND credential_id = $3`,
-        [auth.tenant_id, device_id, credential_id, revoked_ts_ms]
-      ); // End update.
-
-      await clientConn.query( // Update device last credential status if matches.
-        `UPDATE device_index_v1
-         SET last_credential_status = 'REVOKED'
-         WHERE tenant_id = $1 AND device_id = $2 AND last_credential_id = $3`,
-        [auth.tenant_id, device_id, credential_id]
-      ); // End update.
-
-      await clientConn.query("COMMIT"); // Commit.
-    } catch (e: any) { // Error handler.
-      try { await clientConn.query("ROLLBACK"); } catch {} // Rollback.
-      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) }); // Return.
-    } finally { // Release.
-      clientConn.release(); // Release.
-    } // End tx.
-
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, credential_id, fact_id }); // Success response.
+    writeLegacyWarning(app, req, auth);
+    if (!legacyWritesAllowed()) return rejectLegacyWrite(reply);
+    return handleRevokeDeviceCredential(pool, req, reply, auth);
   }); // End revoke route.
 
-  app.get("/api/devices/:device_id", async (req, reply) => { // Read device projection.
+  // @deprecated - use /api/v1/*
+  app.get("/api/devices/:device_id", async (req, reply) => {
+    reply.header("X-Deprecated", "true"); // Read device projection.
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.read"); // Enforce devices.read.
     if (!auth) return; // Auth helper already responded.
 
@@ -435,85 +406,27 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
   }); // End get route.
 
 
+  }
+
   // ------------------------------
   // Devices v1 (Sprint C2): API surface under /api/v1/devices
   // NOTE: Keep existing /api/devices routes unchanged for backward compatibility.
 
-  app.post("/api/v1/devices/:device_id", async (req, reply) => { // Register a device (v1 alias of /api/devices/:device_id).
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write"); // Require devices.write.
-    if (!auth) return; // Auth handled response.
+  if (includeV1) {
+  app.post("/api/v1/devices", async (req, reply) => { // Register a device under /api/v1 namespace.
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+    if (!auth) return;
+    return handleCreateDevice(pool, req, reply, auth);
+  });
 
-    const params: any = (req as any).params ?? {}; // Params.
-    const device_id = normalizeDeviceId(params.device_id); // Normalize device id.
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id"); // Validate.
-    if (device_id === "register") return badRequest(reply, "RESERVED_DEVICE_ID:register"); // Avoid confusion with onboarding register endpoint.
-
-    const body: any = (req as any).body ?? {}; // Body.
-    const display_name = typeof body.display_name === "string" ? body.display_name.trim().slice(0, 200) : ""; // Optional name.
-    const device_mode = normalizeDeviceMode(body.device_mode);
-    if (!device_mode) return badRequest(reply, "MISSING_OR_INVALID:device_mode");
-    const device_template = parseDeviceTemplateOrReply(body, reply);
-    if (!device_template) return;
-
-    const now_ms = Date.now(); // Server time.
-    const occurred_iso = nowIso(now_ms); // occurred_at.
-
-    const det = sha256Hex(`device_registered_v1|${auth.tenant_id}|${device_id}|${display_name}`); // Deterministic hash.
-    const fact_id = `device_${det}`; // Fact id.
-
-    const record = { // Append-only fact record.
-      type: "device_registered_v1", // Fact type.
-      entity: { tenant_id: auth.tenant_id, device_id }, // Entity.
-      payload: { display_name, device_mode, device_template, created_ts_ms: now_ms, actor_id: auth.actor_id, token_id: auth.token_id }, // Payload.
-    }; // End record.
-    await ensureDeviceModeRuntime(pool);
-
-    const clientConn = await pool.connect(); // Acquire db connection.
-    try { // Tx.
-      await clientConn.query("BEGIN"); // Begin.
-
-      await clientConn.query( // Insert fact (idempotent by fact_id).
-        `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-         VALUES ($1, $2::timestamptz, $3, $4)
-         ON CONFLICT (fact_id) DO NOTHING`,
-        [fact_id, occurred_iso, "control", JSON.stringify(record)]
-      ); // End insert.
-
-      await clientConn.query( // Upsert device projection.
-        `INSERT INTO device_index_v1 (tenant_id, device_id, display_name, device_mode, created_ts_ms, last_credential_id, last_credential_status)
-         VALUES ($1, $2, $3, $4, $5, NULL, NULL)
-         ON CONFLICT (tenant_id, device_id)
-         DO UPDATE SET display_name = EXCLUDED.display_name, device_mode = EXCLUDED.device_mode`,
-        [auth.tenant_id, device_id, display_name, device_mode, now_ms]
-      ); // End upsert.
-      await reconcileDeviceTemplateSkillBindingsV1(clientConn, {
-        tenant_id: auth.tenant_id,
-        project_id: auth.project_id,
-        group_id: auth.group_id,
-        device_id,
-        template_code: device_template,
-        missing_required_mode: "autofill",
-      });
-
-      await clientConn.query("COMMIT"); // Commit.
-    } catch (e: any) { // Error.
-      try { await clientConn.query("ROLLBACK"); } catch {} // Rollback.
-      return reply.status(500).send({ ok: false, error: "DB_ERROR", message: String(e?.message ?? e) }); // Return.
-    } finally { // Release.
-      clientConn.release(); // Release.
-    } // End tx.
-
-    const skillBindings = await ensureDeviceSkillBindings({
-      pool,
-      tenant_id: auth.tenant_id,
-      project_id: auth.project_id,
-      group_id: auth.group_id,
-      device_id,
-      trigger: "DEVICE_CREATED",
-      allow_write: true,
-    });
-
-    return reply.send({ ok: true, device_id, tenant_id: auth.tenant_id, device_mode, device_template, template_code: device_template, fact_id, skill_bindings: skillBindings }); // Response.
+  app.post("/api/v1/devices/:device_id", async (req, reply) => { // Register a device (v1 canonical path with explicit device id).
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.write");
+    if (!auth) return;
+    const params: any = (req as any).params ?? {};
+    const device_id = normalizeDeviceId(params.device_id);
+    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
+    if (device_id === "register") return badRequest(reply, "RESERVED_DEVICE_ID:register");
+    return handleCreateDevice(pool, req, reply, auth, device_id);
   }); // End /api/v1 register.
 
   app.get("/api/v1/devices", async (req, reply) => { // List devices for tenant with minimal运营摘要.
@@ -1228,74 +1141,16 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
     });
   });
 
-    app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => { // Alias: issue credential under /api/v1 namespace.
+    app.post("/api/v1/devices/:device_id/credentials", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.write");
     if (!auth) return;
-
-    const device_id = normalizeDeviceId((req.params as any)?.device_id);
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
-
-    const internalBaseUrl =
-      process.env.GEOX_INTERNAL_BASE_URL ||
-      process.env.INTERNAL_BASE_URL ||
-      "http://127.0.0.1:3000";
-
-    const delegated = await fetch(
-      `${internalBaseUrl}/api/devices/${encodeURIComponent(device_id)}/credentials`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: String((req.headers as any)?.authorization ?? ""),
-        },
-        body: JSON.stringify((req as any).body ?? {}),
-      }
-    );
-
-    const text = await delegated.text();
-    let parsed: any = {};
-    try {
-      parsed = text ? JSON.parse(text) : {};
-    } catch {
-      parsed = { raw: text };
-    }
-
-    return reply.status(delegated.status).send(parsed);
+    return handleIssueDeviceCredential(pool, req, reply, auth);
   });
 
-    app.post("/api/v1/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => { // Alias: revoke credential under /api/v1 namespace.
+    app.post("/api/v1/devices/:device_id/credentials/:credential_id/revoke", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "devices.credentials.revoke");
     if (!auth) return;
-
-    const device_id = normalizeDeviceId((req.params as any)?.device_id);
-    const credential_id = normalizeId((req.params as any)?.credential_id);
-    if (!device_id) return badRequest(reply, "MISSING_OR_INVALID:device_id");
-    if (!credential_id) return badRequest(reply, "MISSING_OR_INVALID:credential_id");
-
-    const internalBaseUrl =
-      process.env.GEOX_INTERNAL_BASE_URL ||
-      process.env.INTERNAL_BASE_URL ||
-      "http://127.0.0.1:3000";
-
-    const delegated = await fetch(
-      `${internalBaseUrl}/api/devices/${encodeURIComponent(device_id)}/credentials/${encodeURIComponent(credential_id)}/revoke`,
-      {
-        method: "POST",
-        headers: {
-          authorization: String((req.headers as any)?.authorization ?? ""),
-        },
-      }
-    );
-
-    const text = await delegated.text();
-    let parsed: any = {};
-    try {
-      parsed = text ? JSON.parse(text) : {};
-    } catch {
-      parsed = { raw: text };
-    }
-
-    return reply.status(delegated.status).send(parsed);
+    return handleRevokeDeviceCredential(pool, req, reply, auth);
   });
 
   app.post("/api/v1/devices/:device_id/skill-bindings/reconcile", async (req, reply) => {
@@ -1376,4 +1231,14 @@ export function registerDevicesV1Routes(app: FastifyInstance, pool: Pool) { // R
       access_info: buildAccessInfo(auth.tenant_id, device_id),
     });
   });
+  }
 } // End registration.
+
+
+export function registerDevicesV1PrimaryRoutes(app: FastifyInstance, pool: Pool) {
+  return registerDevicesV1Routes(app, pool, { includeV1: true, includeLegacy: false });
+}
+
+export function registerDevicesLegacyCompatibilityRoutes(app: FastifyInstance, pool: Pool) {
+  return registerDevicesV1Routes(app, pool, { includeV1: false, includeLegacy: true });
+}
