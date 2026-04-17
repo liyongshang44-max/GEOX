@@ -42,9 +42,9 @@ Selection discipline (anti-scheduler)
 
 APIs used (negative guard)
 The adapters and acceptance only use three AO-ACT endpoints:
-- POST /api/control/ao_act/task
-- POST /api/control/ao_act/receipt
-- GET  /api/control/ao_act/index
+- POST /api/v1/actions/task（legacy `/api/control/ao_act/task` 仅兼容）
+- POST /api/v1/actions/receipt（legacy `/api/control/ao_act/receipt` 仅兼容）
+- GET  /api/v1/actions/index（legacy `/api/control/ao_act/index` 仅兼容）
 
 How to run (manual)
 Prereq: apps/server is running and reachable (GEOX_BASE_URL).

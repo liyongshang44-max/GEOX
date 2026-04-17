@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · Execution Proposal
 Non-Goals v0（执行提议层 · 反能力清单）
 

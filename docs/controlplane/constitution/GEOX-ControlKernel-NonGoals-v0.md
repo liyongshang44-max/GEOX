@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · Control Kernel
 Non-Goals v0（确定性求值引擎 · 反能力清单）
 

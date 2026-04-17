@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 一、GEOX · Control Constitution
 RuleSet Skeleton v0（规则集骨架 · 非空冻结）
 

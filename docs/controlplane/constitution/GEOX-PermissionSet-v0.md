@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · PermissionSet v0（合法行动空间 · 只读存在化）
 
 Status：READY TO FREEZE

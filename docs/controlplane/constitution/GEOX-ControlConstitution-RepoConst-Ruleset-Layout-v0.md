@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX-ControlConstitution-RepoConst-Ruleset-Layout-v0.md
 文档状态
 

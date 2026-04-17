@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · Control Constitution
 Rule Shape v0（裁决规则形态白名单）
 

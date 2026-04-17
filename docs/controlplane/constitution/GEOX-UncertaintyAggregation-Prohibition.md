@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · UncertaintyAggregation 禁令
 
 Status：READY TO FREEZE

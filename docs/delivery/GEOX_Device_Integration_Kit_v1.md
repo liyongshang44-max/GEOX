@@ -27,7 +27,7 @@ GEOX 当前支持以下设备接入闭环：
 
 先由管理端调用：
 
-- `POST /api/devices`
+- `POST /api/v1/devices`
 
 最小请求体：
 
@@ -42,7 +42,7 @@ GEOX 当前支持以下设备接入闭环：
 
 由管理员调用：
 
-- `POST /api/devices/{device_id}/credentials`
+- `POST /api/v1/devices/{device_id}/credentials`
 
 成功后会返回：
 
@@ -54,7 +54,7 @@ GEOX 当前支持以下设备接入闭环：
 
 ### 2.3 凭据撤销
 
-- `POST /api/devices/{device_id}/credentials/{credential_id}/revoke`
+- `POST /api/v1/devices/{device_id}/credentials/{credential_id}/revoke`
 
 撤销后，该凭据不应再用于后续设备写入。
 

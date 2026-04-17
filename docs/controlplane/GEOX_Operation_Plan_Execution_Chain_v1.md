@@ -1,6 +1,6 @@
 # GEOX Operation Plan Execution Chain v1
 
-Status: derived design note. README_MIGRATION.md remains the SSOT for sprint/freeze state.
+Status: derived design note. This document is a domain-specific reference. The repository-level documentation entry is defined in docs/SSOT.md.
 
 ## Purpose
 

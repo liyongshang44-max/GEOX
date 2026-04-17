@@ -13,7 +13,7 @@ The repository keeps environment-specific delivery placeholders under:
 - `config/environments/staging/`
 - `config/environments/prod/`
 
-Each environment directory must carry its own token SSOT example and must never point to another environment's live secret file.
+Each environment directory must carry its own token canonical reference example and must never point to another environment's live secret file.
 
 ## Token and secret boundary
 Each environment must maintain an independent AO-ACT token source of truth.

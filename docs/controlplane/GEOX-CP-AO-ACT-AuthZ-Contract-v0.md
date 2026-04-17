@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 # GEOX · Sprint 19
 # AO-ACT AuthZ Contract v0
 
@@ -15,7 +18,7 @@
 
 仅覆盖：
 1) HTTP API 的认证与授权（AuthN/AuthZ）
-2) 授权配置文件（SSOT）
+2) 授权配置文件（domain reference）
 3) 审计事实（append-only）
 
 非目标（必须明确拒绝）
@@ -32,9 +35,9 @@
 
 Scope 列表（冻结）
 
-- `ao_act.task.write`：允许 POST `/api/control/ao_act/task`
-- `ao_act.receipt.write`：允许 POST `/api/control/ao_act/receipt`
-- `ao_act.index.read`：允许 GET `/api/control/ao_act/index`
+- `ao_act.task.write`：允许 POST `/api/v1/actions/task`（legacy `/api/control/ao_act/task` 仅兼容）
+- `ao_act.receipt.write`：允许 POST `/api/v1/actions/receipt`（legacy `/api/control/ao_act/receipt` 仅兼容）
+- `ao_act.index.read`：允许 GET `/api/v1/actions/index`（legacy `/api/control/ao_act/index` 仅兼容）
 
 默认行为（冻结）
 
@@ -43,9 +46,9 @@ Scope 列表（冻结）
 - token 已撤销：403 `AUTH_REVOKED`
 - scope 不足：403 `AUTH_SCOPE_DENIED`
 
-Token SSOT（配置文件）
+Token domain reference（配置文件）
 
-路径（冻结）：`config/auth/ao_act_tokens_v0.json`
+路径（冻结）：`config/auth/example_tokens.json`
 
 结构：
 
@@ -59,7 +62,7 @@ Token SSOT（配置文件）
 
 撤销语义（冻结）
 
-server 每次请求均从 SSOT 文件读取 allowlist；对同一进程而言，撤销对后续请求立即生效。
+server 每次请求均从授权配置文件读取 allowlist；对同一进程而言，撤销对后续请求立即生效。
 
 审计事实（append-only）
 

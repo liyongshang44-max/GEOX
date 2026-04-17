@@ -4,7 +4,7 @@
 适用：Control Plane / Apple III（AO-ACT）
 
 本文件仅定义：
-1) AO-ACT 在多租户/多场地场景下的“硬隔离字段”与 SSOT 命名；
+1) AO-ACT 在多租户/多场地场景下的“硬隔离字段”与 canonical 命名；
 2) 读/写 API 的隔离判定语义（HTTP 状态码固定）；
 3) 幂等去重键的判定域（防跨租户污染）；
 4) device_ref 作为证据引用时的跨租户禁止规则。
@@ -13,7 +13,7 @@
 
 ## 0. 裁定（必须写死，禁止漂移）
 
-1) `tenant_id` 是唯一 SSOT 字段名；禁止使用 `namespace` 作为等价或别名字段。
+1) `tenant_id` 是唯一 canonical 字段名；禁止使用 `namespace` 作为等价或别名字段。
 2) 跨租户访问（scope 不匹配、目标不属于本租户）：统一返回 404
 3) 无 token / token 无效：401
 4) 必要字段缺失（tenant_id/project_id/group_id 等）：400
@@ -73,7 +73,7 @@ Sprint 22 扩展点：
 
 ## 5. API（读/写都必须 tenant-scoped）
 
-### 5.1 POST /api/control/ao_act/task
+### 5.1 Compatibility note: legacy POST /api/control/ao_act/task
 
 请求体必须包含：
 - tenant_id, project_id, group_id（required）
@@ -82,7 +82,7 @@ Sprint 22 扩展点：
 隔离判定：
 - token scope 不匹配或 tenant triple 不匹配 => 404
 
-### 5.2 POST /api/control/ao_act/receipt
+### 5.2 Compatibility note: legacy POST /api/control/ao_act/receipt
 
 请求体必须包含：
 - tenant_id, project_id, group_id（required）
@@ -92,7 +92,7 @@ Sprint 22 扩展点：
 - token scope 不匹配或 tenant triple 不匹配 => 404
 - act_task_id 在本 tenant triple 下不存在 => 404（不可枚举）
 
-### 5.3 GET /api/control/ao_act/index
+### 5.3 Compatibility note: legacy GET /api/control/ao_act/index
 
 查询参数必须包含：
 - tenant_id, project_id, group_id（required）

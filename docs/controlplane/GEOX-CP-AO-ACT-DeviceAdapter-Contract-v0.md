@@ -64,7 +64,7 @@ Receipt（ao_act_receipt_v0）新增可选字段：
 ## 5. API（最小）
 
 新增写入入口（append-only）：
-- POST `/api/control/ao_act/device_ref`
+- Compatibility note: legacy device-ref write path remains `POST /api/control/ao_act/device_ref` where still required by older integrations. The primary public write surface is `/api/v1/actions/*`.
   - 写入 ao_act_device_ref_v0 fact
   - AuthZ：沿用 AO-ACT 的 `receipt.write` scope（本 Sprint 不新增 scope）
 

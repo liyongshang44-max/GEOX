@@ -34,7 +34,7 @@ GEOX 已不再是“验证能力是否存在”的原型系统。
 
 本仓库所有不可逆的工程事实，统一收录于治理索引：
 
-👉 **`docs/controlplane/INDEX.md`**
+👉 **`docs/SSOT.md`**
 
 其中明确列出了：
 
@@ -186,7 +186,7 @@ node apps/server/scripts/p1_skill_loop_minimal.mjs
 可选环境变量（默认值如下）：
 
 - `GEOX_BASE_URL`（默认 `http://127.0.0.1:3001`）
-- `GEOX_TOKEN`（默认使用 `config/auth/ao_act_tokens_v0.json` 中 tenantA 的开发 token）
+- `GEOX_TOKEN`（通过环境变量注入；`config/auth/example_tokens.json` 仅作格式示例，不包含真实凭据）
 - `GEOX_TENANT_ID`（默认 `tenantA`）
 - `GEOX_PROJECT_ID`（默认 `projectA`）
 - `GEOX_GROUP_ID`（默认 `groupA`）

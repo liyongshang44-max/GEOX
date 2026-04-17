@@ -13,7 +13,7 @@ This Sprint introduces a minimal idempotency discipline without introducing a sc
 
 ## Contract (v0)
 
-1) The endpoint `POST /api/control/ao_act/receipt` requires a non-empty, executor-generated idempotency key:
+1) Compatibility note: legacy `POST /api/control/ao_act/receipt` requires a non-empty, executor-generated idempotency key. The primary public endpoint is `POST /api/v1/actions/receipt`:
 
 - `payload.meta.idempotency_key: string` (required, non-empty after trim)
 

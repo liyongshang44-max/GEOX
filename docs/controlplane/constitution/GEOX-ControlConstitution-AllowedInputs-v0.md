@@ -1,3 +1,6 @@
+This document is a domain-specific reference.
+The repository-level documentation entry is defined in docs/SSOT.md.
+
 GEOX · Control Constitution
 Allowed Inputs v0（裁决层输入白名单）
 
