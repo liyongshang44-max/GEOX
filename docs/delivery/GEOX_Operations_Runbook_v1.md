@@ -54,35 +54,32 @@ docker compose down
 
 Step2 收口后，commercial 基线要求证据导出走 `S3_COMPAT` 对象存储链路。
 
-#### 前置：token 来源与注入
+#### S3 smoke 快速 Runbook（最后收口步骤）
 
-`docker-compose.commercial_v1.yml` 中多个服务要求 `GEOX_AO_ACT_TOKEN`，必须在启动前提供。
+`docker-compose.commercial_v1.yml` 与 smoke 脚本都会用到 `GEOX_AO_ACT_TOKEN`。请按以下顺序执行。
 
-推荐方式：
-
-1. 复制模板并填写 token：
+1. 复制环境变量模板：
 
 ```bash
 cp .env.example .env
 ```
 
-2. 从以下任一来源填入 `GEOX_AO_ACT_TOKEN`：
-   - CI / Secret Manager 下发
-   - 本地 auth SSOT：`config/auth/ao_act_tokens_v0.json` 中具备 `evidence_export.read` + `evidence_export.write` scope 的非 revoked token
-   - 示例文件：`config/auth/example_tokens.json`（需替换占位值）
+2. 打开 `.env`，把 `GEOX_AO_ACT_TOKEN=` 填成可用 token。  
+   token 建议从 `config/auth/ao_act_tokens_v0.json` 读取（选择 `revoked=false` 且同时包含 `evidence_export.read` + `evidence_export.write` scope 的条目）；`config/auth/example_tokens.json` 仅作示例格式参考。
 
-#### 启动 commercial compose
+3. 启动 commercial 运行面：
 
 ```bash
-docker compose -f docker-compose.commercial_v1.yml --env-file .env up -d --build
-docker compose -f docker-compose.commercial_v1.yml ps
+docker compose -f docker-compose.commercial_v1.yml up -d
 ```
 
-#### 执行证据导出 S3 smoke
+4. 运行 evidence export S3 smoke：
 
 ```bash
 pnpm --filter @geox/server run test:evidence-export:s3-smoke
 ```
+
+> 说明：`apps/server/scripts/evidence_export_s3_smoke.mjs` 的 token fallback 顺序为：先读环境变量 `GEOX_AO_ACT_TOKEN`，若为空再尝试 `config/auth/example_tokens.json`、`config/auth/ao_act_tokens_v0.json`。
 
 #### PASS 标准
 

@@ -267,6 +267,12 @@ importers:
       '@geox/contracts':
         specifier: workspace:^
         version: link:../contracts
+      '@geox/control-constitution-validator':
+        specifier: workspace:*
+        version: link:../control-constitution-validator
+      '@geox/control-kernel':
+        specifier: workspace:*
+        version: link:../control-kernel
 
   packages/crop-skills:
     devDependencies:
