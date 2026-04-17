@@ -56,15 +56,22 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare commercial compose env
+        run: |
+          cat > .env.ci <<'EOF'
+          GEOX_AO_ACT_TOKEN=geox_ci_acceptance_token
+          EOF
+
+      - name: Validate commercial compose rendering
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
+
       - name: Start acceptance runtime dependencies
-        env:
-          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
-        run: docker compose -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
 
       - name: Wait for acceptance services ready
         run: |
           timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
-          docker compose -f docker-compose.commercial_v1.yml ps
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run acceptance suite
         run: pnpm run test:acceptance
@@ -82,9 +89,7 @@ jobs:
 
       - name: Stop acceptance runtime dependencies
         if: always()
-        env:
-          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
-        run: docker compose -f docker-compose.commercial_v1.yml down --remove-orphans
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down --remove-orphans
 
   release-gate:
     runs-on: ubuntu-latest
