@@ -58,8 +58,17 @@ jobs:
 
       - name: Prepare commercial compose env
         run: |
-          cat > .env.ci <<'EOF'
-          GEOX_AO_ACT_TOKEN=geox_ci_acceptance_token
+          TOKEN="${{ secrets.GEOX_AO_ACT_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN="$(node -e "const fs=require('fs');const p='config/auth/ao_act_tokens_v0.json';if(!fs.existsSync(p)){process.stdout.write('');process.exit(0);}const j=JSON.parse(fs.readFileSync(p,'utf8'));const t=(j.tokens||[]).find(x=>x && x.revoked!==true && typeof x.token==='string' && x.token.trim() && !x.token.includes('set-via-env-or-external-secret-file'));process.stdout.write(t?String(t.token).trim():'');")"
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "missing GEOX_AO_ACT_TOKEN from secret and config/auth/ao_act_tokens_v0.json"
+            exit 1
+          fi
+          cat > .env.ci <<EOF
+          GEOX_AO_ACT_TOKEN=$TOKEN
+          GEOX_TOKEN=$TOKEN
           EOF
 
       - name: Validate commercial compose rendering
@@ -74,7 +83,11 @@ jobs:
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run acceptance suite
-        run: pnpm run test:acceptance
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm run test:acceptance
 
       - name: Upload acceptance artifacts
         if: always()

@@ -1,7 +1,44 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const BASE_URL = process.env.GEOX_BASE_URL ?? "http://127.0.0.1:3001";
-const TOKEN = process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const REPO_ROOT = path.resolve(__dirname, "../../..");
+const TOKEN_CANDIDATE_FILES = [
+  path.join(REPO_ROOT, "config/auth/ao_act_tokens_v0.json"),
+  path.join(REPO_ROOT, "config/auth/example_tokens.json"),
+];
+
+function parseTokenFile(tokenFilePath) {
+  if (!fs.existsSync(tokenFilePath)) return null;
+  const parsed = JSON.parse(fs.readFileSync(tokenFilePath, "utf8"));
+  const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
+  for (const row of tokens) {
+    const token = typeof row?.token === "string" ? row.token.trim() : "";
+    const revoked = Boolean(row?.revoked);
+    if (!token || revoked) continue;
+    if (token.includes("set-via-env-or-external-secret-file")) continue;
+    return token;
+  }
+  return null;
+}
+
+function resolveAccessToken() {
+  const fromEnv = String(process.env.GEOX_TOKEN ?? process.env.GEOX_AO_ACT_TOKEN ?? "").trim();
+  if (fromEnv) return fromEnv;
+  for (const tokenFilePath of TOKEN_CANDIDATE_FILES) {
+    const candidate = parseTokenFile(tokenFilePath);
+    if (candidate) return candidate;
+  }
+  throw new Error(
+    `MISSING_ENV:GEOX_TOKEN (fallback checked: ${TOKEN_CANDIDATE_FILES.join(", ")})`,
+  );
+}
+
+const TOKEN = resolveAccessToken();
 const tenant = {
   tenant_id: process.env.GEOX_TENANT_ID ?? "tenantA",
   project_id: process.env.GEOX_PROJECT_ID ?? "projectA",
@@ -560,6 +597,14 @@ async function main() {
     },
     invalid: { operation_plan_id: invalidOp.operationPlanId, final_status: invalidFinal },
   });
+  console.log(
+    `[p1-smoke] RESULT_JSON ${JSON.stringify({
+      success_operation_plan_id: successOp?.operationPlanId ?? null,
+      invalid_operation_plan_id: invalidOp?.operationPlanId ?? null,
+      success_final_status: successFinal,
+      invalid_final_status: invalidFinal,
+    })}`,
+  );
 
   if (successFinal === "PENDING_ACCEPTANCE") {
     console.log("[p1-smoke][success] 执行已完成，证据已入链，待验收；作为链路 smoke 判定：通过");
