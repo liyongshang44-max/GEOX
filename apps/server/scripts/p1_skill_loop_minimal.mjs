@@ -11,6 +11,16 @@ const TOKEN_CANDIDATE_FILES = [
   path.join(REPO_ROOT, "config/auth/ao_act_tokens_v0.json"),
   path.join(REPO_ROOT, "config/auth/example_tokens.json"),
 ];
+const REQUIRED_SCOPES_FOR_P1_SMOKE = Object.freeze([
+  "ao_act.task.write",
+  "ao_act.index.read",
+  "ao_act.receipt.write",
+  "evidence_export.read",
+  "evidence_export.write",
+]);
+const EXPECTED_TENANT = String(process.env.GEOX_TENANT_ID ?? "tenantA").trim() || "tenantA";
+const EXPECTED_PROJECT = String(process.env.GEOX_PROJECT_ID ?? "projectA").trim() || "projectA";
+const EXPECTED_GROUP = String(process.env.GEOX_GROUP_ID ?? "groupA").trim() || "groupA";
 
 function parseTokenFile(tokenFilePath) {
   if (!fs.existsSync(tokenFilePath)) return null;
@@ -18,9 +28,17 @@ function parseTokenFile(tokenFilePath) {
   const tokens = Array.isArray(parsed?.tokens) ? parsed.tokens : [];
   for (const row of tokens) {
     const token = typeof row?.token === "string" ? row.token.trim() : "";
+    const scopes = Array.isArray(row?.scopes) ? row.scopes.map((s) => String(s)) : [];
+    const role = String(row?.role ?? "").trim().toLowerCase();
+    const tenant = String(row?.tenant_id ?? "").trim();
+    const project = String(row?.project_id ?? "").trim();
+    const group = String(row?.group_id ?? "").trim();
     const revoked = Boolean(row?.revoked);
     if (!token || revoked) continue;
     if (token.includes("set-via-env-or-external-secret-file")) continue;
+    if (tenant !== EXPECTED_TENANT || project !== EXPECTED_PROJECT || group !== EXPECTED_GROUP) continue;
+    if (!["admin", "operator"].includes(role)) continue;
+    if (!REQUIRED_SCOPES_FOR_P1_SMOKE.every((scope) => scopes.includes(scope))) continue;
     return token;
   }
   return null;
