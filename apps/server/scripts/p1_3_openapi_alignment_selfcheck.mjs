@@ -1,7 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const repoRootFromScript = path.resolve(__dirname, '../../..');
+const root = fs.existsSync(path.join(process.cwd(), 'apps/server/src/routes/openapi_v1.ts'))
+  ? process.cwd()
+  : repoRootFromScript;
 const routeRoots = [
   'apps/server/src/routes',
 ];

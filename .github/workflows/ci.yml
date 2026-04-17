@@ -56,6 +56,16 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Start acceptance runtime dependencies
+        env:
+          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
+        run: docker compose -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
+
+      - name: Wait for acceptance services ready
+        run: |
+          timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
+          docker compose -f docker-compose.commercial_v1.yml ps
+
       - name: Run acceptance suite
         run: pnpm run test:acceptance
 
@@ -70,6 +80,12 @@ jobs:
             acceptance-output/*.log
           if-no-files-found: warn
 
+      - name: Stop acceptance runtime dependencies
+        if: always()
+        env:
+          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
+        run: docker compose -f docker-compose.commercial_v1.yml down --remove-orphans
+
   release-gate:
     runs-on: ubuntu-latest
     needs:
@@ -83,6 +99,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Download acceptance artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: acceptance-output
+          path: acceptance-output
 
       - name: Download acceptance artifacts
         uses: actions/download-artifact@v4
