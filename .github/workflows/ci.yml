@@ -56,18 +56,38 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare commercial compose env
+        run: |
+          TOKEN="${{ secrets.GEOX_AO_ACT_TOKEN }}"
+          if [ -z "$TOKEN" ]; then
+            TOKEN="$(node -e "const fs=require('fs');const p='config/auth/ao_act_tokens_v0.json';if(!fs.existsSync(p)){process.stdout.write('');process.exit(0);}const j=JSON.parse(fs.readFileSync(p,'utf8'));const t=(j.tokens||[]).find(x=>x && x.revoked!==true && typeof x.token==='string' && x.token.trim() && !x.token.includes('set-via-env-or-external-secret-file'));process.stdout.write(t?String(t.token).trim():'');")"
+          fi
+          if [ -z "$TOKEN" ]; then
+            echo "missing GEOX_AO_ACT_TOKEN from secret and config/auth/ao_act_tokens_v0.json"
+            exit 1
+          fi
+          cat > .env.ci <<EOF
+          GEOX_AO_ACT_TOKEN=$TOKEN
+          GEOX_TOKEN=$TOKEN
+          EOF
+
+      - name: Validate commercial compose rendering
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
+
       - name: Start acceptance runtime dependencies
-        env:
-          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
-        run: docker compose -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
 
       - name: Wait for acceptance services ready
         run: |
           timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
-          docker compose -f docker-compose.commercial_v1.yml ps
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run acceptance suite
-        run: pnpm run test:acceptance
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm run test:acceptance
 
       - name: Upload acceptance artifacts
         if: always()
@@ -82,9 +102,7 @@ jobs:
 
       - name: Stop acceptance runtime dependencies
         if: always()
-        env:
-          GEOX_AO_ACT_TOKEN: geox_ci_acceptance_token
-        run: docker compose -f docker-compose.commercial_v1.yml down --remove-orphans
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down --remove-orphans
 
   release-gate:
     runs-on: ubuntu-latest
