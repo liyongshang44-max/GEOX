@@ -84,9 +84,9 @@ jobs:
 
       - name: Wait for acceptance services ready
         run: |
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init || true
           timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
-          docker run --rm --network host minio/mc:latest /bin/sh -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run acceptance suite
@@ -101,11 +101,18 @@ jobs:
         run: |
           mkdir -p acceptance-output
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > acceptance-output/SERVER_RUNTIME.log
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log
-          docker run --rm --network host minio/mc:latest /bin/sh -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log || true
+          set +e
+          docker run --rm --network host --entrypoint /bin/sh minio/mc:latest -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log 2>&1
+          MINIO_BUCKET_VERIFY_RC=$?
+          set -e
           grep -E "\\[evidence-export\\]\\[s3\\] upload target bucket=evidence-exports-v1 endpoint=.* job_id=" acceptance-output/SERVER_RUNTIME.log
           grep -E "verifying bucket exists: evidence-exports-v1|listing buckets" acceptance-output/MINIO_INIT.log
           grep -E "evidence-exports-v1" acceptance-output/MINIO_BUCKET_VERIFY.log
+          if [ "$MINIO_BUCKET_VERIFY_RC" -ne 0 ]; then
+            echo "[acceptance] bucket verify command failed with rc=$MINIO_BUCKET_VERIFY_RC (see acceptance-output/MINIO_BUCKET_VERIFY.log)"
+            exit "$MINIO_BUCKET_VERIFY_RC"
+          fi
 
       - name: Upload acceptance artifacts
         if: always()
