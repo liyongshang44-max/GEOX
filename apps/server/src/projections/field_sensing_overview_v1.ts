@@ -176,6 +176,10 @@ function selectLatestDerivedState(rows: any[], selectors: DerivedStateSelectors)
   return null;
 }
 
+function selectCompatibilityOnlyDerivedState(rows: any[], compatibilityStateType: string): LatestDerivedState | null {
+  return extractLatestDerivedState(rows, compatibilityStateType);
+}
+
 export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promise<void> {
   if (!ensurePromise) {
     ensurePromise = (async () => {
@@ -355,10 +359,10 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
     official: "leak_risk_state",
     compatibility: ["water_flow_state"],
   });
-  const irrigationNeedPayload = selectLatestDerivedState(derivedStateRows, {
-    // compatibility-only / not stage-1 official field
-    official: "irrigation_need_state",
-  });
+  // compatibility-only / not stage-1 official field:
+  // irrigation_need_state -> irrigation_need_level is retained only for backward compatibility.
+  // It must not be treated as an official stage-1 sensing summary signal or customer whitelist source.
+  const irrigationNeedPayload = selectCompatibilityOnlyDerivedState(derivedStateRows, "irrigation_need_state");
 
   const irrigationNeedLevel = coerceLevel(
     irrigationNeedPayload?.payload?.level ?? irrigationNeedPayload?.payload?.irrigation_need_level,
