@@ -57,22 +57,21 @@ services:
       GEOX_EVIDENCE_S3_BUCKET: ${GEOX_EVIDENCE_S3_BUCKET:-evidence-exports-v1}
     restart: "no"
     entrypoint: ["/bin/sh", "-c"]
-    command: >
-      set -eu;
-      echo "[minio-init] waiting for MinIO API to become reachable...";
+    command: |
+      set -eu
       until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
-        echo "[minio-init] MinIO not ready yet; retry in 1s";
-        sleep 1;
-      done;
-      echo "[minio-init] creating bucket $$GEOX_EVIDENCE_S3_BUCKET (idempotent)";
-      mc mb --ignore-existing local/"$$GEOX_EVIDENCE_S3_BUCKET";
-      echo "[minio-init] verifying bucket exists: $$GEOX_EVIDENCE_S3_BUCKET";
-      mc stat local/"$$GEOX_EVIDENCE_S3_BUCKET";
-      echo "[minio-init] listing buckets";
-      mc ls local;
-      echo "[minio-init] setting bucket policy private (idempotent)";
-      mc anonymous set private local/"$$GEOX_EVIDENCE_S3_BUCKET" || true;
-      echo "[minio-init] done";
+        echo "[minio-init] waiting for minio"
+        sleep 1
+      done
+      echo "[minio-init] creating bucket $$GEOX_EVIDENCE_S3_BUCKET (idempotent)"
+      mc mb --ignore-existing local/"$$GEOX_EVIDENCE_S3_BUCKET"
+      echo "[minio-init] verifying bucket exists: $$GEOX_EVIDENCE_S3_BUCKET"
+      mc stat local/"$$GEOX_EVIDENCE_S3_BUCKET"
+      echo "[minio-init] listing buckets"
+      mc ls local
+      echo "[minio-init] setting bucket policy private (idempotent)"
+      mc anonymous set private local/"$$GEOX_EVIDENCE_S3_BUCKET" || true
+      echo "[minio-init] done"
 
   server:
     # Server container listens on 3000 internally.

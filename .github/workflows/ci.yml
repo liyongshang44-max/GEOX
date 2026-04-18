@@ -76,11 +76,14 @@ jobs:
         run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
 
       - name: Start acceptance runtime dependencies
-        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt minio minio-init server jobs executor
+        run: |
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d minio minio-init
+          docker logs geox-v1-minio-init || true
+          docker ps -a
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt server jobs executor
 
       - name: Wait for acceptance services ready
         run: |
-          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml wait minio-init
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init
           timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
           docker run --rm --network host minio/mc:latest /bin/sh -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
