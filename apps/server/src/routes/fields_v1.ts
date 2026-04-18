@@ -1012,10 +1012,23 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     const geometry = normalizeGeometryObject(rawGeo);
     const geometryCentroid = geometry ? computeCentroid(geometry) : null;
     const geometryBbox = geometry ? computeBBox(geometry) : null;
+    const refreshed = await refreshFieldReadModels(pool, {
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      field_id,
+    });
 
     return reply.send({ // Return detail payload.
       ok: true, // Success flag.
       field: fieldQ.rows[0], // Field projection.
+      stage1_sensing_summary: refreshed.sensing_summary_stage1.payload, // Official customer-facing Stage-1 sensing summary for this field.
+      stage1_sensing_contract: "stage1_sensing_summary_v1", // Stable contract identifier for client routing and schema checks.
+      stage1_sensing_refresh: { // Stage-1 refresh metadata kept separate from internal mixed read models.
+        freshness: refreshed.sensing_summary_stage1.freshness,
+        status: refreshed.sensing_summary_stage1.status,
+        refreshed_ts_ms: refreshed.sensing_summary_stage1.refreshed_ts_ms,
+      },
       polygon: polyQ.rowCount ? { ...polyQ.rows[0], geojson_json: parseJsonOrNull(polyQ.rows[0].geojson) } : null, // Polygon detail with parsed JSON convenience field.
       geometry: geometry ? {
         type: geometry.type,
