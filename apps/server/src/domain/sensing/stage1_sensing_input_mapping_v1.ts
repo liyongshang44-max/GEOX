@@ -18,7 +18,7 @@ export type Stage1SensingInputMappingEntryV1 = {
   internal_summary_only: boolean;
 };
 
-export const STAGE1_OFFICIAL_CANONICAL_INPUT_METRICS_V1: readonly Stage1OfficialCanonicalInputMetricV1[] = [
+export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1: readonly Stage1OfficialCanonicalInputMetricV1[] = [
   "soil_moisture",
   "canopy_temperature",
   "soil_ec",
@@ -87,12 +87,12 @@ export const STAGE1_SENSING_INPUT_MAPPING_V1: Readonly<Record<Stage1OfficialCano
   },
 } as const;
 
-export function isStage1OfficialCanonicalInputMetricV1(metric: string): metric is Stage1OfficialCanonicalInputMetricV1 {
+export function isStage1OfficialPipelineCanonicalInputMetricV1(metric: string): metric is Stage1OfficialCanonicalInputMetricV1 {
   return Object.prototype.hasOwnProperty.call(STAGE1_SENSING_INPUT_MAPPING_V1, metric);
 }
 
 export function getStage1SensingInputMappingEntryV1(metric: string): Stage1SensingInputMappingEntryV1 | null {
-  if (!isStage1OfficialCanonicalInputMetricV1(metric)) return null;
+  if (!isStage1OfficialPipelineCanonicalInputMetricV1(metric)) return null;
   return STAGE1_SENSING_INPUT_MAPPING_V1[metric];
 }
 
@@ -107,5 +107,5 @@ export function mapStage1ObservationMetricToPipelineObservationV1(metric: string
 }
 
 export function isStage1OfficialTelemetryMetricV1(metric: string): metric is Stage1OfficialCanonicalInputMetricV1 & TelemetryMetricNameV1 {
-  return isStage1OfficialCanonicalInputMetricV1(metric);
+  return isStage1OfficialPipelineCanonicalInputMetricV1(metric);
 }

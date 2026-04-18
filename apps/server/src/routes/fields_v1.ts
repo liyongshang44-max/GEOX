@@ -30,6 +30,7 @@ import type { Pool } from "pg"; // Postgres pool type.
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Token/scope auth helper.
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context type.
+import { STAGE1_REFRESH_SEMANTICS, STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY } from "../domain/sensing/stage1_sensing_contract_v1.js";
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import { ingestTelemetryV1 } from "../services/telemetry_ingest_service_v1.js";
@@ -326,6 +327,10 @@ async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Sta
  */
 // 新流必须走本路由（fields 子域）；同时禁止新代码依赖 legacy/deprecated route。
 export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Route registration entry.
+  const refreshFieldReadModels =
+    ((app as any).refreshFieldReadModelsWithObservabilityV1 as typeof refreshFieldReadModelsWithObservabilityV1 | undefined)
+    ?? refreshFieldReadModelsWithObservabilityV1;
+
   void ensureFieldSeasonProjectionV1(pool).catch((e: any) => { // Ensure upgraded repos also have the season table.
     app.log.error({ err: e }, "failed_to_ensure_field_season_projection_v1"); // Log startup issue instead of crashing boot.
   }); // End ensure table.
@@ -532,7 +537,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }
       let read_model_refresh: any = null;
       try {
-        const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+        const refreshed = await refreshFieldReadModels(pool, {
           tenant_id: auth.tenant_id,
           project_id: auth.project_id,
           group_id: auth.group_id,
@@ -1034,7 +1039,9 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     }); // End response.
   }); // End GET /api/v1/fields/:field_id.
 
-  app.get("/api/v1/fields/:field_id/sensing-read-models", async (req, reply) => { // Return field-level sensing read models for direct frontend consumption.
+  // Official Stage-1 customer-facing sensing contract for fields 子域。
+  // Field detail/product/sales integrations should consume this endpoint instead of mixed read-model payloads.
+  app.get("/api/v1/fields/:field_id/sensing-summary", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
     if (!auth) return;
 
@@ -1050,7 +1057,47 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     );
     if (fieldQ.rowCount === 0) return notFound(reply);
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const refreshed = await refreshFieldReadModels(pool, {
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      field_id,
+    });
+
+    return reply.send({
+      ok: true,
+      field_id,
+      endpoint_contract: "stage1_sensing_summary_v1",
+      stage1_sensing_summary: refreshed.sensing_summary_stage1.payload,
+      stage1_refresh: {
+        freshness: refreshed.sensing_summary_stage1.freshness,
+        status: refreshed.sensing_summary_stage1.status,
+        refreshed_ts_ms: refreshed.sensing_summary_stage1.refreshed_ts_ms,
+      },
+      refresh_semantics: STAGE1_REFRESH_SEMANTICS,
+      sensing_runtime_boundary: STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY,
+    });
+  });
+
+  // Internal/debug/compatibility endpoint for mixed read-model payloads.
+  // Not customer-facing Stage-1 contract; frontend/product MUST NOT use this as formal sensing source-of-truth.
+  app.get("/api/v1/fields/:field_id/sensing-read-models", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
+    if (!auth) return;
+
+    const field_id = normalizeId((req.params as any)?.field_id);
+    if (!field_id) return notFound(reply);
+
+    const fieldQ = await pool.query(
+      `SELECT 1
+         FROM field_index_v1
+        WHERE tenant_id = $1
+          AND field_id = $2`,
+      [auth.tenant_id, field_id]
+    );
+    if (fieldQ.rowCount === 0) return notFound(reply);
+
+    const refreshed = await refreshFieldReadModels(pool, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
@@ -1060,6 +1107,9 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     return reply.send({
       ok: true,
       field_id,
+      endpoint_contract: "internal_sensing_read_models_v1",
+      contract_scope: "internal/debug/compatibility only",
+      customer_facing_stage1_contract: false,
       sensing_overview: refreshed.sensing_overview.payload,
       sensing_summary_stage1: refreshed.sensing_summary_stage1.payload,
       fertility_state: refreshed.fertility_state.payload,
