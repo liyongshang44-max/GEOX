@@ -364,6 +364,9 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   // It must not be treated as an official stage-1 sensing summary signal or customer whitelist source.
   const irrigationNeedPayload = selectCompatibilityOnlyDerivedState(derivedStateRows, "irrigation_need_state");
 
+  // irrigation_need_level is retained for backward compatibility only.
+  // It is not part of the official stage-1 customer-facing sensing summary whitelist
+  // and must not be used as a source-of-truth field for new product or decision logic.
   const irrigationNeedLevel = coerceLevel(
     irrigationNeedPayload?.payload?.level ?? irrigationNeedPayload?.payload?.irrigation_need_level,
     ["LOW", "MEDIUM", "HIGH"] as const
