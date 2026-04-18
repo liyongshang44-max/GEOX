@@ -1,7 +1,8 @@
 import type { Pool, PoolClient } from "pg";
 import {
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
-  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT,
+  type Stage1OfficialSummarySoilMetric,
   type Stage1Freshness,
 } from "../domain/sensing/stage1_sensing_contract_v1.js";
 import { refreshFieldSensingOverviewV1 } from "./field_sensing_overview_v1.js";
@@ -17,7 +18,7 @@ type SoilIndicatorLike = {
 };
 
 export type Stage1SoilMetricSummaryItemV1 = {
-  metric: typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number];
+  metric: Stage1OfficialSummarySoilMetric;
   value: number | null;
   confidence: number | null;
   observed_at_ts_ms: number | null;
@@ -93,18 +94,44 @@ const STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS = {
   leak_risk: toRiskLevel,
 } as const satisfies Record<Stage1CustomerSummaryField, (v: unknown) => unknown>;
 
+const STAGE1_SUMMARY_SOIL_METRICS_ORDERED_SUBSET = STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT.ordered_metrics;
+
+// Explicit source->summary mapping for customer-facing soil summary metrics.
+// This mapping is summary-subset specific and intentionally decoupled from pipeline input whitelist semantics.
+const STAGE1_SUMMARY_SOIL_METRIC_SOURCE_TO_SUBSET_METRIC = {
+  soil_moisture_pct: "soil_moisture_pct",
+  soil_moisture: "soil_moisture_pct",
+  moisture_pct: "soil_moisture_pct",
+  ec_ds_m: "ec_ds_m",
+  ec: "ec_ds_m",
+  soil_ec_ds_m: "ec_ds_m",
+  salinity_ec_ds_m: "ec_ds_m",
+  fertility_index: "fertility_index",
+  soil_fertility_index: "fertility_index",
+  n: "n",
+  nitrogen: "n",
+  soil_n: "n",
+  p: "p",
+  phosphorus: "p",
+  soil_p: "p",
+  k: "k",
+  potassium: "k",
+  soil_k: "k",
+} as const satisfies Record<string, Stage1OfficialSummarySoilMetric>;
+
 function pickOfficialSoilMetrics(soilIndicators: unknown): Stage1SoilMetricSummaryItemV1[] {
   const rows = Array.isArray(soilIndicators) ? soilIndicators as SoilIndicatorLike[] : [];
-  const byMetric = new Map<string, SoilIndicatorLike>();
+  const byMetric = new Map<Stage1OfficialSummarySoilMetric, SoilIndicatorLike>();
 
   for (const row of rows) {
-    const metric = String(row?.metric ?? "").trim();
-    if (!metric) continue;
-    if (!STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.includes(metric as typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number])) continue;
-    if (!byMetric.has(metric)) byMetric.set(metric, row);
+    const sourceMetric = String(row?.metric ?? "").trim().toLowerCase();
+    if (!sourceMetric) continue;
+    const summaryMetric = STAGE1_SUMMARY_SOIL_METRIC_SOURCE_TO_SUBSET_METRIC[sourceMetric as keyof typeof STAGE1_SUMMARY_SOIL_METRIC_SOURCE_TO_SUBSET_METRIC];
+    if (!summaryMetric) continue;
+    if (!byMetric.has(summaryMetric)) byMetric.set(summaryMetric, row);
   }
 
-  return STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.map((metric) => {
+  return STAGE1_SUMMARY_SOIL_METRICS_ORDERED_SUBSET.map((metric) => {
     const row = byMetric.get(metric);
     return {
       metric,
@@ -185,7 +212,8 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
   await ensureFieldSensingSummaryStage1ProjectionV1(db);
 
   // Overview is an internal aggregation source.
-  // Stage-1 summary contract remains authoritative and must be built by explicit summary contract rules.
+  // Stage-1 summary contract remains authoritative and must be built by explicit summary-subset contract rules.
+  // STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT is customer-facing display contract only; it is not pipeline input contract.
   // Overview changes must NOT silently expand stage-1 summary fields.
   const overview = await refreshFieldSensingOverviewV1(db, params);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
