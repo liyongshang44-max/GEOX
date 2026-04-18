@@ -101,6 +101,9 @@ function bucketTelemetryRows(rows: any[], fromTsMs: number, toTsMs: number): Das
 }
 
 export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): void { // Register dashboard summary routes.
+  const refreshFieldReadModels =
+    ((app as any).refreshFieldReadModelsWithObservabilityV1 as typeof refreshFieldReadModelsWithObservabilityV1 | undefined)
+    ?? refreshFieldReadModelsWithObservabilityV1;
   const projectOperationState = (tenant: { tenant_id: string; project_id: string; group_id: string }) => {
     const projector = (app as any).dashboardProjectOperationStateV1 ?? projectOperationStateV1;
     return projector(pool, tenant);
@@ -131,7 +134,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const field_id = String((req.params as any)?.field_id ?? "").trim();
     if (!field_id) return badRequest(reply, "MISSING:field_id");
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const refreshed = await refreshFieldReadModels(pool, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
@@ -162,7 +165,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     const field_id = String((req.params as any)?.field_id ?? "").trim();
     if (!field_id) return badRequest(reply, "MISSING:field_id");
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const refreshed = await refreshFieldReadModels(pool, {
       tenant_id: auth.tenant_id,
       project_id: auth.project_id,
       group_id: auth.group_id,
