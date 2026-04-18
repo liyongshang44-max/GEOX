@@ -365,6 +365,7 @@ registerOperationStateV1Routes(app, pool); // Sprint B: unified operations state
 registerFieldTimelineV1Routes(app, pool); // Sprint C: field timeline/replay API.
 registerFieldProgramStateV1Routes(app, pool); // Program-centric: field program state projection API.
 registerFieldPortfolioV1Routes(app, pool); // Field portfolio projection APIs.
+// Governance boundary: program 仅承载策略/编排，不替代 operation detail；execution 新读取优先接入 operation_state read model。
 registerProgramsV1Routes(app, pool); // Program management + field/season scoped program APIs.
 registerAcceptanceV1Routes(app, pool); // Stage C2: acceptance result evaluation/write API.
 registerEvidenceBundleV1Routes(app, pool); // Stage 3: aggregate operation evidence bundle for frontend consumption.

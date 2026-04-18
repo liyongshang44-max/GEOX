@@ -39,6 +39,7 @@
     "qa:release-gate-check": "node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json",
     "ci:simulator:ingest-guard": "node scripts/check_simulator_ingest_guard.cjs",
     "ci:server:dashboard-status-source-of-truth": "node scripts/check_dashboard_status_source_of_truth.cjs",
+    "ci:route-dependency-guard": "node scripts/check_route_dependency_guard.cjs",
     "selfcheck:smoke:pending-acceptance": "node --test scripts/acceptance/__tests__/pending_acceptance_smoke_selfcheck.test.cjs",
     "selfcheck:p1-skill-loop-minimal": "node apps/server/scripts/p1_skill_loop_minimal_selfcheck.mjs",
     "test:acceptance": "node scripts/acceptance/run_acceptance.cjs"

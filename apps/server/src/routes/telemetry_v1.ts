@@ -8,6 +8,66 @@ import type { Pool } from "pg"; // Postgres connection pool for query execution.
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse Sprint 19 token/scope auth for tenant isolation (Sprint A1).
 import type { AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js"; // Auth context for tenant_id filtering.
 
+const TELEMETRY_COMPAT_SUNSET_AT = "Wed, 31 Dec 2026 23:59:59 GMT"; // Unified telemetry compatibility sunset (RFC1123).
+
+type TelemetryCompatibilityMeta = {
+  successor_endpoint: string;
+  compatibility_notice: string;
+};
+
+const TELEMETRY_COMPAT_META: Record<string, TelemetryCompatibilityMeta> = {
+  "/api/telemetry/v1/query": {
+    successor_endpoint: "/api/v1/operations/* (operation_state 主链 read model)",
+    compatibility_notice: "compatibility only; do not use in new flows; for migration only",
+  },
+  "/api/v1/telemetry/latest": {
+    successor_endpoint: "/api/v1/operations/* 或 /api/v1/field-program-state/* 对应 read model",
+    compatibility_notice: "compatibility only; do not use in new flows; for migration only",
+  },
+  "/api/v1/telemetry/series": {
+    successor_endpoint: "/api/v1/operations/* 或 /api/v1/field-timeline/* 对应 read model",
+    compatibility_notice: "compatibility only; do not use in new flows; for migration only",
+  },
+  "/api/v1/telemetry/metrics": {
+    successor_endpoint: "/api/v1/operations/* 或 /api/v1/reports/* 对应 read model",
+    compatibility_notice: "compatibility only; do not use in new flows; for migration only",
+  },
+};
+
+function telemetryCompatibilityMeta(routePath: keyof typeof TELEMETRY_COMPAT_META): TelemetryCompatibilityMeta {
+  return TELEMETRY_COMPAT_META[routePath];
+}
+
+function applyTelemetryCompatibilityHeaders(reply: any, meta: TelemetryCompatibilityMeta): void {
+  reply.header("X-Deprecated", "true");
+  reply.header("Deprecation", "true");
+  reply.header("Sunset", TELEMETRY_COMPAT_SUNSET_AT);
+  reply.header("Link", `<${meta.successor_endpoint}>; rel="successor-version"`);
+}
+
+function attachTelemetryCompatibilityPayload<T extends Record<string, any>>(payload: T, meta: TelemetryCompatibilityMeta): T & {
+  deprecated: true;
+  successor_endpoint: string;
+  compatibility_notice: string;
+  deprecation_notice: string;
+  sunset_at: string;
+} {
+  return {
+    ...payload,
+    deprecated: true,
+    successor_endpoint: meta.successor_endpoint,
+    compatibility_notice: meta.compatibility_notice,
+    deprecation_notice: "telemetry compatibility endpoint is deprecated; migrate to successor read model",
+    sunset_at: TELEMETRY_COMPAT_SUNSET_AT,
+  };
+}
+
+function sendTelemetryCompatibilityResponse<T extends Record<string, any>>(reply: any, payload: T, routePath: keyof typeof TELEMETRY_COMPAT_META) {
+  const meta = telemetryCompatibilityMeta(routePath);
+  applyTelemetryCompatibilityHeaders(reply, meta);
+  return reply.send(attachTelemetryCompatibilityPayload(payload, meta));
+}
+
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string query parameters.
   return typeof v === "string" && v.trim().length > 0; // Non-empty trimmed string.
 } // End helper.
@@ -20,8 +80,9 @@ function parseFiniteInt(v: any): number | null { // Helper: parse integer from q
   return n; // Return parsed int.
 } // End helper.
 
-function badRequest(reply: any, error: string) { // Helper: send 400 with normalized payload.
-  return reply.status(400).send({ ok: false, error }); // Standard error envelope.
+function badRequest(reply: any, error: string, routePath: keyof typeof TELEMETRY_COMPAT_META) { // Helper: send 400 with normalized payload.
+  reply.status(400);
+  return sendTelemetryCompatibilityResponse(reply, { ok: false, error }, routePath); // Standard error envelope + compatibility contract.
 } // End helper.
 
 function parseMetricList(raw: any): string[] { // Parse comma-separated or repeated metrics query.
@@ -128,16 +189,18 @@ async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: str
  * - GET /api/v1/telemetry/metrics
  */
 export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { // Register telemetry v1 routes.
-  app.get("/api/telemetry/v1/query", async (req, reply) => { // Query telemetry projection by tenant+device+time.
+  app.get("/api/telemetry/v1/query", async (req, reply) => { // Compatibility-only telemetry query (migration only).
+    const routePath = "/api/telemetry/v1/query" as const;
     if ((req.query as any)?.__internal__ !== "true") {
-      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+      reply.code(410);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Enforce scope and obtain tenant context.
     if (!auth) return; // Authorization helper already replied (401/403/404 semantics).
 
     const q: any = (req as any).query ?? {}; // Read query params from request.
     const device_id: string | null = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id"); // device_id is mandatory.
+    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // device_id is mandatory.
 
     const metric: string | null = isNonEmptyString(q.metric) ? String(q.metric).trim() : null; // Optional metric filter.
     const from_ts_ms = parseFiniteInt(q.from_ts_ms); // Optional lower bound in epoch ms.
@@ -145,10 +208,10 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
     const nowMs = Date.now(); // Current time ms.
     const startMs = from_ts_ms ?? (nowMs - 24 * 60 * 60 * 1000); // Default start = now - 24h.
     const endMs = to_ts_ms ?? nowMs; // Default end = now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms"); // Validate bounds ordering.
+    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate bounds ordering.
 
     const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metric ? [metric] : [], clampLimit(q.limit, 5000, 20000)); // Load unified points.
-    return reply.send({ // Send query response.
+    return sendTelemetryCompatibilityResponse(reply, { // Send query response.
       ok: true, // Success flag.
       tenant_id: auth.tenant_id, // Echo tenant for caller debugging (non-sensitive).
       device_id, // Echo device_id.
@@ -156,25 +219,30 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       range: { startTsMs: startMs, endTsMs: endMs }, // Echo resolved range.
       count: points.length, // Number of returned points.
       points, // Unified points array.
-    }); // End response.
+    }, routePath); // End response.
   }); // End route.
 
-  app.get("/api/v1/telemetry/latest", async (req, reply) => { // Return latest point per metric for one device.
+  app.get("/api/v1/telemetry/latest", async (req, reply) => { // Compatibility-only latest telemetry view (migration only).
+    const routePath = "/api/v1/telemetry/latest" as const;
     if ((req.query as any)?.__internal__ !== "true") {
-      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+      reply.code(410);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 
     const q: any = (req as any).query ?? {}; // Parse query params.
     const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id"); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Hide cross-tenant devices.
+    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      reply.status(404);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+    } // Hide cross-tenant devices.
 
     const metrics = parseMetricList(q.metrics); // Optional metric subset.
     const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 7 * 24 * 60 * 60 * 1000); // Default last 7 days to find latest points.
     const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms"); // Validate range.
+    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
 
     const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load candidate points.
     const latest = new Map<string, any>(); // Keep latest point per metric.
@@ -182,31 +250,36 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       latest.set(metricKey(point.metric), point); // Later points overwrite earlier points.
     } // End loop.
 
-    return reply.send({ // Return latest map plus list for frontend convenience.
+    return sendTelemetryCompatibilityResponse(reply, { // Return latest map plus list for frontend convenience.
       ok: true, // Success flag.
       tenant_id: auth.tenant_id, // Tenant id.
       device_id, // Device id.
       count: latest.size, // Number of metrics returned.
       items: Array.from(latest.values()).sort((a, b) => String(a.metric).localeCompare(String(b.metric))), // Stable array for cards.
-    }); // End response.
+    }, routePath); // End response.
   }); // End latest route.
 
-  app.get("/api/v1/telemetry/series", async (req, reply) => { // Return point series for one device.
+  app.get("/api/v1/telemetry/series", async (req, reply) => { // Compatibility-only telemetry series (migration only).
+    const routePath = "/api/v1/telemetry/series" as const;
     if ((req.query as any)?.__internal__ !== "true") {
-      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+      reply.code(410);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 
     const q: any = (req as any).query ?? {}; // Parse query params.
     const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id"); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Hide cross-tenant devices.
+    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      reply.status(404);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+    } // Hide cross-tenant devices.
 
     const metrics = parseMetricList(q.metrics); // Optional metrics list.
     const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
     const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms"); // Validate range.
+    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
 
     const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000)); // Load points.
     const series: Record<string, any[]> = {}; // Group by metric for frontend.
@@ -216,7 +289,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       series[key].push({ ts_ms: point.ts_ms, value_num: point.value_num, value_text: point.value_text, fact_id: point.fact_id }); // Append point.
     } // End grouping.
 
-    return reply.send({ // Return grouped series.
+    return sendTelemetryCompatibilityResponse(reply, { // Return grouped series.
       ok: true, // Success flag.
       tenant_id: auth.tenant_id, // Tenant id.
       device_id, // Device id.
@@ -224,25 +297,30 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       metrics: Object.keys(series), // Included metric names.
       series, // Grouped series map.
       count: points.length, // Total point count.
-    }); // End response.
+    }, routePath); // End response.
   }); // End series route.
 
-  app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Return metric summary cards for one device.
+  app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Compatibility-only telemetry metrics summary (migration only).
+    const routePath = "/api/v1/telemetry/metrics" as const;
     if ((req.query as any)?.__internal__ !== "true") {
-      return reply.code(410).send({ ok: false, error: "DEPRECATED_API" });
+      reply.code(410);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
     }
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
     if (!auth) return; // Auth helper responded.
 
     const q: any = (req as any).query ?? {}; // Parse query params.
     const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id"); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) return reply.status(404).send({ ok: false, error: "NOT_FOUND" }); // Hide cross-tenant devices.
+    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      reply.status(404);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+    } // Hide cross-tenant devices.
 
     const metrics = parseMetricList(q.metrics); // Optional metric subset.
     const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
     const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms"); // Validate range.
+    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
 
     const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load points.
     const summary = new Map<string, any>(); // Aggregate per metric.
@@ -272,6 +350,6 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       avg_value_num: bucket.min_value_num == null ? null : Number((bucket._sum / bucket.count).toFixed(4)), // Simple average for MVP.
     })); // End finalize.
 
-    return reply.send({ ok: true, tenant_id: auth.tenant_id, device_id, range: { startTsMs: startMs, endTsMs: endMs }, count: items.length, items }); // Return metric summary.
+    return sendTelemetryCompatibilityResponse(reply, { ok: true, tenant_id: auth.tenant_id, device_id, range: { startTsMs: startMs, endTsMs: endMs }, count: items.length, items }, routePath); // Return metric summary.
   }); // End metrics route.
 } // End registration.
