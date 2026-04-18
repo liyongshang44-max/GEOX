@@ -53,9 +53,9 @@ services:
     restart: "no"
     entrypoint: ["/bin/sh", "-c"]
     command: >
-      until mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do sleep 1; done &&
-      mc mb --ignore-existing local/"$GEOX_EVIDENCE_S3_BUCKET" &&
-      mc anonymous set private local/"$GEOX_EVIDENCE_S3_BUCKET" || true
+      until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 1; done &&
+      mc mb --ignore-existing local/"$$GEOX_EVIDENCE_S3_BUCKET" &&
+      mc anonymous set private local/"$$GEOX_EVIDENCE_S3_BUCKET" || true
 
   server:
     # Server container listens on 3000 internally.

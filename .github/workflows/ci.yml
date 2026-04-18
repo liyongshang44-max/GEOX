@@ -67,6 +67,9 @@ jobs:
           cat > .env.ci <<EOF
           GEOX_AO_ACT_TOKEN=$TOKEN
           GEOX_TOKEN=$TOKEN
+          GEOX_EVIDENCE_S3_BUCKET=geox
+          MINIO_ROOT_USER=minioadmin
+          MINIO_ROOT_PASSWORD=minioadmin
           EOF
 
       - name: Validate commercial compose rendering
