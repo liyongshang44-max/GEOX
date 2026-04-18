@@ -1245,6 +1245,7 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
       const bundleKey = object_store_key;
       const manifestKey = `${keyPrefix}/manifest.json`;
       const checksumsKey = `${keyPrefix}/sha256.txt`;
+      console.info(`[evidence-export][s3] upload target bucket=${s3cfg.bucket} endpoint=${s3cfg.endpoint} job_id=${job_id}`);
       await s3PutObjectFromFile(s3cfg, bundleKey, bundle_path, bundleContentTypeForFormat(export_format));
       await s3PutObjectFromFile(s3cfg, manifestKey, manifest_path, "application/json");
       await s3PutObjectFromFile(s3cfg, checksumsKey, checksums_path, "text/plain; charset=utf-8");

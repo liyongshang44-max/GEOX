@@ -376,9 +376,7 @@ async function waitForAcceptanceResolution(operationPlanId) {
     const status = String(state.finalStatus ?? "").toUpperCase();
     const successMappedBy = resolveSuccessFinalStatus(status);
     if (successMappedBy === "PENDING_ACCEPTANCE") {
-      seenPendingAcceptance = true;
-      await sleep(500);
-      continue;
+      return { ...state, seenPendingAcceptance: true };
     }
     if (successMappedBy) {
       return { ...state, seenPendingAcceptance };
