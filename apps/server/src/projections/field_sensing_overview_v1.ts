@@ -45,18 +45,26 @@ type FieldSensingOverviewV1 = {
 };
 
 const SOIL_METRIC_KEYS = [
+  // canonical stage-1 soil moisture metrics
   "soil_moisture_pct",
+  // alias (compatibility path, not stage-1 primary)
   "soil_moisture",
   "moisture_pct",
+  // canonical stage-1 salinity metric
   "ec_ds_m",
+  // alias (compatibility path, not stage-1 primary)
   "ec",
   "soil_ec_ds_m",
   "salinity_ec_ds_m",
+  // canonical stage-1 fertility metric
   "fertility_index",
+  // alias (compatibility path, not stage-1 primary)
   "soil_fertility_index",
+  // canonical stage-1 nutrient metrics
   "n",
   "p",
   "k",
+  // alias (compatibility path, not stage-1 primary)
   "nitrogen",
   "phosphorus",
   "potassium",
@@ -150,6 +158,22 @@ function extractLatestDerivedState(rows: any[], stateType: string): LatestDerive
       ? target.source_observation_ids_json.map((x: unknown) => String(x ?? "").trim()).filter(Boolean)
       : [],
   };
+}
+
+
+type DerivedStateSelectors = {
+  official: string;
+  compatibility?: string[];
+};
+
+function selectLatestDerivedState(rows: any[], selectors: DerivedStateSelectors): LatestDerivedState | null {
+  const official = extractLatestDerivedState(rows, selectors.official);
+  if (official) return official;
+  for (const legacyStateType of selectors.compatibility ?? []) {
+    const legacy = extractLatestDerivedState(rows, legacyStateType);
+    if (legacy) return legacy;
+  }
+  return null;
 }
 
 export async function ensureFieldSensingOverviewProjectionV1(db: DbConn): Promise<void> {
@@ -290,20 +314,106 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
         AND ($3::text IS NULL OR project_id = $3)
         AND ($4::text IS NULL OR group_id = $4)
         AND state_type = ANY($5::text[])`,
-    [params.tenant_id, params.field_id, params.project_id ?? null, params.group_id ?? null, ["irrigation_need_state", "sensor_quality_state", "canopy_state", "water_flow_state"]]
+    [
+      params.tenant_id,
+      params.field_id,
+      params.project_id ?? null,
+      params.group_id ?? null,
+      [
+        "canopy_temperature_state",
+        "evapotranspiration_risk_state",
+        "sensor_quality_state",
+        "irrigation_effectiveness_state",
+        "leak_risk_state",
+        // compatibility-only: legacy names are fallback paths and not stage-1 official sources.
+        "irrigation_need_state",
+        "canopy_state",
+        "water_flow_state",
+      ],
+    ]
   );
-  const irrigationPayload = extractLatestDerivedState(derivedRows.rows ?? [], "irrigation_need_state");
-  const qualityPayload = extractLatestDerivedState(derivedRows.rows ?? [], "sensor_quality_state");
-  const canopyPayload = extractLatestDerivedState(derivedRows.rows ?? [], "canopy_state");
-  const waterFlowPayload = extractLatestDerivedState(derivedRows.rows ?? [], "water_flow_state");
-  const irrigationNeedLevel = coerceLevel(irrigationPayload?.payload?.level ?? irrigationPayload?.payload?.irrigation_need_level, ["LOW", "MEDIUM", "HIGH"] as const);
-  const sensorQualityLevel = coerceSensorQualityLevel(qualityPayload?.payload?.level ?? qualityPayload?.payload?.sensor_quality_level ?? qualityPayload?.payload?.quality_level ?? qualityPayload?.payload?.sensor_quality);
-  const canopyTempStatus = coerceEnumLower(canopyPayload?.payload?.canopy_temp_status ?? canopyPayload?.payload?.canopy_temperature_status ?? canopyPayload?.payload?.temp_status, ["normal", "elevated", "critical", "unknown"] as const);
-  const evapotranspirationRisk = coerceEnumLower(canopyPayload?.payload?.evapotranspiration_risk ?? canopyPayload?.payload?.et_risk ?? canopyPayload?.payload?.risk_level, ["low", "medium", "high", "unknown"] as const);
-  const sensorQuality = coerceSensorQuality(qualityPayload?.payload?.sensor_quality ?? qualityPayload?.payload?.level ?? qualityPayload?.payload?.sensor_quality_level ?? qualityPayload?.payload?.quality_level);
-  const irrigationEffectiveness = coerceEnumLower(waterFlowPayload?.payload?.irrigation_effectiveness ?? waterFlowPayload?.payload?.flow_effectiveness, ["low", "medium", "high", "unknown"] as const);
-  const leakRisk = coerceEnumLower(waterFlowPayload?.payload?.leak_risk ?? waterFlowPayload?.payload?.leakage_risk, ["low", "medium", "high", "unknown"] as const);
-  const irrigationActionHintRaw = irrigationPayload?.payload?.action_hint ?? irrigationPayload?.payload?.suggested_action ?? irrigationPayload?.payload?.recommendation;
+
+  const derivedStateRows = derivedRows.rows ?? [];
+  const canopyTemperaturePayload = selectLatestDerivedState(derivedStateRows, {
+    official: "canopy_temperature_state",
+    compatibility: ["canopy_state"],
+  });
+  const evapotranspirationRiskPayload = selectLatestDerivedState(derivedStateRows, {
+    official: "evapotranspiration_risk_state",
+    compatibility: ["canopy_state"],
+  });
+  // customer/product recommended field: sensor_quality_level
+  // internal diagnostics field: sensor_quality
+  const qualityPayload = selectLatestDerivedState(derivedStateRows, {
+    official: "sensor_quality_state",
+  });
+  const irrigationEffectivenessPayload = selectLatestDerivedState(derivedStateRows, {
+    official: "irrigation_effectiveness_state",
+    compatibility: ["water_flow_state"],
+  });
+  const leakRiskPayload = selectLatestDerivedState(derivedStateRows, {
+    official: "leak_risk_state",
+    compatibility: ["water_flow_state"],
+  });
+  const irrigationNeedPayload = selectLatestDerivedState(derivedStateRows, {
+    // compatibility-only / not stage-1 official field
+    official: "irrigation_need_state",
+  });
+
+  const irrigationNeedLevel = coerceLevel(
+    irrigationNeedPayload?.payload?.level ?? irrigationNeedPayload?.payload?.irrigation_need_level,
+    ["LOW", "MEDIUM", "HIGH"] as const
+  );
+  const sensorQualityLevel = coerceSensorQualityLevel(
+    qualityPayload?.payload?.level
+      ?? qualityPayload?.payload?.sensor_quality_level
+      ?? qualityPayload?.payload?.quality_level
+      ?? qualityPayload?.payload?.sensor_quality
+  );
+  const canopyTempStatus = coerceEnumLower(
+    canopyTemperaturePayload?.payload?.canopy_temp_status
+      ?? canopyTemperaturePayload?.payload?.canopy_temperature_status
+      ?? canopyTemperaturePayload?.payload?.temp_status
+      ?? canopyTemperaturePayload?.payload?.level,
+    ["normal", "elevated", "critical", "unknown"] as const
+  );
+  const evapotranspirationRisk = coerceEnumLower(
+    evapotranspirationRiskPayload?.payload?.evapotranspiration_risk
+      ?? evapotranspirationRiskPayload?.payload?.et_risk
+      ?? evapotranspirationRiskPayload?.payload?.risk_level
+      ?? evapotranspirationRiskPayload?.payload?.level,
+    ["low", "medium", "high", "unknown"] as const
+  );
+  const sensorQuality = coerceSensorQuality(
+    qualityPayload?.payload?.sensor_quality
+      ?? qualityPayload?.payload?.level
+      ?? qualityPayload?.payload?.sensor_quality_level
+      ?? qualityPayload?.payload?.quality_level
+  );
+  const irrigationEffectiveness = coerceEnumLower(
+    irrigationEffectivenessPayload?.payload?.irrigation_effectiveness
+      ?? irrigationEffectivenessPayload?.payload?.flow_effectiveness
+      ?? irrigationEffectivenessPayload?.payload?.level,
+    ["low", "medium", "high", "unknown"] as const
+  );
+  const leakRisk = coerceEnumLower(
+    leakRiskPayload?.payload?.leak_risk
+      ?? leakRiskPayload?.payload?.leakage_risk
+      ?? leakRiskPayload?.payload?.level,
+    ["low", "medium", "high", "unknown"] as const
+  );
+
+  // irrigation_action_hint is a display hint, not an executable system control command.
+  // official source first: irrigation_effectiveness_state / leak_risk_state payload hint fields.
+  // compatibility fallback: irrigation_need_state legacy hint fields.
+  const irrigationActionHintRaw =
+    irrigationEffectivenessPayload?.payload?.action_hint
+    ?? leakRiskPayload?.payload?.action_hint
+    ?? irrigationEffectivenessPayload?.payload?.suggested_action
+    ?? leakRiskPayload?.payload?.suggested_action
+    ?? irrigationNeedPayload?.payload?.action_hint
+    ?? irrigationNeedPayload?.payload?.suggested_action
+    ?? irrigationNeedPayload?.payload?.recommendation;
   const irrigationActionHint = String(irrigationActionHintRaw ?? "").trim() || null;
 
   const observedAtTsMs = items.length
@@ -313,24 +423,45 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   const soilConfidence = confidenceSeries.length
     ? Number((confidenceSeries.reduce((sum, n) => sum + n, 0) / confidenceSeries.length).toFixed(3))
     : null;
-  const derivedConfidenceSeries = [canopyPayload?.confidence, qualityPayload?.confidence, waterFlowPayload?.confidence]
-    .filter((x): x is number => x != null);
+  const derivedConfidenceSeries = [
+    canopyTemperaturePayload?.confidence,
+    evapotranspirationRiskPayload?.confidence,
+    qualityPayload?.confidence,
+    irrigationEffectivenessPayload?.confidence,
+    leakRiskPayload?.confidence,
+  ].filter((x): x is number => x != null);
   const derivedConfidence = derivedConfidenceSeries.length
     ? Number((derivedConfidenceSeries.reduce((sum, n) => sum + n, 0) / derivedConfidenceSeries.length).toFixed(3))
     : null;
   const confidence = derivedConfidence ?? soilConfidence;
-  const computedAtTsMs = [canopyPayload?.computed_at_ts_ms, qualityPayload?.computed_at_ts_ms, waterFlowPayload?.computed_at_ts_ms]
+  const computedAtTsMs = [
+    canopyTemperaturePayload?.computed_at_ts_ms,
+    evapotranspirationRiskPayload?.computed_at_ts_ms,
+    qualityPayload?.computed_at_ts_ms,
+    irrigationEffectivenessPayload?.computed_at_ts_ms,
+    leakRiskPayload?.computed_at_ts_ms,
+  ]
     .filter((x): x is number => Number.isFinite(x ?? null))
     .sort((a, b) => b - a)[0] ?? null;
-  const sourceObservedAtTsMs = [canopyPayload?.source_observed_at_ts_ms, qualityPayload?.source_observed_at_ts_ms, waterFlowPayload?.source_observed_at_ts_ms]
+  const sourceObservedAtTsMs = [
+    canopyTemperaturePayload?.source_observed_at_ts_ms,
+    evapotranspirationRiskPayload?.source_observed_at_ts_ms,
+    qualityPayload?.source_observed_at_ts_ms,
+    irrigationEffectivenessPayload?.source_observed_at_ts_ms,
+    leakRiskPayload?.source_observed_at_ts_ms,
+  ]
     .filter((x): x is number => Number.isFinite(x ?? null))
     .sort((a, b) => b - a)[0] ?? null;
   const sourceObservationIds = normalizeCodes([
-    ...(canopyPayload?.source_observation_ids_json ?? []),
+    ...(canopyTemperaturePayload?.source_observation_ids_json ?? []),
+    ...(evapotranspirationRiskPayload?.source_observation_ids_json ?? []),
     ...(qualityPayload?.source_observation_ids_json ?? []),
-    ...(waterFlowPayload?.source_observation_ids_json ?? []),
-    ...(irrigationPayload?.source_observation_ids_json ?? []),
+    ...(irrigationEffectivenessPayload?.source_observation_ids_json ?? []),
+    ...(leakRiskPayload?.source_observation_ids_json ?? []),
+    ...(irrigationNeedPayload?.source_observation_ids_json ?? []),
   ]);
+  // soil_indicators_json is an internal aggregate container.
+  // Stage-1 clients should consume a minimal whitelist from this container instead of flattening all keys.
   const overview: FieldSensingOverviewV1 = {
     tenant_id: params.tenant_id,
     project_id: params.project_id ?? null,
