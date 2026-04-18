@@ -1,3 +1,20 @@
+/**
+ * Mainline Contract:
+ * - operation 详情新流主口径：`operation_state_v1` 的 `/api/v1/operations/*`。
+ * - 新增/改造 operation 详情能力时，必须优先扩展本文件主路由契约。
+ *
+ * Stable Product Fields:
+ * - tenant_id / project_id / group_id 为稳定隔离字段，禁止弱化或旁路。
+ * - operation_id / operation_plan_id 等主键语义保持向后兼容。
+ *
+ * Forbidden New Dependencies:
+ * - 禁止新代码依赖 legacy/deprecated route。
+ * - 禁止把本路由能力下沉到历史兼容入口再反向回调。
+ *
+ * Successor:
+ * - 若未来发生版本迁移，必须在新版本文件中明确 successor 与迁移窗口；
+ *   在迁移完成前，本文件继续作为 `/api/v1/operations/*` 的主口径实现。
+ */
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
@@ -1039,6 +1056,7 @@ async function queryFactsForOperation(pool: Pool, tenant: TenantTriple, operatio
   return all;
 }
 
+// 新流必须走本路由：operation 详情主口径是 operation_state_v1 的 `/api/v1/operations/*`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool): void {
   app.addHook("onReady", async () => {
     await ensureRulePerformanceTable(pool);

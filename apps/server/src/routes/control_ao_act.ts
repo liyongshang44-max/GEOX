@@ -1,3 +1,20 @@
+/**
+ * Mainline Contract:
+ * - action 执行新流主口径：`/api/v1/actions/*`。
+ * - 新增 action 执行、回执、索引、重试能力必须优先进入该主路由族。
+ *
+ * Stable Product Fields:
+ * - tenant_id / project_id / group_id 为稳定隔离字段。
+ * - operation_id / operation_plan_id / act_task_id / idempotency_key 为稳定执行链路字段。
+ *
+ * Forbidden New Dependencies:
+ * - 禁止新代码依赖 legacy/deprecated route。
+ * - 禁止将新流程挂接到 `/api/control/ao_act/*` 等兼容入口。
+ *
+ * Successor:
+ * - 若后续升级 action API 版本，必须在 successor 中显式声明迁移策略；
+ *   迁移窗口内 `/api/v1/actions/*` 仍作为唯一主口径。
+ */
 // GEOX/apps/server/src/routes/control_ao_act.ts
 
 import type { FastifyInstance } from "fastify"; // Fastify instance typing
@@ -1135,6 +1152,7 @@ return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
 
 }
 
+// 新流必须走本路由：action 执行主口径是 `/api/v1/actions/*`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
   app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
@@ -1593,6 +1611,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
 
 }
 
+// 兼容层仅用于存量迁移，禁止新代码依赖 legacy/deprecated route。
 export function registerAoActLegacyRoutes(app: FastifyInstance, pool: Pool): void {
   // @deprecated - use /api/v1/*
   app.post("/api/control/ao_act/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, true));
@@ -1603,6 +1622,7 @@ export function registerAoActLegacyRoutes(app: FastifyInstance, pool: Pool): voi
 }
 
 // @deprecated - compatibility-only combined registrar; prefer explicit v1/legacy registration from server.ts.
+// 新流必须走 `registerAoActV1Routes`，本组合注册器仅为兼容用途，禁止新代码依赖 legacy/deprecated route。
 export function registerControlAoActRoutes(app: FastifyInstance, pool: Pool): void {
   registerAoActV1Routes(app, pool);
   registerAoActLegacyRoutes(app, pool);

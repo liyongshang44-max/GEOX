@@ -1,3 +1,19 @@
+/**
+ * Mainline Contract:
+ * - auth_v1 仅提供最小鉴权壳能力（login/logout/me/providers），不是完整 IAM。
+ * - 新流若需完整身份域能力，应接入独立 IAM/IdP，不在本文件扩展重型权限模型。
+ *
+ * Stable Product Fields:
+ * - actor_id / token_id / tenant_id / project_id / group_id 为稳定输出字段。
+ * - local_allowlist 与 external_idp 仅作为最小模式开关语义，不承诺 IAM 全功能。
+ *
+ * Forbidden New Dependencies:
+ * - 禁止新代码依赖 legacy/deprecated route。
+ * - 禁止将历史认证入口包装为本路由默认依赖。
+ *
+ * Successor:
+ * - 后续若替换为完整 IAM 网关，本文件保留最小壳/兼容层职责并显式声明 successor。
+ */
 import type { FastifyInstance } from "fastify";
 import { defaultAoActTokenFilePathV0, readTokenFileV0, requireAoActAuthV0 } from "../auth/ao_act_authz_v0.js";
 
@@ -28,6 +44,7 @@ function hostBase(req: any): string {
   return `${proto}://${host}`;
 }
 
+// 新流必须走本路由：auth 仅为最小壳，不是完整 IAM，且禁止新代码依赖 legacy/deprecated route。
 export function registerAuthV1Routes(app: FastifyInstance): void {
   app.get("/api/v1/auth/me", async (req, reply) => {
     const auth = requireAoActAuthV0(req, reply);

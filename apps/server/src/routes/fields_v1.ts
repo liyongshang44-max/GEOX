@@ -1,3 +1,19 @@
+/**
+ * Mainline Contract:
+ * - fields_v1 负责字段/地块主读写路由；operation 详情与 action 执行应分别走 `/api/v1/operations/*` 与 `/api/v1/actions/*` 主口径。
+ * - 涉及 field 关联的新流需先评估与 operation_state_v1、action v1 的主链协同。
+ *
+ * Stable Product Fields:
+ * - tenant_id / project_id / group_id 为稳定隔离字段。
+ * - field_id / device_id / season_id / geometry 等核心字段语义需保持兼容。
+ *
+ * Forbidden New Dependencies:
+ * - 禁止新代码依赖 legacy/deprecated route。
+ * - 禁止通过历史兼容路由旁路 field 主链路鉴权与隔离策略。
+ *
+ * Successor:
+ * - 若后续拆分 fields 子域版本，需明确 successor，并保证核心字段向后兼容。
+ */
 // GEOX/apps/server/src/routes/fields_v1.ts
 //
 // Sprint C1 + Sprint F1: Field/GIS routes, device binding, season projection, and field detail summary.
@@ -308,6 +324,7 @@ async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Sta
 /**
  * Register Field/GIS + Device Binding + Season routes.
  */
+// 新流必须走本路由（fields 子域）；同时禁止新代码依赖 legacy/deprecated route。
 export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Route registration entry.
   void ensureFieldSeasonProjectionV1(pool).catch((e: any) => { // Ensure upgraded repos also have the season table.
     app.log.error({ err: e }, "failed_to_ensure_field_season_projection_v1"); // Log startup issue instead of crashing boot.
