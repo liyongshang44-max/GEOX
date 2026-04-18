@@ -540,8 +540,10 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
         });
         read_model_refresh = {
           sensing_overview_status: refreshed.sensing_overview.status,
+          sensing_summary_stage1_status: refreshed.sensing_summary_stage1.status,
           fertility_state_status: refreshed.fertility_state.status,
           sensing_overview_refresh_tracking: refreshed.sensing_overview.refresh_tracking,
+          sensing_summary_stage1_refresh_tracking: refreshed.sensing_summary_stage1.refresh_tracking,
           fertility_state_refresh_tracking: refreshed.fertility_state.refresh_tracking,
         };
       } catch (e: any) {
@@ -1059,25 +1061,31 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       ok: true,
       field_id,
       sensing_overview: refreshed.sensing_overview.payload,
+      sensing_summary_stage1: refreshed.sensing_summary_stage1.payload,
       fertility_state: refreshed.fertility_state.payload,
       freshness: {
         sensing_overview: refreshed.sensing_overview.freshness,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.freshness,
         fertility_state: refreshed.fertility_state.freshness,
       },
       status: {
         sensing_overview: refreshed.sensing_overview.status,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.status,
         fertility_state: refreshed.fertility_state.status,
       },
       refresh_metrics: {
         sensing_overview: refreshed.sensing_overview.refresh_metrics,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_metrics,
         fertility_state: refreshed.fertility_state.refresh_metrics,
       },
       refresh_tracking: {
         sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_tracking,
         fertility_state: refreshed.fertility_state.refresh_tracking,
       },
       refresh_state: {
         sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_tracking,
         fertility_state: refreshed.fertility_state.refresh_tracking,
       },
     });
