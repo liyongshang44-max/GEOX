@@ -1,26 +1,26 @@
-export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = [
-  "soil_moisture_pct",
-  "ec_ds_m",
-  "fertility_index",
-  "n",
-  "p",
-  "k",
-] as const;
+import {
+  STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1,
+  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1,
+} from "./stage1_sensing_input_mapping_v1.js";
 
-export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = [
-  "soil_moisture_pct",
-  "ec_ds_m",
-  "fertility_index",
-  "n",
-  "p",
-  "k",
-] as const;
+export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1;
+
+export const STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS = STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1;
+
+export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1;
 
 export const STAGE1_INPUT_CONTRACT_LAYERS = {
+  // Layer-1 (source of truth): official telemetry/business canonical inputs for Stage-1.
   official_pipeline_input_whitelist: STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  // Layer-2: official aggregate field layer used by pipeline aggregation.
+  official_pipeline_aggregate_fields: STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS,
+  // Layer-3: customer summary display subset for soil/nutrient metrics.
   official_customer_summary_soil_metrics_subset: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
-  pipeline_uses: "official_pipeline_input_whitelist",
-  customer_summary_uses: "official_customer_summary_soil_metrics_subset",
+  source_of_truth_layer: "official_pipeline_input_whitelist",
+  aggregate_field_layer: "official_pipeline_aggregate_fields",
+  summary_display_subset_layer: "official_customer_summary_soil_metrics_subset",
+  source_of_truth_module: "stage1_sensing_input_mapping_v1",
 } as const;
 
 export const STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS = [

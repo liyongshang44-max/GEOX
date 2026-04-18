@@ -113,11 +113,13 @@ function buildRefreshed(field_id: string): any {
 }
 
 test("contract and mapping remain aligned on layered semantics", () => {
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.pipeline_uses, "official_pipeline_input_whitelist");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.customer_summary_uses, "official_customer_summary_soil_metrics_subset");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_layer, "official_pipeline_input_whitelist");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.aggregate_field_layer, "official_pipeline_aggregate_fields");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.summary_display_subset_layer, "official_customer_summary_soil_metrics_subset");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_module, "stage1_sensing_input_mapping_v1");
 
-  const pipelineSet = new Set(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
-  for (const metric of STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS) assert.ok(pipelineSet.has(metric));
+  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
+  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
 
   const allMappedDerivedStates = new Set(
     Object.values(STAGE1_SENSING_INPUT_MAPPING_V1).flatMap((entry) => entry.downstream_derived_states)
