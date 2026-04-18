@@ -206,7 +206,7 @@ function deriveObjectStoreKey(tenant_id_raw: string | null | undefined, job_id_r
   const job_id = normalizeId(job_id_raw) ?? "job_unknown"; // Stable job-safe segment.
   const export_format = normalizeExportFormat(export_format_raw); // Normalize extension source.
   const ext = export_format === "CSV" ? "csv" : export_format === "PDF" ? "pdf" : "json"; // Map to extension.
-  return `evidence-exports-v1/${tenant_id}/${job_id}/bundle.${ext}`; // Future object-store key contract.
+  return `${tenant_id}/${job_id}/bundle.${ext}`; // Object-store key is bucket-relative; never include bucket segment.
 } // End helper.
 
 function getEvidenceStorageMode(): "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT" { // Helper: normalize storage mode from env.
@@ -339,12 +339,26 @@ function buildObjectStoreDownloadPath(job_id_raw: string | null | undefined, par
   return `/api/v1/evidence-export/jobs/${encodeURIComponent(String(job_id_raw ?? ""))}/download?source=object_store&part=${encodeURIComponent(part)}`; // Authorized API path.
 } // End helper.
 
+function normalizeObjectStoreKey(key_raw: string | null | undefined, bucket_raw?: string | null): string | null { // Helper: normalize key so it stays bucket-relative.
+  const key = String(key_raw ?? "").trim().replace(/^\/+/, ""); // Remove optional leading slash.
+  if (!key) return null;
+  const bucket = String(bucket_raw ?? "").trim().replace(/^\/+|\/+$/g, ""); // Normalize bucket token.
+  if (!bucket) return key;
+  const bucketPrefix = `${bucket}/`;
+  if (key === bucket) return ""; // Defensive: invalid but deterministic.
+  if (key.startsWith(bucketPrefix)) return key.slice(bucketPrefix.length); // Strip accidental embedded bucket prefix.
+  return key; // Already bucket-relative.
+}
+
 function objectStorePartKeysFromRow(row: any, export_format: ExportFormat): { bundleKey: string; manifestKey: string; checksumsKey: string } { // Helper: derive S3 object keys for all evidence-pack parts.
+  const s3cfg = getS3CompatConfig();
   const keyFromRow = typeof row?.pack_object_store_key === "string" && row.pack_object_store_key.trim()
     ? row.pack_object_store_key.trim()
     : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format);
-  const keyPrefix = keyFromRow.split("/").slice(0, -1).join("/");
-  const bundleKey = keyFromRow;
+  const normalizedKey = normalizeObjectStoreKey(keyFromRow, s3cfg?.bucket);
+  const safeKey = normalizedKey && normalizedKey.length > 0 ? normalizedKey : deriveObjectStoreKey(row?.tenant_id, row?.job_id, export_format);
+  const keyPrefix = safeKey.split("/").slice(0, -1).join("/");
+  const bundleKey = safeKey;
   const manifestKey = `${keyPrefix}/manifest.json`;
   const checksumsKey = `${keyPrefix}/sha256.txt`;
   return { bundleKey, manifestKey, checksumsKey };
@@ -1244,8 +1258,8 @@ async function runJob(pool: Pool, tenant_id: string, job_id: string, scope: Expo
       copyFileWithParents(manifest_path, object_store_manifest_path); // Mirror manifest.
       copyFileWithParents(checksums_path, object_store_checksums_path); // Mirror checksums.
     } else if (storage_mode === "S3_COMPAT" && s3cfg) { // Upload evidence pack files to S3-compatible object storage.
-      const keyPrefix = object_store_key.split("/").slice(0, -1).join("/"); // Prefix for sidecar files.
-      const bundleKey = object_store_key;
+      const bundleKey = normalizeObjectStoreKey(object_store_key, s3cfg.bucket) || deriveObjectStoreKey(tenant_id, job_id, export_format);
+      const keyPrefix = bundleKey.split("/").slice(0, -1).join("/"); // Prefix for sidecar files.
       const manifestKey = `${keyPrefix}/manifest.json`;
       const checksumsKey = `${keyPrefix}/sha256.txt`;
       console.info(`[evidence-export][s3] upload target bucket=${s3cfg.bucket} endpoint=${s3cfg.endpoint} job_id=${job_id}`);

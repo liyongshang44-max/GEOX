@@ -68,6 +68,7 @@ jobs:
           GEOX_AO_ACT_TOKEN=$TOKEN
           GEOX_TOKEN=$TOKEN
           GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
+          GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT=http://127.0.0.1:9000
           MINIO_ROOT_USER=minioadmin
           MINIO_ROOT_PASSWORD=minioadmin
           EOF
