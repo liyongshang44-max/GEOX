@@ -82,7 +82,8 @@ async function requestJson(path, init = {}) {
 }
 
 async function assertDownload(path) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const requestUrl = `${BASE_URL}${path}`;
+  const res = await fetch(requestUrl, {
     method: "GET",
     redirect: "manual",
     headers: { authorization: AUTH_HEADER },
@@ -90,10 +91,12 @@ async function assertDownload(path) {
   if (res.status === 302 || res.status === 307) {
     const location = String(res.headers.get("location") || "");
     assert(location.length > 0, `redirect location missing for ${path}`);
+    console.log(`[smoke] final fetch url (${path}) = ${location}`);
     const redirected = await fetch(location, { method: "GET" });
     assert(redirected.ok, `redirect target download failed for ${path}: HTTP_${redirected.status}`);
     return;
   }
+  console.log(`[smoke] final fetch url (${path}) = ${requestUrl}`);
   assert(res.ok, `download failed for ${path}: HTTP_${res.status}`);
 }
 
@@ -110,6 +113,7 @@ async function main() {
     method: "POST",
     body: JSON.stringify(createPayload),
   });
+  console.log("[smoke] create response =", JSON.stringify(createRes, null, 2));
 
   const jobId = String(createRes?.job_id || "").trim();
   assert(jobId, `job_id missing in create response: ${JSON.stringify(createRes)}`);
@@ -127,9 +131,18 @@ async function main() {
   }
 
   assert(job && String(job.status) === "DONE", `job not DONE within ${TIMEOUT_MS}ms`);
+  console.log("[smoke] final polled job =", JSON.stringify(job, null, 2));
   const delivery = job?.evidence_pack?.delivery || {};
+  console.log("[smoke] artifact_path =", String(job?.artifact_path || ""));
+  console.log("[smoke] object_store_bundle_path =", String(job?.object_store_bundle_path || ""));
+  console.log("[smoke] object_store_manifest_path =", String(job?.object_store_manifest_path || ""));
+  console.log("[smoke] pack_object_store_key =", String(job?.pack_object_store_key || ""));
   assert(String(delivery.storage_mode) === "S3_COMPAT", `expected storage_mode S3_COMPAT, got ${delivery.storage_mode}`);
   assert(typeof delivery.object_store_key === "string" && delivery.object_store_key.length > 0, "object_store_key missing");
+  const partUrls = delivery?.object_store_part_download_urls || {};
+  console.log("[smoke] final fetch url (bundle) =", String(partUrls?.bundle || `${BASE_URL}/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}/download?part=bundle`));
+  console.log("[smoke] final fetch url (manifest) =", String(partUrls?.manifest || `${BASE_URL}/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}/download?part=manifest`));
+  console.log("[smoke] final fetch url (checksums) =", String(partUrls?.checksums || `${BASE_URL}/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}/download?part=checksums`));
 
   await assertDownload(`/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}/download?part=bundle`);
   await assertDownload(`/api/v1/evidence-export/jobs/${encodeURIComponent(jobId)}/download?part=manifest`);
