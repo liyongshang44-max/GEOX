@@ -21,12 +21,13 @@ import {
 
 test("stage1 sensing contract: official input/status/customer whitelist are stable", () => {
   assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS, [
-    "soil_moisture_pct",
-    "ec_ds_m",
-    "fertility_index",
-    "n",
-    "p",
-    "k",
+    "soil_moisture",
+    "canopy_temperature",
+    "soil_ec",
+    "air_temperature",
+    "air_humidity",
+    "water_flow_rate",
+    "water_pressure",
   ]);
 
   assert.deepEqual(STAGE1_OFFICIAL_DERIVED_STATES, [
@@ -49,13 +50,12 @@ test("stage1 sensing contract: official input/status/customer whitelist are stab
   assert.deepEqual(STAGE1_REFRESH_SEMANTICS.freshness, ["fresh", "stale", "unknown"]);
 });
 
-test("stage1 sensing contract: summary soil metrics are an explicit subset of pipeline input whitelist", () => {
-  const pipelineWhitelist = new Set<string>(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
-  for (const metric of STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS) {
-    assert.ok(pipelineWhitelist.has(metric), `summary soil metric must be in pipeline whitelist: ${metric}`);
-  }
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.pipeline_uses, "official_pipeline_input_whitelist");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.customer_summary_uses, "official_customer_summary_soil_metrics_subset");
+test("stage1 sensing contract: three-layer contracts remain explicit and non-confused", () => {
+  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
+  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_layer, "official_pipeline_input_whitelist");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.aggregate_field_layer, "official_pipeline_aggregate_fields");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.summary_display_subset_layer, "official_customer_summary_soil_metrics_subset");
 });
 
 test("stage1 sensing contract: runtime status and sensing diagnostic boundaries are explicit", () => {

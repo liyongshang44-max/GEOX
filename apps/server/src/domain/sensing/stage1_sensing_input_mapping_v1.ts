@@ -1,34 +1,6 @@
 import type { TelemetryMetricNameV1 } from "@geox/contracts";
 
-export type Stage1OfficialCanonicalInputMetricV1 =
-  | "soil_moisture"
-  | "canopy_temperature"
-  | "soil_ec"
-  | "air_temperature"
-  | "air_humidity"
-  | "water_flow_rate"
-  | "water_pressure";
-
-export type Stage1SensingInputMappingEntryV1 = {
-  metric: Stage1OfficialCanonicalInputMetricV1;
-  observation_canonical_fields: readonly string[];
-  pipeline_aggregate_fields: readonly string[];
-  downstream_derived_states: readonly string[];
-  enters_customer_summary: boolean;
-  internal_summary_only: boolean;
-};
-
-export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1: readonly Stage1OfficialCanonicalInputMetricV1[] = [
-  "soil_moisture",
-  "canopy_temperature",
-  "soil_ec",
-  "air_temperature",
-  "air_humidity",
-  "water_flow_rate",
-  "water_pressure",
-] as const;
-
-export const STAGE1_SENSING_INPUT_MAPPING_V1: Readonly<Record<Stage1OfficialCanonicalInputMetricV1, Stage1SensingInputMappingEntryV1>> = {
+const STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL = {
   soil_moisture: {
     metric: "soil_moisture",
     observation_canonical_fields: ["soil_moisture", "soil_moisture_pct"],
@@ -86,6 +58,40 @@ export const STAGE1_SENSING_INPUT_MAPPING_V1: Readonly<Record<Stage1OfficialCano
     internal_summary_only: false,
   },
 } as const;
+
+export type Stage1OfficialCanonicalInputMetricV1 = keyof typeof STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL;
+
+export type Stage1SensingInputMappingEntryV1 = {
+  metric: Stage1OfficialCanonicalInputMetricV1;
+  observation_canonical_fields: readonly string[];
+  pipeline_aggregate_fields: readonly string[];
+  downstream_derived_states: readonly string[];
+  enters_customer_summary: boolean;
+  internal_summary_only: boolean;
+};
+
+export const STAGE1_SENSING_INPUT_MAPPING_V1: Readonly<Record<Stage1OfficialCanonicalInputMetricV1, Stage1SensingInputMappingEntryV1>> =
+  STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL;
+
+// Layer-1 source of truth: Stage-1 official telemetry/business canonical inputs.
+export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1 = Object.freeze(
+  Object.keys(STAGE1_SENSING_INPUT_MAPPING_V1) as Stage1OfficialCanonicalInputMetricV1[]
+);
+
+// Layer-2: official pipeline aggregate fields used by Stage-1 aggregations.
+export const STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1 = Object.freeze(
+  Array.from(new Set(Object.values(STAGE1_SENSING_INPUT_MAPPING_V1).flatMap((entry) => entry.pipeline_aggregate_fields)))
+);
+
+// Layer-3: official summary soil metrics subset displayed in customer summary.
+export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1 = [
+  "soil_moisture_pct",
+  "ec_ds_m",
+  "fertility_index",
+  "n",
+  "p",
+  "k",
+] as const;
 
 export function isStage1OfficialPipelineCanonicalInputMetricV1(metric: string): metric is Stage1OfficialCanonicalInputMetricV1 {
   return Object.prototype.hasOwnProperty.call(STAGE1_SENSING_INPUT_MAPPING_V1, metric);
