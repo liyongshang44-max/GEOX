@@ -74,17 +74,17 @@ export const STAGE1_SENSING_INPUT_MAPPING_V1: Readonly<Record<Stage1OfficialCano
   STAGE1_SENSING_INPUT_MAPPING_V1_INTERNAL;
 
 // Layer-1 source of truth: Stage-1 official telemetry/business canonical inputs.
-export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1 = Object.freeze(
+export const STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1 = Object.freeze(
   Object.keys(STAGE1_SENSING_INPUT_MAPPING_V1) as Stage1OfficialCanonicalInputMetricV1[]
 );
 
 // Layer-2: official pipeline aggregate fields used by Stage-1 aggregations.
-export const STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1 = Object.freeze(
+export const STAGE1_PIPELINE_AGGREGATE_LAYER_FIELDS_V1 = Object.freeze(
   Array.from(new Set(Object.values(STAGE1_SENSING_INPUT_MAPPING_V1).flatMap((entry) => entry.pipeline_aggregate_fields)))
 );
 
 // Layer-3: official summary soil metrics subset displayed in customer summary.
-export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1 = [
+export const STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_V1 = [
   "soil_moisture_pct",
   "ec_ds_m",
   "fertility_index",

@@ -2,14 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
+  STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1,
   STAGE1_SENSING_INPUT_MAPPING_V1,
   getStage1SensingInputMappingEntryV1,
   mapStage1ObservationMetricToPipelineObservationV1,
 } from "./stage1_sensing_input_mapping_v1.js";
 
 test("stage1 sensing input mapping v1 covers all official canonical metrics", () => {
-  for (const metric of STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1) {
+  for (const metric of STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1) {
     const mapping = STAGE1_SENSING_INPUT_MAPPING_V1[metric];
     assert.ok(mapping, `missing mapping for ${metric}`);
     assert.equal(mapping.metric, metric);
@@ -68,7 +68,7 @@ test("stage1 input mapping defines stable canonical -> observation/pipeline targ
     },
   };
 
-  for (const metric of STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1) {
+  for (const metric of STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1) {
     const entry = getStage1SensingInputMappingEntryV1(metric);
     assert.ok(entry, `missing mapping for ${metric}`);
     assert.deepEqual(entry?.observation_canonical_fields, expected[metric].observation);

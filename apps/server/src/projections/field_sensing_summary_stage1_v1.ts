@@ -1,7 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import {
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
-  STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT,
+  STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_CONTRACT,
   type Stage1OfficialSummarySoilMetric,
   type Stage1Freshness,
 } from "../domain/sensing/stage1_sensing_contract_v1.js";
@@ -94,7 +94,7 @@ const STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS = {
   leak_risk: toRiskLevel,
 } as const satisfies Record<Stage1CustomerSummaryField, (v: unknown) => unknown>;
 
-const STAGE1_SUMMARY_SOIL_METRICS_ORDERED_SUBSET = STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT.ordered_metrics;
+const STAGE1_SUMMARY_SOIL_METRICS_ORDERED_SUBSET = STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_CONTRACT.ordered_metrics;
 
 // Explicit source->summary mapping for customer-facing soil summary metrics.
 // This mapping is summary-subset specific and intentionally decoupled from pipeline input whitelist semantics.
@@ -213,7 +213,7 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
 
   // Overview is an internal aggregation source.
   // Stage-1 summary contract remains authoritative and must be built by explicit summary-subset contract rules.
-  // STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT is customer-facing display contract only; it is not pipeline input contract.
+  // STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_CONTRACT is customer-facing display contract only; it is not pipeline input contract.
   // Overview changes must NOT silently expand stage-1 summary fields.
   const overview = await refreshFieldSensingOverviewV1(db, params);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();

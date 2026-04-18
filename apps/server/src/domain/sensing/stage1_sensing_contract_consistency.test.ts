@@ -4,18 +4,18 @@ import assert from "node:assert/strict";
 import {
   STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE,
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
-  STAGE1_INPUT_CONTRACT_LAYERS,
+  STAGE1_CONTRACT_METRIC_LAYERS,
   STAGE1_OFFICIAL_DERIVED_STATES,
-  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  STAGE1_PIPELINE_INPUT_WHITELIST_METRICS,
   STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE,
-  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET,
   STAGE1_REFRESH_SEMANTICS,
   STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS,
   STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS,
   STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS,
 } from "./stage1_sensing_contract_v1.js";
 import {
-  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
+  STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1,
   STAGE1_SENSING_INPUT_MAPPING_V1,
 } from "./stage1_sensing_input_mapping_v1.js";
 import { refreshFieldSensingSummaryStage1V1 } from "../../projections/field_sensing_summary_stage1_v1.js";
@@ -95,7 +95,7 @@ function buildRefreshed(field_id: string): any {
         sensor_quality_level: "GOOD",
         irrigation_effectiveness: "high",
         leak_risk: "low",
-        official_soil_metrics_json: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.map((metric) => ({
+        official_soil_metrics_json: STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET.map((metric) => ({
           metric, value: metric === "soil_moisture_pct" ? 35 : null, confidence: metric === "soil_moisture_pct" ? 0.9 : null, observed_at_ts_ms: metric === "soil_moisture_pct" ? now - 1000 : null, freshness: metric === "soil_moisture_pct" ? "fresh" : "unknown",
         })),
         computed_at_ts_ms: now - 5000,
@@ -113,15 +113,15 @@ function buildRefreshed(field_id: string): any {
 }
 
 test("contract and mapping remain aligned on layered semantics", () => {
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_layer, "official_pipeline_input_whitelist");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.aggregate_field_layer, "official_pipeline_aggregate_fields");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.summary_display_subset_layer, "official_customer_summary_soil_metrics_subset");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_module, "stage1_sensing_input_mapping_v1");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.source_of_truth_layer, "pipeline_input_whitelist_metrics");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.aggregate_field_layer, "pipeline_aggregate_layer_fields");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.summary_display_subset_layer, "customer_summary_soil_metric_subset");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.source_of_truth_module, "stage1_sensing_input_mapping_v1");
 
-  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
-  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
+  assert.deepEqual(STAGE1_CONTRACT_METRIC_LAYERS.pipeline_input_whitelist_metrics, STAGE1_PIPELINE_INPUT_WHITELIST_METRICS);
+  assert.deepEqual(STAGE1_CONTRACT_METRIC_LAYERS.customer_summary_soil_metric_subset, STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET);
   assert.deepEqual(
-    [...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS].sort(),
+    [...STAGE1_PIPELINE_INPUT_WHITELIST_METRICS].sort(),
     Object.keys(STAGE1_SENSING_INPUT_MAPPING_V1).sort(),
     "official pipeline canonical input whitelist must equal official mapping metric keys"
   );
@@ -135,7 +135,7 @@ test("contract and mapping remain aligned on layered semantics", () => {
   allMappedDerivedStates.add(STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.derived_state_type);
   for (const state of STAGE1_OFFICIAL_DERIVED_STATES) assert.ok(allMappedDerivedStates.has(state), `derived state missing from mapping/official diagnostics contract: ${state}`);
 
-  assert.ok(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1.length > 0);
+  assert.ok(STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1.length > 0);
   for (const field of STAGE1_CUSTOMER_SUMMARY_FIELDS) {
     assert.ok(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields.includes(field));
   }
@@ -161,7 +161,7 @@ test("contract and projection remain aligned for summary payload shape and soil 
   assert.deepEqual(metricKeys, [...STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE.ordered_metrics]);
   assert.deepEqual(
     [...metricKeys].sort(),
-    [...STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS].sort(),
+    [...STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET].sort(),
     "projection summary soil metric subset must match contract subset exactly"
   );
 

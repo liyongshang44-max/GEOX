@@ -2,9 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
-  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
-  STAGE1_INPUT_CONTRACT_LAYERS,
+  STAGE1_PIPELINE_INPUT_WHITELIST_METRICS,
+  STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET,
+  STAGE1_CONTRACT_METRIC_LAYERS,
   STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE,
   STAGE1_INTERNAL_SUMMARY_CONTRACT_SHAPE,
   STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS,
@@ -20,7 +20,7 @@ import {
 } from "./stage1_sensing_contract_v1.js";
 
 test("stage1 sensing contract: official input/status/customer whitelist are stable", () => {
-  assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS, [
+  assert.deepEqual(STAGE1_PIPELINE_INPUT_WHITELIST_METRICS, [
     "soil_moisture",
     "canopy_temperature",
     "soil_ec",
@@ -51,11 +51,11 @@ test("stage1 sensing contract: official input/status/customer whitelist are stab
 });
 
 test("stage1 sensing contract: three-layer contracts remain explicit and non-confused", () => {
-  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
-  assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_layer, "official_pipeline_input_whitelist");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.aggregate_field_layer, "official_pipeline_aggregate_fields");
-  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.summary_display_subset_layer, "official_customer_summary_soil_metrics_subset");
+  assert.deepEqual(STAGE1_CONTRACT_METRIC_LAYERS.pipeline_input_whitelist_metrics, STAGE1_PIPELINE_INPUT_WHITELIST_METRICS);
+  assert.deepEqual(STAGE1_CONTRACT_METRIC_LAYERS.customer_summary_soil_metric_subset, STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET);
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.source_of_truth_layer, "pipeline_input_whitelist_metrics");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.aggregate_field_layer, "pipeline_aggregate_layer_fields");
+  assert.equal(STAGE1_CONTRACT_METRIC_LAYERS.summary_display_subset_layer, "customer_summary_soil_metric_subset");
 });
 
 test("stage1 sensing contract: runtime status and sensing diagnostic boundaries are explicit", () => {
