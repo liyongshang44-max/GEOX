@@ -1,6 +1,6 @@
 import type { Pool, PoolClient } from "pg";
 import {
-  STAGE1_OFFICIAL_INPUT_METRICS,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
   type Stage1Freshness,
 } from "../domain/sensing/stage1_sensing_contract_v1.js";
 import { refreshFieldSensingOverviewV1 } from "./field_sensing_overview_v1.js";
@@ -16,7 +16,7 @@ type SoilIndicatorLike = {
 };
 
 export type Stage1SoilMetricSummaryItemV1 = {
-  metric: typeof STAGE1_OFFICIAL_INPUT_METRICS[number];
+  metric: typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number];
   value: number | null;
   confidence: number | null;
   observed_at_ts_ms: number | null;
@@ -61,11 +61,11 @@ function pickOfficialSoilMetrics(soilIndicators: unknown): Stage1SoilMetricSumma
   for (const row of rows) {
     const metric = String(row?.metric ?? "").trim();
     if (!metric) continue;
-    if (!STAGE1_OFFICIAL_INPUT_METRICS.includes(metric as typeof STAGE1_OFFICIAL_INPUT_METRICS[number])) continue;
+    if (!STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.includes(metric as typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number])) continue;
     if (!byMetric.has(metric)) byMetric.set(metric, row);
   }
 
-  return STAGE1_OFFICIAL_INPUT_METRICS.map((metric) => {
+  return STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.map((metric) => {
     const row = byMetric.get(metric);
     return {
       metric,

@@ -1,4 +1,4 @@
-export const STAGE1_OFFICIAL_INPUT_METRICS = [
+export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = [
   "soil_moisture_pct",
   "ec_ds_m",
   "fertility_index",
@@ -6,6 +6,22 @@ export const STAGE1_OFFICIAL_INPUT_METRICS = [
   "p",
   "k",
 ] as const;
+
+export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = [
+  "soil_moisture_pct",
+  "ec_ds_m",
+  "fertility_index",
+  "n",
+  "p",
+  "k",
+] as const;
+
+export const STAGE1_INPUT_CONTRACT_LAYERS = {
+  official_pipeline_input_whitelist: STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  official_customer_summary_soil_metrics_subset: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  pipeline_uses: "official_pipeline_input_whitelist",
+  customer_summary_uses: "official_customer_summary_soil_metrics_subset",
+} as const;
 
 export const STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS = [
   "soil_moisture",
@@ -92,7 +108,7 @@ export const STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES = {
 } as const;
 
 export const STAGE1_ALL_SENSING_INPUT_METRICS = [
-  ...STAGE1_OFFICIAL_INPUT_METRICS,
+  ...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
   ...STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS,
 ] as const;
 
@@ -133,6 +149,14 @@ export const STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY = {
 
 export function isForbiddenDirectSensorQualityInputV1(field: string): boolean {
   return (STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.forbidden_direct_inputs as readonly string[]).includes(String(field ?? "").trim());
+}
+
+export function isStage1OfficialPipelineCanonicalInputMetricV1(metric: string): boolean {
+  return (STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS as readonly string[]).includes(String(metric ?? "").trim());
+}
+
+export function isStage1OfficialSummarySoilMetricV1(metric: string): boolean {
+  return (STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS as readonly string[]).includes(String(metric ?? "").trim());
 }
 
 export type Stage1RefreshStatus = typeof STAGE1_REFRESH_SEMANTICS.status[number];
