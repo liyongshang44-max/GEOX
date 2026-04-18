@@ -36,6 +36,9 @@ class FakePool {
     if (sql.includes("INSERT INTO field_sensing_overview_v1")) {
       return { rows: [] };
     }
+    if (sql.includes("INSERT INTO field_sensing_summary_stage1_v1")) {
+      return { rows: [] };
+    }
 
     if (sql.includes("INSERT INTO field_fertility_state_v1")) {
       return { rows: [] };
@@ -57,19 +60,26 @@ test("refresh read models: compatibility-only irrigation_need_level does not sat
 
   assert.equal(output.sensing_overview.status, "no_data");
   assert.equal(output.sensing_overview.freshness, "unknown");
+  assert.equal(output.sensing_summary_stage1.status, "no_data");
+  assert.equal(output.sensing_summary_stage1.freshness, "unknown");
 
-  const sensingPayload = output.sensing_overview.payload;
-  assert.ok(sensingPayload);
-  assert.equal(sensingPayload?.irrigation_need_level, "HIGH");
+  const sensingOverviewPayload = output.sensing_overview.payload;
+  assert.ok(sensingOverviewPayload);
+  assert.equal(sensingOverviewPayload?.irrigation_need_level, "HIGH");
 
-  // official stage-1 sensing summary fields remain empty.
-  assert.deepEqual(sensingPayload?.soil_indicators_json, []);
-  assert.equal(sensingPayload?.canopy_temp_status, null);
-  assert.equal(sensingPayload?.evapotranspiration_risk, null);
-  assert.equal(sensingPayload?.sensor_quality_level, null);
-  assert.equal(sensingPayload?.sensor_quality, null);
-  assert.equal(sensingPayload?.irrigation_effectiveness, null);
-  assert.equal(sensingPayload?.leak_risk, null);
-  assert.equal(sensingPayload?.computed_at_ts_ms, null);
-  assert.equal(sensingPayload?.source_observed_at_ts_ms, null);
+  const sensingSummaryPayload = output.sensing_summary_stage1.payload;
+  assert.ok(sensingSummaryPayload);
+
+  // official stage-1 sensing summary fields remain empty and compatibility-only fields are excluded.
+  assert.equal((sensingSummaryPayload as any)?.sensor_quality, undefined);
+  assert.equal((sensingSummaryPayload as any)?.irrigation_need_level, undefined);
+  assert.equal((sensingSummaryPayload as any)?.soil_indicators_json, undefined);
+  assert.ok(Array.isArray(sensingSummaryPayload?.official_soil_metrics_json));
+  assert.equal(sensingSummaryPayload?.official_soil_metrics_json.length, 6);
+  assert.equal(sensingSummaryPayload?.canopy_temp_status, null);
+  assert.equal(sensingSummaryPayload?.evapotranspiration_risk, null);
+  assert.equal(sensingSummaryPayload?.sensor_quality_level, null);
+  assert.equal(sensingSummaryPayload?.irrigation_effectiveness, null);
+  assert.equal(sensingSummaryPayload?.leak_risk, null);
+  assert.equal(sensingSummaryPayload?.computed_at_ts_ms, null);
 });
