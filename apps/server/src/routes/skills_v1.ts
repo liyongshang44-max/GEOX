@@ -26,7 +26,10 @@ import { projectSkillRegistryReadV1, querySkillBindingProjectionV1, querySkillRe
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 const SKILLS_API_CONTRACT_VERSION = "2026-04-06";
-const SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT = "/api/v1/skills/bindings/override";
+const SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT = "/api/v1/skills";
+const SKILLS_LEGACY_RUNS_READ_SUCCESSOR_ENDPOINT = "/api/v1/skill-runs";
+const SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT = "/api/v1/skills/bindings/override";
+const SKILLS_DEPRECATION_SUNSET = "Wed, 30 Sep 2026 00:00:00 GMT";
 
 
 type SkillRow = {
@@ -101,6 +104,12 @@ function sendSkillsResponse(reply: any, payload: Record<string, unknown>) {
   });
 }
 
+function setSkillsLegacyDeprecationHeaders(reply: any, successorEndpoint: string) {
+  reply.header("Deprecation", "true");
+  reply.header("Link", `<${successorEndpoint}>; rel="successor-version"`);
+  reply.header("Sunset", SKILLS_DEPRECATION_SUNSET);
+}
+
 function sendSkillsInternalError(reply: any, e: unknown) {
   const message = e instanceof Error ? e.message : String(e);
   if (message.includes("INVALID_TRIGGER_STAGE")) {
@@ -128,18 +137,24 @@ function sendSkillsInternalError(reply: any, e: unknown) {
   });
 }
 
-// 新流必须走本路由：skills 主口径是 bindings/override + `/api/v1/skill-runs`，并且禁止新代码依赖 legacy/deprecated route。
+// 主推口径：
+// - 查询：`GET /api/v1/skills` + `GET /api/v1/skill-runs`
+// - 绑定治理：`POST/GET /api/v1/skills/bindings` + `POST /api/v1/skills/bindings/override`
+// 新流必须走本路由，禁止新代码依赖 legacy/deprecated route。
 export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/registry", async (req, reply) => {
     const query = (req as any).url?.includes("?") ? String((req as any).url).slice(String((req as any).url).indexOf("?")) : "";
-    const location = `/api/v1/skills${query}`;
+    const location = `${SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT}${query}`;
+    setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT);
     return reply
       .code(301)
       .header("Location", location)
       .send({
         ok: true,
         deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
         redirect_to: location,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
   });
@@ -202,7 +217,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         ok: false,
         error: message,
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     }
@@ -275,16 +290,14 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         ok: false,
         error: message,
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     }
   });
 
   app.get("/api/v1/skills/runs", async (req, reply) => {
-    reply.header("Deprecation", "true");
-    reply.header("Link", "</api/v1/skill-runs>; rel=\"successor-version\"");
-    reply.header("Sunset", "Wed, 30 Sep 2026 00:00:00 GMT");
+    setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_RUNS_READ_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
       if (!auth) return;
@@ -328,6 +341,9 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
       const total = Number(countQ.rows?.[0]?.total ?? 0);
       return sendSkillsResponse(reply, {
         ok: true,
+        deprecated: true,
+        successor_endpoint: SKILLS_LEGACY_RUNS_READ_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
         page,
         page_size,
         total,
@@ -352,7 +368,8 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         ok: false,
         error: message,
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_RUNS_READ_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     }
@@ -506,6 +523,7 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   });
 
   app.post("/api/v1/skills/:skill_id/enable", async (req, reply) => {
+    setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
@@ -518,7 +536,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
           ok: false,
           error: "INVALID_SKILL_ID",
           deprecated: true,
-          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+          write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          sunset_at: SKILLS_DEPRECATION_SUNSET,
           api_contract_version: SKILLS_API_CONTRACT_VERSION,
         });
       }
@@ -538,7 +559,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
           ok: false,
           error: "SKILL_NOT_FOUND",
           deprecated: true,
-          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+          write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          sunset_at: SKILLS_DEPRECATION_SUNSET,
           api_contract_version: SKILLS_API_CONTRACT_VERSION,
         });
       }
@@ -554,7 +578,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         occurred_at: appended.occurred_at,
         status: "ACTIVE",
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+        write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -562,13 +589,17 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         ok: false,
         error: message,
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+        write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     }
   });
 
   app.post("/api/v1/skills/:skill_id/disable", async (req, reply) => {
+    setSkillsLegacyDeprecationHeaders(reply, SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT);
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
@@ -581,7 +612,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
           ok: false,
           error: "INVALID_SKILL_ID",
           deprecated: true,
-          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+          write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          sunset_at: SKILLS_DEPRECATION_SUNSET,
           api_contract_version: SKILLS_API_CONTRACT_VERSION,
         });
       }
@@ -601,7 +635,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
           ok: false,
           error: "SKILL_NOT_FOUND",
           deprecated: true,
-          successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+          successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+          write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+          sunset_at: SKILLS_DEPRECATION_SUNSET,
           api_contract_version: SKILLS_API_CONTRACT_VERSION,
         });
       }
@@ -617,7 +654,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         occurred_at: appended.occurred_at,
         status: "DISABLED",
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+        write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
       });
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
@@ -625,7 +665,10 @@ export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
         ok: false,
         error: message,
         deprecated: true,
-        successor_endpoint: SKILLS_LEGACY_MUTATION_SUCCESSOR_ENDPOINT,
+        successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        read_successor_endpoint: SKILLS_LEGACY_READ_SUCCESSOR_ENDPOINT,
+        write_successor_endpoint: SKILLS_LEGACY_MUTATION_WRITE_SUCCESSOR_ENDPOINT,
+        sunset_at: SKILLS_DEPRECATION_SUNSET,
         api_contract_version: SKILLS_API_CONTRACT_VERSION,
       });
     }
