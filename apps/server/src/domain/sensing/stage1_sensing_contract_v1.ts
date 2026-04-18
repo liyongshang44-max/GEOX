@@ -1,4 +1,4 @@
-export const STAGE1_OFFICIAL_INPUT_METRICS = [
+export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = [
   "soil_moisture_pct",
   "ec_ds_m",
   "fertility_index",
@@ -6,6 +6,22 @@ export const STAGE1_OFFICIAL_INPUT_METRICS = [
   "p",
   "k",
 ] as const;
+
+export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = [
+  "soil_moisture_pct",
+  "ec_ds_m",
+  "fertility_index",
+  "n",
+  "p",
+  "k",
+] as const;
+
+export const STAGE1_INPUT_CONTRACT_LAYERS = {
+  official_pipeline_input_whitelist: STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  official_customer_summary_soil_metrics_subset: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  pipeline_uses: "official_pipeline_input_whitelist",
+  customer_summary_uses: "official_customer_summary_soil_metrics_subset",
+} as const;
 
 export const STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS = [
   "soil_moisture",
@@ -71,6 +87,117 @@ export const STAGE1_REFRESH_SEMANTICS = {
   freshness: ["fresh", "stale", "unknown"] as const,
 } as const;
 
+export const STAGE1_SUMMARY_FIELD_NULLABILITY = {
+  customer_facing: {
+    tenant_id: false,
+    project_id: true,
+    group_id: true,
+    field_id: false,
+    freshness: false,
+    confidence: true,
+    canopy_temp_status: true,
+    evapotranspiration_risk: true,
+    sensor_quality_level: true,
+    irrigation_effectiveness: true,
+    leak_risk: true,
+    official_soil_metrics_json: false,
+    computed_at_ts_ms: true,
+    updated_ts_ms: false,
+  },
+  internal: {
+    sensor_quality: true,
+    irrigation_action_hint: true,
+    source_observed_at_ts_ms: true,
+    source_observation_ids_json: false,
+    explanation_codes_json: false,
+    soil_indicators_json: false,
+    irrigation_need_level: true,
+  },
+} as const;
+
+export const STAGE1_SUMMARY_DISPLAY_ONLY_FIELDS = [
+  "canopy_temp_status",
+  "evapotranspiration_risk",
+  "sensor_quality_level",
+  "irrigation_effectiveness",
+  "leak_risk",
+] as const;
+
+export const STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS = [
+  "sensor_quality",
+  "irrigation_action_hint",
+  "source_observed_at_ts_ms",
+  "source_observation_ids_json",
+  "explanation_codes_json",
+  "soil_indicators_json",
+  "irrigation_need_level",
+] as const;
+
+export const STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS = [
+  ...STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS,
+  "sensing_overview",
+  "fertility_state",
+] as const;
+
+export const STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE = {
+  container_field: "official_soil_metrics_json",
+  ordered_metrics: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  item_shape: {
+    metric: "stage1_official_summary_soil_metric",
+    value: "number|null",
+    confidence: "number|null",
+    observed_at_ts_ms: "number|null",
+    freshness: STAGE1_REFRESH_SEMANTICS.freshness,
+  },
+  item_nullability: {
+    metric: false,
+    value: true,
+    confidence: true,
+    observed_at_ts_ms: true,
+    freshness: false,
+  },
+} as const;
+
+export const STAGE1_SUMMARY_REFRESH_CARRIAGE_SEMANTICS = {
+  summary_payload_fields: {
+    freshness: "Stage-1 summary freshness on payload",
+    confidence: "Stage-1 summary confidence on payload",
+    computed_at_ts_ms: "summary computation timestamp (nullable)",
+    updated_ts_ms: "projection updated timestamp",
+  },
+  route_refresh_envelope: {
+    stage1_refresh_fields: ["freshness", "status", "refreshed_ts_ms"] as const,
+    refresh_status_semantics: STAGE1_REFRESH_SEMANTICS.status,
+    refresh_freshness_semantics: STAGE1_REFRESH_SEMANTICS.freshness,
+  },
+} as const;
+
+export const STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE = {
+  required_top_level_fields: [
+    "tenant_id",
+    "project_id",
+    "group_id",
+    "field_id",
+    "freshness",
+    "confidence",
+    ...STAGE1_CUSTOMER_SUMMARY_FIELDS,
+    STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE.container_field,
+    "computed_at_ts_ms",
+    "updated_ts_ms",
+  ] as const,
+  display_only_fields: STAGE1_SUMMARY_DISPLAY_ONLY_FIELDS,
+  forbidden_fields: STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS,
+  nullability: STAGE1_SUMMARY_FIELD_NULLABILITY.customer_facing,
+  soil_metrics_substructure: STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE,
+  refresh_carriage: STAGE1_SUMMARY_REFRESH_CARRIAGE_SEMANTICS,
+} as const;
+
+export const STAGE1_INTERNAL_SUMMARY_CONTRACT_SHAPE = {
+  customer_superset_base: STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields,
+  internal_only_fields: STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS,
+  nullability: STAGE1_SUMMARY_FIELD_NULLABILITY.internal,
+} as const;
+
 export const STAGE1_STATE_CLASSIFICATION = {
   official_decision_states: [
     "irrigation_effectiveness_state",
@@ -92,7 +219,7 @@ export const STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES = {
 } as const;
 
 export const STAGE1_ALL_SENSING_INPUT_METRICS = [
-  ...STAGE1_OFFICIAL_INPUT_METRICS,
+  ...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
   ...STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS,
 ] as const;
 
@@ -133,6 +260,14 @@ export const STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY = {
 
 export function isForbiddenDirectSensorQualityInputV1(field: string): boolean {
   return (STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.forbidden_direct_inputs as readonly string[]).includes(String(field ?? "").trim());
+}
+
+export function isStage1OfficialPipelineCanonicalInputMetricV1(metric: string): boolean {
+  return (STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS as readonly string[]).includes(String(metric ?? "").trim());
+}
+
+export function isStage1OfficialSummarySoilMetricV1(metric: string): boolean {
+  return (STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS as readonly string[]).includes(String(metric ?? "").trim());
 }
 
 export type Stage1RefreshStatus = typeof STAGE1_REFRESH_SEMANTICS.status[number];
