@@ -158,7 +158,7 @@ test("fields mixed sensing-read-models endpoint is explicitly marked internal/de
   const payload = reply.payload as Record<string, any>;
 
   assert.equal(reply.statusCode, 200);
-  assert.equal(payload.endpoint_contract, "internal_non_authoritative_sensing_read_models_v1");
+  assert.equal(payload.endpoint_contract, "internal_sensing_read_models_v1");
   assert.equal(payload.contract_scope, "internal/debug/compatibility only (non-authoritative; not source-of-truth)");
   assert.equal(payload.customer_facing_stage1_contract, false);
 
@@ -168,4 +168,32 @@ test("fields mixed sensing-read-models endpoint is explicitly marked internal/de
   assert.ok(payload.fertility_state);
   assert.equal(payload.status.sensing_summary_stage1, "ok");
   assert.equal(payload.freshness.sensing_summary_stage1, "fresh");
+});
+
+test("fields detail route exposes stage1 sensing summary aligned with formal contract payload", async () => {
+  process.env.GEOX_TOKEN = "fields-route-test-token";
+  process.env.GEOX_TENANT_ID = "t-1";
+  process.env.GEOX_PROJECT_ID = "p-1";
+  process.env.GEOX_GROUP_ID = "g-1";
+  process.env.GEOX_SCOPES = "fields.read";
+
+  const app = new FakeApp();
+  app.refreshFieldReadModelsWithObservabilityV1 = async (_db, params) => buildRefreshedReadModels(params.field_id);
+  registerFieldsV1Routes(app as any, new FakePool() as any);
+
+  const handler = app.routes.get("GET /api/v1/fields/:field_id");
+  assert.ok(handler, "route must be registered");
+
+  const reply = new FakeReply();
+  await handler!(buildAuthRequest("f-3"), reply);
+  const payload = reply.payload as Record<string, any>;
+  const expected = buildRefreshedReadModels("f-3");
+
+  assert.equal(reply.statusCode, 200);
+  assert.equal(payload.ok, true);
+  assert.equal(payload.stage1_sensing_contract, "stage1_sensing_summary_v1");
+  assert.deepEqual(payload.stage1_sensing_summary, expected.sensing_summary_stage1.payload);
+  assert.equal(payload.stage1_sensing_refresh.freshness, expected.sensing_summary_stage1.freshness);
+  assert.equal(payload.stage1_sensing_refresh.status, expected.sensing_summary_stage1.status);
+  assert.equal(payload.stage1_sensing_refresh.refreshed_ts_ms, expected.sensing_summary_stage1.refreshed_ts_ms);
 });
