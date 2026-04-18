@@ -13,6 +13,10 @@ import {
 import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import { evaluateRisk } from "../domain/risk_engine.js";
+import {
+  STAGE1_REFRESH_SEMANTICS,
+  STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY,
+} from "../domain/sensing/stage1_sensing_contract_v1.js";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -118,6 +122,8 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     return reply.send({ ok: true, field_id, count: items.length, items });
   });
 
+  // Official Stage-1 customer-facing sensing endpoint.
+  // Product/Sales integrations should use this endpoint as the sensing source-of-truth.
   app.get("/api/v1/dashboard/fields/:field_id/sensing-summary", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
@@ -135,26 +141,64 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
     return reply.send({
       ok: true,
       field_id,
+      endpoint_contract: "stage1_sensing_summary_v1",
+      stage1_sensing_summary: refreshed.sensing_summary_stage1.payload,
+      stage1_refresh: {
+        freshness: refreshed.sensing_summary_stage1.freshness,
+        status: refreshed.sensing_summary_stage1.status,
+        refreshed_ts_ms: refreshed.sensing_summary_stage1.refreshed_ts_ms,
+      },
+      refresh_semantics: STAGE1_REFRESH_SEMANTICS,
+      sensing_runtime_boundary: STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY,
+    });
+  });
+
+  // Internal/compatibility endpoint for debugging and backward compatibility.
+  // Do not treat this payload as the formal customer-facing Stage-1 sensing contract.
+  app.get("/api/v1/dashboard/internal/fields/:field_id/sensing-overview", async (req, reply) => {
+    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    if (!auth) return;
+
+    const field_id = String((req.params as any)?.field_id ?? "").trim();
+    if (!field_id) return badRequest(reply, "MISSING:field_id");
+
+    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+      tenant_id: auth.tenant_id,
+      project_id: auth.project_id,
+      group_id: auth.group_id,
+      field_id,
+    });
+
+    return reply.send({
+      ok: true,
+      endpoint_contract: "internal_sensing_overview_v1",
+      field_id,
       sensing_overview: refreshed.sensing_overview.payload,
+      sensing_summary_stage1: refreshed.sensing_summary_stage1.payload,
       fertility_state: refreshed.fertility_state.payload,
       freshness: {
         sensing_overview: refreshed.sensing_overview.freshness,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.freshness,
         fertility_state: refreshed.fertility_state.freshness,
       },
       status: {
         sensing_overview: refreshed.sensing_overview.status,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.status,
         fertility_state: refreshed.fertility_state.status,
       },
       refresh_metrics: {
         sensing_overview: refreshed.sensing_overview.refresh_metrics,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_metrics,
         fertility_state: refreshed.fertility_state.refresh_metrics,
       },
       refresh_tracking: {
         sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_tracking,
         fertility_state: refreshed.fertility_state.refresh_tracking,
       },
       refresh_state: {
         sensing_overview: refreshed.sensing_overview.refresh_tracking,
+        sensing_summary_stage1: refreshed.sensing_summary_stage1.refresh_tracking,
         fertility_state: refreshed.fertility_state.refresh_tracking,
       },
     });

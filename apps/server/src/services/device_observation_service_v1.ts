@@ -8,6 +8,7 @@ import {
   type DeviceObservationQualityFlagV1
 } from "@geox/contracts";
 import type { PoolClient } from "pg";
+import { mapStage1ObservationMetricToPipelineObservationV1 } from "../domain/sensing/stage1_sensing_input_mapping_v1.js";
 import { runSensingInferencePipelineV1, type RunSensingInferencePipelineV1Result } from "../domain/sensing/run_sensing_inference_pipeline_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "./field_read_model_refresh_v1.js";
 
@@ -211,42 +212,11 @@ function toFiniteNumber(v: unknown): number | null {
 }
 
 function mapObservationMetricToPipelineShape(metric: string, valueNum: number, device_id: string): Record<string, unknown> {
-  const observation: Record<string, unknown> = { device_id, [metric]: valueNum };
-  switch (metric) {
-    case "soil_moisture":
-      observation.soil_moisture_pct = valueNum;
-      break;
-    case "canopy_temperature":
-      observation.canopy_temp_c = valueNum;
-      observation.canopy_temp = valueNum;
-      observation.temperature_c = valueNum;
-      break;
-    case "soil_ec":
-      observation.ec_ds_m = valueNum;
-      observation.soil_ec_ds_m = valueNum;
-      break;
-    case "air_temperature":
-      observation.ambient_temp_c = valueNum;
-      observation.air_temp_c = valueNum;
-      observation.ambient_temperature_c = valueNum;
-      break;
-    case "air_humidity":
-      observation.relative_humidity_pct = valueNum;
-      observation.humidity_pct = valueNum;
-      observation.rh_pct = valueNum;
-      break;
-    case "water_flow_rate":
-      observation.inlet_flow_lpm = valueNum;
-      observation.inlet_lpm = valueNum;
-      break;
-    case "water_pressure":
-      observation.pressure_drop_kpa = valueNum;
-      observation.pressure_kpa = valueNum;
-      break;
-    default:
-      break;
-  }
-  return observation;
+  // Stage-1 boundary note:
+  // This mapping only shapes sensing observations for inference inputs.
+  // Device runtime heartbeat/online status belongs to device_status_index_v1 and must not be injected here
+  // as a direct substitute for sensor_quality_state inputs.
+  return mapStage1ObservationMetricToPipelineObservationV1(metric, valueNum, device_id);
 }
 
 async function loadRecentFieldObservationsForPipelineV1(db: DeviceObservationDbConn, params: {
