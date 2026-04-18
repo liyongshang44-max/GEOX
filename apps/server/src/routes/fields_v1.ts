@@ -1081,6 +1081,8 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       ok: true,
       field_id,
       endpoint_contract: "stage1_sensing_summary_v1",
+      contract_scope: "customer-facing Stage-1 sensing source-of-truth",
+      customer_facing_stage1_contract: true,
       stage1_sensing_summary: refreshed.sensing_summary_stage1.payload,
       stage1_refresh: {
         freshness: refreshed.sensing_summary_stage1.freshness,
@@ -1093,6 +1095,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
   });
 
   // Internal/debug/compatibility endpoint for mixed read-model payloads.
+  // Even though sensing_summary_stage1 is included for diagnosis/compatibility, this route is explicitly non-authoritative.
   // Not customer-facing Stage-1 contract; frontend/product MUST NOT use this as formal sensing source-of-truth.
   app.get("/api/v1/fields/:field_id/sensing-read-models", async (req, reply) => {
     const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "fields.read");
@@ -1120,8 +1123,8 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     return reply.send({
       ok: true,
       field_id,
-      endpoint_contract: "internal_sensing_read_models_v1",
-      contract_scope: "internal/debug/compatibility only",
+      endpoint_contract: "internal_non_authoritative_sensing_read_models_v1",
+      contract_scope: "internal/debug/compatibility only (non-authoritative; not source-of-truth)",
       customer_facing_stage1_contract: false,
       sensing_overview: refreshed.sensing_overview.payload,
       sensing_summary_stage1: refreshed.sensing_summary_stage1.payload,
