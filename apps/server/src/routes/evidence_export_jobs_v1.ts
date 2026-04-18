@@ -606,11 +606,11 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
     const q = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
-        WHERE record_json LIKE '%"type":"evidence_export_job_created_v1"%'
-          AND record_json LIKE '%' || $1 || '%'
+        WHERE (record_json::jsonb->>'type') = 'evidence_export_job_created_v1'
+          AND (record_json::jsonb#>>'{entity,tenant_id}') = $1
         ORDER BY occurred_at DESC
         LIMIT 5`,
-      [`"tenant_id":"${tenant_id}"`]
+      [tenant_id]
     );
     for (const r of q.rows) {
       let rr: any = null;
@@ -639,11 +639,11 @@ async function buildEvidenceBundle(pool: Pool, tenant_id: string, scope: ExportS
     const q2 = await pool.query(
       `SELECT fact_id, occurred_at, source, record_json
          FROM facts
-        WHERE record_json LIKE '%"type":"evidence_export_job_completed_v1"%'
-          AND record_json LIKE '%' || $1 || '%'
+        WHERE (record_json::jsonb->>'type') = 'evidence_export_job_completed_v1'
+          AND (record_json::jsonb#>>'{entity,tenant_id}') = $1
         ORDER BY occurred_at DESC
         LIMIT 5`,
-      [`"tenant_id":"${tenant_id}"`]
+      [tenant_id]
     );
     for (const r of q2.rows) {
       let rr: any = null;
