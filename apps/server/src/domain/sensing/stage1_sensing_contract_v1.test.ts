@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  STAGE1_OFFICIAL_INPUT_METRICS,
+  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  STAGE1_INPUT_CONTRACT_LAYERS,
   STAGE1_OFFICIAL_DERIVED_STATES,
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
   STAGE1_REFRESH_SEMANTICS,
@@ -12,7 +14,7 @@ import {
 } from "./stage1_sensing_contract_v1.js";
 
 test("stage1 sensing contract: official input/status/customer whitelist are stable", () => {
-  assert.deepEqual(STAGE1_OFFICIAL_INPUT_METRICS, [
+  assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS, [
     "soil_moisture_pct",
     "ec_ds_m",
     "fertility_index",
@@ -39,6 +41,15 @@ test("stage1 sensing contract: official input/status/customer whitelist are stab
 
   assert.deepEqual(STAGE1_REFRESH_SEMANTICS.status, ["ok", "fallback_stale", "no_data", "error"]);
   assert.deepEqual(STAGE1_REFRESH_SEMANTICS.freshness, ["fresh", "stale", "unknown"]);
+});
+
+test("stage1 sensing contract: summary soil metrics are an explicit subset of pipeline input whitelist", () => {
+  const pipelineWhitelist = new Set<string>(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
+  for (const metric of STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS) {
+    assert.ok(pipelineWhitelist.has(metric), `summary soil metric must be in pipeline whitelist: ${metric}`);
+  }
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.pipeline_uses, "official_pipeline_input_whitelist");
+  assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.customer_summary_uses, "official_customer_summary_soil_metrics_subset");
 });
 
 test("stage1 sensing contract: runtime status and sensing diagnostic boundaries are explicit", () => {
