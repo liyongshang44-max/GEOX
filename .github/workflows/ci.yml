@@ -61,7 +61,7 @@ jobs:
           TOKEN="${{ secrets.GEOX_ACCEPTANCE_TOKEN }}"
           if [ -z "$TOKEN" ]; then TOKEN="${{ secrets.GEOX_AO_ACT_TOKEN }}"; fi
           if [ -z "$TOKEN" ]; then
-            echo "missing acceptance token secret: set GEOX_ACCEPTANCE_TOKEN (recommended) or GEOX_AO_ACT_TOKEN"
+            echo "missing GitHub Actions secret for acceptance token: configure GEOX_ACCEPTANCE_TOKEN (recommended) or GEOX_AO_ACT_TOKEN"
             exit 1
           fi
           cat > .env.ci <<EOF
@@ -100,7 +100,12 @@ jobs:
 
       - name: Stop acceptance runtime dependencies
         if: always()
-        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down --remove-orphans
+        run: |
+          if [ ! -f .env.ci ]; then
+            echo "skip cleanup: .env.ci missing"
+            exit 0
+          fi
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml down --remove-orphans
 
   release-gate:
     runs-on: ubuntu-latest
