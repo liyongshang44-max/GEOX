@@ -218,6 +218,7 @@ function getEvidenceStorageMode(): "LOCAL_FILE" | "LOCAL_MIRROR" | "S3_COMPAT" {
 
 type S3CompatConfig = { // S3-compatible object storage runtime config.
   endpoint: string;
+  publicEndpoint: string | null;
   bucket: string;
   region: string;
   accessKeyId: string;
@@ -228,6 +229,7 @@ type S3CompatConfig = { // S3-compatible object storage runtime config.
 
 function getS3CompatConfig(): S3CompatConfig | null { // Helper: load S3-compatible config from env when enabled.
   const endpoint = String(process.env.GEOX_EVIDENCE_S3_ENDPOINT ?? "").trim();
+  const publicEndpoint = String(process.env.GEOX_EVIDENCE_S3_PUBLIC_ENDPOINT ?? "").trim() || null;
   const bucket = String(process.env.GEOX_EVIDENCE_S3_BUCKET ?? "").trim();
   const region = String(process.env.GEOX_EVIDENCE_S3_REGION ?? "us-east-1").trim() || "us-east-1";
   const accessKeyId = String(process.env.GEOX_EVIDENCE_S3_ACCESS_KEY_ID ?? "").trim();
@@ -236,7 +238,7 @@ function getS3CompatConfig(): S3CompatConfig | null { // Helper: load S3-compati
   const forcePathStyle = String(process.env.GEOX_EVIDENCE_S3_FORCE_PATH_STYLE ?? "true").trim().toLowerCase() !== "false";
   const ttlRaw = Number(process.env.GEOX_EVIDENCE_S3_PRESIGN_TTL_SEC ?? 900);
   const presignTtlSec = Number.isFinite(ttlRaw) && ttlRaw > 0 ? Math.min(Math.trunc(ttlRaw), 7 * 24 * 3600) : 900;
-  return { endpoint, bucket, region, accessKeyId, secretAccessKey, forcePathStyle, presignTtlSec };
+  return { endpoint, publicEndpoint, bucket, region, accessKeyId, secretAccessKey, forcePathStyle, presignTtlSec };
 } // End helper.
 
 function hmacSha256(key: Buffer | string, value: string): Buffer { return crypto.createHmac("sha256", key).update(value, "utf8").digest(); }
@@ -307,7 +309,8 @@ function buildS3PresignedGetUrl(cfg: S3CompatConfig, objectKey: string): string 
   const now = new Date();
   const iso = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   const shortDate = iso.slice(0, 8);
-  const { endpoint, host, pathName } = parseS3Target(cfg, objectKey);
+  const targetCfg = cfg.publicEndpoint ? { ...cfg, endpoint: cfg.publicEndpoint } : cfg; // Prefer public endpoint for client-facing URLs.
+  const { endpoint, host, pathName } = parseS3Target(targetCfg, objectKey);
   const scope = `${shortDate}/${cfg.region}/s3/aws4_request`;
   const queryParams = [
     ["X-Amz-Algorithm", "AWS4-HMAC-SHA256"],
