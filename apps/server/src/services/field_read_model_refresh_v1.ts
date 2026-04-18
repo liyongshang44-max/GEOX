@@ -4,7 +4,16 @@ import type { Pool, PoolClient } from "pg";
 
 type DbConn = Pool | PoolClient;
 
+// freshness semantics (external contract):
+// - fresh: data is within the validity window.
+// - stale: data is expired but still readable as reference.
+// - unknown: freshness cannot be determined.
 type Freshness = "fresh" | "stale" | "unknown";
+// refresh status semantics (external contract):
+// - ok: refresh succeeded and returned a currently valid result.
+// - fallback_stale: refresh failed; last snapshot returned as stale fallback.
+// - no_data: refresh succeeded but lacked enough official data for stage-1 summary.
+// - error: refresh failed and no fallback snapshot is available.
 type RefreshStatus = "ok" | "fallback_stale" | "no_data" | "error";
 
 type SnapshotEntry<T> = {
@@ -181,10 +190,13 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
       hasData: (payload) => {
         const p = payload as Record<string, any>;
         if (Array.isArray(p.soil_indicators_json) && p.soil_indicators_json.length > 0) return true;
+        // hasData only uses stage-1 official summary signals.
+        // compatibility-only fields (for example irrigation_need_level) are intentionally excluded.
         return Boolean(
           (payload as Record<string, any>).canopy_temp_status
           || (payload as Record<string, any>).evapotranspiration_risk
           || (payload as Record<string, any>).sensor_quality
+          || (payload as Record<string, any>).sensor_quality_level
           || (payload as Record<string, any>).irrigation_effectiveness
           || (payload as Record<string, any>).leak_risk
           || (payload as Record<string, any>).computed_at_ts_ms
