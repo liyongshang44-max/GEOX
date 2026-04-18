@@ -1,6 +1,7 @@
 import type { Pool, PoolClient } from "pg";
 import {
-  STAGE1_OFFICIAL_INPUT_METRICS,
+  STAGE1_CUSTOMER_SUMMARY_FIELDS,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
   type Stage1Freshness,
 } from "../domain/sensing/stage1_sensing_contract_v1.js";
 import { refreshFieldSensingOverviewV1 } from "./field_sensing_overview_v1.js";
@@ -16,7 +17,7 @@ type SoilIndicatorLike = {
 };
 
 export type Stage1SoilMetricSummaryItemV1 = {
-  metric: typeof STAGE1_OFFICIAL_INPUT_METRICS[number];
+  metric: typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number];
   value: number | null;
   confidence: number | null;
   observed_at_ts_ms: number | null;
@@ -40,6 +41,15 @@ export type FieldSensingSummaryStage1V1 = {
   updated_ts_ms: number;
 };
 
+type Stage1CustomerSummaryField = typeof STAGE1_CUSTOMER_SUMMARY_FIELDS[number];
+type Stage1CustomerSummarySubsetV1 = Pick<FieldSensingSummaryStage1V1, Stage1CustomerSummaryField>;
+type Stage1SummarySourceOverviewLike = {
+  freshness?: unknown;
+  confidence?: unknown;
+  computed_at_ts_ms?: unknown;
+  soil_indicators_json?: unknown;
+} & Partial<Record<Stage1CustomerSummaryField, unknown>>;
+
 let ensurePromise: Promise<void> | null = null;
 
 function toFiniteNumber(v: unknown): number | null {
@@ -48,11 +58,40 @@ function toFiniteNumber(v: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function toConfidence(v: unknown): number | null {
+  const n = toFiniteNumber(v);
+  if (n == null) return null;
+  return Math.max(0, Math.min(1, n));
+}
+
 function toFreshness(v: unknown): Stage1Freshness {
   const normalized = String(v ?? "").trim().toLowerCase();
   if (normalized === "fresh" || normalized === "stale" || normalized === "unknown") return normalized;
   return "unknown";
 }
+
+function toCanopyTempStatus(v: unknown): FieldSensingSummaryStage1V1["canopy_temp_status"] {
+  const normalized = String(v ?? "").trim().toLowerCase();
+  return normalized === "normal" || normalized === "elevated" || normalized === "critical" || normalized === "unknown" ? normalized : null;
+}
+
+function toRiskLevel(v: unknown): FieldSensingSummaryStage1V1["evapotranspiration_risk"] {
+  const normalized = String(v ?? "").trim().toLowerCase();
+  return normalized === "low" || normalized === "medium" || normalized === "high" || normalized === "unknown" ? normalized : null;
+}
+
+function toSensorQualityLevel(v: unknown): FieldSensingSummaryStage1V1["sensor_quality_level"] {
+  const normalized = String(v ?? "").trim().toUpperCase();
+  return normalized === "GOOD" || normalized === "FAIR" || normalized === "POOR" ? normalized : null;
+}
+
+const STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS = {
+  canopy_temp_status: toCanopyTempStatus,
+  evapotranspiration_risk: toRiskLevel,
+  sensor_quality_level: toSensorQualityLevel,
+  irrigation_effectiveness: toRiskLevel,
+  leak_risk: toRiskLevel,
+} as const satisfies Record<Stage1CustomerSummaryField, (v: unknown) => unknown>;
 
 function pickOfficialSoilMetrics(soilIndicators: unknown): Stage1SoilMetricSummaryItemV1[] {
   const rows = Array.isArray(soilIndicators) ? soilIndicators as SoilIndicatorLike[] : [];
@@ -61,11 +100,11 @@ function pickOfficialSoilMetrics(soilIndicators: unknown): Stage1SoilMetricSumma
   for (const row of rows) {
     const metric = String(row?.metric ?? "").trim();
     if (!metric) continue;
-    if (!STAGE1_OFFICIAL_INPUT_METRICS.includes(metric as typeof STAGE1_OFFICIAL_INPUT_METRICS[number])) continue;
+    if (!STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.includes(metric as typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number])) continue;
     if (!byMetric.has(metric)) byMetric.set(metric, row);
   }
 
-  return STAGE1_OFFICIAL_INPUT_METRICS.map((metric) => {
+  return STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.map((metric) => {
     const row = byMetric.get(metric);
     return {
       metric,
@@ -75,6 +114,34 @@ function pickOfficialSoilMetrics(soilIndicators: unknown): Stage1SoilMetricSumma
       freshness: toFreshness(row?.freshness),
     };
   });
+}
+
+function deriveStage1SummaryFreshness(overviewFreshness: unknown, soilMetrics: Stage1SoilMetricSummaryItemV1[]): Stage1Freshness {
+  const normalizedOverview = toFreshness(overviewFreshness);
+  if (normalizedOverview !== "unknown") return normalizedOverview;
+  if (soilMetrics.some((x) => x.freshness === "fresh")) return "fresh";
+  if (soilMetrics.some((x) => x.freshness === "stale")) return "stale";
+  return "unknown";
+}
+
+function deriveStage1SummaryConfidence(overviewConfidence: unknown, soilMetrics: Stage1SoilMetricSummaryItemV1[]): number | null {
+  const normalizedOverview = toConfidence(overviewConfidence);
+  if (normalizedOverview != null) return normalizedOverview;
+  const candidates = soilMetrics.map((x) => toConfidence(x.confidence)).filter((x): x is number => x != null);
+  if (!candidates.length) return null;
+  return Math.max(...candidates);
+}
+
+function pickStage1CustomerSummaryFields(source: Stage1SummarySourceOverviewLike): Stage1CustomerSummarySubsetV1 {
+  // Customer-facing stage-1 summary is whitelist-driven:
+  // any compatibility/internal key outside STAGE1_CUSTOMER_SUMMARY_FIELDS is excluded by default.
+  return {
+    canopy_temp_status: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.canopy_temp_status(source.canopy_temp_status) as FieldSensingSummaryStage1V1["canopy_temp_status"],
+    evapotranspiration_risk: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.evapotranspiration_risk(source.evapotranspiration_risk) as FieldSensingSummaryStage1V1["evapotranspiration_risk"],
+    sensor_quality_level: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.sensor_quality_level(source.sensor_quality_level) as FieldSensingSummaryStage1V1["sensor_quality_level"],
+    irrigation_effectiveness: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.irrigation_effectiveness(source.irrigation_effectiveness) as FieldSensingSummaryStage1V1["irrigation_effectiveness"],
+    leak_risk: STAGE1_CUSTOMER_SUMMARY_FIELD_NORMALIZERS.leak_risk(source.leak_risk) as FieldSensingSummaryStage1V1["leak_risk"],
+  };
 }
 
 export async function ensureFieldSensingSummaryStage1ProjectionV1(db: DbConn): Promise<void> {
@@ -117,22 +184,23 @@ export async function refreshFieldSensingSummaryStage1V1(db: DbConn, params: {
 }): Promise<FieldSensingSummaryStage1V1> {
   await ensureFieldSensingSummaryStage1ProjectionV1(db);
 
+  // Overview is an internal aggregation source.
+  // Stage-1 summary contract remains authoritative and must be built by explicit summary contract rules.
+  // Overview changes must NOT silently expand stage-1 summary fields.
   const overview = await refreshFieldSensingOverviewV1(db, params);
   const nowMs = Number.isFinite(params.now_ms) ? Number(params.now_ms) : Date.now();
+  const officialSoilMetrics = pickOfficialSoilMetrics(overview.soil_indicators_json);
+  const summaryFields = pickStage1CustomerSummaryFields(overview);
 
   const payload: FieldSensingSummaryStage1V1 = {
     tenant_id: overview.tenant_id,
     project_id: overview.project_id,
     group_id: overview.group_id,
     field_id: overview.field_id,
-    freshness: toFreshness(overview.freshness),
-    confidence: toFiniteNumber(overview.confidence),
-    canopy_temp_status: overview.canopy_temp_status,
-    evapotranspiration_risk: overview.evapotranspiration_risk,
-    sensor_quality_level: overview.sensor_quality_level,
-    irrigation_effectiveness: overview.irrigation_effectiveness,
-    leak_risk: overview.leak_risk,
-    official_soil_metrics_json: pickOfficialSoilMetrics(overview.soil_indicators_json),
+    freshness: deriveStage1SummaryFreshness(overview.freshness, officialSoilMetrics),
+    confidence: deriveStage1SummaryConfidence(overview.confidence, officialSoilMetrics),
+    ...summaryFields,
+    official_soil_metrics_json: officialSoilMetrics,
     computed_at_ts_ms: toFiniteNumber(overview.computed_at_ts_ms),
     updated_ts_ms: nowMs,
   };
