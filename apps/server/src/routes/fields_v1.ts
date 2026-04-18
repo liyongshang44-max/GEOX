@@ -1123,7 +1123,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     return reply.send({
       ok: true,
       field_id,
-      endpoint_contract: "internal_non_authoritative_sensing_read_models_v1",
+      endpoint_contract: "internal_sensing_read_models_v1",
       contract_scope: "internal/debug/compatibility only (non-authoritative; not source-of-truth)",
       customer_facing_stage1_contract: false,
       sensing_overview: refreshed.sensing_overview.payload,
