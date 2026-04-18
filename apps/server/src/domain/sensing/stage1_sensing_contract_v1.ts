@@ -8,14 +8,41 @@ export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = STAGE1_OFFICIAL_
 
 export const STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS = STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1;
 
+// Stage-1 customer-facing summary soil metric subset contract.
+// IMPORTANT:
+// - This is a display subset used by the Stage-1 customer summary payload.
+// - It is NOT the Stage-1 pipeline canonical input whitelist.
+// - It is NOT the complete pipeline canonical input set.
 export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1;
+export type Stage1OfficialSummarySoilMetric = typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number];
+
+export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT = {
+  role: "stage1_customer_facing_summary_subset",
+  usage: "customer_summary_display_only",
+  semantic_boundaries: {
+    equals_pipeline_input_whitelist: false,
+    equals_complete_pipeline_canonical_input_set: false,
+  },
+  ordered_metrics: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  canonical_input_to_summary_metric: {
+    soil_moisture: "soil_moisture_pct",
+    soil_ec: "ec_ds_m",
+    canopy_temperature: null,
+    air_temperature: null,
+    air_humidity: null,
+    water_flow_rate: null,
+    water_pressure: null,
+  } as const,
+  note: "fertility_index/n/p/k are summary-facing soil indicators and are not Stage-1 canonical input metrics.",
+} as const;
 
 export const STAGE1_INPUT_CONTRACT_LAYERS = {
   // Layer-1 (source of truth): official telemetry/business canonical inputs for Stage-1.
   official_pipeline_input_whitelist: STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
   // Layer-2: official aggregate field layer used by pipeline aggregation.
   official_pipeline_aggregate_fields: STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS,
-  // Layer-3: customer summary display subset for soil/nutrient metrics.
+  // Layer-3: customer-facing summary display subset for soil/nutrient metrics only.
+  // This layer is intentionally separate from Stage-1 pipeline input contracts.
   official_customer_summary_soil_metrics_subset: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
   source_of_truth_layer: "official_pipeline_input_whitelist",
   aggregate_field_layer: "official_pipeline_aggregate_fields",
