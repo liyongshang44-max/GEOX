@@ -111,8 +111,8 @@ async function main() {
     body: JSON.stringify(createPayload),
   });
 
-  const jobId = String(createRes?.job?.job_id || "").trim();
-  assert(jobId, "job_id missing in create response");
+  const jobId = String(createRes?.job_id || "").trim();
+  assert(jobId, `job_id missing in create response: ${JSON.stringify(createRes)}`);
 
   const startedAt = Date.now();
   let job = null;

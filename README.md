@@ -36,6 +36,10 @@ GEOX 已不再是“验证能力是否存在”的原型系统。
 
 👉 **`docs/SSOT.md`**
 
+CI acceptance token secrets prerequisite:
+
+👉 **`docs/ci/CI_ACCEPTANCE_SECRETS.md`**
+
 其中明确列出了：
 
 • Sprint 10 · AO-ACT v0  
@@ -146,6 +150,17 @@ Judge 的评估对象始终是 group。
 • 语义边界已通过 negative acceptance 锁死
 • 后续演进以治理优先于功能
 
+十七、CI 验收前置条件（必须）
+------------------------------------------------------------
+
+在 GitHub Actions 跑 acceptance job 之前，仓库必须在 **GitHub Actions Secrets** 至少配置以下其一：
+
+- `GEOX_ACCEPTANCE_TOKEN`（推荐）
+- `GEOX_AO_ACT_TOKEN`（兼容）
+
+未配置时，`Prepare commercial compose env` 会明确失败并提示缺失的是 GitHub Actions secret。
+详细说明见：`docs/ci/CI_ACCEPTANCE_SECRETS.md`。
+
 
 十四、执行入口约束（新增）
 • recommendation 没有执行权；用户界面、recommendation 域和审批提交流程不得直接调用执行入口。
@@ -251,4 +266,3 @@ pnpm run selfcheck:p1-skill-loop-minimal
 
 - 交付文档：`docs/qa/trigger_consistency_delivery_2026-04-11.md`
 - 记录与截图尝试：`docs/artifacts/trigger_consistency_2026-04-11/`
-

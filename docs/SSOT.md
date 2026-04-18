@@ -53,6 +53,7 @@ These are domain-specific references, not repository-level SSOT documents:
 - `docs/delivery/**`
 - `docs/qa/**`
 - `docs/commercial/**`
+- `docs/ci/**`
 
 ### Root README
 
