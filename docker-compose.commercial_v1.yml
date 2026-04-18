@@ -39,6 +39,36 @@ services:
       - "9002:9001"
     volumes:
       - geox_v1_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9000/minio/health/live > /dev/null"]
+      interval: 3s
+      timeout: 2s
+      retries: 30
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: geox-v1-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      GEOX_EVIDENCE_S3_BUCKET: ${GEOX_EVIDENCE_S3_BUCKET:-geox}
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      set -eu;
+      echo "[minio-init] waiting for MinIO API to become reachable...";
+      until mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do
+        echo "[minio-init] MinIO not ready yet; retry in 1s";
+        sleep 1;
+      done;
+      echo "[minio-init] creating bucket $$GEOX_EVIDENCE_S3_BUCKET (idempotent)";
+      mc mb --ignore-existing local/"$$GEOX_EVIDENCE_S3_BUCKET";
+      echo "[minio-init] setting bucket policy private (idempotent)";
+      mc anonymous set private local/"$$GEOX_EVIDENCE_S3_BUCKET" || true;
+      echo "[minio-init] done";
 
   server:
     # Server container listens on 3000 internally.
@@ -74,7 +104,7 @@ services:
       ALERT_SMS_TO: ""
       GEOX_EVIDENCE_STORAGE_MODE: S3_COMPAT
       GEOX_EVIDENCE_S3_ENDPOINT: http://minio:9000
-      GEOX_EVIDENCE_S3_BUCKET: geox
+      GEOX_EVIDENCE_S3_BUCKET: ${GEOX_EVIDENCE_S3_BUCKET:-geox}
       GEOX_EVIDENCE_S3_REGION: us-east-1
       GEOX_EVIDENCE_S3_ACCESS_KEY_ID: minioadmin
       GEOX_EVIDENCE_S3_SECRET_ACCESS_KEY: minioadmin
@@ -90,7 +120,9 @@ services:
       mqtt:
         condition: service_started
       minio:
-        condition: service_started
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
