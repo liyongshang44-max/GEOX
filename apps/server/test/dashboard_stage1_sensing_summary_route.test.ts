@@ -23,6 +23,7 @@ test("dashboard stage1 sensing summary endpoint exposes official contract payloa
   assert.equal(body.endpoint_contract, "stage1_sensing_summary_v1");
   assert.ok(body.stage1_sensing_summary);
   assert.ok(body.stage1_refresh);
+  assert.equal(body.sensing_runtime_boundary?.default_equivalence_forbidden, true);
   assert.equal(body.sensing_overview, undefined);
 
   await app.close();

@@ -13,7 +13,10 @@ import {
 import { ensureDerivedSensingStateProjectionV1, getLatestDerivedSensingStatesByFieldV1 } from "../services/derived_sensing_state_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import { evaluateRisk } from "../domain/risk_engine.js";
-import { STAGE1_REFRESH_SEMANTICS } from "../domain/sensing/stage1_sensing_contract_v1.js";
+import {
+  STAGE1_REFRESH_SEMANTICS,
+  STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY,
+} from "../domain/sensing/stage1_sensing_contract_v1.js";
 
 type DashboardTrendPoint = { ts_ms: number; avg_value_num: number | null; sample_count: number; }; // Bucketed trend point.
 type DashboardTrendSeries = { metric: string; points: DashboardTrendPoint[]; }; // Metric trend series.
@@ -146,6 +149,7 @@ export function registerDashboardV1Routes(app: FastifyInstance, pool: Pool): voi
         refreshed_ts_ms: refreshed.sensing_summary_stage1.refreshed_ts_ms,
       },
       refresh_semantics: STAGE1_REFRESH_SEMANTICS,
+      sensing_runtime_boundary: STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY,
     });
   });
 

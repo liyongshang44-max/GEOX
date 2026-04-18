@@ -212,6 +212,10 @@ function toFiniteNumber(v: unknown): number | null {
 }
 
 function mapObservationMetricToPipelineShape(metric: string, valueNum: number, device_id: string): Record<string, unknown> {
+  // Stage-1 boundary note:
+  // This mapping only shapes sensing observations for inference inputs.
+  // Device runtime heartbeat/online status belongs to device_status_index_v1 and must not be injected here
+  // as a direct substitute for sensor_quality_state inputs.
   return mapStage1ObservationMetricToPipelineObservationV1(metric, valueNum, device_id);
 }
 

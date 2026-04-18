@@ -101,5 +101,39 @@ export const STAGE1_ALL_SUPPORTED_DERIVED_STATES = [
   ...STAGE1_COMPATIBILITY_DERIVED_STATES,
 ] as const;
 
+// Runtime-vs-diagnostic boundary:
+// - Device runtime status (online/offline/heartbeat freshness) belongs to device_status_index_v1.
+// - sensor_quality_state belongs to derived_sensing_state_index_v1 as a sensing diagnostic outcome.
+// These layers may correlate but are intentionally not equivalent and must not be treated as interchangeable.
+export const STAGE1_DEVICE_RUNTIME_STATUS = {
+  source_table: "device_status_index_v1",
+  status_examples: ["online", "offline", "unknown"] as const,
+  heartbeat_fields: ["last_heartbeat_ts_ms", "heartbeat_lag_ms"] as const,
+} as const;
+
+export const STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS = {
+  source_table: "derived_sensing_state_index_v1",
+  derived_state_type: "sensor_quality_state",
+  canonical_input_aliases: {
+    signal_strength_dbm: ["signal_strength_dbm", "rssi_dbm", "signal_dbm"] as const,
+    battery_level_pct: ["battery_level_pct", "battery_pct", "battery"] as const,
+    packet_loss_rate_pct: ["packet_loss_rate_pct", "packet_loss_pct", "packet_loss_rate"] as const,
+  },
+  // Guardrail: heartbeat runtime status MUST NOT be used as direct sensor-quality input.
+  forbidden_direct_inputs: ["last_heartbeat_ts_ms", "device_online", "is_online", "heartbeat_status"] as const,
+} as const;
+
+export const STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY = {
+  device_runtime_status_layer: "device_runtime_status",
+  sensing_diagnostic_layer: "sensing_diagnostic_state",
+  default_equivalence_forbidden: true,
+  explicit_bridge_rule_required: true,
+  note: "Heartbeat online/offline is runtime status, not sensor_quality_state input by default.",
+} as const;
+
+export function isForbiddenDirectSensorQualityInputV1(field: string): boolean {
+  return (STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.forbidden_direct_inputs as readonly string[]).includes(String(field ?? "").trim());
+}
+
 export type Stage1RefreshStatus = typeof STAGE1_REFRESH_SEMANTICS.status[number];
 export type Stage1Freshness = typeof STAGE1_REFRESH_SEMANTICS.freshness[number];

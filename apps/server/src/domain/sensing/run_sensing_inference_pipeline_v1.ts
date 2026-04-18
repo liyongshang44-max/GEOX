@@ -5,6 +5,10 @@ import type {
   WaterFlowInferenceV1Result,
 } from "@geox/contracts";
 import type { Pool, PoolClient } from "pg";
+import {
+  STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS,
+  isForbiddenDirectSensorQualityInputV1,
+} from "./stage1_sensing_contract_v1.js";
 import { appendDerivedSensingStateV1, type DerivedSensingStateTypeV1 } from "../../services/derived_sensing_state_v1.js";
 import { appendSkillRunFact, digestJson } from "../skill_registry/facts.js";
 import { inferCanopyTemperatureFromObservationAggregateV1 } from "./canopy_temperature_inference_v1.js";
@@ -351,10 +355,23 @@ export async function runSensingInferencePipelineV1(input: RunSensingInferencePi
   }
 
   try {
+    // Boundary guard:
+    // sensor_quality_state is a sensing diagnostic state and must use sensing observation signals.
+    // Runtime heartbeat online/offline fields from device_status_index_v1 are intentionally excluded here.
+    const qualityInputAliases = STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.canonical_input_aliases;
+    for (const field of [
+      ...qualityInputAliases.signal_strength_dbm,
+      ...qualityInputAliases.battery_level_pct,
+      ...qualityInputAliases.packet_loss_rate_pct,
+    ]) {
+      if (isForbiddenDirectSensorQualityInputV1(field)) {
+        throw new Error(`STAGE1_SENSOR_QUALITY_INPUT_FORBIDDEN:${field}`);
+      }
+    }
     const aggregate = {
-      signal_strength_dbm: pickLatestFinite(scopedObservations, ["signal_strength_dbm", "rssi_dbm", "signal_dbm"]),
-      battery_level_pct: pickLatestFinite(scopedObservations, ["battery_level_pct", "battery_pct", "battery"]),
-      packet_loss_rate_pct: pickLatestFinite(scopedObservations, ["packet_loss_rate_pct", "packet_loss_pct", "packet_loss_rate"]),
+      signal_strength_dbm: pickLatestFinite(scopedObservations, [...qualityInputAliases.signal_strength_dbm]),
+      battery_level_pct: pickLatestFinite(scopedObservations, [...qualityInputAliases.battery_level_pct]),
+      packet_loss_rate_pct: pickLatestFinite(scopedObservations, [...qualityInputAliases.packet_loss_rate_pct]),
       observation_count: scopedObservations.length,
       source_ids: input.source_device_ids,
     };
