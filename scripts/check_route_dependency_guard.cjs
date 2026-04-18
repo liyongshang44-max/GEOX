@@ -61,18 +61,11 @@ function resolveDiffBase() {
   return "HEAD~1";
 }
 
-function loadAddedLines(baseRef) {
-  const diff = runGit(["diff", "--unified=0", `${baseRef}...HEAD`, "--", ...SCAN_PATHS]);
-  if (!diff.ok) {
-    console.error("[route-dependency-guard] 无法获取 git diff。");
-    process.stderr.write(diff.stderr);
-    process.exit(2);
-  }
-
+function parseUnifiedPatch(patchText) {
   const entries = [];
   let file = null;
   let nextNewLine = 0;
-  for (const rawLine of diff.stdout.split("\n")) {
+  for (const rawLine of patchText.split("\n")) {
     if (rawLine.startsWith("+++ b/")) {
       file = rawLine.slice("+++ b/".length).trim();
       continue;
@@ -93,6 +86,21 @@ function loadAddedLines(baseRef) {
     }
   }
   return entries;
+}
+
+function loadAddedLines(baseRef) {
+  const diff = runGit(["diff", "--unified=0", `${baseRef}...HEAD`, "--", ...SCAN_PATHS]);
+  if (!diff.ok) {
+    const showHead = runGit(["show", "--unified=0", "--format=", "HEAD", "--", ...SCAN_PATHS]);
+    if (!showHead.ok) {
+      console.error("[route-dependency-guard] 无法获取 git diff。");
+      process.stderr.write(diff.stderr);
+      process.exit(2);
+    }
+    console.warn("[route-dependency-guard] 警告：无法解析 diff base，已回退为仅检查 HEAD 提交新增行。");
+    return parseUnifiedPatch(showHead.stdout);
+  }
+  return parseUnifiedPatch(diff.stdout);
 }
 
 function isAllowlisted(file) {

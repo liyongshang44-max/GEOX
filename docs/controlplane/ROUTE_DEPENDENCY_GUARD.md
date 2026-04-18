@@ -39,6 +39,9 @@
 
 这保证“先阻新增，再渐进迁移”，避免一次性炸全仓。
 
+> CI 默认通过 `actions/checkout` 的 `fetch-depth: 0` 提供足够历史以计算 diff base。  
+> 若极端场景无法计算 diff base，脚本会回退为检查 `HEAD` 提交中的新增行，并输出 warning。
+
 ## 白名单（允许暂存 compatibility 调用）
 
 > 仅允许用于兼容层/迁移层自身，不可扩散到新业务流。
