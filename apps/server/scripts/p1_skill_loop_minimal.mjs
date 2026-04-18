@@ -369,13 +369,15 @@ async function submitReceipt(operationPlanId, actTaskId, evidenceKinds, fieldId)
 
 async function waitForAcceptanceResolution(operationPlanId) {
   let seenPendingAcceptance = false;
-  for (let i = 0; i < 20; i += 1) {
+  let lastState = null;
+  for (let i = 0; i < 60; i += 1) {
     const state = await waitForFinalState(operationPlanId);
+    lastState = state;
     const status = String(state.finalStatus ?? "").toUpperCase();
     const successMappedBy = resolveSuccessFinalStatus(status);
     if (successMappedBy === "PENDING_ACCEPTANCE") {
       seenPendingAcceptance = true;
-      await sleep(300);
+      await sleep(500);
       continue;
     }
     if (successMappedBy) {
@@ -384,10 +386,19 @@ async function waitForAcceptanceResolution(operationPlanId) {
     if (status) {
       return { ...state, seenPendingAcceptance };
     }
-    await sleep(300);
+    await sleep(500);
   }
+  const acceptance = lastState?.item?.acceptance ?? {};
+  const timeoutSnapshot = {
+    final_status: lastState?.finalStatus ?? null,
+    acceptance: {
+      verdict: acceptance?.verdict ?? null,
+      status: acceptance?.status ?? null,
+    },
+    report_json_present: Boolean(lastState?.item?.report_json),
+  };
   throw new Error(
-    `operation ${operationPlanId} receipt 后未进入 success 态(${SUCCESS_LANE_FINAL_STATUSES.join("|")})`,
+    `operation ${operationPlanId} receipt 后未进入 success 态(${SUCCESS_LANE_FINAL_STATUSES.join("|")}); last_state=${JSON.stringify(timeoutSnapshot)}`,
   );
 }
 
@@ -419,13 +430,32 @@ async function setDispatchState(actTaskId, state) {
 }
 
 async function waitForFinalState(operationPlanId) {
-  for (let i = 0; i < 10; i += 1) {
+  for (let i = 0; i < 20; i += 1) {
+    let detailItem = null;
+    try {
+      const detail = await requestWithRetry(`/api/v1/operations/${encodeURIComponent(operationPlanId)}/detail`, { method: "GET" });
+      detailItem = detail?.operation ?? detail ?? null;
+    } catch (err) {
+      console.warn(`[p1-smoke][waitFinalState] detail read failed operation=${operationPlanId} reason=${String(err?.message ?? err)}`);
+    }
+    if (detailItem?.final_status) { // Prefer detail when present because projection/readmodel list can lag.
+      return {
+        finalStatus: String(detailItem.final_status).toUpperCase(),
+        item: detailItem,
+      };
+    }
     const list = await requestWithRetry("/api/v1/operations", { method: "GET" });
     const item = (list.items ?? []).find((x) => x.operation_plan_id === operationPlanId || x.operation_id === operationPlanId);
     if (item?.final_status) {
+      const acceptance = detailItem?.acceptance ?? item?.acceptance ?? null;
+      const reportJson = detailItem?.report_json ?? item?.report_json ?? null;
       return {
         finalStatus: String(item.final_status).toUpperCase(),
-        item,
+        item: {
+          ...(item ?? {}),
+          acceptance,
+          report_json: reportJson,
+        },
       };
     }
     await sleep(300);
