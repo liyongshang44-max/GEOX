@@ -123,6 +123,8 @@ test("fields stage1 sensing-summary endpoint returns official customer-facing co
   assert.equal(reply.statusCode, 200);
   assert.equal(payload.ok, true);
   assert.equal(payload.endpoint_contract, "stage1_sensing_summary_v1");
+  assert.equal(payload.contract_scope, "customer-facing Stage-1 sensing source-of-truth");
+  assert.equal(payload.customer_facing_stage1_contract, true);
   assert.equal(payload.field_id, "f-1");
   assert.ok(payload.stage1_sensing_summary);
   assert.equal(payload.stage1_refresh.freshness, "fresh");
@@ -156,8 +158,8 @@ test("fields mixed sensing-read-models endpoint is explicitly marked internal/de
   const payload = reply.payload as Record<string, any>;
 
   assert.equal(reply.statusCode, 200);
-  assert.equal(payload.endpoint_contract, "internal_sensing_read_models_v1");
-  assert.equal(payload.contract_scope, "internal/debug/compatibility only");
+  assert.equal(payload.endpoint_contract, "internal_non_authoritative_sensing_read_models_v1");
+  assert.equal(payload.contract_scope, "internal/debug/compatibility only (non-authoritative; not source-of-truth)");
   assert.equal(payload.customer_facing_stage1_contract, false);
 
   // Internal endpoint intentionally contains mixed read models.
