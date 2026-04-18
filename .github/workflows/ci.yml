@@ -67,7 +67,7 @@ jobs:
           cat > .env.ci <<EOF
           GEOX_AO_ACT_TOKEN=$TOKEN
           GEOX_TOKEN=$TOKEN
-          GEOX_EVIDENCE_S3_BUCKET=geox
+          GEOX_EVIDENCE_S3_BUCKET=evidence-exports-v1
           MINIO_ROOT_USER=minioadmin
           MINIO_ROOT_PASSWORD=minioadmin
           EOF
@@ -76,11 +76,14 @@ jobs:
         run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml config > /tmp/commercial-compose.rendered.yml
 
       - name: Start acceptance runtime dependencies
-        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt minio server jobs executor
+        run: docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml up -d postgres mqtt minio minio-init server jobs executor
 
       - name: Wait for acceptance services ready
         run: |
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml wait minio-init
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init
           timeout 180 bash -lc 'until curl -fsS http://127.0.0.1:3001/api/health > /dev/null; do echo "[wait] server not ready"; sleep 2; done'
+          docker run --rm --network host minio/mc:latest /bin/sh -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1'
           docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml ps
 
       - name: Run acceptance suite
@@ -89,6 +92,17 @@ jobs:
           source .env.ci
           set +a
           pnpm run test:acceptance
+
+      - name: Collect runtime evidence logs
+        if: always()
+        run: |
+          mkdir -p acceptance-output
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs server > acceptance-output/SERVER_RUNTIME.log
+          docker compose --env-file .env.ci -f docker-compose.commercial_v1.yml logs minio-init > acceptance-output/MINIO_INIT.log
+          docker run --rm --network host minio/mc:latest /bin/sh -c 'set -eu; mc alias set local http://127.0.0.1:9000 minioadmin minioadmin; mc ls local; mc stat local/evidence-exports-v1' > acceptance-output/MINIO_BUCKET_VERIFY.log
+          grep -E "\\[evidence-export\\]\\[s3\\] upload target bucket=evidence-exports-v1 endpoint=.* job_id=" acceptance-output/SERVER_RUNTIME.log
+          grep -E "verifying bucket exists: evidence-exports-v1|listing buckets" acceptance-output/MINIO_INIT.log
+          grep -E "evidence-exports-v1" acceptance-output/MINIO_BUCKET_VERIFY.log
 
       - name: Upload acceptance artifacts
         if: always()
