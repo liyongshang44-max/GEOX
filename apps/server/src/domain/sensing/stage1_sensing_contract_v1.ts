@@ -1,29 +1,31 @@
 import {
-  STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1,
-  STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
-  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1,
+  STAGE1_PIPELINE_AGGREGATE_LAYER_FIELDS_V1,
+  STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1,
+  STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_V1,
 } from "./stage1_sensing_input_mapping_v1.js";
 
-export const STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS = STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1;
+// Stage-1 official pipeline input whitelist metrics (source-of-truth inputs for Stage-1 pipeline).
+export const STAGE1_PIPELINE_INPUT_WHITELIST_METRICS = STAGE1_PIPELINE_INPUT_WHITELIST_METRICS_V1;
 
-export const STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS = STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1;
+// Stage-1 pipeline aggregate-layer fields (aggregation output field layer).
+export const STAGE1_PIPELINE_AGGREGATE_LAYER_FIELDS = STAGE1_PIPELINE_AGGREGATE_LAYER_FIELDS_V1;
 
 // Stage-1 customer-facing summary soil metric subset contract.
 // IMPORTANT:
 // - This is a display subset used by the Stage-1 customer summary payload.
 // - It is NOT the Stage-1 pipeline canonical input whitelist.
 // - It is NOT the complete pipeline canonical input set.
-export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS = STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1;
-export type Stage1OfficialSummarySoilMetric = typeof STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS[number];
+export const STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET = STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_V1;
+export type Stage1OfficialSummarySoilMetric = typeof STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET[number];
 
-export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT = {
+export const STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET_CONTRACT = {
   role: "stage1_customer_facing_summary_subset",
   usage: "customer_summary_display_only",
   semantic_boundaries: {
     equals_pipeline_input_whitelist: false,
     equals_complete_pipeline_canonical_input_set: false,
   },
-  ordered_metrics: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  ordered_metrics: STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET,
   canonical_input_to_summary_metric: {
     soil_moisture: "soil_moisture_pct",
     soil_ec: "ec_ds_m",
@@ -36,17 +38,17 @@ export const STAGE1_OFFICIAL_SUMMARY_SOIL_METRIC_CONTRACT = {
   note: "fertility_index/n/p/k are summary-facing soil indicators and are not Stage-1 canonical input metrics.",
 } as const;
 
-export const STAGE1_INPUT_CONTRACT_LAYERS = {
+export const STAGE1_CONTRACT_METRIC_LAYERS = {
   // Layer-1 (source of truth): official telemetry/business canonical inputs for Stage-1.
-  official_pipeline_input_whitelist: STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  pipeline_input_whitelist_metrics: STAGE1_PIPELINE_INPUT_WHITELIST_METRICS,
   // Layer-2: official aggregate field layer used by pipeline aggregation.
-  official_pipeline_aggregate_fields: STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS,
+  pipeline_aggregate_layer_fields: STAGE1_PIPELINE_AGGREGATE_LAYER_FIELDS,
   // Layer-3: customer-facing summary display subset for soil/nutrient metrics only.
   // This layer is intentionally separate from Stage-1 pipeline input contracts.
-  official_customer_summary_soil_metrics_subset: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
-  source_of_truth_layer: "official_pipeline_input_whitelist",
-  aggregate_field_layer: "official_pipeline_aggregate_fields",
-  summary_display_subset_layer: "official_customer_summary_soil_metrics_subset",
+  customer_summary_soil_metric_subset: STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET,
+  source_of_truth_layer: "pipeline_input_whitelist_metrics",
+  aggregate_field_layer: "pipeline_aggregate_layer_fields",
+  summary_display_subset_layer: "customer_summary_soil_metric_subset",
   source_of_truth_module: "stage1_sensing_input_mapping_v1",
 } as const;
 
@@ -168,7 +170,7 @@ export const STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS = [
 
 export const STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE = {
   container_field: "official_soil_metrics_json",
-  ordered_metrics: STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  ordered_metrics: STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET,
   item_shape: {
     metric: "stage1_official_summary_soil_metric",
     value: "number|null",
@@ -246,7 +248,7 @@ export const STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES = {
 } as const;
 
 export const STAGE1_ALL_SENSING_INPUT_METRICS = [
-  ...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+  ...STAGE1_PIPELINE_INPUT_WHITELIST_METRICS,
   ...STAGE1_SUPPORTED_NON_OFFICIAL_INPUT_METRICS,
 ] as const;
 
@@ -290,11 +292,11 @@ export function isForbiddenDirectSensorQualityInputV1(field: string): boolean {
 }
 
 export function isStage1OfficialPipelineCanonicalInputMetricV1(metric: string): boolean {
-  return (STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS as readonly string[]).includes(String(metric ?? "").trim());
+  return (STAGE1_PIPELINE_INPUT_WHITELIST_METRICS as readonly string[]).includes(String(metric ?? "").trim());
 }
 
 export function isStage1OfficialSummarySoilMetricV1(metric: string): boolean {
-  return (STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS as readonly string[]).includes(String(metric ?? "").trim());
+  return (STAGE1_CUSTOMER_SUMMARY_SOIL_METRIC_SUBSET as readonly string[]).includes(String(metric ?? "").trim());
 }
 
 export type Stage1RefreshStatus = typeof STAGE1_REFRESH_SEMANTICS.status[number];
