@@ -327,6 +327,10 @@ async function ensureFieldSeasonProjectionV1(pool: Pool): Promise<void> { // Sta
  */
 // 新流必须走本路由（fields 子域）；同时禁止新代码依赖 legacy/deprecated route。
 export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Route registration entry.
+  const refreshFieldReadModels =
+    ((app as any).refreshFieldReadModelsWithObservabilityV1 as typeof refreshFieldReadModelsWithObservabilityV1 | undefined)
+    ?? refreshFieldReadModelsWithObservabilityV1;
+
   void ensureFieldSeasonProjectionV1(pool).catch((e: any) => { // Ensure upgraded repos also have the season table.
     app.log.error({ err: e }, "failed_to_ensure_field_season_projection_v1"); // Log startup issue instead of crashing boot.
   }); // End ensure table.
@@ -533,7 +537,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       }
       let read_model_refresh: any = null;
       try {
-        const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+        const refreshed = await refreshFieldReadModels(pool, {
           tenant_id: auth.tenant_id,
           project_id: auth.project_id,
           group_id: auth.group_id,
@@ -1053,7 +1057,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     );
     if (fieldQ.rowCount === 0) return notFound(reply);
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const refreshed = await refreshFieldReadModels(pool, {
       tenant_id: auth.tenant_id,
       project_id: auth.project_id,
       group_id: auth.group_id,
@@ -1093,7 +1097,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
     );
     if (fieldQ.rowCount === 0) return notFound(reply);
 
-    const refreshed = await refreshFieldReadModelsWithObservabilityV1(pool, {
+    const refreshed = await refreshFieldReadModels(pool, {
         tenant_id: auth.tenant_id,
         project_id: auth.project_id,
         group_id: auth.group_id,
