@@ -534,9 +534,34 @@ function logLegacyAoActWarning(app: FastifyInstance, req: any, path: string): vo
   app.log.warn({ path, method: req.method, actor: String((req.headers as any)?.authorization ?? '').slice(0, 24), warning: 'deprecated legacy AO-ACT route' }, 'deprecated legacy AO-ACT route used');
 }
 
+const LEGACY_AO_ACT_SUNSET_RFC1123 = "Thu, 31 Dec 2026 23:59:59 GMT";
+const LEGACY_COMPATIBILITY_NOTICE = "compatibility only / do not use in new flows";
+
+function withLegacyCompatibilityPayload(payload: any, successorEndpoint: string): Record<string, unknown> {
+  const base =
+    payload && typeof payload === "object" && !Array.isArray(payload)
+      ? payload as Record<string, unknown>
+      : { ok: false, legacy_payload_wrapped: true, payload };
+  return {
+    ...base,
+    deprecated: true,
+    successor_endpoint: successorEndpoint,
+    compatibility_notice: LEGACY_COMPATIBILITY_NOTICE
+  };
+}
+
+function markLegacyCompatibilityResponse(reply: any, successorEndpoint: string): void {
+  reply.header("X-Deprecated", "true");
+  reply.header("Deprecation", "true");
+  reply.header("Sunset", LEGACY_AO_ACT_SUNSET_RFC1123);
+  reply.header("Link", `<${successorEndpoint}>; rel="successor-version"`);
+  const originalSend = reply.send.bind(reply);
+  reply.send = (payload: any) => originalSend(withLegacyCompatibilityPayload(payload, successorEndpoint));
+}
+
 async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
-    reply.header("X-Deprecated", "true");
+    markLegacyCompatibilityResponse(reply, "/api/v1/actions/task");
     logLegacyAoActWarning(app, req, "/api/control/ao_act/task");
   }
     try {
@@ -706,7 +731,7 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
 
 async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
-    reply.header("X-Deprecated", "true");
+    markLegacyCompatibilityResponse(reply, "/api/v1/actions/receipt");
     logLegacyAoActWarning(app, req, "/api/control/ao_act/receipt");
   }
     try {
@@ -1006,7 +1031,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
 
 async function handleAoActIndexV1(app: FastifyInstance, pool: Pool, req: any, reply: any, deprecated = false) {
   if (deprecated) {
-    reply.header("X-Deprecated", "true");
+    markLegacyCompatibilityResponse(reply, "/api/v1/actions/index");
     logLegacyAoActWarning(app, req, "/api/control/ao_act/index");
   }
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Enforce token scope for index reads.
