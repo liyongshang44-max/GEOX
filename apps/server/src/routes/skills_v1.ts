@@ -1,3 +1,19 @@
+/**
+ * Mainline Contract:
+ * - skills 新流主口径：`bindings/override + /api/v1/skill-runs`，本文件负责 skills 目录与绑定治理入口。
+ * - 新增 skills 生命周期能力时，优先在 v1 主路由与绑定覆盖流程中落地。
+ *
+ * Stable Product Fields:
+ * - tenant_id / project_id / group_id 为稳定隔离字段。
+ * - skill_id / version / category / trigger_stage / bind_target 等字段保持稳定语义。
+ *
+ * Forbidden New Dependencies:
+ * - 禁止新代码依赖 legacy/deprecated route。
+ * - 禁止新增写路径回流到历史 skills 兼容入口。
+ *
+ * Successor:
+ * - 若未来升级到新版本 skills API，需要显式声明 successor，并维护主字段兼容映射。
+ */
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
@@ -112,6 +128,7 @@ function sendSkillsInternalError(reply: any, e: unknown) {
   });
 }
 
+// 新流必须走本路由：skills 主口径是 bindings/override + `/api/v1/skill-runs`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerSkillsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/skills/registry", async (req, reply) => {
     const query = (req as any).url?.includes("?") ? String((req as any).url).slice(String((req as any).url).indexOf("?")) : "";
