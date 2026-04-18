@@ -120,6 +120,14 @@ test("contract and mapping remain aligned on layered semantics", () => {
 
   assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
   assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
+  assert.deepEqual(
+    [...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS].sort(),
+    Object.keys(STAGE1_SENSING_INPUT_MAPPING_V1).sort(),
+    "official pipeline canonical input whitelist must equal official mapping metric keys"
+  );
+  for (const [metric, entry] of Object.entries(STAGE1_SENSING_INPUT_MAPPING_V1)) {
+    assert.equal(entry.metric, metric, `mapping entry.metric must match key for ${metric}`);
+  }
 
   const allMappedDerivedStates = new Set(
     Object.values(STAGE1_SENSING_INPUT_MAPPING_V1).flatMap((entry) => entry.downstream_derived_states)
@@ -151,13 +159,30 @@ test("contract and projection remain aligned for summary payload shape and soil 
 
   const metricKeys = payload.official_soil_metrics_json.map((x) => x.metric);
   assert.deepEqual(metricKeys, [...STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE.ordered_metrics]);
+  assert.deepEqual(
+    [...metricKeys].sort(),
+    [...STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS].sort(),
+    "projection summary soil metric subset must match contract subset exactly"
+  );
 
   for (const forbidden of STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS) {
     assert.equal((payload as Record<string, unknown>)[forbidden], undefined, `forbidden field leaked: ${forbidden}`);
   }
 });
 
-test("contract and routes stay aligned across dashboard and fields official endpoints", async () => {
+function assertSummaryRoutePayloadAligned(payload: Record<string, any>): void {
+  assert.equal(payload.endpoint_contract, "stage1_sensing_summary_v1");
+  assert.deepEqual(
+    Object.keys(payload.stage1_sensing_summary).sort(),
+    [...STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields].sort()
+  );
+  for (const forbidden of STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS) {
+    assert.equal(payload.stage1_sensing_summary[forbidden], undefined, `forbidden field leaked from route payload: ${forbidden}`);
+  }
+  assert.deepEqual(payload.refresh_semantics, STAGE1_REFRESH_SEMANTICS);
+}
+
+test("contract and fields route stay aligned for official sensing endpoint", async () => {
   process.env.GEOX_TOKEN = "consistency-token";
   process.env.GEOX_TENANT_ID = "t-1";
   process.env.GEOX_PROJECT_ID = "p-1";
@@ -169,28 +194,46 @@ test("contract and routes stay aligned across dashboard and fields official endp
   fieldsApp.refreshFieldReadModelsWithObservabilityV1 = async (_db, params) => buildRefreshed(params.field_id);
   registerFieldsV1Routes(fieldsApp as any, pool as any);
 
-  const dashboardApp = new FakeApp();
-  dashboardApp.refreshFieldReadModelsWithObservabilityV1 = async (_db, params) => buildRefreshed(params.field_id);
-  registerDashboardV1Routes(dashboardApp as any, pool as any);
-
   const fieldsHandler = fieldsApp.routes.get("GET /api/v1/fields/:field_id/sensing-summary");
-  const dashboardHandler = dashboardApp.routes.get("GET /api/v1/dashboard/fields/:field_id/sensing-summary");
   assert.ok(fieldsHandler);
-  assert.ok(dashboardHandler);
 
   const fieldsReply = new FakeReply();
   await fieldsHandler!(buildAuthReq("f-1"), fieldsReply);
   const fieldsPayload = fieldsReply.payload as Record<string, any>;
+  assertSummaryRoutePayloadAligned(fieldsPayload);
+});
+
+test("contract and dashboard route stay aligned for official sensing endpoint", async () => {
+  process.env.GEOX_TOKEN = "consistency-token";
+  process.env.GEOX_TENANT_ID = "t-1";
+  process.env.GEOX_PROJECT_ID = "p-1";
+  process.env.GEOX_GROUP_ID = "g-1";
+  process.env.GEOX_SCOPES = "fields.read,ao_act.index.read";
+
+  const pool = new FakePoolForRoutes();
+  const dashboardApp = new FakeApp();
+  dashboardApp.refreshFieldReadModelsWithObservabilityV1 = async (_db, params) => buildRefreshed(params.field_id);
+  registerDashboardV1Routes(dashboardApp as any, pool as any);
+
+  const dashboardHandler = dashboardApp.routes.get("GET /api/v1/dashboard/fields/:field_id/sensing-summary");
+  assert.ok(dashboardHandler);
 
   const dashboardReply = new FakeReply();
   await dashboardHandler!(buildAuthReq("f-1"), dashboardReply);
   const dashboardPayload = dashboardReply.payload as Record<string, any>;
+  assertSummaryRoutePayloadAligned(dashboardPayload);
+});
 
-  assert.equal(fieldsPayload.endpoint_contract, "stage1_sensing_summary_v1");
-  assert.equal(dashboardPayload.endpoint_contract, "stage1_sensing_summary_v1");
-  assert.deepEqual(Object.keys(fieldsPayload.stage1_sensing_summary).sort(), [...STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields].sort());
-  assert.deepEqual(Object.keys(dashboardPayload.stage1_sensing_summary).sort(), [...STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields].sort());
-  assert.deepEqual(Object.keys(fieldsPayload.stage1_sensing_summary).sort(), Object.keys(dashboardPayload.stage1_sensing_summary).sort());
-  assert.deepEqual(fieldsPayload.refresh_semantics, STAGE1_REFRESH_SEMANTICS);
-  assert.deepEqual(dashboardPayload.refresh_semantics, STAGE1_REFRESH_SEMANTICS);
+test("forbidden-fields consistency is enforced in customer-facing summary contracts", () => {
+  const required = new Set(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields);
+  const forbidden = new Set(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS);
+
+  for (const field of STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS) {
+    assert.ok(forbidden.has(field), `internal-only field must be forbidden in customer-facing summary contract: ${field}`);
+  }
+  assert.ok(forbidden.has("sensing_overview"), "mixed overview payload field must remain forbidden");
+  assert.ok(forbidden.has("fertility_state"), "mixed overview payload field must remain forbidden");
+  for (const field of forbidden) {
+    assert.ok(!required.has(field as any), `forbidden field must not appear in customer-facing summary required shape: ${field}`);
+  }
 });
