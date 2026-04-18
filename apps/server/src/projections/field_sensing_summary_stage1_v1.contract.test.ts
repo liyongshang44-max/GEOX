@@ -87,10 +87,22 @@ test("field sensing summary stage1 v1 excludes compatibility and internal-only f
 
   assert.equal(output.official_soil_metrics_json.length, 6);
   const metrics = new Map(output.official_soil_metrics_json.map((x) => [x.metric, x]));
+  assert.deepEqual([...metrics.keys()], ["soil_moisture_pct", "ec_ds_m", "fertility_index", "n", "p", "k"]);
   assert.equal(metrics.get("soil_moisture_pct")?.value, 37.5);
+  assert.equal(metrics.get("soil_moisture_pct")?.freshness, "fresh");
   assert.equal(metrics.get("ec_ds_m")?.value, 2.1);
+  assert.equal(metrics.get("ec_ds_m")?.freshness, "fresh");
   assert.equal(metrics.get("n")?.value, null);
+  assert.equal(metrics.get("n")?.freshness, "unknown");
   assert.equal(metrics.get("p")?.value, null);
+  assert.equal(metrics.get("p")?.freshness, "unknown");
   assert.equal(metrics.get("k")?.value, null);
+  assert.equal(metrics.get("k")?.freshness, "unknown");
   assert.equal(metrics.get("fertility_index")?.value, null);
+  assert.equal(metrics.get("fertility_index")?.freshness, "unknown");
+
+  // Formal summary semantics: explicit freshness/confidence/null behavior.
+  assert.equal(output.freshness, "fresh");
+  assert.equal(output.confidence, 0.9);
+  assert.equal(output.computed_at_ts_ms, 1_710_000_000_500);
 });

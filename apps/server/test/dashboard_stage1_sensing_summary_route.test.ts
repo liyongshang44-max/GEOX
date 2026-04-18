@@ -23,8 +23,14 @@ test("dashboard stage1 sensing summary endpoint exposes official contract payloa
   assert.equal(body.endpoint_contract, "stage1_sensing_summary_v1");
   assert.ok(body.stage1_sensing_summary);
   assert.ok(body.stage1_refresh);
+  assert.ok(["ok", "fallback_stale", "no_data", "error"].includes(body.stage1_refresh?.status));
+  assert.ok(["fresh", "stale", "unknown"].includes(body.stage1_refresh?.freshness));
+  assert.deepEqual(body.refresh_semantics?.status, ["ok", "fallback_stale", "no_data", "error"]);
+  assert.deepEqual(body.refresh_semantics?.freshness, ["fresh", "stale", "unknown"]);
   assert.equal(body.sensing_runtime_boundary?.default_equivalence_forbidden, true);
   assert.equal(body.sensing_overview, undefined);
+  assert.equal(body.fertility_state, undefined);
+  assert.equal(body.sensing_summary_stage1, undefined);
 
   await app.close();
 });
