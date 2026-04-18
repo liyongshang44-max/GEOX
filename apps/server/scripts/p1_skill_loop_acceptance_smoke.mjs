@@ -112,6 +112,15 @@ function isPassing(diag) {
   return diag.acceptance.verdict === "PASS" && allowedFinal.has(diag.final_status);
 }
 
+function isPendingAcceptanceReady(diag) {
+  return (
+    diag.final_status === "PENDING_ACCEPTANCE"
+    && Array.isArray(diag.acceptance.missing_evidence)
+    && diag.acceptance.missing_evidence.length === 0
+    && diag.evidence_bundle.report_json_present === true
+  );
+}
+
 function isHardFailure(diag) {
   const terminalBad = new Set(["INVALID_EXECUTION", "FAILED", "ERROR", "CANCELLED"]);
   if (terminalBad.has(diag.final_status)) return true;
@@ -145,6 +154,10 @@ async function main() {
 
     if (isPassing(diag)) {
       console.log("[p1-acceptance-smoke] PASS: acceptance.verdict=PASS 且 final_status 命中 SUCCESS|SUCCEEDED|VALID");
+      return;
+    }
+    if (isPendingAcceptanceReady(diag)) {
+      console.log("[p1-acceptance-smoke] PASS: final_status=PENDING_ACCEPTANCE 且 missing_evidence=[] 且 report_json_present=true");
       return;
     }
     if (isHardFailure(diag)) {

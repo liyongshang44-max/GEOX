@@ -66,6 +66,10 @@ services:
       done;
       echo "[minio-init] creating bucket $$GEOX_EVIDENCE_S3_BUCKET (idempotent)";
       mc mb --ignore-existing local/"$$GEOX_EVIDENCE_S3_BUCKET";
+      echo "[minio-init] verifying bucket exists: $$GEOX_EVIDENCE_S3_BUCKET";
+      mc stat local/"$$GEOX_EVIDENCE_S3_BUCKET";
+      echo "[minio-init] listing buckets";
+      mc ls local;
       echo "[minio-init] setting bucket policy private (idempotent)";
       mc anonymous set private local/"$$GEOX_EVIDENCE_S3_BUCKET" || true;
       echo "[minio-init] done";
