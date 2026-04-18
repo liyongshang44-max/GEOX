@@ -387,7 +387,7 @@ async function waitForAcceptanceResolution(operationPlanId) {
     await sleep(300);
   }
   throw new Error(
-    `operation ${operationPlanId} receipt 后未进入 success 态(${successStatusExpectationText()})`,
+    `operation ${operationPlanId} receipt 后未进入 success 态(${SUCCESS_LANE_FINAL_STATUSES.join("|")})`,
   );
 }
 
