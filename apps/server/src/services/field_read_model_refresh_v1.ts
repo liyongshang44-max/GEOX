@@ -1,5 +1,6 @@
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1.js";
 import { refreshFieldSensingOverviewV1 } from "../projections/field_sensing_overview_v1.js";
+import { refreshFieldSensingSummaryStage1V1 } from "../projections/field_sensing_summary_stage1_v1.js";
 import {
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
   type Stage1Freshness,
@@ -187,6 +188,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
   field_id: string;
 }): Promise<{
   sensing_overview: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingOverviewV1>>>;
+  sensing_summary_stage1: RefreshOutput<Awaited<ReturnType<typeof refreshFieldSensingSummaryStage1V1>>>;
   fertility_state: RefreshOutput<Awaited<ReturnType<typeof refreshFieldFertilityStateV1>>>;
 }> {
   const base = {
@@ -196,7 +198,7 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     field_id: params.field_id,
   };
 
-  const [sensing_overview, fertility_state] = await Promise.all([
+  const [sensing_overview, sensing_summary_stage1, fertility_state] = await Promise.all([
     refreshWithFallback({
       key: `sensing_overview:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
       refresher: () => refreshFieldSensingOverviewV1(db, base),
@@ -214,6 +216,19 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
       },
     }),
     refreshWithFallback({
+      key: `sensing_summary_stage1:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
+      refresher: () => refreshFieldSensingSummaryStage1V1(db, base),
+      resolveFreshness: (payload) => (payload as Record<string, any>).freshness,
+      hasData: (payload) => {
+        const p = payload as Record<string, any>;
+        if (Array.isArray(p.official_soil_metrics_json) && p.official_soil_metrics_json.some((x: any) => x?.value != null)) return true;
+        return Boolean(
+          hasAnyOfficialStage1SummarySignal(p)
+          || p.computed_at_ts_ms
+        );
+      },
+    }),
+    refreshWithFallback({
       key: `fertility_state:${params.tenant_id}:${params.project_id}:${params.group_id}:${params.field_id}`,
       refresher: () => refreshFieldFertilityStateV1(db, base),
       resolveFreshness: (payload, nowMs) => fertilityFreshnessFromComputedAt((payload as Record<string, any>).computed_at_ts_ms, nowMs),
@@ -221,5 +236,5 @@ export async function refreshFieldReadModelsWithObservabilityV1(db: DbConn, para
     }),
   ]);
 
-  return { sensing_overview, fertility_state };
+  return { sensing_overview, sensing_summary_stage1, fertility_state };
 }
