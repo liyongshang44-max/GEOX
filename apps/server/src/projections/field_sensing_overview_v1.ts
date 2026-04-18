@@ -1,4 +1,9 @@
 import type { Pool, PoolClient } from "pg";
+import {
+  STAGE1_ALL_SENSING_INPUT_METRICS,
+  STAGE1_ALL_SUPPORTED_DERIVED_STATES,
+  STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES,
+} from "../domain/sensing/stage1_sensing_contract_v1.js";
 
 type DbConn = Pool | PoolClient;
 
@@ -44,34 +49,7 @@ type FieldSensingOverviewV1 = {
   updated_ts_ms: number;
 };
 
-const SOIL_METRIC_KEYS = [
-  // canonical stage-1 soil moisture metrics
-  "soil_moisture_pct",
-  // alias (compatibility path, not stage-1 primary)
-  "soil_moisture",
-  "moisture_pct",
-  // canonical stage-1 salinity metric
-  "ec_ds_m",
-  // alias (compatibility path, not stage-1 primary)
-  "ec",
-  "soil_ec_ds_m",
-  "salinity_ec_ds_m",
-  // canonical stage-1 fertility metric
-  "fertility_index",
-  // alias (compatibility path, not stage-1 primary)
-  "soil_fertility_index",
-  // canonical stage-1 nutrient metrics
-  "n",
-  "p",
-  "k",
-  // alias (compatibility path, not stage-1 primary)
-  "nitrogen",
-  "phosphorus",
-  "potassium",
-  "soil_n",
-  "soil_p",
-  "soil_k",
-] as const;
+const SOIL_METRIC_KEYS = STAGE1_ALL_SENSING_INPUT_METRICS;
 
 const FRESH_WINDOW_MS = 1000 * 60 * 60 * 6;
 
@@ -323,28 +301,18 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
       params.field_id,
       params.project_id ?? null,
       params.group_id ?? null,
-      [
-        "canopy_temperature_state",
-        "evapotranspiration_risk_state",
-        "sensor_quality_state",
-        "irrigation_effectiveness_state",
-        "leak_risk_state",
-        // compatibility-only: legacy names are fallback paths and not stage-1 official sources.
-        "irrigation_need_state",
-        "canopy_state",
-        "water_flow_state",
-      ],
+      STAGE1_ALL_SUPPORTED_DERIVED_STATES,
     ]
   );
 
   const derivedStateRows = derivedRows.rows ?? [];
   const canopyTemperaturePayload = selectLatestDerivedState(derivedStateRows, {
     official: "canopy_temperature_state",
-    compatibility: ["canopy_state"],
+    compatibility: [...STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES.canopy_temperature_state],
   });
   const evapotranspirationRiskPayload = selectLatestDerivedState(derivedStateRows, {
     official: "evapotranspiration_risk_state",
-    compatibility: ["canopy_state"],
+    compatibility: [...STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES.evapotranspiration_risk_state],
   });
   // customer/product recommended field: sensor_quality_level
   // internal diagnostics field: sensor_quality
@@ -353,11 +321,11 @@ export async function refreshFieldSensingOverviewV1(db: DbConn, params: {
   });
   const irrigationEffectivenessPayload = selectLatestDerivedState(derivedStateRows, {
     official: "irrigation_effectiveness_state",
-    compatibility: ["water_flow_state"],
+    compatibility: [...STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES.irrigation_effectiveness_state],
   });
   const leakRiskPayload = selectLatestDerivedState(derivedStateRows, {
     official: "leak_risk_state",
-    compatibility: ["water_flow_state"],
+    compatibility: [...STAGE1_DERIVED_STATE_COMPATIBILITY_ALIASES.leak_risk_state],
   });
   // compatibility-only / not stage-1 official field:
   // irrigation_need_state -> irrigation_need_level is retained only for backward compatibility.
