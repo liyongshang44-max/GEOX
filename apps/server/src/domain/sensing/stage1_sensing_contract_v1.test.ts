@@ -5,6 +5,12 @@ import {
   STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
   STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
   STAGE1_INPUT_CONTRACT_LAYERS,
+  STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE,
+  STAGE1_INTERNAL_SUMMARY_CONTRACT_SHAPE,
+  STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS,
+  STAGE1_SUMMARY_DISPLAY_ONLY_FIELDS,
+  STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE,
+  STAGE1_SUMMARY_REFRESH_CARRIAGE_SEMANTICS,
   STAGE1_OFFICIAL_DERIVED_STATES,
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
   STAGE1_REFRESH_SEMANTICS,
@@ -58,4 +64,24 @@ test("stage1 sensing contract: runtime status and sensing diagnostic boundaries 
   assert.equal(STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY.default_equivalence_forbidden, true);
   assert.equal(STAGE1_RUNTIME_DIAGNOSTIC_BOUNDARY.explicit_bridge_rule_required, true);
   assert.ok(STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS.forbidden_direct_inputs.includes("last_heartbeat_ts_ms"));
+});
+
+test("stage1 sensing contract: customer/internal summary structure semantics are explicit", () => {
+  assert.ok(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields.includes("official_soil_metrics_json"));
+  assert.ok(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields.includes("freshness"));
+  assert.ok(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields.includes("updated_ts_ms"));
+  assert.deepEqual(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.display_only_fields, STAGE1_SUMMARY_DISPLAY_ONLY_FIELDS);
+  assert.ok(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes("sensor_quality"));
+  assert.ok(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes("soil_indicators_json"));
+  assert.ok(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes("sensing_overview"));
+  assert.ok(STAGE1_INTERNAL_SUMMARY_CONTRACT_SHAPE.internal_only_fields.includes("irrigation_need_level"));
+  assert.equal(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.nullability.field_id, false);
+  assert.equal(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.nullability.confidence, true);
+  assert.equal(STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.nullability.official_soil_metrics_json, false);
+  assert.equal(STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE.container_field, "official_soil_metrics_json");
+  assert.deepEqual(STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE.item_shape.freshness, STAGE1_REFRESH_SEMANTICS.freshness);
+  assert.deepEqual(
+    STAGE1_SUMMARY_REFRESH_CARRIAGE_SEMANTICS.route_refresh_envelope.stage1_refresh_fields,
+    ["freshness", "status", "refreshed_ts_ms"]
+  );
 });
