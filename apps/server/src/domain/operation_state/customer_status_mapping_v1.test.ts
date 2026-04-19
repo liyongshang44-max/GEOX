@@ -84,6 +84,11 @@ test("customer status mapping: invalid_execution has highest priority", () => {
 });
 
 test("customer status mapping: summary/today_action/risk_level are frozen", () => {
+  assert.deepEqual(customerViewByStatusV1("IN_PROGRESS"), {
+    summary: "作业执行中，系统正在持续采集进度",
+    today_action: "保持设备在线并关注执行状态",
+    risk_level: "medium",
+  });
   assert.deepEqual(customerViewByStatusV1("PENDING_APPROVAL"), {
     summary: "当前建议待审批，尚未进入执行阶段",
     today_action: "下一步：等待审批",
@@ -98,6 +103,16 @@ test("customer status mapping: summary/today_action/risk_level are frozen", () =
     summary: "已收到执行数据，待验收确认",
     today_action: "下一步：进入验收",
     risk_level: "low",
+  });
+  assert.deepEqual(customerViewByStatusV1("COMPLETED"), {
+    summary: "作业已完成并形成闭环",
+    today_action: "继续观察效果并归档证据",
+    risk_level: "low",
+  });
+  assert.deepEqual(customerViewByStatusV1("INVALID_EXECUTION"), {
+    summary: "本次作业未被系统认定为有效执行",
+    today_action: "需重新执行或补充证据",
+    risk_level: "high",
   });
   assert.equal(operationStatusLabelV1("INVALID_EXECUTION"), "执行无效");
 });
