@@ -17,16 +17,30 @@
 4. **final_status 层**（operation detail / operation state）
    - 面向作业状态与闭环推进的最终判定。
 
+## 灌溉 formal evidence 冻结口径
+
+### A. formal evidence 最小集合（明确）
+
+- **formal log evidence**：日志 `kind` 必须通过 `isFormalLogKind(...)` 才算正式日志证据。
+- **formal artifact evidence**：artifact 的 `kind` 只要不是 debug-only（如 `sim_trace`）且 `inferEvidenceLevel(kind)` 不为 `DEBUG`，即可作为 formal artifact candidate。
+
+### B. supporting evidence 集合（明确）
+
+- `media`
+- `metrics`
+
+当前仓库中它们只算 supporting evidence，**不能单独决定 operation 为有效执行**。
+
+### C. 非 formal evidence 集合（明确）
+
+- `sim_trace`（debug-only）
+
+`sim_trace` 明确不算 formal evidence，不能直接用于通过有效执行判定。
+
 ## INVALID_EXECUTION 与证据不足
 
-- 当 receipt 显示已执行（executed），但 formal evidence 不成立时，detail 最终态应为 `INVALID_EXECUTION`。
+- 当 receipt 存在且显示已执行（executed），但 formal evidence 不足时，当前仓库 detail 语义为 `INVALID_EXECUTION`。
 - 这表示“执行链路在证据上无效”，不是 acceptance 的替代结论。
-
-## 灌溉 formal evidence 冻结边界
-
-- `sim_trace` 仅为 simulator 调试痕迹，**不能**直接视为正式 evidence。
-- formal log 必须通过 formal log kind 规则（沿用 evidence_policy 方向）。
-- media / metrics 作为辅助证据维度参与 evidence 评估，但不改变 receipt/acceptance/final_status 的分层语义。
 
 ## 四种典型状态
 
