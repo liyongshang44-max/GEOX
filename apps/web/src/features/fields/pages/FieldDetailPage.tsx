@@ -11,7 +11,6 @@ import SectionSkeleton from "../../../components/common/SectionSkeleton";
 import ReceiptEvidenceCard from "../../../components/evidence/ReceiptEvidenceCard";
 import { apiRequestOptional } from "../../../api/client";
 import { bindDeviceToField } from "../../../api/devices";
-import { shouldShowRecommendationBiasWarning, toneCardClass, toneHintText } from "../../../lib/fieldReadModelV1";
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   ok: { color: "var(--color-status-normal-fg)", bg: "var(--color-status-normal-bg)", border: "var(--color-status-normal-border)" },
@@ -33,7 +32,7 @@ export default function FieldDetailPage(): React.ReactElement {
   const [lang] = React.useState<FieldLang>(() => (getUiLocale() === "en" ? "en" : "zh"));
   const labels = FIELD_TEXT[lang];
   const [selectedMapObject, setSelectedMapObject] = React.useState<any | null>(null);
-  const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, fieldReadModelV1, refresh } = useFieldDetail({ fieldId, lang });
+  const { model, busy, error, technical, hasControlPlane, hasCurrentProgram, hasGeometry, refresh } = useFieldDetail({ fieldId, lang });
   const [deviceOptions, setDeviceOptions] = React.useState<Array<{ device_id: string; connection_status?: string; field_id?: string; last_telemetry_ts_ms?: number | null }>>([]);
   const [bindDeviceId, setBindDeviceId] = React.useState("");
   const [bindMessage, setBindMessage] = React.useState("");
@@ -81,11 +80,6 @@ export default function FieldDetailPage(): React.ReactElement {
   const recommendationEvents = (model?.timeline ?? []).filter((item) => item.type === "recommendation").slice(0, 3);
   const recentOperationEvents = (model?.timeline ?? []).filter((item) => item.type === "operation").slice(0, 5);
   const hasInitializedProgram = hasCurrentPlan;
-  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
-  const sensingV1 = enableReadModelV1 ? fieldReadModelV1?.sensing : null;
-  const fertilityV1 = enableReadModelV1 ? fieldReadModelV1?.fertility : null;
-  const recommendationBias = fertilityV1?.recommendationBias ?? null;
-  const showBiasWarning = shouldShowRecommendationBiasWarning(recommendationBias);
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
     {
@@ -196,45 +190,6 @@ export default function FieldDetailPage(): React.ReactElement {
         ) : null}
       </section>
       ) : null}
-      {activeTab === "overview" && (sensingV1 || fertilityV1) ? (
-        <section className="card detailHeroCard" style={{ marginBottom: 12, borderColor: showBiasWarning ? "var(--color-status-risk-border)" : undefined }}>
-          <div className="sectionTitle">监测/肥力读模型（V1）</div>
-          {sensingV1 ? (
-            <div className={`decisionItemStatic ${toneCardClass(sensingV1.tone)}`}>
-              <div className="decisionItemTitle">技术附录：监测概览</div>
-              <div className="decisionItemMeta">状态：{sensingV1.statusLabel}</div>
-              <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
-              <div className="decisionItemMeta">updated_at：{sensingV1.updatedAtLabel}</div>
-              <div className="decisionItemMeta">解释码：{sensingV1.explainCodeLabels.length ? sensingV1.explainCodeLabels.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">专家信息：观测来源：{sensingV1.sourceObservationIds.length ? sensingV1.sourceObservationIds.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">来源设备：{sensingV1.sourceDevices.length ? sensingV1.sourceDevices.join(" / ") : "--"}</div>
-              {toneHintText(sensingV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(sensingV1.tone)}</div> : null}
-            </div>
-          ) : null}
-          {fertilityV1 ? (
-            <div className={`decisionItemStatic ${toneCardClass(fertilityV1.tone)}`} style={{ marginTop: 8 }}>
-              <div className="decisionItemTitle">技术附录：肥力状态</div>
-              <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel}</div>
-              <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
-              <div className="decisionItemMeta">salinity_risk：{fertilityV1.salinityRiskLabel}</div>
-              <div className="decisionItemMeta">confidence：{fertilityV1.confidenceLabel}</div>
-              <div className="decisionItemMeta">updated_at：{fertilityV1.updatedAtLabel}</div>
-              <div className="decisionItemMeta">解释码：{fertilityV1.explainCodeLabels.length ? fertilityV1.explainCodeLabels.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">专家信息：观测来源：{fertilityV1.sourceObservationIds.length ? fertilityV1.sourceObservationIds.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">来源设备：{fertilityV1.sourceDevices.length ? fertilityV1.sourceDevices.join(" / ") : "--"}</div>
-              {toneHintText(fertilityV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(fertilityV1.tone)}</div> : null}
-            </div>
-          ) : null}
-          {showBiasWarning ? (
-            <div className="decisionItemStatic" style={{ marginTop: 8, borderColor: "var(--color-status-risk-border)", background: "var(--color-status-risk-bg)" }}>
-              <div className="decisionItemTitle">⚠️ 当前建议偏置提示</div>
-              <div className="decisionItemMeta">
-                recommendation_bias = <strong>{fertilityV1?.recommendationBiasLabel}</strong>，建议优先人工复核现场并谨慎推进自动动作。
-              </div>
-            </div>
-          ) : null}
-        </section>
-      ) : null}
       {!hasBoundDevice ? (
       activeTab === "config" ? (
         <section className="card detailHeroCard" style={{ marginBottom: 12 }}>
@@ -274,6 +229,21 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to={recommendationsHref}>查看建议中心</Link>
           <Link className="btn" to="/operations">转为作业</Link>
         </div>
+      </section>
+      ) : null}
+      {activeTab === "overview" ? (
+      <section className="card detailHeroCard">
+        <div className="demoSectionHeader">
+          <div className="sectionTitle">最近作业与验收区</div>
+          <div className="detailSectionLead">聚焦最近一次作业执行与验收结果，便于快速判断是否闭环。</div>
+        </div>
+        {model?.currentTask ? (
+          <div className="decisionList">
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近作业</div><div className="decisionItemMeta">{model.currentTask.action} · 状态：{model.currentTask.status} · 进度：{model.currentTask.progress}%</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近验收</div><div className="decisionItemMeta">{model.lastEvent?.action || "暂无"} · {model.lastEvent?.relativeText || "刚刚"}</div></div>
+          </div>
+        ) : <div className="decisionItemStatic">暂无执行任务</div>}
+        {model?.currentTask?.operationPlanId ? <div className="operationsSummaryActions"><Link className="btn" to={operationHref}>查看作业详情 →</Link></div> : null}
       </section>
       ) : null}
       {hasBoundDevice && !hasTelemetry ? (
