@@ -10,6 +10,12 @@ import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine.js";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine.js";
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
+import {
+  assertFormalTriggerInputLayer,
+  assertNoForbiddenTriggerFields,
+  deriveFormalTriggerSignalsFromStage1Summary,
+  normalizeStage1RecommendationInput
+} from "../domain/decision/stage1_action_boundary_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import {
   ensureDerivedSensingStateProjectionV1,
@@ -1100,6 +1106,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: tenant.group_id,
       field_id: derivedFieldId
     });
+    const stage1SummaryPayload = refreshedReadModels.sensing_summary_stage1.payload;
+    assertFormalTriggerInputLayer("stage1_sensing_summary_v1");
+    assertNoForbiddenTriggerFields(stage1SummaryPayload);
+    const normalizedStage1RecommendationInput = normalizeStage1RecommendationInput(stage1SummaryPayload);
+    const formalTriggerSignals = deriveFormalTriggerSignalsFromStage1Summary(stage1SummaryPayload);
     const fertilityState = refreshedReadModels.fertility_state.payload;
     const sensingOverview = refreshedReadModels.sensing_overview.payload;
     const latestDerivedStates = await getLatestDerivedSensingStatesByFieldV1(pool, {
@@ -1190,6 +1201,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rule_id: primaryRuleId,
         rule_hit: recommendationPayload.rule_hit,
         data_sources: {
+          stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+          stage1_formal_trigger_signals_v1: formalTriggerSignals,
           field_sensing_overview_v1: sensingOverview,
           field_fertility_state_v1: fertilityState ?? null,
           image_recognition: body.image_recognition ?? null
@@ -1240,6 +1253,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           device_id: recommendationPayload.device_id,
           program_id: recommendationPayload.program_id,
           evidence_facts: recommendationEvidenceFacts(sensingOverview, body.image_recognition),
+          stage1_action_trigger_input: {
+            source_kind: "stage1_sensing_summary_v1",
+            formal_trigger_signals: formalTriggerSignals,
+            support_only_signals: normalizedStage1RecommendationInput,
+          },
           created_ts: Date.now()
         }
       });
@@ -1252,6 +1270,8 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           ...recommendationPayload,
           recommendation_input_fact_id,
           data_sources: {
+            stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+            stage1_formal_trigger_signals_v1: formalTriggerSignals,
             field_sensing_overview_v1: sensingOverview,
             field_fertility_state_v1: fertilityState ?? null,
             image_recognition: body.image_recognition ?? null
