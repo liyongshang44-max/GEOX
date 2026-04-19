@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { registerDecisionEngineV1Routes } from "./decision_engine_v1.js";
+import { IRRIGATION_CONTROL_PLANE_ACTION } from "../domain/controlplane/irrigation_action_mapping_v1.js";
 
 class ControlPlanePool {
   constructor(private mode: "eligible" | "ineligible" | "missing") {}
@@ -69,11 +70,16 @@ async function setup(scopes: string, actorId = "admin_user") {
 test("control-plane boundary: formal-trigger recommendation can submit approval", async () => {
   await setup("ao_act.task.write,ao_act.index.read,ao_act.receipt.write");
   const originalFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({
-    ok: true,
-    status: 200,
-    json: async () => ({ ok: true, request_id: "apr_1", fact_id: "fact_apr_1" })
-  } as any);
+  let delegatedActionType: string | null = null;
+  globalThis.fetch = async (_url: any, init?: any) => {
+    const parsedBody = init?.body ? JSON.parse(String(init.body)) : {};
+    delegatedActionType = parsedBody?.action_type ?? null;
+    return ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, request_id: "apr_1", fact_id: "fact_apr_1" })
+    } as any);
+  };
 
   const app = Fastify();
   registerDecisionEngineV1Routes(app, new ControlPlanePool("eligible") as any);
@@ -88,6 +94,7 @@ test("control-plane boundary: formal-trigger recommendation can submit approval"
 
   assert.equal(res.statusCode, 200);
   assert.equal(res.json().ok, true);
+  assert.equal(delegatedActionType, IRRIGATION_CONTROL_PLANE_ACTION);
 
   globalThis.fetch = originalFetch;
   await app.close();
