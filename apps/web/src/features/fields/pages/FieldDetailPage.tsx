@@ -125,12 +125,6 @@ export default function FieldDetailPage(): React.ReactElement {
             <Link className="btn" to="/fields">返回田块列表</Link>
           </div>
         </div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 16 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">土壤湿度</span><strong>{model?.currentStatus?.soilMoisture || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">温度</span><strong>{model?.currentStatus?.temperature || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备状态</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
-        </div>
         <div className="operationsSummaryActions">
           {hasCurrentPlan ? <Link className="btn" to={programHref}>主入口：查看经营方案</Link> : <Link className="btn primary" to={`/programs/create?field_id=${encodeURIComponent(fieldId)}`}>创建经营方案</Link>}
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
@@ -169,14 +163,10 @@ export default function FieldDetailPage(): React.ReactElement {
       {activeTab === "overview" ? (
       <section className="card detailHeroCard fieldBattleSection" style={{ marginBottom: 12 }}>
         <div className="sectionTitle">当前状态区</div>
-        <div className="detailSectionLead">先看当前经营是否完成初始化，再确认设备、遥测与执行状态。</div>
+        <div className="detailSectionLead">先确认当前经营状态与经营方案，判断本田块是否处于可执行状态。</div>
         <div className="fieldBattleMetrics">
           <div className="fieldBattleMetric"><span>当前状态</span><strong>{headerStatusLabel}</strong></div>
-          <div className="fieldBattleMetric"><span>当前作物</span><strong>{model?.currentCropText || "--"}</strong></div>
           <div className="fieldBattleMetric"><span>当前经营方案</span><strong>{currentPlanText}</strong></div>
-          <div className="fieldBattleMetric"><span>设备在线</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
-          <div className="fieldBattleMetric"><span>最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
-          <div className="fieldBattleMetric"><span>当前执行</span><strong>{model?.currentTask ? `${model.currentTask.action} · ${model.currentTask.status}` : "暂无执行任务"}</strong></div>
         </div>
         {!hasInitializedProgram ? (
           <div className="decisionItemStatic onboardingHintCard fieldInitBanner" style={{ marginTop: 10 }}>
@@ -316,6 +306,19 @@ export default function FieldDetailPage(): React.ReactElement {
 
       {activeTab === "realtime" ? (
       <section className="demoContentGrid">
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">实时状态 / 现场数据</div>
+            <div className="detailSectionLead">遥测与设备在线信息集中到此页签展示，不进入默认概览首屏。</div>
+          </div>
+          <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">土壤湿度</span><strong>{model?.currentStatus?.soilMoisture || "--"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">温度</span><strong>{model?.currentStatus?.temperature || "--"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备状态</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
+            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
+          </div>
+        </section>
+
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">最近作业与验收区</div>
