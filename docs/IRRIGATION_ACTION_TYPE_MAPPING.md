@@ -25,3 +25,6 @@
 - control-plane 执行链路保留动作标准化枚举：`IRRIGATE`
 
 二者通过单一来源 helper 映射，避免在业务代码中散落硬编码字符串。
+
+当前仓库动作映射单一来源 helper 为 `apps/server/src/domain/controlplane/irrigation_action_mapping_v1.ts`。
+recommendation / control-plane / customer-facing 不允许在其他业务代码重新定义灌溉动作名语义。
