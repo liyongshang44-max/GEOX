@@ -201,26 +201,26 @@ export default function FieldDetailPage(): React.ReactElement {
           <div className="sectionTitle">监测/肥力读模型（V1）</div>
           {sensingV1 ? (
             <div className={`decisionItemStatic ${toneCardClass(sensingV1.tone)}`}>
-              <div className="decisionItemTitle">field_sensing_overview_v1</div>
+              <div className="decisionItemTitle">技术附录：监测概览</div>
               <div className="decisionItemMeta">状态：{sensingV1.statusLabel}</div>
               <div className="decisionItemMeta">数据可信度/质量：{sensingV1.sensorQuality || "--"}</div>
               <div className="decisionItemMeta">updated_at：{sensingV1.updatedAtLabel}</div>
               <div className="decisionItemMeta">解释码：{sensingV1.explainCodeLabels.length ? sensingV1.explainCodeLabels.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">source_observation_ids：{sensingV1.sourceObservationIds.length ? sensingV1.sourceObservationIds.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">专家信息：观测来源：{sensingV1.sourceObservationIds.length ? sensingV1.sourceObservationIds.join(" / ") : "--"}</div>
               <div className="decisionItemMeta">来源设备：{sensingV1.sourceDevices.length ? sensingV1.sourceDevices.join(" / ") : "--"}</div>
               {toneHintText(sensingV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(sensingV1.tone)}</div> : null}
             </div>
           ) : null}
           {fertilityV1 ? (
             <div className={`decisionItemStatic ${toneCardClass(fertilityV1.tone)}`} style={{ marginTop: 8 }}>
-              <div className="decisionItemTitle">field_fertility_state_v1</div>
+              <div className="decisionItemTitle">技术附录：肥力状态</div>
               <div className="decisionItemMeta">状态：{fertilityV1.statusLabel !== "--" ? fertilityV1.statusLabel : fertilityV1.fertilityStateLabel}</div>
               <div className="decisionItemMeta">recommendation_bias：{fertilityV1.recommendationBiasLabel}</div>
               <div className="decisionItemMeta">salinity_risk：{fertilityV1.salinityRiskLabel}</div>
               <div className="decisionItemMeta">confidence：{fertilityV1.confidenceLabel}</div>
               <div className="decisionItemMeta">updated_at：{fertilityV1.updatedAtLabel}</div>
               <div className="decisionItemMeta">解释码：{fertilityV1.explainCodeLabels.length ? fertilityV1.explainCodeLabels.join(" / ") : "--"}</div>
-              <div className="decisionItemMeta">source_observation_ids：{fertilityV1.sourceObservationIds.length ? fertilityV1.sourceObservationIds.join(" / ") : "--"}</div>
+              <div className="decisionItemMeta">专家信息：观测来源：{fertilityV1.sourceObservationIds.length ? fertilityV1.sourceObservationIds.join(" / ") : "--"}</div>
               <div className="decisionItemMeta">来源设备：{fertilityV1.sourceDevices.length ? fertilityV1.sourceDevices.join(" / ") : "--"}</div>
               {toneHintText(fertilityV1.tone) ? <div className="decisionItemMeta">提示：{toneHintText(fertilityV1.tone)}</div> : null}
             </div>
