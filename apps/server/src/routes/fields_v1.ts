@@ -1037,7 +1037,7 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
         "map_layers",
       ], // Field-detail aggregates for UI tabs only; not part of Stage-1 sensing source-of-truth contract.
       stage1_sensing_non_contract_note:
-        "summary/sensor_trends/recent_alerts/map_layers are field-detail aggregates, not Stage-1 sensing source-of-truth.",
+        "summary, sensor_trends, recent_alerts, and map_layers are field-detail aggregates and not Stage-1 sensing source-of-truth.",
       polygon: polyQ.rowCount ? { ...polyQ.rows[0], geojson_json: parseJsonOrNull(polyQ.rows[0].geojson) } : null, // Polygon detail with parsed JSON convenience field.
       geometry: geometry ? {
         type: geometry.type,
