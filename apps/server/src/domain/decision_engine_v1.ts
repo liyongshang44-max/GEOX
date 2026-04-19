@@ -1,5 +1,6 @@
 import { evaluateAgronomy } from "./agronomy/agronomy_engine.js";
 import { getCropProfile } from "./agronomy/crop_catalog.js";
+import { IRRIGATION_RECOMMENDATION_ACTION } from "./controlplane/irrigation_action_mapping_v1.js";
 
 export type DecisionEngineInputV1 = {
   crop_code: string;
@@ -60,7 +61,7 @@ const HARD_RULE_POLICY_CONFIG_V1: HardRulePolicyConfigItemV1[] = [
       confidence: 0.95,
       expected_effect: { soil_moisture: 8 },
       suggested_action: {
-        action_type: "irrigation.start",
+        action_type: IRRIGATION_RECOMMENDATION_ACTION,
         summary: "命中硬规则 moisture_constraint=dry，建议优先灌溉。",
         parameters: {
           trigger: { moisture_constraint: "dry" },
