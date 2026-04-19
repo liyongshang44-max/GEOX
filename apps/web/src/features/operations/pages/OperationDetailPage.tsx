@@ -333,8 +333,8 @@ export default function OperationDetailPage(): React.ReactElement {
           </section>
         </div>
 
-        <DetailAside title="Detail Aside">
-          <div className="sectionTitle">Detail Aside</div>
+        <DetailAside title="当前闭环摘要">
+          <div className="sectionTitle">当前闭环摘要</div>
           <div className="operationAsideBody">
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行状态</span><strong>{topStatusLabel}</strong></div>
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">验收</span><strong>{model.acceptance.statusLabel}</strong></div>
