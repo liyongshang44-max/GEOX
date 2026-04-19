@@ -6,6 +6,7 @@ import {
   STAGE1_CUSTOMER_SUMMARY_FIELDS,
   STAGE1_INPUT_CONTRACT_LAYERS,
   STAGE1_OFFICIAL_DERIVED_STATES,
+  STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS,
   STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
   STAGE1_OFFICIAL_SOIL_METRICS_SUMMARY_SUBSTRUCTURE,
   STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
@@ -15,7 +16,9 @@ import {
   STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS,
 } from "./stage1_sensing_contract_v1.js";
 import {
+  STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1,
   STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1,
   STAGE1_SENSING_INPUT_MAPPING_V1,
 } from "./stage1_sensing_input_mapping_v1.js";
 import { refreshFieldSensingSummaryStage1V1 } from "../../projections/field_sensing_summary_stage1_v1.js";
@@ -119,6 +122,9 @@ test("contract and mapping remain aligned on layered semantics", () => {
   assert.equal(STAGE1_INPUT_CONTRACT_LAYERS.source_of_truth_module, "stage1_sensing_input_mapping_v1");
 
   assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_pipeline_input_whitelist, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS);
+  assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS, STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1);
+  assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS, STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1);
+  assert.deepEqual(STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1);
   assert.deepEqual(STAGE1_INPUT_CONTRACT_LAYERS.official_customer_summary_soil_metrics_subset, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS);
   assert.deepEqual(
     [...STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS].sort(),
@@ -142,6 +148,24 @@ test("contract and mapping remain aligned on layered semantics", () => {
   for (const field of STAGE1_SUMMARY_INTERNAL_ONLY_FIELDS) {
     assert.ok(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes(field as typeof STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS[number]));
   }
+});
+
+test("contract and mapping constants are exactly aligned for canonical/aggregate/summary layers", () => {
+  assert.deepEqual(
+    STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS,
+    STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS_V1,
+    "contract canonical input metrics must exactly match mapping canonical input metrics"
+  );
+  assert.deepEqual(
+    STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS,
+    STAGE1_OFFICIAL_PIPELINE_AGGREGATE_FIELDS_V1,
+    "contract aggregate fields must exactly match mapping aggregate fields"
+  );
+  assert.deepEqual(
+    STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+    STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1,
+    "contract summary soil metrics must exactly match mapping summary subset"
+  );
 });
 
 test("contract and projection remain aligned for summary payload shape and soil metric whitelist", async () => {
@@ -172,13 +196,17 @@ test("contract and projection remain aligned for summary payload shape and soil 
 
 function assertSummaryRoutePayloadAligned(payload: Record<string, any>): void {
   assert.equal(payload.endpoint_contract, "stage1_sensing_summary_v1");
+  assert.ok(payload.stage1_sensing_summary, "official summary route must return stage1_sensing_summary");
+  assert.ok(payload.stage1_refresh, "official summary route must return stage1_refresh");
   assert.deepEqual(
     Object.keys(payload.stage1_sensing_summary).sort(),
     [...STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields].sort()
   );
   for (const forbidden of STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS) {
     assert.equal(payload.stage1_sensing_summary[forbidden], undefined, `forbidden field leaked from route payload: ${forbidden}`);
+    assert.equal(payload[forbidden], undefined, `forbidden field leaked at route top-level: ${forbidden}`);
   }
+  assert.equal(payload.sensing_summary_stage1, undefined, "official summary route must not expose internal mixed read model field sensing_summary_stage1");
   assert.deepEqual(payload.refresh_semantics, STAGE1_REFRESH_SEMANTICS);
 }
 
@@ -233,6 +261,8 @@ test("forbidden-fields consistency is enforced in customer-facing summary contra
   }
   assert.ok(forbidden.has("sensing_overview"), "mixed overview payload field must remain forbidden");
   assert.ok(forbidden.has("fertility_state"), "mixed overview payload field must remain forbidden");
+  assert.ok(forbidden.has("sensor_quality"), "internal sensor_quality field must remain forbidden");
+  assert.ok(forbidden.has("irrigation_need_level"), "internal irrigation_need_level field must remain forbidden");
   for (const field of forbidden) {
     assert.ok(!required.has(field as any), `forbidden field must not appear in customer-facing summary required shape: ${field}`);
   }
