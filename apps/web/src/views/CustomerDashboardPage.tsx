@@ -101,13 +101,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="muted">离线地块：{numberFmt.format(summary?.offline_fields ?? 0)}。</div>
       </SectionCard>
 
-      <SectionCard title="经营汇总（/api/v1/fields/portfolio/summary）">
+      <SectionCard title="经营汇总">
         <div>未关闭告警：{numberFmt.format(summary?.total_open_alerts ?? 0)}</div>
         <div>待验收：{numberFmt.format(summary?.total_pending_acceptance ?? 0)}</div>
         <div>预计成本：{currencyFmt.format(summary?.total_estimated_cost ?? 0)} · 实际成本：{currencyFmt.format(summary?.total_actual_cost ?? 0)}</div>
       </SectionCard>
 
-      <SectionCard title="待处理事项（/api/v1/alerts/workboard summary）">
+      <SectionCard title="待处理事项">
         <div>总告警：{numberFmt.format(alertSummary.total)}</div>
         <div className="muted">未分配：{numberFmt.format(alertSummary.unassigned)} · 处理中：{numberFmt.format(alertSummary.in_progress)} · 已超时：{numberFmt.format(alertSummary.sla_breached)} · 今日关闭：{numberFmt.format(alertSummary.closed_today)}</div>
         <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
