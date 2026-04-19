@@ -282,8 +282,9 @@ export function useFieldDetail(params: {
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
       const cp = cpRes.status === "fulfilled" ? cpRes.value : null;
-      const latestReadModelRec = enableReadModelV1 ? (recommendationsCp[0] ?? recommendations[0] ?? null) : null;
-      const fieldReadModelV1 = latestReadModelRec ? parseFieldReadModelV1(latestReadModelRec) : null;
+      // 仅作为技术附录数据保留，不参与客户主叙事定义。
+      const technicalReadModelRec = enableReadModelV1 ? (recommendationsCp[0] ?? null) : null;
+      const fieldReadModelV1 = technicalReadModelRec ? parseFieldReadModelV1(technicalReadModelRec) : null;
 
       const overview = buildFieldOverviewVm({
         fieldId,
