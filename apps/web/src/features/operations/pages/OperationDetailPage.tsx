@@ -263,23 +263,6 @@ export default function OperationDetailPage(): React.ReactElement {
           ) : null}
 
           <section className="card" style={{ marginTop: 12 }}>
-            <div className="sectionTitle">来源与解释</div>
-            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{detailSource || "--"}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最终状态</span><strong>{detailFinalStatus || "--"}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则 ID</span><strong>{String(explainSystem?.rule_id ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则版本</span><strong>{String(explainSystem?.rule_version ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{String(explainSystem?.crop_stage ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{Array.isArray(explainSystem?.reason_codes) ? explainSystem.reason_codes.join(", ") || "--" : String(explainSystem?.reason_codes ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">系统解释</span><strong>{String(explainHuman?.reason ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务预期</span><strong>{String(explainHuman?.expectation ?? "--")}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险提示</span><strong>{String(explainHuman?.risk ?? "--")}</strong></div>
-            </div>
-          </section>
-
-          <OperationSkillTraceCard trace={detailSkillTrace} />
-
-          <section className="card" style={{ marginTop: 12 }}>
             <div className="sectionTitle">执行过程</div>
             {notExecutedYet ? (
               <div className="decisionItemStatic" style={{ marginTop: 10 }}>
@@ -289,7 +272,6 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行模式</span><strong>{model.execution.executionModeLabel}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行器</span><strong>{model.execution.executorLabel}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Task ID</span><strong>{executionTrace?.task_id || "--"}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行就绪</span><strong>{executionReady ? "是" : "否"}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">为何转人工</span><strong>{model.execution.manualFallbackReasonLabel}</strong></div>
             </div>
@@ -303,12 +285,10 @@ export default function OperationDetailPage(): React.ReactElement {
 
           <section className="card" style={{ marginTop: 12 }}>
             <div className="sectionTitle">闭环信息（可折叠）</div>
-            <CollapsibleModule title="建议依据" defaultOpen>
+            <CollapsibleModule title="建议依据（业务）">
               <div className="operationsSummaryGrid">
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.recommendationBasis.ruleId || "--"}</strong></div>
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{model.recommendationBasis.cropStage || "--"}</strong></div>
-                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.recommendationBasis.reasonCodesLabel || "--"}</strong></div>
                 <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议摘要</span><strong>{model.recommendation.summary}</strong></div>
+                <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">为什么触发</span><strong>{String(explainHuman?.reason ?? model.businessEffect.riskIfNotExecute ?? "--")}</strong></div>
               </div>
             </CollapsibleModule>
             <CollapsibleModule title="审批内容">
@@ -418,15 +398,53 @@ export default function OperationDetailPage(): React.ReactElement {
       </section>
 
       <section className="card" style={{ marginTop: 12 }}>
-        <div className="sectionTitle">审计附录</div>
-        <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议编号</span><strong>{model.technicalRefs.recommendationId}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.technicalRefs.approvalRequestId}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作业计划编号</span><strong>{model.technicalRefs.operationPlanId}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行任务编号</span><strong>{model.technicalRefs.actTaskId}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
-          <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
-        </div>
+        <CollapsibleModule title="技术附录（默认关闭）">
+          <CollapsibleModule title="来源与解释">
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{detailSource || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最终状态</span><strong>{detailFinalStatus || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则 ID</span><strong>{String(explainSystem?.rule_id ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则版本</span><strong>{String(explainSystem?.rule_version ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{String(explainSystem?.crop_stage ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{Array.isArray(explainSystem?.reason_codes) ? explainSystem.reason_codes.join(", ") || "--" : String(explainSystem?.reason_codes ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">系统解释</span><strong>{String(explainHuman?.reason ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">业务预期</span><strong>{String(explainHuman?.expectation ?? "--")}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">风险提示</span><strong>{String(explainHuman?.risk ?? "--")}</strong></div>
+            </div>
+          </CollapsibleModule>
+
+          <CollapsibleModule title="技能执行诊断">
+            <OperationSkillTraceCard trace={detailSkillTrace} />
+          </CollapsibleModule>
+
+          <CollapsibleModule title="执行过程（技术字段）">
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">Task ID</span><strong>{executionTrace?.task_id || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备 ID</span><strong>{model.execution.deviceId || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">ACK 状态</span><strong>{model.execution.ackStatusLabel}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">ACK 时间</span><strong>{model.execution.ackedAtLabel}</strong></div>
+            </div>
+          </CollapsibleModule>
+
+          <CollapsibleModule title="规则与原因代码">
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">触发规则</span><strong>{model.recommendationBasis.ruleId || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作物阶段</span><strong>{model.recommendationBasis.cropStage || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">原因代码</span><strong>{model.recommendationBasis.reasonCodesLabel || "--"}</strong></div>
+            </div>
+          </CollapsibleModule>
+
+          <CollapsibleModule title="审计附录">
+            <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">建议编号</span><strong>{model.technicalRefs.recommendationId}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.technicalRefs.approvalRequestId}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作业计划编号</span><strong>{model.technicalRefs.operationPlanId}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行任务编号</span><strong>{model.technicalRefs.actTaskId}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
+            </div>
+          </CollapsibleModule>
+        </CollapsibleModule>
       </section>
     </div>
   );

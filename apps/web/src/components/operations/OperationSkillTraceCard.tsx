@@ -16,9 +16,9 @@ export default function OperationSkillTraceCard({ trace }: { trace?: OperationSk
     <section className="card operationSkillTraceCard" style={{ marginTop: 12 }}>
       <div className="sectionTitle">技能运行追踪</div>
       <div className="decisionItemMeta" style={{ marginTop: 8 }}>
-        按 skill_trace[] timeline 展示 stage、status 与 explanation_codes。
+        按执行诊断时间线展示阶段、状态与解释码。
       </div>
-      {!items.length ? <div className="muted" style={{ marginTop: 8 }}>暂无 skill_trace 记录。</div> : null}
+      {!items.length ? <div className="muted" style={{ marginTop: 8 }}>暂无执行诊断记录。</div> : null}
       <div className="operationSkillTraceList">
         {items.map((item, idx) => {
           const resultStatus = String(item?.status || "");
