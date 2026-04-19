@@ -64,6 +64,24 @@ for (const relativeFile of targetFiles) {
     lines.forEach((lineText, index) => {
       const trimmed = lineText.trim();
 
+      const rollbackBlockedTokens = [
+        "title=\"Skill Trace\"",
+        ">Skill Trace<",
+        "\"Skill Trace\"",
+        "title=\"Detail Aside\"",
+        ">Detail Aside<",
+        "\"Detail Aside\"",
+      ];
+      for (const token of rollbackBlockedTokens) {
+        if (!lineText.includes(token)) continue;
+        offenders.push({
+          file: relativeFile,
+          line: index + 1,
+          token,
+          snippet: "Forbidden rollback token in OperationDetailPage",
+        });
+      }
+
       // 来源与解释 / 审计附录必须是折叠技术区内容，不允许普通 sectionTitle 直接上屏。
       if (trimmed.includes('<div className="sectionTitle">来源与解释</div>')) {
         offenders.push({
