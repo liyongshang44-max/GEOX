@@ -8,6 +8,7 @@ import {
   assertFormalTriggerInputLayer,
   assertNoForbiddenTriggerFields,
   deriveFormalTriggerSignalsFromStage1Summary,
+  isFormalStage1TriggerEligible,
 } from "./stage1_action_boundary_v1.js";
 
 test("stage1 action boundary constants remain explicit", () => {
@@ -58,4 +59,6 @@ test("forbidden fields are rejected and formal trigger signals are derived from 
     irrigation_effectiveness: "medium",
     leak_risk: "high",
   });
+  assert.equal(isFormalStage1TriggerEligible(formal), true);
+  assert.equal(isFormalStage1TriggerEligible({ irrigation_effectiveness: "high", leak_risk: "low" }), false);
 });

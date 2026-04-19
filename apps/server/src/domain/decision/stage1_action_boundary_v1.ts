@@ -17,6 +17,7 @@ export type Stage1SupportOnlyField = (typeof SUPPORT_ONLY_STAGE1_FIELDS)[number]
 export type Stage1ForbiddenTriggerField = (typeof FORBIDDEN_STAGE1_TRIGGER_FIELDS)[number];
 
 export type Stage1ActionBoundaryNormalizedInputV1 = Partial<Record<Stage1FormalActionField | Stage1SupportOnlyField, unknown>>;
+export type Stage1FormalTriggerSignalsV1 = Record<Stage1FormalActionField, unknown>;
 
 const RECOMMENDATION_FORMAL_INPUT_LAYER = "stage1_sensing_summary_v1" as const;
 
@@ -50,11 +51,17 @@ export function assertNoForbiddenTriggerFields(input: unknown): void {
   }
 }
 
-export function deriveFormalTriggerSignalsFromStage1Summary(summaryPayload: unknown): Record<Stage1FormalActionField, unknown> {
+export function deriveFormalTriggerSignalsFromStage1Summary(summaryPayload: unknown): Stage1FormalTriggerSignalsV1 {
   const normalized = normalizeStage1RecommendationInput(summaryPayload);
   assertNoForbiddenTriggerFields(summaryPayload);
   return {
     irrigation_effectiveness: normalized.irrigation_effectiveness,
     leak_risk: normalized.leak_risk,
   };
+}
+
+export function isFormalStage1TriggerEligible(signals: Stage1FormalTriggerSignalsV1): boolean {
+  const irrigationEffectiveness = String(signals.irrigation_effectiveness ?? "").trim().toLowerCase();
+  const leakRisk = String(signals.leak_risk ?? "").trim().toLowerCase();
+  return irrigationEffectiveness === "low" || leakRisk === "high";
 }
