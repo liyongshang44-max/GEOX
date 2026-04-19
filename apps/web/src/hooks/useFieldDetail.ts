@@ -2,12 +2,11 @@ import React from "react";
 import { apiRequestOptional } from "../api/client";
 import { fetchFieldCurrentProgram, fetchFieldDetail, fetchFieldGeometry } from "../api/fields";
 import { fetchOperationStates } from "../api/operations";
-import { fetchAgronomyRecommendations, fetchAgronomyRecommendationsControlPlane } from "../api/programs";
+import { fetchAgronomyRecommendations } from "../api/programs";
 import { buildFieldViewModel, type FieldViewModel } from "../viewmodels/fieldViewModel";
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "../viewmodels/evidence";
 import type { FieldLang } from "../lib/fieldViewModel";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
-import { parseFieldReadModelV1, type ParsedFieldReadModelV1 } from "../lib/fieldReadModelV1";
 
 
 type FieldOverviewBuildResult = { detail: any; controlPlaneHit: boolean };
@@ -20,7 +19,6 @@ type FieldDetailState = {
   hasControlPlane: boolean;
   hasCurrentProgram: boolean;
   hasGeometry: boolean;
-  fieldReadModelV1: ParsedFieldReadModelV1 | null;
   latestEvidenceVm?: ReceiptEvidenceVm;
 } | null;
 
@@ -182,7 +180,6 @@ export function useFieldDetail(params: {
   hasControlPlane: boolean;
   hasCurrentProgram: boolean;
   hasGeometry: boolean;
-  fieldReadModelV1: ParsedFieldReadModelV1 | null;
   refresh: () => Promise<void>;
 } {
   const { fieldId, lang } = params;
@@ -191,8 +188,6 @@ export function useFieldDetail(params: {
   const [state, setState] = React.useState<FieldDetailState>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [technical, setTechnical] = React.useState<string | null>(null);
-  const enableReadModelV1 = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_V1 ?? "1") !== "0";
-
   const refresh = React.useCallback(async () => {
     setBusy(true);
     setError(null);
@@ -236,7 +231,6 @@ export function useFieldDetail(params: {
         hasControlPlane: false,
         hasCurrentProgram: false,
         hasGeometry: Boolean(baseOverview.detail?.geometry),
-        fieldReadModelV1: null,
         activeOperations: [],
         allOperations: [],
         recentRecommendations: [],
@@ -248,13 +242,10 @@ export function useFieldDetail(params: {
       });
       setStatus(lang === "zh" ? "基础详情已加载" : "Base field detail loaded");
 
-      const [cpRes, opsRes, recsRes, recsCpRes, geometryRes, positionsRes, trajectoriesRes, currentProgramRes] = await Promise.allSettled([
+      const [cpRes, opsRes, recsRes, geometryRes, positionsRes, trajectoriesRes, currentProgramRes] = await Promise.allSettled([
         cpPromise,
         Promise.resolve().then(() => fetchOperationStates({ field_id: fieldId, limit: 20 })),
         Promise.resolve().then(() => fetchAgronomyRecommendations({ limit: 30 })),
-        enableReadModelV1
-          ? Promise.resolve().then(() => fetchAgronomyRecommendationsControlPlane({ field_id: fieldId, limit: 8 }))
-          : Promise.resolve({ ok: true, summary: { total: 0, pending: 0, in_approval: 0, receipted: 0 }, items: [] as any[] }),
         Promise.resolve().then(() => fetchFieldGeometry(fieldId)),
         Promise.resolve().then(() =>
           apiRequestOptional<{ ok?: boolean; items?: any[] }>(`/api/v1/fields/${encodeURIComponent(fieldId)}/device-positions`)
@@ -274,17 +265,10 @@ export function useFieldDetail(params: {
         recsRes.status === "fulfilled"
           ? (recsRes.value.items ?? []).filter((x) => String(x.field_id ?? "") === fieldId).slice(0, 8)
           : [];
-      const recommendationsCp =
-        recsCpRes.status === "fulfilled"
-          ? (recsCpRes.value.items ?? []).filter((x) => String(x?.field_id ?? x?.field?.field_id ?? "") === fieldId).slice(0, 8)
-          : [];
       const currentProgram = currentProgramRes.status === "fulfilled" ? currentProgramRes.value : null;
       const livePositions = positionsRes.status === "fulfilled" ? positionsRes.value?.items ?? [] : [];
       const liveTrajectories = trajectoriesRes.status === "fulfilled" ? trajectoriesRes.value?.items ?? [] : [];
       const cp = cpRes.status === "fulfilled" ? cpRes.value : null;
-      // 仅作为技术附录数据保留，不参与客户主叙事定义。
-      const technicalReadModelRec = enableReadModelV1 ? (recommendationsCp[0] ?? null) : null;
-      const fieldReadModelV1 = technicalReadModelRec ? parseFieldReadModelV1(technicalReadModelRec) : null;
 
       const overview = buildFieldOverviewVm({
         fieldId,
@@ -306,7 +290,6 @@ export function useFieldDetail(params: {
         hasControlPlane: Boolean(cp),
         hasCurrentProgram: Boolean(currentProgram),
         hasGeometry: Boolean(geometry),
-        fieldReadModelV1,
         activeOperations,
         allOperations,
         recentRecommendations: recommendations,
@@ -322,7 +305,7 @@ export function useFieldDetail(params: {
     } finally {
       setBusy(false);
     }
-  }, [enableReadModelV1, fieldId, lang]);
+  }, [fieldId, lang]);
 
   React.useEffect(() => {
     void refresh();
@@ -351,7 +334,6 @@ export function useFieldDetail(params: {
     hasControlPlane: Boolean(state?.hasControlPlane),
     hasCurrentProgram: Boolean(state?.hasCurrentProgram),
     hasGeometry: Boolean(state?.hasGeometry),
-    fieldReadModelV1: state?.fieldReadModelV1 ?? null,
     refresh,
   };
 }
