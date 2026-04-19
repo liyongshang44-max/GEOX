@@ -5,7 +5,7 @@ import { registerDecisionEngineV1Routes } from "./decision_engine_v1.js";
 import { IRRIGATION_CONTROL_PLANE_ACTION } from "../domain/controlplane/irrigation_action_mapping_v1.js";
 
 class ControlPlanePool {
-  constructor(private mode: "eligible" | "ineligible" | "missing") {}
+  constructor(private mode: "eligible" | "ineligible" | "missing" | "crop_health" | "unknown_recommendation" | "unknown_action") {}
   async query(sql: string, params?: any[]) {
     const text = String(sql);
     if (text.includes("CREATE TABLE") || text.includes("ALTER TABLE") || text.includes("CREATE INDEX")) return { rows: [], rowCount: 0 };
@@ -25,12 +25,23 @@ class ControlPlanePool {
               field_id: "field_1",
               season_id: "season_1",
               rule_id: "irrigation_rule_irrigation_effectiveness_v1",
-              recommendation_type: "irrigation_recommendation_v1",
-              suggested_action: { action_type: "irrigation.start", parameters: { duration_min: 20 } },
+              recommendation_type: this.mode === "crop_health"
+                ? "crop_health_alert_v1"
+                : this.mode === "unknown_recommendation"
+                  ? "unknown_recommendation_v9"
+                  : "irrigation_recommendation_v1",
+              suggested_action: {
+                action_type: this.mode === "crop_health"
+                  ? "crop.health.alert"
+                  : this.mode === "unknown_action"
+                    ? "unknown.action.type"
+                    : "irrigation.start",
+                parameters: { duration_min: 20 }
+              },
               data_sources: {
                 customer_facing: this.mode === "missing" ? {} : {
                   stage1_formal_trigger_signals_v1: {
-                    irrigation_effectiveness: this.mode === "eligible" ? "low" : "high",
+                    irrigation_effectiveness: this.mode === "ineligible" ? "high" : "low",
                     leak_risk: "low",
                   }
                 },
@@ -115,6 +126,77 @@ test("control-plane boundary: recommendation without formal provenance cannot su
 
   assert.equal(res.statusCode, 400);
   assert.equal(res.json().error, "FORMAL_TRIGGER_PROVENANCE_REQUIRED");
+  await app.close();
+});
+
+
+
+test("control-plane boundary: crop health recommendation maps to SPRAY", async () => {
+  await setup("ao_act.task.write,ao_act.index.read,ao_act.receipt.write");
+  const originalFetch = globalThis.fetch;
+  let delegatedActionType: string | null = null;
+  globalThis.fetch = async (_url: any, init?: any) => {
+    const parsedBody = init?.body ? JSON.parse(String(init.body)) : {};
+    delegatedActionType = parsedBody?.action_type ?? null;
+    return ({
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, request_id: "apr_1", fact_id: "fact_apr_1" })
+    } as any);
+  };
+
+  const app = Fastify();
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("crop_health") as any);
+  await app.ready();
+
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/v1/recommendations/rec_approval_1/submit-approval",
+    headers: { authorization: "Bearer control-plane-token" },
+    payload: { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" },
+  });
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.json().ok, true);
+  assert.equal(delegatedActionType, "SPRAY");
+
+  globalThis.fetch = originalFetch;
+  await app.close();
+});
+
+test("control-plane boundary: unknown recommendation_type must reject instead of fallback to IRRIGATE", async () => {
+  await setup("ao_act.task.write,ao_act.index.read,ao_act.receipt.write");
+  const app = Fastify();
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("unknown_recommendation") as any);
+  await app.ready();
+
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/v1/recommendations/rec_approval_1/submit-approval",
+    headers: { authorization: "Bearer control-plane-token" },
+    payload: { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" },
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.json().error, "UNSUPPORTED_RECOMMENDATION_TYPE");
+  await app.close();
+});
+
+test("control-plane boundary: unknown suggested_action.action_type must reject instead of fallback to IRRIGATE", async () => {
+  await setup("ao_act.task.write,ao_act.index.read,ao_act.receipt.write");
+  const app = Fastify();
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("unknown_action") as any);
+  await app.ready();
+
+  const res = await app.inject({
+    method: "POST",
+    url: "/api/v1/recommendations/rec_approval_1/submit-approval",
+    headers: { authorization: "Bearer control-plane-token" },
+    payload: { tenant_id: "tenantA", project_id: "projectA", group_id: "groupA" },
+  });
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.json().error, "UNSUPPORTED_RECOMMENDATION_ACTION_TYPE");
   await app.close();
 });
 

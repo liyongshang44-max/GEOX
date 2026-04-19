@@ -922,12 +922,34 @@ function toProgress(chain: { approval_request_id: string | null; operation_plan_
   };
 }
 
-function toAoActActionType(rec: any): string {
+function toAoActActionType(rec: any): { ok: true; actionType: string } | { ok: false; error: string } {
   const recommendationType = String(rec?.recommendation_type ?? "").trim();
-  const mappedIrrigationAction = mapRecommendationActionToControlPlane(String(rec?.suggested_action?.action_type ?? ""));
-  if (mappedIrrigationAction) return mappedIrrigationAction;
-  if (recommendationType === "crop_health_alert_v1") return "SPRAY";
-  return IRRIGATION_CONTROL_PLANE_ACTION;
+  const recommendationActionType = String(rec?.suggested_action?.action_type ?? "").trim();
+
+  if (!recommendationType) {
+    return { ok: false, error: "MISSING_RECOMMENDATION_TYPE" };
+  }
+  if (!recommendationActionType) {
+    return { ok: false, error: "MISSING_RECOMMENDATION_ACTION_TYPE" };
+  }
+
+  if (recommendationType === "irrigation_recommendation_v1") {
+    const mappedIrrigationAction = mapRecommendationActionToControlPlane(recommendationActionType);
+    if (!mappedIrrigationAction) {
+      return { ok: false, error: "UNSUPPORTED_RECOMMENDATION_ACTION_TYPE" };
+    }
+    return { ok: true, actionType: mappedIrrigationAction };
+  }
+
+  if (recommendationType === "crop_health_alert_v1") {
+    const normalizedCropHealthAction = recommendationActionType.toLowerCase();
+    if (!["crop.health.alert", "inspection.start"].includes(normalizedCropHealthAction)) {
+      return { ok: false, error: "UNSUPPORTED_RECOMMENDATION_ACTION_TYPE" };
+    }
+    return { ok: true, actionType: "SPRAY" };
+  }
+
+  return { ok: false, error: "UNSUPPORTED_RECOMMENDATION_TYPE" };
 }
 
 function toAoActTarget(rec: any): { kind: "field"; ref: string } {
@@ -1481,7 +1503,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       return badRequest(reply, "FORMAL_TRIGGER_PROVENANCE_REQUIRED");
     }
     const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
-    const actionType = toAoActActionType(rec);
+    const actionTypeResult = toAoActActionType(rec);
+    if (!actionTypeResult.ok) {
+      return badRequest(reply, actionTypeResult.error);
+    }
+    const actionType = actionTypeResult.actionType;
     const aoActTarget = toAoActTarget(rec);
     const aoActParameters = toPrimitiveParameters(rec?.suggested_action?.parameters ?? {});
     if (Object.keys(aoActParameters).length === 0) {
