@@ -838,7 +838,11 @@ async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: numb
 }
 
 function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }): any {
-  const payload = row?.record_json?.payload ?? {};
+  const payloadRaw = row?.record_json?.payload ?? {};
+  const payload = payloadRaw && typeof payloadRaw === "object" ? { ...payloadRaw } : {};
+  // customer-facing output must never carry internal debug or internal-only provenance payloads.
+  delete (payload as any).internal_debug_explain;
+  delete (payload as any).data_sources;
   const explain = payload?.explain && typeof payload.explain === "object" ? payload.explain : {};
   const normalizedExplain = {
     trigger_source_fields: Array.isArray(explain.trigger_source_fields) ? explain.trigger_source_fields : [],
@@ -1037,11 +1041,16 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
     const item = normalizeRecommendationOutput(row, chain);
+    const {
+      internal_debug_explain: _internalDebugExplainIgnored,
+      data_sources: _dataSourcesIgnored,
+      ...safeItem
+    } = (item ?? {}) as Record<string, any>;
     const field_id = String(item?.field_id ?? "").trim();
     const latest_states = field_id
       ? await getLatestDerivedSensingStatesByFieldV1(pool, { ...tenant, field_id })
       : [];
-    return reply.send({ ok: true, item: { ...item, latest_derived_sensing_states: latest_states } });
+    return reply.send({ ok: true, item: { ...safeItem, latest_derived_sensing_states: latest_states } });
   });
 
   app.get("/api/v1/agronomy/recommendations/control-plane", async (req, reply) => {
@@ -1123,58 +1132,63 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const chain = await loadRecommendationChainById(pool, recommendation_id, tenant);
     const item = normalizeRecommendationOutput(row, chain);
+    const {
+      internal_debug_explain: _internalDebugExplainIgnored,
+      data_sources: _dataSourcesIgnored,
+      ...safeItem
+    } = (item ?? {}) as Record<string, any>;
     const updatedTs = Date.parse(String(item.occurred_at ?? "")) || Date.now();
-    const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
+    const statusCode = String(safeItem.latest_status ?? safeItem.status ?? "PENDING").toUpperCase();
     return reply.send({
       ok: true,
       item: {
         recommendation: {
-          recommendation_id: item.recommendation_id,
-          title: item.title || (item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
-          subtitle: item?.suggested_action?.summary || "建议已生成，待执行链路推进。",
+          recommendation_id: safeItem.recommendation_id,
+          title: safeItem.title || (safeItem.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
+          subtitle: safeItem?.suggested_action?.summary || "建议已生成，待执行链路推进。",
           status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) },
           type: {
-            code: item.recommendation_type,
-            label: item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"
+            code: safeItem.recommendation_type,
+            label: safeItem.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"
           },
           updated_ts_ms: updatedTs,
           updated_at_label: msLabel(updatedTs)
         },
         summary: {
-          confidence: item.confidence ?? null,
-          rule_count: Array.isArray(item.rule_hit) ? item.rule_hit.length : 0,
-          evidence_count: Array.isArray(item.evidence_refs) ? item.evidence_refs.length : 0,
+          confidence: safeItem.confidence ?? null,
+          rule_count: Array.isArray(safeItem.rule_hit) ? safeItem.rule_hit.length : 0,
+          evidence_count: Array.isArray(safeItem.evidence_refs) ? safeItem.evidence_refs.length : 0,
           processing_status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) }
         },
-        explain: item.explain ?? null,
+        explain: safeItem.explain ?? null,
         reasoning: {
-          trigger_reason: item?.suggested_action?.summary || "建议由规则与证据触发。",
-          rule_hits: (Array.isArray(item.rule_hit) ? item.rule_hit : []).map((rule: any) => ({
+          trigger_reason: safeItem?.suggested_action?.summary || "建议由规则与证据触发。",
+          rule_hits: (Array.isArray(safeItem.rule_hit) ? safeItem.rule_hit : []).map((rule: any) => ({
             rule_id: rule.rule_id,
             label: String(rule.rule_id || "规则"),
             matched: Boolean(rule.matched),
             summary: `阈值 ${rule.threshold ?? "-"}，实际 ${rule.actual ?? "-"}。`
           })),
-          evidence_refs: (Array.isArray(item.evidence_refs) ? item.evidence_refs : []).map((ref: string) => ({ kind: "evidence", label: ref, value: ref }))
+          evidence_refs: (Array.isArray(safeItem.evidence_refs) ? safeItem.evidence_refs : []).map((ref: string) => ({ kind: "evidence", label: ref, value: ref }))
         },
         suggested_action: {
           title: "建议动作",
-          summary: item?.suggested_action?.summary || "-",
-          parameters: item?.suggested_action?.parameters || {}
+          summary: safeItem?.suggested_action?.summary || "-",
+          parameters: safeItem?.suggested_action?.parameters || {}
         },
         pipeline: {
-          approval: { request_id: item.approval_request_id, status: { code: item.approval_request_id ? "APPROVED" : "PENDING", label: item.approval_request_id ? "已批准" : "待审批", tone: item.approval_request_id ? "success" : "warning" } },
-          operation_plan: { operation_plan_id: item.operation_plan_id, status: { code: item.operation_plan_id ? "ACKED" : "PENDING", label: item.operation_plan_id ? "已确认" : "待生成", tone: item.operation_plan_id ? "info" : "warning" } },
-          execution: { act_task_id: item.act_task_id, status: { code: item.act_task_id ? "DISPATCHED" : "PENDING", label: item.act_task_id ? "已下发" : "待下发", tone: item.act_task_id ? "info" : "warning" } },
-          receipt: { receipt_fact_id: item.receipt_fact_id, status: { code: item.receipt_fact_id ? "EXECUTED" : "PENDING", label: item.receipt_fact_id ? "已回执" : "待回执", tone: item.receipt_fact_id ? "success" : "warning" } }
+          approval: { request_id: safeItem.approval_request_id, status: { code: safeItem.approval_request_id ? "APPROVED" : "PENDING", label: safeItem.approval_request_id ? "已批准" : "待审批", tone: safeItem.approval_request_id ? "success" : "warning" } },
+          operation_plan: { operation_plan_id: safeItem.operation_plan_id, status: { code: safeItem.operation_plan_id ? "ACKED" : "PENDING", label: safeItem.operation_plan_id ? "已确认" : "待生成", tone: safeItem.operation_plan_id ? "info" : "warning" } },
+          execution: { act_task_id: safeItem.act_task_id, status: { code: safeItem.act_task_id ? "DISPATCHED" : "PENDING", label: safeItem.act_task_id ? "已下发" : "待下发", tone: safeItem.act_task_id ? "info" : "warning" } },
+          receipt: { receipt_fact_id: safeItem.receipt_fact_id, status: { code: safeItem.receipt_fact_id ? "EXECUTED" : "PENDING", label: safeItem.receipt_fact_id ? "已回执" : "待回执", tone: safeItem.receipt_fact_id ? "success" : "warning" } }
         },
         technical_details: {
-          recommendation_id: item.recommendation_id,
-          approval_request_id: item.approval_request_id,
-          operation_plan_id: item.operation_plan_id,
-          act_task_id: item.act_task_id,
-          raw_type: item.recommendation_type,
-          raw_status: item.latest_status ?? item.status
+          recommendation_id: safeItem.recommendation_id,
+          approval_request_id: safeItem.approval_request_id,
+          operation_plan_id: safeItem.operation_plan_id,
+          act_task_id: safeItem.act_task_id,
+          raw_type: safeItem.recommendation_type,
+          raw_status: safeItem.latest_status ?? safeItem.status
         }
       }
     });
