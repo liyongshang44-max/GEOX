@@ -69,6 +69,14 @@ test("customer boundary: recommendation detail explain must not leak internal so
   registerDecisionEngineV1Routes(app, new CustomerBoundaryPool() as any);
   await app.ready();
 
+  const detailRes = await app.inject({
+    method: "GET",
+    url: "/api/v1/agronomy/recommendations/rec_1?tenant_id=tenantA&project_id=projectA&group_id=groupA",
+    headers: { authorization: "Bearer customer-boundary-token" },
+  });
+  assert.equal(detailRes.statusCode, 200);
+  const detailBody = detailRes.json();
+
   const res = await app.inject({
     method: "GET",
     url: "/api/v1/agronomy/recommendations/rec_1/control-plane?tenant_id=tenantA&project_id=projectA&group_id=groupA",
@@ -86,6 +94,20 @@ test("customer boundary: recommendation detail explain must not leak internal so
   assert.equal(serialized.includes("field_fertility_state_v1"), false);
   assert.equal(serialized.includes("sensor_quality"), false);
   assert.equal(serialized.includes("irrigation_need_level"), false);
+  assert.equal(serialized.includes("source_states"), false);
+  assert.equal(serialized.includes("triggered_rules"), false);
+  assert.equal(serialized.includes("reasoning_path"), false);
+
+  const detailSerialized = JSON.stringify(detailBody);
+  const cpSerialized = JSON.stringify(body);
+  assert.equal(detailSerialized.includes("internal_debug_explain"), false);
+  assert.equal(cpSerialized.includes("internal_debug_explain"), false);
+  assert.equal(detailSerialized.includes("data_sources.internal_only"), false);
+  assert.equal(cpSerialized.includes("data_sources.internal_only"), false);
+  for (const blocked of ["field_sensing_overview_v1", "field_fertility_state_v1", "image_recognition", "sensor_quality", "irrigation_need_level", "canopy_state", "water_flow_state"]) {
+    assert.equal(detailSerialized.includes(blocked), false, `detail must not leak blocked internal field: ${blocked}`);
+    assert.equal(cpSerialized.includes(blocked), false, `control-plane detail must not leak blocked internal field: ${blocked}`);
+  }
 
   assert.ok(body?.item?.pipeline);
   await app.close();

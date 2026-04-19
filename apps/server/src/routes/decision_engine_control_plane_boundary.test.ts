@@ -4,7 +4,7 @@ import Fastify from "fastify";
 import { registerDecisionEngineV1Routes } from "./decision_engine_v1.js";
 
 class ControlPlanePool {
-  constructor(private formalEligible: boolean) {}
+  constructor(private mode: "eligible" | "ineligible" | "missing") {}
   async query(sql: string, params?: any[]) {
     const text = String(sql);
     if (text.includes("CREATE TABLE") || text.includes("ALTER TABLE") || text.includes("CREATE INDEX")) return { rows: [], rowCount: 0 };
@@ -27,12 +27,12 @@ class ControlPlanePool {
               recommendation_type: "irrigation_recommendation_v1",
               suggested_action: { action_type: "irrigation.start", parameters: { duration_min: 20 } },
               data_sources: {
-                customer_facing: {
+                customer_facing: this.mode === "missing" ? {} : {
                   stage1_formal_trigger_signals_v1: {
-                    irrigation_effectiveness: this.formalEligible ? "low" : "high",
+                    irrigation_effectiveness: this.mode === "eligible" ? "low" : "high",
                     leak_risk: "low",
                   }
-                }
+                },
               }
             }
           }
@@ -76,7 +76,7 @@ test("control-plane boundary: formal-trigger recommendation can submit approval"
   } as any);
 
   const app = Fastify();
-  registerDecisionEngineV1Routes(app, new ControlPlanePool(true) as any);
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("eligible") as any);
   await app.ready();
 
   const res = await app.inject({
@@ -93,10 +93,10 @@ test("control-plane boundary: formal-trigger recommendation can submit approval"
   await app.close();
 });
 
-test("control-plane boundary: support/diagnostic recommendation cannot submit approval", async () => {
+test("control-plane boundary: recommendation without formal provenance cannot submit approval", async () => {
   await setup("ao_act.task.write,ao_act.index.read,ao_act.receipt.write");
   const app = Fastify();
-  registerDecisionEngineV1Routes(app, new ControlPlanePool(false) as any);
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("missing") as any);
   await app.ready();
 
   const res = await app.inject({
@@ -114,7 +114,7 @@ test("control-plane boundary: support/diagnostic recommendation cannot submit ap
 test("control-plane boundary: simulator execute forbids recommendation/approval/operation ids direct execution", async () => {
   await setup("ao_act.receipt.write,ao_act.task.write", "executor_runtime");
   const app = Fastify();
-  registerDecisionEngineV1Routes(app, new ControlPlanePool(true) as any);
+  registerDecisionEngineV1Routes(app, new ControlPlanePool("eligible") as any);
   await app.ready();
 
   const res = await app.inject({
@@ -133,5 +133,37 @@ test("control-plane boundary: simulator execute forbids recommendation/approval/
 
   assert.equal(res.statusCode, 400);
   assert.equal(res.json().error, "RECOMMENDATION_ID_NOT_ALLOWED");
+
+  const resApproval = await app.inject({
+    method: "POST",
+    url: "/api/v1/simulators/irrigation/execute",
+    headers: { authorization: "Bearer control-plane-token" },
+    payload: {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      approval_request_id: "apr_1",
+      task_id: "task_1",
+      command_id: "task_1",
+    },
+  });
+  assert.equal(resApproval.statusCode, 400);
+  assert.equal(resApproval.json().error, "APPROVAL_REQUEST_ID_NOT_ALLOWED");
+
+  const resOperation = await app.inject({
+    method: "POST",
+    url: "/api/v1/simulators/irrigation/execute",
+    headers: { authorization: "Bearer control-plane-token" },
+    payload: {
+      tenant_id: "tenantA",
+      project_id: "projectA",
+      group_id: "groupA",
+      operation_plan_id: "opl_1",
+      task_id: "task_1",
+      command_id: "task_1",
+    },
+  });
+  assert.equal(resOperation.statusCode, 400);
+  assert.equal(resOperation.json().error, "OPERATION_PLAN_ID_NOT_ALLOWED");
   await app.close();
 });
