@@ -198,8 +198,11 @@ test("fields detail route exposes stage1 sensing summary aligned with formal con
   assert.equal(reply.statusCode, 200);
   assert.equal(payload.ok, true);
   assert.equal(payload.stage1_sensing_contract, "stage1_sensing_summary_v1");
+  assert.equal(payload.stage1_sensing_contract_scope, "customer-facing Stage-1 sensing source-of-truth");
   assert.deepEqual(payload.stage1_sensing_summary, expected.sensing_summary_stage1.payload);
   assert.equal(payload.stage1_sensing_refresh.freshness, expected.sensing_summary_stage1.freshness);
   assert.equal(payload.stage1_sensing_refresh.status, expected.sensing_summary_stage1.status);
   assert.equal(payload.stage1_sensing_refresh.refreshed_ts_ms, expected.sensing_summary_stage1.refreshed_ts_ms);
+  assert.deepEqual(payload.stage1_sensing_non_contract_aggregates, ["summary", "sensor_trends", "recent_alerts", "map_layers"]);
+  assert.match(payload.stage1_sensing_non_contract_note, /not Stage-1 sensing source-of-truth/i);
 });
