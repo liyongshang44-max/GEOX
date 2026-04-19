@@ -947,6 +947,17 @@ function toAoActParameterSchema(parameters: Record<string, number | boolean | st
   return { keys: keys.length > 0 ? keys : [{ name: "noop", type: "boolean" as const }] };
 }
 
+function recommendationFormalTriggerEligibleForApproval(payload: any): boolean {
+  const signals = payload?.data_sources?.customer_facing?.stage1_formal_trigger_signals_v1
+    ?? payload?.stage1_action_trigger_input?.formal_trigger_signals
+    ?? null;
+  if (!signals || typeof signals !== "object") return false;
+  return isFormalStage1TriggerEligible({
+    irrigation_effectiveness: (signals as any).irrigation_effectiveness,
+    leak_risk: (signals as any).leak_risk,
+  });
+}
+
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
   app.addHook("onReady", async () => {
     await ensureRulePerformanceTable(pool);
@@ -1439,6 +1450,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
 
     const rec = row.record_json?.payload ?? {};
+    if (!recommendationFormalTriggerEligibleForApproval(rec)) {
+      return badRequest(reply, "FORMAL_TRIGGER_PROVENANCE_REQUIRED");
+    }
     const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
     const actionType = toAoActActionType(rec);
     const aoActTarget = toAoActTarget(rec);
