@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import {
+  STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE,
+  STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS,
+  STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS,
+} from "../domain/sensing/stage1_sensing_contract_v1.js";
 import { refreshFieldSensingSummaryStage1V1 } from "./field_sensing_summary_stage1_v1.js";
 
 class FakePool {
@@ -80,20 +85,42 @@ test("field sensing summary stage1 v1 excludes compatibility and internal-only f
     now_ms: now,
   });
 
+  assert.deepEqual(
+    Object.keys(output).sort(),
+    [...STAGE1_CUSTOMER_FACING_SUMMARY_CONTRACT_SHAPE.required_top_level_fields].sort(),
+    "projection output fields must exactly match Stage-1 customer-facing summary contract required_top_level_fields"
+  );
+
+  for (const forbidden of STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS) {
+    assert.equal((output as Record<string, unknown>)[forbidden], undefined, `forbidden field leaked into summary projection: ${forbidden}`);
+  }
+  for (const compatibilityOnlyField of ["irrigation_need_level", "sensor_quality", "sensing_overview", "fertility_state"] as const) {
+    assert.equal((output as Record<string, unknown>)[compatibilityOnlyField], undefined, `compatibility-only field leaked into summary projection: ${compatibilityOnlyField}`);
+  }
+
   assert.equal(output.sensor_quality_level, "GOOD");
   assert.equal((output as any).sensor_quality, undefined);
   assert.equal((output as any).irrigation_need_level, undefined);
   assert.equal((output as any).soil_indicators_json, undefined);
 
-  assert.equal(output.official_soil_metrics_json.length, 6);
+  assert.equal(output.official_soil_metrics_json.length, STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS.length);
   const metrics = new Map(output.official_soil_metrics_json.map((x) => [x.metric, x]));
-  assert.deepEqual([...metrics.keys()], ["soil_moisture_pct", "ec_ds_m", "fertility_index", "n", "p", "k"]);
-  assert.equal(metrics.get("soil_moisture_pct")?.value, 37.5);
+  assert.deepEqual(
+    output.official_soil_metrics_json.map((x) => x.metric),
+    [...STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS],
+    "official_soil_metrics_json must preserve Stage-1 summary soil metric contract ordering with no extra metrics"
+  );
+  assert.deepEqual(
+    [...metrics.keys()].sort(),
+    [...STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS].sort(),
+    "official_soil_metrics_json must contain only Stage-1 contract soil metrics with no additions"
+  );
+  assert.equal(metrics.get("soil_moisture_pct")?.value, 38);
   assert.equal(metrics.get("soil_moisture_pct")?.freshness, "fresh");
   assert.equal(metrics.get("ec_ds_m")?.value, 2.1);
   assert.equal(metrics.get("ec_ds_m")?.freshness, "fresh");
-  assert.equal(metrics.get("n")?.value, null);
-  assert.equal(metrics.get("n")?.freshness, "unknown");
+  assert.equal(metrics.get("n")?.value, 11);
+  assert.equal(metrics.get("n")?.freshness, "fresh");
   assert.equal(metrics.get("p")?.value, null);
   assert.equal(metrics.get("p")?.freshness, "unknown");
   assert.equal(metrics.get("k")?.value, null);

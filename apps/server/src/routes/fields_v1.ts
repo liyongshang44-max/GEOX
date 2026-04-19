@@ -1024,11 +1024,20 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       field: fieldQ.rows[0], // Field projection.
       stage1_sensing_summary: refreshed.sensing_summary_stage1.payload, // Official customer-facing Stage-1 sensing summary for this field.
       stage1_sensing_contract: "stage1_sensing_summary_v1", // Stable contract identifier for client routing and schema checks.
+      stage1_sensing_contract_scope: "customer-facing Stage-1 sensing source-of-truth", // Explicitly marks the authoritative Stage-1 sensing contract scope.
       stage1_sensing_refresh: { // Stage-1 refresh metadata kept separate from internal mixed read models.
         freshness: refreshed.sensing_summary_stage1.freshness,
         status: refreshed.sensing_summary_stage1.status,
         refreshed_ts_ms: refreshed.sensing_summary_stage1.refreshed_ts_ms,
       },
+      stage1_sensing_non_contract_aggregates: [
+        "summary",
+        "sensor_trends",
+        "recent_alerts",
+        "map_layers",
+      ], // Field-detail aggregates for UI tabs only; not part of Stage-1 sensing source-of-truth contract.
+      stage1_sensing_non_contract_note:
+        "summary, sensor_trends, recent_alerts, and map_layers are field-detail aggregates and not Stage-1 sensing source-of-truth.",
       polygon: polyQ.rowCount ? { ...polyQ.rows[0], geojson_json: parseJsonOrNull(polyQ.rows[0].geojson) } : null, // Polygon detail with parsed JSON convenience field.
       geometry: geometry ? {
         type: geometry.type,
