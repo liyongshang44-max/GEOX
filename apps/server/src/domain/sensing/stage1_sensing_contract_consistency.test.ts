@@ -21,6 +21,11 @@ import {
   STAGE1_OFFICIAL_SUMMARY_SOIL_METRICS_SUBSET_V1,
   STAGE1_SENSING_INPUT_MAPPING_V1,
 } from "./stage1_sensing_input_mapping_v1.js";
+import {
+  FORMAL_STAGE1_ACTION_FIELDS,
+  SUPPORT_ONLY_STAGE1_FIELDS,
+  FORBIDDEN_STAGE1_TRIGGER_FIELDS,
+} from "../decision/stage1_action_boundary_v1.js";
 import { refreshFieldSensingSummaryStage1V1 } from "../../projections/field_sensing_summary_stage1_v1.js";
 import { registerDashboardV1Routes } from "../../routes/dashboard_v1.js";
 import { registerFieldsV1Routes } from "../../routes/fields_v1.js";
@@ -265,5 +270,36 @@ test("forbidden-fields consistency is enforced in customer-facing summary contra
   assert.ok(forbidden.has("irrigation_need_level"), "internal irrigation_need_level field must remain forbidden");
   for (const field of forbidden) {
     assert.ok(!required.has(field as any), `forbidden field must not appear in customer-facing summary required shape: ${field}`);
+  }
+});
+
+test("stage1 contract and formal action boundary stay consistent for decision vs diagnostic/internal layers", () => {
+  const officialDecisionStates = new Set(["irrigation_effectiveness_state", "leak_risk_state"]);
+  const stateToSummaryField: Record<string, string> = {
+    irrigation_effectiveness_state: "irrigation_effectiveness",
+    leak_risk_state: "leak_risk",
+    canopy_temperature_state: "canopy_temp_status",
+    evapotranspiration_risk_state: "evapotranspiration_risk",
+    sensor_quality_state: "sensor_quality_level",
+  };
+
+  for (const state of officialDecisionStates) {
+    const mapped = stateToSummaryField[state];
+    assert.ok(FORMAL_STAGE1_ACTION_FIELDS.includes(mapped as any), `official decision state must map to formal action trigger whitelist field: ${state} -> ${mapped}`);
+  }
+
+  for (const state of STAGE1_OFFICIAL_DERIVED_STATES) {
+    const mapped = stateToSummaryField[state];
+    if (!mapped) continue;
+    if (!officialDecisionStates.has(state)) {
+      assert.ok(SUPPORT_ONLY_STAGE1_FIELDS.includes(mapped as any), `non-decision official derived state must remain support-only: ${state} -> ${mapped}`);
+    }
+  }
+
+  for (const forbidden of FORBIDDEN_STAGE1_TRIGGER_FIELDS) {
+    assert.ok(
+      STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes(forbidden as any) || forbidden.endsWith("_state"),
+      `forbidden trigger field must not be upgraded into formal trigger: ${forbidden}`
+    );
   }
 });

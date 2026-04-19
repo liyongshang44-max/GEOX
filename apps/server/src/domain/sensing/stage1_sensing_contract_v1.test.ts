@@ -18,6 +18,11 @@ import {
   STAGE1_DEVICE_RUNTIME_STATUS,
   STAGE1_SENSOR_QUALITY_DIAGNOSTIC_STATUS,
 } from "./stage1_sensing_contract_v1.js";
+import {
+  FORMAL_STAGE1_ACTION_FIELDS,
+  SUPPORT_ONLY_STAGE1_FIELDS,
+  FORBIDDEN_STAGE1_TRIGGER_FIELDS,
+} from "../decision/stage1_action_boundary_v1.js";
 
 test("stage1 sensing contract: official input/status/customer whitelist are stable", () => {
   assert.deepEqual(STAGE1_OFFICIAL_PIPELINE_CANONICAL_INPUT_METRICS, [
@@ -84,4 +89,17 @@ test("stage1 sensing contract: customer/internal summary structure semantics are
     STAGE1_SUMMARY_REFRESH_CARRIAGE_SEMANTICS.route_refresh_envelope.stage1_refresh_fields,
     ["freshness", "status", "refreshed_ts_ms"]
   );
+});
+
+test("stage1 formal action boundary snapshot stays aligned with stage1 summary contract", () => {
+  assert.deepEqual(FORMAL_STAGE1_ACTION_FIELDS, ["irrigation_effectiveness", "leak_risk"]);
+  for (const field of FORMAL_STAGE1_ACTION_FIELDS) {
+    assert.ok(STAGE1_CUSTOMER_SUMMARY_FIELDS.includes(field as any), `formal action field must be part of customer summary fields: ${field}`);
+  }
+  for (const field of SUPPORT_ONLY_STAGE1_FIELDS) {
+    assert.ok(STAGE1_SUMMARY_DISPLAY_ONLY_FIELDS.includes(field as any), `support-only field must stay display-only: ${field}`);
+  }
+  for (const forbidden of FORBIDDEN_STAGE1_TRIGGER_FIELDS) {
+    assert.ok(STAGE1_SUMMARY_CUSTOMER_FORBIDDEN_FIELDS.includes(forbidden as any) || forbidden.endsWith("_state"), `forbidden trigger field must remain outside customer-facing action layer: ${forbidden}`);
+  }
 });
