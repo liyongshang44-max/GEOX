@@ -4,12 +4,18 @@ import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
-import { evaluateAgronomy } from "../domain/agronomy/agronomy_engine.js";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine.js";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine.js";
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
+import {
+  assertFormalTriggerInputLayer,
+  assertNoForbiddenTriggerFields,
+  deriveFormalTriggerSignalsFromStage1Summary,
+  isFormalStage1TriggerEligible,
+  normalizeStage1RecommendationInput
+} from "../domain/decision/stage1_action_boundary_v1.js";
 import { refreshFieldReadModelsWithObservabilityV1 } from "../services/field_read_model_refresh_v1.js";
 import {
   ensureDerivedSensingStateProjectionV1,
@@ -21,6 +27,20 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
 
 type RecommendationExplainV1 = {
+  trigger_source_fields: Array<{
+    field: string;
+    role: "formal_trigger" | "support_signal";
+    value: string | number | boolean | null;
+  }>;
+  action_summary: string;
+  rule_hit_summary: Array<{
+    rule_id: string;
+    matched: boolean;
+    summary: string;
+  }>;
+};
+
+type InternalDebugExplainV1 = {
   source_states: Array<{
     source: "derived_sensing_state_v1" | "field_fertility_state_v1" | "field_sensing_overview_v1";
     skill: string;
@@ -60,7 +80,7 @@ type RecommendationV1 = {
   recommendation_type: RecommendationTypeV1;
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
-  reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" }>;
+  reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" | "stage1_sensing_summary_v1" | "support_path.field_fertility_state_v1" | "support_path.image_recognition" }>;
   explanation_codes?: Array<{ code: string; source: "field_sensing_overview_v1" | "field_fertility_state_v1" | "request_constraints" }>;
   explain?: RecommendationExplainV1;
   evidence_refs: string[];
@@ -73,6 +93,7 @@ type RecommendationV1 = {
   };
   created_ts: number;
   model_version: "decision_engine_v1";
+  internal_debug_explain?: InternalDebugExplainV1;
   rank_score?: number;
   rule_performance_score?: number;
   rule_score?: number;
@@ -90,6 +111,14 @@ type FieldSensingOverviewInputV1 = {
   updated_ts_ms: number;
   soil_indicators_json: Array<{ metric: string; value: number | null }>;
   explanation_codes_json: string[];
+};
+
+type Stage1SummaryRecommendationInputV1 = {
+  irrigation_effectiveness?: unknown;
+  leak_risk?: unknown;
+  canopy_temp_status?: unknown;
+  evapotranspiration_risk?: unknown;
+  sensor_quality_level?: unknown;
 };
 
 type RulePerformanceStats = {
@@ -184,9 +213,10 @@ async function insertFact(pool: Pool, source: string, record_json: any): Promise
 }
 
 function sensingMetricValue(
-  overview: FieldSensingOverviewInputV1,
+  overview: FieldSensingOverviewInputV1 | null | undefined,
   metrics: string[],
 ): number | null {
+  if (!overview) return null;
   const normalized = new Set(metrics.map((x) => x.trim().toLowerCase()));
   const hit = (Array.isArray(overview.soil_indicators_json) ? overview.soil_indicators_json : [])
     .find((item) => normalized.has(String(item.metric ?? "").trim().toLowerCase()));
@@ -208,14 +238,14 @@ function recommendationEvidenceFacts(sensingOverview: FieldSensingOverviewInputV
   ];
 }
 
-function buildRecommendationExplainV1(params: {
+function buildRecommendationInternalDebugExplainV1(params: {
   recommendation: RecommendationV1;
   sensingOverview: FieldSensingOverviewInputV1;
   fertilityState: any;
   derivedSensingStates: any[];
-}): RecommendationExplainV1 {
+}): InternalDebugExplainV1 {
   const { recommendation, sensingOverview, fertilityState, derivedSensingStates } = params;
-  const source_states: RecommendationExplainV1["source_states"] = [];
+  const source_states: InternalDebugExplainV1["source_states"] = [];
   const sensingIndicators = Array.isArray(sensingOverview?.soil_indicators_json) ? sensingOverview.soil_indicators_json : [];
   for (const indicator of sensingIndicators) {
     const metric = String(indicator?.metric ?? "").trim();
@@ -269,7 +299,7 @@ function buildRecommendationExplainV1(params: {
     skill: mapRuleToSkill(String(hit?.rule_id ?? recommendation.rule_id ?? "")).skill_id || "agronomy_rule",
   }));
   const primaryRule = mapRuleToSkill(String(recommendation.rule_id ?? ""));
-  const reasoning_path: RecommendationExplainV1["reasoning_path"] = [
+  const reasoning_path: InternalDebugExplainV1["reasoning_path"] = [
     {
       node_id: "obs",
       node_type: "observation",
@@ -295,10 +325,52 @@ function buildRecommendationExplainV1(params: {
   return { source_states, triggered_rules, reasoning_path };
 }
 
-function buildRecommendations(
+function buildRecommendationExplainV1(params: { recommendation: RecommendationV1; stage1Summary: Stage1SummaryRecommendationInputV1 }): RecommendationExplainV1 {
+  const { recommendation, stage1Summary } = params;
+  const trigger_source_fields: RecommendationExplainV1["trigger_source_fields"] = [
+    {
+      field: "irrigation_effectiveness",
+      role: "formal_trigger",
+      value: stage1Summary.irrigation_effectiveness == null ? null : String(stage1Summary.irrigation_effectiveness),
+    },
+    {
+      field: "leak_risk",
+      role: "formal_trigger",
+      value: stage1Summary.leak_risk == null ? null : String(stage1Summary.leak_risk),
+    },
+    {
+      field: "canopy_temp_status",
+      role: "support_signal",
+      value: stage1Summary.canopy_temp_status == null ? null : String(stage1Summary.canopy_temp_status),
+    },
+    {
+      field: "evapotranspiration_risk",
+      role: "support_signal",
+      value: stage1Summary.evapotranspiration_risk == null ? null : String(stage1Summary.evapotranspiration_risk),
+    },
+    {
+      field: "sensor_quality_level",
+      role: "support_signal",
+      value: stage1Summary.sensor_quality_level == null ? null : String(stage1Summary.sensor_quality_level),
+    },
+  ];
+  const rule_hit_summary = (Array.isArray(recommendation.rule_hit) ? recommendation.rule_hit : []).map((hit) => ({
+    rule_id: String(hit?.rule_id ?? "unknown_rule"),
+    matched: Boolean(hit?.matched),
+    summary: `rule=${String(hit?.rule_id ?? "unknown_rule")}, matched=${Boolean(hit?.matched)}`,
+  }));
+  return {
+    trigger_source_fields,
+    action_summary: String(recommendation?.suggested_action?.summary ?? "建议动作已生成"),
+    rule_hit_summary,
+  };
+}
+
+function buildRecommendationsFromStage1Summary(
   body: any,
-  readModel: FieldSensingOverviewInputV1,
+  stage1Summary: Stage1SummaryRecommendationInputV1,
   snapshotId: string,
+  internalContext?: { sensingOverview?: FieldSensingOverviewInputV1 | null; fertilityState?: any | null },
   hardRuleInput?: HardRuleConstraintInputV1 | null,
 ): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
@@ -311,12 +383,18 @@ function buildRecommendations(
   const image = (body.image_recognition && typeof body.image_recognition === "object") ? body.image_recognition : {};
   const now = Date.now();
 
-  const soilMoisture = Number(sensingMetricValue(readModel, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]) ?? NaN);
-  const canopyTemp = Number(sensingMetricValue(readModel, ["canopy_temp_c", "canopy_temperature_c"]) ?? NaN);
+  const supportOverview = internalContext?.sensingOverview ?? null;
+  const soilMoisture = Number(sensingMetricValue(supportOverview, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]) ?? NaN);
+  const canopyTemp = Number(sensingMetricValue(supportOverview, ["canopy_temp_c", "canopy_temperature_c"]) ?? NaN);
   const stressScore = clamp01(Number(image.stress_score ?? 0));
   const diseaseScore = clamp01(Number(image.disease_score ?? 0));
   const pestRisk = clamp01(Number(image.pest_risk_score ?? 0));
   const imageConfidence = clamp01(Number(image.confidence ?? 0.8));
+  const supportSignals = {
+    canopy_temp_status: String(stage1Summary.canopy_temp_status ?? "").trim().toLowerCase() || null,
+    evapotranspiration_risk: String(stage1Summary.evapotranspiration_risk ?? "").trim().toLowerCase() || null,
+    sensor_quality_level: String(stage1Summary.sensor_quality_level ?? "").trim().toUpperCase() || null,
+  };
 
   const out: RecommendationV1[] = [];
   const program = (body.program && typeof body.program === "object") ? body.program : {};
@@ -327,13 +405,6 @@ function buildRecommendations(
       ? Number(body.days_after_planting ?? program.days_after_planting)
       : undefined,
   });
-  const irrigationEval = Number.isFinite(soilMoisture)
-    ? evaluateAgronomy({
-      crop_code: String(program.crop_code || body.crop_code || "corn"),
-      soil_moisture: soilMoisture
-    })
-    : { should_irrigate: false, reason: "soil_moisture_missing" };
-  const moistureThreshold = 35;
   const hardRuleHints = evaluateHardRuleHintsV1({
     moisture_constraint: hardRuleInput?.moisture_constraint ?? body.moisture_constraint,
     salinity_risk: hardRuleInput?.salinity_risk ?? body.salinity_risk,
@@ -357,8 +428,8 @@ function buildRecommendations(
         recommendation_type: blueprint.recommendation_type,
         status: "proposed",
         reason_codes: [hint.reason_code, ...blueprint.reason_codes_suffix],
-        reason_details: [{ code: hint.reason_code, action_hint: hint.action_hint, source: hint.source }],
-        explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
+        reason_details: [{ code: hint.reason_code, action_hint: hint.action_hint, source: "support_path.field_fertility_state_v1" }],
+        explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
         evidence_refs: blueprint.evidence_refs,
         rule_hit: [{ rule_id: blueprint.rule_id, matched: true, threshold: null, actual: null }],
         confidence: blueprint.confidence,
@@ -370,13 +441,19 @@ function buildRecommendations(
     return out;
   }
 
-  const irrigationNeed = irrigationEval.should_irrigate || (Number.isFinite(canopyTemp) && canopyTemp >= 32 && stressScore >= 0.45);
+  // Formal trigger source is restricted to Stage-1 action boundary fields only.
+  const formalIrrigationEffectiveness = String(stage1Summary.irrigation_effectiveness ?? "").trim().toLowerCase();
+  const formalLeakRisk = String(stage1Summary.leak_risk ?? "").trim().toLowerCase();
+  const irrigationNeed = formalIrrigationEffectiveness === "low" || formalLeakRisk === "high";
   if (irrigationNeed) {
     const moistureTerm = Number.isFinite(soilMoisture) ? clamp01((45 - soilMoisture) / 45) : 0.2;
     const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
     const confidence = Number((0.45 + 0.3 * moistureTerm + 0.15 * heatTerm + 0.1 * imageConfidence).toFixed(3));
     const durationMin = Number.isFinite(soilMoisture) && soilMoisture < 25 ? 35 : 20;
-    const irrigationRuleId = irrigationEval.should_irrigate ? "irrigation_rule_soil_moisture_v1" : "irrigation_rule_heat_stress_v1";
+    const irrigationRuleId = formalLeakRisk === "high"
+      ? "irrigation_rule_leak_risk_v1"
+      : "irrigation_rule_irrigation_effectiveness_v1";
+    const reasonCode = formalLeakRisk === "high" ? "leak_risk_high" : "irrigation_effectiveness_low";
     out.push({
       recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
       snapshot_id: snapshotId,
@@ -390,13 +467,13 @@ function buildRecommendations(
       program_id,
       recommendation_type: "irrigation_recommendation_v1",
       status: "proposed",
-      reason_codes: [irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress"],
-      reason_details: [{ code: irrigationEval.should_irrigate ? irrigationEval.reason : "soil_moisture_low_or_heat_stress", action_hint: "irrigate_first", source: "field_sensing_overview_v1" }],
-      explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
+      reason_codes: [reasonCode],
+      reason_details: [{ code: reasonCode, action_hint: "irrigate_first", source: "stage1_sensing_summary_v1" }],
+      explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
       evidence_refs: ["field_sensing_overview_v1:soil_moisture", "field_sensing_overview_v1:canopy_temp", "image:stress_score"],
       rule_hit: [
-        { rule_id: "irrigation_rule_soil_moisture_v1", matched: Number.isFinite(soilMoisture) ? soilMoisture < moistureThreshold : false, threshold: moistureThreshold, actual: Number.isFinite(soilMoisture) ? soilMoisture : null },
-        { rule_id: "irrigation_rule_heat_stress_v1", matched: Number.isFinite(canopyTemp) ? (canopyTemp >= 32 && stressScore >= 0.45) : false, threshold: 32, actual: Number.isFinite(canopyTemp) ? canopyTemp : null }
+        { rule_id: "irrigation_rule_irrigation_effectiveness_v1", matched: formalIrrigationEffectiveness === "low", threshold: 1, actual: formalIrrigationEffectiveness === "low" ? 1 : 0 },
+        { rule_id: "irrigation_rule_leak_risk_v1", matched: formalLeakRisk === "high", threshold: 1, actual: formalLeakRisk === "high" ? 1 : 0 }
       ],
       confidence,
       suggested_action: {
@@ -407,9 +484,12 @@ function buildRecommendations(
           duration_min: durationMin,
           water_l_per_min: 18,
           trigger: {
+            formal_source: "stage1_sensing_summary_v1",
+            support_path: "field_sensing_overview_v1",
             soil_moisture_pct: Number.isFinite(soilMoisture) ? soilMoisture : null,
             canopy_temp_c: Number.isFinite(canopyTemp) ? canopyTemp : null,
-            image_stress_score: stressScore
+            image_stress_score: stressScore,
+            stage1_support_signals: supportSignals,
           }
         }
       },
@@ -436,8 +516,8 @@ function buildRecommendations(
       recommendation_type: "crop_health_alert_v1",
       status: "proposed",
       reason_codes: ["image_health_risk_high"],
-      reason_details: [{ code: "image_health_risk_high", action_hint: "inspect", source: "field_sensing_overview_v1" }],
-      explanation_codes: (readModel.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
+      reason_details: [{ code: "image_health_risk_high", action_hint: "inspect", source: "support_path.image_recognition" }],
+      explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
       evidence_refs: ["image:disease_score", "image:pest_risk_score", "image:stress_score"],
       rule_hit: [
         { rule_id: "crop_health_risk_rule_v1", matched: healthRisk >= 0.7, threshold: 0.7, actual: healthRisk }
@@ -447,11 +527,14 @@ function buildRecommendations(
         action_type: "crop.health.alert",
         summary: `图像识别到较高${alertKind === "disease" ? "病害" : "虫害"}风险，请人工复核并安排处置。`,
         parameters: {
+          formal_source: "stage1_sensing_summary_v1",
+          support_path: "image_recognition",
           alert_kind: alertKind,
           risk_score: healthRisk,
           disease_score: diseaseScore,
           pest_risk_score: pestRisk,
-          stress_score: stressScore
+          stress_score: stressScore,
+          stage1_support_signals: supportSignals,
         }
       },
       created_ts: now,
@@ -756,6 +839,12 @@ async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: numb
 
 function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }): any {
   const payload = row?.record_json?.payload ?? {};
+  const explain = payload?.explain && typeof payload.explain === "object" ? payload.explain : {};
+  const normalizedExplain = {
+    trigger_source_fields: Array.isArray(explain.trigger_source_fields) ? explain.trigger_source_fields : [],
+    action_summary: String(explain.action_summary ?? payload?.suggested_action?.summary ?? "建议动作已生成"),
+    rule_hit_summary: Array.isArray(explain.rule_hit_summary) ? explain.rule_hit_summary : [],
+  };
   return {
     fact_id: row.fact_id,
     occurred_at: row.occurred_at,
@@ -778,7 +867,7 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     title: payload.title ?? null,
     summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
-    explain: payload.explain ?? null,
+    explain: normalizedExplain,
   };
 }
 
@@ -856,6 +945,17 @@ function toAoActParameterSchema(parameters: Record<string, number | boolean | st
     return { name, type: "enum" as const, enum: [String(value)] };
   });
   return { keys: keys.length > 0 ? keys : [{ name: "noop", type: "boolean" as const }] };
+}
+
+function recommendationFormalTriggerEligibleForApproval(payload: any): boolean {
+  const signals = payload?.data_sources?.customer_facing?.stage1_formal_trigger_signals_v1
+    ?? payload?.stage1_action_trigger_input?.formal_trigger_signals
+    ?? null;
+  if (!signals || typeof signals !== "object") return false;
+  return isFormalStage1TriggerEligible({
+    irrigation_effectiveness: (signals as any).irrigation_effectiveness,
+    leak_risk: (signals as any).leak_risk,
+  });
 }
 
 export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -1100,6 +1200,17 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       group_id: tenant.group_id,
       field_id: derivedFieldId
     });
+    const stage1Summary = refreshedReadModels.sensing_summary_stage1.payload;
+    if (!stage1Summary || typeof stage1Summary !== "object") {
+      return badRequest(reply, "FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE");
+    }
+    assertFormalTriggerInputLayer("stage1_sensing_summary_v1");
+    assertNoForbiddenTriggerFields(stage1Summary);
+    const normalizedStage1RecommendationInput = normalizeStage1RecommendationInput(stage1Summary);
+    const formalTriggerSignals = deriveFormalTriggerSignalsFromStage1Summary(stage1Summary);
+    if (!isFormalStage1TriggerEligible(formalTriggerSignals)) {
+      return badRequest(reply, "FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE");
+    }
     const fertilityState = refreshedReadModels.fertility_state.payload;
     const sensingOverview = refreshedReadModels.sensing_overview.payload;
     const latestDerivedStates = await getLatestDerivedSensingStatesByFieldV1(pool, {
@@ -1110,12 +1221,6 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     });
     if (!sensingOverview) return badRequest(reply, "FIELD_SENSING_OVERVIEW_NOT_FOUND");
     const snapshot_id = `rm_${tenant.tenant_id}_${derivedFieldId}_${sensingOverview.updated_ts_ms ?? Date.now()}`;
-
-    const soilMoisture = sensingMetricValue(sensingOverview, ["soil_moisture_pct", "soil_moisture", "moisture_pct"]);
-    const canopyTemp = sensingMetricValue(sensingOverview, ["canopy_temp_c", "canopy_temperature_c"]);
-    if (soilMoisture == null || canopyTemp == null) {
-      return badRequest(reply, "FIELD_SENSING_OVERVIEW_INCOMPLETE");
-    }
 
     if (!fertilityState || String(fertilityState.fertility_level ?? "").trim() === "") {
       req.log.warn({
@@ -1142,7 +1247,13 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           salinity_risk: null,
           source: "field_fertility_state_v1"
         };
-    const recommendations = buildRecommendations(body, sensingOverview, snapshot_id, hardRuleInput);
+    const recommendations = buildRecommendationsFromStage1Summary(
+      body,
+      stage1Summary,
+      snapshot_id,
+      { sensingOverview: sensingOverview ?? null, fertilityState: fertilityState ?? null },
+      hardRuleInput
+    );
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
@@ -1162,6 +1273,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       rec.rule_confidence = payloadStats.rule_confidence;
       rec.rank_score = Number((Number(rec.confidence ?? 0) * (1 + perfScore)).toFixed(6));
       rec.explain = buildRecommendationExplainV1({
+        recommendation: rec,
+        stage1Summary,
+      });
+      rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({
         recommendation: rec,
         sensingOverview,
         fertilityState: fertilityState ?? null,
@@ -1190,9 +1305,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rule_id: primaryRuleId,
         rule_hit: recommendationPayload.rule_hit,
         data_sources: {
-          field_sensing_overview_v1: sensingOverview,
-          field_fertility_state_v1: fertilityState ?? null,
-          image_recognition: body.image_recognition ?? null
+          customer_facing: {
+            stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+            stage1_formal_trigger_signals_v1: formalTriggerSignals,
+          },
+          internal_only: {
+            field_sensing_overview_v1: sensingOverview,
+            field_fertility_state_v1: fertilityState ?? null,
+            image_recognition: body.image_recognition ?? null
+          }
         }
       });
       if (!chainValidation.ok) {
@@ -1240,6 +1361,11 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           device_id: recommendationPayload.device_id,
           program_id: recommendationPayload.program_id,
           evidence_facts: recommendationEvidenceFacts(sensingOverview, body.image_recognition),
+          stage1_action_trigger_input: {
+            source_kind: "stage1_sensing_summary_v1",
+            formal_trigger_signals: formalTriggerSignals,
+            support_only_signals: normalizedStage1RecommendationInput,
+          },
           created_ts: Date.now()
         }
       });
@@ -1252,9 +1378,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           ...recommendationPayload,
           recommendation_input_fact_id,
           data_sources: {
-            field_sensing_overview_v1: sensingOverview,
-            field_fertility_state_v1: fertilityState ?? null,
-            image_recognition: body.image_recognition ?? null
+            customer_facing: {
+              stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+              stage1_formal_trigger_signals_v1: formalTriggerSignals,
+            },
+            internal_only: {
+              field_sensing_overview_v1: sensingOverview,
+              field_fertility_state_v1: fertilityState ?? null,
+              image_recognition: body.image_recognition ?? null
+            }
           }
         }
       });
@@ -1290,7 +1422,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         duration_ms: 0,
       });
       fact_ids.push(fact_id);
-      resolvedRecommendations.push(recommendationPayload);
+      resolvedRecommendations.push({
+        ...recommendationPayload,
+        internal_debug_explain: undefined,
+      });
     }
 
     return reply.send({ ok: true, recommendations: resolvedRecommendations, fact_ids });
@@ -1315,6 +1450,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
 
     const rec = row.record_json?.payload ?? {};
+    if (!recommendationFormalTriggerEligibleForApproval(rec)) {
+      return badRequest(reply, "FORMAL_TRIGGER_PROVENANCE_REQUIRED");
+    }
     const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
     const actionType = toAoActActionType(rec);
     const aoActTarget = toAoActTarget(rec);
