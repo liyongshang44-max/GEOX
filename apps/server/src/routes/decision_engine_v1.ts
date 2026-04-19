@@ -22,6 +22,12 @@ import {
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1.js";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import {
+  IRRIGATION_CONTROL_PLANE_ACTION,
+  IRRIGATION_RECOMMENDATION_ACTION,
+  mapRecommendationActionToControlPlane,
+  toCustomerFacingActionLabel
+} from "../domain/controlplane/irrigation_action_mapping_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
@@ -477,7 +483,7 @@ function buildRecommendationsFromStage1Summary(
       ],
       confidence,
       suggested_action: {
-        action_type: "irrigation.start",
+        action_type: IRRIGATION_RECOMMENDATION_ACTION,
         summary: `${crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
         parameters: {
           crop_code,
@@ -918,9 +924,10 @@ function toProgress(chain: { approval_request_id: string | null; operation_plan_
 
 function toAoActActionType(rec: any): string {
   const recommendationType = String(rec?.recommendation_type ?? "").trim();
-  if (recommendationType === "irrigation_recommendation_v1") return "IRRIGATE";
+  const mappedIrrigationAction = mapRecommendationActionToControlPlane(String(rec?.suggested_action?.action_type ?? ""));
+  if (mappedIrrigationAction) return mappedIrrigationAction;
   if (recommendationType === "crop_health_alert_v1") return "SPRAY";
-  return "IRRIGATE";
+  return IRRIGATION_CONTROL_PLANE_ACTION;
 }
 
 function toAoActTarget(rec: any): { kind: "field"; ref: string } {
@@ -1072,7 +1079,9 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       const statusCode = String(item.latest_status ?? item.status ?? "PENDING").toUpperCase();
       return {
         recommendation_id: item.recommendation_id,
-        title: item.title || (item.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
+        title: item.title || (item.recommendation_type === "irrigation_recommendation_v1"
+          ? `${toCustomerFacingActionLabel(String(item?.suggested_action?.action_type ?? ""))}建议`
+          : "作物健康建议"),
         status: {
           code: statusCode,
           label: recommendationStatusLabel(statusCode),
@@ -1144,12 +1153,16 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       item: {
         recommendation: {
           recommendation_id: safeItem.recommendation_id,
-          title: safeItem.title || (safeItem.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"),
+          title: safeItem.title || (safeItem.recommendation_type === "irrigation_recommendation_v1"
+            ? `${toCustomerFacingActionLabel(String(safeItem?.suggested_action?.action_type ?? ""))}建议`
+            : "作物健康建议"),
           subtitle: safeItem?.suggested_action?.summary || "建议已生成，待执行链路推进。",
           status: { code: statusCode, label: recommendationStatusLabel(statusCode), tone: statusTone(statusCode) },
           type: {
             code: safeItem.recommendation_type,
-            label: safeItem.recommendation_type === "irrigation_recommendation_v1" ? "灌溉建议" : "作物健康建议"
+            label: safeItem.recommendation_type === "irrigation_recommendation_v1"
+              ? `${toCustomerFacingActionLabel(String(safeItem?.suggested_action?.action_type ?? ""))}建议`
+              : "作物健康建议"
           },
           updated_ts_ms: updatedTs,
           updated_at_label: msLabel(updatedTs)
@@ -1476,7 +1489,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     }
     const aoActParameterSchema = toAoActParameterSchema(aoActParameters);
     const adapterTypeRaw = typeof rec?.suggested_action?.adapter_type === "string" ? String(rec.suggested_action.adapter_type).trim() : "";
-    const adapter_type = adapterTypeRaw || ((String(actionType).toLowerCase() === "irrigation.start" || String(actionType).toLowerCase() === "irrigate") ? "irrigation_simulator" : "mqtt");
+    const adapter_type = adapterTypeRaw || (String(actionType).toUpperCase() === IRRIGATION_CONTROL_PLANE_ACTION ? "irrigation_simulator" : "mqtt");
 
     const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
       tenant_id: tenant.tenant_id,
