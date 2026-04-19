@@ -24,13 +24,22 @@ import { projectRecommendationStateV1 } from "../projections/recommendation_stat
 import { projectDeviceStateV1 } from "../projections/device_state_v1.js";
 import { projectOperationReportV1 } from "../projections/report_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
-import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy.js";
+import {
+  collectIrrigationValidEvidenceRefs,
+  evaluateIrrigationEvidenceBundle,
+  shouldMarkInvalidExecutionForIrrigation,
+} from "../domain/acceptance/irrigation_evidence_contract_v1.js";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect.js";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
 import { buildAttributionBasis, computeEffect, ensureRulePerformanceTable, evaluateEffectVerdict, recordRulePerformance, type EffectVerdict } from "../domain/agronomy/effect_engine.js";
 import { resolveCropStageByPriority } from "../domain/agronomy/stage_resolver.js";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import {
+  customerViewByStatusV1,
+  operationStatusLabelV1,
+  resolveCustomerViewStatusV1,
+} from "../domain/operation_state/customer_status_mapping_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type FactRow = { fact_id: string; occurred_at: string; source: string | null; record_json: any };
@@ -434,80 +443,6 @@ function hasExecutedReceiptStatus(statusRaw: unknown): boolean {
   return ["DONE", "SUCCEEDED", "SUCCESS", "EXECUTED", "ACKED"].includes(status);
 }
 
-function statusLabel(s: string | null): string {
-  const code = String(s ?? "").trim().toUpperCase();
-  if (!code) return "待推进";
-  if (code === "PENDING_ACCEPTANCE") return "待验收";
-  if (code === "INVALID_EXECUTION") return "执行无效";
-  if (["SUCCESS", "SUCCEEDED", "DONE", "EXECUTED"].includes(code)) return "执行成功";
-  if (["FAILED", "ERROR", "NOT_EXECUTED", "REJECTED"].includes(code)) return "执行失败";
-  if (["RUNNING", "DISPATCHED", "ACKED", "APPROVED", "READY", "IN_PROGRESS"].includes(code)) return "执行中";
-  if (["PENDING", "CREATED", "PROPOSED", "PENDING_APPROVAL"].includes(code)) return "待审批";
-  return code;
-}
-
-type CustomerViewStatus = "PENDING_APPROVAL" | "IN_PROGRESS" | "PENDING_RECEIPT" | "PENDING_ACCEPTANCE" | "COMPLETED" | "INVALID_EXECUTION";
-
-function resolveCustomerViewStatus(input: {
-  final_status: string | null;
-  has_approval: boolean;
-  has_task: boolean;
-  has_receipt: boolean;
-  has_acceptance: boolean;
-  invalid_execution: boolean;
-}): CustomerViewStatus {
-  if (input.invalid_execution) return "INVALID_EXECUTION";
-  const finalStatus = String(input.final_status ?? "").trim().toUpperCase();
-  if (!input.has_approval && !input.has_task) return "PENDING_APPROVAL";
-  if (["SUCCEEDED", "SUCCESS", "DONE", "EXECUTED"].includes(finalStatus) || input.has_acceptance) return "COMPLETED";
-  if (finalStatus === "PENDING_ACCEPTANCE") return "PENDING_ACCEPTANCE";
-  if (input.has_receipt) return "PENDING_ACCEPTANCE";
-  if (input.has_task && !input.has_receipt) return "PENDING_RECEIPT";
-  return "IN_PROGRESS";
-}
-
-function customerViewByStatus(status: CustomerViewStatus): { summary: string; today_action: string; risk_level: "low" | "medium" | "high" } {
-  switch (status) {
-    case "PENDING_APPROVAL":
-      return {
-        summary: "当前建议待审批，尚未进入执行阶段",
-        today_action: "下一步：等待审批",
-        risk_level: "medium",
-      };
-    case "IN_PROGRESS":
-      return {
-        summary: "作业执行中，系统正在持续采集进度",
-        today_action: "保持设备在线并关注执行状态",
-        risk_level: "medium",
-      };
-    case "PENDING_RECEIPT":
-      return {
-        summary: "作业已下发，等待回执数据",
-        today_action: "督促执行端回传回执与证据",
-        risk_level: "medium",
-      };
-    case "PENDING_ACCEPTANCE":
-      return {
-        summary: "已收到执行数据，待验收确认",
-        today_action: "下一步：进入验收",
-        risk_level: "low",
-      };
-    case "COMPLETED":
-      return {
-        summary: "作业已完成并形成闭环",
-        today_action: "继续观察效果并归档证据",
-        risk_level: "low",
-      };
-    case "INVALID_EXECUTION":
-    default:
-      return {
-        summary: "本次作业未被系统认定为有效执行",
-        today_action: "需重新执行或补充证据",
-        risk_level: "high",
-      };
-  }
-}
-
 function mapReasonCodeToText(code: string): string {
   const key = String(code ?? "").trim().toLowerCase();
   if (!key) return "触发了系统规则条件";
@@ -807,30 +742,8 @@ function toEvidenceRefs(value: unknown): string[] {
     .slice(0, 50);
 }
 
-function toEvidenceRefFromValue(value: unknown): string | null {
-  if (typeof value === "string") {
-    const ref = cleanJsonText(value, "");
-    return ref || null;
-  }
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  const ref = cleanJsonText(record.ref ?? record.path ?? record.url ?? "", "");
-  return ref || null;
-}
-
 function collectValidEvidenceRefs(input: { artifacts: Array<{ payload?: any }>; logs: unknown[] }): string[] {
-  const artifactRefs = input.artifacts
-    .filter((item) => {
-      const kind = String(item?.payload?.kind ?? "").trim().toLowerCase();
-      return Boolean(kind) && kind !== "sim_trace";
-    })
-    .map((item) => toEvidenceRefFromValue(item?.payload))
-    .filter((item): item is string => Boolean(item));
-  const logRefs = input.logs
-    .filter((item) => isFormalLogKind((item as any)?.kind ?? item))
-    .map((item) => toEvidenceRefFromValue(item))
-    .filter((item): item is string => Boolean(item));
-  return [...new Set([...artifactRefs, ...logRefs])].slice(0, 50);
+  return collectIrrigationValidEvidenceRefs(input);
 }
 
 function buildInvalidExecutionReport(op: any) {
@@ -864,7 +777,7 @@ function buildEvidenceTimeline(state: any, approvalDecision: FactRow | null, fac
   const timelineFromState: Array<{ id: string; kind: string; label: string; status: string | null; occurred_at: string | null; actor_label: string | null; summary: string }> = (state?.timeline ?? []).map((item: any, idx: number) => ({
     id: `${item.type}_${item.ts}_${idx}`,
     kind: String(item.type ?? "UNKNOWN"),
-    label: item.label || statusLabel(item.type),
+    label: item.label || operationStatusLabelV1(item.type),
     status: state?.final_status ?? null,
     occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
     actor_label: null,
@@ -878,7 +791,7 @@ function buildEvidenceTimeline(state: any, approvalDecision: FactRow | null, fac
       status: toText(approvalDecision.record_json?.payload?.decision) ?? "",
       occurred_at: approvalDecision.occurred_at,
       actor_label: toText(approvalDecision.record_json?.payload?.decider ?? approvalDecision.record_json?.payload?.actor_label),
-      summary: statusLabel(toText(approvalDecision.record_json?.payload?.decision))
+      summary: operationStatusLabelV1(toText(approvalDecision.record_json?.payload?.decision))
     });
   }
   const fallbackFromFacts = facts.map((item) => ({
@@ -1524,7 +1437,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       })
       .map((x: any) => x.payload);
     const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
-    const evidenceEvaluation = evaluateEvidence({
+    const evidenceEvaluation = evaluateIrrigationEvidenceBundle({
       artifacts: artifacts.map((x: any) => ({ kind: x?.payload?.kind ?? "artifact" })),
       logs,
       media,
@@ -1648,7 +1561,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       return {
         id: `${item.type}_${item.ts}_${idx}`,
         kind,
-        label: item.label || statusLabel(item.type),
+        label: item.label || operationStatusLabelV1(item.type),
         status: state.final_status,
         occurred_at: item.ts ? new Date(item.ts).toISOString() : null,
         actor_label: null,
@@ -1663,13 +1576,17 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         status: toText(approvalDecision.record_json?.payload?.decision) ?? "",
         occurred_at: approvalDecision.occurred_at,
         actor_label: toText(approvalDecision.record_json?.payload?.decider ?? approvalDecision.record_json?.payload?.actor_label),
-        summary: statusLabel(toText(approvalDecision.record_json?.payload?.decision))
+        summary: operationStatusLabelV1(toText(approvalDecision.record_json?.payload?.decision))
       });
     }
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
     const executedReceipt = hasExecutedReceiptStatus(receiptPayload?.status ?? receiptPayload?.receipt_status ?? normalizedReceipt?.receipt_status);
-    const invalidExecution = Boolean(receiptFact) && executedReceipt && !evidenceEvaluation.has_formal_evidence;
+    const invalidExecution = shouldMarkInvalidExecutionForIrrigation({
+      hasReceipt: Boolean(receiptFact),
+      executedReceipt,
+      evidence: evidenceEvaluation,
+    });
     const finalStatus = invalidExecution ? "INVALID_EXECUTION" : state.final_status;
     const invalidReason = invalidExecution
       ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
@@ -1688,7 +1605,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       water_l: normalizedReceipt?.water_l,
       chemical_ml: normalizedReceipt?.chemical_ml,
     });
-    const customerViewStatus = resolveCustomerViewStatus({
+    const customerViewStatus = resolveCustomerViewStatusV1({
       final_status: finalStatus,
       has_approval: Boolean(approvalReq || approvalDecision),
       has_task: Boolean(task),
@@ -1696,7 +1613,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       has_acceptance: Boolean(acceptance),
       invalid_execution: invalidExecution,
     });
-    const customerView = customerViewByStatus(customerViewStatus);
+    const customerView = customerViewByStatusV1(customerViewStatus);
     const agronomyCropCode = toText(
       rec?.record_json?.payload?.crop_code
       ?? plan?.record_json?.payload?.crop_code
@@ -2033,7 +1950,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         // Deprecated: keep for compatibility with older frontend versions.
         legacy_skill_trace: stableLegacySkillTrace,
         final_status: stableFinalStatus,
-        status_label: statusLabel(stableFinalStatus),
+        status_label: operationStatusLabelV1(stableFinalStatus),
         invalid_reason: invalidReason,
         executor_device_id: task ? executorDeviceId : null,
         recommended_device_id: recommendedDeviceId,
@@ -2047,7 +1964,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
         approval: approvalReq || approvalDecision ? {
           approval_request_id: toText(state.approval_request_id ?? approvalReq?.record_json?.payload?.request_id),
           decision: toText(approvalDecision?.record_json?.payload?.decision),
-          decision_label: statusLabel(toText(approvalDecision?.record_json?.payload?.decision)),
+          decision_label: operationStatusLabelV1(toText(approvalDecision?.record_json?.payload?.decision)),
           actor_label: toText(approvalDecision?.record_json?.payload?.decider ?? approvalDecision?.record_json?.payload?.actor_label),
           decided_at: approvalDecision?.occurred_at ?? null
         } : null,

@@ -2,7 +2,10 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { buildAcceptanceResult } from "../domain/acceptance/acceptance_engine_v1.js";
-import { inferEvidenceLevel, type EvidenceLevel } from "../domain/acceptance/evidence_policy.js";
+import {
+  inferIrrigationEvidenceLevel,
+  type EvidenceLevel
+} from "../domain/acceptance/irrigation_evidence_contract_v1.js";
 import { projectOperationStateFromFacts, type OperationProjectionFactRow } from "../projections/operation_state_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -334,7 +337,7 @@ export function registerEvidenceBundleV1Routes(app: FastifyInstance, pool: Pool)
 
     const artifactItems = artifactRows.map((row) => {
       const p = row.record_json?.payload ?? {};
-      const evidenceLevel = inferEvidenceLevel(p.kind) as EvidenceLevel;
+      const evidenceLevel = inferIrrigationEvidenceLevel(p.kind) as EvidenceLevel;
       const skill = buildArtifactSkillMatch({
         artifactTs: toText(p.created_at) ?? row.occurred_at,
         artifactKind: toText(p.kind),

@@ -238,7 +238,7 @@ async function loadAcceptanceDerivedStates(pool: Pool, tenant: TenantTriple, fie
     sensor_quality_state: byType.get("sensor_quality_state") ?? null,
   };
 }
-function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
+export function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" | "FAIL" | "PARTIAL" {
   if (result === "PASSED") return "PASS";
   if (result === "FAILED") return "FAIL";
   return "PARTIAL";

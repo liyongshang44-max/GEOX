@@ -30,6 +30,7 @@ import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertili
 import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_state_v1.js";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 import { loadManualOperationByCommandId } from "../domain/controlplane/task_service.js";
+import { actionReceiptRequestSchemaV1, validateActionReceiptMetaV1 } from "../contracts/action_receipt_v1.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -741,58 +742,16 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
 
-      const body = z
-        .object({
-          tenant_id: z.string().min(1),
-          project_id: z.string().min(1),
-          group_id: z.string().min(1),
-          operation_plan_id: z.string().min(1),
-          act_task_id: z.string().min(1),
-          executor_id: z.object({ kind: z.enum(["human", "script", "device"]), id: z.string().min(1), namespace: z.string().min(1) }),
-          execution_time: z.object({ start_ts: z.number(), end_ts: z.number() }),
-          execution_coverage: z.object({ kind: z.enum(["area", "path", "field"]), ref: z.string().min(1) }),
-          resource_usage: z.object({
-            fuel_l: z.number().nullable(),
-            electric_kwh: z.number().nullable(),
-            water_l: z.number().nullable(),
-            chemical_ml: z.number().nullable()
-          }),
-          logs_refs: z
-            .array(z.object({ kind: z.string().min(1), ref: z.string().min(1) }))
-            .min(1),
-          status: z.enum(["executed", "not_executed"]).optional(),
-          constraint_check: z.object({ violated: z.boolean(), violations: z.array(z.string()) }),
-          observed_parameters: z.record(z.union([z.number(), z.boolean(), z.string()])),
-          device_refs: z
-            .array(
-              z.object({
-                kind: z.literal("device_ref_fact"),
-                ref: z.string().min(8),
-                note: z.string().max(280).optional().nullable()
-              })
-            )
-            .optional(),
-          meta: z.record(z.any()).optional()
-        })
-        
-  .parse(req.body);
+      const body = actionReceiptRequestSchemaV1.parse(req.body);
 
+      const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
 
-const tenant = assertTenantFieldsPresentV0(body, "body"); // Extract tenant triple from parsed body.
-if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard isolation (404 on mismatch).
-
-
-const idempotencyKey = String((body.meta as any)?.idempotency_key ?? "").trim(); // Read executor-generated idempotency key from receipt meta.
-if (!idempotencyKey) { // Require a non-empty key so clients can safely retry writes.
-  return reply.status(400).send({ ok: false, error: "IDEMPOTENCY_KEY_REQUIRED" }); // Reject missing key to prevent duplicate receipts.
-} // End idempotency key guard.
-const commandId = String((body.meta as any)?.command_id ?? body.act_task_id).trim(); // Reuse command_id trace key without changing frozen top-level payload schema.
-if (!commandId) {
-  return reply.status(400).send({ ok: false, error: "MISSING_COMMAND_ID" });
-}
-if (commandId !== body.act_task_id) {
-  return reply.status(400).send({ ok: false, error: "COMMAND_TASK_ID_MISMATCH" });
-}
+      const metaValidation = validateActionReceiptMetaV1(body.meta, body.act_task_id);
+      if (metaValidation.error) {
+        return reply.status(400).send({ ok: false, error: metaValidation.error });
+      }
+      const { idempotencyKey, commandId } = metaValidation;
 
 if (body.execution_time.start_ts > body.execution_time.end_ts) {
 
