@@ -24,7 +24,11 @@ import { projectRecommendationStateV1 } from "../projections/recommendation_stat
 import { projectDeviceStateV1 } from "../projections/device_state_v1.js";
 import { projectOperationReportV1 } from "../projections/report_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
-import { evaluateEvidence, isFormalLogKind } from "../domain/acceptance/evidence_policy.js";
+import {
+  collectIrrigationValidEvidenceRefs,
+  evaluateIrrigationEvidenceBundle,
+  shouldMarkInvalidExecutionForIrrigation,
+} from "../domain/acceptance/irrigation_evidence_contract_v1.js";
 import { deriveBusinessEffect } from "../domain/agronomy/business_effect.js";
 import { computeCostBreakdown } from "../domain/agronomy/cost_model.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
@@ -807,30 +811,8 @@ function toEvidenceRefs(value: unknown): string[] {
     .slice(0, 50);
 }
 
-function toEvidenceRefFromValue(value: unknown): string | null {
-  if (typeof value === "string") {
-    const ref = cleanJsonText(value, "");
-    return ref || null;
-  }
-  if (!value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  const ref = cleanJsonText(record.ref ?? record.path ?? record.url ?? "", "");
-  return ref || null;
-}
-
 function collectValidEvidenceRefs(input: { artifacts: Array<{ payload?: any }>; logs: unknown[] }): string[] {
-  const artifactRefs = input.artifacts
-    .filter((item) => {
-      const kind = String(item?.payload?.kind ?? "").trim().toLowerCase();
-      return Boolean(kind) && kind !== "sim_trace";
-    })
-    .map((item) => toEvidenceRefFromValue(item?.payload))
-    .filter((item): item is string => Boolean(item));
-  const logRefs = input.logs
-    .filter((item) => isFormalLogKind((item as any)?.kind ?? item))
-    .map((item) => toEvidenceRefFromValue(item))
-    .filter((item): item is string => Boolean(item));
-  return [...new Set([...artifactRefs, ...logRefs])].slice(0, 50);
+  return collectIrrigationValidEvidenceRefs(input);
 }
 
 function buildInvalidExecutionReport(op: any) {
@@ -1524,7 +1506,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       })
       .map((x: any) => x.payload);
     const metrics = Array.isArray(receiptPayload?.metrics) ? receiptPayload.metrics : [];
-    const evidenceEvaluation = evaluateEvidence({
+    const evidenceEvaluation = evaluateIrrigationEvidenceBundle({
       artifacts: artifacts.map((x: any) => ({ kind: x?.payload?.kind ?? "artifact" })),
       logs,
       media,
@@ -1669,7 +1651,11 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     timeline.sort((a, b) => (toMs(a.occurred_at) ?? 0) - (toMs(b.occurred_at) ?? 0));
 
     const executedReceipt = hasExecutedReceiptStatus(receiptPayload?.status ?? receiptPayload?.receipt_status ?? normalizedReceipt?.receipt_status);
-    const invalidExecution = Boolean(receiptFact) && executedReceipt && !evidenceEvaluation.has_formal_evidence;
+    const invalidExecution = shouldMarkInvalidExecutionForIrrigation({
+      hasReceipt: Boolean(receiptFact),
+      executedReceipt,
+      evidence: evidenceEvaluation,
+    });
     const finalStatus = invalidExecution ? "INVALID_EXECUTION" : state.final_status;
     const invalidReason = invalidExecution
       ? (evidenceEvaluation.reason === "only_sim_trace" ? "evidence_invalid" : "evidence_missing")
