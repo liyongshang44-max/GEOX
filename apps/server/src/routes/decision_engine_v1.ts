@@ -27,6 +27,20 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 type RecommendationTypeV1 = "irrigation_recommendation_v1" | "crop_health_alert_v1";
 
 type RecommendationExplainV1 = {
+  trigger_source_fields: Array<{
+    field: string;
+    role: "formal_trigger" | "support_signal";
+    value: string | number | boolean | null;
+  }>;
+  action_summary: string;
+  rule_hit_summary: Array<{
+    rule_id: string;
+    matched: boolean;
+    summary: string;
+  }>;
+};
+
+type InternalDebugExplainV1 = {
   source_states: Array<{
     source: "derived_sensing_state_v1" | "field_fertility_state_v1" | "field_sensing_overview_v1";
     skill: string;
@@ -79,6 +93,7 @@ type RecommendationV1 = {
   };
   created_ts: number;
   model_version: "decision_engine_v1";
+  internal_debug_explain?: InternalDebugExplainV1;
   rank_score?: number;
   rule_performance_score?: number;
   rule_score?: number;
@@ -223,14 +238,14 @@ function recommendationEvidenceFacts(sensingOverview: FieldSensingOverviewInputV
   ];
 }
 
-function buildRecommendationExplainV1(params: {
+function buildRecommendationInternalDebugExplainV1(params: {
   recommendation: RecommendationV1;
   sensingOverview: FieldSensingOverviewInputV1;
   fertilityState: any;
   derivedSensingStates: any[];
-}): RecommendationExplainV1 {
+}): InternalDebugExplainV1 {
   const { recommendation, sensingOverview, fertilityState, derivedSensingStates } = params;
-  const source_states: RecommendationExplainV1["source_states"] = [];
+  const source_states: InternalDebugExplainV1["source_states"] = [];
   const sensingIndicators = Array.isArray(sensingOverview?.soil_indicators_json) ? sensingOverview.soil_indicators_json : [];
   for (const indicator of sensingIndicators) {
     const metric = String(indicator?.metric ?? "").trim();
@@ -284,7 +299,7 @@ function buildRecommendationExplainV1(params: {
     skill: mapRuleToSkill(String(hit?.rule_id ?? recommendation.rule_id ?? "")).skill_id || "agronomy_rule",
   }));
   const primaryRule = mapRuleToSkill(String(recommendation.rule_id ?? ""));
-  const reasoning_path: RecommendationExplainV1["reasoning_path"] = [
+  const reasoning_path: InternalDebugExplainV1["reasoning_path"] = [
     {
       node_id: "obs",
       node_type: "observation",
@@ -308,6 +323,47 @@ function buildRecommendationExplainV1(params: {
     }
   ];
   return { source_states, triggered_rules, reasoning_path };
+}
+
+function buildRecommendationExplainV1(params: { recommendation: RecommendationV1; stage1Summary: Stage1SummaryRecommendationInputV1 }): RecommendationExplainV1 {
+  const { recommendation, stage1Summary } = params;
+  const trigger_source_fields: RecommendationExplainV1["trigger_source_fields"] = [
+    {
+      field: "irrigation_effectiveness",
+      role: "formal_trigger",
+      value: stage1Summary.irrigation_effectiveness == null ? null : String(stage1Summary.irrigation_effectiveness),
+    },
+    {
+      field: "leak_risk",
+      role: "formal_trigger",
+      value: stage1Summary.leak_risk == null ? null : String(stage1Summary.leak_risk),
+    },
+    {
+      field: "canopy_temp_status",
+      role: "support_signal",
+      value: stage1Summary.canopy_temp_status == null ? null : String(stage1Summary.canopy_temp_status),
+    },
+    {
+      field: "evapotranspiration_risk",
+      role: "support_signal",
+      value: stage1Summary.evapotranspiration_risk == null ? null : String(stage1Summary.evapotranspiration_risk),
+    },
+    {
+      field: "sensor_quality_level",
+      role: "support_signal",
+      value: stage1Summary.sensor_quality_level == null ? null : String(stage1Summary.sensor_quality_level),
+    },
+  ];
+  const rule_hit_summary = (Array.isArray(recommendation.rule_hit) ? recommendation.rule_hit : []).map((hit) => ({
+    rule_id: String(hit?.rule_id ?? "unknown_rule"),
+    matched: Boolean(hit?.matched),
+    summary: `rule=${String(hit?.rule_id ?? "unknown_rule")}, matched=${Boolean(hit?.matched)}`,
+  }));
+  return {
+    trigger_source_fields,
+    action_summary: String(recommendation?.suggested_action?.summary ?? "建议动作已生成"),
+    rule_hit_summary,
+  };
 }
 
 function buildRecommendationsFromStage1Summary(
@@ -783,6 +839,12 @@ async function loadRecommendations(pool: Pool, tenant: TenantTriple, limit: numb
 
 function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: string | null; operation_plan_id: string | null; act_task_id: string | null; receipt_fact_id: string | null; latest_status: string | null }): any {
   const payload = row?.record_json?.payload ?? {};
+  const explain = payload?.explain && typeof payload.explain === "object" ? payload.explain : {};
+  const normalizedExplain = {
+    trigger_source_fields: Array.isArray(explain.trigger_source_fields) ? explain.trigger_source_fields : [],
+    action_summary: String(explain.action_summary ?? payload?.suggested_action?.summary ?? "建议动作已生成"),
+    rule_hit_summary: Array.isArray(explain.rule_hit_summary) ? explain.rule_hit_summary : [],
+  };
   return {
     fact_id: row.fact_id,
     occurred_at: row.occurred_at,
@@ -805,7 +867,7 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     title: payload.title ?? null,
     summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
-    explain: payload.explain ?? null,
+    explain: normalizedExplain,
   };
 }
 
@@ -1201,6 +1263,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       rec.rank_score = Number((Number(rec.confidence ?? 0) * (1 + perfScore)).toFixed(6));
       rec.explain = buildRecommendationExplainV1({
         recommendation: rec,
+        stage1Summary,
+      });
+      rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({
+        recommendation: rec,
         sensingOverview,
         fertilityState: fertilityState ?? null,
         derivedSensingStates: latestDerivedStates
@@ -1228,11 +1294,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rule_id: primaryRuleId,
         rule_hit: recommendationPayload.rule_hit,
         data_sources: {
-          stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
-          stage1_formal_trigger_signals_v1: formalTriggerSignals,
-          field_sensing_overview_v1: sensingOverview,
-          field_fertility_state_v1: fertilityState ?? null,
-          image_recognition: body.image_recognition ?? null
+          customer_facing: {
+            stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+            stage1_formal_trigger_signals_v1: formalTriggerSignals,
+          },
+          internal_only: {
+            field_sensing_overview_v1: sensingOverview,
+            field_fertility_state_v1: fertilityState ?? null,
+            image_recognition: body.image_recognition ?? null
+          }
         }
       });
       if (!chainValidation.ok) {
@@ -1297,11 +1367,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           ...recommendationPayload,
           recommendation_input_fact_id,
           data_sources: {
-            stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
-            stage1_formal_trigger_signals_v1: formalTriggerSignals,
-            field_sensing_overview_v1: sensingOverview,
-            field_fertility_state_v1: fertilityState ?? null,
-            image_recognition: body.image_recognition ?? null
+            customer_facing: {
+              stage1_sensing_summary_v1: normalizedStage1RecommendationInput,
+              stage1_formal_trigger_signals_v1: formalTriggerSignals,
+            },
+            internal_only: {
+              field_sensing_overview_v1: sensingOverview,
+              field_fertility_state_v1: fertilityState ?? null,
+              image_recognition: body.image_recognition ?? null
+            }
           }
         }
       });
@@ -1337,7 +1411,10 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         duration_ms: 0,
       });
       fact_ids.push(fact_id);
-      resolvedRecommendations.push(recommendationPayload);
+      resolvedRecommendations.push({
+        ...recommendationPayload,
+        internal_debug_explain: undefined,
+      });
     }
 
     return reply.send({ ok: true, recommendations: resolvedRecommendations, fact_ids });
