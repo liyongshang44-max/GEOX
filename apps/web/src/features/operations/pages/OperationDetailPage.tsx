@@ -413,7 +413,7 @@ export default function OperationDetailPage(): React.ReactElement {
             </div>
           </CollapsibleModule>
 
-          <CollapsibleModule title="Skill Trace">
+          <CollapsibleModule title="技能执行诊断">
             <OperationSkillTraceCard trace={detailSkillTrace} />
           </CollapsibleModule>
 
