@@ -1,10 +1,10 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { fetchAuthMe } from "../api/auth";
 import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
+import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
 import { renderFieldsRoutes } from "./routes/fieldsRoutes";
@@ -268,9 +268,9 @@ export default function App(): React.ReactElement {
             <Route
               path="*"
               element={(
-                <RequireAuthenticated>
+                <RequireSession>
                   <Shell expert={expert} />
-                </RequireAuthenticated>
+                </RequireSession>
               )}
             />
           </Routes>

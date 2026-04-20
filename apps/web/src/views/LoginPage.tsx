@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LoginError, type LoginErrorCode, loginWithToken } from "../api/auth";
 import { useSession } from "../auth/useSession";
 
@@ -14,10 +14,22 @@ const LOGIN_ERROR_COPY: Record<LoginErrorCode, string> = {
 
 export default function LoginPage(): React.ReactElement {
   const navigate = useNavigate();
+  const location = useLocation();
   const { applyLogin, notice, clearNotice } = useSession();
   const [token, setTokenInput] = React.useState("");
   const [errorCode, setErrorCode] = React.useState<LoginErrorCode | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const invalidReason = React.useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const reason = params.get("reason") || "";
+    if (reason === "AUTH_REVOKED") return "登录凭据已撤销，请重新登录。";
+    if (reason === "AUTH_SCOPE_DENIED" || reason === "AUTH_ROLE_DENIED") return "当前身份仅允许查看/需联系实施或支持。";
+    if (reason === "SERVICE_UNAVAILABLE") return "服务暂不可用，请稍后重试。";
+    if (reason === "AUTH_MISSING") return "未检测到有效登录，请重新登录。";
+    if (reason === "AUTH_INVALID") return "登录状态已失效，请重新登录。";
+    const stateMessage = (location.state as { message?: string } | null)?.message;
+    return stateMessage ? String(stateMessage) : "";
+  }, [location.search, location.state]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -43,6 +55,11 @@ export default function LoginPage(): React.ReactElement {
     <section className="card" style={{ maxWidth: 560, margin: "48px auto", padding: 24 }}>
       <h1 style={{ marginTop: 0 }}>登录 GEOX 控制台</h1>
       <p className="muted" style={{ marginTop: 0 }}>请输入由平台签发的访问 Token，系统将向认证服务校验并建立正式会话。</p>
+      {invalidReason ? (
+        <div className="card" role="status" style={{ borderColor: "#f6d78b", background: "#fff9eb", marginBottom: 12 }}>
+          {invalidReason}
+        </div>
+      ) : null}
       {notice ? (
         <div className="card" role="status" style={{ borderColor: "#f6d78b", background: "#fff9eb", marginBottom: 12 }}>
           <div>{notice}</div>
