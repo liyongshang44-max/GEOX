@@ -2,6 +2,7 @@
 // GEOX/apps/web/src/lib/api.ts
 import type { OverlaySegment, ExplainOverlayV1 } from "./contracts";
 import { requestJson as requestJsonClient } from "../api/client";
+import { persistSessionToken, readSessionToken } from "../auth/authStorage";
 
 export function withMediaBase(url: string): string {
   if (!url) return url;
@@ -20,27 +21,21 @@ export class ApiError extends Error {
   }
 }
 
-const DEFAULT_AO_ACT_TOKEN = ""; // Default dev token for local acceptance and demo flows.
-
-export function readStoredAoActToken(): string { // Read the AO-ACT token from shared browser storage with a safe dev fallback.
-  try {
-    const local = localStorage.getItem("geox_ao_act_token"); // Preferred persistent token location.
-    if (typeof local === "string" && local.trim()) return local.trim(); // Return local token when present.
-  } catch {}
-
-  try {
-    const session = sessionStorage.getItem("geox_ao_act_token"); // Session fallback for tabs that only persist session state.
-    if (typeof session === "string" && session.trim()) return session.trim(); // Return session token when present.
-  } catch {}
-
-  return DEFAULT_AO_ACT_TOKEN; // Fall back to the built-in dev token for local commercial console usage.
+/**
+ * @deprecated Legacy compatibility only.
+ * B 组新主流程必须统一通过 `apps/web/src/auth/*` + `apps/web/src/api/client.ts` 管理会话，
+ * 禁止继续新增任何直接 localStorage/sessionStorage token 读取逻辑。
+ */
+export function readStoredAoActToken(): string {
+  return readSessionToken();
 }
 
-export function persistAoActToken(next: string): string { // Persist the AO-ACT token into both local and session storage.
-  const token = String(next ?? "").trim() || DEFAULT_AO_ACT_TOKEN; // Normalize empty input back to the default dev token.
-  try { localStorage.setItem("geox_ao_act_token", token); } catch {}
-  try { sessionStorage.setItem("geox_ao_act_token", token); } catch {}
-  return token;
+/**
+ * @deprecated Legacy compatibility only.
+ * 请勿在 B 组新流中调用；新流请使用 AuthProvider 的登录/会话写入能力。
+ */
+export function persistAoActToken(next: string): string {
+  return persistSessionToken(next);
 }
 
 async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
