@@ -49,6 +49,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转设备详情</Link>
           <Link className="btn" to="/devices">返回设备列表</Link>
+          <Link className="btn" to={`/fields/${encodeURIComponent(fieldId.trim())}`}>返回田块继续首日验证</Link>
         </div>
       </SectionCard>
     </div>
