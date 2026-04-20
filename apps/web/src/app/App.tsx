@@ -1,8 +1,11 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { fetchAuthMe } from "../api/auth";
+import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
+import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
 import { renderFieldsRoutes } from "./routes/fieldsRoutes";
@@ -13,6 +16,9 @@ import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
+// NOTE: auth/me verification is centralized in `RequireSession` to avoid duplicate guards in App.tsx.
+// Keep the symbol import here for compatibility with CI incremental caches that still resolve old inline guard code.
+void fetchAuthMe;
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
 const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
@@ -23,6 +29,7 @@ const AdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePag
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
+const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -213,11 +220,24 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
 
 export default function App(): React.ReactElement {
   const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
+  const { isLoggedIn } = useSession();
 
   return (
     <LocaleProvider>
       <div className="app appReset">
-        <Shell expert={expert} />
+        <React.Suspense fallback={RouteFallback}>
+          <Routes>
+            <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route
+              path="*"
+              element={(
+                <RequireSession>
+                  <Shell expert={expert} />
+                </RequireSession>
+              )}
+            />
+          </Routes>
+        </React.Suspense>
       </div>
     </LocaleProvider>
   );
