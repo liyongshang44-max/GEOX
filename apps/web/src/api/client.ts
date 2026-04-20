@@ -9,18 +9,6 @@ export const API_BASE_URL = String(
   DEFAULT_API_BASE
 ).replace(/\/+$/, "");
 
-function readAoActFallbackToken(): string {
-  try {
-    const local = localStorage.getItem("geox_ao_act_token");
-    if (typeof local === "string" && local.trim()) return local.trim();
-  } catch {}
-  try {
-    const session = sessionStorage.getItem("geox_ao_act_token");
-    if (typeof session === "string" && session.trim()) return session.trim();
-  } catch {}
-  return "";
-}
-
 export const OPTIONAL_API_STATUSES = [404, 422] as const;
 
 export class ApiError extends Error {
@@ -59,9 +47,9 @@ export function withQuery(path: string, params?: Record<string, unknown>): strin
   const tenant = readTenantContext();
   const merged = {
     ...params,
-    tenant_id: (params?.tenant_id as string | undefined) ?? tenant.tenant_id,
-    project_id: (params?.project_id as string | undefined) ?? tenant.project_id,
-    group_id: (params?.group_id as string | undefined) ?? tenant.group_id,
+    tenant_id: (params?.tenant_id as string | undefined) ?? tenant?.tenant_id,
+    project_id: (params?.project_id as string | undefined) ?? tenant?.project_id,
+    group_id: (params?.group_id as string | undefined) ?? tenant?.group_id,
   };
 
   for (const [key, value] of Object.entries(merged ?? {})) {
@@ -102,7 +90,7 @@ export async function apiRequestWithPolicy<T>(
   init?: RequestInit,
   options?: ApiRequestPolicyOptions,
 ): Promise<ApiRequestResult<T>> {
-  const token = readSessionToken() || readAoActFallbackToken();
+  const token = readSessionToken();
   const tenant = readTenantContext();
   const finalUrl = resolveUrl(path);
   const key = buildRequestKey(finalUrl, init);
@@ -122,13 +110,13 @@ export async function apiRequestWithPolicy<T>(
       if (token && !headers.has("Authorization")) {
         headers.set("Authorization", `Bearer ${token}`);
       }
-      if (tenant.tenant_id && !headers.has("x-tenant-id")) {
+      if (tenant?.tenant_id && !headers.has("x-tenant-id")) {
         headers.set("x-tenant-id", tenant.tenant_id);
       }
-      if (tenant.project_id && !headers.has("x-project-id")) {
+      if (tenant?.project_id && !headers.has("x-project-id")) {
         headers.set("x-project-id", tenant.project_id);
       }
-      if (tenant.group_id && !headers.has("x-group-id")) {
+      if (tenant?.group_id && !headers.has("x-group-id")) {
         headers.set("x-group-id", tenant.group_id);
       }
 
