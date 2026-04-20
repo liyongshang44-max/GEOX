@@ -1,5 +1,7 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { fetchAuthMe } from "../api/auth";
+import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
@@ -23,6 +25,7 @@ const AdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePag
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
+const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -211,13 +214,66 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
   );
 }
 
+function RequireAuthenticated({ children }: { children: React.ReactElement }): React.ReactElement {
+  const { token, clearToken } = useSession();
+  const [status, setStatus] = React.useState<"checking" | "ok" | "failed">("checking");
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    if (!token.trim()) {
+      setStatus("failed");
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setStatus("checking");
+    fetchAuthMe()
+      .then(() => {
+        if (mounted) setStatus("ok");
+      })
+      .catch(() => {
+        clearToken();
+        if (mounted) setStatus("failed");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, clearToken]);
+
+  if (status === "checking") {
+    return <div className="card" style={{ padding: 16, margin: 24 }}>正在验证登录状态...</div>;
+  }
+
+  if (status === "failed") {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 export default function App(): React.ReactElement {
   const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
+  const { token } = useSession();
 
   return (
     <LocaleProvider>
       <div className="app appReset">
-        <Shell expert={expert} />
+        <React.Suspense fallback={RouteFallback}>
+          <Routes>
+            <Route path="/login" element={token.trim() ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route
+              path="*"
+              element={(
+                <RequireAuthenticated>
+                  <Shell expert={expert} />
+                </RequireAuthenticated>
+              )}
+            />
+          </Routes>
+        </React.Suspense>
       </div>
     </LocaleProvider>
   );
