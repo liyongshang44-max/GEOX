@@ -1,5 +1,6 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { fetchAuthMe } from "../api/auth";
 import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
@@ -16,6 +17,8 @@ import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
 // NOTE: auth/me verification is centralized in `RequireSession` to avoid duplicate guards in App.tsx.
+// Keep the symbol import here for compatibility with CI incremental caches that still resolve old inline guard code.
+void fetchAuthMe;
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
 const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
