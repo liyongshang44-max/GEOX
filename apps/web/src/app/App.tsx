@@ -15,6 +15,7 @@ import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
+// NOTE: auth/me verification is centralized in `RequireSession` to avoid duplicate guards in App.tsx.
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
 const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
