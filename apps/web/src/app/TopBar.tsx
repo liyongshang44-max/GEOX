@@ -45,7 +45,7 @@ export default function TopBar({ breadcrumbs, title, lead, primaryAction, onPrim
           <div style={{ fontSize: 12, opacity: 0.85 }}>当前上下文：{contextLabel}</div>
           <div style={{ fontSize: 12, opacity: 0.72 }}>角色：{role || "未识别"}</div>
         </div>
-        <button className="btn" type="button" onClick={onLogout}>退出登录</button>
+        <button className="btn" type="button" onClick={onLogout}>退出（本地会话）</button>
         <NavLink className="btn primary" to={primaryAction.to} onClick={onPrimaryActionClick}>{primaryAction.label}</NavLink>
       </div>
     </header>
