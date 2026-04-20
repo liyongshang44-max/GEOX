@@ -1,4 +1,3 @@
-import { persistTenantContext } from "../auth/authStorage";
 import { apiRequest, ApiError } from "./client";
 
 export type AuthMe = {
@@ -66,11 +65,6 @@ function ensureTenantContext(source: Pick<AuthMe, "tenant_id" | "project_id" | "
   if (!source.tenant_id || !source.project_id || !source.group_id) {
     throw new LoginError("MISSING_CONTEXT");
   }
-  persistTenantContext({
-    tenant_id: source.tenant_id,
-    project_id: source.project_id,
-    group_id: source.group_id,
-  });
 }
 
 export async function loginWithToken(token: string): Promise<AuthMe> {

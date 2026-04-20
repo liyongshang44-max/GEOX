@@ -215,13 +215,13 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
 }
 
 function RequireAuthenticated({ children }: { children: React.ReactElement }): React.ReactElement {
-  const { token, clearToken } = useSession();
+  const { token, isLoggedIn, hydrateSession, clearSession } = useSession();
   const [status, setStatus] = React.useState<"checking" | "ok" | "failed">("checking");
 
   React.useEffect(() => {
     let mounted = true;
 
-    if (!token.trim()) {
+    if (!isLoggedIn || !token.trim()) {
       setStatus("failed");
       return () => {
         mounted = false;
@@ -230,18 +230,19 @@ function RequireAuthenticated({ children }: { children: React.ReactElement }): R
 
     setStatus("checking");
     fetchAuthMe()
-      .then(() => {
-        if (mounted) setStatus("ok");
+      .then((me) => {
+        const next = hydrateSession(me);
+        if (mounted) setStatus(next ? "ok" : "failed");
       })
       .catch(() => {
-        clearToken();
+        clearSession();
         if (mounted) setStatus("failed");
       });
 
     return () => {
       mounted = false;
     };
-  }, [token, clearToken]);
+  }, [token, isLoggedIn, hydrateSession, clearSession]);
 
   if (status === "checking") {
     return <div className="card" style={{ padding: 16, margin: 24 }}>正在验证登录状态...</div>;
@@ -256,14 +257,14 @@ function RequireAuthenticated({ children }: { children: React.ReactElement }): R
 
 export default function App(): React.ReactElement {
   const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
-  const { token } = useSession();
+  const { isLoggedIn } = useSession();
 
   return (
     <LocaleProvider>
       <div className="app appReset">
         <React.Suspense fallback={RouteFallback}>
           <Routes>
-            <Route path="/login" element={token.trim() ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
             <Route
               path="*"
               element={(

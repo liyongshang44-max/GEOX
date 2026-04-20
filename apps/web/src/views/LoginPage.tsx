@@ -14,7 +14,7 @@ const LOGIN_ERROR_COPY: Record<LoginErrorCode, string> = {
 
 export default function LoginPage(): React.ReactElement {
   const navigate = useNavigate();
-  const { setToken } = useSession();
+  const { applyLogin, notice, clearNotice } = useSession();
   const [token, setTokenInput] = React.useState("");
   const [errorCode, setErrorCode] = React.useState<LoginErrorCode | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -25,8 +25,8 @@ export default function LoginPage(): React.ReactElement {
     setErrorCode(null);
 
     try {
-      await loginWithToken(token);
-      setToken(token);
+      const me = await loginWithToken(token);
+      applyLogin(token, me);
       navigate("/dashboard", { replace: true });
     } catch (error) {
       if (error instanceof LoginError) {
@@ -43,6 +43,12 @@ export default function LoginPage(): React.ReactElement {
     <section className="card" style={{ maxWidth: 560, margin: "48px auto", padding: 24 }}>
       <h1 style={{ marginTop: 0 }}>登录 GEOX 控制台</h1>
       <p className="muted" style={{ marginTop: 0 }}>请输入由平台签发的访问 Token，系统将向认证服务校验并建立正式会话。</p>
+      {notice ? (
+        <div className="card" role="status" style={{ borderColor: "#f6d78b", background: "#fff9eb", marginBottom: 12 }}>
+          <div>{notice}</div>
+          <button type="button" className="btn ghost" style={{ marginTop: 8 }} onClick={clearNotice}>我知道了</button>
+        </div>
+      ) : null}
       <form onSubmit={onSubmit}>
         <label htmlFor="token-input">访问 Token</label>
         <textarea
