@@ -67,7 +67,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasServerTrajectory = Boolean(model?.map?.hasTrajectory);
   const activeTrackId = model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined;
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
-  const programHref = "/programs";
+  const currentProgramId = String(model?.currentProgramId ?? "").trim();
+  const programHref = currentProgramId ? `/programs/${encodeURIComponent(currentProgramId)}` : "/programs";
   const recommendationsHref = fieldId
     ? `/agronomy/recommendations?field_id=${encodeURIComponent(fieldId)}&from=field_detail`
     : "/agronomy/recommendations";
