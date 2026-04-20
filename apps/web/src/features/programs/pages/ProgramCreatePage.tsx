@@ -95,7 +95,7 @@ export default function ProgramCreatePage(): React.ReactElement {
         goal_yield: "medium",
         constraints_notes: notes,
       });
-      navigate(`/programs/${encodeURIComponent(result.program_id)}`);
+      navigate(`/programs/${encodeURIComponent(result.program_id)}?created=1`);
     } catch (error) {
       setErrors(parseSchemaErrors(error));
     } finally {
