@@ -14,6 +14,20 @@ const env = {
 };
 
 const checks = [];
+const CHECK_GROUPS = {
+  "server reachable": "ENV",
+  "server authenticated probe": "ENV",
+  "web reachable": "ENV",
+  "bearer token configured": "ENV",
+  "field exists": "OBJECT",
+  "device exists": "OBJECT",
+  "program exists": "OBJECT",
+  "requested field-device match": "CHAIN",
+  "field-device binding": "CHAIN",
+  "field online device": "CHAIN",
+  "field first telemetry": "CHAIN",
+  "recommendation/operation handoff": "CHAIN",
+};
 
 function recordCheck(name, status, reason, nextStep) {
   checks.push({ name, status, reason, nextStep });
@@ -69,6 +83,23 @@ async function checkServerReachable() {
   }
 }
 
+async function checkServerAuthenticatedProbe() {
+  if (!env.bearerToken) {
+    recordCheck("server authenticated probe", "WARN", "skipped because GEOX_BEARER_TOKEN missing", "set GEOX_BEARER_TOKEN to verify authenticated API availability");
+    return;
+  }
+  try {
+    const res = await request(`${env.baseUrl}/api/v1/fields?limit=1`, { withAuth: true });
+    if (res.status >= 400) {
+      recordCheck("server authenticated probe", "WARN", `authenticated probe returned status=${res.status}`, "verify token validity/scope and backend auth middleware");
+      return;
+    }
+    recordCheck("server authenticated probe", "PASS", `authenticated probe succeeded status=${res.status}`, "authenticated business API is reachable");
+  } catch (error) {
+    recordCheck("server authenticated probe", "WARN", `authenticated probe failed: ${String(error?.message ?? error)}`, "check auth gateway/network and rerun");
+  }
+}
+
 async function checkWebReachable() {
   try {
     const res = await request(env.webUrl);
@@ -76,7 +107,13 @@ async function checkWebReachable() {
       recordCheck("web reachable", "FAIL", `web returned ${res.status}`, "start/recover web app and verify GEOX_WEB_URL");
       return;
     }
-    recordCheck("web reachable", "PASS", `web responded ${res.status}`, "open GEOX_WEB_URL in browser for live demo");
+    const body = typeof res.body === "string" ? res.body : "";
+    const hasAppMarker = body.includes("<div id=\"root\">") || body.includes("vite") || body.includes("GEOX");
+    if (!hasAppMarker) {
+      recordCheck("web reachable", "WARN", `web responded ${res.status}, but app marker is weak`, "open GEOX_WEB_URL to confirm this is the expected GEOX frontend");
+      return;
+    }
+    recordCheck("web reachable", "PASS", `web responded ${res.status} with app marker`, "open GEOX_WEB_URL in browser for live demo");
   } catch (error) {
     recordCheck("web reachable", "FAIL", `cannot reach GEOX_WEB_URL=${env.webUrl}; ${String(error?.message ?? error)}`, "check GEOX_WEB_URL and frontend dev server");
   }
@@ -137,7 +174,7 @@ async function loadDevice() {
       return null;
     }
     recordCheck("device exists", "PASS", `device_id=${env.deviceId} is readable`, "keep this device online during demo");
-    return detail.body;
+    return { deviceId: env.deviceId, devicePayload: detail.body, source: "requested" };
   }
 
   const list = await request(`${env.baseUrl}/api/v1/devices?limit=20`, { withAuth: true });
@@ -152,7 +189,7 @@ async function loadDevice() {
   }
   const sample = String(devices[0]?.device_id ?? devices[0]?.id ?? "").trim() || "<unknown>";
   recordCheck("device exists", "PASS", `found ${devices.length} device(s), sample=${sample}`, "optionally set GEOX_DEVICE_ID for deterministic check");
-  return devices[0];
+  return { deviceId: sample === "<unknown>" ? "" : sample, devicePayload: devices[0], source: "sample" };
 }
 
 async function loadProgram() {
@@ -185,7 +222,69 @@ async function loadProgram() {
   return programs[0];
 }
 
-function checkFieldBindingAndTelemetry(fieldContext) {
+function getCandidateValues(payload, keys) {
+  if (!payload || typeof payload !== "object") return [];
+  const out = [];
+  const stack = [payload];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current || typeof current !== "object") continue;
+    if (Array.isArray(current)) {
+      for (const item of current) stack.push(item);
+      continue;
+    }
+    for (const [key, value] of Object.entries(current)) {
+      if (keys.includes(key)) out.push(value);
+      if (value && typeof value === "object") stack.push(value);
+    }
+  }
+  return out;
+}
+
+function toTsMs(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function findDeviceTelemetryEvidence(devicePayload) {
+  const candidates = getCandidateValues(devicePayload, [
+    "latest_telemetry_ts_ms",
+    "latestTelemetryTsMs",
+    "last_telemetry_ts_ms",
+    "lastTelemetryTsMs",
+    "latest_data_ts_ms",
+    "latestDataTsMs",
+    "last_data_ts_ms",
+    "lastDataTsMs",
+    "telemetry_ts_ms",
+  ]);
+  let bestTs = 0;
+  for (const candidate of candidates) {
+    const ts = toTsMs(candidate);
+    if (ts > bestTs) bestTs = ts;
+  }
+  return bestTs;
+}
+
+function checkRequestedFieldDeviceMatch(fieldPayload) {
+  if (!env.fieldId || !env.deviceId) return;
+  if (!fieldPayload || typeof fieldPayload !== "object") {
+    recordCheck("requested field-device match", "WARN", `field_id=${env.fieldId}, device_id=${env.deviceId}; field detail unavailable`, "fix field read issue, then verify requested field-device relation");
+    return;
+  }
+  const boundDevices = pickArray(fieldPayload, ["bound_devices", "devices"]);
+  const match = boundDevices.some((d) => {
+    const id = String(d?.device_id ?? d?.id ?? "").trim();
+    return id && id === env.deviceId;
+  });
+  if (match) {
+    recordCheck("requested field-device match", "PASS", `field_id=${env.fieldId} is bound to device_id=${env.deviceId}`, "requested field/device pair is consistent for pilot checks");
+    return;
+  }
+  recordCheck("requested field-device match", "FAIL", `field_id=${env.fieldId} exists and device_id=${env.deviceId} exists, but device is not bound to requested field`, "bind the requested device to the requested field, then rerun");
+}
+
+function checkFieldBindingAndTelemetry(fieldContext, deviceContext) {
   const effectiveFieldId = String(fieldContext?.fieldId ?? "").trim();
   const source = fieldContext?.source === "sample" ? "sample" : "requested";
   const fieldPayload = fieldContext?.fieldPayload;
@@ -194,6 +293,9 @@ function checkFieldBindingAndTelemetry(fieldContext) {
     : `field_id=${effectiveFieldId || env.fieldId || "<unknown>"}`;
 
   if (!effectiveFieldId) {
+    if (env.fieldId && env.deviceId) {
+      recordCheck("requested field-device match", "WARN", `field_id=${env.fieldId}, device_id=${env.deviceId}; cannot verify relation without field detail`, "set valid GEOX_FIELD_ID and rerun");
+    }
     recordCheck("field-device binding", "WARN", "no available field_id to inspect binding", "create field or set GEOX_FIELD_ID, then rerun");
     recordCheck("field online device", "WARN", "no available field_id to inspect online state", "create field or set GEOX_FIELD_ID, then rerun");
     recordCheck("field first telemetry", "WARN", "no available field_id to inspect telemetry", "create field or set GEOX_FIELD_ID, then rerun");
@@ -201,11 +303,14 @@ function checkFieldBindingAndTelemetry(fieldContext) {
   }
 
   if (!fieldPayload || typeof fieldPayload !== "object") {
+    checkRequestedFieldDeviceMatch(fieldPayload);
     recordCheck("field-device binding", "FAIL", `field detail unavailable; cannot inspect binding (${sourceHint})`, "fix field read issue and rerun");
     recordCheck("field online device", "WARN", `field detail unavailable; online state unknown (${sourceHint})`, "fix field read issue and rerun");
     recordCheck("field first telemetry", "WARN", `field detail unavailable; telemetry state unknown (${sourceHint})`, "fix field read issue and rerun");
     return;
   }
+
+  checkRequestedFieldDeviceMatch(fieldPayload);
 
   const boundDevices = pickArray(fieldPayload, ["bound_devices", "devices"]);
   if (boundDevices.length < 1) {
@@ -224,36 +329,70 @@ function checkFieldBindingAndTelemetry(fieldContext) {
     recordCheck("field online device", "PASS", `${sourceHint}; online devices=${online.length}`, "maintain connectivity during demo window");
   }
 
-  const latestTelemetryTs = Number(fieldPayload?.latest_telemetry_ts_ms ?? 0);
-  if (!Number.isFinite(latestTelemetryTs) || latestTelemetryTs <= 0) {
-    recordCheck("field first telemetry", "WARN", `${sourceHint}; no latest telemetry evidence found for bound devices`, "wait for first telemetry ingestion then rerun");
-  } else {
+  const latestTelemetryTs = toTsMs(fieldPayload?.latest_telemetry_ts_ms);
+  const latestDeviceTelemetryTs = findDeviceTelemetryEvidence(deviceContext?.devicePayload);
+  const deviceHint = deviceContext?.source === "requested"
+    ? `device_id=${deviceContext?.deviceId || env.deviceId || "<unknown>"}`
+    : `sample device_id=${deviceContext?.deviceId || "<unknown>"}`;
+
+  if (latestTelemetryTs > 0) {
     const iso = new Date(latestTelemetryTs).toISOString();
-    recordCheck("field first telemetry", "PASS", `${sourceHint}; latest_telemetry_ts_ms=${latestTelemetryTs} (${iso})`, "use this telemetry timestamp as evidence in day-1 report");
+    recordCheck("field first telemetry", "PASS", `${sourceHint}; field detail telemetry evidence latest_telemetry_ts_ms=${latestTelemetryTs} (${iso})`, "use this telemetry timestamp as evidence in day-1 report");
+    return;
+  }
+
+  if (latestDeviceTelemetryTs > 0) {
+    const iso = new Date(latestDeviceTelemetryTs).toISOString();
+    recordCheck("field first telemetry", "PASS", `${sourceHint}; device telemetry evidence fallback from ${deviceHint}, ts_ms=${latestDeviceTelemetryTs} (${iso})`, "field telemetry field missing, but device telemetry already proves day-1 data flow");
+  } else {
+    recordCheck("field first telemetry", "WARN", `${sourceHint}; no telemetry evidence from field detail, and no device telemetry evidence fallback`, "wait for first telemetry ingestion then rerun");
   }
 }
 
+function matchesScopedObject(item, { fieldId, programId }) {
+  if (!item || typeof item !== "object") return false;
+  const fieldValues = getCandidateValues(item, ["field_id", "fieldId"]);
+  const programValues = getCandidateValues(item, ["program_id", "programId"]);
+  const matchField = fieldId ? fieldValues.some((v) => String(v).trim() === fieldId) : false;
+  const matchProgram = programId ? programValues.some((v) => String(v).trim() === programId) : false;
+  return matchField || matchProgram;
+}
+
 async function checkRecommendationOrOperationChain() {
-  const rec = await request(`${env.baseUrl}/api/v1/recommendations?limit=20`, { withAuth: true });
-  let hasRecommendation = false;
+  const scopeHints = [];
+  if (env.fieldId) scopeHints.push(`field_id=${env.fieldId}`);
+  if (env.programId) scopeHints.push(`program_id=${env.programId}`);
+
+  const rec = await request(`${env.baseUrl}/api/v1/recommendations?limit=50`, { withAuth: true });
+  let recItems = [];
   if (rec.status < 400) {
-    const recItems = pickArray(rec.body, ["items", "recommendations"]);
-    hasRecommendation = recItems.length > 0;
+    recItems = pickArray(rec.body, ["items", "recommendations"]);
   }
 
-  const ops = await request(`${env.baseUrl}/api/v1/operations?limit=20`, { withAuth: true });
+  const ops = await request(`${env.baseUrl}/api/v1/operations?limit=50`, { withAuth: true });
+  const opItems = ops.status < 400 ? pickArray(ops.body, ["items", "operations"]) : [];
+  const scopedRecommendations = recItems.filter((item) => matchesScopedObject(item, { fieldId: env.fieldId, programId: env.programId }));
+  const scopedOperations = opItems.filter((item) => matchesScopedObject(item, { fieldId: env.fieldId, programId: env.programId }));
+
+  if (scopedRecommendations.length > 0 || scopedOperations.length > 0) {
+    const details = [];
+    if (scopedRecommendations.length > 0) details.push(`recommendation_count=${scopedRecommendations.length}`);
+    if (scopedOperations.length > 0) details.push(`operation_count=${scopedOperations.length}`);
+    recordCheck("recommendation/operation handoff", "PASS", `found scoped handoff objects (${details.join(", ")}) for ${scopeHints.join(", ") || "current tenant"}`, "keep scoped chain objects visible for pilot walkthrough");
+    return;
+  }
+
   if (ops.status >= 400) {
-    if (hasRecommendation) {
-      recordCheck("recommendation/operation handoff", "PASS", "recommendation object exists (operation list unavailable)", "verify /api/v1/operations permission for richer handoff visibility");
+    if (recItems.length > 0) {
+      recordCheck("recommendation/operation handoff", "PASS", "tenant-level recommendation exists, exact field/program linkage not verified (operation list unavailable)", "verify /api/v1/operations permission for richer scoped handoff visibility");
       return;
     }
     recordCheck("recommendation/operation handoff", "WARN", `operation list unavailable status=${ops.status}`, "ensure ao_act.index.read permission and create recommendation/operation evidence");
     return;
   }
 
-  const opItems = pickArray(ops.body, ["items", "operations"]);
-  if (hasRecommendation || opItems.length > 0) {
-    recordCheck("recommendation/operation handoff", "PASS", `recommendation=${hasRecommendation ? "yes" : "no"}, operation_count=${opItems.length}`, "keep at least one active chain object for on-site walkthrough");
+  if (recItems.length > 0 || opItems.length > 0) {
+    recordCheck("recommendation/operation handoff", "PASS", `tenant-level recommendation/operation exists (recommendation_count=${recItems.length}, operation_count=${opItems.length}), exact field/program linkage not verified`, "prefer creating or querying objects linked to requested field/program for deterministic pilot evidence");
     return;
   }
 
@@ -261,6 +400,20 @@ async function checkRecommendationOrOperationChain() {
 }
 
 function summarizeAndExit() {
+  const groupOrder = ["ENV", "OBJECT", "CHAIN"];
+  console.log("---- grouped check summary ----");
+  for (const group of groupOrder) {
+    const groupChecks = checks.filter((item) => (CHECK_GROUPS[item.name] ?? "OTHER") === group);
+    for (const item of groupChecks) {
+      console.log(`[${group}] ${item.status} ${item.name}`);
+    }
+  }
+  const otherChecks = checks.filter((item) => !CHECK_GROUPS[item.name]);
+  for (const item of otherChecks) {
+    console.log(`[OTHER] ${item.status} ${item.name}`);
+  }
+  console.log("---- end grouped summary ----");
+
   const hasFail = checks.some((item) => item.status === "FAIL");
   const hasWarn = checks.some((item) => item.status === "WARN");
   const finalStatus = hasFail ? "FAIL" : (hasWarn ? "WARN" : "PASS");
@@ -277,6 +430,7 @@ function summarizeAndExit() {
 
 async function main() {
   const serverOk = await checkServerReachable();
+  await checkServerAuthenticatedProbe();
   await checkWebReachable();
 
   if (!serverOk) {
@@ -293,9 +447,9 @@ async function main() {
   }
 
   const fieldContext = await loadField();
-  await loadDevice();
+  const deviceContext = await loadDevice();
   await loadProgram();
-  checkFieldBindingAndTelemetry(fieldContext);
+  checkFieldBindingAndTelemetry(fieldContext, deviceContext);
   await checkRecommendationOrOperationChain();
   summarizeAndExit();
 }
