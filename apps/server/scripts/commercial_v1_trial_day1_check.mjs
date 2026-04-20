@@ -103,7 +103,7 @@ async function loadField() {
       return null;
     }
     recordCheck("field exists", "PASS", `field_id=${env.fieldId} is readable`, "use this field_id for demo walkthrough");
-    return detail.body;
+    return { fieldId: env.fieldId, fieldPayload: detail.body, source: "requested" };
   }
 
   const list = await request(`${env.baseUrl}/api/v1/fields?limit=20`, { withAuth: true });
@@ -122,7 +122,7 @@ async function loadField() {
 
   if (!selectedId) return null;
   const detail = await request(`${env.baseUrl}/api/v1/fields/${encodeURIComponent(selectedId)}`, { withAuth: true });
-  return detail.status >= 400 ? null : detail.body;
+  return detail.status >= 400 ? null : { fieldId: selectedId, fieldPayload: detail.body, source: "sample" };
 }
 
 async function loadDevice() {
@@ -185,44 +185,51 @@ async function loadProgram() {
   return programs[0];
 }
 
-function checkFieldBindingAndTelemetry(fieldPayload) {
-  if (!env.fieldId) {
-    recordCheck("field-device binding", "WARN", "GEOX_FIELD_ID not provided; skipped deterministic binding check", "set GEOX_FIELD_ID to verify exact field binding state");
-    recordCheck("field online device", "WARN", "GEOX_FIELD_ID not provided; skipped deterministic online check", "set GEOX_FIELD_ID to verify online device state");
-    recordCheck("field first telemetry", "WARN", "GEOX_FIELD_ID not provided; skipped deterministic telemetry check", "set GEOX_FIELD_ID to verify first telemetry arrival");
+function checkFieldBindingAndTelemetry(fieldContext) {
+  const effectiveFieldId = String(fieldContext?.fieldId ?? "").trim();
+  const source = fieldContext?.source === "sample" ? "sample" : "requested";
+  const fieldPayload = fieldContext?.fieldPayload;
+  const sourceHint = source === "sample"
+    ? `using sample field_id=${effectiveFieldId || "<unknown>"} because GEOX_FIELD_ID not provided`
+    : `field_id=${effectiveFieldId || env.fieldId || "<unknown>"}`;
+
+  if (!effectiveFieldId) {
+    recordCheck("field-device binding", "WARN", "no available field_id to inspect binding", "create field or set GEOX_FIELD_ID, then rerun");
+    recordCheck("field online device", "WARN", "no available field_id to inspect online state", "create field or set GEOX_FIELD_ID, then rerun");
+    recordCheck("field first telemetry", "WARN", "no available field_id to inspect telemetry", "create field or set GEOX_FIELD_ID, then rerun");
     return;
   }
 
   if (!fieldPayload || typeof fieldPayload !== "object") {
-    recordCheck("field-device binding", "FAIL", "field detail unavailable; cannot inspect binding", "fix field read issue and rerun");
-    recordCheck("field online device", "WARN", "field detail unavailable; online state unknown", "fix field read issue and rerun");
-    recordCheck("field first telemetry", "WARN", "field detail unavailable; telemetry state unknown", "fix field read issue and rerun");
+    recordCheck("field-device binding", "FAIL", `field detail unavailable; cannot inspect binding (${sourceHint})`, "fix field read issue and rerun");
+    recordCheck("field online device", "WARN", `field detail unavailable; online state unknown (${sourceHint})`, "fix field read issue and rerun");
+    recordCheck("field first telemetry", "WARN", `field detail unavailable; telemetry state unknown (${sourceHint})`, "fix field read issue and rerun");
     return;
   }
 
   const boundDevices = pickArray(fieldPayload, ["bound_devices", "devices"]);
   if (boundDevices.length < 1) {
-    recordCheck("field-device binding", "WARN", `field_id=${env.fieldId} has no bound devices`, "bind at least one device to this field for closed-loop demo");
-    recordCheck("field online device", "WARN", "no bound devices, online check not satisfied", "bind + start one device heartbeat before demo");
-    recordCheck("field first telemetry", "WARN", "no bound devices, telemetry evidence unavailable", "bind device and push telemetry point");
+    recordCheck("field-device binding", "WARN", `${sourceHint}; field has no bound devices`, "bind at least one device to this field for closed-loop demo");
+    recordCheck("field online device", "WARN", `${sourceHint}; no bound devices, online check not satisfied`, "bind + start one device heartbeat before demo");
+    recordCheck("field first telemetry", "WARN", `${sourceHint}; no bound devices, telemetry evidence unavailable`, "bind device and push telemetry point");
     return;
   }
 
-  recordCheck("field-device binding", "PASS", `field_id=${env.fieldId} has ${boundDevices.length} bound device(s)`, "keep at least one binding stable for demo day");
+  recordCheck("field-device binding", "PASS", `${sourceHint}; bound devices=${boundDevices.length}`, "keep at least one binding stable for demo day");
 
   const online = boundDevices.filter((d) => String(d?.connection_status ?? "").toUpperCase() === "ONLINE");
   if (online.length < 1) {
-    recordCheck("field online device", "WARN", "field has bound devices but none is ONLINE", "start device heartbeat and verify device_status_index_v1 update");
+    recordCheck("field online device", "WARN", `${sourceHint}; field has bound devices but none is ONLINE`, "start device heartbeat and verify device_status_index_v1 update");
   } else {
-    recordCheck("field online device", "PASS", `online devices=${online.length}`, "maintain connectivity during demo window");
+    recordCheck("field online device", "PASS", `${sourceHint}; online devices=${online.length}`, "maintain connectivity during demo window");
   }
 
   const latestTelemetryTs = Number(fieldPayload?.latest_telemetry_ts_ms ?? 0);
   if (!Number.isFinite(latestTelemetryTs) || latestTelemetryTs <= 0) {
-    recordCheck("field first telemetry", "WARN", "no latest telemetry evidence found for bound devices", "wait for first telemetry ingestion then rerun");
+    recordCheck("field first telemetry", "WARN", `${sourceHint}; no latest telemetry evidence found for bound devices`, "wait for first telemetry ingestion then rerun");
   } else {
     const iso = new Date(latestTelemetryTs).toISOString();
-    recordCheck("field first telemetry", "PASS", `latest_telemetry_ts_ms=${latestTelemetryTs} (${iso})`, "use this telemetry timestamp as evidence in day-1 report");
+    recordCheck("field first telemetry", "PASS", `${sourceHint}; latest_telemetry_ts_ms=${latestTelemetryTs} (${iso})`, "use this telemetry timestamp as evidence in day-1 report");
   }
 }
 
@@ -285,10 +292,10 @@ async function main() {
     return;
   }
 
-  const fieldPayload = await loadField();
+  const fieldContext = await loadField();
   await loadDevice();
   await loadProgram();
-  checkFieldBindingAndTelemetry(fieldPayload);
+  checkFieldBindingAndTelemetry(fieldContext);
   await checkRecommendationOrOperationChain();
   summarizeAndExit();
 }
