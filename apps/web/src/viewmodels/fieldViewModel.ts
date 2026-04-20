@@ -13,6 +13,7 @@ export type FieldViewModel = {
   areaText: string;
   currentCropText: string;
   currentPlanText: string;
+  currentProgramId: string | null;
   status: FieldConsoleStatus;
   statusLabel: string;
   statusReason?: string;
@@ -248,7 +249,13 @@ export function buildFieldViewModel(params: {
   const markers = Array.isArray(detail?.map_layers?.markers) ? detail.map_layers.markers : [];
   const areaText = detail?.field?.area_ha ? `${detail.field.area_ha} ha` : "--";
   const currentCropText = String(detail?.latest_season?.crop || detail?.season?.crop || "苹果");
-  const currentPlanText = String(params.currentProgram?.title || params.currentProgram?.program_name || params.currentProgram?.program_id || (currentTask ? `${currentTask.action}方案` : "--"));
+  const currentProgramId = String(
+    params.currentProgram?.program_id
+      || params.currentProgram?.id
+      || params.currentProgram?.programId
+      || ""
+  ).trim() || null;
+  const currentPlanText = String(params.currentProgram?.title || params.currentProgram?.program_name || currentProgramId || (currentTask ? `${currentTask.action}方案` : "--"));
   const firstDevice = (Array.isArray(detail?.bound_devices) ? detail.bound_devices : [])[0] ?? null;
   const onlineCount = Number(detail?.summary?.online_device_count ?? 0);
   const deviceOnline = Number.isFinite(onlineCount)
@@ -268,6 +275,7 @@ export function buildFieldViewModel(params: {
     areaText,
     currentCropText,
     currentPlanText,
+    currentProgramId,
     status,
     statusLabel: mapStatusLabel(status),
     statusReason,

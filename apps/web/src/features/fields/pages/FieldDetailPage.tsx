@@ -67,7 +67,8 @@ export default function FieldDetailPage(): React.ReactElement {
   const hasServerTrajectory = Boolean(model?.map?.hasTrajectory);
   const activeTrackId = model?.currentTask?.operationPlanId || model?.map?.trajectorySegments?.[0]?.id || undefined;
   const operationHref = model?.currentTask?.operationPlanId ? `/operations/${encodeURIComponent(model.currentTask.operationPlanId)}` : "/operations";
-  const programHref = "/programs";
+  const currentProgramId = String(model?.currentProgramId ?? "").trim();
+  const programHref = currentProgramId ? `/programs/${encodeURIComponent(currentProgramId)}` : "/programs";
   const recommendationsHref = fieldId
     ? `/agronomy/recommendations?field_id=${encodeURIComponent(fieldId)}&from=field_detail`
     : "/agronomy/recommendations";
@@ -80,6 +81,9 @@ export default function FieldDetailPage(): React.ReactElement {
   const recommendationEvents = (model?.timeline ?? []).filter((item) => item.type === "recommendation").slice(0, 3);
   const recentOperationEvents = (model?.timeline ?? []).filter((item) => item.type === "operation").slice(0, 5);
   const hasInitializedProgram = hasCurrentPlan;
+  const isCreatedFromProgramFlow = searchParams.get("created") === "1";
+  const shouldShowUninitializedBanner = !hasCurrentPlan;
+  const shouldShowCreatedSuccessHint = isCreatedFromProgramFlow && hasCurrentPlan;
   const checklist = [
     { label: "田块是否已创建", status: Boolean(fieldId) ? "已完成" : "待完成", action: <Link to="/fields">查看田块列表</Link> },
     {
@@ -130,7 +134,7 @@ export default function FieldDetailPage(): React.ReactElement {
           <Link className="btn" to={operationHref}>次入口：查看当前作业</Link>
           <Link className="btn" to="/devices">次入口：查看设备</Link>
         </div>
-        {(searchParams.get("created") === "1" || !hasCurrentPlan) ? (
+        {shouldShowUninitializedBanner ? (
           <div className="decisionItemStatic onboardingHintCard fieldInitBanner" style={{ marginTop: 12 }}>
             <div className="onboardingHintTitle">尚未完成初始化经营</div>
             <div className="onboardingHintDesc">这块田还没有经营方案。创建经营方案后，系统才能根据目标生成建议与作业。</div>
@@ -139,6 +143,12 @@ export default function FieldDetailPage(): React.ReactElement {
               <Link className="btn" to="/devices">去绑定设备</Link>
               <Link className="btn" to="/fields">返回田块列表</Link>
             </div>
+          </div>
+        ) : null}
+        {shouldShowCreatedSuccessHint ? (
+          <div className="decisionItemStatic" style={{ marginTop: 12 }}>
+            <div className="onboardingHintTitle">经营方案创建成功</div>
+            <div className="onboardingHintDesc">当前田块已完成初始化经营，可继续查看首日检查、建议与作业。</div>
           </div>
         ) : null}
         {!hasControlPlane ? <div className="demoMetricHint" style={{ marginTop: 8 }}>暂无控制信息</div> : null}
