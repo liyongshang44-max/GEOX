@@ -1,6 +1,5 @@
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { fetchAuthMe } from "../api/auth";
 import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
