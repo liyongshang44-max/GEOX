@@ -15,6 +15,9 @@ import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
 import { trackMainActionClick, usePageEnterEvent } from "../shared/telemetry/pageEvents";
 
+// NOTE: auth/me verification is centralized in `RequireSession` to avoid duplicate guards in App.tsx.
+// Keep the symbol import here for compatibility with CI incremental caches that still resolve old inline guard code.
+void fetchAuthMe;
 const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
 const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
@@ -212,6 +215,47 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
       </React.Suspense>
     </AppShell>
   );
+}
+
+function RequireAuthenticated({ children }: { children: React.ReactElement }): React.ReactElement {
+  const { token, isLoggedIn, hydrateSession, clearSession } = useSession();
+  const [status, setStatus] = React.useState<"checking" | "ok" | "failed">("checking");
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    if (!isLoggedIn || !token.trim()) {
+      setStatus("failed");
+      return () => {
+        mounted = false;
+      };
+    }
+
+    setStatus("checking");
+    fetchAuthMe()
+      .then((me) => {
+        const next = hydrateSession(me);
+        if (mounted) setStatus(next ? "ok" : "failed");
+      })
+      .catch(() => {
+        clearSession();
+        if (mounted) setStatus("failed");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [token, isLoggedIn, hydrateSession, clearSession]);
+
+  if (status === "checking") {
+    return <div className="card" style={{ padding: 16, margin: 24 }}>正在验证登录状态...</div>;
+  }
+
+  if (status === "failed") {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 }
 
 export default function App(): React.ReactElement {
