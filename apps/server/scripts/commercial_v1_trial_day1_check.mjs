@@ -3,6 +3,9 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:3001";
 const DEFAULT_WEB_URL = "http://127.0.0.1:5173";
 const REQUEST_TIMEOUT_MS = Number.parseInt(process.env.GEOX_CHECK_TIMEOUT_MS ?? "6000", 10) || 6000;
+const TRIAL_DAY_WINDOW_HOURS = Number.parseInt(process.env.GEOX_TRIAL_DAY_WINDOW_HOURS ?? "24", 10) || 24;
+const MIN_VALID_TS_MS = Date.parse("2000-01-01T00:00:00.000Z");
+const FUTURE_TS_TOLERANCE_MS = 5 * 60 * 1000;
 
 const env = {
   baseUrl: String(process.env.GEOX_BASE_URL ?? DEFAULT_BASE_URL).trim(),
@@ -14,6 +17,11 @@ const env = {
 };
 
 const checks = [];
+const chainState = {
+  requestedPairRequired: false,
+  requestedPairMatched: null,
+  requestedPairReason: "requested pair not provided",
+};
 const CHECK_GROUPS = {
   "server reachable": "ENV",
   "server authenticated probe": "ENV",
@@ -94,7 +102,7 @@ async function checkServerAuthenticatedProbe() {
       recordCheck("server authenticated probe", "WARN", `authenticated probe returned status=${res.status}`, "verify token validity/scope and backend auth middleware");
       return;
     }
-    recordCheck("server authenticated probe", "PASS", `authenticated probe succeeded status=${res.status}`, "authenticated business API is reachable");
+    recordCheck("server authenticated probe", "PASS", `authenticated probe succeeded status=${res.status}; authenticated business API reachable via /api/v1/fields`, "authenticated business API is reachable");
   } catch (error) {
     recordCheck("server authenticated probe", "WARN", `authenticated probe failed: ${String(error?.message ?? error)}`, "check auth gateway/network and rerun");
   }
@@ -108,7 +116,8 @@ async function checkWebReachable() {
       return;
     }
     const body = typeof res.body === "string" ? res.body : "";
-    const hasAppMarker = body.includes("<div id=\"root\">") || body.includes("vite") || body.includes("GEOX");
+    const bodyLower = body.toLowerCase();
+    const hasAppMarker = body.includes("<div id=\"root\">") || body.includes("id=\"root\"") || bodyLower.includes("vite") || body.includes("GEOX") || bodyLower.includes("geox");
     if (!hasAppMarker) {
       recordCheck("web reachable", "WARN", `web responded ${res.status}, but app marker is weak`, "open GEOX_WEB_URL to confirm this is the expected GEOX frontend");
       return;
@@ -246,6 +255,20 @@ function toTsMs(raw) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function parseValidTimestampMs(raw) {
+  const ts = toTsMs(raw);
+  if (ts <= 0) return { valid: false, tsMs: 0, reason: "missing/empty" };
+  if (ts < MIN_VALID_TS_MS) return { valid: false, tsMs: ts, reason: "too old to be valid timestamp" };
+  const now = Date.now();
+  if (ts > now + FUTURE_TS_TOLERANCE_MS) return { valid: false, tsMs: ts, reason: "timestamp is in the future" };
+  return { valid: true, tsMs: ts, reason: "ok" };
+}
+
+function isWithinTrialDayWindow(tsMs) {
+  if (!tsMs) return false;
+  return Date.now() - tsMs <= TRIAL_DAY_WINDOW_HOURS * 60 * 60 * 1000;
+}
+
 function findDeviceTelemetryEvidence(devicePayload) {
   const candidates = getCandidateValues(devicePayload, [
     "latest_telemetry_ts_ms",
@@ -258,17 +281,24 @@ function findDeviceTelemetryEvidence(devicePayload) {
     "lastDataTsMs",
     "telemetry_ts_ms",
   ]);
-  let bestTs = 0;
+  let best = { valid: false, tsMs: 0, reason: "missing/empty" };
   for (const candidate of candidates) {
-    const ts = toTsMs(candidate);
-    if (ts > bestTs) bestTs = ts;
+    const parsed = parseValidTimestampMs(candidate);
+    if (parsed.valid && parsed.tsMs > best.tsMs) best = parsed;
   }
-  return bestTs;
+  return best;
 }
 
 function checkRequestedFieldDeviceMatch(fieldPayload) {
-  if (!env.fieldId || !env.deviceId) return;
+  chainState.requestedPairRequired = Boolean(env.fieldId && env.deviceId);
+  if (!chainState.requestedPairRequired) {
+    chainState.requestedPairMatched = null;
+    chainState.requestedPairReason = "requested pair not provided";
+    return;
+  }
   if (!fieldPayload || typeof fieldPayload !== "object") {
+    chainState.requestedPairMatched = false;
+    chainState.requestedPairReason = "field detail unavailable for requested pair check";
     recordCheck("requested field-device match", "WARN", `field_id=${env.fieldId}, device_id=${env.deviceId}; field detail unavailable`, "fix field read issue, then verify requested field-device relation");
     return;
   }
@@ -278,9 +308,13 @@ function checkRequestedFieldDeviceMatch(fieldPayload) {
     return id && id === env.deviceId;
   });
   if (match) {
+    chainState.requestedPairMatched = true;
+    chainState.requestedPairReason = "requested field/device pair confirmed";
     recordCheck("requested field-device match", "PASS", `field_id=${env.fieldId} is bound to device_id=${env.deviceId}`, "requested field/device pair is consistent for pilot checks");
     return;
   }
+  chainState.requestedPairMatched = false;
+  chainState.requestedPairReason = "requested field/device pair not bound";
   recordCheck("requested field-device match", "FAIL", `field_id=${env.fieldId} exists and device_id=${env.deviceId} exists, but device is not bound to requested field`, "bind the requested device to the requested field, then rerun");
 }
 
@@ -329,24 +363,66 @@ function checkFieldBindingAndTelemetry(fieldContext, deviceContext) {
     recordCheck("field online device", "PASS", `${sourceHint}; online devices=${online.length}`, "maintain connectivity during demo window");
   }
 
-  const latestTelemetryTs = toTsMs(fieldPayload?.latest_telemetry_ts_ms);
-  const latestDeviceTelemetryTs = findDeviceTelemetryEvidence(deviceContext?.devicePayload);
+  const fieldTelemetry = parseValidTimestampMs(fieldPayload?.latest_telemetry_ts_ms);
+  const deviceTelemetry = findDeviceTelemetryEvidence(deviceContext?.devicePayload);
+  const fallbackSource = deviceContext?.source === "requested" ? "requested device" : "sample device";
   const deviceHint = deviceContext?.source === "requested"
     ? `device_id=${deviceContext?.deviceId || env.deviceId || "<unknown>"}`
     : `sample device_id=${deviceContext?.deviceId || "<unknown>"}`;
+  const requestedPairBroken = chainState.requestedPairRequired && chainState.requestedPairMatched === false;
 
-  if (latestTelemetryTs > 0) {
-    const iso = new Date(latestTelemetryTs).toISOString();
-    recordCheck("field first telemetry", "PASS", `${sourceHint}; field detail telemetry evidence latest_telemetry_ts_ms=${latestTelemetryTs} (${iso})`, "use this telemetry timestamp as evidence in day-1 report");
-    return;
+  let status = "WARN";
+  let nextStep = "wait for first valid telemetry ingestion then rerun";
+  let fieldEvidenceMsg = "none";
+  let deviceEvidenceMsg = "none";
+
+  if (fieldTelemetry.valid) {
+    const iso = new Date(fieldTelemetry.tsMs).toISOString();
+    if (isWithinTrialDayWindow(fieldTelemetry.tsMs)) {
+      status = "PASS";
+      nextStep = "use this telemetry timestamp as day-1 scoped evidence";
+      fieldEvidenceMsg = `valid ts=${fieldTelemetry.tsMs} (${iso}) within ${TRIAL_DAY_WINDOW_HOURS}h window`;
+    } else {
+      status = "WARN";
+      nextStep = "ingest fresh telemetry for requested pilot chain before live demo";
+      fieldEvidenceMsg = `valid ts=${fieldTelemetry.tsMs} (${iso}) but outside ${TRIAL_DAY_WINDOW_HOURS}h window`;
+    }
+  } else if (fieldPayload?.latest_telemetry_ts_ms) {
+    fieldEvidenceMsg = `invalid timestamp (${fieldTelemetry.reason})`;
   }
 
-  if (latestDeviceTelemetryTs > 0) {
-    const iso = new Date(latestDeviceTelemetryTs).toISOString();
-    recordCheck("field first telemetry", "PASS", `${sourceHint}; device telemetry evidence fallback from ${deviceHint}, ts_ms=${latestDeviceTelemetryTs} (${iso})`, "field telemetry field missing, but device telemetry already proves day-1 data flow");
-  } else {
-    recordCheck("field first telemetry", "WARN", `${sourceHint}; no telemetry evidence from field detail, and no device telemetry evidence fallback`, "wait for first telemetry ingestion then rerun");
+  if (deviceTelemetry.valid) {
+    const iso = new Date(deviceTelemetry.tsMs).toISOString();
+    if (!isWithinTrialDayWindow(deviceTelemetry.tsMs)) {
+      deviceEvidenceMsg = `${fallbackSource}: ${deviceHint}, valid ts=${deviceTelemetry.tsMs} (${iso}) but outside ${TRIAL_DAY_WINDOW_HOURS}h window`;
+      if (status === "PASS") status = "WARN";
+      nextStep = "push fresh telemetry today for requested pilot chain evidence";
+    } else {
+      deviceEvidenceMsg = `${fallbackSource}: ${deviceHint}, valid ts=${deviceTelemetry.tsMs} (${iso})`;
+      if (!fieldTelemetry.valid) {
+        if (fallbackSource === "sample device" && requestedPairBroken) {
+          status = "WARN";
+          nextStep = "this only proves tenant telemetry exists; bind requested pair and ingest telemetry on requested device";
+        } else if (fallbackSource === "sample device") {
+          status = "PASS";
+          nextStep = "only proves tenant telemetry exists; prefer requested pair telemetry for pilot closure evidence";
+        } else {
+          status = "PASS";
+          nextStep = "prefer field detail telemetry evidence for stronger requested-chain day-1 proof";
+        }
+      }
+    }
   }
+
+  const requestedPairNote = requestedPairBroken
+    ? `; requested chain not established (${chainState.requestedPairReason})`
+    : "";
+  recordCheck(
+    "field first telemetry",
+    status,
+    `${sourceHint}; field detail telemetry evidence: ${fieldEvidenceMsg}; device telemetry evidence fallback: ${deviceEvidenceMsg}${requestedPairNote}`,
+    nextStep,
+  );
 }
 
 function matchesScopedObject(item, { fieldId, programId }) {
@@ -362,6 +438,8 @@ async function checkRecommendationOrOperationChain() {
   const scopeHints = [];
   if (env.fieldId) scopeHints.push(`field_id=${env.fieldId}`);
   if (env.programId) scopeHints.push(`program_id=${env.programId}`);
+  const scopeLabel = scopeHints.join(", ") || "requested field/program not provided";
+  const requestedPairBroken = chainState.requestedPairRequired && chainState.requestedPairMatched === false;
 
   const rec = await request(`${env.baseUrl}/api/v1/recommendations?limit=50`, { withAuth: true });
   let recItems = [];
@@ -378,25 +456,28 @@ async function checkRecommendationOrOperationChain() {
     const details = [];
     if (scopedRecommendations.length > 0) details.push(`recommendation_count=${scopedRecommendations.length}`);
     if (scopedOperations.length > 0) details.push(`operation_count=${scopedOperations.length}`);
-    recordCheck("recommendation/operation handoff", "PASS", `found scoped handoff objects (${details.join(", ")}) for ${scopeHints.join(", ") || "current tenant"}`, "keep scoped chain objects visible for pilot walkthrough");
+    const caution = requestedPairBroken
+      ? `; requested chain not established (${chainState.requestedPairReason}), scoped objects may not represent requested field-device pilot chain`
+      : "";
+    recordCheck("recommendation/operation handoff", "PASS", `level=scoped confirmed; scope=${scopeLabel}; found ${details.join(", ")}${caution}`, "keep scoped chain objects visible for pilot walkthrough, and ensure they reference requested field/program explicitly");
     return;
   }
 
   if (ops.status >= 400) {
     if (recItems.length > 0) {
-      recordCheck("recommendation/operation handoff", "PASS", "tenant-level recommendation exists, exact field/program linkage not verified (operation list unavailable)", "verify /api/v1/operations permission for richer scoped handoff visibility");
+      recordCheck("recommendation/operation handoff", "WARN", `level=tenant-level only; recommendation exists but operation list unavailable status=${ops.status}; requested chain may still be unproven`, "grant operations read permission and create/query objects explicitly linked to requested field/program before demo evidence sign-off");
       return;
     }
-    recordCheck("recommendation/operation handoff", "WARN", `operation list unavailable status=${ops.status}`, "ensure ao_act.index.read permission and create recommendation/operation evidence");
+    recordCheck("recommendation/operation handoff", "WARN", `level=not started; operation list unavailable status=${ops.status} and no recommendation found`, "ensure ao_act.index.read permission and create scoped recommendation/operation objects");
     return;
   }
 
   if (recItems.length > 0 || opItems.length > 0) {
-    recordCheck("recommendation/operation handoff", "PASS", `tenant-level recommendation/operation exists (recommendation_count=${recItems.length}, operation_count=${opItems.length}), exact field/program linkage not verified`, "prefer creating or querying objects linked to requested field/program for deterministic pilot evidence");
+    recordCheck("recommendation/operation handoff", "WARN", `level=tenant-level only; tenant has recommendation/operation objects (recommendation_count=${recItems.length}, operation_count=${opItems.length}) but no scoped proof for ${scopeLabel}`, "create or query recommendation/operation objects that explicitly reference requested field/program; tenant-level objects alone are not pilot-chain evidence");
     return;
   }
 
-  recordCheck("recommendation/operation handoff", "WARN", "preconditions exist but recommendation/operation chain has not started", "generate recommendation or create operation to complete day-1 demo chain");
+  recordCheck("recommendation/operation handoff", "WARN", `level=not started; no recommendation/operation objects found for ${scopeLabel}`, "generate scoped recommendation or create scoped operation to start the requested pilot handoff chain");
 }
 
 function summarizeAndExit() {
@@ -417,14 +498,45 @@ function summarizeAndExit() {
   const hasFail = checks.some((item) => item.status === "FAIL");
   const hasWarn = checks.some((item) => item.status === "WARN");
   const finalStatus = hasFail ? "FAIL" : (hasWarn ? "WARN" : "PASS");
-  const summary = finalStatus === "PASS"
-    ? "当前环境已具备首日演示条件"
-    : finalStatus === "WARN"
-      ? "当前环境可启动，但尚未达到首日闭环演示条件"
-      : "当前环境基础入口异常，未通过首日检查";
+
+  const envFailed = checks.some((item) => (CHECK_GROUPS[item.name] === "ENV" || item.name === "business-object checks") && item.status === "FAIL");
+  const chainFailed = checks.some((item) => CHECK_GROUPS[item.name] === "CHAIN" && item.status === "FAIL");
+  const requestedPairBroken = chainState.requestedPairRequired && chainState.requestedPairMatched === false;
+  const tenantOnlyHandoff = checks.some((item) => item.name === "recommendation/operation handoff" && item.reason.includes("level=tenant-level only"));
+  const nextActions = [];
+
+  let summary = "";
+  if (envFailed) {
+    summary = "环境未通过，不进入对象链检查。";
+    nextActions.push("recover env");
+  } else if (requestedPairBroken) {
+    summary = "环境已起，但指定试点链未成立（requested field-device match failed）；当前不能判定为当天可演示。";
+    nextActions.push("bind requested device to requested field");
+  } else if (chainFailed || hasWarn) {
+    summary = "环境已起，但对象链未闭合，不能说“当天可演示”。";
+  } else {
+    summary = "环境、对象、链路均通过，可进入首日演示。";
+  }
+
+  if (tenantOnlyHandoff) {
+    summary += " 当前只具备租户级 handoff 对象，不足以证明当前试点链闭合。";
+    nextActions.push("create scoped handoff object");
+  }
+
+  if (hasWarn) {
+    nextActions.push("create missing objects");
+  }
+  if (chainFailed && !requestedPairBroken) {
+    nextActions.push("fix chain blockers");
+  }
+
+  const uniqueActions = [...new Set(nextActions)];
 
   console.log(`TRIAL_DAY1_STATUS=${finalStatus}`);
   console.log(summary);
+  if (uniqueActions.length > 0) {
+    console.log(`建议下一步动作总览: ${uniqueActions.join(" | ")}`);
+  }
   process.exitCode = finalStatus === "FAIL" ? 1 : 0;
 }
 
