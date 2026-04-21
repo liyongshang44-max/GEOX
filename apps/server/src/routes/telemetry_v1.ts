@@ -233,17 +233,15 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/latest", async (req, reply) => { // Compatibility-only latest telemetry view (migration only).
     const routePath = "/api/v1/telemetry/latest" as const;
     try {
-      if ((req.query as any)?.__internal__ !== "true") {
-        applyTelemetryFailureCors(req, reply);
-        reply.code(410);
-        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
-      }
       const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
       const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-      if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
       if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
@@ -253,7 +251,10 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       const metrics = parseMetricList(q.metrics); // Optional metric subset.
       const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 7 * 24 * 60 * 60 * 1000); // Default last 7 days to find latest points.
       const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-      if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
 
       const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load candidate points.
       const latest = new Map<string, any>(); // Keep latest point per metric.
@@ -279,17 +280,15 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/series", async (req, reply) => { // Compatibility-only telemetry series (migration only).
     const routePath = "/api/v1/telemetry/series" as const;
     try {
-      if ((req.query as any)?.__internal__ !== "true") {
-        applyTelemetryFailureCors(req, reply);
-        reply.code(410);
-        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
-      }
       const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
       const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-      if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
       if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
@@ -299,7 +298,10 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       const metrics = parseMetricList(q.metrics); // Optional metrics list.
       const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
       const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-      if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
 
       const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000)); // Load points.
       const series: Record<string, any[]> = {}; // Group by metric for frontend.
@@ -329,17 +331,15 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
   app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Compatibility-only telemetry metrics summary (migration only).
     const routePath = "/api/v1/telemetry/metrics" as const;
     try {
-      if ((req.query as any)?.__internal__ !== "true") {
-        applyTelemetryFailureCors(req, reply);
-        reply.code(410);
-        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
-      }
       const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
       if (!auth) return; // Auth helper responded.
 
       const q: any = (req as any).query ?? {}; // Parse query params.
       const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-      if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
       if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
@@ -349,7 +349,10 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
       const metrics = parseMetricList(q.metrics); // Optional metric subset.
       const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
       const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-      if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
 
       const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load points.
       const summary = new Map<string, any>(); // Aggregate per metric.
