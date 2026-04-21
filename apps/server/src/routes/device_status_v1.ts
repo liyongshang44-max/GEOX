@@ -117,20 +117,26 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
   void ensureDeviceStatusIndexV1Schema(pool); // Ensure schema at startup (async, best-effort).
 
   const requireAuth = requireAuthCompat(); // Resolve auth function once.
+  const statusLogTag = "status-step1-v3";
 
   // GET /api/v1/devices/:device_id/status
-  app.get("/api/v1/devices/:device_id/status", { preHandler: requireAuth as any }, async (req, reply) => {
-    req.log.info({ route: "device.status", params: (req as any).params }, "device.status entered");
+  app.get("/api/v1/devices/:device_id/status", async (req, reply) => {
+    req.log.info({ route: "device.status", log_tag: statusLogTag, params: (req as any).params }, "device.status entered");
     let tenant_id = "unknown";
     const device_id = String((req as any).params?.device_id ?? "").trim();
     try {
+      await (requireAuth as any)(req, reply);
+      if ((reply as any).sent) {
+        req.log.warn({ route: "device.status", log_tag: statusLogTag, device_id }, "device.status auth blocked");
+        return;
+      }
       const auth = getAuthContext(req) ?? ({ tenant_id: "tenantA" } as FactsAuth); // Fallback tenant for single-tenant dev.
       tenant_id = String(auth.tenant_id); // Tenant id.
-      req.log.info({ route: "device.status", tenant_id, device_id }, "device.status auth resolved");
+      req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id }, "device.status auth resolved");
       if (!device_id) return reply.code(400).send({ ok: false, error: "BAD_REQUEST", message: "invalid device_id" });
 
       const offline_after_ms = 5 * 60 * 1000; // Default: 5 minutes.
-      req.log.info({ route: "device.status", tenant_id, device_id }, "device.status before query");
+      req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id }, "device.status before query");
       const q = await pool.query(
         `SELECT device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms, status
            FROM device_status_index_v1
@@ -138,7 +144,7 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
           LIMIT 1`,
         [tenant_id, device_id]
       );
-      req.log.info({ route: "device.status", tenant_id, device_id, row_count: q.rowCount ?? 0 }, "device.status after query");
+      req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id, row_count: q.rowCount ?? 0 }, "device.status after query");
 
       if (q.rowCount === 0) {
         // Non-enumerable behavior: 404 to external caller.
@@ -167,15 +173,13 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
         updated_ts_ms: toIntMs(row.updated_ts_ms) ?? null,
       });
     } catch (e: any) {
-      req.log.error({ route: "device.status", tenant_id, device_id, err: e }, "device.status failed");
+      req.log.error({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id, err: e }, "device.status failed");
       return reply.code(500).send({ ok: false, error: "INTERNAL", message: String(e?.message ?? e) });
     } finally {
-      req.log.info({ route: "device.status", tenant_id, device_id }, "device.status completed");
+      req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id }, "device.status completed");
     }
   });
 }
-
-
 
 
 
