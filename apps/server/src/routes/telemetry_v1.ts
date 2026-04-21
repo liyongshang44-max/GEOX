@@ -68,6 +68,14 @@ function sendTelemetryCompatibilityResponse<T extends Record<string, any>>(reply
   return reply.send(attachTelemetryCompatibilityPayload(payload, meta));
 }
 
+function applyTelemetryFailureCors(req: any, reply: any): void {
+  const origin = typeof req?.headers?.origin === "string" && req.headers.origin.trim() ? req.headers.origin : "*";
+  reply.header("Access-Control-Allow-Origin", origin);
+  reply.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-AO-ACT-Token");
+  reply.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+  reply.header("Vary", "Origin");
+}
+
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string query parameters.
   return typeof v === "string" && v.trim().length > 0; // Non-empty trimmed string.
 } // End helper.
@@ -224,132 +232,162 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
 
   app.get("/api/v1/telemetry/latest", async (req, reply) => { // Compatibility-only latest telemetry view (migration only).
     const routePath = "/api/v1/telemetry/latest" as const;
-    if ((req.query as any)?.__internal__ !== "true") {
-      reply.code(410);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
+    try {
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      if (!auth) return; // Auth helper responded.
+
+      const q: any = (req as any).query ?? {}; // Parse query params.
+      const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+        applyTelemetryFailureCors(req, reply);
+        reply.status(404);
+        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+      } // Hide cross-tenant devices.
+
+      const metrics = parseMetricList(q.metrics); // Optional metric subset.
+      const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 7 * 24 * 60 * 60 * 1000); // Default last 7 days to find latest points.
+      const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
+
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load candidate points.
+      const latest = new Map<string, any>(); // Keep latest point per metric.
+      for (const point of points) { // Walk time-ordered points.
+        latest.set(metricKey(point.metric), point); // Later points overwrite earlier points.
+      } // End loop.
+
+      return sendTelemetryCompatibilityResponse(reply, { // Return latest map plus list for frontend convenience.
+        ok: true, // Success flag.
+        tenant_id: auth.tenant_id, // Tenant id.
+        device_id, // Device id.
+        count: latest.size, // Number of metrics returned.
+        items: Array.from(latest.values()).sort((a, b) => String(a.metric).localeCompare(String(b.metric))), // Stable array for cards.
+      }, routePath); // End response.
+    } catch (error) {
+      req.log.error({ err: error }, "telemetry.latest failed");
+      applyTelemetryFailureCors(req, reply);
+      reply.status(500);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "INTERNAL_ERROR" }, routePath);
     }
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
-    if (!auth) return; // Auth helper responded.
-
-    const q: any = (req as any).query ?? {}; // Parse query params.
-    const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
-      reply.status(404);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
-    } // Hide cross-tenant devices.
-
-    const metrics = parseMetricList(q.metrics); // Optional metric subset.
-    const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 7 * 24 * 60 * 60 * 1000); // Default last 7 days to find latest points.
-    const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
-
-    const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load candidate points.
-    const latest = new Map<string, any>(); // Keep latest point per metric.
-    for (const point of points) { // Walk time-ordered points.
-      latest.set(metricKey(point.metric), point); // Later points overwrite earlier points.
-    } // End loop.
-
-    return sendTelemetryCompatibilityResponse(reply, { // Return latest map plus list for frontend convenience.
-      ok: true, // Success flag.
-      tenant_id: auth.tenant_id, // Tenant id.
-      device_id, // Device id.
-      count: latest.size, // Number of metrics returned.
-      items: Array.from(latest.values()).sort((a, b) => String(a.metric).localeCompare(String(b.metric))), // Stable array for cards.
-    }, routePath); // End response.
   }); // End latest route.
 
   app.get("/api/v1/telemetry/series", async (req, reply) => { // Compatibility-only telemetry series (migration only).
     const routePath = "/api/v1/telemetry/series" as const;
-    if ((req.query as any)?.__internal__ !== "true") {
-      reply.code(410);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
+    try {
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      if (!auth) return; // Auth helper responded.
+
+      const q: any = (req as any).query ?? {}; // Parse query params.
+      const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+        applyTelemetryFailureCors(req, reply);
+        reply.status(404);
+        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+      } // Hide cross-tenant devices.
+
+      const metrics = parseMetricList(q.metrics); // Optional metrics list.
+      const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
+      const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
+
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000)); // Load points.
+      const series: Record<string, any[]> = {}; // Group by metric for frontend.
+      for (const point of points) { // Group points.
+        const key = metricKey(point.metric); // Normalize metric key.
+        if (!Array.isArray(series[key])) series[key] = []; // Initialize list.
+        series[key].push({ ts_ms: point.ts_ms, value_num: point.value_num, value_text: point.value_text, fact_id: point.fact_id }); // Append point.
+      } // End grouping.
+
+      return sendTelemetryCompatibilityResponse(reply, { // Return grouped series.
+        ok: true, // Success flag.
+        tenant_id: auth.tenant_id, // Tenant id.
+        device_id, // Device id.
+        range: { startTsMs: startMs, endTsMs: endMs }, // Range.
+        metrics: Object.keys(series), // Included metric names.
+        series, // Grouped series map.
+        count: points.length, // Total point count.
+      }, routePath); // End response.
+    } catch (error) {
+      req.log.error({ err: error }, "telemetry.series failed");
+      applyTelemetryFailureCors(req, reply);
+      reply.status(500);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "INTERNAL_ERROR" }, routePath);
     }
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
-    if (!auth) return; // Auth helper responded.
-
-    const q: any = (req as any).query ?? {}; // Parse query params.
-    const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
-      reply.status(404);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
-    } // Hide cross-tenant devices.
-
-    const metrics = parseMetricList(q.metrics); // Optional metrics list.
-    const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
-    const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
-
-    const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000)); // Load points.
-    const series: Record<string, any[]> = {}; // Group by metric for frontend.
-    for (const point of points) { // Group points.
-      const key = metricKey(point.metric); // Normalize metric key.
-      if (!Array.isArray(series[key])) series[key] = []; // Initialize list.
-      series[key].push({ ts_ms: point.ts_ms, value_num: point.value_num, value_text: point.value_text, fact_id: point.fact_id }); // Append point.
-    } // End grouping.
-
-    return sendTelemetryCompatibilityResponse(reply, { // Return grouped series.
-      ok: true, // Success flag.
-      tenant_id: auth.tenant_id, // Tenant id.
-      device_id, // Device id.
-      range: { startTsMs: startMs, endTsMs: endMs }, // Range.
-      metrics: Object.keys(series), // Included metric names.
-      series, // Grouped series map.
-      count: points.length, // Total point count.
-    }, routePath); // End response.
   }); // End series route.
 
   app.get("/api/v1/telemetry/metrics", async (req, reply) => { // Compatibility-only telemetry metrics summary (migration only).
     const routePath = "/api/v1/telemetry/metrics" as const;
-    if ((req.query as any)?.__internal__ !== "true") {
-      reply.code(410);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "DEPRECATED_API" }, routePath);
+    try {
+      const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
+      if (!auth) return; // Auth helper responded.
+
+      const q: any = (req as any).query ?? {}; // Parse query params.
+      const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
+      if (!device_id) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
+      }
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+        applyTelemetryFailureCors(req, reply);
+        reply.status(404);
+        return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
+      } // Hide cross-tenant devices.
+
+      const metrics = parseMetricList(q.metrics); // Optional metric subset.
+      const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
+      const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
+      if (startMs > endMs) {
+        applyTelemetryFailureCors(req, reply);
+        return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
+      }
+
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load points.
+      const summary = new Map<string, any>(); // Aggregate per metric.
+      for (const point of points) { // Aggregate points.
+        const key = metricKey(point.metric); // Normalize metric key.
+        const prev = summary.get(key) ?? { metric: key, count: 0, latest_ts_ms: null, latest_value_num: null, latest_value_text: null, min_value_num: null, max_value_num: null, avg_value_num: null, _sum: 0 }; // Seed bucket.
+        prev.count += 1; // Increase count.
+        prev.latest_ts_ms = point.ts_ms; // Points are time-ordered, so the last seen point is latest.
+        prev.latest_value_num = point.value_num; // Keep latest numeric value.
+        prev.latest_value_text = point.value_text; // Keep latest text value.
+        if (typeof point.value_num === "number" && Number.isFinite(point.value_num)) { // Aggregate numeric fields only.
+          prev.min_value_num = prev.min_value_num == null ? point.value_num : Math.min(prev.min_value_num, point.value_num); // Update min.
+          prev.max_value_num = prev.max_value_num == null ? point.value_num : Math.max(prev.max_value_num, point.value_num); // Update max.
+          prev._sum += point.value_num; // Update sum.
+        } // End numeric branch.
+        summary.set(key, prev); // Save bucket.
+      } // End aggregation loop.
+
+      const items = Array.from(summary.values()).map((bucket: any) => ({ // Finalize response buckets.
+        metric: bucket.metric, // Metric name.
+        count: bucket.count, // Point count.
+        latest_ts_ms: bucket.latest_ts_ms, // Latest point ts.
+        latest_value_num: bucket.latest_value_num, // Latest numeric value.
+        latest_value_text: bucket.latest_value_text, // Latest text value.
+        min_value_num: bucket.min_value_num, // Minimum numeric value.
+        max_value_num: bucket.max_value_num, // Maximum numeric value.
+        avg_value_num: bucket.min_value_num == null ? null : Number((bucket._sum / bucket.count).toFixed(4)), // Simple average for MVP.
+      })); // End finalize.
+
+      return sendTelemetryCompatibilityResponse(reply, { ok: true, tenant_id: auth.tenant_id, device_id, range: { startTsMs: startMs, endTsMs: endMs }, count: items.length, items }, routePath); // Return metric summary.
+    } catch (error) {
+      req.log.error({ err: error }, "telemetry.metrics failed");
+      applyTelemetryFailureCors(req, reply);
+      reply.status(500);
+      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "INTERNAL_ERROR" }, routePath);
     }
-    const auth: AoActAuthContextV0 | null = requireAoActScopeV0(req, reply, "telemetry.read"); // Require telemetry.read.
-    if (!auth) return; // Auth helper responded.
-
-    const q: any = (req as any).query ?? {}; // Parse query params.
-    const device_id = isNonEmptyString(q.device_id) ? String(q.device_id).trim() : null; // Required device id.
-    if (!device_id) return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
-    if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
-      reply.status(404);
-      return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
-    } // Hide cross-tenant devices.
-
-    const metrics = parseMetricList(q.metrics); // Optional metric subset.
-    const startMs = parseFiniteInt(q.from_ts_ms) ?? (Date.now() - 24 * 60 * 60 * 1000); // Default last 24h.
-    const endMs = parseFiniteInt(q.to_ts_ms) ?? Date.now(); // Default end now.
-    if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
-
-    const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load points.
-    const summary = new Map<string, any>(); // Aggregate per metric.
-    for (const point of points) { // Aggregate points.
-      const key = metricKey(point.metric); // Normalize metric key.
-      const prev = summary.get(key) ?? { metric: key, count: 0, latest_ts_ms: null, latest_value_num: null, latest_value_text: null, min_value_num: null, max_value_num: null, avg_value_num: null, _sum: 0 }; // Seed bucket.
-      prev.count += 1; // Increase count.
-      prev.latest_ts_ms = point.ts_ms; // Points are time-ordered, so the last seen point is latest.
-      prev.latest_value_num = point.value_num; // Keep latest numeric value.
-      prev.latest_value_text = point.value_text; // Keep latest text value.
-      if (typeof point.value_num === "number" && Number.isFinite(point.value_num)) { // Aggregate numeric fields only.
-        prev.min_value_num = prev.min_value_num == null ? point.value_num : Math.min(prev.min_value_num, point.value_num); // Update min.
-        prev.max_value_num = prev.max_value_num == null ? point.value_num : Math.max(prev.max_value_num, point.value_num); // Update max.
-        prev._sum += point.value_num; // Update sum.
-      } // End numeric branch.
-      summary.set(key, prev); // Save bucket.
-    } // End aggregation loop.
-
-    const items = Array.from(summary.values()).map((bucket: any) => ({ // Finalize response buckets.
-      metric: bucket.metric, // Metric name.
-      count: bucket.count, // Point count.
-      latest_ts_ms: bucket.latest_ts_ms, // Latest point ts.
-      latest_value_num: bucket.latest_value_num, // Latest numeric value.
-      latest_value_text: bucket.latest_value_text, // Latest text value.
-      min_value_num: bucket.min_value_num, // Minimum numeric value.
-      max_value_num: bucket.max_value_num, // Maximum numeric value.
-      avg_value_num: bucket.min_value_num == null ? null : Number((bucket._sum / bucket.count).toFixed(4)), // Simple average for MVP.
-    })); // End finalize.
-
-    return sendTelemetryCompatibilityResponse(reply, { ok: true, tenant_id: auth.tenant_id, device_id, range: { startTsMs: startMs, endTsMs: endMs }, count: items.length, items }, routePath); // Return metric summary.
   }); // End metrics route.
 } // End registration.
