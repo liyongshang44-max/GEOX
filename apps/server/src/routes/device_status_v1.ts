@@ -120,11 +120,16 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
   const statusLogTag = "status-step1-v3";
 
   // GET /api/v1/devices/:device_id/status
-  app.get("/api/v1/devices/:device_id/status", { preHandler: requireAuth as any }, async (req, reply) => {
+  app.get("/api/v1/devices/:device_id/status", async (req, reply) => {
     req.log.info({ route: "device.status", log_tag: statusLogTag, params: (req as any).params }, "device.status entered");
     let tenant_id = "unknown";
     const device_id = String((req as any).params?.device_id ?? "").trim();
     try {
+      await (requireAuth as any)(req, reply);
+      if ((reply as any).sent) {
+        req.log.warn({ route: "device.status", log_tag: statusLogTag, device_id }, "device.status auth blocked");
+        return;
+      }
       const auth = getAuthContext(req) ?? ({ tenant_id: "tenantA" } as FactsAuth); // Fallback tenant for single-tenant dev.
       tenant_id = String(auth.tenant_id); // Tenant id.
       req.log.info({ route: "device.status", log_tag: statusLogTag, tenant_id, device_id }, "device.status auth resolved");
@@ -175,7 +180,6 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
     }
   });
 }
-
 
 
 
