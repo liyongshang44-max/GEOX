@@ -498,6 +498,15 @@ export async function fetchDeviceStatus(token: string, deviceId: string): Promis
   });
 }
 
+export async function fetchDeviceStatusOptional(token: string, deviceId: string): Promise<DeviceStatus | null> {
+  try {
+    return await fetchDeviceStatus(token, deviceId);
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}
+
 export async function fetchDeviceConsole(token: string, deviceId: string): Promise<DeviceConsoleView> {
   return requestJson<DeviceConsoleView>(`/api/v1/devices/${encodeURIComponent(deviceId)}/console`, {
     headers: authHeaders(token),

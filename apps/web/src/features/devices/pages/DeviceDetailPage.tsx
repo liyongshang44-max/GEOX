@@ -7,7 +7,7 @@ import {
   fetchDeviceControlPlane,
   fetchDeviceConsole,
   fetchDeviceDetail,
-  fetchDeviceStatus,
+  fetchDeviceStatusOptional,
   fetchDevices,
   fetchTelemetryLatestOptional,
   fetchTelemetryMetricsOptional,
@@ -88,7 +88,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchDeviceDetail", fetchDeviceDetail(token, deviceId)),
         withTimeout("fetchDeviceConsole", fetchDeviceConsole(token, deviceId)),
         withTimeout("fetchDeviceControlPlane", fetchDeviceControlPlane(token, deviceId)),
-        withTimeout("fetchDeviceStatus", fetchDeviceStatus(token, deviceId)),
+        withTimeout("fetchDeviceStatus", fetchDeviceStatusOptional(token, deviceId)),
         withTimeout("fetchTelemetryLatest", fetchTelemetryLatestOptional(token, { device_id: deviceId })),
         withTimeout("fetchTelemetryMetrics", fetchTelemetryMetricsOptional(token, { device_id: deviceId })),
         withTimeout("fetchTelemetrySeries", fetchTelemetrySeriesOptional(token, { device_id: deviceId })),
@@ -98,7 +98,8 @@ export default function DeviceDetailPage(): React.ReactElement {
       const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
       const nextDetail = byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
       const nextConsole = byName.fetchDeviceConsole?.status === "fulfilled" ? byName.fetchDeviceConsole.value : null;
-      const nextStatus = byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
+      const statusResult = byName.fetchDeviceStatus;
+      const nextStatus = statusResult?.status === "fulfilled" ? statusResult.value ?? null : null;
       const nextControlPlane = byName.fetchDeviceControlPlane?.status === "fulfilled" ? byName.fetchDeviceControlPlane.value : null;
       const nextLatest = byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
       const nextMetrics = byName.fetchTelemetryMetrics?.status === "fulfilled" ? byName.fetchTelemetryMetrics.value : [];
@@ -109,8 +110,8 @@ export default function DeviceDetailPage(): React.ReactElement {
       if (requiredFailures.length > 0) {
         setError("设备详情加载失败，请稍后重试");
       }
-      const statusFailed = byName.fetchDeviceStatus?.status === "rejected";
-      setStatusSnapshotFallback(statusFailed ? "当前设备暂无状态快照" : null);
+      const statusUnavailable = statusResult?.status === "rejected" || (statusResult?.status === "fulfilled" && !statusResult.value);
+      setStatusSnapshotFallback(statusUnavailable ? "当前设备暂无状态快照" : null);
       const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
       let boundFieldInfo: BoundFieldInfo = { field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null, bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null };
       if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(deviceId);
