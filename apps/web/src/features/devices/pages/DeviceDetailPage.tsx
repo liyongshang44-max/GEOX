@@ -9,9 +9,9 @@ import {
   fetchDeviceDetail,
   fetchDeviceStatus,
   fetchDevices,
-  fetchTelemetryLatest,
-  fetchTelemetryMetrics,
-  fetchTelemetrySeries,
+  fetchTelemetryLatestOptional,
+  fetchTelemetryMetricsOptional,
+  fetchTelemetrySeriesOptional,
   issueDeviceCredential,
   revokeDeviceCredential,
   type DeviceConsoleView,
@@ -88,9 +88,9 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchDeviceConsole", fetchDeviceConsole(token, deviceId)),
         withTimeout("fetchDeviceControlPlane", fetchDeviceControlPlane(token, deviceId)),
         withTimeout("fetchDeviceStatus", fetchDeviceStatus(token, deviceId)),
-        withTimeout("fetchTelemetryLatest", fetchTelemetryLatest(token, { device_id: deviceId })),
-        withTimeout("fetchTelemetryMetrics", fetchTelemetryMetrics(token, { device_id: deviceId })),
-        withTimeout("fetchTelemetrySeries", fetchTelemetrySeries(token, { device_id: deviceId })),
+        withTimeout("fetchTelemetryLatest", fetchTelemetryLatestOptional(token, { device_id: deviceId })),
+        withTimeout("fetchTelemetryMetrics", fetchTelemetryMetricsOptional(token, { device_id: deviceId })),
+        withTimeout("fetchTelemetrySeries", fetchTelemetrySeriesOptional(token, { device_id: deviceId })),
         withTimeout("fetchDevices", fetchDevices(token)),
         withTimeout("fetchFields", fetchFields()),
       ]);
@@ -162,6 +162,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestImageUpdatedTs = latestImageItem?.ts_ms ?? latestImageItem?.observed_at_ts_ms ?? statusObj?.last_telemetry_ts_ms ?? null;
   const firstDataReceived = Boolean((cpOverview as any)?.last_telemetry_label || statusObj?.last_telemetry_ts_ms || recentLatest);
   const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
+  const hasTelemetryData = latest.length > 0 || metrics.length > 0 || Object.keys(series || {}).length > 0;
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
@@ -213,6 +214,7 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="sectionTitle">图像观测（V1）</div>
             <div className="detailSectionLead">当前仅提供图像占位预览、更新时间与最新 image_ref。</div>
           </div>
+          {!hasTelemetryData ? <div className="decisionItemStatic" style={{ marginBottom: 12 }}>暂无遥测数据（当前设备未提供最新遥测视图）。</div> : null}
           <div className="decisionList">
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">图像占位预览</div>
@@ -240,7 +242,7 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusLabel} · 最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div></div>
           </div>
           <div className="traceChipRow" style={{ marginTop: 12 }}>
-            <span className="traceChip">最近遥测：{cpOverview?.last_telemetry_label || "-"}</span>
+            <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
             <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
             <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
             <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
