@@ -7,7 +7,7 @@ import {
   fetchDeviceControlPlane,
   fetchDeviceConsole,
   fetchDeviceDetail,
-  fetchDeviceStatus,
+  fetchDeviceStatusOptional,
   fetchDevices,
   fetchTelemetryLatestOptional,
   fetchTelemetryMetricsOptional,
@@ -77,6 +77,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
+  const [statusSnapshotFallback, setStatusSnapshotFallback] = React.useState<string | null>(null);
   const [onboardingRecords, setOnboardingRecords] = React.useState<OnboardingRecord[]>([]);
 
   async function refresh(): Promise<void> {
@@ -87,7 +88,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchDeviceDetail", fetchDeviceDetail(token, deviceId)),
         withTimeout("fetchDeviceConsole", fetchDeviceConsole(token, deviceId)),
         withTimeout("fetchDeviceControlPlane", fetchDeviceControlPlane(token, deviceId)),
-        withTimeout("fetchDeviceStatus", fetchDeviceStatus(token, deviceId)),
+        withTimeout("fetchDeviceStatus", fetchDeviceStatusOptional(token, deviceId)),
         withTimeout("fetchTelemetryLatest", fetchTelemetryLatestOptional(token, { device_id: deviceId })),
         withTimeout("fetchTelemetryMetrics", fetchTelemetryMetricsOptional(token, { device_id: deviceId })),
         withTimeout("fetchTelemetrySeries", fetchTelemetrySeriesOptional(token, { device_id: deviceId })),
@@ -97,13 +98,20 @@ export default function DeviceDetailPage(): React.ReactElement {
       const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
       const nextDetail = byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
       const nextConsole = byName.fetchDeviceConsole?.status === "fulfilled" ? byName.fetchDeviceConsole.value : null;
-      const nextStatus = byName.fetchDeviceStatus?.status === "fulfilled" ? byName.fetchDeviceStatus.value : null;
+      const statusResult = byName.fetchDeviceStatus;
+      const nextStatus = statusResult?.status === "fulfilled" ? statusResult.value ?? null : null;
       const nextControlPlane = byName.fetchDeviceControlPlane?.status === "fulfilled" ? byName.fetchDeviceControlPlane.value : null;
       const nextLatest = byName.fetchTelemetryLatest?.status === "fulfilled" ? byName.fetchTelemetryLatest.value : [];
       const nextMetrics = byName.fetchTelemetryMetrics?.status === "fulfilled" ? byName.fetchTelemetryMetrics.value : [];
       const nextSeries = byName.fetchTelemetrySeries?.status === "fulfilled" ? ((byName.fetchTelemetrySeries.value as any)?.series || (byName.fetchTelemetrySeries.value as any) || {}) : {};
       const nextDevices = byName.fetchDevices?.status === "fulfilled" ? byName.fetchDevices.value : [];
       const nextFields = byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
+      const requiredFailures = ["fetchDeviceDetail", "fetchDeviceConsole", "fetchDeviceControlPlane"].filter((name) => byName[name]?.status === "rejected");
+      if (requiredFailures.length > 0) {
+        setError("设备详情加载失败，请稍后重试");
+      }
+      const statusUnavailable = statusResult?.status === "rejected" || (statusResult?.status === "fulfilled" && !statusResult.value);
+      setStatusSnapshotFallback(statusUnavailable ? "当前设备暂无状态快照" : null);
       const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
       let boundFieldInfo: BoundFieldInfo = { field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null, bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null };
       if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(deviceId);
@@ -166,6 +174,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
+  const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
 
   return (
     <div className="demoDashboardPage">
@@ -239,7 +248,7 @@ export default function DeviceDetailPage(): React.ReactElement {
           <div className="decisionList">
             <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
-            <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusLabel} · 最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
           </div>
           <div className="traceChipRow" style={{ marginTop: 12 }}>
             <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
