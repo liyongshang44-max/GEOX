@@ -120,9 +120,9 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
 
   // GET /api/v1/devices/:device_id/status
   app.get("/api/v1/devices/:device_id/status", { preHandler: requireAuth as any }, async (req, reply) => {
+    req.log.info({ route: "device.status", params: (req as any).params }, "device.status entered");
     let tenant_id = "unknown";
     const device_id = String((req as any).params?.device_id ?? "").trim();
-    req.log.info({ route: "device.status", params: (req as any).params, device_id }, "device.status entered");
     try {
       const auth = getAuthContext(req) ?? ({ tenant_id: "tenantA" } as FactsAuth); // Fallback tenant for single-tenant dev.
       tenant_id = String(auth.tenant_id); // Tenant id.
@@ -174,7 +174,6 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
     }
   });
 }
-
 
 
 
