@@ -71,9 +71,25 @@ function sendTelemetryCompatibilityResponse<T extends Record<string, any>>(reply
 function applyTelemetryFailureCors(req: any, reply: any): void {
   const origin = typeof req?.headers?.origin === "string" && req.headers.origin.trim() ? req.headers.origin : "*";
   reply.header("Access-Control-Allow-Origin", origin);
-  reply.header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-AO-ACT-Token");
-  reply.header("Access-Control-Allow-Methods", "GET, OPTIONS");
   reply.header("Vary", "Origin");
+  reply.header("Access-Control-Allow-Credentials", "true");
+  reply.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  reply.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, x-api-contract-version, x-api-contract-required, x-tenant-id, x-project-id, x-group-id",
+  );
+  reply.header("Access-Control-Expose-Headers", "Content-Type, x-api-contract-version");
+}
+
+class TelemetryReadError extends Error {
+  public code: string;
+  public cause: unknown;
+
+  constructor(code: string, cause: unknown) {
+    super(code);
+    this.code = code;
+    this.cause = cause;
+  }
 }
 
 function isNonEmptyString(v: any): v is string { // Helper: validate non-empty string query parameters.
@@ -109,7 +125,7 @@ function metricKey(metric: string): string { // Normalize metric keys for respon
   return String(metric).trim(); // Return trimmed metric.
 } // End helper.
 
-async function loadRawTelemetryFromFacts(pool: Pool, tenant_id: string, device_id: string, startMs: number, endMs: number, metrics: string[]): Promise<any[]> { // Fallback reader from facts SSOT.
+async function loadRawTelemetryFromFacts(pool: Pool, tenant_id: string, device_id: string, startMs: number, endMs: number, metrics: string[], logger?: any): Promise<any[]> { // Fallback reader from facts SSOT.
   const values: any[] = [tenant_id, device_id, new Date(startMs).toISOString(), new Date(endMs).toISOString()]; // Bind base params.
   let metricFilterSql = ""; // Optional metric predicate.
   if (metrics.length > 0) { // Apply metric filter only when caller asks for it.
@@ -133,21 +149,26 @@ async function loadRawTelemetryFromFacts(pool: Pool, tenant_id: string, device_i
     ORDER BY ts_ms ASC
   `; // Query SSOT facts directly.
 
-  const r = await pool.query(sql, values); // Execute fallback query.
-  return (r.rows ?? []).map((row: any) => { // Normalize fallback row shape.
-    const rawValueText = row.raw_value_text == null ? null : String(row.raw_value_text); // Preserve original string value.
-    const maybeNum = rawValueText != null && rawValueText !== "" && Number.isFinite(Number(rawValueText)) ? Number(rawValueText) : null; // Recover numeric values when possible.
-    return { // Return normalized telemetry point.
-      metric: String(row.metric), // Metric name.
-      ts_ms: Number(row.ts_ms), // Event timestamp ms.
-      value_num: maybeNum, // Numeric value when parseable.
-      value_text: rawValueText, // Text representation.
-      fact_id: String(row.fact_id), // Ledger fact id.
-    }; // End normalized point.
-  }); // End mapping.
+  try {
+    const r = await pool.query(sql, values); // Execute fallback query.
+    return (r.rows ?? []).map((row: any) => { // Normalize fallback row shape.
+      const rawValueText = row.raw_value_text == null ? null : String(row.raw_value_text); // Preserve original string value.
+      const maybeNum = rawValueText != null && rawValueText !== "" && Number.isFinite(Number(rawValueText)) ? Number(rawValueText) : null; // Recover numeric values when possible.
+      return { // Return normalized telemetry point.
+        metric: String(row.metric), // Metric name.
+        ts_ms: Number(row.ts_ms), // Event timestamp ms.
+        value_num: maybeNum, // Numeric value when parseable.
+        value_text: rawValueText, // Text representation.
+        fact_id: String(row.fact_id), // Ledger fact id.
+      }; // End normalized point.
+    }); // End mapping.
+  } catch (error) {
+    logger?.error?.({ err: error, tenant_id, device_id }, "telemetry.facts query failed");
+    throw new TelemetryReadError("FACTS_QUERY_FAILED", error);
+  }
 } // End helper.
 
-async function loadTelemetryPoints(pool: Pool, tenant_id: string, device_id: string, startMs: number, endMs: number, metrics: string[], limit: number): Promise<any[]> { // Unified telemetry point loader.
+async function loadTelemetryPoints(pool: Pool, tenant_id: string, device_id: string, startMs: number, endMs: number, metrics: string[], limit: number, logger?: any): Promise<any[]> { // Unified telemetry point loader.
   const values: any[] = [tenant_id, device_id, new Date(startMs).toISOString(), new Date(endMs).toISOString()]; // Base params for projection query.
   let metricFilterSql = ""; // Optional projection metric filter.
   if (metrics.length > 0) { // Add filter when metrics were requested.
@@ -167,7 +188,12 @@ async function loadTelemetryPoints(pool: Pool, tenant_id: string, device_id: str
     LIMIT ${limit}
   `; // Projection query for normal path.
 
-  const projectionRows = (await pool.query(sql, values)).rows ?? []; // Query projection first.
+  let projectionRows: any[] = [];
+  try {
+    projectionRows = (await pool.query(sql, values)).rows ?? []; // Query projection first.
+  } catch (error) {
+    logger?.warn?.({ err: error, tenant_id, device_id }, "telemetry.projection query failed; fallback to facts");
+  }
   if (projectionRows.length > 0) return projectionRows.map((row: any) => ({ // Return projection rows when present.
     metric: String(row.metric), // Metric name.
     ts_ms: Number(row.ts_ms), // Timestamp ms.
@@ -176,13 +202,18 @@ async function loadTelemetryPoints(pool: Pool, tenant_id: string, device_id: str
     fact_id: String(row.fact_id), // Ledger fact id.
   })); // End mapping.
 
-  const factRows = await loadRawTelemetryFromFacts(pool, tenant_id, device_id, startMs, endMs, metrics); // Fallback to facts when projection is empty.
+  const factRows = await loadRawTelemetryFromFacts(pool, tenant_id, device_id, startMs, endMs, metrics, logger); // Fallback to facts when projection is empty or failed.
   return factRows.slice(0, limit); // Respect limit on fallback path too.
 } // End helper.
 
-async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: string): Promise<boolean> { // Non-enumerable device existence gate.
-  const q = await pool.query(`SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, [tenant_id, device_id]); // Query device projection.
-  return (q.rows ?? []).length > 0; // True when tenant owns the device.
+async function ensureDeviceVisible(pool: Pool, tenant_id: string, device_id: string, logger?: any): Promise<boolean> { // Non-enumerable device existence gate.
+  try {
+    const q = await pool.query(`SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`, [tenant_id, device_id]); // Query device projection.
+    return (q.rows ?? []).length > 0; // True when tenant owns the device.
+  } catch (error) {
+    logger?.error?.({ err: error, tenant_id, device_id }, "telemetry.device visibility query failed");
+    throw new TelemetryReadError("DEVICE_VISIBILITY_QUERY_FAILED", error);
+  }
 } // End helper.
 
 /**
@@ -218,7 +249,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
     const endMs = to_ts_ms ?? nowMs; // Default end = now.
     if (startMs > endMs) return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate bounds ordering.
 
-    const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metric ? [metric] : [], clampLimit(q.limit, 5000, 20000)); // Load unified points.
+    const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metric ? [metric] : [], clampLimit(q.limit, 5000, 20000), req.log); // Load unified points.
     return sendTelemetryCompatibilityResponse(reply, { // Send query response.
       ok: true, // Success flag.
       tenant_id: auth.tenant_id, // Echo tenant for caller debugging (non-sensitive).
@@ -242,7 +273,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         applyTelemetryFailureCors(req, reply);
         return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
       }
-      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id, req.log))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
         return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
@@ -256,7 +287,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
       }
 
-      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load candidate points.
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000, req.log); // Load candidate points.
       const latest = new Map<string, any>(); // Keep latest point per metric.
       for (const point of points) { // Walk time-ordered points.
         latest.set(metricKey(point.metric), point); // Later points overwrite earlier points.
@@ -289,7 +320,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         applyTelemetryFailureCors(req, reply);
         return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
       }
-      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id, req.log))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
         return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
@@ -303,7 +334,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
       }
 
-      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000)); // Load points.
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, clampLimit(q.limit, 5000, 20000), req.log); // Load points.
       const series: Record<string, any[]> = {}; // Group by metric for frontend.
       for (const point of points) { // Group points.
         const key = metricKey(point.metric); // Normalize metric key.
@@ -340,7 +371,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         applyTelemetryFailureCors(req, reply);
         return badRequest(reply, "MISSING:device_id", routePath); // Validate device id.
       }
-      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id))) {
+      if (!(await ensureDeviceVisible(pool, auth.tenant_id, device_id, req.log))) {
         applyTelemetryFailureCors(req, reply);
         reply.status(404);
         return sendTelemetryCompatibilityResponse(reply, { ok: false, error: "NOT_FOUND" }, routePath);
@@ -354,7 +385,7 @@ export function registerTelemetryV1Routes(app: FastifyInstance, pool: Pool) { //
         return badRequest(reply, "INVALID_RANGE:from_ts_ms_gt_to_ts_ms", routePath); // Validate range.
       }
 
-      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000); // Load points.
+      const points = await loadTelemetryPoints(pool, auth.tenant_id, device_id, startMs, endMs, metrics, 20000, req.log); // Load points.
       const summary = new Map<string, any>(); // Aggregate per metric.
       for (const point of points) { // Aggregate points.
         const key = metricKey(point.metric); // Normalize metric key.
