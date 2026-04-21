@@ -5,7 +5,7 @@ import {
   fetchDashboardRecentExecutions,
   fetchDashboardOperationStates,
   fetchDashboardAssignments,
-  getOverview,
+  fetchDashboardOverview,
   getRecentEvidence,
   fetchDashboardOverviewV2,
   fetchDashboardFieldSensingSummary,
@@ -66,7 +66,21 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   const navigate = useNavigate();
   const api = React.useMemo(
     () => ({
-      getOverview,
+      getOverview: async (params?: { from_ts_ms?: number; to_ts_ms?: number }) => {
+        const overview = await fetchDashboardOverview(params);
+        const summary = overview?.summary ?? {};
+        const fieldCount = Number(summary.field_count ?? 0);
+        const openAlertCount = Number(summary.open_alert_count ?? 0);
+        return {
+          field_count: fieldCount,
+          normal_field_count: Math.max(0, fieldCount - openAlertCount),
+          risk_field_count: openAlertCount,
+          today_execution_count: Number(summary.running_task_count ?? 0),
+          pending_acceptance_count: (overview?.latest_receipts ?? []).filter(
+            (item) => String(item?.status ?? "").toUpperCase() !== "PASS"
+          ).length,
+        };
+      },
       getRecentExecutions: async (params?: { limit?: number }) => fetchDashboardRecentExecutions(params?.limit ?? 8),
       getRecentEvidence,
       getRecommendations: async (params?: { limit?: number }) => fetchDashboardRecommendations(params?.limit ?? 50),

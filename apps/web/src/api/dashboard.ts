@@ -421,31 +421,6 @@ export async function fetchManualExecutionQualityTasks(params: {
   };
 }
 
-export async function getOverview(params?: { from_ts_ms?: number; to_ts_ms?: number }): Promise<{
-  field_count: number;
-  normal_field_count: number;
-  risk_field_count: number;
-  today_execution_count: number;
-  pending_acceptance_count: number;
-}> {
-  const now = Date.now();
-  const res = await fetchDashboardOverview({
-    from_ts_ms: params?.from_ts_ms ?? now - 24 * 60 * 60 * 1000,
-    to_ts_ms: params?.to_ts_ms ?? now,
-  });
-  const fieldCount = Number(res?.summary?.field_count ?? 0);
-  const riskFieldCount = Number(res?.summary?.open_alert_count ?? 0);
-  const runningTaskCount = Number(res?.summary?.running_task_count ?? 0);
-  const pendingAcceptanceCount = (res?.latest_receipts ?? []).filter((item) => String(item?.status ?? "").toUpperCase() !== "PASS").length;
-  return {
-    field_count: fieldCount,
-    normal_field_count: Math.max(0, fieldCount - riskFieldCount),
-    risk_field_count: riskFieldCount,
-    today_execution_count: runningTaskCount,
-    pending_acceptance_count: pendingAcceptanceCount,
-  };
-}
-
 export async function getRecentEvidence(params?: { limit?: number }): Promise<DashboardEvidenceItem[]> {
   return fetchDashboardEvidenceSummary(params?.limit ?? 5);
 }
