@@ -197,8 +197,12 @@ export function registerProgramsCoreV1Routes(app: FastifyInstance, pool: Pool, o
     const limit = Math.max(1, Math.min(Number(q.limit ?? 100) || 100, 300));
 
     const allowedFieldIds = normalizeAllowedFieldIds(auth);
-    let items = (await projectProgramPortfolioV1(pool, tenant))
-      .filter((x) => allowedFieldIds.includes(String(x.field_id ?? "").trim()));
+    let items = await projectProgramPortfolioV1(pool, tenant);
+    // commercial_v1/admin pilot compatibility:
+    // when token payload does not include allowed_field_ids, do not collapse portfolio to empty.
+    if (allowedFieldIds.length > 0) {
+      items = items.filter((x) => allowedFieldIds.includes(String(x.field_id ?? "").trim()));
+    }
     if (q.field_id) {
       const requestedFieldId = String(q.field_id).trim();
       items = items.filter((x) => x.field_id === requestedFieldId);
