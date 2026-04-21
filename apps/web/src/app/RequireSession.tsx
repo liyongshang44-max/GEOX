@@ -48,13 +48,34 @@ export default function RequireSession({ children }: { children: React.ReactElem
   const { token, isLoggedIn, hydrateSession, clearSession } = useSession();
   const [status, setStatus] = React.useState<"checking" | "ok" | "failed">("checking");
   const [reason, setReason] = React.useState<SessionGuardReason>("AUTH_INVALID");
+  const verifiedTokenRef = React.useRef<string>("");
+  const statusRef = React.useRef<"checking" | "ok" | "failed">("checking");
+  const hydrateSessionRef = React.useRef(hydrateSession);
+  const clearSessionRef = React.useRef(clearSession);
+
+  React.useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  React.useEffect(() => {
+    hydrateSessionRef.current = hydrateSession;
+    clearSessionRef.current = clearSession;
+  }, [hydrateSession, clearSession]);
 
   React.useEffect(() => {
     let mounted = true;
+    const normalizedToken = token.trim();
 
-    if (!isLoggedIn || !token.trim()) {
+    if (!isLoggedIn || !normalizedToken) {
+      verifiedTokenRef.current = "";
       setReason("AUTH_MISSING");
       setStatus("failed");
+      return () => {
+        mounted = false;
+      };
+    }
+
+    if (statusRef.current === "ok" && verifiedTokenRef.current === normalizedToken) {
       return () => {
         mounted = false;
       };
@@ -63,19 +84,22 @@ export default function RequireSession({ children }: { children: React.ReactElem
     setStatus("checking");
     fetchAuthMe()
       .then((me) => {
-        const next = hydrateSession(me);
+        const next = hydrateSessionRef.current(me);
         if (!mounted) return;
         if (!next) {
+          verifiedTokenRef.current = "";
           setReason("AUTH_INVALID");
           setStatus("failed");
           return;
         }
+        verifiedTokenRef.current = normalizedToken;
         setStatus("ok");
       })
       .catch((error) => {
         const mappedReason = mapSessionCheckError(error);
+        verifiedTokenRef.current = "";
         if (mappedReason === "AUTH_MISSING" || mappedReason === "AUTH_INVALID" || mappedReason === "AUTH_REVOKED") {
-          clearSession();
+          clearSessionRef.current();
         }
         if (!mounted) return;
         setReason(mappedReason);
@@ -85,7 +109,7 @@ export default function RequireSession({ children }: { children: React.ReactElem
     return () => {
       mounted = false;
     };
-  }, [isLoggedIn, token, hydrateSession, clearSession]);
+  }, [isLoggedIn, token]);
 
   if (status === "checking") {
     return <div className="card" style={{ padding: 16, margin: 24 }}>正在验证会话，请稍候...</div>;
