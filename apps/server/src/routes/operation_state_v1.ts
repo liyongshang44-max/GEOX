@@ -20,8 +20,6 @@ import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } from "../auth/route_role_authz.js";
 import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
-import { projectRecommendationStateV1 } from "../projections/recommendation_state_v1.js";
-import { projectDeviceStateV1 } from "../projections/device_state_v1.js";
 import { projectOperationReportV1 } from "../projections/report_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 import {
@@ -1080,6 +1078,7 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/operations", async (req, reply) => {
+    req.log.info({ route: "/api/v1/operations" }, "route entered");
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
     const tenant = tenantFromReq(req as any, auth);
@@ -1087,7 +1086,9 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
     const q: any = (req as any).query ?? {};
     const limit = Math.max(1, Math.min(Number(q.limit ?? 100) || 100, 300));
 
+    req.log.info({ route: "/api/v1/operations", tenant, limit }, "projectOperationStateV1 start");
     let items = await projectOperationStateV1(pool, tenant);
+    req.log.info({ route: "/api/v1/operations", raw_count: items.length }, "projectOperationStateV1 done");
     if (q.field_id) items = items.filter((x) => x.field_id === String(q.field_id));
     items = items.filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
     if (q.device_id) items = items.filter((x) => x.device_id === String(q.device_id));
@@ -1119,12 +1120,16 @@ export function registerOperationStateV1Routes(app: FastifyInstance, pool: Pool)
       };
     });
 
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "projectRecommendationStateV1 start");
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "projectRecommendationStateV1 done");
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "projectDeviceStateV1 start");
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "projectDeviceStateV1 done");
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "reply.send start");
+    req.log.info({ route: "/api/v1/operations", item_count: items.length }, "request completed");
     return reply.send({
       ok: true,
       count: items.length,
-      items,
-      recommendation_states: projectRecommendationStateV1(items),
-      device_states: projectDeviceStateV1(items)
+      items
     });
   });
 
