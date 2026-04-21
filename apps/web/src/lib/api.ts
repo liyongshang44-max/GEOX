@@ -654,6 +654,21 @@ export async function fetchTelemetryLatest(token: string, params?: Record<string
   return Array.isArray(res.items) ? res.items : [];
 }
 
+function shouldFallbackTelemetryOptional(err: unknown): boolean {
+  if (err instanceof ApiError) return err.status === 404 || err.status === 410;
+  const status = typeof (err as any)?.status === "number" ? Number((err as any).status) : null;
+  return status === 404 || status === 410;
+}
+
+export async function fetchTelemetryLatestOptional(token: string, params?: Record<string, unknown>): Promise<TelemetryLatestItem[]> {
+  try {
+    return await fetchTelemetryLatest(token, params);
+  } catch (err: unknown) {
+    if (shouldFallbackTelemetryOptional(err)) return [];
+    throw err;
+  }
+}
+
 export async function fetchTelemetryMetrics(token: string, params?: Record<string, unknown>): Promise<TelemetryMetricsItem[]> {
   const res = await requestJson<{ ok?: boolean; items?: TelemetryMetricsItem[] }>(
     withQuery(`/api/v1/telemetry/metrics`, params),
@@ -662,10 +677,28 @@ export async function fetchTelemetryMetrics(token: string, params?: Record<strin
   return Array.isArray(res.items) ? res.items : [];
 }
 
+export async function fetchTelemetryMetricsOptional(token: string, params?: Record<string, unknown>): Promise<TelemetryMetricsItem[]> {
+  try {
+    return await fetchTelemetryMetrics(token, params);
+  } catch (err: unknown) {
+    if (shouldFallbackTelemetryOptional(err)) return [];
+    throw err;
+  }
+}
+
 export async function fetchTelemetrySeries(token: string, params?: Record<string, unknown>): Promise<TelemetrySeriesResponse> {
   return requestJson<TelemetrySeriesResponse>(withQuery(`/api/v1/telemetry/series`, params), {
     headers: authHeaders(token),
   });
+}
+
+export async function fetchTelemetrySeriesOptional(token: string, params?: Record<string, unknown>): Promise<TelemetrySeriesResponse> {
+  try {
+    return await fetchTelemetrySeries(token, params);
+  } catch (err: unknown) {
+    if (shouldFallbackTelemetryOptional(err)) return {};
+    throw err;
+  }
 }
 
 // -----------------------------
