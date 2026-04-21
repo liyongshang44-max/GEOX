@@ -17,19 +17,19 @@ type TelemetryCompatibilityMeta = {
 
 const TELEMETRY_COMPAT_META: Record<string, TelemetryCompatibilityMeta> = {
   "/api/telemetry/v1/query": {
-    successor_endpoint: "/api/v1/operations/* (operation_state 主链 read model)",
+    successor_endpoint: "/api/v1/operations",
     compatibility_notice: "compatibility only; do not use in new flows; for migration only",
   },
   "/api/v1/telemetry/latest": {
-    successor_endpoint: "/api/v1/operations/* 或 /api/v1/field-program-state/* 对应 read model",
+    successor_endpoint: "/api/v1/operations",
     compatibility_notice: "compatibility only; do not use in new flows; for migration only",
   },
   "/api/v1/telemetry/series": {
-    successor_endpoint: "/api/v1/operations/* 或 /api/v1/field-timeline/* 对应 read model",
+    successor_endpoint: "/api/v1/field-timeline",
     compatibility_notice: "compatibility only; do not use in new flows; for migration only",
   },
   "/api/v1/telemetry/metrics": {
-    successor_endpoint: "/api/v1/operations/* 或 /api/v1/reports/* 对应 read model",
+    successor_endpoint: "/api/v1/reports",
     compatibility_notice: "compatibility only; do not use in new flows; for migration only",
   },
 };
