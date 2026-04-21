@@ -9,8 +9,6 @@ import {
   fetchDeviceDetail,
   fetchDeviceStatus,
   fetchDevices,
-  fetchFields,
-  fetchFieldDetail,
   fetchTelemetryLatest,
   fetchTelemetryMetrics,
   fetchTelemetrySeries,
@@ -23,9 +21,8 @@ import {
   type DeviceStatus,
   type TelemetryLatestItem,
   type TelemetryMetricsItem,
-  type FieldListItem,
-  type FieldDetail,
 } from "../../../lib/api";
+import { fetchFieldDetail, fetchFields, type FieldDetail, type FieldListItem } from "../../../api/fields";
 import StatusBadge from "../../../components/common/StatusBadge";
 import ErrorState from "../../../components/common/ErrorState";
 import { formatTimeOrFallback } from "../../../lib/presentation/time";
@@ -47,12 +44,12 @@ function withTimeout<T>(name: string, promise: Promise<T>, ms = 8000): Promise<N
     promise.then((value) => { clearTimeout(timer); resolve({ name, status: "fulfilled", value }); }).catch((reason) => { clearTimeout(timer); resolve({ name, status: "rejected", reason }); });
   });
 }
-async function resolveBoundFieldFromFields(token: string, deviceId: string): Promise<BoundFieldInfo> {
-  const fields: FieldListItem[] = await fetchFields(token);
+async function resolveBoundFieldFromFields(deviceId: string): Promise<BoundFieldInfo> {
+  const fields: FieldListItem[] = await fetchFields();
   for (const field of fields) {
     try {
-      const detail: FieldDetail = await fetchFieldDetail(token, field.field_id);
-      const matched = (detail.bound_devices || []).find((item: any) => item.device_id === deviceId);
+      const detail: FieldDetail | null = await fetchFieldDetail(field.field_id);
+      const matched = (detail?.bound_devices || []).find((item: any) => item.device_id === deviceId);
       if (matched) return { field_id: field.field_id, bound_ts_ms: matched.bound_ts_ms ?? null };
     } catch {}
   }
@@ -95,7 +92,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         withTimeout("fetchTelemetryMetrics", fetchTelemetryMetrics(token, { device_id: deviceId })),
         withTimeout("fetchTelemetrySeries", fetchTelemetrySeries(token, { device_id: deviceId })),
         withTimeout("fetchDevices", fetchDevices(token)),
-        withTimeout("fetchFields", fetchFields(token)),
+        withTimeout("fetchFields", fetchFields()),
       ]);
       const byName = Object.fromEntries(results.map((r) => [r.name, r])) as Record<string, NamedSettled<any>>;
       const nextDetail = byName.fetchDeviceDetail?.status === "fulfilled" ? byName.fetchDeviceDetail.value : null;
@@ -109,7 +106,7 @@ export default function DeviceDetailPage(): React.ReactElement {
       const nextFields = byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
       const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
       let boundFieldInfo: BoundFieldInfo = { field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null, bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null };
-      if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(token, deviceId);
+      if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(deviceId);
       setDetail(nextDetail); setConsoleView(nextConsole); setControlPlane(nextControlPlane); setStatusObj(nextStatus); setDeviceListItem(matchedDevice); setResolvedBoundField(boundFieldInfo); setLatest(nextLatest); setMetrics(nextMetrics); setSeries(nextSeries); setAvailableFields(nextFields as FieldListItem[]); setBindFieldId(String(boundFieldInfo.field_id || "")); setStatus(`设备 ${deviceId} 已加载。`);
     } catch (e: any) {
       setError("设备详情加载失败，请稍后重试"); setStatus(`读取失败：${e?.bodyText || e?.message || String(e)}`);
