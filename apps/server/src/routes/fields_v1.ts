@@ -513,6 +513,10 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       await clientConn.query("COMMIT");
       const simulator_bootstrap: Array<{ device_id: string; simulator_started: boolean; telemetry_seeded: boolean; error?: string }> = [];
       const authHeader = String((req.headers as any)?.authorization ?? "");
+      // Internal self-call base URL for simulator bootstrap only.
+      // - In compose/containers, GEOX_INTERNAL_BASE_URL is injected as http://server:3000.
+      // - This 127.0.0.1:3000 fallback is for single-process local dev when env vars are absent.
+      // - It is NOT the commercial_v1 external access口径; host-side entrypoint remains 127.0.0.1:3001.
       const internalBaseUrl = process.env.GEOX_INTERNAL_BASE_URL || process.env.INTERNAL_BASE_URL || "http://127.0.0.1:3000";
       for (const row of deviceRows) {
         let simulator_started = false;
