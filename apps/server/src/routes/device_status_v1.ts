@@ -120,13 +120,16 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
 
   // GET /api/v1/devices/:device_id/status
   app.get("/api/v1/devices/:device_id/status", { preHandler: requireAuth as any }, async (req, reply) => {
+    req.log.info({ route: "device.status" }, "device.status route entered");
     try {
       const auth = getAuthContext(req) ?? ({ tenant_id: "tenantA" } as FactsAuth); // Fallback tenant for single-tenant dev.
+      req.log.info({ route: "device.status", tenant_id: auth.tenant_id }, "device.status auth resolved");
       const tenant_id = String(auth.tenant_id); // Tenant id.
       const device_id = String((req as any).params?.device_id ?? "").trim(); // Device id path param.
       if (!device_id) return reply.code(400).send({ ok: false, error: "BAD_REQUEST", message: "invalid device_id" });
 
       const offline_after_ms = 5 * 60 * 1000; // Default: 5 minutes.
+      req.log.info({ route: "device.status", tenant_id, device_id }, "device.status query start");
       const q = await pool.query(
         `SELECT device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms, status
            FROM device_status_index_v1
@@ -134,9 +137,11 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
           LIMIT 1`,
         [tenant_id, device_id]
       );
+      req.log.info({ route: "device.status", tenant_id, device_id, row_count: q.rowCount ?? 0 }, "device.status query end");
 
       if (q.rowCount === 0) {
         // Non-enumerable behavior: 404 to external caller.
+        req.log.warn({ route: "device.status", tenant_id, device_id }, "device.status reply 404");
         return reply.code(404).send({ ok: false, error: "NOT_FOUND", message: "device not found" });
       }
 
@@ -146,6 +151,7 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
       const online = last_hb != null ? (now_ms - last_hb) <= offline_after_ms : false;
       const status = online ? "ONLINE" : "OFFLINE";
 
+      req.log.info({ route: "device.status", tenant_id, device_id }, "device.status reply 200");
       return reply.code(200).send({
         ok: true,
         device_id: String(row.device_id ?? device_id),
@@ -160,11 +166,13 @@ export function registerDeviceStatusV1Routes(app: FastifyInstance, pool: Pool): 
         updated_ts_ms: toIntMs(row.updated_ts_ms) ?? null,
       });
     } catch (e: any) {
+      req.log.error({ route: "device.status", err: e }, "device.status catch");
       return reply.code(500).send({ ok: false, error: "INTERNAL", message: String(e?.message ?? e) });
+    } finally {
+      req.log.info({ route: "device.status" }, "request completed");
     }
   });
 }
-
 
 
 

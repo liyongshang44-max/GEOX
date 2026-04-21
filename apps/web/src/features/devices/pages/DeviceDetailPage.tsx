@@ -77,6 +77,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const [issuedSecret, setIssuedSecret] = React.useState<string>("");
   const [issuedCredentialId, setIssuedCredentialId] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
+  const [statusSnapshotFallback, setStatusSnapshotFallback] = React.useState<string | null>(null);
   const [onboardingRecords, setOnboardingRecords] = React.useState<OnboardingRecord[]>([]);
 
   async function refresh(): Promise<void> {
@@ -104,6 +105,12 @@ export default function DeviceDetailPage(): React.ReactElement {
       const nextSeries = byName.fetchTelemetrySeries?.status === "fulfilled" ? ((byName.fetchTelemetrySeries.value as any)?.series || (byName.fetchTelemetrySeries.value as any) || {}) : {};
       const nextDevices = byName.fetchDevices?.status === "fulfilled" ? byName.fetchDevices.value : [];
       const nextFields = byName.fetchFields?.status === "fulfilled" ? byName.fetchFields.value : [];
+      const requiredFailures = ["fetchDeviceDetail", "fetchDeviceConsole", "fetchDeviceControlPlane"].filter((name) => byName[name]?.status === "rejected");
+      if (requiredFailures.length > 0) {
+        setError("设备详情加载失败，请稍后重试");
+      }
+      const statusFailed = byName.fetchDeviceStatus?.status === "rejected";
+      setStatusSnapshotFallback(statusFailed ? "当前设备暂无状态快照" : null);
       const matchedDevice = nextDevices.find((item: any) => String(item.device_id) === String(deviceId)) || null;
       let boundFieldInfo: BoundFieldInfo = { field_id: matchedDevice?.field_id || (nextDetail as any)?.device?.field_id || null, bound_ts_ms: matchedDevice?.bound_ts_ms || (nextDetail as any)?.device?.bound_ts_ms || null };
       if (!boundFieldInfo.field_id && nextFields.length) boundFieldInfo = await resolveBoundFieldFromFields(deviceId);
@@ -166,6 +173,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
+  const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
 
   return (
     <div className="demoDashboardPage">
@@ -239,7 +247,7 @@ export default function DeviceDetailPage(): React.ReactElement {
           <div className="decisionList">
             <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
-            <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusLabel} · 最近心跳：{cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
           </div>
           <div className="traceChipRow" style={{ marginTop: 12 }}>
             <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
