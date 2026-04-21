@@ -60,6 +60,7 @@ export default function ProgramNewPage(): React.ReactElement {
   const [submitting, setSubmitting] = React.useState(false);
   const [errors, setErrors] = React.useState<string[]>([]);
   const [fields, setFields] = React.useState<Array<{ field_id: string; name?: string }>>([]);
+  const [fieldsLoadFailed, setFieldsLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
     let mounted = true;
@@ -70,10 +71,15 @@ export default function ProgramNewPage(): React.ReactElement {
           field_id: String(item?.field_id ?? "").trim(),
           name: typeof item?.name === "string" ? item.name : undefined,
         })).filter((item) => item.field_id);
+        setFieldsLoadFailed(false);
         setFields(normalized);
         if (normalized.length === 1) setForm((prev) => ({ ...prev, field_id: normalized[0].field_id }));
       })
-      .catch(() => setFields([]));
+      .catch(() => {
+        if (!mounted) return;
+        setFields([]);
+        setFieldsLoadFailed(true);
+      });
     return () => { mounted = false; };
   }, []);
 
@@ -144,6 +150,12 @@ export default function ProgramNewPage(): React.ReactElement {
               <input className="input" value={form.field_id} onChange={(e) => onChange("field_id", e.target.value)} placeholder="field_c8_demo" required />
             )}
           </label>
+
+          {fields.length === 0 ? (
+            <div className="decisionItemStatic">
+              {fieldsLoadFailed ? "暂无田块可选，请稍后刷新重试" : "暂无田块可选"}
+            </div>
+          ) : null}
 
           <label className="decisionItemStatic">
             <div className="decisionItemTitle">season_id</div>

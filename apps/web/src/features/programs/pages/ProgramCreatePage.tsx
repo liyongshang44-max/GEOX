@@ -47,6 +47,7 @@ export default function ProgramCreatePage(): React.ReactElement {
   const [errors, setErrors] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [fields, setFields] = React.useState<Array<{ field_id: string; name?: string }>>([]);
+  const [fieldsLoadFailed, setFieldsLoadFailed] = React.useState(false);
 
   React.useEffect(() => {
     const fieldFromQuery = String(searchParams.get("field_id") ?? "").trim();
@@ -60,11 +61,16 @@ export default function ProgramCreatePage(): React.ReactElement {
       const normalized = (items ?? [])
         .map((item: any) => ({ field_id: String(item?.field_id ?? "").trim(), name: typeof item?.name === "string" ? item.name : undefined }))
         .filter((item) => item.field_id);
+      setFieldsLoadFailed(false);
       setFields(normalized);
       if (!form.field_id && normalized.length === 1) setForm((prev) => ({ ...prev, field_id: normalized[0].field_id }));
-    }).catch(() => setFields([]));
+    }).catch(() => {
+      if (!mounted) return;
+      setFields([]);
+      setFieldsLoadFailed(true);
+    });
     return () => { mounted = false; };
-  }, [form.field_id]);
+  }, []);
 
   const onChange = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -125,6 +131,12 @@ export default function ProgramCreatePage(): React.ReactElement {
               <input className="input" value={form.field_id} onChange={(e) => onChange("field_id", e.target.value)} placeholder="field_demo_001" required />
             )}
           </label>
+
+          {fields.length === 0 ? (
+            <div className="decisionItemStatic">
+              {fieldsLoadFailed ? "暂无田块可选，请稍后刷新重试" : "暂无田块可选"}
+            </div>
+          ) : null}
 
           <label className="decisionItemStatic">
             <div className="decisionItemTitle">作物</div>
