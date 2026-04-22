@@ -244,6 +244,17 @@ async function withValidatedDevice(
 }
 
 export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool): void {
+  // Conflict guard for legacy/incorrect aggregate path:
+  // register static route ahead of /api/v1/devices/:device_id/status so "simulator" is never parsed as :device_id.
+  app.get("/api/v1/devices/simulator/status", async (_req, reply) => {
+    return reply.status(410).send({
+      ok: false,
+      error: "DEPRECATED_PATH",
+      message: "Use /api/v1/devices/simulator/statuses instead",
+      replacement: "/api/v1/devices/simulator/statuses",
+    });
+  });
+
   app.get("/api/v1/devices/simulator/statuses", async (req, reply) => {
     await ensureDeviceSimulatorIndexRuntime(pool);
     const auth = requireAoActScopeV0(req, reply, "telemetry.read");
