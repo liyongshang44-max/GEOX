@@ -288,20 +288,20 @@ export default function DeviceOnboardingPage(): React.ReactElement {
 
       <SectionCard title="技术详情 / 展开调试信息">
         <details>
-          <summary className="metaText" style={{ cursor: "pointer" }}>展开 carrier/device/simulator 原始字段（仅供排障）</summary>
+          <summary className="metaText" style={{ cursor: "pointer" }}>展开设备接入技术详情（仅供排障）</summary>
           <div className="contentGridTwo alignStart" style={{ marginTop: 10 }}>
-            <div className="field"><span className="metaLabel">carrier.display_name</span><div className="metaText">{overview?.displayName ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">carrier.device_id</span><div className="metaText">{deviceId || "-"}</div></div>
-            <div className="field"><span className="metaLabel">source_type</span><div className="metaText">{sourceType}</div></div>
-            <div className="field"><span className="metaLabel">device_mode</span><div className="metaText">{overview?.deviceMode ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">simulator_started</span><div className="metaText">{formatBool(overview?.simulatorStarted)}</div></div>
-            <div className="field"><span className="metaLabel">simulator_status</span><div className="metaText">{overview?.simulatorStatus ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">skill category</span><div className="metaText">{skill?.categories?.join(" / ") || "-"}</div></div>
-            <div className="field"><span className="metaLabel">bind_target</span><div className="metaText">{skill?.bindingTargets?.join(" / ") || "-"}</div></div>
-            <div className="field"><span className="metaLabel">device_type</span><div className="metaText">{overview?.deviceType ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">field</span><div className="metaText">{overview?.fieldId ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">telemetry.last_telemetry</span><div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">telemetry.last_heartbeat</span><div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">设备显示名称</span><div className="metaText">{overview?.displayName ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">设备标识</span><div className="metaText">{deviceId || "-"}</div></div>
+            <div className="field"><span className="metaLabel">接入来源类型</span><div className="metaText">{sourceType}</div></div>
+            <div className="field"><span className="metaLabel">设备运行模式</span><div className="metaText">{overview?.deviceMode ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">模拟感知是否已启动</span><div className="metaText">{formatBool(overview?.simulatorStarted)}</div></div>
+            <div className="field"><span className="metaLabel">模拟感知状态</span><div className="metaText">{overview?.simulatorStatus ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">技能分类</span><div className="metaText">{skill?.categories?.join(" / ") || "-"}</div></div>
+            <div className="field"><span className="metaLabel">绑定目标</span><div className="metaText">{skill?.bindingTargets?.join(" / ") || "-"}</div></div>
+            <div className="field"><span className="metaLabel">设备类型</span><div className="metaText">{overview?.deviceType ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">所属地块</span><div className="metaText">{overview?.fieldId ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">最近遥测时间</span><div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">最近心跳时间</span><div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div></div>
           </div>
         </details>
       </SectionCard>
