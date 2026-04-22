@@ -3,53 +3,132 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSession } from "../../../auth/useSession";
 import DeviceOnboardingFlow from "../../../features/devices/onboarding/components/DeviceOnboardingFlow";
 import { PageHeader, SectionCard } from "../../../shared/ui";
+import { buildSkillCarrierVm, type CarrierSourceType, type SkillCarrierVm } from "../../../viewmodels/skillCarrierVm";
+
+function formatTime(ts: number | null): string {
+  if (!ts) return "-";
+  return new Date(ts).toLocaleString("zh-CN", { hour12: false });
+}
 
 export default function DeviceOnboardingPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { token, setToken } = useSession();
   const [deviceId, setDeviceId] = React.useState<string>(searchParams.get("device_id") || "demo_device_001");
-  const [displayName, setDisplayName] = React.useState<string>("演示设备 001");
-  const [fieldId, setFieldId] = React.useState<string>("field_demo_001");
-  const [deviceMode, setDeviceMode] = React.useState<"real" | "simulator">("simulator");
-  const [deviceTemplate, setDeviceTemplate] = React.useState<string>("soil_probe_v1");
+  const [sourceType, setSourceType] = React.useState<CarrierSourceType>("simulator");
+  const [vm, setVm] = React.useState<SkillCarrierVm | null>(null);
+  const [loading, setLoading] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string>("");
+
+  React.useEffect(() => {
+    let active = true;
+    async function load(): Promise<void> {
+      const id = deviceId.trim();
+      if (!token.trim() || !id) {
+        setVm(null);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      try {
+        const next = await buildSkillCarrierVm({ token, deviceId: id, sourceType });
+        if (active) setVm(next);
+      } catch (e: unknown) {
+        if (!active) return;
+        setVm(null);
+        setError(e instanceof Error ? e.message : "加载失败");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [token, deviceId, sourceType]);
+
+  const overview = vm?.carrier;
+  const skill = vm?.skill;
 
   return (
     <div className="consolePage">
       <PageHeader
-        title="设备接入向导"
-        description="固定 6 步接入流程，统一展示状态、反馈、下一步动作与失败排查建议；当前以 mock state（pending/success/failed）驱动交互闭环。"
+        title="Skill Carrier Onboarding"
+        description="该载体为某 skill 提供输入：页面主交互只呈现载体概览与 source_type 分支，不再以培训流程叙事作为主骨架。"
       />
 
-      <SectionCard title="基础上下文">
+      <SectionCard title="第一层：接入概览（carrier / source_type / skill category / bind_target / device_type / field / telemetry）">
         <div className="contentGridTwo alignStart">
           <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
-          <label className="field">设备 ID<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
-          <label className="field">设备名称<input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></label>
+          <label className="field">carrier.device_id<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
           <label className="field">
-            device_mode
-            <select className="select" value={deviceMode} onChange={(e) => setDeviceMode((e.target.value as "real" | "simulator"))}>
-              <option value="simulator">simulator（仿真）</option>
-              <option value="real">real（真实设备）</option>
+            source_type
+            <select className="select" value={sourceType} onChange={(e) => setSourceType(e.target.value as CarrierSourceType)}>
+              <option value="simulator">simulator（模拟承载）</option>
+              <option value="physical">physical（真实设备承载）</option>
             </select>
           </label>
-          <label className="field">
-            device_template
-            <input className="input" value={deviceTemplate} onChange={(e) => setDeviceTemplate(e.target.value)} />
-          </label>
-          <label className="field">目标田块 ID<input className="input" value={fieldId} onChange={(e) => setFieldId(e.target.value)} /></label>
+          <div className="field">
+            <span className="metaLabel">carrier.display_name</span>
+            <div className="metaText">{overview?.displayName ?? "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">skill category</span>
+            <div className="metaText">{skill?.categories?.join(" / ") || "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">bind_target</span>
+            <div className="metaText">{skill?.bindingTargets?.join(" / ") || "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">device_type</span>
+            <div className="metaText">{overview?.deviceType ?? "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">field</span>
+            <div className="metaText">{overview?.fieldId ?? "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">telemetry.last_telemetry</span>
+            <div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">telemetry.last_heartbeat</span>
+            <div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+          </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          当前演示上下文：<code>{deviceId}</code> / <code>{displayName}</code> / <code>{deviceMode}</code> / <code>{deviceTemplate}</code> / <code>{fieldId}</code>。
+          {loading ? "正在组装 skill carrier viewmodel..." : `skills=${skill?.total ?? 0} · telemetry_status=${vm?.telemetry.status ?? "-"}`}
         </div>
+        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>加载失败：{error}</div> : null}
       </SectionCard>
 
-      <DeviceOnboardingFlow deviceId={deviceId} deviceMode={deviceMode} deviceTemplate={deviceTemplate} />
+      <SectionCard title="第二层：模式分支（真实设备承载 vs 模拟承载）">
+        {sourceType === "physical" ? (
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">真实设备承载（physical）</div>
+            <div className="decisionItemMeta">该载体直接为 skill 提供现场输入，请优先核对设备在线状态、最后一次心跳与 telemetry 上报时间。</div>
+            <div className="decisionItemMeta">current telemetry_status：{vm?.telemetry.status ?? "unknown"}</div>
+          </div>
+        ) : (
+          <div className="decisionItemStatic">
+            <div className="decisionItemTitle">模拟承载（simulator）</div>
+            <div className="decisionItemMeta">该载体通过 simulator 为 skill 注入测试输入，用于验证 skill 行为与绑定策略。</div>
+            <div className="decisionItemMeta">
+              simulator status：
+              {vm?.simulator.checked ? (vm.simulator.running == null ? "unknown" : vm.simulator.running ? "running" : "stopped") : "not_checked"}
+            </div>
+          </div>
+        )}
+      </SectionCard>
+
+      <DeviceOnboardingFlow sourceType={sourceType} />
 
       <SectionCard title="后续动作">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转设备详情</Link>
+          <Link className="btn" to="/skills/registry">查看技能注册中心</Link>
+          <Link className="btn" to="/skills/bindings">查看 skill 绑定关系</Link>
           <Link className="btn" to="/devices">返回设备列表</Link>
-          <Link className="btn" to={`/fields/${encodeURIComponent(fieldId.trim())}`}>返回田块继续首日验证</Link>
         </div>
       </SectionCard>
     </div>
