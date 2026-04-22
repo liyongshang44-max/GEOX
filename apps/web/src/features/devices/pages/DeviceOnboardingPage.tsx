@@ -18,7 +18,7 @@ function formatTime(ts: number | null): string {
 
 function formatBool(value: boolean | null | undefined): string {
   if (value == null) return "-";
-  return value ? "true" : "false";
+  return value ? "是" : "否";
 }
 
 export default function DeviceOnboardingPage(): React.ReactElement {
@@ -140,6 +140,12 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const skillInputText = `${skill?.categories?.join(" / ") || "未识别 skill 类别"} · ${skill?.bindingTargets?.join(" / ") || "未绑定目标"}`;
   const bindingStatusText = `${overview?.fieldId || "未绑定 field"} · ${vm?.telemetry.status || "暂无遥测状态"}`;
   const sensingText = `输入 ${formatTime(vm?.telemetry.lastTelemetryAt ?? null)} · 心跳 ${formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}`;
+  const simulatorStateText = (() => {
+    if (effectiveSimulatorStatus?.last_error) return "异常";
+    if (effectiveSimulatorStatus?.running === true) return "运行中";
+    if (effectiveSimulatorStatus?.running === false) return "已停止";
+    return "未启动";
+  })();
 
   return (
     <div className="consolePage">
@@ -200,16 +206,31 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟承载（simulator）</div>
               <div className="decisionItemMeta">该载体正在为 sensing skill 提供演示输入，用于验证 skill 行为与绑定策略。</div>
-              <div className="decisionItemMeta">
-                当前模拟输入状态：
-                {vm?.simulator.checked ? (vm.simulator.running == null ? "unknown" : vm.simulator.running ? "running" : "stopped") : "not_checked"}
-              </div>
+              <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">模拟输入控制</div>
+              <div className="decisionItemTitle">模拟感知控制</div>
+              <div className="contentGridTwo alignStart" style={{ marginBottom: 8 }}>
+                <div className="field">
+                  <span className="metaLabel">当前状态</span>
+                  <div className="metaText">{simulatorStateText}</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">当前承载说明</span>
+                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "sensing skill"} 提供模拟输入</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">最近一次模拟输入时间</span>
+                  <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">模拟输入周期</span>
+                  <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
+                </div>
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
-                  <span className="metaLabel">输入频率（毫秒）</span>
+                  <span className="metaLabel">模拟输入周期（毫秒）</span>
                   <input
                     className="input"
                     value={intervalInput}
@@ -219,10 +240,10 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   />
                 </label>
                 <button type="button" className="btn primary" disabled={simulatorBusy} onClick={() => void handleSimulatorStart()}>
-                  {simulatorBusy ? "处理中..." : "启动模拟输入"}
+                  {simulatorBusy ? "处理中..." : "启动模拟感知"}
                 </button>
                 <button type="button" className="btn" disabled={simulatorBusy} onClick={() => void handleSimulatorStop()}>
-                  {simulatorBusy ? "处理中..." : "停止模拟输入"}
+                  {simulatorBusy ? "处理中..." : "停止模拟感知"}
                 </button>
                 <button type="button" className="btn secondary" disabled={simulatorBusy} onClick={() => void refreshSimulatorStatus()}>
                   刷新状态
