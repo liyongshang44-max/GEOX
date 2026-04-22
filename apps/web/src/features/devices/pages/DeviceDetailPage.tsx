@@ -35,6 +35,16 @@ import { extractBootstrapContext } from "../../../lib/bootstrapContext";
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
 }
+
+function formatCarrierSkillNote(raw: unknown): string {
+  const normalized = String(raw ?? "").trim().toLowerCase();
+  if (!normalized) return "正在为感知技能提供输入";
+  if (normalized.includes("irrigation") || normalized.includes("灌溉")) return "正在为灌溉类技能提供输入";
+  if (normalized.includes("patrol") || normalized.includes("巡检")) return "正在为巡检类技能提供输入";
+  if (normalized.includes("alert") || normalized.includes("告警")) return "正在为告警类技能提供输入";
+  if (normalized.includes("growth") || normalized.includes("生长")) return "正在为生长评估类技能提供输入";
+  return "正在为相关感知技能提供输入";
+}
 type BoundFieldInfo = { field_id: string | null; bound_ts_ms: number | null };
 type NamedSettled<T = unknown> = { name: string; status: "fulfilled"; value: T } | { name: string; status: "rejected"; reason: unknown };
 
@@ -175,7 +185,6 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const policyAwareMetrics = React.useMemo(() => buildDevicePolicyAwareMetrics({ latest, metrics, series }), [latest, metrics, series]);
   const heroMetric = policyAwareMetrics[0] || null;
-  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，设备模式 ${bootstrapContext.device_mode ?? "-"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
   const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
   const carrierModeText = String(bootstrapContext.device_mode ?? "").toLowerCase().includes("sim") ? "模拟承载" : "真实设备";
@@ -188,15 +197,14 @@ export default function DeviceDetailPage(): React.ReactElement {
     if (bootstrapContext.simulator_started === false) return "已停止";
     return "已停止";
   })();
-  const carrierSummaryText = bootstrapContext.skill_related_note
-    ? `正在为相关技能提供输入（${bootstrapContext.skill_related_note}）`
-    : "正在为感知技能提供输入";
+  const carrierSummaryText = formatCarrierSkillNote(bootstrapContext.skill_related_note);
   const recentSensingTimeText = cpOverview?.last_telemetry_label || fmtTs(statusObj?.last_telemetry_ts_ms);
   const cycleMs = Number((cpOverview as any)?.interval_ms ?? (statusObj as any)?.interval_ms ?? NaN);
   const cycleSec = Number((cpOverview as any)?.interval_sec ?? (cpOverview as any)?.report_interval_sec ?? (statusObj as any)?.interval_sec ?? NaN);
   const cycleText = Number.isFinite(cycleSec) && cycleSec > 0
     ? `${cycleSec} 秒`
     : (Number.isFinite(cycleMs) && cycleMs > 0 ? `${Math.round(cycleMs / 1000)} 秒` : "不适用");
+  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，载体模式 ${carrierModeText}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
 
   return (
     <div className="demoDashboardPage">
@@ -271,14 +279,6 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">载体状态</div>
-              <div className="decisionItemMeta">载体模式：{carrierModeText}</div>
-              <div className="decisionItemMeta">当前感知状态：{sensingStateText}</div>
-              <div className="decisionItemMeta">当前承载说明：{carrierSummaryText}</div>
-              <div className="decisionItemMeta">最近感知时间：{recentSensingTimeText}</div>
-              <div className="decisionItemMeta">运行周期：{cycleText}</div>
-            </div>
           </div>
           <details style={{ marginTop: 10 }}>
             <summary className="metaText" style={{ cursor: "pointer" }}>展开技术补充信息（trace chips）</summary>
@@ -290,6 +290,17 @@ export default function DeviceDetailPage(): React.ReactElement {
             </div>
           </details>
       </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader"><div className="sectionTitle">载体状态</div><div className="detailSectionLead">用于快速确认当前承载模式、感知输入状态与最近回传节奏。</div></div>
+          <div className="decisionList">
+            <div className="decisionItemStatic"><div className="decisionItemTitle">载体模式</div><div className="decisionItemMeta">{carrierModeText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">当前感知状态</div><div className="decisionItemMeta">{sensingStateText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">当前承载说明</div><div className="decisionItemMeta">{carrierSummaryText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近感知时间</div><div className="decisionItemMeta">{recentSensingTimeText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">运行周期</div><div className="decisionItemMeta">{cycleText}</div></div>
+          </div>
+        </section>
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader"><div className="sectionTitle">策略化指标视图</div><div className="detailSectionLead">仅展示已纳入指标展示策略且允许出现在设备详情页的指标，未分级指标默认不渲染。</div></div>
