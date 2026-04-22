@@ -2,6 +2,16 @@ import { mapOperationTypeToLabel, type FieldLang } from "../lib/fieldViewModel";
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveTimelineLabel } from "./timelineLabels";
 import { resolveOperationPlanId, toOperationDetailPath } from "../lib/operationLink";
+import {
+  getMetricDisplayPolicy,
+  getMetricDisplayLabelZh,
+  isCustomerPrimaryMetric,
+  isCustomerSecondaryMetric,
+  isProfessionalDetailMetric,
+  shouldShowMetricOnExplain,
+  shouldShowMetricOnFieldDetail,
+  shouldShowMetricOnFieldSummary,
+} from "../lib/metricDisplayPolicy";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
@@ -25,6 +35,26 @@ export type FieldViewModel = {
     recentHeartbeat: string;
     latestSuggestion: string;
   };
+  fieldSummaryMetrics: Array<{
+    metric: string;
+    label: string;
+    value: string;
+    canonicalUnit: string;
+    reasoningStatus: string;
+    source: string;
+    fixedRoutes: string[];
+    visibleOnExplain: boolean;
+  }>;
+  technicalDetailMetrics: Array<{
+    metric: string;
+    label: string;
+    value: string;
+    canonicalUnit: string;
+    reasoningStatus: string;
+    source: string;
+    fixedRoutes: string[];
+    visibleOnExplain: boolean;
+  }>;
   currentTask: null | {
     action: string;
     deviceId: string;
@@ -88,6 +118,72 @@ function latestTrendValue(detail: any, key: "soil_moisture" | "soil_temp"): numb
   const latest = rows[rows.length - 1];
   const value = Number(latest?.value_num ?? NaN);
   return Number.isFinite(value) ? value : null;
+}
+
+function toNumberOrNull(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Number(n.toFixed(2));
+}
+
+function normalizeFieldMetricValues(detail: any): Record<string, number | null> {
+  const base = detail?.latest_recommendation?.current_metrics
+    ?? detail?.current_metrics
+    ?? detail?.latest_metrics
+    ?? detail?.summary?.metrics
+    ?? {};
+
+  const metrics = typeof base === "object" && base != null ? base : {};
+  return {
+    ...Object.fromEntries(
+      Object.entries(metrics).map(([metric, value]) => [metric, toNumberOrNull(value)]),
+    ),
+    soil_moisture: toNumberOrNull(
+      (metrics as any)?.soil_moisture
+      ?? (metrics as any)?.soil_moisture_pct
+      ?? latestTrendValue(detail, "soil_moisture"),
+    ),
+    air_temperature: toNumberOrNull((metrics as any)?.air_temperature ?? (metrics as any)?.temperature),
+    air_humidity: toNumberOrNull((metrics as any)?.air_humidity ?? (metrics as any)?.humidity),
+    soil_temperature: toNumberOrNull((metrics as any)?.soil_temperature ?? latestTrendValue(detail, "soil_temp")),
+  };
+}
+
+function formatMetricValue(metric: string, value: number | null): string {
+  const policy = getMetricDisplayPolicy(metric);
+  if (!policy || value == null) return "--";
+  return `${Number(value).toFixed(1)}${policy.canonical_unit}`;
+}
+
+function resolveFixedRoutes(metric: string): string[] {
+  const policy = getMetricDisplayPolicy(metric);
+  const routes = Array.isArray(policy?.fixed_routes) ? [...policy.fixed_routes] : [];
+  if (metric !== "soil_moisture") return routes;
+  const forcedRoutes = ["field.soil_status", "field.trend", "explain.evidence_basis"];
+  for (const route of forcedRoutes) {
+    if (!routes.includes(route)) routes.push(route);
+  }
+  return routes;
+}
+
+function buildStandardFieldMetrics(detail: any): FieldViewModel["fieldSummaryMetrics"] {
+  const normalizedMetrics = normalizeFieldMetricValues(detail);
+  const items: FieldViewModel["fieldSummaryMetrics"] = [];
+  for (const [metric, value] of Object.entries(normalizedMetrics)) {
+    const policy = getMetricDisplayPolicy(metric);
+    if (!policy) continue;
+    items.push({
+      metric,
+      label: getMetricDisplayLabelZh(metric),
+      value: formatMetricValue(metric, value),
+      canonicalUnit: policy.canonical_unit,
+      reasoningStatus: policy.reasoning_status,
+      source: policy.source_field_key ?? policy.source_field_aliases?.[0] ?? "--",
+      fixedRoutes: resolveFixedRoutes(metric),
+      visibleOnExplain: shouldShowMetricOnExplain(metric),
+    });
+  }
+  return items;
 }
 
 function computeStatus(data: { hasAlert: boolean; hasFailedTask: boolean }): FieldConsoleStatus {
@@ -268,6 +364,15 @@ export function buildFieldViewModel(params: {
     : "暂无建议";
   const soilMoisture = latestTrendValue(detail, "soil_moisture");
   const soilTemp = latestTrendValue(detail, "soil_temp");
+  const standardMetrics = buildStandardFieldMetrics(detail);
+  const fieldSummaryMetrics = standardMetrics.filter((item) =>
+    shouldShowMetricOnFieldSummary(item.metric)
+    && (isCustomerPrimaryMetric(item.metric) || isCustomerSecondaryMetric(item.metric)),
+  );
+  const technicalDetailMetrics = standardMetrics.filter((item) =>
+    shouldShowMetricOnFieldDetail(item.metric)
+    && isProfessionalDetailMetric(item.metric),
+  );
 
   return {
     fieldId,
@@ -287,6 +392,8 @@ export function buildFieldViewModel(params: {
       recentHeartbeat: latestHeartbeatTs ? `${formatRelative(latestHeartbeatTs)}（${formatDateTime(latestHeartbeatTs)}）` : "--",
       latestSuggestion,
     },
+    fieldSummaryMetrics,
+    technicalDetailMetrics,
     currentTask,
     lastEvent,
     kpis: [
