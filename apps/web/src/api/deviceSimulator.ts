@@ -18,6 +18,11 @@ export type DeviceSimulatorStatus = {
   reason?: string;
 };
 
+export type DeviceSimulatorStatusListResponse = {
+  ok?: boolean;
+  items?: DeviceSimulatorStatus[];
+};
+
 function toOptionalInterval(value: number | undefined): number | undefined {
   if (value == null) return undefined;
   const n = Number(value);
@@ -43,4 +48,9 @@ export async function stopDeviceSimulator(deviceId: string): Promise<DeviceSimul
 export async function getDeviceSimulatorStatus(deviceId: string): Promise<DeviceSimulatorStatus> {
   const trimmedId = String(deviceId ?? "").trim();
   return apiRequest<DeviceSimulatorStatus>(`/api/v1/devices/${encodeURIComponent(trimmedId)}/simulator/status`);
+}
+
+export async function listDeviceSimulatorStatuses(limit = 500): Promise<DeviceSimulatorStatusListResponse> {
+  const normalizedLimit = Math.max(1, Math.min(Math.floor(Number(limit) || 500), 500));
+  return apiRequest<DeviceSimulatorStatusListResponse>(`/api/v1/devices/simulator/statuses?limit=${normalizedLimit}`);
 }
