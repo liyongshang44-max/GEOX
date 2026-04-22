@@ -219,13 +219,14 @@ export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool
 
     const query: any = req.query ?? {};
     const limit = parseLimit(query.limit);
-    const tenant_id = isNonEmptyString(query.tenant_id) ? String(query.tenant_id).trim() : auth.tenant_id;
-    const project_id = isNonEmptyString(query.project_id) ? String(query.project_id).trim() : auth.project_id;
-    const group_id = isNonEmptyString(query.group_id) ? String(query.group_id).trim() : auth.group_id;
-
-    if (tenant_id !== auth.tenant_id || project_id !== auth.project_id || group_id !== auth.group_id) {
-      return reply.status(403).send({ ok: false, error: "FORBIDDEN_SCOPE" });
-    }
+    // Compatibility-only query params: accepted but auth context is always authoritative.
+    // This avoids unbounded scans and prevents caller-controlled cross-scope reads.
+    const query_tenant_id = isNonEmptyString(query.tenant_id) ? String(query.tenant_id).trim() : null;
+    const query_project_id = isNonEmptyString(query.project_id) ? String(query.project_id).trim() : null;
+    const query_group_id = isNonEmptyString(query.group_id) ? String(query.group_id).trim() : null;
+    const tenant_id = auth.tenant_id;
+    const project_id = auth.project_id;
+    const group_id = auth.group_id;
 
     const q = await pool.query(
       `SELECT
@@ -273,6 +274,9 @@ export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool
       tenant_id,
       project_id,
       group_id,
+      scope_source: "auth_context",
+      scope_query_ignored:
+        query_tenant_id !== null || query_project_id !== null || query_group_id !== null,
       items,
     });
   });
