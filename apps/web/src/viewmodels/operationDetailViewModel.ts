@@ -14,6 +14,15 @@ export type OperationStoryTimelineItemVm = {
 };
 
 export type OperationDetailPageVm = {
+  metricReferences: Array<{
+    label: string;
+    value: string;
+    unit: string;
+    reasoning_status: string;
+    source: string;
+    guidanceLabel: string;
+    isPrimaryReasoning: boolean;
+  }>;
   actionLabel: string;
   deviceLabel: string;
   technicalRefs: {
@@ -272,6 +281,37 @@ function mapSignedPercentLabel(raw: unknown): string {
   const value = Number(raw ?? NaN);
   if (!Number.isFinite(value)) return "--";
   return `${value >= 0 ? "+" : ""}${value.toFixed(0)}%`;
+}
+
+function normalizeMetricReference(args: {
+  label: string;
+  rawValue: unknown;
+  unit?: string;
+  reasoningStatus?: unknown;
+  source?: string;
+}): {
+  label: string;
+  value: string;
+  unit: string;
+  reasoning_status: string;
+  source: string;
+  guidanceLabel: string;
+  isPrimaryReasoning: boolean;
+} {
+  const unit = args.unit ?? "";
+  const reasoningStatus = String(args.reasoningStatus ?? "IN_CURRENT_REASONING").trim() || "IN_CURRENT_REASONING";
+  const valueNumber = Number(args.rawValue ?? NaN);
+  const value = Number.isFinite(valueNumber) ? `${Number.isInteger(valueNumber) ? valueNumber : valueNumber.toFixed(1)}` : "--";
+  const isDowngraded = ["PROFESSIONAL_DETAIL", "NOT_IN_CURRENT_REASONING"].includes(reasoningStatus.toUpperCase());
+  return {
+    label: args.label,
+    value,
+    unit,
+    reasoning_status: reasoningStatus,
+    source: toText(args.source, "unknown"),
+    guidanceLabel: isDowngraded ? "技术参考/辅助观测" : "当前主决策核心依据",
+    isPrimaryReasoning: !isDowngraded,
+  };
 }
 
 function mapEffectVerdictLabel(raw: unknown): string {
@@ -736,6 +776,22 @@ export function buildOperationDetailViewModel(args?: {
       : "作业闭环已完成，可进入复盘。";
 
   return {
+    metricReferences: [
+      normalizeMetricReference({
+        label: "执行前土壤湿度",
+        rawValue: safeDetail?.agronomy?.before_metrics?.soil_moisture,
+        unit: "%",
+        reasoningStatus: safeDetail?.agronomy?.before_metrics?.soil_moisture_reasoning_status,
+        source: "agronomy.before_metrics.soil_moisture",
+      }),
+      normalizeMetricReference({
+        label: "执行后土壤湿度",
+        rawValue: safeDetail?.agronomy?.after_metrics?.soil_moisture,
+        unit: "%",
+        reasoningStatus: safeDetail?.agronomy?.after_metrics?.soil_moisture_reasoning_status,
+        source: "agronomy.after_metrics.soil_moisture",
+      }),
+    ],
     actionLabel: toText(safeDetail?.task?.action_type, "作业"),
     deviceLabel: toText(safeDetail?.task?.device_id, "未指定设备"),
     technicalRefs: {
@@ -799,8 +855,8 @@ export function buildOperationDetailViewModel(args?: {
       verdictLabel: mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict),
     },
     effectAssessment: {
-      beforeMetricsLabel: `执行前土壤湿度：${mapPercentLabel(safeDetail?.agronomy?.before_metrics?.soil_moisture)}`,
-      afterMetricsLabel: `执行后土壤湿度：${mapPercentLabel(safeDetail?.agronomy?.after_metrics?.soil_moisture)}`,
+      beforeMetricsLabel: `执行前指标：${mapPercentLabel(safeDetail?.agronomy?.before_metrics?.soil_moisture)}`,
+      afterMetricsLabel: `执行后指标：${mapPercentLabel(safeDetail?.agronomy?.after_metrics?.soil_moisture)}`,
       actualEffectLabel: `实际效果：${mapSignedPercentLabel(actualEffectDelta)}`,
       effectVerdictLabel: `效果结论：${mapEffectVerdictLabel(safeDetail?.agronomy?.effect_verdict)}`,
     },

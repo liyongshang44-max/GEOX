@@ -8,7 +8,13 @@ export type BadgeStatus = "success" | "warning" | "failed" | "pending";
 export type ProgramActionExpectation = { label: string; value: string };
 export type ProgramDetailAction = { type: string; mode: string; reason: string; expectedEffect: string; expectation: ProgramActionExpectation };
 export type ProgramDetailTimelineItem = { kind: string; status: string; occurredAt: string; summary: string };
-export type ProgramDetailMetric = { label: string; value: string };
+export type ProgramDetailMetric = {
+  label: string;
+  value: string;
+  unit: string;
+  reasoning_status: string;
+  source: string;
+};
 export type ProgramDetailViewModel = any;
 
 type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
@@ -54,7 +60,7 @@ export type ProgramConsoleViewModel = {
   cropInsight: {
     cropLabel: string;
     cropStage: string;
-    keyMetrics: Array<{ label: string; value: string }>;
+    keyMetrics: ProgramDetailMetric[];
     activeRuleCount: number;
   };
   programAgronomy: {
@@ -150,6 +156,22 @@ function metricValueText(value: unknown, suffix = ""): string {
   const n = toNumber(value);
   if (!Number.isFinite(n)) return "暂无数据";
   return `${n}${suffix}`;
+}
+
+function normalizeMetricReference(args: {
+  label: string;
+  value: unknown;
+  unit?: string;
+  reasoningStatus?: unknown;
+  source?: string;
+}): ProgramDetailMetric {
+  return {
+    label: args.label,
+    value: metricValueText(args.value, ""),
+    unit: args.unit ?? "",
+    reasoning_status: toText(args.reasoningStatus, "IN_CURRENT_REASONING"),
+    source: toText(args.source, "unknown"),
+  };
 }
 
 function normalizeStageCode(value: unknown): string {
@@ -381,9 +403,27 @@ export function buildProgramDetailViewModel(args: {
     ?? detail?.updated_at
     ?? null;
   const keyMetrics = [
-    { label: "土壤湿度", value: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%") },
-    { label: "温度", value: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃") },
-    { label: "湿度", value: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%") },
+    normalizeMetricReference({
+      label: "土壤湿度",
+      value: metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct,
+      unit: "%",
+      reasoningStatus: metricsSource?.soil_moisture_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.soil_moisture",
+    }),
+    normalizeMetricReference({
+      label: "温度",
+      value: metricsSource?.temperature ?? metricsSource?.air_temperature,
+      unit: "℃",
+      reasoningStatus: metricsSource?.temperature_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.temperature",
+    }),
+    normalizeMetricReference({
+      label: "湿度",
+      value: metricsSource?.humidity ?? metricsSource?.air_humidity,
+      unit: "%",
+      reasoningStatus: metricsSource?.humidity_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.humidity",
+    }),
   ];
   const activeRuleCount = Number(
     detail?.latest_recommendation?.active_rule_count
