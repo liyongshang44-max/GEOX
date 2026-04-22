@@ -1,5 +1,5 @@
 import { apiRequestOptional, withQuery } from "../api/client";
-import { listDeviceSimulatorStatuses, type DeviceSimulatorStatus } from "../api/deviceSimulator";
+import { getDeviceSimulatorStatus, listDeviceSimulatorStatuses, type DeviceSimulatorStatus } from "../api/deviceSimulator";
 import { listSkillBindings, listSkillRegistry, resolveSkillClassification, type SkillBindingItem, type SkillRegistryItem } from "../api/skills";
 
 type DeviceRecord = Record<string, unknown>;
@@ -135,18 +135,28 @@ async function fetchDevices(): Promise<DeviceRecord[]> {
 
 async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string, DeviceSimulatorStatus>> {
   const map = new Map<string, DeviceSimulatorStatus>();
-  const targetIds = new Set(deviceIds.map((id) => normalizeText(id)).filter(Boolean));
+  const targetIds = Array.from(new Set(deviceIds.map((id) => normalizeText(id)).filter(Boolean)));
   try {
     const res = await listDeviceSimulatorStatuses(500);
     const items = normalizeList<Record<string, unknown>>(res);
+    const targetSet = new Set(targetIds);
     for (const item of items) {
       const deviceId = normalizeText(item.device_id ?? item.id);
       if (!deviceId) continue;
-      if (targetIds.size > 0 && !targetIds.has(deviceId)) continue;
+      if (targetSet.size > 0 && !targetSet.has(deviceId)) continue;
       map.set(deviceId, item as DeviceSimulatorStatus);
     }
+    return map;
   } catch {
-    // keep empty map when aggregate endpoint is unavailable
+    // compatibility fallback: only used when aggregate endpoint request fails.
+    await Promise.all(targetIds.map(async (deviceId) => {
+      try {
+        const status = await getDeviceSimulatorStatus(deviceId);
+        map.set(deviceId, status);
+      } catch {
+        // optional per-device status fallback
+      }
+    }));
   }
   return map;
 }
