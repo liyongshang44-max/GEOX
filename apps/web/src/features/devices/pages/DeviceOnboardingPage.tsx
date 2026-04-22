@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useSession } from "../../../auth/useSession";
 import {
   getDeviceSimulatorStatus,
@@ -7,6 +7,8 @@ import {
   stopDeviceSimulator,
   type DeviceSimulatorStatus,
 } from "../../../api/deviceSimulator";
+import { bindDeviceToField } from "../../../api/devices";
+import { registerDeviceOnboarding } from "../../../lib/api";
 import { PageHeader, SectionCard } from "../../../shared/ui";
 import { buildSkillCarrierVm, type CarrierSourceType, type SkillCarrierVm } from "../../../viewmodels/skillCarrierVm";
 
@@ -33,9 +35,10 @@ function formatIntervalToSeconds(intervalMs: number | null | undefined): string 
 }
 
 export default function DeviceOnboardingPage(): React.ReactElement {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { token, setToken } = useSession();
-  const [deviceId, setDeviceId] = React.useState<string>(searchParams.get("device_id") || "demo_device_001");
+  const [deviceId, setDeviceId] = React.useState<string>(searchParams.get("device_id") || "");
   const [sourceType, setSourceType] = React.useState<CarrierSourceType>("simulator");
   const [vm, setVm] = React.useState<SkillCarrierVm | null>(null);
   const [loading, setLoading] = React.useState<boolean>(false);
@@ -44,6 +47,26 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const [simulatorError, setSimulatorError] = React.useState<string>("");
   const [simulatorBusy, setSimulatorBusy] = React.useState<boolean>(false);
   const [intervalInput, setIntervalInput] = React.useState<string>("1000");
+  const [onboardingBusy, setOnboardingBusy] = React.useState<boolean>(false);
+  const [onboardingError, setOnboardingError] = React.useState<string>("");
+  const [onboardingSuccess, setOnboardingSuccess] = React.useState<string>("");
+  const [onboardingForm, setOnboardingForm] = React.useState<{
+    device_id: string;
+    display_name: string;
+    device_mode: "real" | "simulator";
+    device_type: string;
+    field_id: string;
+  }>({
+    device_id: searchParams.get("device_id") || "",
+    display_name: "",
+    device_mode: "simulator",
+    device_type: "",
+    field_id: "",
+  });
+
+  function updateOnboardingForm<K extends keyof typeof onboardingForm>(key: K, value: (typeof onboardingForm)[K]): void {
+    setOnboardingForm((prev) => ({ ...prev, [key]: value }));
+  }
 
   const refreshSimulatorStatus = React.useCallback(async (): Promise<void> => {
     const id = deviceId.trim();
@@ -149,6 +172,48 @@ export default function DeviceOnboardingPage(): React.ReactElement {
     }
   }
 
+  async function handleCreateDevice(): Promise<void> {
+    const nextDeviceId = onboardingForm.device_id.trim();
+    const nextDisplayName = onboardingForm.display_name.trim();
+    const nextFieldId = onboardingForm.field_id.trim();
+    const nextDeviceType = onboardingForm.device_type.trim();
+    if (!token.trim()) {
+      setOnboardingError("请先填写访问令牌。");
+      return;
+    }
+    if (!nextDeviceId) {
+      setOnboardingError("请填写 device_id。");
+      return;
+    }
+    if (!nextDisplayName) {
+      setOnboardingError("请填写 display_name。");
+      return;
+    }
+    setOnboardingBusy(true);
+    setOnboardingError("");
+    setOnboardingSuccess("");
+    try {
+      await registerDeviceOnboarding(token, {
+        device_id: nextDeviceId,
+        display_name: nextDisplayName,
+        device_mode: onboardingForm.device_mode,
+        device_template: nextDeviceType || undefined,
+        template_code: nextDeviceType || undefined,
+      });
+      if (nextFieldId) {
+        await bindDeviceToField({ device_id: nextDeviceId, field_id: nextFieldId });
+      }
+      setDeviceId(nextDeviceId);
+      setSourceType(onboardingForm.device_mode === "simulator" ? "simulator" : "physical");
+      setOnboardingSuccess(`设备 ${nextDeviceId} 已创建，正在跳转详情页。`);
+      navigate(`/devices/${encodeURIComponent(nextDeviceId)}`);
+    } catch (e: any) {
+      setOnboardingError(`创建设备失败：${e?.bodyText || e?.message || String(e)}`);
+    } finally {
+      setOnboardingBusy(false);
+    }
+  }
+
   const overview = vm?.carrier;
   const skill = vm?.skill;
   const ui = vm?.ui;
@@ -173,8 +238,55 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         title={pageTitle}
         description={pageDescription}
       />
+      <SectionCard title="新设备首次接入入口" subtitle="用于完成设备对象创建与首次接入，不再依赖默认 demo 设备。">
+        <div className="contentGridTwo alignStart">
+          <label className="field">
+            <span className="metaLabel">device_id *</span>
+            <input className="input" placeholder="如 device_demo_001" value={onboardingForm.device_id} onChange={(e) => updateOnboardingForm("device_id", e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="metaLabel">display_name *</span>
+            <input className="input" placeholder="设备显示名称" value={onboardingForm.display_name} onChange={(e) => updateOnboardingForm("display_name", e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="metaLabel">device_mode *</span>
+            <select className="select" value={onboardingForm.device_mode} onChange={(e) => updateOnboardingForm("device_mode", e.target.value as "real" | "simulator")}>
+              <option value="real">真实设备承载</option>
+              <option value="simulator">模拟承载</option>
+            </select>
+          </label>
+          <label className="field">
+            <span className="metaLabel">device_type（可选）</span>
+            <input className="input" placeholder="如 soil_sensor_v1" value={onboardingForm.device_type} onChange={(e) => updateOnboardingForm("device_type", e.target.value)} />
+          </label>
+          <label className="field" style={{ gridColumn: "1 / -1" }}>
+            <span className="metaLabel">field_id（可选）</span>
+            <input className="input" placeholder="如 field_demo_001" value={onboardingForm.field_id} onChange={(e) => updateOnboardingForm("field_id", e.target.value)} />
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+          <button type="button" className="btn primary" disabled={onboardingBusy} onClick={() => void handleCreateDevice()}>
+            {onboardingBusy ? "创建中..." : "新建设备并发起首次接入"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={onboardingBusy}
+            onClick={() => {
+              const id = onboardingForm.device_id.trim();
+              if (!id) return;
+              setDeviceId(id);
+              setSourceType(onboardingForm.device_mode === "simulator" ? "simulator" : "physical");
+            }}
+          >
+            使用该设备查看接入状态
+          </button>
+        </div>
+        {onboardingError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{onboardingError}</div> : null}
+        {onboardingSuccess ? <div className="metaText" style={{ marginTop: 8, color: "#067647" }}>{onboardingSuccess}</div> : null}
+      </SectionCard>
 
-      <SectionCard title="载体接入状态总览">
+      <SectionCard title="已有设备载体接入状态总览" subtitle="以下区域用于已存在设备的状态查看、模拟控制与排障。">
         <div className="contentGridTwo alignStart" style={{ marginBottom: 12 }}>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">载体信息</div>
