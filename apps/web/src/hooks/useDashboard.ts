@@ -3,6 +3,7 @@ import type { DashboardActionVm, DashboardRiskVm, DashboardVm } from "../viewmod
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { toOperationDetailPath } from "../lib/operationLink";
 import { mapOperationFinalStatusLabel, normalizeOperationFinalStatus } from "../lib/operationLabels";
+import { getMetricCanonicalUnit, getMetricDisplayLabelZh } from "../lib/metricDisplayPolicy";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -35,10 +36,11 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     invalidCount: 2,
   },
   metricUnits: {
-    soil_moisture: "%",
-    temperature: "°C",
-    humidity: "%",
+    soil_moisture: getMetricCanonicalUnit("soil_moisture") || "%",
+    temperature: getMetricCanonicalUnit("temperature") || "°C",
+    humidity: getMetricCanonicalUnit("humidity") || "%",
   },
+  diagnosticMetrics: [],
   todayActions: [
     { type: "INVALID_EXECUTION", count: 0 },
     { type: "PENDING_ACCEPTANCE", count: 0 },
@@ -87,11 +89,37 @@ function normalizeModelMetrics(metrics: any): any {
     temperature: normalizeTemperatureMetric(metrics.temperature),
     humidity: normalizePercentMetric(metrics.humidity),
     units: {
-      soil_moisture: "%",
-      temperature: "°C",
-      humidity: "%",
+      soil_moisture: getMetricCanonicalUnit("soil_moisture") || "%",
+      temperature: getMetricCanonicalUnit("temperature") || "°C",
+      humidity: getMetricCanonicalUnit("humidity") || "%",
     },
   };
+}
+
+function formatDashboardMetricValue(metric: string, value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(Number(value))) return "--";
+  const unit = getMetricCanonicalUnit(metric);
+  return `${Number(value).toFixed(1)}${unit}`;
+}
+
+function buildDashboardDiagnosticMetrics(latestMetrics: { soil_moisture?: number | null; temperature?: number | null; humidity?: number | null }) {
+  return [
+    {
+      metric: "soil_moisture",
+      label: getMetricDisplayLabelZh("soil_moisture"),
+      valueLabel: formatDashboardMetricValue("soil_moisture", latestMetrics.soil_moisture),
+    },
+    {
+      metric: "temperature",
+      label: getMetricDisplayLabelZh("temperature"),
+      valueLabel: formatDashboardMetricValue("temperature", latestMetrics.temperature),
+    },
+    {
+      metric: "humidity",
+      label: getMetricDisplayLabelZh("humidity"),
+      valueLabel: formatDashboardMetricValue("humidity", latestMetrics.humidity),
+    },
+  ];
 }
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
@@ -402,6 +430,9 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           })
           .slice(0, 3);
 
+        const latestMetrics = normalizeModelMetrics(overview?.latest_metrics ?? {});
+        const dashboardDiagnosticMetrics = buildDashboardDiagnosticMetrics(latestMetrics);
+
         setData({
           overview: {
             fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
@@ -451,10 +482,11 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             invalidCount: invalidExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.invalidCount,
           },
           metricUnits: {
-            soil_moisture: "%",
-            temperature: "°C",
-            humidity: "%",
+            soil_moisture: getMetricCanonicalUnit("soil_moisture") || "%",
+            temperature: getMetricCanonicalUnit("temperature") || "°C",
+            humidity: getMetricCanonicalUnit("humidity") || "%",
           },
+          diagnosticMetrics: dashboardDiagnosticMetrics,
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,
           cropStageDistribution,
