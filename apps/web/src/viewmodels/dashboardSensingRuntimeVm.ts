@@ -1,5 +1,5 @@
 import { apiRequestOptional, withQuery } from "../api/client";
-import { getDeviceSimulatorStatus, type DeviceSimulatorStatus } from "../api/deviceSimulator";
+import { listDeviceSimulatorStatuses, type DeviceSimulatorStatus } from "../api/deviceSimulator";
 import { listSkillBindings, listSkillRegistry, resolveSkillClassification, type SkillBindingItem, type SkillRegistryItem } from "../api/skills";
 
 type DeviceRecord = Record<string, unknown>;
@@ -135,34 +135,19 @@ async function fetchDevices(): Promise<DeviceRecord[]> {
 
 async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string, DeviceSimulatorStatus>> {
   const map = new Map<string, DeviceSimulatorStatus>();
-  const candidates = [
-    "/api/v1/devices/simulator/statuses",
-  ];
-
-  for (const path of candidates) {
-    try {
-      const res = await apiRequestOptional<unknown>(withQuery(path, { limit: 500 }), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
-      const items = normalizeList<Record<string, unknown>>(res);
-      if (items.length) {
-        for (const item of items) {
-          const deviceId = normalizeText(item.device_id ?? item.id);
-          if (deviceId) map.set(deviceId, item as DeviceSimulatorStatus);
-        }
-        return map;
-      }
-    } catch {
-      // fallback below
+  const targetIds = new Set(deviceIds.map((id) => normalizeText(id)).filter(Boolean));
+  try {
+    const res = await listDeviceSimulatorStatuses(500);
+    const items = normalizeList<Record<string, unknown>>(res);
+    for (const item of items) {
+      const deviceId = normalizeText(item.device_id ?? item.id);
+      if (!deviceId) continue;
+      if (targetIds.size > 0 && !targetIds.has(deviceId)) continue;
+      map.set(deviceId, item as DeviceSimulatorStatus);
     }
+  } catch {
+    // keep empty map when aggregate endpoint is unavailable
   }
-
-  await Promise.all(deviceIds.map(async (deviceId) => {
-    try {
-      const status = await getDeviceSimulatorStatus(deviceId);
-      map.set(deviceId, status);
-    } catch {
-      // optional per-device status
-    }
-  }));
   return map;
 }
 
