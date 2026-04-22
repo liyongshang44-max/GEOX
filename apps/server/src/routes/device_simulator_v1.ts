@@ -128,6 +128,38 @@ async function readDeviceSimulatorState(pool: Pool, tenant_id: string, device_id
   };
 }
 
+async function listDeviceSimulatorStatesFromIndexV1(
+  pool: Pool,
+  tenant_id: string,
+  limit: number,
+): Promise<any[]> {
+  // SSOT for aggregate read API:
+  // always read from persisted device_simulator_index_v1, never from in-memory runners.
+  const q = await pool.query(
+    `SELECT
+        s.tenant_id,
+        s.device_id,
+        s.status,
+        s.started_ts_ms,
+        s.stopped_ts_ms,
+        s.interval_ms,
+        s.last_tick_ts_ms,
+        s.last_error,
+        s.updated_ts_ms,
+        d.display_name,
+        d.device_mode
+      FROM device_simulator_index_v1 s
+      LEFT JOIN device_index_v1 d
+        ON d.tenant_id = s.tenant_id
+       AND d.device_id = s.device_id
+     WHERE s.tenant_id = $1
+     ORDER BY s.updated_ts_ms DESC, s.device_id ASC
+     LIMIT $2`,
+    [tenant_id, limit]
+  );
+  return q.rows ?? [];
+}
+
 async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: string): Promise<boolean> {
   const found = await pool.query(
     `SELECT 1 FROM device_index_v1 WHERE tenant_id = $1 AND device_id = $2 LIMIT 1`,
@@ -228,30 +260,8 @@ export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool
     const project_id = auth.project_id;
     const group_id = auth.group_id;
 
-    const q = await pool.query(
-      `SELECT
-          s.tenant_id,
-          s.device_id,
-          s.status,
-          s.started_ts_ms,
-          s.stopped_ts_ms,
-          s.interval_ms,
-          s.last_tick_ts_ms,
-          s.last_error,
-          s.updated_ts_ms,
-          d.display_name,
-          d.device_mode
-        FROM device_simulator_index_v1 s
-        LEFT JOIN device_index_v1 d
-          ON d.tenant_id = s.tenant_id
-         AND d.device_id = s.device_id
-       WHERE s.tenant_id = $1
-       ORDER BY s.updated_ts_ms DESC, s.device_id ASC
-       LIMIT $2`,
-      [tenant_id, limit]
-    );
-
-    const items = (q.rows ?? []).map((row: any) => ({
+    const rows = await listDeviceSimulatorStatesFromIndexV1(pool, tenant_id, limit);
+    const items = rows.map((row: any) => ({
       tenant_id: String(row.tenant_id ?? tenant_id),
       project_id,
       group_id,
