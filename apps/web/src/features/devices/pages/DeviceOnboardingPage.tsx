@@ -227,24 +227,26 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             </div>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟感知控制</div>
-              <div className="contentGridTwo alignStart" style={{ marginBottom: 8 }}>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>主状态</div>
+              <div className="contentGridTwo alignStart" style={{ marginBottom: 10 }}>
                 <div className="field">
                   <span className="metaLabel">当前状态</span>
                   <div className="metaText">{simulatorStateText}</div>
-                </div>
-                <div className="field">
-                  <span className="metaLabel">当前承载说明</span>
-                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
                 </div>
                 <div className="field">
                   <span className="metaLabel">最近一次模拟输入时间</span>
                   <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">模拟输入周期</span>
+                  <span className="metaLabel">当前模拟输入周期</span>
                   <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
                 </div>
+                <div className="field">
+                  <span className="metaLabel">当前承载说明</span>
+                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
+                </div>
               </div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>操作</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
                   <span className="metaLabel">模拟输入周期（毫秒）</span>
@@ -267,6 +269,18 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                 </button>
               </div>
               {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{simulatorError}</div> : null}
+              <details style={{ marginTop: 10 }}>
+                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（模拟感知调试字段）</summary>
+                <div className="contentGridTwo alignStart" style={{ marginTop: 8 }}>
+                  <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
+                  <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
+                </div>
+              </details>
             </div>
           </div>
         )}
@@ -288,13 +302,6 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="field"><span className="metaLabel">field</span><div className="metaText">{overview?.fieldId ?? "-"}</div></div>
             <div className="field"><span className="metaLabel">telemetry.last_telemetry</span><div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div></div>
             <div className="field"><span className="metaLabel">telemetry.last_heartbeat</span><div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
-            <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
           </div>
         </details>
       </SectionCard>
