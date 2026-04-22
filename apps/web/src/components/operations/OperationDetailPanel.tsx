@@ -1,5 +1,6 @@
 import React from "react";
 import type { OperationLabels, OperationWorkItem } from "../../lib/operationViewModel";
+import { formatSourceMeta } from "../../lib/dataOrigin";
 
 export default function OperationDetailPanel({
   item,
@@ -19,7 +20,7 @@ export default function OperationDetailPanel({
     <section className="card" style={{ padding: 16, display: "grid", gap: 8 }}>
       <h3 style={{ margin: 0 }}>{labels.detailTitle}</h3>
       <div><b>{labels.currentStatus}：</b>{item.statusLabel}</div>
-      <div><b>{labels.source}：</b>{item.sourceLabel}</div>
+      <div><b>{labels.source}：</b>{formatSourceMeta(item)}</div>
       <div><b>{labels.createdAt}：</b>{item.createdAt}</div>
       <div><b>{labels.targetField}：</b>{item.field}</div>
       <div><b>{labels.targetDevice}：</b>{item.device}</div>

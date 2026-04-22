@@ -1,4 +1,5 @@
 import type { OperationsConsoleApprovalDetail, OperationsConsoleMonitoringItem, OperationsConsoleResponse } from "./api";
+import { formatSourceMeta, resolveSourceMeta, type DataOriginValue } from "./dataOrigin";
 
 export type OpsLang = "zh" | "en";
 export type WorkStatus = "pending_approval" | "ready_to_dispatch" | "executing" | "completed" | "failed";
@@ -143,6 +144,9 @@ export type OperationWorkItem = {
   statusLabel: string;
   title: string;
   sourceLabel: string;
+  source_kind: DataOriginValue;
+  source_type: DataOriginValue;
+  data_origin: DataOriginValue;
   createdAt: string;
   field: string;
   device: string;
@@ -167,11 +171,23 @@ export function shortId(v: string | null | undefined): string {
   return id.length <= 12 ? id : `${id.slice(0, 6)}...${id.slice(-4)}`;
 }
 
-function inferSource(raw: any, labels: OperationLabels): string {
-  const src = String(raw?.source ?? raw?.meta?.source ?? raw?.approval_source ?? "").toLowerCase();
-  if (src.includes("recommend")) return labels.fromRecommendation;
-  if (raw?.recommendation_id || raw?.meta?.recommendation_id) return labels.fromRecommendation;
-  return labels.manual;
+function inferSource(raw: any): { sourceLabel: string; source_kind: DataOriginValue; source_type: DataOriginValue; data_origin: DataOriginValue } {
+  const sourceMeta = resolveSourceMeta(
+    {
+      source_kind: raw?.source_kind,
+      source_type: raw?.source_type ?? raw?.source ?? raw?.meta?.source ?? raw?.approval_source,
+      data_origin: raw?.data_origin,
+    },
+    raw?.recommendation_id || raw?.meta?.recommendation_id
+      ? { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" }
+      : { source_kind: "external_background", source_type: "external_background", data_origin: "external_background" },
+  );
+  return {
+    sourceLabel: formatSourceMeta(sourceMeta),
+    source_kind: sourceMeta.source_kind,
+    source_type: sourceMeta.source_type,
+    data_origin: sourceMeta.data_origin,
+  };
 }
 
 function normalizeTarget(target: any): { field: string; device: string } {
@@ -218,12 +234,13 @@ export function buildWorkItems(data: OperationsConsoleResponse | null, lang: Ops
       const approvalId = String(a.request_id ?? "");
       const taskId = String(a.act_task_id ?? "");
       const operationPlanId = opPlanIdFromRaw(a);
+      const sourceInfo = inferSource(a);
       return {
         key: `approval:${approvalId}`,
         status: "pending_approval",
         statusLabel: statusLabel("pending_approval", labels),
         title: actionLabel(a.action_type, lang),
-        sourceLabel: inferSource(a, labels),
+        ...sourceInfo,
         createdAt: a.occurred_at || "-",
         field: target.field,
         device: a.device_id || target.device || "-",
@@ -247,12 +264,13 @@ export function buildWorkItems(data: OperationsConsoleResponse | null, lang: Ops
     const status = statusFromTask(m);
     const target = normalizeTarget(m.target);
     const operationPlanId = opPlanIdFromRaw(m);
+    const sourceInfo = inferSource(m);
     return {
       key: `task:${m.act_task_id}`,
       status,
       statusLabel: statusLabel(status, labels),
       title: actionLabel(m.action_type, lang),
-      sourceLabel: inferSource(m, labels),
+      ...sourceInfo,
       createdAt: m.dispatch_occurred_at || m.receipt_occurred_at || "-",
       field: target.field,
       device: m.device_id || target.device || "-",

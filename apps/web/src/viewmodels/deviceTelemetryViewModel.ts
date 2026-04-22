@@ -3,6 +3,7 @@ import {
   shouldShowMetricOnDeviceDetail,
   getMetricDisplayPolicy,
 } from "../lib/metricDisplayPolicy";
+import { resolveSourceMeta, type SourceMeta } from "../lib/dataOrigin";
 
 export type DeviceSeriesPoint = {
   ts_ms: number;
@@ -18,6 +19,9 @@ export type DevicePolicyAwareMetric = {
   canonical_unit: string;
   reasoning_status: string;
   source: "latest" | "metrics" | "series";
+  source_kind: SourceMeta["source_kind"];
+  source_type: SourceMeta["source_type"];
+  data_origin: SourceMeta["data_origin"];
 };
 
 function metricKeyOf(input: any): string {
@@ -45,6 +49,7 @@ function fromLatest(latest: any[]): Map<string, DevicePolicyAwareMetric> {
       canonical_unit: policy.canonical_unit,
       reasoning_status: policy.reasoning_status,
       source: "latest",
+      ...resolveSourceMeta(item, { source_kind: "device_observation", source_type: "device_observation", data_origin: "device_observation" }),
     });
   }
   return out;
@@ -64,6 +69,7 @@ function fromMetrics(metrics: any[], existing: Map<string, DevicePolicyAwareMetr
       canonical_unit: policy.canonical_unit,
       reasoning_status: policy.reasoning_status,
       source: "metrics",
+      ...resolveSourceMeta(item, { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" }),
     });
   }
 }
@@ -88,6 +94,7 @@ function fromSeries(
       canonical_unit: policy.canonical_unit,
       reasoning_status: policy.reasoning_status,
       source: "series",
+      ...resolveSourceMeta(latestPoint, { source_kind: "device_observation", source_type: "device_observation", data_origin: "device_observation" }),
     });
   }
 }
