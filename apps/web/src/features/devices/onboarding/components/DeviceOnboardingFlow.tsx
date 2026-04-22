@@ -15,7 +15,7 @@ export default function DeviceOnboardingFlow({ sourceType }: Props): React.React
           本页主交互聚焦“载体为 skill 提供输入”，此区域仅用于补充排错建议与步骤说明。
         </div>
         <div className="metaText" style={{ marginTop: 6 }}>
-          当前 source_type：<code>{sourceType}</code>
+          当前接入来源：<code>{sourceType}</code>
         </div>
       </details>
 
