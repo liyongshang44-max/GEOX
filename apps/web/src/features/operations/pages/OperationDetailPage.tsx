@@ -38,10 +38,9 @@ function CollapsibleModule({ title, defaultOpen = false, children }: { title: st
   );
 }
 
-function formatMaybeNumber(value: unknown): string {
-  const n = Number(value ?? NaN);
-  if (!Number.isFinite(n)) return "--";
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+function metricValueLabel(value: string, unit: string): string {
+  if (!value || value === "--") return "--";
+  return `${value}${unit || ""}`;
 }
 
 function toDateTimeLabel(ts?: number | null): string {
@@ -440,8 +439,18 @@ export default function OperationDetailPage(): React.ReactElement {
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.technicalRefs.approvalRequestId}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作业计划编号</span><strong>{model.technicalRefs.operationPlanId}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行任务编号</span><strong>{model.technicalRefs.actTaskId}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
+              {(model.metricReferences ?? []).map((metric, idx) => (
+                <React.Fragment key={`${metric.source}-${idx}`}>
+                  <div className="operationsSummaryMetric">
+                    <span className="operationsSummaryLabel">{metric.label}</span>
+                    <strong>{metricValueLabel(metric.value, metric.unit)}</strong>
+                  </div>
+                  <div className="operationsSummaryMetric">
+                    <span className="operationsSummaryLabel">指标定位</span>
+                    <strong>{metric.guidanceLabel}</strong>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
           </CollapsibleModule>
         </CollapsibleModule>

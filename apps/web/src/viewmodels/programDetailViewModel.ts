@@ -1,6 +1,7 @@
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveTimelineLabel } from "./timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
+import { getMetricDisplayPolicy } from "../lib/metricDisplayPolicy";
 
 type ProgramConsoleStatus = "ok" | "risk" | "error" | "running";
 
@@ -8,7 +9,13 @@ export type BadgeStatus = "success" | "warning" | "failed" | "pending";
 export type ProgramActionExpectation = { label: string; value: string };
 export type ProgramDetailAction = { type: string; mode: string; reason: string; expectedEffect: string; expectation: ProgramActionExpectation };
 export type ProgramDetailTimelineItem = { kind: string; status: string; occurredAt: string; summary: string };
-export type ProgramDetailMetric = { label: string; value: string };
+export type ProgramDetailMetric = {
+  label: string;
+  value: string;
+  unit: string;
+  reasoning_status: string;
+  source: string;
+};
 export type ProgramDetailViewModel = any;
 
 type TimelineType = "recommendation" | "approval" | "execution" | "evidence";
@@ -54,7 +61,7 @@ export type ProgramConsoleViewModel = {
   cropInsight: {
     cropLabel: string;
     cropStage: string;
-    keyMetrics: Array<{ label: string; value: string }>;
+    keyMetrics: ProgramDetailMetric[];
     activeRuleCount: number;
   };
   programAgronomy: {
@@ -150,6 +157,34 @@ function metricValueText(value: unknown, suffix = ""): string {
   const n = toNumber(value);
   if (!Number.isFinite(n)) return "暂无数据";
   return `${n}${suffix}`;
+}
+
+function normalizeMetricReference(args: {
+  metricKey?: string;
+  label: string;
+  value: unknown;
+  unit?: string;
+  reasoningStatus?: unknown;
+  source?: string;
+}): ProgramDetailMetric {
+  const policy = getMetricDisplayPolicy(args.metricKey);
+  const rawReasoningStatus = toText(args.reasoningStatus, "").trim().toUpperCase();
+  const reasoningStatus = [
+    "PRIMARY_REASONING_INPUT",
+    "SECONDARY_REASONING_INPUT",
+    "PROFESSIONAL_ONLY",
+    "RAW_ONLY",
+    "NOT_IN_CURRENT_REASONING",
+  ].includes(rawReasoningStatus)
+    ? rawReasoningStatus
+    : toText(policy?.reasoning_status, "NOT_IN_CURRENT_REASONING");
+  return {
+    label: args.label,
+    value: metricValueText(args.value, ""),
+    unit: args.unit ?? "",
+    reasoning_status: reasoningStatus,
+    source: toText(args.source, "unknown"),
+  };
 }
 
 function normalizeStageCode(value: unknown): string {
@@ -381,9 +416,30 @@ export function buildProgramDetailViewModel(args: {
     ?? detail?.updated_at
     ?? null;
   const keyMetrics = [
-    { label: "土壤湿度", value: metricValueText(metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct, "%") },
-    { label: "温度", value: metricValueText(metricsSource?.temperature ?? metricsSource?.air_temperature, "℃") },
-    { label: "湿度", value: metricValueText(metricsSource?.humidity ?? metricsSource?.air_humidity, "%") },
+    normalizeMetricReference({
+      metricKey: "soil_moisture",
+      label: "土壤湿度",
+      value: metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct,
+      unit: "%",
+      reasoningStatus: metricsSource?.soil_moisture_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.soil_moisture",
+    }),
+    normalizeMetricReference({
+      metricKey: "air_temperature",
+      label: "温度",
+      value: metricsSource?.temperature ?? metricsSource?.air_temperature,
+      unit: "℃",
+      reasoningStatus: metricsSource?.temperature_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.temperature",
+    }),
+    normalizeMetricReference({
+      metricKey: "air_humidity",
+      label: "湿度",
+      value: metricsSource?.humidity ?? metricsSource?.air_humidity,
+      unit: "%",
+      reasoningStatus: metricsSource?.humidity_reasoning_status ?? metricsSource?.reasoning_status,
+      source: "latest_recommendation.current_metrics.humidity",
+    }),
   ];
   const activeRuleCount = Number(
     detail?.latest_recommendation?.active_rule_count
