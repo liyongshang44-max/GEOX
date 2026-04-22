@@ -20,6 +20,12 @@ function formatBool(value: boolean | null | undefined): string {
   return value ? "已启动" : "未启动";
 }
 
+function formatRawStatus(value: unknown): string {
+  if (typeof value === "boolean") return value ? "已启动" : "未启动";
+  if (value == null) return "-";
+  return String(value);
+}
+
 export default function DeviceOnboardingPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { token, setToken } = useSession();
@@ -186,7 +192,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         <div className="metaText" style={{ marginTop: 8 }}>
           {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`}
         </div>
-        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>获取承载信息失败：{error}</div> : null}
+        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{error}</div> : null}
       </SectionCard>
 
       <SectionCard title="承载模式与模拟感知">
@@ -247,7 +253,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                 <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（可折叠）</summary>
                 <div className="contentGridTwo alignStart" style={{ marginTop: 8 }}>
                   <div className="field"><span className="metaLabel">原始运行状态字段</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-                  <div className="field"><span className="metaLabel">原始状态字段</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">原始状态字段</span><div className="metaText">{formatRawStatus(effectiveSimulatorStatus?.status)}</div></div>
                   <div className="field"><span className="metaLabel">启动时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">停止时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">最近错误</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
