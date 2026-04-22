@@ -21,6 +21,12 @@ function formatBool(value: boolean | null | undefined): string {
   return value ? "已启动" : "未启动";
 }
 
+function formatRawStatus(value: unknown): string {
+  if (typeof value === "boolean") return value ? "已启动" : "未启动";
+  if (value == null) return "-";
+  return String(value);
+}
+
 export default function DeviceOnboardingPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { token, setToken } = useSession();
@@ -140,6 +146,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
 
   const overview = vm?.carrier;
   const skill = vm?.skill;
+  const ui = vm?.ui;
   const effectiveSimulatorStatus: DeviceSimulatorStatus | null = simulatorStatus ?? (vm?.simulator.status as DeviceSimulatorStatus | null) ?? null;
   const carrierModeText = sourceType === "simulator" ? "模拟承载" : "真实设备承载";
   const simulatorStateText = (() => {
@@ -151,43 +158,46 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const skillCategoriesText = skill?.categories?.join(" / ") || "未识别";
   const bindingTargetsText = skill?.bindingTargets?.join(" / ") || "未绑定";
   const sensingStatusText = vm?.telemetry.status || simulatorStateText;
+  const pageTitle = ui?.pageTitle || "感知载体接入";
+  const pageDescription = ui?.pageDescription || "当前页面用于为地块接入承载感知技能与设备技能的载体，支持真实设备承载与模拟承载两种模式。可查看承载状态、控制模拟感知并验证技能输入链路。";
+  const carrierSummaryText = ui?.carrierSummary || `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`;
 
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知技能载体接入"
-        description="当前页面用于为地块接入承载感知技能的载体。可选择真实设备承载或模拟承载模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
+        title={pageTitle}
+        description={pageDescription}
       />
 
       <SectionCard title="载体接入状态总览">
         <div className="contentGridTwo alignStart" style={{ marginBottom: 12 }}>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">载体信息</div>
-            <div className="decisionItemMeta">载体编号：{deviceId || "-"}</div>
-            <div className="decisionItemMeta">载体名称：{overview?.displayName || "未命名载体"}</div>
-            <div className="decisionItemMeta">承载模式：{carrierModeText}</div>
+            <div className="decisionItemMeta">{ui?.carrierIdLabel || "载体编号"}：{deviceId || "-"}</div>
+            <div className="decisionItemMeta">{ui?.carrierNameLabel || "载体名称"}：{overview?.displayName || "未命名载体"}</div>
+            <div className="decisionItemMeta">{ui?.carrierModeLabel || "承载模式"}：{carrierModeText}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">技能承载信息</div>
-            <div className="decisionItemMeta">当前技能类别：{skillCategoriesText}</div>
-            <div className="decisionItemMeta">当前绑定目标：{bindingTargetsText}</div>
-            <div className="decisionItemMeta">当前设备类型：{overview?.deviceType || "未识别"}</div>
+            <div className="decisionItemTitle">技能承载</div>
+            <div className="decisionItemMeta">{ui?.skillCategoryLabel || "当前技能类别"}：{skillCategoriesText}</div>
+            <div className="decisionItemMeta">{ui?.bindTargetLabel || "当前绑定目标"}：{bindingTargetsText}</div>
+            <div className="decisionItemMeta">{ui?.deviceTypeLabel || "当前设备类型"}：{overview?.deviceType || "未识别"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">现场绑定信息</div>
-            <div className="decisionItemMeta">当前绑定地块：{overview?.fieldId || "未绑定"}</div>
-            <div className="decisionItemMeta">当前输入状态：{sensingStatusText || "-"}</div>
+            <div className="decisionItemTitle">现场绑定</div>
+            <div className="decisionItemMeta">{ui?.fieldLabel || "当前绑定地块"}：{overview?.fieldId || "未绑定"}</div>
+            <div className="decisionItemMeta">{ui?.inputStatusLabel || "当前输入状态"}：{sensingStatusText || "-"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">最近感知信息</div>
-            <div className="decisionItemMeta">最近感知时间：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
-            <div className="decisionItemMeta">最近心跳时间：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+            <div className="decisionItemTitle">最近感知</div>
+            <div className="decisionItemMeta">{ui?.latestInputLabel || "最近感知时间"}：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
+            <div className="decisionItemMeta">{ui?.latestHeartbeatLabel || "最近心跳时间"}：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
           </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`}
+          {loading ? "正在加载承载状态…" : carrierSummaryText}
         </div>
-        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>获取承载信息失败：{error}</div> : null}
+        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{error}</div> : null}
       </SectionCard>
 
       <SectionCard title="承载模式与模拟感知">
@@ -200,24 +210,20 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">模拟承载</div>
-              <div className="decisionItemMeta">该载体正在为感知技能提供演示输入，用于验证技能行为与绑定策略。</div>
-              <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
-            </div>
-            <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟感知控制卡</div>
-              <div className="metaLabel" style={{ marginBottom: 6 }}>主状态</div>
+              <div className="decisionItemMeta" style={{ marginBottom: 8 }}>{ui?.simulatorControlSummary || "当前为模拟承载，可直接控制模拟感知并验证技能输入链路。"}</div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>状态摘要</div>
               <div className="contentGridTwo alignStart" style={{ marginBottom: 10 }}>
                 <div className="field">
-                  <span className="metaLabel">当前状态</span>
+                  <span className="metaLabel">{ui?.simulatorStatusLabel || "当前状态"}</span>
                   <div className="metaText">{simulatorStateText}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">最近一次模拟输入时间</span>
+                  <span className="metaLabel">{ui?.simulatorLastTickLabel || "最近一次模拟输入时间"}</span>
                   <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">当前模拟输入周期</span>
+                  <span className="metaLabel">{ui?.simulatorIntervalLabel || "当前模拟输入周期"}</span>
                   <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
                 </div>
                 <div className="field">
@@ -225,7 +231,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
                 </div>
               </div>
-              <div className="metaLabel" style={{ marginBottom: 6 }}>操作</div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>操作区</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
                   <span className="metaLabel">模拟输入周期</span>
@@ -250,13 +256,13 @@ export default function DeviceOnboardingPage(): React.ReactElement {
               </div>
               {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{simulatorError}</div> : null}
               <details style={{ marginTop: 10 }}>
-                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（模拟感知调试字段）</summary>
+                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（可折叠）</summary>
                 <div className="contentGridTwo alignStart" style={{ marginTop: 8 }}>
                   <div className="field"><span className="metaLabel">原始运行状态字段</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-                  <div className="field"><span className="metaLabel">原始状态值</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">原始状态字段</span><div className="metaText">{formatRawStatus(effectiveSimulatorStatus?.status)}</div></div>
                   <div className="field"><span className="metaLabel">启动时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">停止时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
-                  <div className="field"><span className="metaLabel">最近错误</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">{ui?.simulatorErrorLabel || "最近错误"}</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
                   <div className="field"><span className="metaLabel">原始周期字段</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
                   <div className="field"><span className="metaLabel">最近 tick 时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
                 </div>
@@ -302,7 +308,12 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title="接入辅助步骤（可选）" subtitle="用于帮助说明、排查指引与步骤附录，不作为页面主骨架。">
-        <DeviceOnboardingFlow sourceType={sourceType} />
+        <details>
+          <summary className="metaText" style={{ cursor: "pointer" }}>展开帮助说明 / 步骤参考 / 排查附录</summary>
+          <div style={{ marginTop: 10 }}>
+            <DeviceOnboardingFlow sourceType={sourceType} />
+          </div>
+        </details>
       </SectionCard>
 
       <SectionCard title="后续动作">
