@@ -2,10 +2,10 @@ import {
   formatRiskStatus,
   mapAlertTypeToLabel,
   mapOperationTypeToLabel,
-  mapSourceFieldToLabel,
   type FieldLang,
 } from "../lib/fieldViewModel";
 import { mapOperationFinalStatusLabel, normalizeOperationFinalStatus } from "../lib/operationLabels";
+import { formatSourceMeta, resolveSourceMeta } from "../lib/dataOrigin";
 
 function fmtTs(ms: number | null | undefined): string {
   if (!ms || !Number.isFinite(ms)) return "-";
@@ -42,8 +42,14 @@ export function buildFieldDetailViewModel(params: {
   const { detail, labels, lang, activeOperations, allOperations, recentRecommendations, currentProgram, programsBySeason, playbackTs } = params;
 
   const operationItems = (Array.isArray(detail?.map_layers?.job_history) ? detail.map_layers.job_history : []).map((item: any) => {
-    const sourceRaw = String(item?.timing_source ?? "");
-    const source = mapSourceFieldToLabel(sourceRaw, lang);
+    const sourceMeta = resolveSourceMeta(
+      {
+        source_kind: item?.source_kind,
+        source_type: item?.source_type ?? item?.timing_source,
+        data_origin: item?.data_origin,
+      },
+      { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+    );
     const statusLabel = mapOperationFinalStatusLabel(item?.final_status ?? item?.status ?? null, lang === "en" ? "en" : "zh");
     const window = item.trajectory_window_start_ts_ms
       ? `${fmtTs(item.trajectory_window_start_ts_ms)} ~ ${fmtTs(item.trajectory_window_end_ts_ms)}`
@@ -54,7 +60,10 @@ export function buildFieldDetailViewModel(params: {
       type: mapOperationTypeToLabel(item.task_type, lang),
       time: fmtTs(item.ts_ms),
       timeMs: Number(item.ts_ms ?? 0),
-      source,
+      source: formatSourceMeta(sourceMeta),
+      source_kind: sourceMeta.source_kind,
+      source_type: sourceMeta.source_type,
+      data_origin: sourceMeta.data_origin,
       status: statusLabel,
       device: item.device_id || "-",
       window,

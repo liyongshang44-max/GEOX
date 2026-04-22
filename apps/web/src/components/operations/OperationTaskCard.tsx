@@ -1,5 +1,6 @@
 import React from "react";
 import type { OperationLabels, OperationWorkItem } from "../../lib/operationViewModel";
+import { formatSourceMeta } from "../../lib/dataOrigin";
 
 export default function OperationTaskCard({
   item,
@@ -20,7 +21,7 @@ export default function OperationTaskCard({
         <div style={{ textAlign: "left", display: "grid", gap: 6 }}>
           <div style={{ fontWeight: 700 }}>{item.title}</div>
           <div className="muted">{labels.currentStatus}: {item.statusLabel}</div>
-          <div className="muted">{labels.source}: {item.sourceLabel}</div>
+          <div className="muted">{labels.source}: {formatSourceMeta(item)}</div>
           <div className="muted">{labels.targetField}: {item.field} · {labels.targetDevice}: {item.device}</div>
           <div className="muted">{labels.createdAt}: {item.createdAt}</div>
           <div className="muted">{labels.approvalId}: <span className="mono">{item.shortApprovalId}</span> · {labels.taskId}: <span className="mono">{item.shortTaskId}</span></div>
