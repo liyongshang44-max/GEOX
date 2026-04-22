@@ -160,6 +160,22 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="metaText">{overview?.displayName ?? "-"}</div>
           </div>
           <div className="field">
+            <span className="metaLabel">device_mode</span>
+            <div className="metaText">{overview?.deviceMode ?? "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">simulator_started</span>
+            <div className="metaText">{formatBool(overview?.simulatorStarted)}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">simulator_status</span>
+            <div className="metaText">{overview?.simulatorStatus ?? "-"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">skill_related_note</span>
+            <div className="metaText">{overview?.skillRelatedNote ?? "-"}</div>
+          </div>
+          <div className="field">
             <span className="metaLabel">skill category</span>
             <div className="metaText">{skill?.categories?.join(" / ") || "-"}</div>
           </div>

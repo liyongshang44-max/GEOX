@@ -30,6 +30,7 @@ import { normalizeStatusWord } from "../../../lib/statusVocabulary";
 import { ONBOARDING_TRACE_STORAGE_KEY, type OnboardingRecord } from "../../../features/devices/onboarding/mockFlow";
 import { buildDevicePolicyAwareMetrics } from "../../../viewmodels/deviceTelemetryViewModel";
 import { formatSourceMeta } from "../../../lib/dataOrigin";
+import { extractBootstrapContext } from "../../../lib/bootstrapContext";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
@@ -163,6 +164,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const boundFieldId = resolvedBoundField.field_id || deviceListItem?.field_id || (detail as any)?.device?.field_id || null;
   const boundTsMs = resolvedBoundField.bound_ts_ms || deviceListItem?.bound_ts_ms || (detail as any)?.device?.bound_ts_ms || null;
   const cp = (controlPlane as any)?.item; const hero = cp?.device; const cpSummary = cp?.summary; const cpOverview = cp?.overview; const cpConnectivity = cp?.connectivity;
+  const bootstrapContext = extractBootstrapContext((detail as any)?.device, statusObj, cpOverview, cpSummary);
   const recentLatest = latest[0]; const statusLabel = normalizeStatusWord(hero?.status?.label || statusObj?.status || "-");
   const latestImageItem = latest.find((item: any) => String(item?.metric ?? item?.metric_key ?? "").toLowerCase() === "image_ref") || null;
   const latestImageRef = String(latestImageItem?.value_text ?? latestImageItem?.value ?? "-") || "-";
@@ -173,7 +175,7 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const policyAwareMetrics = React.useMemo(() => buildDevicePolicyAwareMetrics({ latest, metrics, series }), [latest, metrics, series]);
   const heroMetric = policyAwareMetrics[0] || null;
-  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
+  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，设备模式 ${bootstrapContext.device_mode ?? "-"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
   const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
 
@@ -251,13 +253,17 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
           </div>
-          <div className="traceChipRow" style={{ marginTop: 12 }}>
-            <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
-            <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
-            <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
-            <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
-          </div>
-        </section>
+        <div className="traceChipRow" style={{ marginTop: 12 }}>
+          <span className="traceChip">mode：{bootstrapContext.device_mode ?? "-"}</span>
+          <span className="traceChip">simulator_started：{bootstrapContext.simulator_started == null ? "-" : (bootstrapContext.simulator_started ? "true" : "false")}</span>
+          <span className="traceChip">simulator_status：{bootstrapContext.simulator_status ?? "-"}</span>
+          <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
+          <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
+          <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
+          <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
+        </div>
+        {bootstrapContext.skill_related_note ? <div className="demoMetricHint" style={{ marginTop: 8 }}>{bootstrapContext.skill_related_note}</div> : null}
+      </section>
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader"><div className="sectionTitle">策略化指标视图</div><div className="detailSectionLead">仅展示已纳入指标展示策略且允许出现在设备详情页的指标，未分级指标默认不渲染。</div></div>
