@@ -2,7 +2,7 @@ import { apiRequestOptional, withQuery } from "../api/client";
 import { getDeviceSimulatorStatus, type DeviceSimulatorStatus } from "../api/deviceSimulator";
 import { listSkillBindings, listSkillRegistry, resolveSkillClassification, type SkillBindingItem, type SkillRegistryItem } from "../api/skills";
 
-type DeviceRecord = Record<string, any>;
+type DeviceRecord = Record<string, unknown>;
 
 type DeviceFieldBindingRecord = {
   device_id?: string | null;
@@ -16,12 +16,19 @@ export type DashboardSensingRuntimeVm = {
   latestTelemetryTsMs: number | null;
   hasFormalSensingInput: boolean;
 };
+const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
 
-function normalizeList<T>(res: any): T[] {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" ? value as Record<string, unknown> : null;
+}
+
+function normalizeList<T>(res: unknown): T[] {
   if (Array.isArray(res)) return res as T[];
-  if (Array.isArray(res?.items)) return res.items as T[];
-  if (Array.isArray(res?.data)) return res.data as T[];
-  if (Array.isArray(res?.devices)) return res.devices as T[];
+  const obj = asRecord(res);
+  if (!obj) return [];
+  if (Array.isArray(obj.items)) return obj.items as T[];
+  if (Array.isArray(obj.data)) return obj.data as T[];
+  if (Array.isArray(obj.devices)) return obj.devices as T[];
   return [];
 }
 
@@ -59,8 +66,49 @@ function inferIsSimulator(device: DeviceRecord, simulatorStatus: DeviceSimulator
   return false;
 }
 
+function normalizeMetricKey(value: unknown): string {
+  return normalizeText(value).toLowerCase().replace(/[\s.-]+/g, "_");
+}
+
+function collectMetricKeys(source: unknown, output: Set<string>, depth = 0): void {
+  if (source == null || depth > 4) return;
+  if (Array.isArray(source)) {
+    for (const item of source) collectMetricKeys(item, output, depth + 1);
+    return;
+  }
+  if (typeof source !== "object") return;
+  const obj = source as Record<string, unknown>;
+  for (const [rawKey, rawValue] of Object.entries(obj)) {
+    const key = normalizeMetricKey(rawKey);
+    if (REQUIRED_SENSING_PROFILE_KEYS.includes(key as (typeof REQUIRED_SENSING_PROFILE_KEYS)[number])) {
+      output.add(key);
+    }
+    if (rawValue && typeof rawValue === "object") {
+      collectMetricKeys(rawValue, output, depth + 1);
+      continue;
+    }
+    const metricName = normalizeMetricKey(rawValue);
+    if (REQUIRED_SENSING_PROFILE_KEYS.includes(metricName as (typeof REQUIRED_SENSING_PROFILE_KEYS)[number])) {
+      output.add(metricName);
+    }
+  }
+  const candidateMetricName = normalizeMetricKey(
+    obj.metric ?? obj.metric_key ?? obj.name ?? obj.key,
+  );
+  if (REQUIRED_SENSING_PROFILE_KEYS.includes(candidateMetricName as (typeof REQUIRED_SENSING_PROFILE_KEYS)[number])) {
+    output.add(candidateMetricName);
+  }
+}
+
+function hasMinimalSensingProfile(device: DeviceRecord, simulatorStatus: DeviceSimulatorStatus | null): boolean {
+  const found = new Set<string>();
+  collectMetricKeys(device, found);
+  collectMetricKeys(simulatorStatus, found);
+  return REQUIRED_SENSING_PROFILE_KEYS.every((key) => found.has(key));
+}
+
 async function fetchDevices(): Promise<DeviceRecord[]> {
-  const res = await apiRequestOptional<any>(withQuery("/api/v1/devices", { limit: 500 }), undefined, {
+  const res = await apiRequestOptional<unknown>(withQuery("/api/v1/devices", { limit: 500 }), undefined, {
     timeoutMs: 5000,
     dedupe: true,
     silent: true,
@@ -76,7 +124,7 @@ async function fetchDeviceFieldBindings(): Promise<DeviceFieldBindingRecord[]> {
   ];
   for (const path of candidates) {
     try {
-      const res = await apiRequestOptional<any>(path, undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+      const res = await apiRequestOptional<unknown>(path, undefined, { timeoutMs: 5000, dedupe: true, silent: true });
       const list = normalizeList<DeviceFieldBindingRecord>(res);
       if (list.length > 0) return list;
     } catch {
@@ -95,8 +143,8 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
 
   for (const path of candidates) {
     try {
-      const res = await apiRequestOptional<any>(withQuery(path, { limit: 500 }), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
-      const items = normalizeList<any>(res);
+      const res = await apiRequestOptional<unknown>(withQuery(path, { limit: 500 }), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
+      const items = normalizeList<Record<string, unknown>>(res);
       if (items.length) {
         for (const item of items) {
           const deviceId = normalizeText(item?.device_id ?? item?.id);
@@ -186,11 +234,12 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
   for (const device of devices) {
     const deviceId = normalizeText(device?.device_id ?? device?.id);
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
+    const telemetryObj = asRecord(device?.telemetry);
     const telemetryTs = toTs(
       device?.last_telemetry_ts_ms
       ?? device?.lastTelemetryTsMs
-      ?? device?.telemetry?.last_ts_ms
-      ?? device?.telemetry?.lastTelemetryTsMs,
+      ?? telemetryObj?.last_ts_ms
+      ?? telemetryObj?.lastTelemetryTsMs,
     );
     const simTickTs = toTs(simStatus?.last_tick_ts_ms);
     if (telemetryTs != null) telemetryCandidates.push(telemetryTs);
@@ -205,12 +254,20 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
     if (inferIsSimulator(device ?? {}, simStatus)) return false;
     return toTs(device?.last_telemetry_ts_ms ?? device?.lastTelemetryTsMs) != null;
   });
+  const hasSimulatorFormalInput = devices.some((device) => {
+    const deviceId = normalizeText(device?.device_id ?? device?.id);
+    if (!deviceId || !fieldBoundDeviceIds.has(deviceId)) return false;
+    const simStatus = simulatorStatusMap.get(deviceId) ?? null;
+    if (!inferIsSimulator(device ?? {}, simStatus)) return false;
+    if (simStatus?.running !== true) return false;
+    return hasMinimalSensingProfile(device ?? {}, simStatus);
+  });
 
   return {
     activeSensingDeviceSkillCount: activeSensingOrDeviceSkills.size,
     simulatorCarrierSkillCount: simulatorSkillIds.size,
     physicalCarrierSkillCount: physicalSkillIds.size,
     latestTelemetryTsMs,
-    hasFormalSensingInput: hasPhysicalTelemetry,
+    hasFormalSensingInput: hasPhysicalTelemetry || hasSimulatorFormalInput,
   };
 }
