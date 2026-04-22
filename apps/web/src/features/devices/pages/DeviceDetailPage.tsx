@@ -178,6 +178,25 @@ export default function DeviceDetailPage(): React.ReactElement {
   const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，设备模式 ${bootstrapContext.device_mode ?? "-"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
   const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
+  const carrierModeText = String(bootstrapContext.device_mode ?? "").toLowerCase().includes("sim") ? "模拟承载" : "真实设备";
+  const sensingStateRaw = String(bootstrapContext.simulator_status ?? "").toLowerCase();
+  const sensingStateText = (() => {
+    if (sensingStateRaw.includes("error") || sensingStateRaw.includes("fail")) return "异常";
+    if (sensingStateRaw.includes("running") || sensingStateRaw.includes("start")) return "运行中";
+    if (sensingStateRaw.includes("stop") || sensingStateRaw.includes("idle")) return "已停止";
+    if (bootstrapContext.simulator_started === true) return "运行中";
+    if (bootstrapContext.simulator_started === false) return "已停止";
+    return "未启动";
+  })();
+  const carrierSummaryText = bootstrapContext.skill_related_note
+    ? `用于 skill 输入链路（${bootstrapContext.skill_related_note}）`
+    : "用于 sensing/device skill 输入链路";
+  const recentSensingTimeText = cpOverview?.last_telemetry_label || fmtTs(statusObj?.last_telemetry_ts_ms);
+  const cycleMs = Number((cpOverview as any)?.interval_ms ?? (statusObj as any)?.interval_ms ?? NaN);
+  const cycleSec = Number((cpOverview as any)?.interval_sec ?? (cpOverview as any)?.report_interval_sec ?? (statusObj as any)?.interval_sec ?? NaN);
+  const cycleText = Number.isFinite(cycleSec) && cycleSec > 0
+    ? `${cycleSec} 秒`
+    : (Number.isFinite(cycleMs) && cycleMs > 0 ? `${Math.round(cycleMs / 1000)} 秒` : "不适用");
 
   return (
     <div className="demoDashboardPage">
@@ -252,17 +271,15 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">载体状态</div>
+              <div className="decisionItemMeta">载体模式：{carrierModeText}</div>
+              <div className="decisionItemMeta">当前感知状态：{sensingStateText}</div>
+              <div className="decisionItemMeta">当前承载说明：{carrierSummaryText}</div>
+              <div className="decisionItemMeta">最近感知时间：{recentSensingTimeText}</div>
+              <div className="decisionItemMeta">运行周期：{cycleText}</div>
+            </div>
           </div>
-        <div className="traceChipRow" style={{ marginTop: 12 }}>
-          <span className="traceChip">mode：{bootstrapContext.device_mode ?? "-"}</span>
-          <span className="traceChip">simulator_started：{bootstrapContext.simulator_started == null ? "-" : (bootstrapContext.simulator_started ? "true" : "false")}</span>
-          <span className="traceChip">simulator_status：{bootstrapContext.simulator_status ?? "-"}</span>
-          <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
-          <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
-          <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
-          <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
-        </div>
-        {bootstrapContext.skill_related_note ? <div className="demoMetricHint" style={{ marginTop: 8 }}>{bootstrapContext.skill_related_note}</div> : null}
       </section>
 
         <section className="card detailHeroCard">

@@ -37,11 +37,11 @@ export default function SensingRuntimeStatus(): React.ReactElement {
     { key: "sim-skill", label: "simulator 承载 skill 数", value: `${vm.simulatorCarrierSkillCount}` },
     { key: "physical-skill", label: "真实设备承载 skill 数", value: `${vm.physicalCarrierSkillCount}` },
     { key: "telemetry", label: "最近 telemetry 时间", value: formatTime(vm.latestTelemetryTsMs) },
-    { key: "formal", label: "是否具备正式感知输入", value: vm.hasFormalSensingInput ? "是" : "否" },
+    { key: "formal", label: "是否具备正式感知输入（含模拟承载）", value: vm.hasFormalSensingInput ? "是" : "否" },
   ];
 
   return (
-    <SectionCard title="感知运行状态 / 当前 Skill 运行状态" subtitle="聚合 skill 绑定、simulator 与设备状态，统一输出感知运行态摘要。">
+    <SectionCard title="感知运行状态 / 当前 Skill 运行状态" subtitle="聚合 skill 绑定、simulator 与设备状态；正式感知输入口径同时覆盖真实设备与模拟承载。">
       <div className="decisionList" style={{ marginTop: 8 }}>
         {items.map((item) => (
           <div key={item.key} className="decisionItemStatic">
