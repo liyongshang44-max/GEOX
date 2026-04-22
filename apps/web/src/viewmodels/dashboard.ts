@@ -1,3 +1,5 @@
+import type { DataOriginValue } from "../lib/dataOrigin";
+
 export type DashboardOverviewVm = {
   fieldCount: number;
   normalFieldCount: number;
@@ -71,6 +73,9 @@ export type DashboardVm = {
     label: string;
     valueLabel: string;
     sourceLabel?: string;
+    source_kind?: DataOriginValue;
+    source_type?: DataOriginValue;
+    data_origin?: DataOriginValue;
   }>;
   todayActions: Array<{
     type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED" | "GENERAL_REMINDER";

@@ -10,6 +10,7 @@ import {
   isCustomerPrimaryMetric,
   shouldShowMetricOnDashboard,
 } from "../lib/metricDisplayPolicy";
+import { formatSourceMeta, resolveSourceMeta } from "../lib/dataOrigin";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -103,11 +104,19 @@ function buildDashboardDiagnosticMetrics(latestMetrics: Record<string, unknown>)
     .filter(([metric]) => shouldShowMetricOnDashboard(metric) && isCustomerPrimaryMetric(metric))
     .map(([metric, value]) => {
       const policy = getMetricDisplayPolicy(metric);
+      const sourceMeta = resolveSourceMeta(
+        {
+          source_type: policy?.source_field_key,
+          data_origin: policy?.source_field_aliases?.[0],
+        },
+        { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+      );
       return {
         metric,
         label: getMetricDisplayLabelZh(metric),
         valueLabel: formatDashboardMetricValue(metric, normalizeNumericMetric(value)),
-        sourceLabel: policy?.source_field_key ?? policy?.source_field_aliases?.[0] ?? "--",
+        sourceLabel: formatSourceMeta(sourceMeta),
+        ...sourceMeta,
       };
     });
 }

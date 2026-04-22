@@ -31,6 +31,8 @@ import DashboardPageContainer from "./DashboardPageContainer";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { parseFieldReadModelV1, toReadableRecommendationBias, toReadableSalinityRisk, toReadableStatusLabel } from "../../../lib/fieldReadModelV1";
 import { getMetricDisplayLabelZh, isCustomerPrimaryMetric, shouldShowMetricOnDashboard } from "../../../lib/metricDisplayPolicy";
+import { formatSourceMeta, resolveSourceMeta } from "../../../lib/dataOrigin";
+import type { DataOriginValue } from "../../../lib/dataOrigin";
 
 function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
@@ -48,31 +50,21 @@ function normalizeReadModel(recommendation: any): {
   recommendation_bias: string | null;
   last_updated: string | number | null;
   source_label: string | null;
-  source_kind: string | null;
-  source_type: string | null;
-  data_origin: string | null;
+  source_kind: DataOriginValue | null;
+  source_type: DataOriginValue | null;
+  data_origin: DataOriginValue | null;
 } {
   const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback: false });
   const sensingSource = recommendation?.read_model?.field_sensing_overview_v1 ?? recommendation?.read_model?.sensing_overview ?? {};
   const fertilitySource = recommendation?.read_model?.field_fertility_state_v1 ?? recommendation?.read_model?.fertility_state ?? {};
-  const source_kind = String(
-    sensingSource?.source_kind
-    ?? fertilitySource?.source_kind
-    ?? recommendation?.source_kind
-    ?? "",
-  ).trim() || null;
-  const source_type = String(
-    sensingSource?.source_type
-    ?? fertilitySource?.source_type
-    ?? recommendation?.source_type
-    ?? "",
-  ).trim() || null;
-  const data_origin = String(
-    sensingSource?.data_origin
-    ?? fertilitySource?.data_origin
-    ?? recommendation?.data_origin
-    ?? "",
-  ).trim() || null;
+  const sourceMeta = resolveSourceMeta(
+    {
+      source_kind: sensingSource?.source_kind ?? fertilitySource?.source_kind ?? recommendation?.source_kind,
+      source_type: sensingSource?.source_type ?? fertilitySource?.source_type ?? recommendation?.source_type,
+      data_origin: sensingSource?.data_origin ?? fertilitySource?.data_origin ?? recommendation?.data_origin,
+    },
+    { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+  );
   return {
     sensing_status: toReadableStatusLabel(parsed.sensing?.status ?? null),
     sensing_freshness: parsed.sensing?.sensorQuality ?? null,
@@ -82,10 +74,10 @@ function normalizeReadModel(recommendation: any): {
     confidence: normalizeNumericMetric(parsed.fertility?.confidence),
     recommendation_bias: toReadableRecommendationBias(parsed.fertility?.recommendationBias),
     last_updated: parsed.fertility?.updatedAtMs ?? parsed.sensing?.updatedAtMs ?? recommendation?.updated_ts_ms ?? null,
-    source_label: [source_kind, source_type, data_origin].filter(Boolean).join(" / ") || null,
-    source_kind,
-    source_type,
-    data_origin,
+    source_label: formatSourceMeta(sourceMeta),
+    source_kind: sourceMeta.source_kind,
+    source_type: sourceMeta.source_type,
+    data_origin: sourceMeta.data_origin,
   };
 }
 

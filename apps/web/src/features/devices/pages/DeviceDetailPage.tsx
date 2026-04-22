@@ -29,6 +29,7 @@ import { formatTimeOrFallback } from "../../../lib/presentation/time";
 import { normalizeStatusWord } from "../../../lib/statusVocabulary";
 import { ONBOARDING_TRACE_STORAGE_KEY, type OnboardingRecord } from "../../../features/devices/onboarding/mockFlow";
 import { buildDevicePolicyAwareMetrics } from "../../../viewmodels/deviceTelemetryViewModel";
+import { formatSourceMeta } from "../../../lib/dataOrigin";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
@@ -267,7 +268,13 @@ export default function DeviceDetailPage(): React.ReactElement {
                 <div className="decisionItemTitle">{item.display_label_zh}</div>
                 <div className="decisionItemMeta">值：{item.value}{item.canonical_unit ? ` ${item.canonical_unit}` : ""}</div>
                 <div className="decisionItemMeta">推理状态：{item.reasoning_status}</div>
-                <div className="decisionItemMeta">来源：{item.source}</div>
+                <div className="decisionItemMeta">
+                  来源：{formatSourceMeta({
+                    source_kind: item.source_kind,
+                    source_type: item.source_type,
+                    data_origin: item.data_origin,
+                  })}
+                </div>
               </div>
             ))}
           </div>

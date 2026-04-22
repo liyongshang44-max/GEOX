@@ -7,6 +7,7 @@ import { resolveFreshnessTone, toneCardClass, toneHintText } from "../../../lib/
 import { mapFieldDisplayName } from "../../../lib/operationLabels";
 import { resolveUnifiedOperationFinalStatus, toDashboardEvidenceGroup } from "../../../lib/operationStatusUnified";
 import { SectionCard, StatusPill } from "../../../shared/ui";
+import { formatSourceMeta } from "../../../lib/dataOrigin";
 
 type EvidenceItem = {
   id: string;
@@ -88,6 +89,9 @@ export default function EvidenceOutcomeSection({
     label: string;
     valueLabel: string;
     sourceLabel?: string;
+    source_kind?: string;
+    source_type?: string;
+    data_origin?: string;
   }>;
   loadError?: string | null;
 }): React.ReactElement {
@@ -215,16 +219,24 @@ export default function EvidenceOutcomeSection({
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">source</div>
             <div className="decisionItemMeta">
-              {latestReadModel.source_label ?? "--"}
-              {latestReadModel.source_kind ? ` · kind: ${latestReadModel.source_kind}` : ""}
-              {latestReadModel.source_type ? ` · type: ${latestReadModel.source_type}` : ""}
-              {latestReadModel.data_origin ? ` · origin: ${latestReadModel.data_origin}` : ""}
+              {formatSourceMeta({
+                source_kind: latestReadModel.source_kind ?? undefined,
+                source_type: latestReadModel.source_type ?? undefined,
+                data_origin: latestReadModel.data_origin ?? undefined,
+              })}
             </div>
           </div>
           {(dashboardMetrics ?? []).map((metric) => (
             <div key={`dashboard_metric_${metric.metric}`} className="decisionItemStatic">
               <div className="decisionItemTitle">{metric.label}</div>
-              <div className="decisionItemMeta">{metric.valueLabel}{metric.sourceLabel ? ` · source: ${metric.sourceLabel}` : ""}</div>
+              <div className="decisionItemMeta">
+                {metric.valueLabel}
+                {` · source: ${formatSourceMeta({
+                  source_kind: metric.source_kind,
+                  source_type: metric.source_type,
+                  data_origin: metric.data_origin,
+                })}`}
+              </div>
             </div>
           ))}
         </div>
