@@ -23,6 +23,7 @@ import FieldRuntime from "../features/dashboard/sections/FieldRuntime";
 import DecisionOperationQueue from "../features/dashboard/sections/DecisionOperationQueue";
 import EvidenceOutcome from "../features/dashboard/sections/EvidenceOutcome";
 import { useDashboard } from "../hooks/useDashboard";
+import { getMetricDisplayLabelZh, isCustomerPrimaryMetric, shouldShowMetricOnDashboard } from "../lib/metricDisplayPolicy";
 import { buildOperationSummary, mapFieldDisplayName, mapOperationActionLabel } from "../lib/operationLabels";
 import { PageHeader } from "../shared/ui";
 import { parseFieldReadModelV1 } from "../lib/fieldReadModelV1";
@@ -43,9 +44,33 @@ function normalizeReadModel(recommendation: any): {
   confidence: number | null;
   recommendation_bias: string | null;
   last_updated: string | number | null;
+  source_kind: string | null;
+  source_type: string | null;
+  data_origin: string | null;
+  source_label: string | null;
 } {
   const enableLegacyFallback = String((import.meta as any)?.env?.VITE_ENABLE_FIELD_READ_MODEL_LEGACY_FALLBACK ?? "0") === "1";
   const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback });
+  const sensingSource = recommendation?.read_model?.field_sensing_overview_v1 ?? recommendation?.read_model?.sensing_overview ?? {};
+  const fertilitySource = recommendation?.read_model?.field_fertility_state_v1 ?? recommendation?.read_model?.fertility_state ?? {};
+  const source_kind = String(
+    sensingSource?.source_kind
+    ?? fertilitySource?.source_kind
+    ?? recommendation?.source_kind
+    ?? "",
+  ).trim() || null;
+  const source_type = String(
+    sensingSource?.source_type
+    ?? fertilitySource?.source_type
+    ?? recommendation?.source_type
+    ?? "",
+  ).trim() || null;
+  const data_origin = String(
+    sensingSource?.data_origin
+    ?? fertilitySource?.data_origin
+    ?? recommendation?.data_origin
+    ?? "",
+  ).trim() || null;
   return {
     soil_moisture: normalizeNumericMetric(parsed.sensing?.soilMoisture),
     soil_temperature: normalizeNumericMetric(parsed.sensing?.soilTemperature),
@@ -56,6 +81,10 @@ function normalizeReadModel(recommendation: any): {
     confidence: normalizeNumericMetric(parsed.fertility?.confidence),
     recommendation_bias: parsed.fertility?.recommendationBias ?? null,
     last_updated: recommendation?.updated_ts_ms ?? null,
+    source_kind,
+    source_type,
+    data_origin,
+    source_label: [source_kind, source_type, data_origin].filter(Boolean).join(" / ") || null,
   };
 }
 
@@ -541,6 +570,15 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
   };
 
   const latestReadModel = (smartRecommendations.latest as any)?.normalized_read_model ?? {};
+  const dashboardPrimaryMetrics = React.useMemo(
+    () => (d.diagnosticMetrics ?? [])
+      .filter((metric) => shouldShowMetricOnDashboard(metric.metric) && isCustomerPrimaryMetric(metric.metric))
+      .map((metric) => ({
+        ...metric,
+        label: getMetricDisplayLabelZh(metric.metric),
+      })),
+    [d.diagnosticMetrics],
+  );
   const fieldCount = Number(d.overview.fieldCount ?? 0);
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
   const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
@@ -650,6 +688,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
         evidenceItems={d.evidences}
         smartRecommendations={smartRecommendations}
         latestReadModel={latestReadModel}
+        dashboardMetrics={dashboardPrimaryMetrics}
         loadError={error}
       />
     </div>

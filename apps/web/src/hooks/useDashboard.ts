@@ -3,6 +3,14 @@ import type { DashboardActionVm, DashboardRiskVm, DashboardVm } from "../viewmod
 import { mapDashboardEvidenceToVm } from "../viewmodels/evidence";
 import { toOperationDetailPath } from "../lib/operationLink";
 import { mapOperationFinalStatusLabel, normalizeOperationFinalStatus } from "../lib/operationLabels";
+import {
+  getMetricCanonicalUnit,
+  getMetricDisplayLabelZh,
+  getMetricDisplayPolicy,
+  isCustomerPrimaryMetric,
+  shouldShowMetricOnDashboard,
+} from "../lib/metricDisplayPolicy";
+import { formatSourceMeta, resolveSourceMeta } from "../lib/dataOrigin";
 
 const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   overview: {
@@ -34,11 +42,8 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
     deviationCount: 3,
     invalidCount: 2,
   },
-  metricUnits: {
-    soil_moisture: "%",
-    temperature: "°C",
-    humidity: "%",
-  },
+  metricUnits: {},
+  diagnosticMetrics: [],
   todayActions: [
     { type: "INVALID_EXECUTION", count: 0 },
     { type: "PENDING_ACCEPTANCE", count: 0 },
@@ -66,14 +71,7 @@ const DEFAULT_DASHBOARD_DATA: DashboardVm = {
   },
 };
 
-function normalizePercentMetric(value: unknown): number | null {
-  const n = Number(value);
-  if (!Number.isFinite(n)) return null;
-  if (n >= 0 && n <= 1) return Number((n * 100).toFixed(2));
-  return Number(n.toFixed(2));
-}
-
-function normalizeTemperatureMetric(value: unknown): number | null {
+function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
   if (!Number.isFinite(n)) return null;
   return Number(n.toFixed(2));
@@ -81,17 +79,46 @@ function normalizeTemperatureMetric(value: unknown): number | null {
 
 function normalizeModelMetrics(metrics: any): any {
   if (!metrics || typeof metrics !== "object") return metrics;
+  const normalizedEntries = Object.entries(metrics).map(([metric, value]) => {
+    if (value == null || typeof value === "object") return [metric, value];
+    return [metric, normalizeNumericMetric(value)];
+  });
   return {
-    ...metrics,
-    soil_moisture: normalizePercentMetric(metrics.soil_moisture),
-    temperature: normalizeTemperatureMetric(metrics.temperature),
-    humidity: normalizePercentMetric(metrics.humidity),
-    units: {
-      soil_moisture: "%",
-      temperature: "°C",
-      humidity: "%",
-    },
+    ...Object.fromEntries(normalizedEntries),
+    units: Object.fromEntries(
+      Object.keys(metrics)
+        .filter((metric) => Boolean(getMetricCanonicalUnit(metric)))
+        .map((metric) => [metric, getMetricCanonicalUnit(metric)]),
+    ),
   };
+}
+
+function formatDashboardMetricValue(metric: string, value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(Number(value))) return "--";
+  const unit = getMetricCanonicalUnit(metric);
+  return `${Number(value).toFixed(1)}${unit}`;
+}
+
+function buildDashboardDiagnosticMetrics(latestMetrics: Record<string, unknown>) {
+  return Object.entries(latestMetrics ?? {})
+    .filter(([metric]) => shouldShowMetricOnDashboard(metric) && isCustomerPrimaryMetric(metric))
+    .map(([metric, value]) => {
+      const policy = getMetricDisplayPolicy(metric);
+      const sourceMeta = resolveSourceMeta(
+        {
+          source_type: policy?.source_field_key,
+          data_origin: policy?.source_field_aliases?.[0],
+        },
+        { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+      );
+      return {
+        metric,
+        label: getMetricDisplayLabelZh(metric),
+        valueLabel: formatDashboardMetricValue(metric, normalizeNumericMetric(value)),
+        sourceLabel: formatSourceMeta(sourceMeta),
+        ...sourceMeta,
+      };
+    });
 }
 
 function mapRiskSource(title: string): DashboardRiskVm["source"] {
@@ -402,6 +429,14 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
           })
           .slice(0, 3);
 
+        const latestMetrics = normalizeModelMetrics(overview?.latest_metrics ?? {});
+        const dashboardDiagnosticMetrics = buildDashboardDiagnosticMetrics(latestMetrics);
+        const metricUnits = Object.fromEntries(
+          dashboardDiagnosticMetrics
+            .map((item) => [item.metric, getMetricCanonicalUnit(item.metric)])
+            .filter(([, unit]) => Boolean(unit)),
+        );
+
         setData({
           overview: {
             fieldCount: overview?.field_count ?? overview?.fieldCount ?? 0,
@@ -450,11 +485,8 @@ export function useDashboard(api: any): { data: DashboardVm; error: string | nul
             deviationCount: deviationExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.deviationCount,
             invalidCount: invalidExecutionCount || DEFAULT_DASHBOARD_DATA.operationEffect.invalidCount,
           },
-          metricUnits: {
-            soil_moisture: "%",
-            temperature: "°C",
-            humidity: "%",
-          },
+          metricUnits,
+          diagnosticMetrics: dashboardDiagnosticMetrics,
           todayActions,
           agronomyRecommendations: recentAgronomyRecommendations,
           cropStageDistribution,

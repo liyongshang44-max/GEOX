@@ -28,12 +28,11 @@ import ErrorState from "../../../components/common/ErrorState";
 import { formatTimeOrFallback } from "../../../lib/presentation/time";
 import { normalizeStatusWord } from "../../../lib/statusVocabulary";
 import { ONBOARDING_TRACE_STORAGE_KEY, type OnboardingRecord } from "../../../features/devices/onboarding/mockFlow";
+import { buildDevicePolicyAwareMetrics } from "../../../viewmodels/deviceTelemetryViewModel";
+import { formatSourceMeta } from "../../../lib/dataOrigin";
 
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
-}
-function prettyValue(vn: number | null, vt: string | null): string {
-  return typeof vn === "number" && Number.isFinite(vn) ? String(vn) : (vt || "-");
 }
 type BoundFieldInfo = { field_id: string | null; bound_ts_ms: number | null };
 type NamedSettled<T = unknown> = { name: string; status: "fulfilled"; value: T } | { name: string; status: "rejected"; reason: unknown };
@@ -172,7 +171,9 @@ export default function DeviceDetailPage(): React.ReactElement {
   const firstDataLabel = firstDataReceived ? "已完成" : "数据不足";
   const hasTelemetryData = latest.length > 0 || metrics.length > 0 || Object.keys(series || {}).length > 0;
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
-  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${recentLatest ? `${recentLatest.metric}=${prettyValue(recentLatest.value_num, recentLatest.value_text)}` : "暂无"}。`;
+  const policyAwareMetrics = React.useMemo(() => buildDevicePolicyAwareMetrics({ latest, metrics, series }), [latest, metrics, series]);
+  const heroMetric = policyAwareMetrics[0] || null;
+  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
   const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
 
@@ -255,6 +256,27 @@ export default function DeviceDetailPage(): React.ReactElement {
             <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
             <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
             <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader"><div className="sectionTitle">策略化指标视图</div><div className="detailSectionLead">仅展示已纳入指标展示策略且允许出现在设备详情页的指标，未分级指标默认不渲染。</div></div>
+          {!policyAwareMetrics.length ? <div className="decisionItemStatic">暂无可展示指标（策略未覆盖或数据不足）。</div> : null}
+          <div className="decisionList">
+            {policyAwareMetrics.map((item) => (
+              <div key={item.metric} className="decisionItemStatic">
+                <div className="decisionItemTitle">{item.display_label_zh}</div>
+                <div className="decisionItemMeta">值：{item.value}{item.canonical_unit ? ` ${item.canonical_unit}` : ""}</div>
+                <div className="decisionItemMeta">推理状态：{item.reasoning_status}</div>
+                <div className="decisionItemMeta">
+                  来源：{formatSourceMeta({
+                    source_kind: item.source_kind,
+                    source_type: item.source_type,
+                    data_origin: item.data_origin,
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 

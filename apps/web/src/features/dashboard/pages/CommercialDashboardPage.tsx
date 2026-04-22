@@ -30,6 +30,9 @@ import MissingSkillCoverage from "../sections/MissingSkillCoverage";
 import DashboardPageContainer from "./DashboardPageContainer";
 import { useDashboard } from "../../../hooks/useDashboard";
 import { parseFieldReadModelV1, toReadableRecommendationBias, toReadableSalinityRisk, toReadableStatusLabel } from "../../../lib/fieldReadModelV1";
+import { getMetricDisplayLabelZh, isCustomerPrimaryMetric, shouldShowMetricOnDashboard } from "../../../lib/metricDisplayPolicy";
+import { formatSourceMeta, resolveSourceMeta } from "../../../lib/dataOrigin";
+import type { DataOriginValue } from "../../../lib/dataOrigin";
 
 function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
@@ -46,9 +49,22 @@ function normalizeReadModel(recommendation: any): {
   confidence: number | null;
   recommendation_bias: string | null;
   last_updated: string | number | null;
-  source_label: string;
+  source_label: string | null;
+  source_kind: DataOriginValue | null;
+  source_type: DataOriginValue | null;
+  data_origin: DataOriginValue | null;
 } {
   const parsed = parseFieldReadModelV1(recommendation, { enableLegacyFallback: false });
+  const sensingSource = recommendation?.read_model?.field_sensing_overview_v1 ?? recommendation?.read_model?.sensing_overview ?? {};
+  const fertilitySource = recommendation?.read_model?.field_fertility_state_v1 ?? recommendation?.read_model?.fertility_state ?? {};
+  const sourceMeta = resolveSourceMeta(
+    {
+      source_kind: sensingSource?.source_kind ?? fertilitySource?.source_kind ?? recommendation?.source_kind,
+      source_type: sensingSource?.source_type ?? fertilitySource?.source_type ?? recommendation?.source_type,
+      data_origin: sensingSource?.data_origin ?? fertilitySource?.data_origin ?? recommendation?.data_origin,
+    },
+    { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+  );
   return {
     sensing_status: toReadableStatusLabel(parsed.sensing?.status ?? null),
     sensing_freshness: parsed.sensing?.sensorQuality ?? null,
@@ -58,7 +74,10 @@ function normalizeReadModel(recommendation: any): {
     confidence: normalizeNumericMetric(parsed.fertility?.confidence),
     recommendation_bias: toReadableRecommendationBias(parsed.fertility?.recommendationBias),
     last_updated: parsed.fertility?.updatedAtMs ?? parsed.sensing?.updatedAtMs ?? recommendation?.updated_ts_ms ?? null,
-    source_label: "field_sensing_overview_v1 + field_fertility_state_v1",
+    source_label: formatSourceMeta(sourceMeta),
+    source_kind: sourceMeta.source_kind,
+    source_type: sourceMeta.source_type,
+    data_origin: sourceMeta.data_origin,
   };
 }
 
@@ -286,6 +305,15 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     }
     return (smartRecommendations.latest as any)?.normalized_read_model ?? {};
   }, [latestFieldSensingSummary, smartRecommendations.latest]);
+  const dashboardPrimaryMetrics = React.useMemo(
+    () => (d.diagnosticMetrics ?? [])
+      .filter((metric) => shouldShowMetricOnDashboard(metric.metric) && isCustomerPrimaryMetric(metric.metric))
+      .map((metric) => ({
+        ...metric,
+        label: getMetricDisplayLabelZh(metric.metric),
+      })),
+    [d.diagnosticMetrics],
+  );
   const fieldCount = Number(d.overview.fieldCount ?? 0);
   const deviceCount = Number(deviceSummary.online + deviceSummary.offline);
   const hasFirstData = smartRecommendations.latest != null || Number(d.overview.todayExecutionCount ?? 0) > 0;
@@ -399,6 +427,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
                 evidenceItems={d.evidences}
                 smartRecommendations={smartRecommendations}
                 latestReadModel={latestReadModel}
+                dashboardMetrics={dashboardPrimaryMetrics}
                 loadError={error}
               />
             ),

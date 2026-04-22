@@ -13,6 +13,7 @@ import { executeOperationAction, fetchOperationHandoff, type OperationHandoffIte
 import { mapOperationActionLabel, mapDeviceDisplayName, mapFieldDisplayName, toBusinessExecutionNarrative } from "../../../lib/operationLabels";
 import { toOperationDetailStatusLabel } from "../../../lib/operationStatusUnified";
 import { toBusinessTimelineLabel } from "../../../viewmodels/timelineLabels";
+import { formatSourceMeta, resolveSourceMeta } from "../../../lib/dataOrigin";
 
 const COPY = {
   backToList: "返回作业列表",
@@ -38,10 +39,9 @@ function CollapsibleModule({ title, defaultOpen = false, children }: { title: st
   );
 }
 
-function formatMaybeNumber(value: unknown): string {
-  const n = Number(value ?? NaN);
-  if (!Number.isFinite(n)) return "--";
-  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+function metricValueLabel(value: string, unit: string): string {
+  if (!value || value === "--") return "--";
+  return `${value}${unit || ""}`;
 }
 
 function toDateTimeLabel(ts?: number | null): string {
@@ -109,7 +109,14 @@ export default function OperationDetailPage(): React.ReactElement {
   const executionReady = Boolean((safeDetail as any)?.execution_ready);
   const executionTrace = (safeDetail as any)?.execution_trace ?? {};
   const executionContext = (safeDetail as any)?.execution_context ?? {};
-  const detailSource = String((safeDetail as any)?.source ?? (safeDetail as any)?.operation?.source ?? "UNKNOWN");
+  const detailSourceMeta = resolveSourceMeta(
+    {
+      source_kind: (safeDetail as any)?.source_kind ?? (safeDetail as any)?.operation?.source_kind,
+      source_type: (safeDetail as any)?.source_type ?? (safeDetail as any)?.operation?.source_type ?? (safeDetail as any)?.source,
+      data_origin: (safeDetail as any)?.data_origin ?? (safeDetail as any)?.operation?.data_origin,
+    },
+    { source_kind: "derived_state", source_type: "derived_state", data_origin: "derived_state" },
+  );
   const detailFinalStatus = model.execution.finalStatusLabel || toOperationDetailStatusLabel((model.finalStatus as any) ?? "UNKNOWN");
   const detailSkillTrace = (safeDetail as any)?.skill_trace ?? (safeDetail as any)?.operation?.skill_trace ?? null;
   const explainSystem = (safeDetail as any)?.explain?.system ?? {};
@@ -401,7 +408,7 @@ export default function OperationDetailPage(): React.ReactElement {
         <CollapsibleModule title="技术附录（默认关闭）">
           <CollapsibleModule title="来源与解释">
             <div className="operationsSummaryGrid" style={{ marginTop: 10 }}>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{detailSource || "--"}</strong></div>
+              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">来源</span><strong>{formatSourceMeta(detailSourceMeta)}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最终状态</span><strong>{detailFinalStatus || "--"}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则 ID</span><strong>{String(explainSystem?.rule_id ?? "--")}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">规则版本</span><strong>{String(explainSystem?.rule_version ?? "--")}</strong></div>
@@ -440,8 +447,18 @@ export default function OperationDetailPage(): React.ReactElement {
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">审批编号</span><strong>{model.technicalRefs.approvalRequestId}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">作业计划编号</span><strong>{model.technicalRefs.operationPlanId}</strong></div>
               <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">执行任务编号</span><strong>{model.technicalRefs.actTaskId}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果前值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.before_metrics?.soil_moisture)}</strong></div>
-              <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">效果后值</span><strong>{formatMaybeNumber((safeDetail as any)?.agronomy?.after_metrics?.soil_moisture)}</strong></div>
+              {(model.metricReferences ?? []).map((metric, idx) => (
+                <React.Fragment key={`${metric.source}-${idx}`}>
+                  <div className="operationsSummaryMetric">
+                    <span className="operationsSummaryLabel">{metric.label}</span>
+                    <strong>{metricValueLabel(metric.value, metric.unit)}</strong>
+                  </div>
+                  <div className="operationsSummaryMetric">
+                    <span className="operationsSummaryLabel">指标定位</span>
+                    <strong>{metric.guidanceLabel}</strong>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
           </CollapsibleModule>
         </CollapsibleModule>
