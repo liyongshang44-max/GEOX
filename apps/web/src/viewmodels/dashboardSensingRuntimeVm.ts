@@ -137,7 +137,6 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
   const map = new Map<string, DeviceSimulatorStatus>();
   const candidates = [
     "/api/v1/devices/simulator/statuses",
-    "/api/v1/devices/simulator/status",
   ];
 
   for (const path of candidates) {
