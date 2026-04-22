@@ -155,11 +155,11 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知技能载体接入"
-        description="为地块接入承载感知技能的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
+        title="感知载体接入"
+        description="当前页面用于为地块接入承载感知技能的载体。可选择真实设备承载或模拟承载模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
-      <SectionCard title="第一层：承载状态摘要">
+      <SectionCard title="第一层：承载状态摘要（产品视图）">
         <div className="contentGridTwo alignStart">
           <label className="field">
             访问令牌
@@ -189,7 +189,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="metaText">{bindingTargetsText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">绑定地块</span>
+            <span className="metaLabel">当前绑定地块</span>
             <div className="metaText">{overview?.fieldId || "未绑定"}</div>
           </div>
           <div className="field">
