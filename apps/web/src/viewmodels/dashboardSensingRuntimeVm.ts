@@ -10,6 +10,7 @@ export type DashboardSensingRuntimeVm = {
   physicalCarrierSkillCount: number;
   latestTelemetryTsMs: number | null;
   hasFormalSensingInput: boolean;
+  formalSensingInputLabel: string;
 };
 const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
 
@@ -238,5 +239,6 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
     physicalCarrierSkillCount: physicalSkillIds.size,
     latestTelemetryTsMs,
     hasFormalSensingInput: hasPhysicalTelemetry || hasSimulatorFormalInput,
+    formalSensingInputLabel: hasPhysicalTelemetry || hasSimulatorFormalInput ? "是" : "否",
   };
 }
