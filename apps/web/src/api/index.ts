@@ -18,3 +18,5 @@ export {
   type FieldPortfolioSummaryV1,
   type FetchFieldPortfolioParams,
 } from "./fieldPortfolio";
+
+export * from "./deviceSimulator";
