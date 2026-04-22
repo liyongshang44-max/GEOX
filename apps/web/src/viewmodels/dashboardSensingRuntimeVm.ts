@@ -19,15 +19,20 @@ export type DashboardSensingRuntimeVm = {
 const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
 
 function normalizeList<T>(res: unknown): T[] {
+  const obj = asRecord(res);
   if (Array.isArray(res)) return res as T[];
-  if (Array.isArray(res?.items)) return res.items as T[];
-  if (Array.isArray(res?.data)) return res.data as T[];
-  if (Array.isArray(res?.devices)) return res.devices as T[];
+  if (Array.isArray(obj?.items)) return obj.items as T[];
+  if (Array.isArray(obj?.data)) return obj.data as T[];
+  if (Array.isArray(obj?.devices)) return obj.devices as T[];
   return [];
 }
 
 function normalizeText(value: unknown): string {
   return String(value ?? "").trim();
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }
 
 function toTs(input: unknown): number | null {
@@ -45,15 +50,16 @@ function isSensingOrDeviceSkill(item: SkillRegistryItem): boolean {
 }
 
 function inferIsSimulator(device: DeviceRecord, simulatorStatus: DeviceSimulatorStatus | null): boolean {
+  const deviceObj = asRecord(device);
   const modeText = [
-    device?.device_mode,
-    device?.source_type,
-    device?.carrier,
-    device?.template_code,
-    device?.device_template,
-    device?.device_type,
-    device?.name,
-    device?.display_name,
+    deviceObj?.device_mode,
+    deviceObj?.source_type,
+    deviceObj?.carrier,
+    deviceObj?.template_code,
+    deviceObj?.device_template,
+    deviceObj?.device_type,
+    deviceObj?.name,
+    deviceObj?.display_name,
   ].map((v) => normalizeText(v).toLowerCase()).join(" ");
   if (modeText.includes("simulator") || modeText.includes("sim") || modeText.includes("virtual")) return true;
   if (simulatorStatus?.running === true) return true;
@@ -141,7 +147,7 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
       const items = normalizeList<Record<string, unknown>>(res);
       if (items.length) {
         for (const item of items) {
-          const deviceId = normalizeText(item?.device_id ?? item?.id);
+          const deviceId = normalizeText(item.device_id ?? item.id);
           if (deviceId) map.set(deviceId, item as DeviceSimulatorStatus);
         }
         return map;
@@ -190,7 +196,7 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
 
   const deviceById = new Map<string, DeviceRecord>();
   for (const item of devices) {
-    const id = normalizeText(item?.device_id ?? item?.id);
+    const id = normalizeText(item.device_id ?? item.id);
     if (id) deviceById.set(id, item);
   }
 
@@ -214,25 +220,26 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
 
   const fieldBoundDeviceIds = new Set<string>();
   for (const binding of deviceFieldBindings) {
-    const deviceId = normalizeText(binding?.device_id);
-    const fieldId = normalizeText(binding?.field_id);
+    const deviceId = normalizeText(binding.device_id);
+    const fieldId = normalizeText(binding.field_id);
     if (deviceId && fieldId) fieldBoundDeviceIds.add(deviceId);
   }
   for (const device of devices) {
-    const deviceId = normalizeText(device?.device_id ?? device?.id);
-    const fieldId = normalizeText(device?.field_id);
+    const deviceId = normalizeText(device.device_id ?? device.id);
+    const fieldId = normalizeText(device.field_id);
     if (deviceId && fieldId) fieldBoundDeviceIds.add(deviceId);
   }
 
   const telemetryCandidates: number[] = [];
   for (const device of devices) {
-    const deviceId = normalizeText(device?.device_id ?? device?.id);
+    const deviceId = normalizeText(device.device_id ?? device.id);
+    const telemetry = asRecord(device.telemetry);
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
     const telemetryTs = toTs(
-      device?.last_telemetry_ts_ms
-      ?? device?.lastTelemetryTsMs
-      ?? device?.telemetry?.last_ts_ms
-      ?? device?.telemetry?.lastTelemetryTsMs,
+      device.last_telemetry_ts_ms
+      ?? device.lastTelemetryTsMs
+      ?? telemetry?.last_ts_ms
+      ?? telemetry?.lastTelemetryTsMs,
     );
     const simTickTs = toTs(simStatus?.last_tick_ts_ms);
     if (telemetryTs != null) telemetryCandidates.push(telemetryTs);
@@ -241,14 +248,14 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
   const latestTelemetryTsMs = telemetryCandidates.length ? Math.max(...telemetryCandidates) : null;
 
   const hasPhysicalTelemetry = devices.some((device) => {
-    const deviceId = normalizeText(device?.device_id ?? device?.id);
+    const deviceId = normalizeText(device.device_id ?? device.id);
     if (!deviceId || !fieldBoundDeviceIds.has(deviceId)) return false;
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
     if (inferIsSimulator(device ?? {}, simStatus)) return false;
-    return toTs(device?.last_telemetry_ts_ms ?? device?.lastTelemetryTsMs) != null;
+    return toTs(device.last_telemetry_ts_ms ?? device.lastTelemetryTsMs) != null;
   });
   const hasSimulatorFormalInput = devices.some((device) => {
-    const deviceId = normalizeText(device?.device_id ?? device?.id);
+    const deviceId = normalizeText(device.device_id ?? device.id);
     if (!deviceId || !fieldBoundDeviceIds.has(deviceId)) return false;
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
     if (!inferIsSimulator(device ?? {}, simStatus)) return false;
