@@ -35,13 +35,12 @@ export default function SensingRuntimeStatus(): React.ReactElement {
     { key: "active-skill", label: "生效感知技能数", value: vm.effectiveSensingSkillsLabel },
     { key: "sim-skill", label: "模拟承载技能数", value: vm.simulatorBackedSkillsLabel },
     { key: "physical-skill", label: "真实设备承载技能数", value: vm.physicalBackedSkillsLabel },
-    { key: "telemetry", label: "最近遥测时间", value: vm.latestSensingTimeLabel },
+    { key: "telemetry", label: "最近感知时间", value: vm.latestSensingTimeLabel },
     { key: "formal", label: "是否具备有效感知输入", value: vm.formalSensingInputLabel },
-    { key: "source-summary", label: "感知来源摘要", value: vm.sourceSummaryLabel },
   ];
 
   return (
-    <SectionCard title="感知运行状态" subtitle="聚合技能绑定、模拟承载与设备状态，统一展示当前有效感知输入情况。">
+    <SectionCard title="感知运行状态" subtitle="面向产品展示当前感知能力与输入有效性。">
       <div className="decisionList" style={{ marginTop: 8 }}>
         {items.map((item) => (
           <div key={item.key} className="decisionItemStatic">
