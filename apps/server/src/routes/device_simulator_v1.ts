@@ -132,24 +132,38 @@ async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: stri
 
 async function writeTelemetryTick(pool: Pool, runner: SimulatorRunner): Promise<void> {
   const ts_ms = Date.now();
-  const metric = "sim_runner_alive";
-  const value_num = 1;
-  await ingestTelemetryV1(
-    pool,
-    {
-      tenant_id: runner.tenant_id,
-      device_id: runner.device_id,
-      metric,
-      value: value_num,
-      unit: "unitless",
-      ts_ms,
-    },
-    {
-      source: "device_simulator_v1",
-      quality_flags: ["OK"],
-      confidence: 1,
-    }
-  );
+  const cycle = (2 * Math.PI * runner.seq) / 144; // ~12 minutes at 5s interval.
+  const tempBase = 24;
+  const air_temperature = Number((tempBase + 1.4 * Math.sin(cycle) + 0.4 * Math.sin(cycle / 3)).toFixed(2));
+  const air_humidity = Number((58 - 0.45 * (air_temperature - tempBase) + 1.2 * Math.sin(cycle / 2 + Math.PI / 6)).toFixed(2));
+  const soil_moisture = Number((41 + 3.5 * Math.sin(cycle / 6 + Math.PI / 5) + 0.08 * runner.seq).toFixed(2));
+
+  const telemetryPoints = [
+    { metric: "sim_runner_alive", value: 1, unit: "unitless" },
+    { metric: "air_temperature", value: air_temperature, unit: "celsius" },
+    { metric: "air_humidity", value: air_humidity, unit: "percent" },
+    { metric: "soil_moisture", value: soil_moisture, unit: "percent" },
+  ] as const;
+
+  for (const point of telemetryPoints) {
+    await ingestTelemetryV1(
+      pool,
+      {
+        tenant_id: runner.tenant_id,
+        device_id: runner.device_id,
+        metric: point.metric,
+        value: point.value,
+        unit: point.unit,
+        ts_ms,
+      },
+      {
+        source: "device_simulator_v1",
+        quality_flags: ["OK"],
+        confidence: 1,
+      }
+    );
+  }
+
   runner.last_tick_ts_ms = ts_ms;
   runner.seq += 1;
   await upsertDeviceSimulatorState(pool, {
