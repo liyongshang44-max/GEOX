@@ -26,6 +26,12 @@ function formatRawStatus(value: unknown): string {
   return String(value);
 }
 
+function formatIntervalToSeconds(intervalMs: number | null | undefined): string {
+  const ms = Number(intervalMs ?? NaN);
+  if (!Number.isFinite(ms) || ms <= 0) return "-";
+  return `${(ms / 1000).toFixed(ms % 1000 === 0 ? 0 : 1)} 秒`;
+}
+
 export default function DeviceOnboardingPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const { token, setToken } = useSession();
@@ -223,7 +229,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                 </div>
                 <div className="field">
                   <span className="metaLabel">{ui?.simulatorIntervalLabel || "当前模拟输入周期"}</span>
-                  <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
+                  <div className="metaText">{formatIntervalToSeconds(effectiveSimulatorStatus?.interval_ms ?? null)}</div>
                 </div>
                 <div className="field">
                   <span className="metaLabel">当前承载说明</span>

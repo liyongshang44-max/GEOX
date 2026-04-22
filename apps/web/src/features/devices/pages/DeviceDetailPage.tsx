@@ -356,7 +356,7 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">历史接入记录 {onboardingRecords.length} 条</div>
               <details style={{ marginTop: 8 }}>
                 <summary className="metaText" style={{ cursor: "pointer" }}>技术补充信息</summary>
-                <div className="decisionItemMeta" style={{ marginTop: 6 }}>记录来源：local mock trace</div>
+                <div className="decisionItemMeta" style={{ marginTop: 6 }}>记录来源：本地调试轨迹</div>
               </details>
             </div>
           </div>
