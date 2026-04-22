@@ -145,6 +145,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
 
   const overview = vm?.carrier;
   const skill = vm?.skill;
+  const ui = vm?.ui;
   const effectiveSimulatorStatus: DeviceSimulatorStatus | null = simulatorStatus ?? (vm?.simulator.status as DeviceSimulatorStatus | null) ?? null;
   const carrierModeText = sourceType === "simulator" ? "模拟承载" : "真实设备承载";
   const simulatorStateText = (() => {
@@ -156,41 +157,44 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const skillCategoriesText = skill?.categories?.join(" / ") || "未识别";
   const bindingTargetsText = skill?.bindingTargets?.join(" / ") || "未绑定";
   const sensingStatusText = vm?.telemetry.status || simulatorStateText;
+  const pageTitle = ui?.pageTitle || "感知载体接入";
+  const pageDescription = ui?.pageDescription || "当前页面用于为地块接入承载感知技能与设备技能的载体，支持真实设备承载与模拟承载两种模式。可查看承载状态、控制模拟感知并验证技能输入链路。";
+  const carrierSummaryText = ui?.carrierSummary || `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`;
 
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知载体接入"
-        description="当前页面用于为地块接入承载感知技能与设备技能的载体，支持真实设备承载与模拟承载两种模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
+        title={pageTitle}
+        description={pageDescription}
       />
 
       <SectionCard title="载体接入状态总览">
         <div className="contentGridTwo alignStart" style={{ marginBottom: 12 }}>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">载体信息</div>
-            <div className="decisionItemMeta">载体编号：{deviceId || "-"}</div>
-            <div className="decisionItemMeta">载体名称：{overview?.displayName || "未命名载体"}</div>
-            <div className="decisionItemMeta">承载模式：{carrierModeText}</div>
+            <div className="decisionItemMeta">{ui?.carrierIdLabel || "载体编号"}：{deviceId || "-"}</div>
+            <div className="decisionItemMeta">{ui?.carrierNameLabel || "载体名称"}：{overview?.displayName || "未命名载体"}</div>
+            <div className="decisionItemMeta">{ui?.carrierModeLabel || "承载模式"}：{carrierModeText}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">技能承载</div>
-            <div className="decisionItemMeta">当前技能类别：{skillCategoriesText}</div>
-            <div className="decisionItemMeta">当前绑定目标：{bindingTargetsText}</div>
-            <div className="decisionItemMeta">当前设备类型：{overview?.deviceType || "未识别"}</div>
+            <div className="decisionItemMeta">{ui?.skillCategoryLabel || "当前技能类别"}：{skillCategoriesText}</div>
+            <div className="decisionItemMeta">{ui?.bindTargetLabel || "当前绑定目标"}：{bindingTargetsText}</div>
+            <div className="decisionItemMeta">{ui?.deviceTypeLabel || "当前设备类型"}：{overview?.deviceType || "未识别"}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">现场绑定</div>
-            <div className="decisionItemMeta">当前绑定地块：{overview?.fieldId || "未绑定"}</div>
-            <div className="decisionItemMeta">当前输入状态：{sensingStatusText || "-"}</div>
+            <div className="decisionItemMeta">{ui?.fieldLabel || "当前绑定地块"}：{overview?.fieldId || "未绑定"}</div>
+            <div className="decisionItemMeta">{ui?.inputStatusLabel || "当前输入状态"}：{sensingStatusText || "-"}</div>
           </div>
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">最近感知</div>
-            <div className="decisionItemMeta">最近感知时间：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
-            <div className="decisionItemMeta">最近心跳时间：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+            <div className="decisionItemMeta">{ui?.latestInputLabel || "最近感知时间"}：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
+            <div className="decisionItemMeta">{ui?.latestHeartbeatLabel || "最近心跳时间"}：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
           </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`}
+          {loading ? "正在加载承载状态…" : carrierSummaryText}
         </div>
         {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{error}</div> : null}
       </SectionCard>
@@ -206,18 +210,19 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟感知控制卡</div>
+              <div className="decisionItemMeta" style={{ marginBottom: 8 }}>{ui?.simulatorControlSummary || "当前为模拟承载，可直接控制模拟感知并验证技能输入链路。"}</div>
               <div className="metaLabel" style={{ marginBottom: 6 }}>状态摘要</div>
               <div className="contentGridTwo alignStart" style={{ marginBottom: 10 }}>
                 <div className="field">
-                  <span className="metaLabel">当前状态</span>
+                  <span className="metaLabel">{ui?.simulatorStatusLabel || "当前状态"}</span>
                   <div className="metaText">{simulatorStateText}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">最近一次模拟输入时间</span>
+                  <span className="metaLabel">{ui?.simulatorLastTickLabel || "最近一次模拟输入时间"}</span>
                   <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">当前模拟输入周期</span>
+                  <span className="metaLabel">{ui?.simulatorIntervalLabel || "当前模拟输入周期"}</span>
                   <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
                 </div>
                 <div className="field">
@@ -256,7 +261,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   <div className="field"><span className="metaLabel">原始状态字段</span><div className="metaText">{formatRawStatus(effectiveSimulatorStatus?.status)}</div></div>
                   <div className="field"><span className="metaLabel">启动时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">停止时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
-                  <div className="field"><span className="metaLabel">最近错误</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">{ui?.simulatorErrorLabel || "最近错误"}</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
                   <div className="field"><span className="metaLabel">原始周期字段</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
                   <div className="field"><span className="metaLabel">最近 tick 时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
                 </div>
