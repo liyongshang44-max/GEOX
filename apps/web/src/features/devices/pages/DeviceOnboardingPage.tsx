@@ -7,7 +7,6 @@ import {
   stopDeviceSimulator,
   type DeviceSimulatorStatus,
 } from "../../../api/deviceSimulator";
-import DeviceOnboardingFlow from "../../../features/devices/onboarding/components/DeviceOnboardingFlow";
 import { PageHeader, SectionCard } from "../../../shared/ui";
 import { buildSkillCarrierVm, type CarrierSourceType, type SkillCarrierVm } from "../../../viewmodels/skillCarrierVm";
 
@@ -155,8 +154,8 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知技能载体接入"
-        description="当前页面用于为地块接入承载感知技能的载体。可选择真实设备承载或模拟承载模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
+        title="感知载体接入"
+        description="当前页面用于为地块接入承载感知技能与设备技能的载体，支持真实设备承载与模拟承载两种模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
       <SectionCard title="载体接入状态总览">
@@ -168,18 +167,18 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="decisionItemMeta">承载模式：{carrierModeText}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">技能承载信息</div>
+            <div className="decisionItemTitle">技能承载</div>
             <div className="decisionItemMeta">当前技能类别：{skillCategoriesText}</div>
             <div className="decisionItemMeta">当前绑定目标：{bindingTargetsText}</div>
             <div className="decisionItemMeta">当前设备类型：{overview?.deviceType || "未识别"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">现场绑定信息</div>
+            <div className="decisionItemTitle">现场绑定</div>
             <div className="decisionItemMeta">当前绑定地块：{overview?.fieldId || "未绑定"}</div>
             <div className="decisionItemMeta">当前输入状态：{sensingStatusText || "-"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">最近感知信息</div>
+            <div className="decisionItemTitle">最近感知</div>
             <div className="decisionItemMeta">最近感知时间：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
             <div className="decisionItemMeta">最近心跳时间：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
           </div>
@@ -302,7 +301,27 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title="接入辅助步骤（可选）" subtitle="用于帮助说明、排查指引与步骤附录，不作为页面主骨架。">
-        <DeviceOnboardingFlow sourceType={sourceType} />
+        <details>
+          <summary className="metaText" style={{ cursor: "pointer" }}>展开接入建议与排查步骤</summary>
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前承载模式</div>
+              <div className="decisionItemMeta">{carrierModeText}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 1：确认载体绑定</div>
+              <div className="decisionItemMeta">核对载体编号、地块绑定与技能绑定目标是否一致。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 2：检查输入链路</div>
+              <div className="decisionItemMeta">优先查看最近感知时间、最近心跳时间与当前输入状态，确认链路持续可用。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 3：必要时进行模拟验证</div>
+              <div className="decisionItemMeta">在模拟承载模式下启动模拟感知，验证技能输入是否按预期生效。</div>
+            </div>
+          </div>
+        </details>
       </SectionCard>
 
       <SectionCard title="后续动作">
