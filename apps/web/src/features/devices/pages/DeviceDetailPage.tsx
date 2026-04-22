@@ -352,8 +352,12 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">时间：{fmtTs(latestOnboardingTrace?.timestamp || null)}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">历史记录数</div>
-              <div className="decisionItemMeta">{onboardingRecords.length} 条（来源：local mock trace）</div>
+              <div className="decisionItemTitle">历史接入记录</div>
+              <div className="decisionItemMeta">{onboardingRecords.length} 条</div>
+              <details style={{ marginTop: 8 }}>
+                <summary className="metaText" style={{ cursor: "pointer" }}>技术补充信息</summary>
+                <div className="decisionItemMeta" style={{ marginTop: 6 }}>记录来源：local mock trace</div>
+              </details>
             </div>
           </div>
         </section>
