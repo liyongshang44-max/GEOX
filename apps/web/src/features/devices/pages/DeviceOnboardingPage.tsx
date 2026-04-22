@@ -155,8 +155,8 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知技能载体接入"
-        description="当前页面用于为地块接入承载感知技能的载体。可选择真实设备承载或模拟承载模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
+        title="感知载体接入"
+        description="当前页面用于为地块接入承载感知技能与设备技能的载体，支持真实设备承载与模拟承载两种模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
       <SectionCard title="载体接入状态总览">
@@ -168,18 +168,18 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="decisionItemMeta">承载模式：{carrierModeText}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">技能承载信息</div>
+            <div className="decisionItemTitle">技能承载</div>
             <div className="decisionItemMeta">当前技能类别：{skillCategoriesText}</div>
             <div className="decisionItemMeta">当前绑定目标：{bindingTargetsText}</div>
             <div className="decisionItemMeta">当前设备类型：{overview?.deviceType || "未识别"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">现场绑定信息</div>
+            <div className="decisionItemTitle">现场绑定</div>
             <div className="decisionItemMeta">当前绑定地块：{overview?.fieldId || "未绑定"}</div>
             <div className="decisionItemMeta">当前输入状态：{sensingStatusText || "-"}</div>
           </div>
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">最近感知信息</div>
+            <div className="decisionItemTitle">最近感知</div>
             <div className="decisionItemMeta">最近感知时间：{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
             <div className="decisionItemMeta">最近心跳时间：{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
           </div>
