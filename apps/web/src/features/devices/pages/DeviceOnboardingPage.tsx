@@ -7,7 +7,6 @@ import {
   stopDeviceSimulator,
   type DeviceSimulatorStatus,
 } from "../../../api/deviceSimulator";
-import DeviceOnboardingFlow from "../../../features/devices/onboarding/components/DeviceOnboardingFlow";
 import { PageHeader, SectionCard } from "../../../shared/ui";
 import { buildSkillCarrierVm, type CarrierSourceType, type SkillCarrierVm } from "../../../viewmodels/skillCarrierVm";
 
