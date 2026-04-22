@@ -1,5 +1,5 @@
 import { apiRequestOptional, withQuery } from "../api/client";
-import { getDeviceSimulatorStatus, type DeviceSimulatorStatus } from "../api/deviceSimulator";
+import { getDeviceSimulatorStatus, listDeviceSimulatorStatuses, type DeviceSimulatorStatus } from "../api/deviceSimulator";
 import { listSkillBindings, listSkillRegistry, resolveSkillClassification, type SkillBindingItem, type SkillRegistryItem } from "../api/skills";
 
 type DeviceRecord = Record<string, unknown>;
@@ -135,35 +135,29 @@ async function fetchDevices(): Promise<DeviceRecord[]> {
 
 async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string, DeviceSimulatorStatus>> {
   const map = new Map<string, DeviceSimulatorStatus>();
-  const candidates = [
-    "/api/v1/devices/simulator/statuses",
-    "/api/v1/devices/simulator/status",
-  ];
-
-  for (const path of candidates) {
-    try {
-      const res = await apiRequestOptional<unknown>(withQuery(path, { limit: 500 }), undefined, { timeoutMs: 5000, dedupe: true, silent: true });
-      const items = normalizeList<Record<string, unknown>>(res);
-      if (items.length) {
-        for (const item of items) {
-          const deviceId = normalizeText(item.device_id ?? item.id);
-          if (deviceId) map.set(deviceId, item as DeviceSimulatorStatus);
-        }
-        return map;
+  const targetIds = Array.from(new Set(deviceIds.map((id) => normalizeText(id)).filter(Boolean)));
+  try {
+    const res = await listDeviceSimulatorStatuses(500);
+    const items = normalizeList<Record<string, unknown>>(res);
+    const targetSet = new Set(targetIds);
+    for (const item of items) {
+      const deviceId = normalizeText(item.device_id ?? item.id);
+      if (!deviceId) continue;
+      if (targetSet.size > 0 && !targetSet.has(deviceId)) continue;
+      map.set(deviceId, item as DeviceSimulatorStatus);
+    }
+    return map;
+  } catch {
+    // compatibility fallback: only used when aggregate endpoint request fails.
+    await Promise.all(targetIds.map(async (deviceId) => {
+      try {
+        const status = await getDeviceSimulatorStatus(deviceId);
+        map.set(deviceId, status);
+      } catch {
+        // optional per-device status fallback
       }
-    } catch {
-      // fallback below
-    }
+    }));
   }
-
-  await Promise.all(deviceIds.map(async (deviceId) => {
-    try {
-      const status = await getDeviceSimulatorStatus(deviceId);
-      map.set(deviceId, status);
-    } catch {
-      // optional per-device status
-    }
-  }));
   return map;
 }
 

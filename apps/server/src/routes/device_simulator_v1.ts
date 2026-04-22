@@ -46,6 +46,12 @@ function parseIntervalMs(raw: any): number {
   return Math.max(1000, Math.min(clamped, 60000));
 }
 
+function parseLimit(raw: any): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 200;
+  return Math.max(1, Math.min(Math.floor(n), 500));
+}
+
 async function ensureDeviceSimulatorIndexRuntime(pool: Pool): Promise<void> {
   if (!ensureDeviceSimulatorIndexPromise) {
     ensureDeviceSimulatorIndexPromise = (async () => {
@@ -120,6 +126,38 @@ async function readDeviceSimulatorState(pool: Pool, tenant_id: string, device_id
     last_error: row.last_error == null ? null : String(row.last_error),
     updated_ts_ms: Number(row.updated_ts_ms ?? 0),
   };
+}
+
+async function listDeviceSimulatorStatesFromIndexV1(
+  pool: Pool,
+  tenant_id: string,
+  limit: number,
+): Promise<any[]> {
+  // SSOT for aggregate read API:
+  // always read from persisted device_simulator_index_v1, never from in-memory runners.
+  const q = await pool.query(
+    `SELECT
+        s.tenant_id,
+        s.device_id,
+        s.status,
+        s.started_ts_ms,
+        s.stopped_ts_ms,
+        s.interval_ms,
+        s.last_tick_ts_ms,
+        s.last_error,
+        s.updated_ts_ms,
+        d.display_name,
+        d.device_mode
+      FROM device_simulator_index_v1 s
+      LEFT JOIN device_index_v1 d
+        ON d.tenant_id = s.tenant_id
+       AND d.device_id = s.device_id
+     WHERE s.tenant_id = $1
+     ORDER BY s.updated_ts_ms DESC, s.device_id ASC
+     LIMIT $2`,
+    [tenant_id, limit]
+  );
+  return q.rows ?? [];
 }
 
 async function ensureDeviceExists(pool: Pool, tenant_id: string, device_id: string): Promise<boolean> {
@@ -206,6 +244,64 @@ async function withValidatedDevice(
 }
 
 export function registerDeviceSimulatorV1Routes(app: FastifyInstance, pool: Pool): void {
+  // Conflict guard for legacy/incorrect aggregate path:
+  // register static route ahead of /api/v1/devices/:device_id/status so "simulator" is never parsed as :device_id.
+  app.get("/api/v1/devices/simulator/status", async (_req, reply) => {
+    return reply.status(410).send({
+      ok: false,
+      error: "DEPRECATED_PATH",
+      message: "Use /api/v1/devices/simulator/statuses instead",
+      replacement: "/api/v1/devices/simulator/statuses",
+    });
+  });
+
+  app.get("/api/v1/devices/simulator/statuses", async (req, reply) => {
+    await ensureDeviceSimulatorIndexRuntime(pool);
+    const auth = requireAoActScopeV0(req, reply, "telemetry.read");
+    if (!auth) return;
+
+    const query: any = req.query ?? {};
+    const limit = parseLimit(query.limit);
+    // Compatibility-only query params: accepted but auth context is always authoritative.
+    // This avoids unbounded scans and prevents caller-controlled cross-scope reads.
+    const query_tenant_id = isNonEmptyString(query.tenant_id) ? String(query.tenant_id).trim() : null;
+    const query_project_id = isNonEmptyString(query.project_id) ? String(query.project_id).trim() : null;
+    const query_group_id = isNonEmptyString(query.group_id) ? String(query.group_id).trim() : null;
+    const tenant_id = auth.tenant_id;
+    const project_id = auth.project_id;
+    const group_id = auth.group_id;
+
+    const rows = await listDeviceSimulatorStatesFromIndexV1(pool, tenant_id, limit);
+    const items = rows.map((row: any) => ({
+      tenant_id: String(row.tenant_id ?? tenant_id),
+      project_id,
+      group_id,
+      device_id: String(row.device_id ?? ""),
+      display_name: row.display_name == null ? null : String(row.display_name),
+      device_mode: row.device_mode == null ? null : String(row.device_mode),
+      key: `${tenant_id}::${String(row.device_id ?? "")}`,
+      running: String(row.status ?? "").toLowerCase() === "running",
+      status: String(row.status ?? "stopped").toLowerCase(),
+      started_ts_ms: row.started_ts_ms == null ? null : Number(row.started_ts_ms),
+      stopped_ts_ms: row.stopped_ts_ms == null ? null : Number(row.stopped_ts_ms),
+      interval_ms: Number(row.interval_ms ?? 5000),
+      last_tick_ts_ms: row.last_tick_ts_ms == null ? null : Number(row.last_tick_ts_ms),
+      last_error: row.last_error == null ? null : String(row.last_error),
+      updated_ts_ms: row.updated_ts_ms == null ? null : Number(row.updated_ts_ms),
+    }));
+
+    return reply.send({
+      ok: true,
+      tenant_id,
+      project_id,
+      group_id,
+      scope_source: "auth_context",
+      scope_query_ignored:
+        query_tenant_id !== null || query_project_id !== null || query_group_id !== null,
+      items,
+    });
+  });
+
   app.post("/api/v1/devices/:id/simulator/start", async (req, reply) => {
     await ensureDeviceSimulatorIndexRuntime(pool);
     const validated = await withValidatedDevice(req, reply, pool, { source: "path" });
