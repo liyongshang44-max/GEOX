@@ -25,6 +25,12 @@ function timelineTypeLabel(type: string): string {
   return "事件";
 }
 
+function metricDetailHint(item: { source: string; reasoningStatus: string; fixedRoutes: string[]; visibleOnExplain: boolean }): string {
+  const routes = item.fixedRoutes.length ? item.fixedRoutes.join(" / ") : "-";
+  const explain = item.visibleOnExplain ? "是" : "否";
+  return `source: ${item.source} · reasoning: ${item.reasoningStatus} · routes: ${routes} · explain可见: ${explain}`;
+}
+
 export default function FieldDetailPage(): React.ReactElement {
   const params = useParams();
   const [searchParams] = useSearchParams();
@@ -318,14 +324,35 @@ export default function FieldDetailPage(): React.ReactElement {
       <section className="demoContentGrid">
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
-            <div className="sectionTitle">实时状态 / 现场数据</div>
-            <div className="detailSectionLead">遥测与设备在线信息集中到此页签展示，不进入默认概览首屏。</div>
+            <div className="sectionTitle">实时状态 / Field Summary Metrics</div>
+            <div className="detailSectionLead">仅展示 customer_primary + customer_secondary 的指标。</div>
           </div>
           <div className="operationsSummaryGrid" style={{ marginTop: 8 }}>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">土壤湿度</span><strong>{model?.currentStatus?.soilMoisture || "--"}</strong></div>
-            <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">温度</span><strong>{model?.currentStatus?.temperature || "--"}</strong></div>
+            {(model?.fieldSummaryMetrics ?? []).map((item) => (
+              <div key={`summary_metric_${item.metric}`} className="operationsSummaryMetric" title={metricDetailHint(item)}>
+                <span className="operationsSummaryLabel">{item.label}</span>
+                <strong>{item.value || "--"}</strong>
+              </div>
+            ))}
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">设备状态</span><strong>{model?.currentStatus?.deviceOnline || "--"}</strong></div>
             <div className="operationsSummaryMetric"><span className="operationsSummaryLabel">最近心跳</span><strong>{model?.currentStatus?.recentHeartbeat || "--"}</strong></div>
+          </div>
+        </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader">
+            <div className="sectionTitle">Technical Detail Metrics</div>
+            <div className="detailSectionLead">仅展示 professional_detail 指标。</div>
+          </div>
+          <div className="decisionList" style={{ marginTop: 8 }}>
+            {(model?.technicalDetailMetrics ?? []).map((item) => (
+              <div key={`technical_metric_${item.metric}`} className="decisionItemStatic">
+                <div className="decisionItemTitle">{item.label}</div>
+                <div className="decisionItemMeta">{item.value || "--"}</div>
+                <div className="demoMetricHint">{metricDetailHint(item)}</div>
+              </div>
+            ))}
+            {!(model?.technicalDetailMetrics ?? []).length ? <div className="decisionItemStatic">暂无专业明细指标。</div> : null}
           </div>
         </section>
 
