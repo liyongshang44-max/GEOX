@@ -186,11 +186,11 @@ export default function DeviceDetailPage(): React.ReactElement {
     if (sensingStateRaw.includes("stop") || sensingStateRaw.includes("idle")) return "已停止";
     if (bootstrapContext.simulator_started === true) return "运行中";
     if (bootstrapContext.simulator_started === false) return "已停止";
-    return "未启动";
+    return "已停止";
   })();
   const carrierSummaryText = bootstrapContext.skill_related_note
-    ? `用于 skill 输入链路（${bootstrapContext.skill_related_note}）`
-    : "用于 sensing/device skill 输入链路";
+    ? `正在为相关 skill 提供输入（${bootstrapContext.skill_related_note}）`
+    : "正在为 sensing/device skill 提供输入";
   const recentSensingTimeText = cpOverview?.last_telemetry_label || fmtTs(statusObj?.last_telemetry_ts_ms);
   const cycleMs = Number((cpOverview as any)?.interval_ms ?? (statusObj as any)?.interval_ms ?? NaN);
   const cycleSec = Number((cpOverview as any)?.interval_sec ?? (cpOverview as any)?.report_interval_sec ?? (statusObj as any)?.interval_sec ?? NaN);
@@ -280,6 +280,15 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">运行周期：{cycleText}</div>
             </div>
           </div>
+          <details style={{ marginTop: 10 }}>
+            <summary className="metaText" style={{ cursor: "pointer" }}>展开技术补充信息（trace chips）</summary>
+            <div className="traceChipRow" style={{ marginTop: 8 }}>
+              <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
+              <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
+              <span className="traceChip">固件：{cpOverview?.fw_ver || statusObj?.firmware_version || "-"}</span>
+              <span className="traceChip">信号：{cpOverview?.rssi_dbm ?? statusObj?.rssi_dbm ?? "-"} dBm</span>
+            </div>
+          </details>
       </section>
 
         <section className="card detailHeroCard">
