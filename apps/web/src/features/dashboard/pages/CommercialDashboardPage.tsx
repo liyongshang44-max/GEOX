@@ -34,6 +34,7 @@ import { parseFieldReadModelV1, toReadableRecommendationBias, toReadableSalinity
 import { getMetricDisplayLabelZh, isCustomerPrimaryMetric, shouldShowMetricOnDashboard } from "../../../lib/metricDisplayPolicy";
 import { formatSourceMeta, resolveSourceMeta } from "../../../lib/dataOrigin";
 import type { DataOriginValue } from "../../../lib/dataOrigin";
+import { extractBootstrapContext, type BootstrapContext } from "../../../lib/bootstrapContext";
 
 function normalizeNumericMetric(value: unknown): number | null {
   const n = Number(value);
@@ -131,6 +132,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     }) | null;
   }>({ todayCount: 0, latest: null });
   const [latestFieldSensingSummary, setLatestFieldSensingSummary] = React.useState<DashboardFieldSensingSummary | null>(null);
+  const [bootstrapContext, setBootstrapContext] = React.useState<BootstrapContext>({
+    device_mode: null,
+    simulator_started: null,
+    simulator_status: null,
+    skill_related_note: null,
+  });
 
   React.useEffect(() => {
     let mounted = true;
@@ -167,6 +174,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
       if (!mounted || !res) return;
       setTopActions(Array.isArray(res.top_actions) ? res.top_actions.slice(0, 3) : []);
       setDeviceSummary(res.device_status_summary ?? { online: 0, offline: 0, busy: 0, low_battery: 0 });
+      setBootstrapContext(extractBootstrapContext(res, (res as any)?.onboarding_context, (res as any)?.device_context));
     });
     return () => {
       mounted = false;
@@ -327,6 +335,11 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
     anomalies_24h: Number(d.overview.riskFieldCount ?? 0),
     executing_ops: runningActions.length,
   };
+  const dashboardContextDescription = [
+    `mode=${bootstrapContext.device_mode ?? "-"}`,
+    `simulator_started=${bootstrapContext.simulator_started == null ? "-" : String(bootstrapContext.simulator_started)}`,
+    `simulator_status=${bootstrapContext.simulator_status ?? "-"}`,
+  ].join(" · ");
 
   const runTopAction = async (item: DashboardTopActionItem): Promise<void> => {
     if (!item.execution_ready || !item.execution_plan) return;
@@ -377,7 +390,7 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
           {
             zone: "A",
             title: "平台总览",
-            description: "平台控制台主入口：统一承载运营与技能态势。",
+            description: `平台控制台主入口：统一承载运营与技能态势。${dashboardContextDescription}`,
             content: (
               <OverviewMetrics
                 expert={expert}

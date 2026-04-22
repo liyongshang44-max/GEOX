@@ -5,6 +5,7 @@ import {
   fetchSimulatorRunnerStatus,
   type SimulatorRunnerStatusResponseV1,
 } from "../lib/api";
+import { extractBootstrapContext } from "../lib/bootstrapContext";
 
 export type CarrierSourceType = "simulator" | "physical";
 
@@ -15,6 +16,10 @@ export type SkillCarrierVm = {
     sourceType: CarrierSourceType;
     deviceType: string;
     fieldId: string;
+    deviceMode: string;
+    simulatorStarted: boolean | null;
+    simulatorStatus: string;
+    skillRelatedNote: string;
   };
   skill: {
     total: number;
@@ -76,6 +81,12 @@ export async function buildSkillCarrierVm(input: {
 
   const device = (detailRaw as any)?.device ?? detailRaw ?? {};
   const status = statusRaw ?? {};
+  const bootstrap = extractBootstrapContext(device, status, simulatorRaw);
+  const preferredSourceType: CarrierSourceType = bootstrap.device_mode === "simulator"
+    ? "simulator"
+    : bootstrap.device_mode === "real"
+      ? "physical"
+      : input.sourceType;
 
   const categories = uniqueText(skills.map((item) => resolveSkillClassification(item)));
   const bindingTargets = uniqueText(bindings.map((item: any) => item?.target_id ?? item?.crop_code ?? item?.bind_target));
@@ -84,9 +95,17 @@ export async function buildSkillCarrierVm(input: {
     carrier: {
       deviceId: toText(device?.device_id ?? deviceId, deviceId || "unknown_device"),
       displayName: toText(device?.display_name ?? device?.name, "未命名设备"),
-      sourceType: input.sourceType,
+      sourceType: preferredSourceType,
       deviceType: toText(device?.device_template ?? device?.template_code ?? device?.device_type, "unknown_template"),
       fieldId: toText(device?.field_id ?? status?.field_id, "未绑定"),
+      deviceMode: toText(bootstrap.device_mode, preferredSourceType === "simulator" ? "simulator" : "real"),
+      simulatorStarted: bootstrap.simulator_started,
+      simulatorStatus: toText(
+        bootstrap.simulator_status
+          ?? (typeof simulatorRaw?.running === "boolean" ? (simulatorRaw.running ? "running" : "stopped") : null),
+        "unknown"
+      ),
+      skillRelatedNote: toText(bootstrap.skill_related_note, "该载体用于技能输入链路。"),
     },
     skill: {
       total: skills.length,
@@ -99,9 +118,9 @@ export async function buildSkillCarrierVm(input: {
       status: toText(status?.status ?? device?.status, "unknown"),
     },
     simulator: {
-      checked: input.sourceType === "simulator",
-      running: input.sourceType === "simulator" ? (typeof simulatorRaw?.running === "boolean" ? simulatorRaw.running : null) : null,
-      status: input.sourceType === "simulator" ? simulatorRaw : null,
+      checked: preferredSourceType === "simulator",
+      running: preferredSourceType === "simulator" ? (typeof simulatorRaw?.running === "boolean" ? simulatorRaw.running : bootstrap.simulator_started) : null,
+      status: preferredSourceType === "simulator" ? simulatorRaw : null,
     },
   };
 }

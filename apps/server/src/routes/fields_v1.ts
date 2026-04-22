@@ -558,18 +558,38 @@ export function registerFieldsV1Routes(app: FastifyInstance, pool: Pool) { // Ro
       } catch (e: any) {
         read_model_refresh = { error: String(e?.message ?? e) };
       }
+      const simulator_started = simulator_bootstrap.length > 0 && simulator_bootstrap.every((item) => item.simulator_started);
+      const simulator_status = simulator_bootstrap.length === 0
+        ? "not_started"
+        : simulator_bootstrap.every((item) => item.simulator_started)
+          ? "running"
+          : simulator_bootstrap.some((item) => item.simulator_started)
+            ? "partial"
+            : "failed";
+      const skill_related_note = "Simulator carriers are prepared for sensing/device skill input validation.";
       return reply.send({
         ok: true,
         field_id,
         field_name,
         device_mode: "simulator",
+        simulator_started,
+        simulator_status,
+        skill_related_note,
         environment_type: "demo_simulator_only",
-        devices: deviceRows.map((row) => ({
-          device_id: row.device_id,
-          display_name: row.display_name,
-          template_type: row.key,
-          device_mode: "simulator",
-        })),
+        devices: deviceRows.map((row) => {
+          const bootstrap = simulator_bootstrap.find((item) => item.device_id === row.device_id);
+          const rowSimulatorStarted = !!bootstrap?.simulator_started;
+          const rowSimulatorStatus = rowSimulatorStarted ? "running" : (bootstrap ? "failed" : "not_started");
+          return {
+            device_id: row.device_id,
+            display_name: row.display_name,
+            template_type: row.key,
+            device_mode: "simulator",
+            simulator_started: rowSimulatorStarted,
+            simulator_status: rowSimulatorStatus,
+            skill_related_note: `Simulator carrier (${row.key}) can be used as skill input source.`,
+          };
+        }),
         simulator_bootstrap,
         read_model_refresh,
       });
