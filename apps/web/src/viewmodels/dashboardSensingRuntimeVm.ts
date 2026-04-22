@@ -18,6 +18,7 @@ export type DashboardSensingRuntimeVm = {
   sourceSummaryLabel: string;
 };
 const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
+const simulatorStatusCache = new Map<string, DeviceSimulatorStatus>();
 
 function normalizeList<T>(res: unknown): T[] {
   const obj = asRecord(res);
@@ -144,7 +145,9 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
       const deviceId = normalizeText(item.device_id ?? item.id);
       if (!deviceId) continue;
       if (targetSet.size > 0 && !targetSet.has(deviceId)) continue;
-      map.set(deviceId, item as DeviceSimulatorStatus);
+      const normalizedStatus = item as DeviceSimulatorStatus;
+      map.set(deviceId, normalizedStatus);
+      simulatorStatusCache.set(deviceId, normalizedStatus);
     }
     return map;
   } catch {
@@ -153,8 +156,10 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
       try {
         const status = await getDeviceSimulatorStatus(deviceId);
         map.set(deviceId, status);
+        simulatorStatusCache.set(deviceId, status);
       } catch {
-        // optional per-device status fallback
+        const cached = simulatorStatusCache.get(deviceId);
+        if (cached) map.set(deviceId, cached);
       }
     }));
   }
