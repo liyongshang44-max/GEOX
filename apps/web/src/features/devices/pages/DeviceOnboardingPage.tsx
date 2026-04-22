@@ -7,7 +7,6 @@ import {
   stopDeviceSimulator,
   type DeviceSimulatorStatus,
 } from "../../../api/deviceSimulator";
-import DeviceOnboardingFlow from "../../../features/devices/onboarding/components/DeviceOnboardingFlow";
 import { PageHeader, SectionCard } from "../../../shared/ui";
 import { buildSkillCarrierVm, type CarrierSourceType, type SkillCarrierVm } from "../../../viewmodels/skillCarrierVm";
 
@@ -302,7 +301,27 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title="接入辅助步骤（可选）" subtitle="用于帮助说明、排查指引与步骤附录，不作为页面主骨架。">
-        <DeviceOnboardingFlow sourceType={sourceType} />
+        <details>
+          <summary className="metaText" style={{ cursor: "pointer" }}>展开接入建议与排查步骤</summary>
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">当前承载模式</div>
+              <div className="decisionItemMeta">{carrierModeText}</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 1：确认载体绑定</div>
+              <div className="decisionItemMeta">核对载体编号、地块绑定与技能绑定目标是否一致。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 2：检查输入链路</div>
+              <div className="decisionItemMeta">优先查看最近感知时间、最近心跳时间与当前输入状态，确认链路持续可用。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">建议步骤 3：必要时进行模拟验证</div>
+              <div className="decisionItemMeta">在模拟承载模式下启动模拟感知，验证技能输入是否按预期生效。</div>
+            </div>
+          </div>
+        </details>
       </SectionCard>
 
       <SectionCard title="后续动作">
