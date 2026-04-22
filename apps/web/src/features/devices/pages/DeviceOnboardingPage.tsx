@@ -199,13 +199,8 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">模拟承载</div>
-              <div className="decisionItemMeta">该载体正在为感知技能提供演示输入，用于验证技能行为与绑定策略。</div>
-              <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
-            </div>
-            <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟感知控制卡</div>
-              <div className="metaLabel" style={{ marginBottom: 6 }}>主状态</div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>状态摘要</div>
               <div className="contentGridTwo alignStart" style={{ marginBottom: 10 }}>
                 <div className="field">
                   <span className="metaLabel">当前状态</span>
@@ -224,7 +219,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
                 </div>
               </div>
-              <div className="metaLabel" style={{ marginBottom: 6 }}>操作</div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>操作区</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
                   <span className="metaLabel">模拟输入周期</span>
@@ -249,10 +244,10 @@ export default function DeviceOnboardingPage(): React.ReactElement {
               </div>
               {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{simulatorError}</div> : null}
               <details style={{ marginTop: 10 }}>
-                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（模拟感知调试字段）</summary>
+                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（可折叠）</summary>
                 <div className="contentGridTwo alignStart" style={{ marginTop: 8 }}>
                   <div className="field"><span className="metaLabel">原始运行状态字段</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-                  <div className="field"><span className="metaLabel">原始状态值</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">原始状态字段</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
                   <div className="field"><span className="metaLabel">启动时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">停止时间戳</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
                   <div className="field"><span className="metaLabel">最近错误</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
