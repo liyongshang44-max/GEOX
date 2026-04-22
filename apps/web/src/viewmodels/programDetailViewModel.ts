@@ -1,6 +1,7 @@
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveTimelineLabel } from "./timelineLabels";
 import { toOperationDetailPath } from "../lib/operationLink";
+import { getMetricDisplayPolicy } from "../lib/metricDisplayPolicy";
 
 type ProgramConsoleStatus = "ok" | "risk" | "error" | "running";
 
@@ -159,17 +160,29 @@ function metricValueText(value: unknown, suffix = ""): string {
 }
 
 function normalizeMetricReference(args: {
+  metricKey?: string;
   label: string;
   value: unknown;
   unit?: string;
   reasoningStatus?: unknown;
   source?: string;
 }): ProgramDetailMetric {
+  const policy = getMetricDisplayPolicy(args.metricKey);
+  const rawReasoningStatus = toText(args.reasoningStatus, "").trim().toUpperCase();
+  const reasoningStatus = [
+    "PRIMARY_REASONING_INPUT",
+    "SECONDARY_REASONING_INPUT",
+    "PROFESSIONAL_ONLY",
+    "RAW_ONLY",
+    "NOT_IN_CURRENT_REASONING",
+  ].includes(rawReasoningStatus)
+    ? rawReasoningStatus
+    : toText(policy?.reasoning_status, "NOT_IN_CURRENT_REASONING");
   return {
     label: args.label,
     value: metricValueText(args.value, ""),
     unit: args.unit ?? "",
-    reasoning_status: toText(args.reasoningStatus, "IN_CURRENT_REASONING"),
+    reasoning_status: reasoningStatus,
     source: toText(args.source, "unknown"),
   };
 }
@@ -404,6 +417,7 @@ export function buildProgramDetailViewModel(args: {
     ?? null;
   const keyMetrics = [
     normalizeMetricReference({
+      metricKey: "soil_moisture",
       label: "土壤湿度",
       value: metricsSource?.soil_moisture ?? metricsSource?.soil_moisture_pct,
       unit: "%",
@@ -411,6 +425,7 @@ export function buildProgramDetailViewModel(args: {
       source: "latest_recommendation.current_metrics.soil_moisture",
     }),
     normalizeMetricReference({
+      metricKey: "air_temperature",
       label: "温度",
       value: metricsSource?.temperature ?? metricsSource?.air_temperature,
       unit: "℃",
@@ -418,6 +433,7 @@ export function buildProgramDetailViewModel(args: {
       source: "latest_recommendation.current_metrics.temperature",
     }),
     normalizeMetricReference({
+      metricKey: "air_humidity",
       label: "湿度",
       value: metricsSource?.humidity ?? metricsSource?.air_humidity,
       unit: "%",

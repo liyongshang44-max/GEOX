@@ -1,6 +1,7 @@
 
 import { mapReceiptToVm, type ReceiptEvidenceVm } from "./evidence";
 import { resolveUnifiedOperationFinalStatus, toOperationDetailStatusLabel } from "../lib/operationStatusUnified";
+import { getMetricDisplayPolicy } from "../lib/metricDisplayPolicy";
 
 export type OperationStoryTimelineItemVm = {
   id: string;
@@ -284,6 +285,7 @@ function mapSignedPercentLabel(raw: unknown): string {
 }
 
 function normalizeMetricReference(args: {
+  metricKey?: string;
   label: string;
   rawValue: unknown;
   unit?: string;
@@ -298,11 +300,24 @@ function normalizeMetricReference(args: {
   guidanceLabel: string;
   isPrimaryReasoning: boolean;
 } {
+  const policy = getMetricDisplayPolicy(args.metricKey);
   const unit = args.unit ?? "";
-  const reasoningStatus = String(args.reasoningStatus ?? "IN_CURRENT_REASONING").trim() || "IN_CURRENT_REASONING";
+  const rawReasoningStatus = String(args.reasoningStatus ?? "").trim().toUpperCase();
+  const reasoningStatusFromPolicy = String(policy?.reasoning_status ?? "NOT_IN_CURRENT_REASONING");
+  const reasoningStatus = [
+    "PRIMARY_REASONING_INPUT",
+    "SECONDARY_REASONING_INPUT",
+    "PROFESSIONAL_ONLY",
+    "RAW_ONLY",
+    "NOT_IN_CURRENT_REASONING",
+  ].includes(rawReasoningStatus)
+    ? rawReasoningStatus
+    : reasoningStatusFromPolicy;
   const valueNumber = Number(args.rawValue ?? NaN);
   const value = Number.isFinite(valueNumber) ? `${Number.isInteger(valueNumber) ? valueNumber : valueNumber.toFixed(1)}` : "--";
-  const isDowngraded = ["PROFESSIONAL_DETAIL", "NOT_IN_CURRENT_REASONING"].includes(reasoningStatus.toUpperCase());
+  const isProfessionalTier = policy?.display_tier === "professional_detail";
+  const isReasoningDowngraded = ["PROFESSIONAL_ONLY", "RAW_ONLY", "NOT_IN_CURRENT_REASONING"].includes(reasoningStatus);
+  const isDowngraded = isProfessionalTier || isReasoningDowngraded;
   return {
     label: args.label,
     value,
@@ -778,6 +793,7 @@ export function buildOperationDetailViewModel(args?: {
   return {
     metricReferences: [
       normalizeMetricReference({
+        metricKey: "soil_moisture",
         label: "执行前土壤湿度",
         rawValue: safeDetail?.agronomy?.before_metrics?.soil_moisture,
         unit: "%",
@@ -785,6 +801,7 @@ export function buildOperationDetailViewModel(args?: {
         source: "agronomy.before_metrics.soil_moisture",
       }),
       normalizeMetricReference({
+        metricKey: "soil_moisture",
         label: "执行后土壤湿度",
         rawValue: safeDetail?.agronomy?.after_metrics?.soil_moisture,
         unit: "%",
