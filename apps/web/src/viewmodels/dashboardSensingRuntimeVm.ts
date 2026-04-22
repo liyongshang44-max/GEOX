@@ -4,17 +4,13 @@ import { listSkillBindings, listSkillRegistry, resolveSkillClassification, type 
 
 type DeviceRecord = Record<string, unknown>;
 
-type DeviceFieldBindingRecord = {
-  device_id?: string | null;
-  field_id?: string | null;
-};
-
 export type DashboardSensingRuntimeVm = {
   activeSensingDeviceSkillCount: number;
   simulatorCarrierSkillCount: number;
   physicalCarrierSkillCount: number;
   latestTelemetryTsMs: number | null;
   hasFormalSensingInput: boolean;
+  formalSensingInputLabel: string;
 };
 const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
 
@@ -116,24 +112,6 @@ async function fetchDevices(): Promise<DeviceRecord[]> {
   return normalizeList<DeviceRecord>(res);
 }
 
-async function fetchDeviceFieldBindings(): Promise<DeviceFieldBindingRecord[]> {
-  const candidates = [
-    "/api/v1/devices/field-bindings",
-    "/api/v1/devices/bindings/fields",
-    "/api/v1/fields/device-bindings",
-  ];
-  for (const path of candidates) {
-    try {
-      const res = await apiRequestOptional<unknown>(path, undefined, { timeoutMs: 5000, dedupe: true, silent: true });
-      const list = normalizeList<DeviceFieldBindingRecord>(res);
-      if (list.length > 0) return list;
-    } catch {
-      // try next candidate endpoint
-    }
-  }
-  return [];
-}
-
 async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string, DeviceSimulatorStatus>> {
   const map = new Map<string, DeviceSimulatorStatus>();
   const candidates = [
@@ -169,17 +147,15 @@ async function fetchSimulatorStatusMap(deviceIds: string[]): Promise<Map<string,
 }
 
 export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensingRuntimeVm> {
-  const [skillsResult, bindingsResult, devicesResult, bindingsByFieldResult] = await Promise.allSettled([
+  const [skillsResult, bindingsResult, devicesResult] = await Promise.allSettled([
     listSkillRegistry({ limit: 300 }),
     listSkillBindings({ limit: 500 }),
     fetchDevices(),
-    fetchDeviceFieldBindings(),
   ]);
 
   const skills = skillsResult.status === "fulfilled" ? skillsResult.value : [];
   const rawBindings = bindingsResult.status === "fulfilled" ? bindingsResult.value : [];
   const devices = devicesResult.status === "fulfilled" ? devicesResult.value : [];
-  const deviceFieldBindings = bindingsByFieldResult.status === "fulfilled" ? bindingsByFieldResult.value : [];
 
   const activeSensingOrDeviceSkills = new Set(
     skills
@@ -218,18 +194,6 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
     else physicalSkillIds.add(skillId);
   }
 
-  const fieldBoundDeviceIds = new Set<string>();
-  for (const binding of deviceFieldBindings) {
-    const deviceId = normalizeText(binding.device_id);
-    const fieldId = normalizeText(binding.field_id);
-    if (deviceId && fieldId) fieldBoundDeviceIds.add(deviceId);
-  }
-  for (const device of devices) {
-    const deviceId = normalizeText(device.device_id ?? device.id);
-    const fieldId = normalizeText(device.field_id);
-    if (deviceId && fieldId) fieldBoundDeviceIds.add(deviceId);
-  }
-
   const telemetryCandidates: number[] = [];
   for (const device of devices) {
     const deviceId = normalizeText(device.device_id ?? device.id);
@@ -249,14 +213,20 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
 
   const hasPhysicalTelemetry = devices.some((device) => {
     const deviceId = normalizeText(device.device_id ?? device.id);
-    if (!deviceId || !fieldBoundDeviceIds.has(deviceId)) return false;
+    if (!deviceId) return false;
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
     if (inferIsSimulator(device ?? {}, simStatus)) return false;
-    return toTs(device.last_telemetry_ts_ms ?? device.lastTelemetryTsMs) != null;
+    const telemetry = asRecord(device.telemetry);
+    return toTs(
+      device.last_telemetry_ts_ms
+      ?? device.lastTelemetryTsMs
+      ?? telemetry?.last_ts_ms
+      ?? telemetry?.lastTelemetryTsMs,
+    ) != null;
   });
   const hasSimulatorFormalInput = devices.some((device) => {
     const deviceId = normalizeText(device.device_id ?? device.id);
-    if (!deviceId || !fieldBoundDeviceIds.has(deviceId)) return false;
+    if (!deviceId) return false;
     const simStatus = simulatorStatusMap.get(deviceId) ?? null;
     if (!inferIsSimulator(device ?? {}, simStatus)) return false;
     if (simStatus?.running !== true) return false;
@@ -269,5 +239,6 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
     physicalCarrierSkillCount: physicalSkillIds.size,
     latestTelemetryTsMs,
     hasFormalSensingInput: hasPhysicalTelemetry || hasSimulatorFormalInput,
+    formalSensingInputLabel: hasPhysicalTelemetry || hasSimulatorFormalInput ? "是" : "否",
   };
 }

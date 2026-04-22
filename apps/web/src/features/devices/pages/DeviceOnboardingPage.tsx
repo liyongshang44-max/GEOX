@@ -140,9 +140,11 @@ export default function DeviceOnboardingPage(): React.ReactElement {
 
   const overview = vm?.carrier;
   const skill = vm?.skill;
+  const presentation = vm?.presentation;
   const effectiveSimulatorStatus: DeviceSimulatorStatus | null = simulatorStatus ?? (vm?.simulator.status as DeviceSimulatorStatus | null) ?? null;
-  const carrierModeText = sourceType === "simulator" ? "模拟承载" : "真实设备承载";
+  const carrierModeText = presentation?.carrierModeLabel || (sourceType === "simulator" ? "模拟承载" : "真实设备承载");
   const simulatorStateText = (() => {
+    if (presentation?.simulatorStatusLabel) return presentation.simulatorStatusLabel;
     if (effectiveSimulatorStatus?.last_error) return "异常";
     if (effectiveSimulatorStatus?.running === true) return "运行中";
     if (effectiveSimulatorStatus?.running === false) return "已停止";
@@ -150,16 +152,16 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   })();
   const skillCategoriesText = skill?.categories?.join(" / ") || "未识别";
   const bindingTargetsText = skill?.bindingTargets?.join(" / ") || "未绑定";
-  const sensingStatusText = vm?.telemetry.status || simulatorStateText;
+  const sensingStatusText = presentation?.simulatorStatusLabel || simulatorStateText;
 
   return (
     <div className="consolePage">
       <PageHeader
-        title="感知技能载体接入"
-        description="为地块接入承载感知技能的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
+        title="感知载体接入"
+        description="当前页面用于为地块接入承载感知技能的载体。可选择真实设备承载或模拟承载模式。可查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
-      <SectionCard title="第一层：承载状态摘要">
+      <SectionCard title="第一层：承载状态摘要（产品视图）">
         <div className="contentGridTwo alignStart">
           <label className="field">
             访问令牌
@@ -189,16 +191,16 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="metaText">{bindingTargetsText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">绑定地块</span>
+            <span className="metaLabel">当前绑定地块</span>
             <div className="metaText">{overview?.fieldId || "未绑定"}</div>
           </div>
           <div className="field">
             <span className="metaLabel">最近感知时间</span>
-            <div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
+            <div className="metaText">{presentation?.latestInputLabel || formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
           </div>
           <div className="field">
             <span className="metaLabel">最近心跳时间</span>
-            <div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+            <div className="metaText">{presentation?.latestHeartbeatLabel || formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
           </div>
           <div className="field">
             <span className="metaLabel">当前输入状态</span>
@@ -216,35 +218,37 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">真实设备承载</div>
             <div className="decisionItemMeta">该载体直接为技能提供现场输入，请优先核对感知链路与心跳连续性。</div>
-            <div className="decisionItemMeta">当前感知链路状态：{vm?.telemetry.status ?? "未知"}</div>
+            <div className="decisionItemMeta">当前感知链路状态：{presentation?.simulatorStatusLabel || "未知"}</div>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟承载</div>
-              <div className="decisionItemMeta">该载体正在为感知技能提供演示输入，用于验证技能行为与绑定策略。</div>
+              <div className="decisionItemMeta">{presentation?.simulatorControlSummary || "该载体正在为感知技能提供演示输入，用于验证技能行为与绑定策略。"}</div>
               <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
             </div>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟感知控制</div>
-              <div className="contentGridTwo alignStart" style={{ marginBottom: 8 }}>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>主状态</div>
+              <div className="contentGridTwo alignStart" style={{ marginBottom: 10 }}>
                 <div className="field">
                   <span className="metaLabel">当前状态</span>
                   <div className="metaText">{simulatorStateText}</div>
-                </div>
-                <div className="field">
-                  <span className="metaLabel">当前承载说明</span>
-                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
                 </div>
                 <div className="field">
                   <span className="metaLabel">最近一次模拟输入时间</span>
                   <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
                 </div>
                 <div className="field">
-                  <span className="metaLabel">模拟输入周期</span>
+                  <span className="metaLabel">当前模拟输入周期</span>
                   <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
                 </div>
+                <div className="field">
+                  <span className="metaLabel">当前承载说明</span>
+                  <div className="metaText">{presentation?.carrierSummary || `正在为 ${skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入`}</div>
+                </div>
               </div>
+              <div className="metaLabel" style={{ marginBottom: 6 }}>操作</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
                   <span className="metaLabel">模拟输入周期（毫秒）</span>
@@ -267,6 +271,18 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                 </button>
               </div>
               {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{simulatorError}</div> : null}
+              <details style={{ marginTop: 10 }}>
+                <summary className="metaText" style={{ cursor: "pointer" }}>技术详情（模拟感知调试字段）</summary>
+                <div className="contentGridTwo alignStart" style={{ marginTop: 8 }}>
+                  <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
+                  <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
+                  <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
+                  <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
+                </div>
+              </details>
             </div>
           </div>
         )}
@@ -288,13 +304,6 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="field"><span className="metaLabel">field</span><div className="metaText">{overview?.fieldId ?? "-"}</div></div>
             <div className="field"><span className="metaLabel">telemetry.last_telemetry</span><div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div></div>
             <div className="field"><span className="metaLabel">telemetry.last_heartbeat</span><div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
-            <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
-            <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
-            <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
           </div>
         </details>
       </SectionCard>
@@ -305,9 +314,9 @@ export default function DeviceOnboardingPage(): React.ReactElement {
 
       <SectionCard title="后续动作">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转设备详情</Link>
-          <Link className="btn" to="/skills/registry">查看技能注册中心</Link>
-          <Link className="btn" to="/skills/bindings">查看技能绑定关系</Link>
+          <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>查看载体详情</Link>
+          <Link className="btn" to="/skills/registry">查看技能注册</Link>
+          <Link className="btn" to="/skills/bindings">查看技能绑定</Link>
           <Link className="btn" to="/devices">返回设备列表</Link>
         </div>
       </SectionCard>

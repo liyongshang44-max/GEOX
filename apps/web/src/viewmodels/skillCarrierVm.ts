@@ -36,6 +36,14 @@ export type SkillCarrierVm = {
     running: boolean | null;
     status: SimulatorRunnerStatusResponseV1 | null;
   };
+  presentation: {
+    carrierModeLabel: string;
+    simulatorStatusLabel: string;
+    carrierSummary: string;
+    latestInputLabel: string;
+    latestHeartbeatLabel: string;
+    simulatorControlSummary: string;
+  };
 };
 
 function toText(value: unknown, fallback = "-"): string {
@@ -55,6 +63,20 @@ function uniqueText(values: unknown[]): string[] {
     if (text) seen.add(text);
   }
   return Array.from(seen.values());
+}
+
+function formatTimeLabel(ts: number | null): string {
+  if (!ts) return "-";
+  return new Date(ts).toLocaleString("zh-CN", { hour12: false });
+}
+
+function mapStatusLabel(input: unknown): string {
+  const text = String(input ?? "").trim().toLowerCase();
+  if (!text) return "未启动";
+  if (text.includes("error") || text.includes("fail") || text.includes("异常")) return "异常";
+  if (text.includes("running") || text.includes("start") || text.includes("在线") || text.includes("active")) return "运行中";
+  if (text.includes("stop") || text.includes("idle") || text.includes("离线") || text.includes("inactive")) return "已停止";
+  return "未启动";
 }
 
 export async function buildSkillCarrierVm(input: {
@@ -90,6 +112,21 @@ export async function buildSkillCarrierVm(input: {
 
   const categories = uniqueText(skills.map((item) => resolveSkillClassification(item)));
   const bindingTargets = uniqueText(bindings.map((item: any) => item?.target_id ?? item?.crop_code ?? item?.bind_target));
+  const lastTelemetryAt = toTs(device?.last_telemetry_ts_ms ?? status?.last_telemetry_ts_ms);
+  const lastHeartbeatAt = toTs(device?.last_heartbeat_ts_ms ?? status?.last_heartbeat_ts_ms);
+  const carrierModeLabel = preferredSourceType === "simulator" ? "模拟承载" : "真实设备承载";
+  const simulatorStatusLabel = mapStatusLabel(
+    bootstrap.simulator_status
+      ?? (typeof simulatorRaw?.running === "boolean" ? (simulatorRaw.running ? "running" : "stopped") : null)
+      ?? status?.status
+      ?? device?.status,
+  );
+  const carrierSummary = `正在为 ${categories.join(" / ") || "相关感知技能"} 提供输入`;
+  const latestInputLabel = formatTimeLabel(lastTelemetryAt);
+  const latestHeartbeatLabel = formatTimeLabel(lastHeartbeatAt);
+  const simulatorControlSummary = preferredSourceType === "simulator"
+    ? `当前为${carrierModeLabel}，输入状态${simulatorStatusLabel}`
+    : `当前为${carrierModeLabel}，建议优先核对现场感知链路`;
 
   return {
     carrier: {
@@ -113,14 +150,22 @@ export async function buildSkillCarrierVm(input: {
       bindingTargets,
     },
     telemetry: {
-      lastTelemetryAt: toTs(device?.last_telemetry_ts_ms ?? status?.last_telemetry_ts_ms),
-      lastHeartbeatAt: toTs(device?.last_heartbeat_ts_ms ?? status?.last_heartbeat_ts_ms),
+      lastTelemetryAt,
+      lastHeartbeatAt,
       status: toText(status?.status ?? device?.status, "unknown"),
     },
     simulator: {
       checked: preferredSourceType === "simulator",
       running: preferredSourceType === "simulator" ? (typeof simulatorRaw?.running === "boolean" ? simulatorRaw.running : bootstrap.simulator_started) : null,
       status: preferredSourceType === "simulator" ? simulatorRaw : null,
+    },
+    presentation: {
+      carrierModeLabel,
+      simulatorStatusLabel,
+      carrierSummary,
+      latestInputLabel,
+      latestHeartbeatLabel,
+      simulatorControlSummary,
     },
   };
 }

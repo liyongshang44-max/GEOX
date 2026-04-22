@@ -8,6 +8,7 @@ const EMPTY_VM: DashboardSensingRuntimeVm = {
   physicalCarrierSkillCount: 0,
   latestTelemetryTsMs: null,
   hasFormalSensingInput: false,
+  formalSensingInputLabel: "否",
 };
 
 function formatTime(value: number | null): string {
@@ -43,8 +44,8 @@ export default function SensingRuntimeStatus(): React.ReactElement {
     { key: "active-skill", label: "生效感知技能数", value: `${vm.activeSensingDeviceSkillCount}` },
     { key: "sim-skill", label: "模拟承载技能数", value: `${vm.simulatorCarrierSkillCount}` },
     { key: "physical-skill", label: "真实设备承载技能数", value: `${vm.physicalCarrierSkillCount}` },
-    { key: "telemetry", label: "最近遥测时间", value: formatTime(vm.latestTelemetryTsMs) },
-    { key: "formal", label: "是否具备有效感知输入", value: vm.hasFormalSensingInput ? "是" : "否" },
+    { key: "telemetry", label: "最近感知时间", value: formatTime(vm.latestTelemetryTsMs) },
+    { key: "formal", label: "是否具备有效感知输入", value: vm.formalSensingInputLabel },
     { key: "source-summary", label: "感知来源摘要", value: sensingSourceSummary },
   ];
 

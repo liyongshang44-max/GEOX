@@ -35,6 +35,16 @@ import { extractBootstrapContext } from "../../../lib/bootstrapContext";
 function fmtTs(v: number | null | undefined): string {
   return formatTimeOrFallback(v);
 }
+
+function formatCarrierSkillNote(raw: unknown): string {
+  const normalized = String(raw ?? "").trim().toLowerCase();
+  if (!normalized) return "正在为感知技能提供输入";
+  if (normalized.includes("irrigation") || normalized.includes("灌溉")) return "正在为灌溉类技能提供输入";
+  if (normalized.includes("patrol") || normalized.includes("巡检")) return "正在为巡检类技能提供输入";
+  if (normalized.includes("alert") || normalized.includes("告警")) return "正在为告警类技能提供输入";
+  if (normalized.includes("growth") || normalized.includes("生长")) return "正在为生长评估类技能提供输入";
+  return "正在为相关感知技能提供输入";
+}
 type BoundFieldInfo = { field_id: string | null; bound_ts_ms: number | null };
 type NamedSettled<T = unknown> = { name: string; status: "fulfilled"; value: T } | { name: string; status: "rejected"; reason: unknown };
 
@@ -175,7 +185,6 @@ export default function DeviceDetailPage(): React.ReactElement {
   const latestOnboardingTrace = onboardingRecords.slice().sort((a, b) => b.timestamp - a.timestamp)[0] || null;
   const policyAwareMetrics = React.useMemo(() => buildDevicePolicyAwareMetrics({ latest, metrics, series }), [latest, metrics, series]);
   const heroMetric = policyAwareMetrics[0] || null;
-  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，设备模式 ${bootstrapContext.device_mode ?? "-"}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
   const fieldHref = boundFieldId ? `/fields/${encodeURIComponent(boundFieldId)}` : "/fields";
   const statusBlockText = statusSnapshotFallback || `${statusLabel} · 最近心跳：${cpOverview?.last_heartbeat_label || fmtTs(statusObj?.last_heartbeat_ts_ms)}`;
   const carrierModeText = String(bootstrapContext.device_mode ?? "").toLowerCase().includes("sim") ? "模拟承载" : "真实设备";
@@ -188,15 +197,14 @@ export default function DeviceDetailPage(): React.ReactElement {
     if (bootstrapContext.simulator_started === false) return "已停止";
     return "已停止";
   })();
-  const carrierSummaryText = bootstrapContext.skill_related_note
-    ? `正在为相关技能提供输入（${bootstrapContext.skill_related_note}）`
-    : "正在为感知技能提供输入";
+  const carrierSummaryText = formatCarrierSkillNote(bootstrapContext.skill_related_note);
   const recentSensingTimeText = cpOverview?.last_telemetry_label || fmtTs(statusObj?.last_telemetry_ts_ms);
   const cycleMs = Number((cpOverview as any)?.interval_ms ?? (statusObj as any)?.interval_ms ?? NaN);
   const cycleSec = Number((cpOverview as any)?.interval_sec ?? (cpOverview as any)?.report_interval_sec ?? (statusObj as any)?.interval_sec ?? NaN);
   const cycleText = Number.isFinite(cycleSec) && cycleSec > 0
     ? `${cycleSec} 秒`
     : (Number.isFinite(cycleMs) && cycleMs > 0 ? `${Math.round(cycleMs / 1000)} 秒` : "不适用");
+  const summaryLead = `当前设备状态 ${statusLabel}，绑定对象 ${boundFieldId || "未绑定田块"}，载体模式 ${carrierModeText}，最近遥测 ${heroMetric ? `${heroMetric.display_label_zh}=${heroMetric.value}${heroMetric.canonical_unit ? ` ${heroMetric.canonical_unit}` : ""}` : "暂无"}。`;
 
   return (
     <div className="demoDashboardPage">
@@ -243,7 +251,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">图像观测（V1）</div>
-            <div className="detailSectionLead">当前仅提供图像占位预览、更新时间与最新 image_ref。</div>
+            <div className="detailSectionLead">当前仅提供图像占位预览、更新时间与最新图像引用标识。</div>
           </div>
           {!hasTelemetryData ? <div className="decisionItemStatic" style={{ marginBottom: 12 }}>暂无遥测数据（当前设备未提供最新遥测视图）。</div> : null}
           <div className="decisionList">
@@ -251,7 +259,7 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div className="decisionItemTitle">图像占位预览</div>
               <div className="decisionItemMeta">当前版本不渲染实时视频流，仅显示静态占位。</div>
               <div style={{ marginTop: 8, border: "1px dashed #9ca3af", borderRadius: 10, minHeight: 160, display: "flex", alignItems: "center", justifyContent: "center", color: "#6b7280", background: "#f9fafb" }}>
-                image preview placeholder
+                图像预览占位
               </div>
             </div>
             <div className="decisionItemStatic">
@@ -259,7 +267,7 @@ export default function DeviceDetailPage(): React.ReactElement {
               <div className="decisionItemMeta">{fmtTs(latestImageUpdatedTs)}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">最新 image_ref</div>
+              <div className="decisionItemTitle">最新图像引用标识</div>
               <div className="decisionItemMeta" style={{ wordBreak: "break-all" }}>{latestImageRef || "-"}</div>
             </div>
           </div>
@@ -271,17 +279,9 @@ export default function DeviceDetailPage(): React.ReactElement {
             <div className="decisionItemStatic"><div className="decisionItemTitle">设备身份</div><div className="decisionItemMeta">{cpOverview?.display_name || (detail as any)?.device?.display_name || deviceId || "-"} · ID：{cpOverview?.device_id || (detail as any)?.device?.device_id || deviceId || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">现场绑定</div><div className="decisionItemMeta">{cpSummary?.bound_field?.field_name || boundFieldId || "未绑定田块"} · 绑定时间：{cpSummary?.bound_field?.bound_at_label || fmtTs(boundTsMs)}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">最近状态</div><div className="decisionItemMeta">{statusBlockText}</div></div>
-            <div className="decisionItemStatic">
-              <div className="decisionItemTitle">载体状态</div>
-              <div className="decisionItemMeta">载体模式：{carrierModeText}</div>
-              <div className="decisionItemMeta">当前感知状态：{sensingStateText}</div>
-              <div className="decisionItemMeta">当前承载说明：{carrierSummaryText}</div>
-              <div className="decisionItemMeta">最近感知时间：{recentSensingTimeText}</div>
-              <div className="decisionItemMeta">运行周期：{cycleText}</div>
-            </div>
           </div>
           <details style={{ marginTop: 10 }}>
-            <summary className="metaText" style={{ cursor: "pointer" }}>展开技术补充信息（trace chips）</summary>
+            <summary className="metaText" style={{ cursor: "pointer" }}>展开技术补充信息（追踪标签）</summary>
             <div className="traceChipRow" style={{ marginTop: 8 }}>
               <span className="traceChip">最近遥测：{hasTelemetryData ? (cpOverview?.last_telemetry_label || "-") : "暂无遥测数据"}</span>
               <span className="traceChip">电量：{cpOverview?.battery_percent ?? "-"}%</span>
@@ -290,6 +290,17 @@ export default function DeviceDetailPage(): React.ReactElement {
             </div>
           </details>
       </section>
+
+        <section className="card detailHeroCard">
+          <div className="demoSectionHeader"><div className="sectionTitle">载体状态</div><div className="detailSectionLead">用于快速确认当前承载模式、感知输入状态与最近回传节奏。</div></div>
+          <div className="decisionList">
+            <div className="decisionItemStatic"><div className="decisionItemTitle">载体模式</div><div className="decisionItemMeta">{carrierModeText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">当前感知状态</div><div className="decisionItemMeta">{sensingStateText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">当前承载说明</div><div className="decisionItemMeta">{carrierSummaryText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">最近感知时间</div><div className="decisionItemMeta">{recentSensingTimeText}</div></div>
+            <div className="decisionItemStatic"><div className="decisionItemTitle">运行周期</div><div className="decisionItemMeta">{cycleText}</div></div>
+          </div>
+        </section>
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader"><div className="sectionTitle">策略化指标视图</div><div className="detailSectionLead">仅展示已纳入指标展示策略且允许出现在设备详情页的指标，未分级指标默认不渲染。</div></div>
@@ -313,7 +324,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         </section>
 
         <section className="card detailHeroCard">
-          <div className="demoSectionHeader"><div className="sectionTitle">接入信息</div><div className="detailSectionLead">给设备接入和调试同学看的最小信息面，只保留本轮接入一定会用到的关键 Topic。</div></div>
+          <div className="demoSectionHeader"><div className="sectionTitle">接入信息</div><div className="detailSectionLead">给设备接入和调试同学看的最小信息面，只保留本轮接入一定会用到的关键通道信息。</div></div>
           <div className="decisionList">
             <div className="decisionItemStatic"><div className="decisionItemTitle">MQTT 客户端编号</div><div className="decisionItemMeta">{cpConnectivity?.mqtt_client_id || consoleView?.access_info?.mqtt_client_id || "-"}</div></div>
             <div className="decisionItemStatic"><div className="decisionItemTitle">遥测 / 心跳通道</div><div className="decisionItemMeta">{cpConnectivity?.telemetry_topic || consoleView?.access_info?.telemetry_topic || "-"} · {cpConnectivity?.heartbeat_topic || consoleView?.access_info?.heartbeat_topic || "-"}</div></div>
@@ -324,7 +335,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         <section id="onboarding-records" className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">接入记录</div>
-            <div className="detailSectionLead">预留接入记录入口，并与 onboarding trace 数据关联，便于追溯每步执行结果。</div>
+            <div className="detailSectionLead">预留接入记录入口，并与接入追踪数据关联，便于追溯每步执行结果。</div>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
@@ -335,14 +346,14 @@ export default function DeviceDetailPage(): React.ReactElement {
               </div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">最近 trace</div>
-              <div className="decisionItemMeta">trace_id：{latestOnboardingTrace?.traceId || "-"}</div>
+              <div className="decisionItemTitle">最近追踪记录</div>
+              <div className="decisionItemMeta">追踪标识：{latestOnboardingTrace?.traceId || "-"}</div>
               <div className="decisionItemMeta">步骤：{latestOnboardingTrace?.stepKey || "-"} · 状态：{latestOnboardingTrace?.nextState || "-"}</div>
               <div className="decisionItemMeta">时间：{fmtTs(latestOnboardingTrace?.timestamp || null)}</div>
             </div>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">历史记录数</div>
-              <div className="decisionItemMeta">{onboardingRecords.length} 条（来源：local mock trace）</div>
+              <div className="decisionItemMeta">{onboardingRecords.length} 条（来源：本地模拟追踪）</div>
             </div>
           </div>
         </section>
