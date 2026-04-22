@@ -18,7 +18,7 @@ function formatTime(ts: number | null): string {
 
 function formatBool(value: boolean | null | undefined): string {
   if (value == null) return "-";
-  return value ? "true" : "false";
+  return value ? "是" : "否";
 }
 
 export default function DeviceOnboardingPage(): React.ReactElement {
@@ -136,72 +136,60 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const overview = vm?.carrier;
   const skill = vm?.skill;
   const effectiveSimulatorStatus: DeviceSimulatorStatus | null = simulatorStatus ?? (vm?.simulator.status as DeviceSimulatorStatus | null) ?? null;
+  const carrierModeText = sourceType === "simulator" ? "模拟承载" : "真实设备承载";
+  const skillInputText = `${skill?.categories?.join(" / ") || "未识别 skill 类别"} · ${skill?.bindingTargets?.join(" / ") || "未绑定目标"}`;
+  const bindingStatusText = `${overview?.fieldId || "未绑定 field"} · ${vm?.telemetry.status || "暂无遥测状态"}`;
+  const sensingText = `输入 ${formatTime(vm?.telemetry.lastTelemetryAt ?? null)} · 心跳 ${formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}`;
+  const simulatorStateText = (() => {
+    if (effectiveSimulatorStatus?.last_error) return "异常";
+    if (effectiveSimulatorStatus?.running === true) return "运行中";
+    if (effectiveSimulatorStatus?.running === false) return "已停止";
+    return "未启动";
+  })();
 
   return (
     <div className="consolePage">
       <PageHeader
         title="Skill Carrier Onboarding"
-        description="该载体为某 skill 提供输入：页面主交互只呈现载体概览与 source_type 分支，不再以培训流程叙事作为主骨架。"
+        description="该载体正在为 sensing skill 提供演示输入：先看产品摘要，再按需展开技术详情排障。"
       />
 
-      <SectionCard title="第一层：接入概览（carrier / source_type / skill category / bind_target / device_type / field / telemetry）">
+      <SectionCard title="首屏摘要">
         <div className="contentGridTwo alignStart">
-          <label className="field">访问令牌<input className="input" value={token} onChange={(e) => setToken(e.target.value)} /></label>
-          <label className="field">carrier.device_id<input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} /></label>
           <label className="field">
-            source_type
+            访问令牌
+            <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
+          </label>
+          <label className="field">
+            载体 ID
+            <input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} />
+          </label>
+          <label className="field">
+            承载模式
             <select className="select" value={sourceType} onChange={(e) => setSourceType(e.target.value as CarrierSourceType)}>
-              <option value="simulator">simulator（模拟承载）</option>
-              <option value="physical">physical（真实设备承载）</option>
+              <option value="simulator">模拟承载</option>
+              <option value="physical">真实设备承载</option>
             </select>
           </label>
           <div className="field">
-            <span className="metaLabel">carrier.display_name</span>
-            <div className="metaText">{overview?.displayName ?? "-"}</div>
+            <span className="metaLabel">承载模式</span>
+            <div className="metaText">{carrierModeText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">device_mode</span>
-            <div className="metaText">{overview?.deviceMode ?? "-"}</div>
+            <span className="metaLabel">当前技能输入</span>
+            <div className="metaText">{skillInputText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">simulator_started</span>
-            <div className="metaText">{formatBool(overview?.simulatorStarted)}</div>
+            <span className="metaLabel">载体绑定状态</span>
+            <div className="metaText">{bindingStatusText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">simulator_status</span>
-            <div className="metaText">{overview?.simulatorStatus ?? "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">skill_related_note</span>
-            <div className="metaText">{overview?.skillRelatedNote ?? "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">skill category</span>
-            <div className="metaText">{skill?.categories?.join(" / ") || "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">bind_target</span>
-            <div className="metaText">{skill?.bindingTargets?.join(" / ") || "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">device_type</span>
-            <div className="metaText">{overview?.deviceType ?? "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">field</span>
-            <div className="metaText">{overview?.fieldId ?? "-"}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">telemetry.last_telemetry</span>
-            <div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
-          </div>
-          <div className="field">
-            <span className="metaLabel">telemetry.last_heartbeat</span>
-            <div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+            <span className="metaLabel">最近感知</span>
+            <div className="metaText">{sensingText}</div>
           </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          {loading ? "正在组装 skill carrier viewmodel..." : `skills=${skill?.total ?? 0} · telemetry_status=${vm?.telemetry.status ?? "-"}`}
+          {loading ? "正在组装 skill 载体摘要..." : `已识别 ${skill?.total ?? 0} 个候选 skill，当前为 ${carrierModeText}。`}
         </div>
         {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>加载失败：{error}</div> : null}
       </SectionCard>
@@ -210,24 +198,39 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         {sourceType === "physical" ? (
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">真实设备承载（physical）</div>
-            <div className="decisionItemMeta">该载体直接为 skill 提供现场输入，请优先核对设备在线状态、最后一次心跳与 telemetry 上报时间。</div>
-            <div className="decisionItemMeta">current telemetry_status：{vm?.telemetry.status ?? "unknown"}</div>
+            <div className="decisionItemMeta">该载体直接为 skill 提供现场输入，请优先核对感知链路与心跳连续性。</div>
+            <div className="decisionItemMeta">当前感知链路状态：{vm?.telemetry.status ?? "unknown"}</div>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟承载（simulator）</div>
-              <div className="decisionItemMeta">该载体通过 simulator 为 skill 注入测试输入，用于验证 skill 行为与绑定策略。</div>
-              <div className="decisionItemMeta">
-                simulator status：
-                {vm?.simulator.checked ? (vm.simulator.running == null ? "unknown" : vm.simulator.running ? "running" : "stopped") : "not_checked"}
-              </div>
+              <div className="decisionItemMeta">该载体正在为 sensing skill 提供演示输入，用于验证 skill 行为与绑定策略。</div>
+              <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
             </div>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">Simulator 控制与正式状态信息</div>
+              <div className="decisionItemTitle">模拟感知控制</div>
+              <div className="contentGridTwo alignStart" style={{ marginBottom: 8 }}>
+                <div className="field">
+                  <span className="metaLabel">当前状态</span>
+                  <div className="metaText">{simulatorStateText}</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">当前承载说明</span>
+                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "sensing skill"} 提供模拟输入</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">最近一次模拟输入时间</span>
+                  <div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div>
+                </div>
+                <div className="field">
+                  <span className="metaLabel">模拟输入周期</span>
+                  <div className="metaText">{effectiveSimulatorStatus?.interval_ms ? `${effectiveSimulatorStatus.interval_ms} ms` : "-"}</div>
+                </div>
+              </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
                 <label className="field" style={{ minWidth: 220 }}>
-                  <span className="metaLabel">interval_ms</span>
+                  <span className="metaLabel">模拟输入周期（毫秒）</span>
                   <input
                     className="input"
                     value={intervalInput}
@@ -237,28 +240,46 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   />
                 </label>
                 <button type="button" className="btn primary" disabled={simulatorBusy} onClick={() => void handleSimulatorStart()}>
-                  {simulatorBusy ? "处理中..." : "Start"}
+                  {simulatorBusy ? "处理中..." : "启动模拟感知"}
                 </button>
                 <button type="button" className="btn" disabled={simulatorBusy} onClick={() => void handleSimulatorStop()}>
-                  {simulatorBusy ? "处理中..." : "Stop"}
+                  {simulatorBusy ? "处理中..." : "停止模拟感知"}
                 </button>
                 <button type="button" className="btn secondary" disabled={simulatorBusy} onClick={() => void refreshSimulatorStatus()}>
-                  Refresh
+                  刷新状态
                 </button>
-              </div>
-              <div className="contentGridTwo alignStart">
-                <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
-                <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
-                <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
-                <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
-                <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
-                <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
-                <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
               </div>
               {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>simulator API 错误：{simulatorError}</div> : null}
             </div>
           </div>
         )}
+      </SectionCard>
+
+      <SectionCard title="技术详情 / 展开调试信息">
+        <details>
+          <summary className="metaText" style={{ cursor: "pointer" }}>展开 carrier/device/simulator 原始字段（仅供排障）</summary>
+          <div className="contentGridTwo alignStart" style={{ marginTop: 10 }}>
+            <div className="field"><span className="metaLabel">carrier.display_name</span><div className="metaText">{overview?.displayName ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">carrier.device_id</span><div className="metaText">{deviceId || "-"}</div></div>
+            <div className="field"><span className="metaLabel">source_type</span><div className="metaText">{sourceType}</div></div>
+            <div className="field"><span className="metaLabel">device_mode</span><div className="metaText">{overview?.deviceMode ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">simulator_started</span><div className="metaText">{formatBool(overview?.simulatorStarted)}</div></div>
+            <div className="field"><span className="metaLabel">simulator_status</span><div className="metaText">{overview?.simulatorStatus ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">skill category</span><div className="metaText">{skill?.categories?.join(" / ") || "-"}</div></div>
+            <div className="field"><span className="metaLabel">bind_target</span><div className="metaText">{skill?.bindingTargets?.join(" / ") || "-"}</div></div>
+            <div className="field"><span className="metaLabel">device_type</span><div className="metaText">{overview?.deviceType ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">field</span><div className="metaText">{overview?.fieldId ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">telemetry.last_telemetry</span><div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">telemetry.last_heartbeat</span><div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">running</span><div className="metaText">{formatBool(effectiveSimulatorStatus?.running ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">started_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.started_ts_ms ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">stopped_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.stopped_ts_ms ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">interval_ms</span><div className="metaText">{effectiveSimulatorStatus?.interval_ms ?? "-"}</div></div>
+            <div className="field"><span className="metaLabel">last_tick_ts_ms</span><div className="metaText">{formatTime(effectiveSimulatorStatus?.last_tick_ts_ms ?? null)}</div></div>
+            <div className="field"><span className="metaLabel">status</span><div className="metaText">{String(effectiveSimulatorStatus?.status ?? "-")}</div></div>
+            <div className="field"><span className="metaLabel">last_error</span><div className="metaText">{String(effectiveSimulatorStatus?.last_error ?? "-")}</div></div>
+          </div>
+        </details>
       </SectionCard>
 
       <DeviceOnboardingFlow sourceType={sourceType} />
