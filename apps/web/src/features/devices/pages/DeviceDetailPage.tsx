@@ -335,7 +335,7 @@ export default function DeviceDetailPage(): React.ReactElement {
         <section id="onboarding-records" className="card detailHeroCard">
           <div className="demoSectionHeader">
             <div className="sectionTitle">接入记录</div>
-            <div className="detailSectionLead">预留接入记录入口，并与 onboarding trace 数据关联，便于追溯每步执行结果。</div>
+            <div className="detailSectionLead">预留接入记录入口，便于追溯每步执行结果与历史接入轨迹。</div>
           </div>
           <div className="decisionList">
             <div className="decisionItemStatic">
@@ -353,10 +353,10 @@ export default function DeviceDetailPage(): React.ReactElement {
             </div>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">历史接入记录</div>
-              <div className="decisionItemMeta">{onboardingRecords.length} 条</div>
+              <div className="decisionItemMeta">历史接入记录 {onboardingRecords.length} 条</div>
               <details style={{ marginTop: 8 }}>
                 <summary className="metaText" style={{ cursor: "pointer" }}>技术补充信息</summary>
-                <div className="decisionItemMeta" style={{ marginTop: 6 }}>记录来源：local mock trace</div>
+                <div className="decisionItemMeta" style={{ marginTop: 6 }}>记录来源：本地调试轨迹</div>
               </details>
             </div>
           </div>
