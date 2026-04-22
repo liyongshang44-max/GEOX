@@ -156,7 +156,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
     <div className="consolePage">
       <PageHeader
         title="感知技能载体接入"
-        description="为地块接入承载 sensing/device skill 的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
+        description="为地块接入承载感知技能的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
       <SectionCard title="第一层：承载状态摘要">
@@ -206,7 +206,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
           </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选 skill，当前为 ${carrierModeText}。`}
+          {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选技能，当前为 ${carrierModeText}。`}
         </div>
         {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>获取承载信息失败：{error}</div> : null}
       </SectionCard>
@@ -215,14 +215,14 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         {sourceType === "physical" ? (
           <div className="decisionItemStatic">
             <div className="decisionItemTitle">真实设备承载</div>
-            <div className="decisionItemMeta">该载体直接为 skill 提供现场输入，请优先核对感知链路与心跳连续性。</div>
-            <div className="decisionItemMeta">当前感知链路状态：{vm?.telemetry.status ?? "unknown"}</div>
+            <div className="decisionItemMeta">该载体直接为技能提供现场输入，请优先核对感知链路与心跳连续性。</div>
+            <div className="decisionItemMeta">当前感知链路状态：{vm?.telemetry.status ?? "未知"}</div>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
               <div className="decisionItemTitle">模拟承载</div>
-              <div className="decisionItemMeta">该载体正在为 sensing skill 提供演示输入，用于验证 skill 行为与绑定策略。</div>
+              <div className="decisionItemMeta">该载体正在为感知技能提供演示输入，用于验证技能行为与绑定策略。</div>
               <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
             </div>
             <div className="decisionItemStatic">
@@ -234,7 +234,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                 </div>
                 <div className="field">
                   <span className="metaLabel">当前承载说明</span>
-                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "sensing skill"} 提供模拟输入</div>
+                  <div className="metaText">正在为 {skill?.categories?.join(" / ") || "相关技能"} 提供模拟输入</div>
                 </div>
                 <div className="field">
                   <span className="metaLabel">最近一次模拟输入时间</span>
@@ -307,7 +307,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn primary" to={`/devices/${encodeURIComponent(deviceId.trim())}`}>跳转设备详情</Link>
           <Link className="btn" to="/skills/registry">查看技能注册中心</Link>
-          <Link className="btn" to="/skills/bindings">查看 skill 绑定关系</Link>
+          <Link className="btn" to="/skills/bindings">查看技能绑定关系</Link>
           <Link className="btn" to="/devices">返回设备列表</Link>
         </div>
       </SectionCard>

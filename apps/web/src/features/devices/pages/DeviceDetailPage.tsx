@@ -189,8 +189,8 @@ export default function DeviceDetailPage(): React.ReactElement {
     return "已停止";
   })();
   const carrierSummaryText = bootstrapContext.skill_related_note
-    ? `正在为相关 skill 提供输入（${bootstrapContext.skill_related_note}）`
-    : "正在为 sensing/device skill 提供输入";
+    ? `正在为相关技能提供输入（${bootstrapContext.skill_related_note}）`
+    : "正在为感知技能提供输入";
   const recentSensingTimeText = cpOverview?.last_telemetry_label || fmtTs(statusObj?.last_telemetry_ts_ms);
   const cycleMs = Number((cpOverview as any)?.interval_ms ?? (statusObj as any)?.interval_ms ?? NaN);
   const cycleSec = Number((cpOverview as any)?.interval_sec ?? (cpOverview as any)?.report_interval_sec ?? (statusObj as any)?.interval_sec ?? NaN);
