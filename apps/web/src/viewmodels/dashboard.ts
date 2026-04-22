@@ -65,15 +65,12 @@ export type DashboardVm = {
     deviationCount: number;
     invalidCount: number;
   };
-  metricUnits: {
-    soil_moisture: string;
-    temperature: string;
-    humidity: string;
-  };
+  metricUnits: Record<string, string>;
   diagnosticMetrics: Array<{
     metric: string;
     label: string;
     valueLabel: string;
+    sourceLabel?: string;
   }>;
   todayActions: Array<{
     type: "INVALID_EXECUTION" | "PENDING_ACCEPTANCE" | "APPROVAL_REQUIRED" | "GENERAL_REMINDER";
