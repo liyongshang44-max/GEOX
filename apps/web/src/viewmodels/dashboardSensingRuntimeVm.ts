@@ -10,6 +10,12 @@ export type DashboardSensingRuntimeVm = {
   physicalCarrierSkillCount: number;
   latestTelemetryTsMs: number | null;
   hasFormalSensingInput: boolean;
+  effectiveSensingSkillsLabel: string;
+  simulatorBackedSkillsLabel: string;
+  physicalBackedSkillsLabel: string;
+  latestSensingTimeLabel: string;
+  formalSensingInputLabel: string;
+  sourceSummaryLabel: string;
 };
 const REQUIRED_SENSING_PROFILE_KEYS = ["air_temperature", "air_humidity", "soil_moisture"] as const;
 
@@ -62,7 +68,16 @@ function inferIsSimulator(device: DeviceRecord, simulatorStatus: DeviceSimulator
 }
 
 function normalizeMetricKey(value: unknown): string {
-  return normalizeText(value).toLowerCase().replace(/[\s.-]+/g, "_");
+  const normalized = normalizeText(value)
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[\s.-]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (normalized === "airtemperature" || normalized === "air_temp") return "air_temperature";
+  if (normalized === "airhumidity" || normalized === "air_hum") return "air_humidity";
+  if (normalized === "soilmoisture" || normalized === "soil_moist") return "soil_moisture";
+  return normalized;
 }
 
 function collectMetricKeys(source: unknown, output: Set<string>, depth = 0): void {
@@ -100,6 +115,13 @@ function hasMinimalSensingProfile(device: DeviceRecord, simulatorStatus: DeviceS
   collectMetricKeys(device, found);
   collectMetricKeys(simulatorStatus, found);
   return REQUIRED_SENSING_PROFILE_KEYS.every((key) => found.has(key));
+}
+
+function formatSensingTime(value: number | null): string {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString("zh-CN", { hour12: false });
 }
 
 async function fetchDevices(): Promise<DeviceRecord[]> {
@@ -231,12 +253,25 @@ export async function buildDashboardSensingRuntimeVm(): Promise<DashboardSensing
     if (simStatus?.running !== true) return false;
     return hasMinimalSensingProfile(device ?? {}, simStatus);
   });
+  const hasFormalSensingInput = hasPhysicalTelemetry || hasSimulatorFormalInput;
+  const sourceSummaryLabel = (() => {
+    if (simulatorSkillIds.size > 0 && physicalSkillIds.size > 0) return "当前真实设备与模拟承载同时提供输入";
+    if (simulatorSkillIds.size > 0) return "当前主要由模拟承载提供感知输入";
+    if (physicalSkillIds.size > 0) return "当前主要由真实设备提供感知输入";
+    return "当前尚未识别稳定感知来源";
+  })();
 
   return {
     activeSensingDeviceSkillCount: activeSensingOrDeviceSkills.size,
     simulatorCarrierSkillCount: simulatorSkillIds.size,
     physicalCarrierSkillCount: physicalSkillIds.size,
     latestTelemetryTsMs,
-    hasFormalSensingInput: hasPhysicalTelemetry || hasSimulatorFormalInput,
+    hasFormalSensingInput,
+    effectiveSensingSkillsLabel: String(activeSensingOrDeviceSkills.size),
+    simulatorBackedSkillsLabel: String(simulatorSkillIds.size),
+    physicalBackedSkillsLabel: String(physicalSkillIds.size),
+    latestSensingTimeLabel: formatSensingTime(latestTelemetryTsMs),
+    formalSensingInputLabel: hasFormalSensingInput ? "是" : "否",
+    sourceSummaryLabel,
   };
 }
