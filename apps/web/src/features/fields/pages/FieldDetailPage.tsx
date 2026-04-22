@@ -25,10 +25,33 @@ function timelineTypeLabel(type: string): string {
   return "事件";
 }
 
+function reasoningRoleLabel(reasoningStatus: string): string {
+  const code = String(reasoningStatus ?? "").toUpperCase();
+  if (code === "PRIMARY_REASONING_INPUT") return "主决策输入";
+  if (code === "SECONDARY_REASONING_INPUT") return "辅助决策输入";
+  if (["PROFESSIONAL_ONLY", "RAW_ONLY", "NOT_IN_CURRENT_REASONING"].includes(code)) return "技术参考/辅助观测";
+  return "辅助观测";
+}
+
+function routeLabel(route: string): string {
+  const labels: Record<string, string> = {
+    "dashboard.kpi": "看板概览",
+    "dashboard.irrigation": "灌溉看板",
+    "field.summary": "田块概览",
+    "field.detail": "田块详情",
+    "field.detail.professional": "田块专业视图",
+    "field.soil_status": "土壤状态",
+    "field.trend": "趋势分析",
+    "explain.signal": "解释页信号",
+    "explain.evidence_basis": "解释页证据依据",
+  };
+  return labels[route] ?? "指标分析";
+}
+
 function metricDetailHint(item: { source: string; reasoningStatus: string; fixedRoutes: string[]; visibleOnExplain: boolean }): string {
-  const routes = item.fixedRoutes.length ? item.fixedRoutes.join(" / ") : "-";
-  const explain = item.visibleOnExplain ? "是" : "否";
-  return `source: ${item.source} · reasoning: ${item.reasoningStatus} · routes: ${routes} · explain可见: ${explain}`;
+  const routes = item.fixedRoutes.length ? item.fixedRoutes.map(routeLabel).join(" / ") : "常规指标页";
+  const explain = item.visibleOnExplain ? "显示" : "不显示";
+  return `来源：${item.source} · 决策角色：${reasoningRoleLabel(item.reasoningStatus)} · 推荐查看：${routes} · 解释页：${explain}`;
 }
 
 export default function FieldDetailPage(): React.ReactElement {
@@ -341,8 +364,8 @@ export default function FieldDetailPage(): React.ReactElement {
 
         <section className="card detailHeroCard">
           <div className="demoSectionHeader">
-            <div className="sectionTitle">Technical Detail Metrics</div>
-            <div className="detailSectionLead">仅展示 professional_detail 指标。</div>
+            <div className="sectionTitle">专业指标（辅助观察）</div>
+            <div className="detailSectionLead">展示专业层指标，用于复核与技术判断，不直接作为客户主决策结论。</div>
           </div>
           <div className="decisionList" style={{ marginTop: 8 }}>
             {(model?.technicalDetailMetrics ?? []).map((item) => (
