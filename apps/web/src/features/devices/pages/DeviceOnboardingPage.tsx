@@ -150,8 +150,8 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   return (
     <div className="consolePage">
       <PageHeader
-        title="Skill Carrier Onboarding"
-        description="该载体正在为 sensing skill 提供演示输入：先看产品摘要，再按需展开技术详情排障。"
+        title="感知技能载体接入"
+        description="为地块接入承载 sensing/device skill 的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
       <SectionCard title="首屏摘要">
