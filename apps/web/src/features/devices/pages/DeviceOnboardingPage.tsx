@@ -40,8 +40,13 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       setSimulatorStatus(null);
       return;
     }
-    const status = await getDeviceSimulatorStatus(id);
-    setSimulatorStatus(status);
+    try {
+      const status = await getDeviceSimulatorStatus(id);
+      setSimulatorStatus(status);
+      setSimulatorError("");
+    } catch {
+      setSimulatorError("状态刷新失败");
+    }
   }, [deviceId, sourceType, token]);
 
   React.useEffect(() => {
@@ -60,7 +65,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       } catch (e: unknown) {
         if (!active) return;
         setVm(null);
-        setError(e instanceof Error ? e.message : "加载失败");
+        setError(e instanceof Error ? e.message : "获取承载信息失败");
       } finally {
         if (active) setLoading(false);
       }
@@ -91,7 +96,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       } catch (e: unknown) {
         if (!active) return;
         setSimulatorStatus(null);
-        setSimulatorError(e instanceof Error ? e.message : "获取 simulator 状态失败");
+        setSimulatorError(e instanceof Error ? e.message : "状态刷新失败");
       }
     }
     void loadStatus();
@@ -111,7 +116,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       setSimulatorStatus(result);
       await refreshSimulatorStatus();
     } catch (e: unknown) {
-      setSimulatorError(e instanceof Error ? e.message : "启动 simulator 失败");
+      setSimulatorError(e instanceof Error ? e.message : "模拟感知控制失败");
     } finally {
       setSimulatorBusy(false);
     }
@@ -127,7 +132,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       setSimulatorStatus(result);
       await refreshSimulatorStatus();
     } catch (e: unknown) {
-      setSimulatorError(e instanceof Error ? e.message : "停止 simulator 失败");
+      setSimulatorError(e instanceof Error ? e.message : "模拟感知控制失败");
     } finally {
       setSimulatorBusy(false);
     }
@@ -137,15 +142,15 @@ export default function DeviceOnboardingPage(): React.ReactElement {
   const skill = vm?.skill;
   const effectiveSimulatorStatus: DeviceSimulatorStatus | null = simulatorStatus ?? (vm?.simulator.status as DeviceSimulatorStatus | null) ?? null;
   const carrierModeText = sourceType === "simulator" ? "模拟承载" : "真实设备承载";
-  const skillInputText = `${skill?.categories?.join(" / ") || "未识别 skill 类别"} · ${skill?.bindingTargets?.join(" / ") || "未绑定目标"}`;
-  const bindingStatusText = `${overview?.fieldId || "未绑定 field"} · ${vm?.telemetry.status || "暂无遥测状态"}`;
-  const sensingText = `输入 ${formatTime(vm?.telemetry.lastTelemetryAt ?? null)} · 心跳 ${formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}`;
   const simulatorStateText = (() => {
     if (effectiveSimulatorStatus?.last_error) return "异常";
     if (effectiveSimulatorStatus?.running === true) return "运行中";
     if (effectiveSimulatorStatus?.running === false) return "已停止";
     return "未启动";
   })();
+  const skillCategoriesText = skill?.categories?.join(" / ") || "未识别";
+  const bindingTargetsText = skill?.bindingTargets?.join(" / ") || "未绑定";
+  const sensingStatusText = vm?.telemetry.status || simulatorStateText;
 
   return (
     <div className="consolePage">
@@ -154,17 +159,17 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         description="为地块接入承载 sensing/device skill 的载体，可选择真实设备或模拟承载模式。当前页面用于查看承载状态、控制模拟感知并验证技能输入链路。"
       />
 
-      <SectionCard title="首屏摘要">
+      <SectionCard title="第一层：承载状态摘要">
         <div className="contentGridTwo alignStart">
           <label className="field">
             访问令牌
             <input className="input" value={token} onChange={(e) => setToken(e.target.value)} />
           </label>
           <label className="field">
-            载体 ID
+            载体编号
             <input className="input" value={deviceId} onChange={(e) => setDeviceId(e.target.value)} />
           </label>
-          <label className="field">
+          <label className="field" style={{ gridColumn: "1 / -1" }}>
             承载模式
             <select className="select" value={sourceType} onChange={(e) => setSourceType(e.target.value as CarrierSourceType)}>
               <option value="simulator">模拟承载</option>
@@ -176,35 +181,47 @@ export default function DeviceOnboardingPage(): React.ReactElement {
             <div className="metaText">{carrierModeText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">当前技能输入</span>
-            <div className="metaText">{skillInputText}</div>
+            <span className="metaLabel">当前技能类别</span>
+            <div className="metaText">{skillCategoriesText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">载体绑定状态</span>
-            <div className="metaText">{bindingStatusText}</div>
+            <span className="metaLabel">当前绑定目标</span>
+            <div className="metaText">{bindingTargetsText}</div>
           </div>
           <div className="field">
-            <span className="metaLabel">最近感知</span>
-            <div className="metaText">{sensingText}</div>
+            <span className="metaLabel">绑定地块</span>
+            <div className="metaText">{overview?.fieldId || "未绑定"}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">最近感知时间</span>
+            <div className="metaText">{formatTime(vm?.telemetry.lastTelemetryAt ?? null)}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">最近心跳时间</span>
+            <div className="metaText">{formatTime(vm?.telemetry.lastHeartbeatAt ?? null)}</div>
+          </div>
+          <div className="field">
+            <span className="metaLabel">当前输入状态</span>
+            <div className="metaText">{sensingStatusText || "-"}</div>
           </div>
         </div>
         <div className="metaText" style={{ marginTop: 8 }}>
-          {loading ? "正在组装 skill 载体摘要..." : `已识别 ${skill?.total ?? 0} 个候选 skill，当前为 ${carrierModeText}。`}
+          {loading ? "正在加载承载状态…" : `已识别 ${skill?.total ?? 0} 个候选 skill，当前为 ${carrierModeText}。`}
         </div>
-        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>加载失败：{error}</div> : null}
+        {error ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>获取承载信息失败：{error}</div> : null}
       </SectionCard>
 
-      <SectionCard title="第二层：模式分支（真实设备承载 vs 模拟承载）">
+      <SectionCard title="第二层：承载模式与模拟感知">
         {sourceType === "physical" ? (
           <div className="decisionItemStatic">
-            <div className="decisionItemTitle">真实设备承载（physical）</div>
+            <div className="decisionItemTitle">真实设备承载</div>
             <div className="decisionItemMeta">该载体直接为 skill 提供现场输入，请优先核对感知链路与心跳连续性。</div>
             <div className="decisionItemMeta">当前感知链路状态：{vm?.telemetry.status ?? "unknown"}</div>
           </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
             <div className="decisionItemStatic">
-              <div className="decisionItemTitle">模拟承载（simulator）</div>
+              <div className="decisionItemTitle">模拟承载</div>
               <div className="decisionItemMeta">该载体正在为 sensing skill 提供演示输入，用于验证 skill 行为与绑定策略。</div>
               <div className="decisionItemMeta">当前模拟输入状态：{simulatorStateText}</div>
             </div>
@@ -249,7 +266,7 @@ export default function DeviceOnboardingPage(): React.ReactElement {
                   刷新状态
                 </button>
               </div>
-              {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>simulator API 错误：{simulatorError}</div> : null}
+              {simulatorError ? <div className="metaText" style={{ marginTop: 8, color: "#b42318" }}>{simulatorError}</div> : null}
             </div>
           </div>
         )}
@@ -282,7 +299,9 @@ export default function DeviceOnboardingPage(): React.ReactElement {
         </details>
       </SectionCard>
 
-      <DeviceOnboardingFlow sourceType={sourceType} />
+      <SectionCard title="接入辅助步骤（可选）" subtitle="用于帮助说明、排查指引与步骤附录，不作为页面主骨架。">
+        <DeviceOnboardingFlow sourceType={sourceType} />
+      </SectionCard>
 
       <SectionCard title="后续动作">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
