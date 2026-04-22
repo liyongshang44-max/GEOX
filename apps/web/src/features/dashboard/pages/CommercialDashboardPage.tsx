@@ -20,6 +20,7 @@ import { fetchOperationBilling, fetchOperationEvidencePack } from "../../../api/
 import { executeOperationAction } from "../../../api/operations";
 import ErrorState from "../../../components/common/ErrorState";
 import OverviewMetrics from "../sections/OverviewMetrics";
+import SensingRuntimeStatus from "../sections/SensingRuntimeStatus";
 import TodayPriority from "../sections/TodayPriority";
 import FieldRuntime from "../sections/FieldRuntime";
 import DecisionOperationQueue from "../sections/DecisionOperationQueue";
@@ -367,6 +368,12 @@ export default function CommercialDashboardPage({ expert = false }: { expert?: b
 
       <DashboardPageContainer
         blocks={[
+          {
+            zone: "I",
+            title: "感知运行状态",
+            description: "汇总生效 skill、simulator/真实设备承载关系与最新 telemetry。",
+            content: <SensingRuntimeStatus />,
+          },
           {
             zone: "A",
             title: "平台总览",
