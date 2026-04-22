@@ -315,8 +315,19 @@ export default function DeviceOnboardingPage(): React.ReactElement {
       <SectionCard title="接入辅助步骤（可选）" subtitle="用于帮助说明、排查指引与步骤附录，不作为页面主骨架。">
         <details>
           <summary className="metaText" style={{ cursor: "pointer" }}>展开帮助说明 / 步骤参考 / 排查附录</summary>
-          <div style={{ marginTop: 10 }}>
-            <DeviceOnboardingFlow sourceType={sourceType} />
+          <div style={{ marginTop: 10, display: "grid", gap: 10 }}>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">帮助说明</div>
+              <div className="decisionItemMeta">本区域仅作为接入辅助说明，不参与主路径状态判断。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">步骤参考</div>
+              <div className="decisionItemMeta">建议依次核对：载体信息、技能承载、现场绑定、最近感知与模拟控制状态。</div>
+            </div>
+            <div className="decisionItemStatic">
+              <div className="decisionItemTitle">排查附录</div>
+              <div className="decisionItemMeta">如出现异常，请先刷新状态，再查看“技术详情 / 展开调试信息”中的原始字段。</div>
+            </div>
           </div>
         </details>
       </SectionCard>
