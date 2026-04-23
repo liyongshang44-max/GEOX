@@ -72,7 +72,7 @@ export function buildCustomerDashboardViewModel(aggregate: CustomerDashboardAggr
     },
     costTrend: {
       title: "成本趋势",
-      summary: `本周期投入约 ¥${Number(aggregate?.period_summary?.total_cost ?? 0).toFixed(2)}`,
+      summary: `本周期预计投入 ¥${Number(aggregate?.period_summary?.estimated_total_cost ?? 0).toFixed(2)}，实际投入 ¥${Number(aggregate?.period_summary?.actual_total_cost ?? 0).toFixed(2)}`,
       detail: "趋势信息由后端定义并返回。",
     },
     actionAdvice: {

@@ -6,11 +6,25 @@ export type CustomerDashboardAggregateV1 = {
     healthy: number;
     at_risk: number;
   };
+  top_risk_fields: Array<{
+    field_id: string;
+    field_name: string | null;
+    risk_level: OperationReportRiskLevel;
+    risk_reasons: string[];
+    open_alerts_count: number;
+    pending_acceptance_count: number;
+    last_operation_at: string | null;
+  }>;
   recent_operations: Array<{
     operation_id: string;
     operation_plan_id: string;
     field_id: string;
+    field_name: string | null;
+    title: string | null;
+    customer_title: string | null;
     executed_at: string | null;
+    final_status: string;
+    acceptance_status: string | null;
     risk_level: OperationReportRiskLevel;
     risk_reasons: string[];
     estimated_total_cost: number;
@@ -22,12 +36,26 @@ export type CustomerDashboardAggregateV1 = {
   };
   period_summary: {
     total_operations: number;
-    total_cost: number;
+    estimated_total_cost: number;
+    actual_total_cost: number;
     avg_sla_ms: number | null;
+  };
+  pending_actions_summary: {
+    total_open_alerts: number;
+    unassigned_alerts: number;
+    in_progress_alerts: number;
+    sla_breached_alerts: number;
+    closed_today_alerts: number;
+    pending_acceptance: number;
+  };
+  device_summary: {
+    offline_fields: number;
+    total_devices: number;
+    offline_devices: number;
   };
 };
 
-export type FieldPortfolioSummaryV1 = CustomerDashboardAggregateV1 & {
+export type FieldPortfolioSummaryV1 = Omit<CustomerDashboardAggregateV1, "top_risk_fields"> & {
   top_risk_fields: Array<{
     field_id: string;
     risk_level: OperationReportRiskLevel;
@@ -214,7 +242,26 @@ export function projectFieldReportDetailV1(params: {
   };
 }
 
-export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]): CustomerDashboardAggregateV1 {
+export function projectCustomerDashboardAggregateV1(params: {
+  reports: OperationReportV1[];
+  field_name_by_id?: Map<string, string | null>;
+  open_alerts_by_field?: Map<string, number>;
+  pending_acceptance_by_field?: Map<string, number>;
+  pending_actions_summary?: {
+    total_open_alerts: number;
+    unassigned_alerts: number;
+    in_progress_alerts: number;
+    sla_breached_alerts: number;
+    closed_today_alerts: number;
+    pending_acceptance?: number;
+  };
+  device_summary?: {
+    offline_fields: number;
+    total_devices: number;
+    offline_devices: number;
+  };
+}): CustomerDashboardAggregateV1 {
+  const reports = params.reports;
   const sortedReports = [...reports].sort((a, b) => {
     const bMs = resolveOperationTimeMs(b);
     const aMs = resolveOperationTimeMs(a);
@@ -227,7 +274,12 @@ export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]
       operation_id: report.identifiers.operation_id,
       operation_plan_id: report.identifiers.operation_plan_id,
       field_id: resolveReportFieldId(report),
+      field_name: params.field_name_by_id?.get(resolveReportFieldId(report)) ?? null,
+      title: report.operation_title ?? null,
+      customer_title: report.customer_title ?? null,
       executed_at: executedAtMs == null ? null : report.execution.execution_finished_at,
+      final_status: report.execution.final_status,
+      acceptance_status: report.acceptance.status ?? null,
       risk_level: report.risk.level,
       risk_reasons: [...report.risk.reasons],
       estimated_total_cost: Number(report.cost.estimated_total ?? 0),
@@ -237,17 +289,31 @@ export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]
 
   const reasonCount = new Map<string, number>();
   let globalRisk: OperationReportRiskLevel = "LOW";
-  let totalCost = 0;
+  let estimatedTotalCost = 0;
+  let actualTotalCost = 0;
   let slaSum = 0;
   let slaCount = 0;
   let healthy = 0;
   let atRisk = 0;
+  let pendingAcceptanceCount = 0;
+  const fieldAgg = new Map<string, {
+    field_id: string;
+    field_name: string | null;
+    risk_level: OperationReportRiskLevel;
+    risk_reasons: Set<string>;
+    open_alerts_count: number;
+    pending_acceptance_count: number;
+    last_operation_at: string | null;
+    last_operation_ms: number;
+  }>();
 
   for (const report of reports) {
     globalRisk = maxRisk(globalRisk, report.risk.level);
-    totalCost += Number(report.cost.estimated_total ?? 0);
+    estimatedTotalCost += Number(report.cost.estimated_total ?? 0);
+    actualTotalCost += Number(report.cost.actual_total ?? 0);
     if (report.risk.level === "LOW") healthy += 1;
     else atRisk += 1;
+    if (String(report.execution.final_status ?? "").toUpperCase() === "PENDING_ACCEPTANCE") pendingAcceptanceCount += 1;
 
     const duration = report.sla.execution_duration_ms;
     if (typeof duration === "number" && Number.isFinite(duration)) {
@@ -260,6 +326,30 @@ export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]
       if (!reason) continue;
       reasonCount.set(reason, (reasonCount.get(reason) ?? 0) + 1);
     }
+
+    const fieldId = resolveReportFieldId(report);
+    if (!fieldId) continue;
+    const current = fieldAgg.get(fieldId) ?? {
+      field_id: fieldId,
+      field_name: params.field_name_by_id?.get(fieldId) ?? null,
+      risk_level: "LOW" as OperationReportRiskLevel,
+      risk_reasons: new Set<string>(),
+      open_alerts_count: Number(params.open_alerts_by_field?.get(fieldId) ?? 0),
+      pending_acceptance_count: Number(params.pending_acceptance_by_field?.get(fieldId) ?? 0),
+      last_operation_at: null,
+      last_operation_ms: 0,
+    };
+    current.risk_level = maxRisk(current.risk_level, report.risk.level);
+    for (const reasonRaw of report.risk.reasons) {
+      const reason = String(reasonRaw ?? "").trim();
+      if (reason) current.risk_reasons.add(reason);
+    }
+    const opMs = resolveOperationTimeMs(report);
+    if (opMs >= current.last_operation_ms) {
+      current.last_operation_ms = opMs;
+      current.last_operation_at = report.execution.execution_finished_at ?? report.generated_at ?? null;
+    }
+    fieldAgg.set(fieldId, current);
   }
 
   const topReasons = [...reasonCount.entries()]
@@ -270,12 +360,33 @@ export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]
     .slice(0, 5)
     .map(([reason]) => reason);
 
+  const topRiskFields = [...fieldAgg.values()]
+    .sort((a, b) => {
+      const riskDiff = RISK_RANK[b.risk_level] - RISK_RANK[a.risk_level];
+      if (riskDiff !== 0) return riskDiff;
+      if (b.open_alerts_count !== a.open_alerts_count) return b.open_alerts_count - a.open_alerts_count;
+      if (b.pending_acceptance_count !== a.pending_acceptance_count) return b.pending_acceptance_count - a.pending_acceptance_count;
+      if (b.last_operation_ms !== a.last_operation_ms) return b.last_operation_ms - a.last_operation_ms;
+      return a.field_id.localeCompare(b.field_id);
+    })
+    .slice(0, 5)
+    .map((item) => ({
+      field_id: item.field_id,
+      field_name: item.field_name,
+      risk_level: item.risk_level,
+      risk_reasons: [...item.risk_reasons].slice(0, 3),
+      open_alerts_count: item.open_alerts_count,
+      pending_acceptance_count: item.pending_acceptance_count,
+      last_operation_at: item.last_operation_at,
+    }));
+
   return {
     fields: {
       total: reports.length,
       healthy,
       at_risk: atRisk,
     },
+    top_risk_fields: topRiskFields,
     recent_operations: recentOperations,
     risk_summary: {
       level: globalRisk,
@@ -283,15 +394,29 @@ export function projectCustomerDashboardAggregateV1(reports: OperationReportV1[]
     },
     period_summary: {
       total_operations: reports.length,
-      total_cost: totalCost,
+      estimated_total_cost: estimatedTotalCost,
+      actual_total_cost: actualTotalCost,
       avg_sla_ms: slaCount > 0 ? slaSum / slaCount : null,
+    },
+    pending_actions_summary: {
+      total_open_alerts: Number(params.pending_actions_summary?.total_open_alerts ?? 0),
+      unassigned_alerts: Number(params.pending_actions_summary?.unassigned_alerts ?? 0),
+      in_progress_alerts: Number(params.pending_actions_summary?.in_progress_alerts ?? 0),
+      sla_breached_alerts: Number(params.pending_actions_summary?.sla_breached_alerts ?? 0),
+      closed_today_alerts: Number(params.pending_actions_summary?.closed_today_alerts ?? 0),
+      pending_acceptance: Number(params.pending_actions_summary?.pending_acceptance ?? pendingAcceptanceCount),
+    },
+    device_summary: {
+      offline_fields: Number(params.device_summary?.offline_fields ?? 0),
+      total_devices: Number(params.device_summary?.total_devices ?? 0),
+      offline_devices: Number(params.device_summary?.offline_devices ?? 0),
     },
   };
 }
 
 
 export function projectFieldPortfolioSummaryV1(reports: OperationReportV1[]): FieldPortfolioSummaryV1 {
-  const aggregate = projectCustomerDashboardAggregateV1(reports);
+  const aggregate = projectCustomerDashboardAggregateV1({ reports });
   const byField = new Map<string, {
     field_id: string;
     risk_level: OperationReportRiskLevel;
