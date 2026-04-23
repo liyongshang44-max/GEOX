@@ -31,7 +31,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
             <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
             <Link className="btn" to="/alerts">进入告警中心</Link>
           </>
-        }
+        )}
       />
 
       <SectionCard title="地块状态">
