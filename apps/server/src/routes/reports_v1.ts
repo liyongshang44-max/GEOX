@@ -5,10 +5,10 @@ import { enforceFieldScopeOrDeny, enforceOperationFieldScope, hasFieldAccess } f
 import { projectOperationStateV1, type OperationStateV1 } from "../projections/operation_state_v1.js";
 import {
   projectOperationReportV1,
-  type OperationReportFieldListResponseV1,
   type OperationReportSingleResponseV1,
   type OperationReportV1,
 } from "../projections/report_v1.js";
+import { projectFieldReportDetailV1, type FieldReportDetailV1 } from "../projections/report_dashboard_v1.js";
 import { normalizeReceiptEvidence } from "../services/receipt_evidence.js";
 import { computeOperationCostV1 } from "../domain/cost_model.js";
 import { toCustomerFacingActionLabel } from "../domain/controlplane/irrigation_action_mapping_v1.js";
@@ -139,6 +139,17 @@ function buildResponseTimeMs(state: OperationStateV1, executionStartedAt: string
   if (dispatchedTs == null || !Number.isFinite(executionStartedTs)) return null;
   return Math.max(0, executionStartedTs - dispatchedTs);
 }
+
+function toIsoFromEpochMs(v: unknown): string | null {
+  const n = typeof v === "number" ? v : Number(v);
+  if (!Number.isFinite(n)) return null;
+  return new Date(n).toISOString();
+}
+
+type FieldReportDetailResponseV1 = {
+  ok: true;
+  field_report_v1: FieldReportDetailV1;
+};
 
 export async function projectReportV1(params: {
   pool: Pool;
@@ -358,8 +369,64 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         };
       })(),
     }))));
+    const fieldNameQ = await pool.query(
+      `SELECT name
+         FROM field_index_v1
+        WHERE tenant_id = $1
+          AND field_id = $2
+        LIMIT 1`,
+      [tenant.tenant_id, fieldId],
+    );
+    const fieldName = toText(fieldNameQ.rows?.[0]?.name);
 
-    const payload: OperationReportFieldListResponseV1 = { ok: true, items };
+    const boundDevicesQ = await pool.query(
+      `SELECT b.device_id, s.last_telemetry_ts_ms
+         FROM device_binding_index_v1 b
+         LEFT JOIN device_status_index_v1 s
+           ON s.tenant_id = b.tenant_id AND s.device_id = b.device_id
+        WHERE b.tenant_id = $1
+          AND b.field_id = $2`,
+      [tenant.tenant_id, fieldId],
+    );
+    const boundDeviceIds = (boundDevicesQ.rows ?? []).map((row: any) => String(row.device_id ?? "")).filter(Boolean);
+    const onlineThresholdMs = Date.now() - 15 * 60 * 1000;
+    let onlineDevices = 0;
+    let lastTelemetryMs: number | null = null;
+    for (const row of boundDevicesQ.rows ?? []) {
+      const lastTelemetryTsMs = typeof row.last_telemetry_ts_ms === "number" ? row.last_telemetry_ts_ms : Number(row.last_telemetry_ts_ms);
+      if (Number.isFinite(lastTelemetryTsMs)) {
+        if (lastTelemetryMs == null || lastTelemetryTsMs > lastTelemetryMs) lastTelemetryMs = lastTelemetryTsMs;
+        if (lastTelemetryTsMs >= onlineThresholdMs) onlineDevices += 1;
+      }
+    }
+
+    const alertQ = await pool.query(
+      `SELECT COUNT(*)::bigint AS active_alerts
+         FROM alert_event_index_v1
+        WHERE tenant_id = $1
+          AND status IN ('OPEN', 'ACKED')
+          AND (
+            (object_type = 'FIELD' AND object_id = $2)
+            OR (object_type = 'DEVICE' AND object_id = ANY($3::text[]))
+          )`,
+      [tenant.tenant_id, fieldId, boundDeviceIds.length > 0 ? boundDeviceIds : ["__none__"]],
+    );
+    const openAlertsCount = Number(alertQ.rows?.[0]?.active_alerts ?? 0);
+
+    const fieldReport = projectFieldReportDetailV1({
+      field_id: fieldId,
+      field_name: fieldName,
+      reports: items,
+      open_alerts_count: openAlertsCount,
+      device_summary: {
+        total_devices: boundDeviceIds.length,
+        online_devices: onlineDevices,
+        offline_devices: Math.max(0, boundDeviceIds.length - onlineDevices),
+        last_telemetry_at: toIsoFromEpochMs(lastTelemetryMs),
+      },
+    });
+
+    const payload: FieldReportDetailResponseV1 = { ok: true, field_report_v1: fieldReport };
     return reply.send(payload);
   });
 }
