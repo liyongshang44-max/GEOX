@@ -44,7 +44,7 @@ function titleForPath(pathname: string): string {
   if (pathname.startsWith("/devices/")) return "设备详情";
   if (pathname.startsWith("/operations/") && pathname.endsWith("/report/export")) return "作业报告导出";
   if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return "作业报告";
-  if (pathname.startsWith("/operations/workboard")) return "运营作业台";
+  if (pathname.startsWith("/operations/workboard")) return "内部运营作业台";
   if (pathname.startsWith("/operations/")) return "作业详情";
   if (pathname.startsWith("/operations")) return "作业";
   if (pathname.startsWith("/human-assignments/")) return "人工执行详情";
@@ -57,7 +57,7 @@ function titleForPath(pathname: string): string {
   if (pathname === "/programs/new") return "新建经营方案";
   if (pathname.startsWith("/programs/")) return "经营方案详情";
   if (pathname.startsWith("/agronomy/recommendations")) return "农业建议";
-  if (pathname.startsWith("/alerts")) return "告警中心";
+  if (pathname.startsWith("/alerts")) return "内部告警中心";
   if (pathname.startsWith("/audit-export")) return "证据中心";
   if (pathname.startsWith("/skills/registry")) return "技能注册中心";
   if (pathname.startsWith("/skills/bindings")) return "技能绑定";
@@ -82,7 +82,7 @@ function leadForPath(pathname: string): string {
   if (pathname.startsWith("/devices/")) return "查看单个设备的状态、最新遥测和最小趋势。";
   if (pathname.startsWith("/operations/") && pathname.endsWith("/report/export")) return "作业报告导出版，保留六段叙事并隐藏内部调试信息。";
   if (pathname.startsWith("/operations/") && pathname.endsWith("/report")) return "查看作业报告固定区块：摘要、执行、验收、证据、成本、SLA 与风险。";
-  if (pathname.startsWith("/operations/workboard")) return "以人工队列方式统一处理分派、开工、备注、解决和关闭动作。";
+  if (pathname.startsWith("/operations/workboard")) return "内部运营页，用于处理作业分派、跟进和关闭，不属于客户主流程。";
   if (pathname.startsWith("/operations/")) return "查看作业状态、执行时间线与最新执行证据。";
   if (pathname.startsWith("/operations")) return "聚焦待执行与长时间未推进动作，支持快速追溯经营方案。";
   if (pathname.startsWith("/human-assignments/")) return "查看任务详情并提交人工执行回执。";
@@ -95,7 +95,7 @@ function leadForPath(pathname: string): string {
   if (pathname === "/programs/new") return "创建新的经营方案，补齐 field/season/crop 上下文。";
   if (pathname.startsWith("/programs/")) return "查看经营方案的决策链、执行链、证据链与资源结果。";
   if (pathname.startsWith("/agronomy/recommendations")) return "作为经营方案下的二级入口，查看农业建议、证据引用与审批前状态。";
-  if (pathname.startsWith("/alerts")) return "统一管理阈值规则、告警事件与确认关闭动作。";
+  if (pathname.startsWith("/alerts")) return "内部运营页，用于管理告警规则、事件和关闭动作，不属于客户主流程。";
   if (pathname.startsWith("/audit-export")) return "统一管理证据导出、回执追踪与完整性校验。";
   if (pathname.startsWith("/skills/registry")) return "集中管理技能状态、版本和覆盖范围。";
   if (pathname.startsWith("/skills/bindings")) return "查看技能绑定策略、作用域与优先级。";
