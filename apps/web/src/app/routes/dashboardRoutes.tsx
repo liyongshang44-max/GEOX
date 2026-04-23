@@ -4,6 +4,7 @@ import { Route } from "react-router-dom";
 const CommercialDashboardPage = React.lazy(() => import("../../features/dashboard/pages/CommercialDashboardPage"));
 const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../features/dashboard/pages/ManualExecutionQualityAnalysisPage"));
 const CustomerDashboardPage = React.lazy(() => import("../../views/CustomerDashboardPage"));
+const CustomerDashboardExportPage = React.lazy(() => import("../../views/CustomerDashboardExportPage"));
 
 export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
   return [
@@ -11,5 +12,6 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
     <Route key="dashboard" path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />,
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
     <Route key="dashboard-customer" path="/dashboard/customer" element={<CustomerDashboardPage />} />,
+    <Route key="dashboard-export" path="/dashboard/export" element={<CustomerDashboardExportPage />} />,
   ];
 }
