@@ -544,11 +544,33 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk", "workflow"],
+          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk", "workflow"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
             generated_at: { type: "string", format: "date-time" },
+            approval: {
+              type: "object",
+              required: ["status", "actor_id", "actor_name", "generated_at", "approved_at", "note"],
+              properties: {
+                status: { type: "string", nullable: true },
+                actor_id: { type: "string", nullable: true },
+                actor_name: { type: "string", nullable: true },
+                generated_at: { type: "string", format: "date-time", nullable: true },
+                approved_at: { type: "string", format: "date-time", nullable: true },
+                note: { type: "string", nullable: true }
+              }
+            },
+            why: {
+              type: "object",
+              required: ["explain_human", "objective_text"],
+              properties: {
+                explain_human: { type: "string", nullable: true },
+                objective_text: { type: "string", nullable: true }
+              }
+            },
+            operation_title: { type: "string", nullable: true },
+            customer_title: { type: "string", nullable: true },
             identifiers: {
               type: "object",
               required: ["tenant_id", "project_id", "group_id", "field_id", "operation_plan_id", "operation_id", "recommendation_id", "act_task_id", "receipt_id"],
