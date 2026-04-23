@@ -113,6 +113,26 @@ function deriveOperationTitle(actionType: unknown): string | null {
   return actionLabel === "执行" ? "田间作业" : `${actionLabel}作业`;
 }
 
+function ensureReportV1ExtendedFields(report: OperationReportV1): OperationReportV1 {
+  return {
+    ...report,
+    approval: report.approval ?? {
+      status: null,
+      actor_id: null,
+      actor_name: null,
+      generated_at: null,
+      approved_at: null,
+      note: null,
+    },
+    why: report.why ?? {
+      explain_human: null,
+      objective_text: null,
+    },
+    operation_title: report.operation_title ?? null,
+    customer_title: report.customer_title ?? report.operation_title ?? null,
+  };
+}
+
 function buildResponseTimeMs(state: OperationStateV1, executionStartedAt: string | null): number | null {
   const dispatchedTs = state.timeline.find((item) => item.type === "TASK_CREATED")?.ts ?? null;
   const executionStartedTs = executionStartedAt ? Date.parse(executionStartedAt) : NaN;
@@ -289,7 +309,10 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         }
         : null),
     });
-    const payload: OperationReportSingleResponseV1 = { ok: true, operation_report_v1 };
+    const payload: OperationReportSingleResponseV1 = {
+      ok: true,
+      operation_report_v1: ensureReportV1ExtendedFields(operation_report_v1),
+    };
     return reply.send(payload);
   });
 
@@ -317,7 +340,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       tenant_id: tenant.tenant_id,
       operation_ids: fieldStates.flatMap((state) => [state.operation_id, state.operation_plan_id]).filter(Boolean),
     });
-    const items = await Promise.all(fieldStates.map((state) => projectReportV1({
+    const items = await Promise.all(fieldStates.map(async (state) => ensureReportV1ExtendedFields(await projectReportV1({
       pool,
       tenant,
       operationState: state,
@@ -334,7 +357,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
           linked_alert_ids: linkedAlerts.map((row) => row.alert_id).filter(Boolean),
         };
       })(),
-    })));
+    }))));
 
     const payload: OperationReportFieldListResponseV1 = { ok: true, items };
     return reply.send(payload);
