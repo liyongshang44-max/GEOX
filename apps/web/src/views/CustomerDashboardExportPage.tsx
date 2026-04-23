@@ -66,7 +66,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-      <SectionCard title="近期动作">
+      <SectionCard title="近期作业">
         <div className="list">
           {(vm?.recentOperations ?? []).map((item) => (
             <div key={item.operationId} className="item">
@@ -74,7 +74,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
             </div>
           ))}
           {!(vm?.recentOperations.length) ? (
-            <div className="muted">暂无近期动作</div>
+            <div className="muted">暂无近期作业</div>
           ) : null}
         </div>
       </SectionCard>

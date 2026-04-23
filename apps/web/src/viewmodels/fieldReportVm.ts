@@ -1,5 +1,5 @@
 import type { FieldReportDetailV1 } from "../api/reports";
-import { toAcceptanceStatusLabel, toOperationStatusLabel, toRiskLabel } from "../lib/customerLabels";
+import { CUSTOMER_LABELS, labelAcceptanceStatus, labelFinalStatus, labelRiskLevel } from "../lib/customerLabels";
 
 export type FieldReportPageVm = {
   header: {
@@ -42,17 +42,6 @@ export type FieldReportPageVm = {
   } | null;
 };
 
-function mapRiskText(raw: unknown): string {
-  return toRiskLabel(raw);
-}
-
-function mapStatusText(raw: unknown): string {
-  return toOperationStatusLabel(raw);
-}
-
-function mapAcceptanceText(raw: unknown): string {
-  return toAcceptanceStatusLabel(raw);
-}
 
 function formatDateTime(value: string | null | undefined, fallback = "--"): string {
   if (!value) return fallback;
@@ -74,7 +63,7 @@ function formatCount(value: number | null | undefined): string {
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
   const fieldId = report.field.field_id;
   const fieldName = String(report.field.field_name ?? "").trim();
-  const title = fieldName || fieldId || "地块报告";
+  const title = fieldName || fieldId || CUSTOMER_LABELS.fieldReportTitle;
 
   return {
     header: {
@@ -83,7 +72,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       fieldId,
     },
     overview: {
-      riskText: mapRiskText(report.overview.current_risk_level),
+      riskText: labelRiskLevel(report.overview.current_risk_level),
       openAlertsText: formatCount(report.overview.open_alerts_count),
       pendingAcceptanceText: formatCount(report.overview.pending_acceptance_count),
       totalOperationsText: formatCount(report.overview.total_operations_count),
@@ -100,8 +89,8 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       return {
         id: operationId || "--",
         title: String(item.customer_title || item.title || operationId || "未命名作业"),
-        statusText: mapStatusText(item.final_status),
-        acceptanceText: mapAcceptanceText(item.acceptance_status),
+        statusText: labelFinalStatus(item.final_status),
+        acceptanceText: labelAcceptanceStatus(item.acceptance_status),
         generatedAtText: formatDateTime(item.generated_at),
         href: operationId ? `/operations/${encodeURIComponent(operationId)}/report` : "#",
       };
