@@ -45,6 +45,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         eyebrow="GEOX / 地块报告"
         title={vm.header.title}
         description={vm.header.subtitle}
+        actions={[{ label: "打印导出", onClick: () => window.print() }]}
       />
 
       <SectionCard title="地块总览">

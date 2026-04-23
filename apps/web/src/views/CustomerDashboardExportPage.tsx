@@ -25,6 +25,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}
         description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
+        actions={[{ label: "打印导出", onClick: () => window.print() }]}
       />
 
       <SectionCard title="地块状态">

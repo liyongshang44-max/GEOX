@@ -45,6 +45,7 @@ export default function OperationReportExportPage(): React.ReactElement {
         eyebrow="GEOX / 作业闭环"
         title={vm.header.title}
         description={vm.header.subtitle}
+        actions={[{ label: "打印导出", onClick: () => window.print() }]}
       />
 
       <SectionCard title="为什么做">
