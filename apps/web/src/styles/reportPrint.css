@@ -1,0 +1,68 @@
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .btn,
+  nav,
+  aside,
+  header nav,
+  .pageActions,
+  .uiPageHeaderActions,
+  .newSideNav,
+  .newTopBar,
+  [data-print-hide="true"],
+  button,
+  input,
+  select,
+  textarea {
+    display: none !important;
+  }
+
+  .newAppShell {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  .newAppMain,
+  .newAppContent,
+  .demoDashboardPage {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .card,
+  .uiPageHeader,
+  .uiSectionCard,
+  .sectionCard,
+  .SectionCard,
+  article,
+  .item {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1px solid #d9d9d9 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  a,
+  a:visited,
+  a:hover,
+  a:active {
+    color: #000 !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}
