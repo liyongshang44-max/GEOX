@@ -29,7 +29,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         actions={(
           <>
             <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
-            <Link className="btn" to="/alerts">进入告警中心</Link>
+            <Link className="btn" to="/dashboard/export">导出当前看板</Link>
           </>
         )}
       />
@@ -56,14 +56,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
           已超时：{vm?.pendingActions.slaBreachedText ?? "0"} ·
           今日关闭：{vm?.pendingActions.closedTodayText ?? "0"}
         </div>
-        <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
 
       <SectionCard title="Top 风险地块">
         <div className="list">
           {(vm?.topRiskFields ?? []).map((item) => (
             <div key={item.fieldId} className="item">
-              <Link to={item.href}>地块 {item.title}</Link> · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
+              <Link to={item.href}>{item.title}</Link> · 风险 {item.riskText} · 主要原因 {item.reasonText} · 未关闭告警 {item.openAlertsText} ·
               待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
             </div>
           ))}
@@ -77,7 +76,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="list">
           {(vm?.recentOperations ?? []).map((item) => (
             <div key={item.operationId} className="item">
-              <Link to={item.href}>{item.title}</Link> · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
+              <Link to={item.href}>{item.title}</Link> · 所属地块 {item.fieldTitle} · 最终状态 {item.statusText} · 验收状态 {item.acceptanceText} · 执行时间 {item.executedAtText}
             </div>
           ))}
           {!(vm?.recentOperations.length) ? (
