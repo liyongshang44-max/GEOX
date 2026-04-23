@@ -1,17 +1,11 @@
 import React from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { fetchAlerts, type AlertV1 } from "../api/alerts";
-import { fetchFieldReport, mapReportCode, type OperationReportV1 } from "../api/reports";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/reports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
-import { alertCategoryLabel, alertStatusLabel } from "../lib/alertLabels";
 import { PageHeader, SectionCard } from "../shared/ui";
 import FieldTagEditor from "../components/fields/FieldTagEditor";
-
-function sum(items: OperationReportV1[], picker: (item: OperationReportV1) => number): number {
-  return items.reduce((acc, item) => acc + picker(item), 0);
-}
-
+import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 
 function resolveOverviewPath(locationSearch: string): string {
   const params = new URLSearchParams(locationSearch);
@@ -40,18 +34,16 @@ export default function FieldReportPage(): React.ReactElement {
   const detailHref = React.useMemo(() => (`/fields/${encodeURIComponent(fieldId)}${location.search || ""}`), [fieldId, location.search]);
   const overviewHref = React.useMemo(() => resolveOverviewPath(location.search), [location.search]);
   const [loading, setLoading] = React.useState(true);
-  const [items, setItems] = React.useState<OperationReportV1[]>([]);
-  const [alerts, setAlerts] = React.useState<AlertV1[]>([]);
+  const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
-    void Promise.all([fetchFieldReport(fieldId), fetchAlerts({ field_ids: [fieldId], status: ["OPEN", "ACKED"] })])
-      .then(([reports, scopedAlerts]) => {
+    void fetchFieldReport(fieldId)
+      .then((res) => {
         if (!alive) return;
-        setItems(reports);
-        setAlerts(scopedAlerts);
+        setReport(res);
         setError("");
       })
       .catch((e: unknown) => {
@@ -68,55 +60,74 @@ export default function FieldReportPage(): React.ReactElement {
   }, [fieldId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
-  if (error) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
+  if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
-  const high = items.filter((item) => item.risk.level === "HIGH").length;
-  const medium = items.filter((item) => item.risk.level === "MEDIUM").length;
-  const low = items.filter((item) => item.risk.level === "LOW").length;
+  const vm = buildFieldReportVm(report);
 
   return (
     <div className="demoDashboardPage">
       <PageHeader
         eyebrow="GEOX / 地块报告"
-        title={`地块报告 ${fieldId}`}
-        description="展示地块 operation reports + 风险/成本汇总"
+        title={vm.header.title}
+        description={vm.header.subtitle}
         actions={(<><Link className="btn" to={detailHref}>返回地块详情</Link><Link className="btn" to={overviewHref}>返回多地块总览</Link></>)}
       />
 
       <FieldTagEditor fieldId={fieldId} />
 
-      <SectionCard title="未关闭关联告警">
-        <div className="list">
-          {alerts.map((alert) => (
-            <article key={alert.alert_id} className="item">
-              <div>{alertCategoryLabel(alert.category)} · {alertStatusLabel(alert.status)}</div>
-              <div className="muted">告警ID：{alert.alert_id}</div>
-            </article>
-          ))}
-          {!alerts.length ? <div className="muted">暂无未关闭告警</div> : null}
+      <SectionCard title="地块总览">
+        <div className="kvGrid2">
+          <div><strong>当前风险：</strong>{vm.overview.riskText}</div>
+          <div><strong>未关闭告警数：</strong>{vm.overview.openAlertsText}</div>
+          <div><strong>待验收作业数：</strong>{vm.overview.pendingAcceptanceText}</div>
+          <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
+          <div><strong>最近作业时间：</strong>{vm.overview.latestOperationText}</div>
+          <div><strong>预计总成本：</strong>{vm.overview.estimatedCostText}</div>
+          <div><strong>实际总成本：</strong>{vm.overview.actualCostText}</div>
         </div>
       </SectionCard>
 
-      <SectionCard title="Operation Reports">
+      <SectionCard title="状态解释">
+        <div>{vm.explain.human}</div>
+        <ul style={{ marginTop: 8 }}>
+          {vm.explain.topReasonsText.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
+        </ul>
+      </SectionCard>
+
+      <SectionCard title="近期作业">
         <div className="list">
-          {items.map((item, idx) => (
-            <article key={`${item.identifiers.operation_plan_id || item.identifiers.operation_id || idx}`} className="item">
-              <div>{idx + 1}. {item.identifiers.operation_plan_id || item.identifiers.operation_id || "--"}</div>
-              <div className="muted">状态：{mapReportCode(item.execution.final_status).label}</div>
-              <div className="muted">风险：{mapReportCode(item.risk.level).label}</div>
+          {vm.recentOperations.map((item) => (
+            <article key={item.id} className="item">
+              <div><Link to={item.href}>{item.title}</Link></div>
+              <div className="muted">状态：{item.statusText}</div>
+              <div className="muted">验收：{item.acceptanceText}</div>
+              <div className="muted">生成时间：{item.generatedAtText}</div>
             </article>
           ))}
-          {!items.length ? <div className="muted">暂无作业报告</div> : null}
+          {!vm.recentOperations.length ? <div className="muted">暂无作业报告</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title="风险汇总">
-        <div>高：{high} · 中：{medium} · 低：{low}</div>
+      <SectionCard title="感知/设备概况">
+        <div className="kvGrid2">
+          <div><strong>设备总数：</strong>{vm.deviceSummary.totalText}</div>
+          <div><strong>在线：</strong>{vm.deviceSummary.onlineText}</div>
+          <div><strong>离线：</strong>{vm.deviceSummary.offlineText}</div>
+          <div><strong>最近遥测时间：</strong>{vm.deviceSummary.lastTelemetryText}</div>
+        </div>
       </SectionCard>
 
-      <SectionCard title="成本汇总">
-        <div>预计总成本：{sum(items, (item) => item.cost.estimated_total)}</div>
-        <div>实际总成本：{sum(items, (item) => item.cost.actual_total ?? 0)}</div>
+      <SectionCard title="下一步建议">
+        {vm.nextAction ? (
+          <div className="kvGrid2">
+            <div><strong>建议标题：</strong>{vm.nextAction.title}</div>
+            <div><strong>建议说明：</strong>{vm.nextAction.explainText}</div>
+            <div><strong>建议目标：</strong>{vm.nextAction.objectiveText}</div>
+            <div><strong>优先级：</strong>{vm.nextAction.priorityText}</div>
+          </div>
+        ) : (
+          <div className="muted">暂无下一步建议</div>
+        )}
       </SectionCard>
     </div>
   );

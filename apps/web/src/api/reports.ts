@@ -1,13 +1,16 @@
 import { apiRequest, withQuery } from "./client";
 import type {
-  OperationReportFieldListResponseV1,
   OperationReportSingleResponseV1,
   OperationReportV1,
 } from "../../../server/src/projections/report_v1";
-import type { CustomerDashboardAggregateV1 as CustomerDashboardAggregateV1Projection } from "../../../server/src/projections/report_dashboard_v1";
+import type {
+  CustomerDashboardAggregateV1 as CustomerDashboardAggregateV1Projection,
+  FieldReportDetailV1 as FieldReportDetailV1Projection,
+} from "../../../server/src/projections/report_dashboard_v1";
 
 export type { OperationReportV1 };
 export type CustomerDashboardAggregateV1 = CustomerDashboardAggregateV1Projection;
+export type FieldReportDetailV1 = FieldReportDetailV1Projection;
 // 历史上的 reports 前端聚合类型已废弃；dashboard 仅消费后端 aggregate v1。
 export type ReportCodeTone = "success" | "warning" | "danger" | "info" | "neutral";
 
@@ -43,9 +46,14 @@ function unwrapOperationReport(payload: OperationReportSingleResponseV1 | Operat
   return payload;
 }
 
-function unwrapFieldReports(payload: OperationReportFieldListResponseV1 | OperationReportV1[]): OperationReportV1[] {
-  if (Array.isArray(payload)) return payload;
-  return payload.items;
+type FieldReportDetailEnvelope = {
+  ok: true;
+  field_report_v1: FieldReportDetailV1;
+};
+
+function unwrapFieldReportDetail(payload: FieldReportDetailEnvelope | FieldReportDetailV1): FieldReportDetailV1 {
+  if ("field_report_v1" in payload) return payload.field_report_v1;
+  return payload;
 }
 
 type CustomerDashboardAggregateEnvelope = {
@@ -58,9 +66,11 @@ export async function fetchOperationReport(operationId: string): Promise<Operati
   return unwrapOperationReport(res);
 }
 
-export async function fetchFieldReport(fieldId: string): Promise<OperationReportV1[]> {
-  const res = await apiRequest<OperationReportFieldListResponseV1 | OperationReportV1[]>(withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`));
-  return unwrapFieldReports(res);
+export async function fetchFieldReport(fieldId: string): Promise<FieldReportDetailV1> {
+  const res = await apiRequest<FieldReportDetailEnvelope | FieldReportDetailV1>(
+    withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`)
+  );
+  return unwrapFieldReportDetail(res);
 }
 
 export async function fetchCustomerDashboardAggregate(params: { fieldIds?: string[]; timeRange?: "7d" | "30d" | "season" } = {}): Promise<CustomerDashboardAggregateV1> {
