@@ -96,7 +96,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <SectionCard title="地块状态">
         <div>
           共 {numberFmt.format(summary?.total_fields ?? 0)} 个地块，风险 {numberFmt.format((summary?.by_risk.high ?? 0) + (summary?.by_risk.critical ?? 0))} 个，
-          严重 {numberFmt.format(summary?.by_risk.critical ?? 0)} 个
+          高风险地块数 {numberFmt.format((summary?.by_risk.high ?? 0) + (summary?.by_risk.critical ?? 0))} 个
         </div>
         <div className="muted">离线地块：{numberFmt.format(summary?.offline_fields ?? 0)}。</div>
       </SectionCard>
