@@ -36,7 +36,8 @@ export type CustomerDashboardAggregateV1 = {
   };
   period_summary: {
     total_operations: number;
-    total_cost: number;
+    estimated_total_cost: number;
+    actual_total_cost: number;
     avg_sla_ms: number | null;
   };
   pending_actions_summary: {
@@ -288,7 +289,8 @@ export function projectCustomerDashboardAggregateV1(params: {
 
   const reasonCount = new Map<string, number>();
   let globalRisk: OperationReportRiskLevel = "LOW";
-  let totalCost = 0;
+  let estimatedTotalCost = 0;
+  let actualTotalCost = 0;
   let slaSum = 0;
   let slaCount = 0;
   let healthy = 0;
@@ -307,7 +309,8 @@ export function projectCustomerDashboardAggregateV1(params: {
 
   for (const report of reports) {
     globalRisk = maxRisk(globalRisk, report.risk.level);
-    totalCost += Number(report.cost.estimated_total ?? 0);
+    estimatedTotalCost += Number(report.cost.estimated_total ?? 0);
+    actualTotalCost += Number(report.cost.actual_total ?? 0);
     if (report.risk.level === "LOW") healthy += 1;
     else atRisk += 1;
     if (String(report.execution.final_status ?? "").toUpperCase() === "PENDING_ACCEPTANCE") pendingAcceptanceCount += 1;
@@ -391,7 +394,8 @@ export function projectCustomerDashboardAggregateV1(params: {
     },
     period_summary: {
       total_operations: reports.length,
-      total_cost: totalCost,
+      estimated_total_cost: estimatedTotalCost,
+      actual_total_cost: actualTotalCost,
       avg_sla_ms: slaCount > 0 ? slaSum / slaCount : null,
     },
     pending_actions_summary: {

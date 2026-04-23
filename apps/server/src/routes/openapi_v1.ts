@@ -783,10 +783,11 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 },
                 period_summary: {
                   type: "object",
-                  required: ["total_operations", "total_cost", "avg_sla_ms"],
+                  required: ["total_operations", "estimated_total_cost", "actual_total_cost", "avg_sla_ms"],
                   properties: {
                     total_operations: { type: "integer" },
-                    total_cost: { type: "number" },
+                    estimated_total_cost: { type: "number" },
+                    actual_total_cost: { type: "number" },
                     avg_sla_ms: { type: "number", nullable: true }
                   }
                 },
