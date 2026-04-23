@@ -13,6 +13,14 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
     <Route key="dashboard" path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />,
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
     <Route key="dashboard-customer" path="/dashboard/customer" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
-    <Route key="dashboard-export" path="/dashboard/export" element={<RouteErrorBoundary><CustomerDashboardExportPage /></RouteErrorBoundary>} />,
+    <Route
+      key="dashboard-export"
+      path="/dashboard/export"
+      element={
+        <RouteErrorBoundary>
+          <CustomerDashboardExportPage />
+        </RouteErrorBoundary>
+      }
+    />,
   ];
 }
