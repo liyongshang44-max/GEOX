@@ -1,10 +1,9 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/reports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 
-export default function CustomerDashboardPage(): React.ReactElement {
+export default function CustomerDashboardExportPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
   const [error, setError] = React.useState<string>("");
 
@@ -21,17 +20,12 @@ export default function CustomerDashboardPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage reportPrintPage">
       <PageHeader
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}
         description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
-        actions={(
-          <>
-            <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
-            <Link className="btn" to="/alerts">进入告警中心</Link>
-          </>
-        )}
+        actions={[{ label: "打印导出", onClick: () => window.print() }]}
       />
 
       <SectionCard title="地块状态">
@@ -56,14 +50,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
           已超时：{vm?.pendingActions.slaBreachedText ?? "0"} ·
           今日关闭：{vm?.pendingActions.closedTodayText ?? "0"}
         </div>
-        <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
 
       <SectionCard title="Top 风险地块">
         <div className="list">
           {(vm?.topRiskFields ?? []).map((item) => (
             <div key={item.fieldId} className="item">
-              <Link to={item.href}>地块 {item.title}</Link> · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
+              地块 {item.title} · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
               待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
             </div>
           ))}
@@ -77,7 +70,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="list">
           {(vm?.recentOperations ?? []).map((item) => (
             <div key={item.operationId} className="item">
-              <Link to={item.href}>{item.title}</Link> · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
+              {item.title} · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
             </div>
           ))}
           {!(vm?.recentOperations.length) ? (

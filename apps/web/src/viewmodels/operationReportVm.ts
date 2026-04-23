@@ -1,5 +1,13 @@
 import type { OperationReportV1 } from "../api/reports";
-import { toAcceptanceStatusLabel, toOperationStatusLabel, toRiskLabel } from "../lib/customerLabels";
+import {
+  CUSTOMER_LABELS,
+  labelAcceptanceStatus,
+  labelApprovalStatus,
+  labelBooleanYesNo,
+  labelEmptyFallback,
+  labelFinalStatus,
+  labelRiskLevel,
+} from "../lib/customerLabels";
 
 export type OperationReportPageVm = {
   header: {
@@ -62,51 +70,27 @@ export type OperationReportPageVm = {
   };
 };
 
-function mapFinalStatusToCustomerText(raw: unknown): string {
-  const label = toOperationStatusLabel(raw);
-  if (label === "已完成" || label === "已通过") return "作业已完成并通过验收";
-  if (label === "待验收") return "作业已完成，等待验收";
-  if (label === "未通过") return "作业未通过验收";
-  return "作业执行中";
-}
-
-function mapGenericLabel(raw: unknown): string {
-  const key = String(raw ?? "").trim().toUpperCase();
-  if (!key) return "--";
-  if (["LOW", "MEDIUM", "HIGH"].includes(key)) return toRiskLabel(key);
-  if (["PASS", "FAIL", "PENDING", "PENDING_ACCEPTANCE", "SUCCESS", "SUCCEEDED", "FAILED", "ERROR", "INVALID_EXECUTION", "RUNNING"].includes(key)) {
-    return toOperationStatusLabel(key);
-  }
-  const dict: Record<string, string> = {
-    VALID: "有效",
-    MISSING_DATA: "缺失",
-    INVALID_ORDER: "异常",
-  };
-  return dict[key] ?? key;
-}
-
 function kv(value: unknown, fallback = "--"): string {
-  if (value === null || value === undefined || value === "") return fallback;
-  return String(value);
+  return labelEmptyFallback(value, fallback);
 }
 
 function joinReasonTexts(reasons: string[]): string {
   if (!Array.isArray(reasons) || reasons.length === 0) return "暂无明确风险原因";
-  return reasons.map((item) => mapGenericLabel(item)).join("、");
+  return reasons.map((item) => labelEmptyFallback(item)).join("、");
 }
 
 function mapSlaQuality(value: unknown, rawMs: unknown): string {
   const quality = String(value ?? "").trim().toUpperCase();
   if (quality === "VALID") return kv(rawMs);
   if (quality === "MISSING_DATA") return "缺失";
-  if (quality === "INVALID_ORDER") return "异常";
+  if (quality === "INVALID_ORDER") return "执行异常";
   return "--";
 }
 
 export function buildOperationReportVm(report: OperationReportV1): OperationReportPageVm {
-  const finalStatusText = mapFinalStatusToCustomerText(report.execution.final_status);
-  const acceptanceStatusText = toAcceptanceStatusLabel(report.acceptance.status);
-  const riskLabel = mapGenericLabel(report.risk.level);
+  const finalStatusText = labelFinalStatus(report.execution.final_status);
+  const acceptanceStatusText = labelAcceptanceStatus(report.acceptance.status);
+  const riskLabel = labelRiskLevel(report.risk.level);
   const reasonText = joinReasonTexts(report.risk.reasons);
   const reportWhy = (report as any).why ?? null;
   const reportApproval = (report as any).approval ?? null;
@@ -115,7 +99,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
 
   return {
     header: {
-      title: kv((report as any).customer_title || (report as any).operation_title, "田间作业闭环"),
+      title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
       subtitle: finalStatusText,
       internalId,
     },
@@ -128,7 +112,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       reasonText: kv(reportWhy?.objective_text, reasonText),
     },
     approval: {
-      statusText: kv(reportApproval?.status, "未提供审批信息"),
+      statusText: reportApproval ? labelApprovalStatus(reportApproval?.status) : "待确认",
       actorText: kv(reportApproval?.actor_name || reportApproval?.actor_id),
       timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at),
       noteText: kv(reportApproval?.note),
@@ -138,7 +122,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       ownerText: kv(report.workflow.owner_name || report.workflow.owner_actor_id),
       startedAtText: kv(report.execution.execution_started_at),
       finishedAtText: kv(report.execution.execution_finished_at),
-      invalidExecutionText: report.execution.invalid_execution ? "是" : "否",
+      invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution),
       statusText: finalStatusText,
     },
     evidence: {
@@ -150,7 +134,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     acceptance: {
       statusText: acceptanceStatusText,
       verdictText: kv(report.acceptance.verdict),
-      missingEvidenceText: report.acceptance.missing_evidence ? "是" : "否",
+      missingEvidenceText: labelBooleanYesNo(report.acceptance.missing_evidence),
       generatedAtText: kv(report.acceptance.generated_at),
     },
     conclusion: {
@@ -174,7 +158,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
         acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms),
         invalidReasons:
           Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length
-            ? report.sla.invalid_reasons.join(" / ")
+            ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ")
             : "--",
       },
     },
