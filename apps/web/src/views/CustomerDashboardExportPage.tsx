@@ -56,7 +56,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
         <div className="list">
           {(vm?.topRiskFields ?? []).map((item) => (
             <div key={item.fieldId} className="item">
-              地块 {item.title} · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
+              {item.title} · 风险 {item.riskText} · 主要原因 {item.reasonText} · 未关闭告警 {item.openAlertsText} ·
               待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
             </div>
           ))}
@@ -70,7 +70,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
         <div className="list">
           {(vm?.recentOperations ?? []).map((item) => (
             <div key={item.operationId} className="item">
-              {item.title} · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
+              {item.title} · 所属地块 {item.fieldTitle} · 最终状态 {item.statusText} · 验收状态 {item.acceptanceText} · 执行时间 {item.executedAtText}
             </div>
           ))}
           {!(vm?.recentOperations.length) ? (
