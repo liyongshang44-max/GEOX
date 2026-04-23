@@ -1,4 +1,4 @@
-import { apiRequest, withQuery } from "./client";
+import { apiRequest, apiRequestWithPolicy, ApiError, withQuery } from "./client";
 import type {
   OperationReportSingleResponseV1,
   OperationReportV1,
@@ -67,10 +67,15 @@ export async function fetchOperationReport(operationId: string): Promise<Operati
 }
 
 export async function fetchFieldReport(fieldId: string): Promise<FieldReportDetailV1> {
-  const res = await apiRequest<FieldReportDetailEnvelope | FieldReportDetailV1>(
-    withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`)
+  const res = await apiRequestWithPolicy<FieldReportDetailEnvelope | FieldReportDetailV1>(
+    withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`),
+    undefined,
+    { timeoutMs: 30000 }
   );
-  return unwrapFieldReportDetail(res);
+  if (!res.ok) {
+    throw new ApiError(res.status, res.bodyText, withQuery(`/api/v1/reports/field/${encodeURIComponent(fieldId)}`));
+  }
+  return unwrapFieldReportDetail(res.data);
 }
 
 export async function fetchCustomerDashboardAggregate(params: { fieldIds?: string[]; timeRange?: "7d" | "30d" | "season" } = {}): Promise<CustomerDashboardAggregateV1> {
