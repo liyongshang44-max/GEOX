@@ -39,7 +39,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <SectionCard title="地块状态">
         <div>地块总数：{vm?.fieldStatus.totalFieldsText ?? "0"}</div>
         <div>风险地块数：{vm?.fieldStatus.atRiskText ?? "0"}</div>
-        <div>严重风险数：{vm?.fieldStatus.criticalText ?? "0"}</div>
+        <div>高风险地块数：{vm?.fieldStatus.highRiskText ?? "0"}</div>
         <div className="muted">离线地块数：{vm?.fieldStatus.offlineFieldsText ?? "0"}</div>
       </SectionCard>
 

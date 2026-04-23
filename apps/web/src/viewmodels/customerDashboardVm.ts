@@ -37,7 +37,7 @@ export type CustomerDashboardPageVm = {
   fieldStatus: {
     totalFieldsText: string;
     atRiskText: string;
-    criticalText: string;
+    highRiskText: string;
     offlineFieldsText: string;
   };
   businessSummary: {
@@ -100,7 +100,7 @@ function toAcceptanceStatusText(raw: unknown): string {
 export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1): CustomerDashboardPageVm {
   const totalFields = Number(aggregate?.fields?.total ?? 0);
   const atRisk = Number(aggregate?.fields?.at_risk ?? 0);
-  const critical = aggregate.top_risk_fields.filter((x) => String(x.risk_level ?? "").toUpperCase() === "HIGH").length;
+  const highRisk = aggregate.top_risk_fields.filter((x) => String(x.risk_level ?? "").toUpperCase() === "HIGH").length;
   const offlineFields = Number(aggregate?.device_summary?.offline_fields ?? 0);
 
   return {
@@ -111,7 +111,7 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     fieldStatus: {
       totalFieldsText: numberFmt.format(totalFields),
       atRiskText: numberFmt.format(atRisk),
-      criticalText: numberFmt.format(critical),
+      highRiskText: numberFmt.format(highRisk),
       offlineFieldsText: numberFmt.format(offlineFields),
     },
     businessSummary: {
