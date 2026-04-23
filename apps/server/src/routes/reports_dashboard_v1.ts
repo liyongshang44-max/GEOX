@@ -20,6 +20,7 @@ type TenantTriple = {
 };
 
 const DASHBOARD_REPORT_CONCURRENCY_LIMIT = 12;
+const DEVICE_OFFLINE_THRESHOLD_MS = 15 * 60 * 1000;
 
 function normalizeFieldIds(raw: unknown): string[] {
   if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
@@ -94,6 +95,150 @@ async function queryScopedOperations(
     if (!dedup.has(operationId)) dedup.set(operationId, { operation_id: operationId, field_id: fieldId });
   }
   return [...dedup.values()];
+}
+
+async function queryFieldNameMap(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, string | null>> {
+  if (fieldIds.length === 0) return new Map();
+  const q = await pool.query(
+    `SELECT field_id, name
+       FROM field_index_v1
+      WHERE tenant_id = $1
+        AND field_id = ANY($2::text[])`,
+    [tenant.tenant_id, fieldIds],
+  );
+  const map = new Map<string, string | null>();
+  for (const row of q.rows ?? []) {
+    const fieldId = String((row as any).field_id ?? "").trim();
+    if (!fieldId) continue;
+    const name = String((row as any).name ?? "").trim();
+    map.set(fieldId, name || null);
+  }
+  return map;
+}
+
+async function queryOpenAlertCountByField(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<Map<string, number>> {
+  if (fieldIds.length === 0) return new Map();
+  const q = await pool.query(
+    `SELECT field_id, SUM(cnt)::bigint AS count
+       FROM (
+         SELECT e.object_id AS field_id, COUNT(*)::bigint AS cnt
+           FROM alert_event_index_v1 e
+          WHERE e.tenant_id = $1
+            AND e.status IN ('OPEN','ACKED')
+            AND e.object_type = 'FIELD'
+            AND e.object_id = ANY($2::text[])
+          GROUP BY e.object_id
+         UNION ALL
+         SELECT b.field_id AS field_id, COUNT(*)::bigint AS cnt
+           FROM alert_event_index_v1 e
+           JOIN device_binding_index_v1 b
+             ON b.tenant_id = e.tenant_id
+            AND b.device_id = e.object_id
+          WHERE e.tenant_id = $1
+            AND e.status IN ('OPEN','ACKED')
+            AND e.object_type = 'DEVICE'
+            AND b.field_id = ANY($2::text[])
+          GROUP BY b.field_id
+       ) t
+      GROUP BY field_id`,
+    [tenant.tenant_id, fieldIds],
+  ).catch(() => ({ rows: [] as any[] }));
+  const map = new Map<string, number>();
+  for (const row of q.rows ?? []) {
+    const fieldId = String((row as any).field_id ?? "").trim();
+    if (!fieldId) continue;
+    map.set(fieldId, Number((row as any).count ?? 0));
+  }
+  return map;
+}
+
+async function queryPendingActionsSummary(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<{
+  total_open_alerts: number;
+  unassigned_alerts: number;
+  in_progress_alerts: number;
+  sla_breached_alerts: number;
+  closed_today_alerts: number;
+}> {
+  if (fieldIds.length === 0) {
+    return { total_open_alerts: 0, unassigned_alerts: 0, in_progress_alerts: 0, sla_breached_alerts: 0, closed_today_alerts: 0 };
+  }
+  const nowMs = Date.now();
+  const startToday = new Date();
+  startToday.setUTCHours(0, 0, 0, 0);
+  const startTodayMs = startToday.getTime();
+  const q = await pool.query(
+    `WITH scoped_alerts AS (
+       SELECT e.alert_id
+         FROM alert_event_index_v1 e
+        WHERE e.tenant_id = $1
+          AND e.status IN ('OPEN','ACKED')
+          AND (
+            (e.object_type = 'FIELD' AND e.object_id = ANY($2::text[]))
+            OR
+            (e.object_type = 'DEVICE' AND e.object_id IN (
+              SELECT device_id FROM device_binding_index_v1 WHERE tenant_id = $1 AND field_id = ANY($2::text[])
+            ))
+          )
+     )
+     SELECT
+       COUNT(*)::bigint AS total_open_alerts,
+       SUM(CASE WHEN COALESCE(w.status, 'OPEN') = 'OPEN' THEN 1 ELSE 0 END)::bigint AS unassigned_alerts,
+       SUM(CASE WHEN COALESCE(w.status, 'OPEN') IN ('IN_PROGRESS','ASSIGNED','ACKED') THEN 1 ELSE 0 END)::bigint AS in_progress_alerts,
+       SUM(CASE WHEN w.sla_due_at IS NOT NULL AND w.sla_due_at < $3 THEN 1 ELSE 0 END)::bigint AS sla_breached_alerts,
+       SUM(CASE WHEN COALESCE(w.status, 'OPEN') = 'CLOSED' AND w.updated_at >= $4 THEN 1 ELSE 0 END)::bigint AS closed_today_alerts
+      FROM scoped_alerts s
+      LEFT JOIN alert_workflow_v1 w
+        ON w.tenant_id = $1
+       AND w.alert_id = s.alert_id`,
+    [tenant.tenant_id, fieldIds, nowMs, startTodayMs],
+  ).catch(() => ({ rows: [{}] as any[] }));
+  const row: any = q.rows?.[0] ?? {};
+  return {
+    total_open_alerts: Number(row.total_open_alerts ?? 0),
+    unassigned_alerts: Number(row.unassigned_alerts ?? 0),
+    in_progress_alerts: Number(row.in_progress_alerts ?? 0),
+    sla_breached_alerts: Number(row.sla_breached_alerts ?? 0),
+    closed_today_alerts: Number(row.closed_today_alerts ?? 0),
+  };
+}
+
+async function queryDeviceSummary(pool: Pool, tenant: TenantTriple, fieldIds: string[]): Promise<{
+  offline_fields: number;
+  total_devices: number;
+  offline_devices: number;
+}> {
+  if (fieldIds.length === 0) return { offline_fields: 0, total_devices: 0, offline_devices: 0 };
+  const q = await pool.query(
+    `SELECT COALESCE(d.field_id, b.field_id) AS field_id, d.device_id, d.last_heartbeat_ts_ms
+       FROM device_status_index_v1 d
+       LEFT JOIN device_binding_index_v1 b
+         ON b.tenant_id = d.tenant_id AND b.device_id = d.device_id
+      WHERE d.tenant_id = $1
+        AND COALESCE(d.field_id, b.field_id) = ANY($2::text[])`,
+    [tenant.tenant_id, fieldIds],
+  ).catch(() => ({ rows: [] as any[] }));
+
+  const cutoff = Date.now() - DEVICE_OFFLINE_THRESHOLD_MS;
+  const offlineFieldSet = new Set<string>();
+  let totalDevices = 0;
+  let offlineDevices = 0;
+  for (const row of q.rows ?? []) {
+    const fieldId = String((row as any).field_id ?? "").trim();
+    if (!fieldId) continue;
+    totalDevices += 1;
+    const heartbeatMs = Number((row as any).last_heartbeat_ts_ms ?? 0);
+    const offline = !(Number.isFinite(heartbeatMs) && heartbeatMs > 0 && heartbeatMs >= cutoff);
+    if (offline) {
+      offlineDevices += 1;
+      offlineFieldSet.add(fieldId);
+    }
+  }
+
+  return {
+    offline_fields: offlineFieldSet.size,
+    total_devices: totalDevices,
+    offline_devices: offlineDevices,
+  };
 }
 
 export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Pool): void {
@@ -204,11 +349,44 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       }
     )).filter((report): report is NonNullable<typeof report> => Boolean(report));
 
-    const aggregate = projectCustomerDashboardAggregateV1(reports);
+    const scopedFieldIdSet = new Set(scopedFieldIds);
+    for (const report of reports) {
+      const fieldId = String(report.identifiers.field_id ?? "").trim();
+      if (fieldId) scopedFieldIdSet.add(fieldId);
+    }
+    const aggregateFieldIds = [...scopedFieldIdSet];
+
+    const [fieldNameById, openAlertsByField, pendingActionsSummary, deviceSummary] = await Promise.all([
+      queryFieldNameMap(pool, tenant, aggregateFieldIds),
+      queryOpenAlertCountByField(pool, tenant, aggregateFieldIds),
+      queryPendingActionsSummary(pool, tenant, aggregateFieldIds),
+      queryDeviceSummary(pool, tenant, aggregateFieldIds),
+    ]);
+
+    const pendingAcceptanceByField = new Map<string, number>();
+    for (const report of reports) {
+      const fieldId = String(report.identifiers.field_id ?? "").trim();
+      if (!fieldId) continue;
+      const finalStatus = String(report.execution.final_status ?? "").toUpperCase();
+      if (finalStatus !== "PENDING_ACCEPTANCE") continue;
+      pendingAcceptanceByField.set(fieldId, (pendingAcceptanceByField.get(fieldId) ?? 0) + 1);
+    }
+
+    const aggregate = projectCustomerDashboardAggregateV1({
+      reports,
+      field_name_by_id: fieldNameById,
+      open_alerts_by_field: openAlertsByField,
+      pending_acceptance_by_field: pendingAcceptanceByField,
+      pending_actions_summary: {
+        ...pendingActionsSummary,
+        pending_acceptance: [...pendingAcceptanceByField.values()].reduce((s, n) => s + n, 0),
+      },
+      device_summary: deviceSummary,
+    });
 
     return reply.send({
       ok: true,
-      ...aggregate,
+      aggregate,
     });
   });
 }
