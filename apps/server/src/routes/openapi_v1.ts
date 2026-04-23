@@ -898,6 +898,64 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/devices/simulator/statuses": {
+        get: {
+          tags: ["devices"],
+          summary: "List simulator statuses across tenant-scoped devices",
+          parameters: [
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 500 }, description: "Max number of rows to return" },
+            { name: "tenant_id", in: "query", required: false, schema: { type: "string" }, description: "Compatibility-only. Ignored; auth context is authoritative." },
+            { name: "project_id", in: "query", required: false, schema: { type: "string" }, description: "Compatibility-only. Ignored; auth context is authoritative." },
+            { name: "group_id", in: "query", required: false, schema: { type: "string" }, description: "Compatibility-only. Ignored; auth context is authoritative." }
+          ],
+          responses: {
+            "200": {
+              description: "Tenant-scoped simulator status list",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      ok: { type: "boolean" },
+                      tenant_id: { type: "string" },
+                      project_id: { type: ["string", "null"] },
+                      group_id: { type: ["string", "null"] },
+                      scope_source: { type: "string", enum: ["auth_context"] },
+                      scope_query_ignored: { type: "boolean" },
+                      items: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            tenant_id: { type: "string" },
+                            project_id: { type: ["string", "null"] },
+                            group_id: { type: ["string", "null"] },
+                            device_id: { type: "string" },
+                            display_name: { type: ["string", "null"] },
+                            device_mode: { type: ["string", "null"] },
+                            key: { type: "string" },
+                            running: { type: "boolean" },
+                            status: { type: "string" },
+                            started_ts_ms: { type: ["number", "null"] },
+                            stopped_ts_ms: { type: ["number", "null"] },
+                            interval_ms: { type: "number" },
+                            last_tick_ts_ms: { type: ["number", "null"] },
+                            last_error: { type: ["string", "null"] },
+                            updated_ts_ms: { type: ["number", "null"] }
+                          },
+                          additionalProperties: false
+                        }
+                      }
+                    },
+                    required: ["ok", "tenant_id", "scope_source", "scope_query_ignored", "items"],
+                    additionalProperties: false
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "/api/v1/simulator-runner/start": {
         post: {
           tags: ["devices"],
