@@ -9,10 +9,15 @@
     color: #000 !important;
   }
 
+  .btn,
+  nav,
+  aside,
+  header nav,
+  .pageActions,
+  .uiPageHeaderActions,
   .newSideNav,
   .newTopBar,
-  .uiPageHeaderActions,
-  .btn,
+  [data-print-hide="true"],
   button,
   input,
   select,
@@ -35,24 +40,18 @@
   }
 
   .card,
+  .uiPageHeader,
   .uiSectionCard,
-  .uiPageHeader {
+  .sectionCard,
+  .SectionCard,
+  article,
+  .item {
     background: #fff !important;
     color: #000 !important;
     border: 1px solid #d9d9d9 !important;
     box-shadow: none !important;
     break-inside: avoid;
     page-break-inside: avoid;
-  }
-
-  .uiSectionCard,
-  .uiPageHeader {
-    margin-top: 8mm !important;
-  }
-
-  .uiSectionCard:first-of-type,
-  .uiPageHeader:first-of-type {
-    margin-top: 0 !important;
   }
 
   a,
