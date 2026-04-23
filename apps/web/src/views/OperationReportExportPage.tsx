@@ -40,7 +40,7 @@ export default function OperationReportExportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
 
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage reportPrintPage">
       <PageHeader
         eyebrow="GEOX / 作业闭环"
         title={vm.header.title}

@@ -20,7 +20,7 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage reportPrintPage">
       <PageHeader
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}

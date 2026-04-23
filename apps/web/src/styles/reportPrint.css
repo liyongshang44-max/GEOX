@@ -32,7 +32,8 @@
 
   .newAppMain,
   .newAppContent,
-  .demoDashboardPage {
+  .demoDashboardPage,
+  .reportPrintPage {
     margin: 0 !important;
     padding: 0 !important;
     background: #fff !important;

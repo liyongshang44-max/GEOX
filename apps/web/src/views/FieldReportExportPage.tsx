@@ -40,7 +40,7 @@ export default function FieldReportExportPage(): React.ReactElement {
   const vm = buildFieldReportVm(report);
 
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage reportPrintPage">
       <PageHeader
         eyebrow="GEOX / 地块报告"
         title={vm.header.title}
