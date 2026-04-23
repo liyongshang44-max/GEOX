@@ -724,7 +724,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             ok: { type: "boolean" },
             aggregate: {
               type: "object",
-              required: ["fields", "recent_operations", "risk_summary", "period_summary"],
+              required: ["fields", "top_risk_fields", "recent_operations", "risk_summary", "period_summary", "pending_actions_summary", "device_summary"],
               properties: {
                 fields: {
                   type: "object",
@@ -735,16 +735,37 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                     at_risk: { type: "integer" }
                   }
                 },
-                recent_operations: {
+                top_risk_fields: {
                   type: "array",
                   items: {
                     type: "object",
-                    required: ["operation_id", "operation_plan_id", "field_id", "executed_at", "risk_level", "risk_reasons", "estimated_total_cost", "execution_duration_ms"],
+                    required: ["field_id", "field_name", "risk_level", "risk_reasons", "open_alerts_count", "pending_acceptance_count", "last_operation_at"],
+                    properties: {
+                      field_id: { type: "string" },
+                      field_name: { type: "string", nullable: true },
+                      risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
+                      risk_reasons: { type: "array", items: { type: "string" } },
+                      open_alerts_count: { type: "integer" },
+                      pending_acceptance_count: { type: "integer" },
+                      last_operation_at: { type: "string", format: "date-time", nullable: true }
+                    }
+                  }
+                },
+                recent_operations: {
+                  type: "array",
+                  items: {
+                    type: "object",                    
+                    required: ["operation_id", "operation_plan_id", "field_id", "field_name", "title", "customer_title", "executed_at", "final_status", "acceptance_status", "risk_level", "risk_reasons", "estimated_total_cost", "execution_duration_ms"],
                     properties: {
                       operation_id: { type: "string" },
                       operation_plan_id: { type: "string" },
                       field_id: { type: "string" },
+                      field_name: { type: "string", nullable: true },
+                      title: { type: "string", nullable: true },
+                      customer_title: { type: "string", nullable: true },
                       executed_at: { type: "string", format: "date-time", nullable: true },
+                      final_status: { type: "string" },
+                      acceptance_status: { type: "string", nullable: true },
                       risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
                       risk_reasons: { type: "array", items: { type: "string" } },
                       estimated_total_cost: { type: "number" },
@@ -762,11 +783,33 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 },
                 period_summary: {
                   type: "object",
-                  required: ["total_operations", "total_cost", "avg_sla_ms"],
+                  required: ["total_operations", "estimated_total_cost", "actual_total_cost", "avg_sla_ms"],
                   properties: {
                     total_operations: { type: "integer" },
-                    total_cost: { type: "number" },
+                    estimated_total_cost: { type: "number" },
+                    actual_total_cost: { type: "number" },
                     avg_sla_ms: { type: "number", nullable: true }
+                  }
+                },
+                pending_actions_summary: {
+                  type: "object",
+                  required: ["total_open_alerts", "unassigned_alerts", "in_progress_alerts", "sla_breached_alerts", "closed_today_alerts", "pending_acceptance"],
+                  properties: {
+                    total_open_alerts: { type: "integer" },
+                    unassigned_alerts: { type: "integer" },
+                    in_progress_alerts: { type: "integer" },
+                    sla_breached_alerts: { type: "integer" },
+                    closed_today_alerts: { type: "integer" },
+                    pending_acceptance: { type: "integer" }
+                  }
+                },
+                device_summary: {
+                  type: "object",
+                  required: ["offline_fields", "total_devices", "offline_devices"],
+                  properties: {
+                    offline_fields: { type: "integer" },
+                    total_devices: { type: "integer" },
+                    offline_devices: { type: "integer" }
                   }
                 }
               },

@@ -1,90 +1,31 @@
-/* eslint no-restricted-imports: ["error", { "patterns": ["../viewmodels/customerDashboardViewModel", "../viewmodels/*customer*Dashboard*", "../lib/*aggregate*"] }] */
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchAlertWorkboardSummary, type AlertWorkboardSummaryV1 } from "../api/alertWorkflow";
-import {
-  type FieldPortfolioItemV1,
-  type FieldPortfolioSummaryV1,
-  fetchFieldPortfolio,
-  fetchFieldPortfolioSummary,
-} from "../api/fieldPortfolio";
-import { mapReportCode } from "../api/reports";
+import { fetchCustomerDashboardAggregate } from "../api/reports";
+import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 
-const numberFmt = new Intl.NumberFormat("zh-CN");
-const currencyFmt = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 2 });
-
-function formatDateTime(v: string | null | undefined): string {
-  if (!v) return "时间未知";
-  const ms = Date.parse(v);
-  if (!Number.isFinite(ms)) return "时间未知";
-  return new Date(ms).toLocaleString("zh-CN", { hour12: false });
-}
-
-function riskRank(value: string): number {
-  const normalized = String(value ?? "").trim().toUpperCase();
-  if (normalized === "CRITICAL") return 3;
-  if (normalized === "HIGH") return 2;
-  if (normalized === "MEDIUM") return 1;
-  return 0;
-}
-
 export default function CustomerDashboardPage(): React.ReactElement {
-  const [summary, setSummary] = React.useState<FieldPortfolioSummaryV1 | null>(null);
-  const [portfolioItems, setPortfolioItems] = React.useState<FieldPortfolioItemV1[]>([]);
+  const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
   const [error, setError] = React.useState<string>("");
-  const [alertSummary, setAlertSummary] = React.useState<AlertWorkboardSummaryV1>({
-    total: 0,
-    unassigned: 0,
-    in_progress: 0,
-    sla_breached: 0,
-    closed_today: 0,
-  });
 
   React.useEffect(() => {
-    void Promise.all([
-      fetchFieldPortfolioSummary(),
-      fetchFieldPortfolio({ sort_by: "risk", sort_order: "desc", page: 1, page_size: 5 }),
-      fetchAlertWorkboardSummary(),
-    ])
-      .then(([nextSummaryData, nextItems, nextAlertSummary]) => {
-        setSummary(nextSummaryData);
-        setPortfolioItems(nextItems);
-        setAlertSummary(nextAlertSummary);
+    void fetchCustomerDashboardAggregate()
+      .then((aggregate) => {
+        setVm(buildCustomerDashboardVm(aggregate));
         setError("");
       })
       .catch(() => {
-        setSummary(null);
-        setPortfolioItems([]);
-        setAlertSummary({
-          total: 0,
-          unassigned: 0,
-          in_progress: 0,
-          sla_breached: 0,
-          closed_today: 0,
-        });
+        setVm(null);
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
   }, []);
-
-  const topRiskFields = React.useMemo(() => {
-    return [...portfolioItems]
-      .sort((a, b) => {
-        const riskDiff = riskRank(b.risk_level) - riskRank(a.risk_level);
-        if (riskDiff !== 0) return riskDiff;
-        const updatedDiff = Date.parse(String(b.updated_at ?? "")) - Date.parse(String(a.updated_at ?? ""));
-        if (Number.isFinite(updatedDiff) && updatedDiff !== 0) return updatedDiff;
-        return String(a.field_id ?? "").localeCompare(String(b.field_id ?? ""));
-      })
-      .slice(0, 5);
-  }, [portfolioItems]);
 
   return (
     <div className="demoDashboardPage">
       <PageHeader
         eyebrow="GEOX / 客户看板"
-        title="客户看板"
-        description="围绕经营结果、风险、成本与行动建议展示"
+        title={vm?.header.title ?? "客户看板"}
+        description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
         actions={
           <>
             <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
@@ -95,34 +36,52 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <SectionCard title="地块状态">
         <div>
-          共 {numberFmt.format(summary?.total_fields ?? 0)} 个地块，风险 {numberFmt.format((summary?.by_risk.high ?? 0) + (summary?.by_risk.critical ?? 0))} 个，
-          严重 {numberFmt.format(summary?.by_risk.critical ?? 0)} 个
+          共 {vm?.fieldStatus.totalFieldsText ?? "0"} 个地块，风险 {vm?.fieldStatus.atRiskText ?? "0"} 个，
+          高风险地块数 {vm?.fieldStatus.highRiskText ?? "0"} 个
         </div>
-        <div className="muted">离线地块：{numberFmt.format(summary?.offline_fields ?? 0)}。</div>
+        <div className="muted">离线地块：{vm?.fieldStatus.offlineFieldsText ?? "0"}。</div>
       </SectionCard>
 
       <SectionCard title="经营汇总">
-        <div>未关闭告警：{numberFmt.format(summary?.total_open_alerts ?? 0)}</div>
-        <div>待验收：{numberFmt.format(summary?.total_pending_acceptance ?? 0)}</div>
-        <div>预计成本：{currencyFmt.format(summary?.total_estimated_cost ?? 0)} · 实际成本：{currencyFmt.format(summary?.total_actual_cost ?? 0)}</div>
+        <div>未关闭告警：{vm?.businessSummary.openAlertsText ?? "0"}</div>
+        <div>待验收：{vm?.businessSummary.pendingAcceptanceText ?? "0"}</div>
+        <div>预计成本：{vm?.businessSummary.estimatedCostText ?? "¥0.00"} · 实际成本：{vm?.businessSummary.actualCostText ?? "¥0.00"}</div>
       </SectionCard>
 
       <SectionCard title="待处理事项">
-        <div>总告警：{numberFmt.format(alertSummary.total)}</div>
-        <div className="muted">未分配：{numberFmt.format(alertSummary.unassigned)} · 处理中：{numberFmt.format(alertSummary.in_progress)} · 已超时：{numberFmt.format(alertSummary.sla_breached)} · 今日关闭：{numberFmt.format(alertSummary.closed_today)}</div>
+        <div>总告警：{vm?.pendingActions.totalAlertsText ?? "0"}</div>
+        <div className="muted">
+          未分配：{vm?.pendingActions.unassignedText ?? "0"} ·
+          处理中：{vm?.pendingActions.inProgressText ?? "0"} ·
+          已超时：{vm?.pendingActions.slaBreachedText ?? "0"} ·
+          今日关闭：{vm?.pendingActions.closedTodayText ?? "0"}
+        </div>
         <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
 
       <SectionCard title="Top 风险地块">
         <div className="list">
-          {topRiskFields.map((item) => (
-            <div key={item.field_id} className="item">
-              地块 {item.field_name || item.field_id} · 风险 {mapReportCode(item.risk_level).label} · 告警 {item.alert_summary.open_total} ·
-              待验收 {item.acceptance_summary.pending_count} · 最近作业 {formatDateTime(item.operation_summary.last_operation_at)}
+          {(vm?.topRiskFields ?? []).map((item) => (
+            <div key={item.fieldId} className="item">
+              <Link to={item.href}>地块 {item.title}</Link> · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
+              待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
             </div>
           ))}
-          {!topRiskFields.length ? (
+          {!(vm?.topRiskFields.length) ? (
             <div className="muted">暂无风险地块数据</div>
+          ) : null}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="近期动作">
+        <div className="list">
+          {(vm?.recentOperations ?? []).map((item) => (
+            <div key={item.operationId} className="item">
+              <Link to={item.href}>{item.title}</Link> · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
+            </div>
+          ))}
+          {!(vm?.recentOperations.length) ? (
+            <div className="muted">暂无近期动作</div>
           ) : null}
         </div>
       </SectionCard>
