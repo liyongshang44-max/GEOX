@@ -7,6 +7,20 @@ export type OperationReportV1 = {
   type: "operation_report_v1";
   version: "v1";
   generated_at: string;
+  approval: {
+    status: string | null;
+    actor_id: string | null;
+    actor_name: string | null;
+    generated_at: string | null;
+    approved_at: string | null;
+    note: string | null;
+  };
+  why: {
+    explain_human: string | null;
+    objective_text: string | null;
+  };
+  operation_title: string | null;
+  customer_title: string | null;
   identifiers: {
     tenant_id: string;
     project_id: string;
@@ -282,6 +296,20 @@ export function projectOperationReportV1(input: {
     updated_by?: unknown;
     linked_alert_ids?: unknown;
   } | null;
+  approval?: {
+    status?: unknown;
+    actor_id?: unknown;
+    actor_name?: unknown;
+    generated_at?: unknown;
+    approved_at?: unknown;
+    note?: unknown;
+  } | null;
+  why?: {
+    explain_human?: unknown;
+    objective_text?: unknown;
+  } | null;
+  operation_title?: unknown;
+  customer_title?: unknown;
   now?: Date;
 }): OperationReportV1 {
   const now = input.now ?? new Date();
@@ -325,6 +353,20 @@ export function projectOperationReportV1(input: {
     type: "operation_report_v1",
     version: "v1",
     generated_at: now.toISOString(),
+    approval: {
+      status: toText(input.approval?.status),
+      actor_id: toText(input.approval?.actor_id),
+      actor_name: toText(input.approval?.actor_name),
+      generated_at: toText(input.approval?.generated_at),
+      approved_at: toText(input.approval?.approved_at),
+      note: toText(input.approval?.note),
+    },
+    why: {
+      explain_human: toText(input.why?.explain_human),
+      objective_text: toText(input.why?.objective_text),
+    },
+    operation_title: toText(input.operation_title),
+    customer_title: toText(input.customer_title),
     identifiers: {
       tenant_id: input.tenant.tenant_id,
       project_id: input.tenant.project_id,
