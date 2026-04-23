@@ -26,7 +26,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}
         description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
-        actions={
+        actions={(
           <>
             <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
             <Link className="btn" to="/alerts">进入告警中心</Link>
