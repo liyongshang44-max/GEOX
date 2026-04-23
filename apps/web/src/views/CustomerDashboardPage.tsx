@@ -1,11 +1,11 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/reports";
-import { buildCustomerDashboardVm, type CustomerDashboardVm } from "../viewmodels/customerDashboardVm";
+import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function CustomerDashboardPage(): React.ReactElement {
-  const [vm, setVm] = React.useState<CustomerDashboardVm | null>(null);
+  const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
   const [error, setError] = React.useState<string>("");
 
   React.useEffect(() => {
@@ -25,7 +25,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <PageHeader
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}
-        description={vm?.header.description ?? "经营结果、风险与行动摘要"}
+        description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
         actions={
           <>
             <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
@@ -43,18 +43,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title="经营汇总">
-        <div>未关闭告警：{vm?.businessSummary.totalOpenAlertsText ?? "0"}</div>
+        <div>未关闭告警：{vm?.businessSummary.openAlertsText ?? "0"}</div>
         <div>待验收：{vm?.businessSummary.pendingAcceptanceText ?? "0"}</div>
         <div>预计成本：{vm?.businessSummary.estimatedCostText ?? "¥0.00"} · 实际成本：{vm?.businessSummary.actualCostText ?? "¥0.00"}</div>
       </SectionCard>
 
       <SectionCard title="待处理事项">
-        <div>总告警：{vm?.pendingActions.totalOpenAlertsText ?? "0"}</div>
+        <div>总告警：{vm?.pendingActions.totalAlertsText ?? "0"}</div>
         <div className="muted">
-          未分配：{vm?.pendingActions.unassignedAlertsText ?? "0"} ·
-          处理中：{vm?.pendingActions.inProgressAlertsText ?? "0"} ·
-          已超时：{vm?.pendingActions.slaBreachedAlertsText ?? "0"} ·
-          今日关闭：{vm?.pendingActions.closedTodayAlertsText ?? "0"}
+          未分配：{vm?.pendingActions.unassignedText ?? "0"} ·
+          处理中：{vm?.pendingActions.inProgressText ?? "0"} ·
+          已超时：{vm?.pendingActions.slaBreachedText ?? "0"} ·
+          今日关闭：{vm?.pendingActions.closedTodayText ?? "0"}
         </div>
         <div style={{ marginTop: 8 }}><Link className="btn" to="/operations/workboard">进入作业台</Link></div>
       </SectionCard>
@@ -63,7 +63,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="list">
           {(vm?.topRiskFields ?? []).map((item) => (
             <div key={item.fieldId} className="item">
-              地块 {item.fieldName} · 风险 {item.riskLevelText} · 告警 {item.openAlertsText} ·
+              <Link to={item.href}>地块 {item.title}</Link> · 风险 {item.riskText} · 原因 {item.reasonText} · 告警 {item.openAlertsText} ·
               待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
             </div>
           ))}
@@ -77,7 +77,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <div className="list">
           {(vm?.recentOperations ?? []).map((item) => (
             <div key={item.operationId} className="item">
-              {item.title} · 地块 {item.fieldName} · 状态 {item.statusText} · 执行时间 {item.executedAtText}
+              <Link to={item.href}>{item.title}</Link> · 地块 {item.fieldTitle} · 状态 {item.statusText} · 验收 {item.acceptanceText} · 执行时间 {item.executedAtText}
             </div>
           ))}
           {!(vm?.recentOperations.length) ? (
