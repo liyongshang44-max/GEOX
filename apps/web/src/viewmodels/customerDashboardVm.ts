@@ -1,4 +1,5 @@
 import type { CustomerDashboardAggregateV1 } from "../api/reports";
+import { toAcceptanceStatusLabel, toOperationStatusLabel, toRiskLabel } from "../lib/customerLabels";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
 const currencyFmt = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", maximumFractionDigits: 2 });
@@ -80,7 +81,7 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     topRiskFields: (aggregate.top_risk_fields ?? []).map((item) => ({
       fieldId: String(item.field_id ?? ""),
       title: String(item.field_name ?? item.field_id ?? "未知地块"),
-      riskText: String(item.risk_level ?? "UNKNOWN"),
+      riskText: toRiskLabel(item.risk_level),
       reasonText: (item.risk_reasons ?? []).join("、") || "-",
       openAlertsText: numberFmt.format(Number(item.open_alerts_count ?? 0)),
       pendingAcceptanceText: numberFmt.format(Number(item.pending_acceptance_count ?? 0)),
@@ -91,8 +92,8 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
       operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
       title: String(item.customer_title ?? item.title ?? item.operation_id ?? "作业"),
       fieldTitle: String(item.field_name ?? item.field_id ?? "未知地块"),
-      statusText: String(item.final_status ?? item.acceptance_status ?? "UNKNOWN"),
-      acceptanceText: String(item.acceptance_status ?? "NOT_AVAILABLE"),
+      statusText: toOperationStatusLabel(item.final_status),
+      acceptanceText: toAcceptanceStatusLabel(item.acceptance_status),
       executedAtText: item.executed_at ? new Date(item.executed_at).toLocaleString("zh-CN", { hour12: false }) : "时间未知",
       href: `/operations?operation_plan_id=${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
     })),

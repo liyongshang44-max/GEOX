@@ -1,4 +1,5 @@
 import type { OperationReportV1 } from "../api/reports";
+import { toAcceptanceStatusLabel, toOperationStatusLabel, toRiskLabel } from "../lib/customerLabels";
 
 export type OperationReportPageVm = {
   header: {
@@ -62,27 +63,21 @@ export type OperationReportPageVm = {
 };
 
 function mapFinalStatusToCustomerText(raw: unknown): string {
-  const key = String(raw ?? "").trim().toUpperCase();
-  if (["SUCCESS", "SUCCEEDED", "PASS"].includes(key)) return "作业已完成并通过验收";
-  if (key === "PENDING_ACCEPTANCE") return "作业已完成，等待验收";
-  if (["INVALID_EXECUTION", "FAIL", "FAILED", "ERROR"].includes(key)) return "作业未达到预期效果";
-  if (["RUNNING", "PENDING"].includes(key)) return "作业执行中";
-  return "作业状态待确认";
+  const label = toOperationStatusLabel(raw);
+  if (label === "已完成" || label === "已通过") return "作业已完成并通过验收";
+  if (label === "待验收") return "作业已完成，等待验收";
+  if (label === "未通过") return "作业未通过验收";
+  return "作业执行中";
 }
 
 function mapGenericLabel(raw: unknown): string {
   const key = String(raw ?? "").trim().toUpperCase();
   if (!key) return "--";
+  if (["LOW", "MEDIUM", "HIGH"].includes(key)) return toRiskLabel(key);
+  if (["PASS", "FAIL", "PENDING", "PENDING_ACCEPTANCE", "SUCCESS", "SUCCEEDED", "FAILED", "ERROR", "INVALID_EXECUTION", "RUNNING"].includes(key)) {
+    return toOperationStatusLabel(key);
+  }
   const dict: Record<string, string> = {
-    PASS: "已通过",
-    FAIL: "未通过",
-    SUCCESS: "已完成",
-    SUCCEEDED: "已完成",
-    PENDING_ACCEPTANCE: "等待验收",
-    INVALID_EXECUTION: "执行无效",
-    LOW: "低风险",
-    MEDIUM: "中风险",
-    HIGH: "高风险",
     VALID: "有效",
     MISSING_DATA: "缺失",
     INVALID_ORDER: "异常",
@@ -110,7 +105,7 @@ function mapSlaQuality(value: unknown, rawMs: unknown): string {
 
 export function buildOperationReportVm(report: OperationReportV1): OperationReportPageVm {
   const finalStatusText = mapFinalStatusToCustomerText(report.execution.final_status);
-  const acceptanceStatusText = mapGenericLabel(report.acceptance.status);
+  const acceptanceStatusText = toAcceptanceStatusLabel(report.acceptance.status);
   const riskLabel = mapGenericLabel(report.risk.level);
   const reasonText = joinReasonTexts(report.risk.reasons);
   const reportWhy = (report as any).why ?? null;

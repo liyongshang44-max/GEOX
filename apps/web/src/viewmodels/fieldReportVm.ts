@@ -1,4 +1,5 @@
 import type { FieldReportDetailV1 } from "../api/reports";
+import { toAcceptanceStatusLabel, toOperationStatusLabel, toRiskLabel } from "../lib/customerLabels";
 
 export type FieldReportPageVm = {
   header: {
@@ -42,43 +43,15 @@ export type FieldReportPageVm = {
 };
 
 function mapRiskText(raw: unknown): string {
-  const key = String(raw ?? "").trim().toUpperCase();
-  if (key === "HIGH") return "高风险";
-  if (key === "MEDIUM") return "中风险";
-  if (key === "LOW") return "低风险";
-  return "未知";
+  return toRiskLabel(raw);
 }
 
 function mapStatusText(raw: unknown): string {
-  const key = String(raw ?? "").trim().toUpperCase();
-  const dict: Record<string, string> = {
-    SUCCESS: "已完成",
-    SUCCEEDED: "已完成",
-    PASS: "已通过",
-    PENDING_ACCEPTANCE: "待验收",
-    RUNNING: "执行中",
-    PENDING: "待处理",
-    FAIL: "未通过",
-    FAILED: "执行失败",
-    ERROR: "错误",
-    INVALID_EXECUTION: "执行无效",
-    EVIDENCE_MISSING: "证据缺失",
-  };
-  return dict[key] ?? (key || "未知");
+  return toOperationStatusLabel(raw);
 }
 
 function mapAcceptanceText(raw: unknown): string {
-  const key = String(raw ?? "").trim().toUpperCase();
-  const dict: Record<string, string> = {
-    PASS: "验收通过",
-    FAIL: "验收未通过",
-    PENDING: "待验收",
-    PENDING_ACCEPTANCE: "待验收",
-    SUCCESS: "验收通过",
-    SUCCEEDED: "验收通过",
-    REJECTED: "验收拒绝",
-  };
-  return dict[key] ?? (key ? `验收${key}` : "待验收");
+  return toAcceptanceStatusLabel(raw);
 }
 
 function formatDateTime(value: string | null | undefined, fallback = "--"): string {
