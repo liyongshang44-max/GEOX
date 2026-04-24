@@ -150,7 +150,7 @@ type FieldReportDetailResponseV1 = {
   ok: true;
   field_report_v1: FieldReportDetailV1;
 };
-const FIELD_REPORT_OPERATION_LIMIT = 100;
+const FIELD_REPORT_OPERATION_LIMIT = 20;
 
 export async function projectReportV1(params: {
   pool: Pool;
