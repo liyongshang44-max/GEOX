@@ -28,18 +28,33 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   // Seed formal Stage1 summary source fields via derived_sensing_state_index_v1
   // so /recommendations/generate can pass FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE boundary.
   const nowMs = Date.now();
-  const stage1FactId = randomUUID();
+  await pool.query(`
+    ALTER TABLE derived_sensing_state_index_v1
+      ADD COLUMN IF NOT EXISTS project_id text
+  `);
+
+  await pool.query(`
+    ALTER TABLE derived_sensing_state_index_v1
+      ADD COLUMN IF NOT EXISTS group_id text
+  `);
+
+  await pool.query(`
+    ALTER TABLE derived_sensing_state_index_v1
+      ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb
+  `);
+
   await pool.query(
-    `ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text;
-     ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text;
-     ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb;
-
-     DELETE FROM derived_sensing_state_index_v1
+    `DELETE FROM derived_sensing_state_index_v1
      WHERE tenant_id = $1
-       AND field_id = $4
-       AND state_type = 'irrigation_effectiveness_state';
+       AND field_id = $2
+       AND state_type = 'irrigation_effectiveness_state'
+       AND (project_id = $3 OR project_id IS NULL)
+       AND (group_id = $4 OR group_id IS NULL)`,
+    [tenant_id, field_id, project_id, group_id]
+  );
 
-     INSERT INTO derived_sensing_state_index_v1
+  await pool.query(
+    `INSERT INTO derived_sensing_state_index_v1
       (
         tenant_id,
         project_id,
@@ -70,8 +85,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
         $5,
         $6,
         '["obs_prescription_stage1"]'::jsonb
-      );`,
-    [tenant_id, project_id, group_id, field_id, nowMs, stage1FactId]
+      )`,
+    [tenant_id, project_id, group_id, field_id, nowMs, randomUUID()]
   );
 
   const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
