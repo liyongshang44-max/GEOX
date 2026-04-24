@@ -6,6 +6,10 @@ export type ServerConfig = {
   host: string;
   port: number;
   databaseUrl: string;
+  systemProfile: string;
+  disableAppleII: boolean;
+  tenantHeaders: readonly string[];
+  apiContractHeaders: readonly string[];
 };
 
 function loadDotEnvFile(fp: string): void {
@@ -33,31 +37,28 @@ export function loadEnv(): void {
   loadDotEnvFile(path.join(__dirname, ".env"));
 }
 
-export function resolveDatabaseUrl(): string {
-  const direct = process.env.DATABASE_URL;
-  if (typeof direct === "string" && direct.length) return direct;
-  const host = process.env.PGHOST;
-  const port = process.env.PGPORT;
-  const user = process.env.PGUSER;
-  const pass = process.env.PGPASSWORD;
-  const db = process.env.PGDATABASE;
-  if (host && port && user && db) {
-    const cred = pass ? `${encodeURIComponent(user)}:${encodeURIComponent(pass)}` : encodeURIComponent(user);
-    return `postgres://${cred}@${host}:${port}/${db}`;
-  }
-  return "";
-}
-
 export function resolveServerConfig(): ServerConfig {
   loadEnv();
+
   const databaseUrl = process.env.DATABASE_URL ?? "";
   if (!databaseUrl) {
     throw new Error("Missing DATABASE_URL (expected postgres://user:pass@host:5432/db)");
+  }
+
+  const systemProfile = process.env.GEOX_SYSTEM_PROFILE ?? "dev";
+  const disableAppleII = (process.env.GEOX_DISABLE_APPLE_II ?? "") === "1";
+
+  if (systemProfile === "commercial_v0" && disableAppleII) {
+    throw new Error("Apple II is required in commercial_v0 profile; refusing to start with GEOX_DISABLE_APPLE_II=1");
   }
 
   return {
     host: process.env.HOST ?? "0.0.0.0",
     port: process.env.PORT ? Number(process.env.PORT) : 3000,
     databaseUrl,
+    systemProfile,
+    disableAppleII,
+    tenantHeaders: ["x-tenant-id", "x-project-id", "x-group-id"],
+    apiContractHeaders: ["x-api-contract-version", "x-api-contract-required"],
   };
 }
