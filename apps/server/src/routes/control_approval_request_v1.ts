@@ -5,6 +5,11 @@ import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 
 import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
+import {
+  assertTenantTriple,
+  createApprovalRequestV1,
+  requireTenantMatchOr404,
+} from "../domain/approval/approval_request_service_v1.js";
 
 type TenantTriple = {
   tenant_id: string; // Tenant isolation SSOT field.
@@ -16,24 +21,6 @@ function isNonEmptyString(v: unknown): v is string {
   return typeof v === "string" && v.trim().length > 0; // Non-empty string guard.
 }
 
-function hasMeaningfulIssuer(v: unknown): boolean {
-  if (isNonEmptyString(v)) return true; // Accept legacy string issuer.
-  if (v && typeof v === "object") {
-    const id = String((v as any).id ?? "").trim(); // Object issuer must at least carry an id.
-    return id.length > 0;
-  }
-  return false;
-}
-
-function hasMeaningfulTarget(v: unknown): boolean {
-  if (isNonEmptyString(v)) return true; // Accept field:xxx shorthand string target.
-  if (v && typeof v === "object") {
-    const ref = String((v as any).ref ?? "").trim(); // Object target must at least carry a ref.
-    return ref.length > 0;
-  }
-  return false;
-}
-
 function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 shape.
 }
@@ -43,24 +30,6 @@ function parseLimit(v: any, def: number, max: number): number {
   if (!Number.isFinite(n) || Math.floor(n) !== n) return def;
   if (n <= 0) return def;
   return Math.min(n, max);
-}
-
-function assertTenantTriple(body: any): TenantTriple {
-  const t = String(body?.tenant_id ?? "");
-  const p = String(body?.project_id ?? "");
-  const g = String(body?.group_id ?? "");
-  if (!t.trim()) throw new Error("MISSING_OR_INVALID:tenant_id");
-  if (!p.trim()) throw new Error("MISSING_OR_INVALID:project_id");
-  if (!g.trim()) throw new Error("MISSING_OR_INVALID:group_id");
-  return { tenant_id: t.trim(), project_id: p.trim(), group_id: g.trim() };
-}
-
-function requireTenantMatchOr404(auth: TenantTriple, target: TenantTriple, reply: any): boolean {
-  if (auth.tenant_id !== target.tenant_id || auth.project_id !== target.project_id || auth.group_id !== target.group_id) {
-    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    return false;
-  }
-  return true;
 }
 
 function normalizeAoActIssuer(auth: any, proposalIssuer: any): any {
@@ -165,59 +134,8 @@ async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
     const body: any = req.body ?? {};
     const tenant = assertTenantTriple(body);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
-
-    const required = ["issuer", "action_type", "target", "time_window", "parameter_schema", "parameters", "constraints"];
-    for (const k of required) {
-      if (body[k] === undefined) return badRequest(reply, `MISSING_FIELD:${k}`);
-    }
-
-    if (!hasMeaningfulIssuer(body.issuer)) return badRequest(reply, "MISSING_OR_INVALID:issuer");
-    if (!isNonEmptyString(body.action_type)) return badRequest(reply, "MISSING_OR_INVALID:action_type");
-    if (!hasMeaningfulTarget(body.target)) return badRequest(reply, "MISSING_OR_INVALID:target");
-
-    const win = body.time_window;
-    if (win === null || typeof win !== "object") return badRequest(reply, "MISSING_OR_INVALID:time_window");
-    const start_ts = Number(win.start_ts);
-    const end_ts = Number(win.end_ts);
-    if (!Number.isFinite(start_ts) || !Number.isFinite(end_ts)) return badRequest(reply, "MISSING_OR_INVALID:time_window");
-    if (start_ts > end_ts) return badRequest(reply, "TIME_WINDOW_INVALID");
-
-    const request_id = `apr_${randomUUID().replace(/-/g, "")}`;
-    const created_at_ts = Date.now();
-    const record_json = {
-      type: "approval_request_v1",
-      payload: {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        program_id: body.program_id ?? body.meta?.program_id ?? null,
-        field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
-        season_id: body.season_id ?? body.meta?.season_id ?? null,
-        request_id,
-        status: "PENDING",
-        actor_id: auth.actor_id,
-        token_id: auth.token_id,
-        created_at_ts,
-        proposal: {
-          issuer: body.issuer,
-          action_type: body.action_type,
-          target: body.target,
-          time_window: { start_ts, end_ts },
-          parameter_schema: body.parameter_schema,
-          parameters: body.parameters,
-          constraints: body.constraints,
-          meta: body.meta ?? null
-        }
-      }
-    };
-
-    const fact_id = randomUUID();
-    await pool.query(
-      "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
-      [fact_id, "api/v1/approvals/request", record_json]
-    );
-
-    return reply.send({ ok: true, fact_id, request_id });
+    const created = await createApprovalRequestV1(pool, auth, body);
+    return reply.send(created);
   } catch (e: any) {
     return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
   }
