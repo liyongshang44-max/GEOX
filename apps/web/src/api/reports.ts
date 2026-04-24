@@ -56,10 +56,16 @@ function unwrapFieldReportDetail(payload: FieldReportDetailEnvelope | FieldRepor
   return payload;
 }
 
-type CustomerDashboardAggregateEnvelope = {
-  ok: true;
-  aggregate: CustomerDashboardAggregateV1;
-};
+type CustomerDashboardAggregateEnvelope =
+  | { ok: true; aggregate: CustomerDashboardAggregateV1 }
+  | { ok: true; customer_dashboard_aggregate_v1: CustomerDashboardAggregateV1 }
+  | CustomerDashboardAggregateV1;
+
+function unwrapCustomerDashboardAggregate(payload: CustomerDashboardAggregateEnvelope): CustomerDashboardAggregateV1 {
+  if ("aggregate" in payload) return payload.aggregate;
+  if ("customer_dashboard_aggregate_v1" in payload) return payload.customer_dashboard_aggregate_v1;
+  return payload;
+}
 
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
   const res = await apiRequest<OperationReportSingleResponseV1 | OperationReportV1>(withQuery(`/api/v1/reports/operation/${encodeURIComponent(operationId)}`));
@@ -85,5 +91,5 @@ export async function fetchCustomerDashboardAggregate(params: { fieldIds?: strin
   if (params.timeRange) query.time_range = params.timeRange;
 
   const res = await apiRequest<CustomerDashboardAggregateEnvelope>(withQuery("/api/v1/reports/customer-dashboard/aggregate", query));
-  return res.aggregate;
+  return unwrapCustomerDashboardAggregate(res);
 }
