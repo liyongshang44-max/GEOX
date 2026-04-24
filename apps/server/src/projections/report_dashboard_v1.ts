@@ -1,4 +1,5 @@
 import type { OperationReportRiskLevel, OperationReportV1 } from "./report_v1.js";
+import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type CustomerDashboardAggregateV1 = {
   fields: {
@@ -154,6 +155,34 @@ function inferActionType(report: OperationReportV1): string | null {
   if (title.includes("喷药") || title.includes("喷施")) return "SPRAY";
   if (title.includes("巡检")) return "INSPECT";
   return null;
+}
+
+function toIsoFromMs(ms: number | null): string | null {
+  if (ms == null || !Number.isFinite(ms) || ms <= 0) return null;
+  return new Date(ms).toISOString();
+}
+
+function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel {
+  const finalStatus = String(state.final_status ?? "").toUpperCase();
+  const acceptance = String(state.acceptance?.status ?? "").toUpperCase();
+  if (finalStatus === "FAILED" || finalStatus === "INVALID_EXECUTION" || acceptance === "FAIL") return "HIGH";
+  if (finalStatus === "PENDING_ACCEPTANCE" || finalStatus === "RUNNING" || finalStatus === "PENDING") return "MEDIUM";
+  return "LOW";
+}
+
+function deriveStateRiskReasons(state: OperationStateV1): string[] {
+  const reasons = new Set<string>();
+  for (const code of state.reason_codes ?? []) {
+    const text = String(code ?? "").trim();
+    if (text) reasons.add(text);
+  }
+  const finalStatus = String(state.final_status ?? "").toUpperCase();
+  const acceptance = String(state.acceptance?.status ?? "").toUpperCase();
+  if (finalStatus === "INVALID_EXECUTION") reasons.add("INVALID_EXECUTION");
+  if (finalStatus === "FAILED") reasons.add("EXECUTION_FAILED");
+  if (finalStatus === "PENDING_ACCEPTANCE") reasons.add("PENDING_ACCEPTANCE");
+  if (acceptance === "FAIL") reasons.add("ACCEPTANCE_FAIL");
+  return [...reasons];
 }
 
 export function projectFieldReportDetailV1(params: {
@@ -405,6 +434,146 @@ export function projectCustomerDashboardAggregateV1(params: {
       sla_breached_alerts: Number(params.pending_actions_summary?.sla_breached_alerts ?? 0),
       closed_today_alerts: Number(params.pending_actions_summary?.closed_today_alerts ?? 0),
       pending_acceptance: Number(params.pending_actions_summary?.pending_acceptance ?? pendingAcceptanceCount),
+    },
+    device_summary: {
+      offline_fields: Number(params.device_summary?.offline_fields ?? 0),
+      total_devices: Number(params.device_summary?.total_devices ?? 0),
+      offline_devices: Number(params.device_summary?.offline_devices ?? 0),
+    },
+  };
+}
+
+export function projectCustomerDashboardAggregateFromStatesV1(params: {
+  states: OperationStateV1[];
+  field_ids: string[];
+  field_name_by_id?: Map<string, string | null>;
+  open_alerts_by_field?: Map<string, number>;
+  pending_actions_summary?: {
+    total_open_alerts: number;
+    unassigned_alerts: number;
+    in_progress_alerts: number;
+    sla_breached_alerts: number;
+    closed_today_alerts: number;
+  };
+  device_summary?: {
+    offline_fields: number;
+    total_devices: number;
+    offline_devices: number;
+  };
+}): CustomerDashboardAggregateV1 {
+  const sortedStates = [...params.states].sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0));
+  const reasonCount = new Map<string, number>();
+  const perField = new Map<string, {
+    field_id: string;
+    risk_level: OperationReportRiskLevel;
+    risk_reasons: Set<string>;
+    pending_acceptance_count: number;
+    last_operation_ms: number;
+  }>();
+  let pendingAcceptanceTotal = 0;
+
+  for (const state of sortedStates) {
+    const fieldId = String(state.field_id ?? "").trim();
+    if (!fieldId) continue;
+    const riskLevel = deriveStateRiskLevel(state);
+    const riskReasons = deriveStateRiskReasons(state);
+    for (const reason of riskReasons) reasonCount.set(reason, (reasonCount.get(reason) ?? 0) + 1);
+    const finalStatus = String(state.final_status ?? "").toUpperCase();
+    const lastMs = Number(state.last_event_ts ?? 0);
+    const agg = perField.get(fieldId) ?? {
+      field_id: fieldId,
+      risk_level: "LOW",
+      risk_reasons: new Set<string>(),
+      pending_acceptance_count: 0,
+      last_operation_ms: 0,
+    };
+    agg.risk_level = maxRisk(agg.risk_level, riskLevel);
+    for (const reason of riskReasons) agg.risk_reasons.add(reason);
+    if (finalStatus === "PENDING_ACCEPTANCE") {
+      agg.pending_acceptance_count += 1;
+      pendingAcceptanceTotal += 1;
+    }
+    if (Number.isFinite(lastMs) && lastMs > agg.last_operation_ms) agg.last_operation_ms = lastMs;
+    perField.set(fieldId, agg);
+  }
+
+  const fieldIds = params.field_ids.length > 0 ? params.field_ids : [...perField.keys()];
+  let healthy = 0;
+  let atRisk = 0;
+  for (const fieldId of fieldIds) {
+    const risk = perField.get(fieldId)?.risk_level ?? "LOW";
+    if (risk === "LOW") healthy += 1;
+    else atRisk += 1;
+  }
+
+  const topReasons = [...reasonCount.entries()]
+    .sort((a, b) => (b[1] - a[1]) || a[0].localeCompare(b[0]))
+    .slice(0, 5)
+    .map(([reason]) => reason);
+  const riskSummaryLevel = [...perField.values()].reduce<OperationReportRiskLevel>((acc, item) => maxRisk(acc, item.risk_level), "LOW");
+
+  return {
+    fields: {
+      total: fieldIds.length,
+      healthy,
+      at_risk: atRisk,
+    },
+    top_risk_fields: [...fieldIds]
+      .map((fieldId) => {
+        const agg = perField.get(fieldId);
+        return {
+          field_id: fieldId,
+          field_name: params.field_name_by_id?.get(fieldId) ?? null,
+          risk_level: agg?.risk_level ?? "LOW",
+          risk_reasons: agg ? [...agg.risk_reasons] : [],
+          open_alerts_count: Number(params.open_alerts_by_field?.get(fieldId) ?? 0),
+          pending_acceptance_count: Number(agg?.pending_acceptance_count ?? 0),
+          last_operation_at: toIsoFromMs(agg?.last_operation_ms ?? null),
+        };
+      })
+      .sort((a, b) =>
+        (RISK_RANK[b.risk_level] - RISK_RANK[a.risk_level])
+        || (b.open_alerts_count - a.open_alerts_count)
+        || (b.pending_acceptance_count - a.pending_acceptance_count)
+        || ((toMs(b.last_operation_at) ?? 0) - (toMs(a.last_operation_at) ?? 0))
+      )
+      .slice(0, 5),
+    recent_operations: sortedStates.slice(0, 5).map((state) => {
+      const fieldId = String(state.field_id ?? "").trim();
+      const riskReasons = deriveStateRiskReasons(state);
+      return {
+        operation_id: String(state.operation_id ?? "").trim(),
+        operation_plan_id: String(state.operation_plan_id ?? state.operation_id ?? "").trim(),
+        field_id: fieldId,
+        field_name: params.field_name_by_id?.get(fieldId) ?? null,
+        title: null,
+        customer_title: null,
+        executed_at: toIsoFromMs(Number(state.last_event_ts ?? 0)),
+        final_status: String(state.final_status ?? "UNKNOWN"),
+        acceptance_status: state.acceptance?.status ?? null,
+        risk_level: deriveStateRiskLevel(state),
+        risk_reasons: riskReasons,
+        estimated_total_cost: 0,
+        execution_duration_ms: null,
+      };
+    }),
+    risk_summary: {
+      level: riskSummaryLevel,
+      top_reasons: topReasons,
+    },
+    period_summary: {
+      total_operations: sortedStates.length,
+      estimated_total_cost: 0,
+      actual_total_cost: 0,
+      avg_sla_ms: null,
+    },
+    pending_actions_summary: {
+      total_open_alerts: Number(params.pending_actions_summary?.total_open_alerts ?? 0),
+      unassigned_alerts: Number(params.pending_actions_summary?.unassigned_alerts ?? 0),
+      in_progress_alerts: Number(params.pending_actions_summary?.in_progress_alerts ?? 0),
+      sla_breached_alerts: Number(params.pending_actions_summary?.sla_breached_alerts ?? 0),
+      closed_today_alerts: Number(params.pending_actions_summary?.closed_today_alerts ?? 0),
+      pending_acceptance: pendingAcceptanceTotal,
     },
     device_summary: {
       offline_fields: Number(params.device_summary?.offline_fields ?? 0),
