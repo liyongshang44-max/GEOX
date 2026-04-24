@@ -11,6 +11,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const field_id = env('FIELD_ID', 'field_demo_1');
   const season_id = env('SEASON_ID', 'season_demo_1');
   const databaseUrl = env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox');
+  const pool = new Pool({ connectionString: databaseUrl });
 
   const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
   const healthzOk = healthz.ok && healthz.json && healthz.json.ok === true && !(healthz.json.missing_tables || []).includes('prescription_contract_v1');
@@ -23,6 +24,62 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     openapi.json.paths['/api/v1/prescriptions/from-recommendation']
   );
 
+  // Seed formal Stage1 summary source fields so /recommendations/generate can pass
+  // FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE boundary with current strict Stage1 contract.
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS field_sensing_overview_v1 (
+      tenant_id text NOT NULL,
+      project_id text NULL,
+      group_id text NULL,
+      field_id text NOT NULL,
+      observed_at_ts_ms bigint NULL,
+      freshness text NOT NULL DEFAULT 'fresh',
+      confidence double precision NULL,
+      soil_indicators_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      irrigation_need_level text NULL,
+      sensor_quality_level text NULL,
+      canopy_temp_status text NULL,
+      evapotranspiration_risk text NULL,
+      sensor_quality text NULL,
+      irrigation_effectiveness text NULL,
+      leak_risk text NULL,
+      irrigation_action_hint text NULL,
+      computed_at_ts_ms bigint NULL,
+      source_observed_at_ts_ms bigint NULL,
+      explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+      updated_ts_ms bigint NOT NULL,
+      PRIMARY KEY (tenant_id, field_id)
+    )`
+  );
+  const nowMs = Date.now();
+  await pool.query(
+    `INSERT INTO field_sensing_overview_v1
+      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,$5,'fresh',0.93,'[]'::jsonb,'GOOD','normal','medium','low','low','irrigate_first',$5,$5,'[]'::jsonb,'[]'::jsonb,$5)
+     ON CONFLICT (tenant_id, field_id)
+     DO UPDATE SET
+      project_id = EXCLUDED.project_id,
+      group_id = EXCLUDED.group_id,
+      observed_at_ts_ms = EXCLUDED.observed_at_ts_ms,
+      freshness = EXCLUDED.freshness,
+      confidence = EXCLUDED.confidence,
+      soil_indicators_json = EXCLUDED.soil_indicators_json,
+      sensor_quality_level = EXCLUDED.sensor_quality_level,
+      canopy_temp_status = EXCLUDED.canopy_temp_status,
+      evapotranspiration_risk = EXCLUDED.evapotranspiration_risk,
+      irrigation_effectiveness = EXCLUDED.irrigation_effectiveness,
+      leak_risk = EXCLUDED.leak_risk,
+      irrigation_action_hint = EXCLUDED.irrigation_action_hint,
+      computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
+      source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
+      explanation_codes_json = EXCLUDED.explanation_codes_json,
+      source_observation_ids_json = EXCLUDED.source_observation_ids_json,
+      updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, field_id, nowMs]
+  );
+
   const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST',
     token,
@@ -33,6 +90,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       field_id,
       season_id,
       device_id: env('DEVICE_ID', `device_prescription_${Date.now()}`),
+      crop_code: 'corn',
+      stage1_sensing_summary: {
+        irrigation_effectiveness: 'low',
+        leak_risk: 'low',
+        canopy_temp_status: 'normal',
+        evapotranspiration_risk: 'medium',
+        sensor_quality_level: 'GOOD',
+      },
       image_recognition: { stress_score: 0.72, disease_score: 0.1, pest_risk_score: 0.1, confidence: 0.95 },
     },
   });
@@ -98,7 +163,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const latestStatus = String(submitApprovalJson.prescription?.status ?? '').trim();
 
   const draftRecommendationId = `rec_prescription_draft_${Date.now()}`;
-  const pool = new Pool({ connectionString: databaseUrl });
   const draftFactId = randomUUID();
   await pool.query(
     'INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)',
