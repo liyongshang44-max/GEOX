@@ -1,11 +1,17 @@
-import { createApp, runStartupMigrations, startBackgroundWorkers } from "../app.js";
+import { createApp } from "../app.js";
 import { resolveServerConfig } from "../config/index.js";
+import { runSqlMigrations } from "../infra/migrations.js";
+import { ensureRuntimeDirectories, resolveRuntimePaths } from "../infra/runtimePaths.js";
+import { startBackgroundWorkers } from "./workers.js";
 
 export async function startServer(): Promise<void> {
   const config = resolveServerConfig();
-  const { app, pool } = createApp();
+  const paths = resolveRuntimePaths();
+  ensureRuntimeDirectories(paths);
 
-  await runStartupMigrations(pool);
+  const { app, pool } = createApp({ config, paths });
+
+  await runSqlMigrations(pool);
   startBackgroundWorkers(pool);
 
   const shutdown = async (signal: string): Promise<void> => {
