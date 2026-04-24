@@ -2,6 +2,8 @@ CREATE TABLE IF NOT EXISTS prescription_contract_v1 (
   prescription_id TEXT PRIMARY KEY,
   recommendation_id TEXT NOT NULL,
   tenant_id TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  group_id TEXT NOT NULL,
   field_id TEXT NOT NULL,
   season_id TEXT NULL,
   crop_id TEXT NULL,
@@ -30,5 +32,5 @@ CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_tenant_field
 CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_status
   ON prescription_contract_v1(status);
 
-CREATE UNIQUE INDEX IF NOT EXISTS ux_prescription_contract_v1_recommendation_id
-  ON prescription_contract_v1(recommendation_id);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_prescription_contract_v1_tenant_project_group_recommendation
+  ON prescription_contract_v1(tenant_id, project_id, group_id, recommendation_id);

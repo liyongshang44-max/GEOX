@@ -116,6 +116,24 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     zone_id: null,
   };
 
+  const fieldMismatch = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
+    method: 'POST',
+    token,
+    body: { ...fromRecommendationBody, field_id: `${field_id}_mismatch` },
+  });
+
+  const seededCrossScopePrescriptionId = `prc_seed_${Date.now()}`;
+  const crossScopeProjectId = 'project_scope_other';
+  const crossScopeGroupId = 'group_scope_other';
+  await pool.query(
+    `INSERT INTO prescription_contract_v1
+      (prescription_id, recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, zone_id, operation_type, spatial_scope, timing_window, operation_amount, device_requirements, risk, evidence_refs, approval_requirement, acceptance_conditions, status, created_at, updated_at, created_by)
+     VALUES
+      ($1,$2,$3,$4,$5,$6,$7,$8,NULL,'IRRIGATION','{}'::jsonb,'{}'::jsonb,'{\"amount\":25,\"unit\":\"mm\"}'::jsonb,'{}'::jsonb,'{\"level\":\"MEDIUM\",\"reasons\":[]}'::jsonb,'[]'::jsonb,'{\"required\":true}'::jsonb,'{\"evidence_required\":[\"receipt\"]}'::jsonb,'READY_FOR_APPROVAL',NOW(),NOW(),'acceptance_seed')
+     ON CONFLICT (tenant_id, project_id, group_id, recommendation_id) DO UPDATE SET updated_at = NOW()`,
+    [seededCrossScopePrescriptionId, recommendation_id, tenant_id, crossScopeProjectId, crossScopeGroupId, field_id, season_id, 'corn']
+  );
+
   const create = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
     token,
@@ -125,6 +143,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription = createJson.prescription;
   const prescription_id = String(prescription?.prescription_id ?? '').trim();
   assert.ok(prescription_id, 'prescription_id missing');
+  const idempotencyScoped = prescription_id !== seededCrossScopePrescriptionId;
 
   const checkShape = Boolean(
     prescription &&
@@ -149,6 +168,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const readById = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}`, { method: 'GET', token });
   const readByIdJson = requireOk(readById, 'read prescription by id');
+  const crossProjectRead = await fetchJson(
+    `${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(crossScopeProjectId)}&group_id=${encodeURIComponent(group_id)}`,
+    { method: 'GET', token }
+  );
 
   const readByRecommendation = await fetchJson(`${base}/api/v1/prescriptions/by-recommendation/${encodeURIComponent(recommendation_id)}`, { method: 'GET', token });
   const readByRecommendationJson = requireOk(readByRecommendation, 'read prescription by recommendation');
@@ -236,6 +259,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       contract_shape_valid: checkShape,
       draft_submit_blocked: submitDraft.status === 400 && submitDraft.json?.error === 'PRESCRIPTION_NOT_READY_FOR_APPROVAL',
       draft_status_preserved: String(readDraftAfterSubmitJson.prescription?.status ?? '') === 'DRAFT',
+      field_mismatch_blocked: fieldMismatch.status === 400 && fieldMismatch.json?.error === 'PRESCRIPTION_FIELD_MISMATCH',
+      cross_project_read_blocked: crossProjectRead.status === 404 && crossProjectRead.json?.error === 'NOT_FOUND',
+      idempotency_scoped: idempotencyScoped,
       healthz_ok: Boolean(healthzOk),
       openapi_contains_prescription_paths: Boolean(openapiContainsPrescriptionPaths),
     },
@@ -251,6 +277,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.equal(out.checks.contract_shape_valid, true, 'contract shape failed');
   assert.equal(out.checks.draft_submit_blocked, true, `draft submit blocked failed status=${submitDraft.status} body=${submitDraft.text}`);
   assert.equal(out.checks.draft_status_preserved, true, 'draft status preserved failed');
+  assert.equal(out.checks.field_mismatch_blocked, true, `field mismatch blocked failed status=${fieldMismatch.status} body=${fieldMismatch.text}`);
+  assert.equal(out.checks.cross_project_read_blocked, true, `cross project read blocked failed status=${crossProjectRead.status} body=${crossProjectRead.text}`);
+  assert.equal(out.checks.idempotency_scoped, true, 'idempotency scoped failed');
   assert.equal(out.checks.healthz_ok, true, `healthz check failed status=${healthz.status} body=${healthz.text}`);
   assert.equal(out.checks.openapi_contains_prescription_paths, true, 'openapi missing prescription path');
 })().catch((e) => {

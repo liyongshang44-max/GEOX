@@ -2516,11 +2516,13 @@ function applyP13OpenApiAlignment(spec: any) {
 
     PrescriptionContractV1: {
       type: "object",
-      required: ["prescription_id", "recommendation_id", "tenant_id", "field_id", "operation_type", "spatial_scope", "timing_window", "operation_amount", "device_requirements", "risk", "evidence_refs", "approval_requirement", "acceptance_conditions", "status", "created_at", "updated_at"],
+      required: ["prescription_id", "recommendation_id", "tenant_id", "project_id", "group_id", "field_id", "operation_type", "spatial_scope", "timing_window", "operation_amount", "device_requirements", "risk", "evidence_refs", "approval_requirement", "acceptance_conditions", "status", "created_at", "updated_at"],
       properties: {
         prescription_id: { type: "string" },
         recommendation_id: { type: "string" },
         tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
         field_id: { type: "string" },
         season_id: { type: ["string", "null"] },
         crop_id: { type: ["string", "null"] },
@@ -2543,7 +2545,7 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     PrescriptionFromRecommendationRequest: {
       type: "object",
-      required: ["recommendation_id", "tenant_id", "field_id"],
+      required: ["recommendation_id", "tenant_id", "project_id", "group_id", "field_id"],
       properties: {
         recommendation_id: { type: "string" },
         tenant_id: { type: "string" },

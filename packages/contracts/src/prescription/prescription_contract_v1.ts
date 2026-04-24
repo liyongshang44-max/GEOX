@@ -21,6 +21,8 @@ export type PrescriptionContractV1 = {
   prescription_id: string;
   recommendation_id: string;
   tenant_id: string;
+  project_id: string;
+  group_id: string;
   field_id: string;
   season_id?: string | null;
   crop_id?: string | null;

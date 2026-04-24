@@ -36,20 +36,25 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
       project_id: String(body.project_id ?? auth.project_id),
       group_id: String(body.group_id ?? auth.group_id),
     };
-    const field_id = String(body.field_id ?? "").trim();
     if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
-    if (!field_id) return badRequest(reply, "MISSING_FIELD_ID");
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
     const recFact = await loadRecommendationFact(pool, tenant, recommendation_id);
     if (!recFact) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
+    const recFieldId = String(recFact.payload?.field_id ?? "").trim();
+    if (!recFieldId) return badRequest(reply, "RECOMMENDATION_FIELD_MISSING");
+    if (body.field_id !== undefined && String(body.field_id ?? "").trim() !== recFieldId) {
+      return badRequest(reply, "PRESCRIPTION_FIELD_MISMATCH");
+    }
 
     const result = await createPrescriptionFromRecommendation(pool, {
       recommendation_id,
-      tenant_id: tenant.tenant_id,
-      field_id,
-      season_id: body.season_id ?? recFact.payload?.season_id ?? null,
-      crop_id: body.crop_id ?? recFact.payload?.crop_code ?? null,
+      tenant_id: String(recFact.payload?.tenant_id ?? tenant.tenant_id),
+      project_id: String(recFact.payload?.project_id ?? tenant.project_id),
+      group_id: String(recFact.payload?.group_id ?? tenant.group_id),
+      field_id: recFieldId,
+      season_id: recFact.payload?.season_id ?? null,
+      crop_id: recFact.payload?.crop_code ?? null,
       zone_id: body.zone_id ?? null,
       created_by: auth.actor_id,
     }, recFact.payload);
@@ -60,26 +65,38 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   app.get("/api/v1/prescriptions/:prescription_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
+    const query: any = (req as any).query ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(query.tenant_id ?? auth.tenant_id),
+      project_id: String(query.project_id ?? auth.project_id),
+      group_id: String(query.group_id ?? auth.group_id),
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const prescription_id = String(params.prescription_id ?? "").trim();
     if (!prescription_id) return badRequest(reply, "MISSING_PRESCRIPTION_ID");
 
-    const prescription = await getPrescriptionById(pool, prescription_id);
+    const prescription = await getPrescriptionById(pool, prescription_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
-    if (prescription.tenant_id !== auth.tenant_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, prescription });
   });
 
   app.get("/api/v1/prescriptions/by-recommendation/:recommendation_id", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
     if (!auth) return;
+    const query: any = (req as any).query ?? {};
+    const tenant: TenantTriple = {
+      tenant_id: String(query.tenant_id ?? auth.tenant_id),
+      project_id: String(query.project_id ?? auth.project_id),
+      group_id: String(query.group_id ?? auth.group_id),
+    };
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const recommendation_id = String(params.recommendation_id ?? "").trim();
     if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
 
-    const prescription = await getPrescriptionByRecommendationId(pool, recommendation_id);
+    const prescription = await getPrescriptionByRecommendationId(pool, recommendation_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
-    if (prescription.tenant_id !== auth.tenant_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     return reply.send({ ok: true, prescription });
   });
 
@@ -93,7 +110,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const prescription_id = String(params.prescription_id ?? "").trim();
     if (!prescription_id) return badRequest(reply, "MISSING_PRESCRIPTION_ID");
 
-    const prescription = await getPrescriptionById(pool, prescription_id);
+    const prescription = await getPrescriptionById(pool, prescription_id, auth);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
     if (prescription.tenant_id !== auth.tenant_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
     if (String(prescription.status) !== "READY_FOR_APPROVAL") {

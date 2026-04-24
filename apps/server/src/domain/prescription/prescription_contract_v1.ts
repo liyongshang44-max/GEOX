@@ -16,6 +16,8 @@ type TenantTriple = {
 type FromRecommendationInput = {
   recommendation_id: string;
   tenant_id: string;
+  project_id: string;
+  group_id: string;
   field_id: string;
   season_id?: string | null;
   crop_id?: string | null;
@@ -186,6 +188,8 @@ function hydratePrescription(row: any): PrescriptionContractV1 {
     prescription_id: String(row.prescription_id),
     recommendation_id: String(row.recommendation_id),
     tenant_id: String(row.tenant_id),
+    project_id: String(row.project_id),
+    group_id: String(row.group_id),
     field_id: String(row.field_id),
     season_id: row.season_id ? String(row.season_id) : null,
     crop_id: row.crop_id ? String(row.crop_id) : null,
@@ -206,14 +210,24 @@ function hydratePrescription(row: any): PrescriptionContractV1 {
   };
 }
 
-export async function getPrescriptionById(pool: Pool, prescription_id: string): Promise<PrescriptionContractV1 | null> {
-  const res = await pool.query("SELECT * FROM prescription_contract_v1 WHERE prescription_id = $1 LIMIT 1", [prescription_id]);
+export async function getPrescriptionById(pool: Pool, prescription_id: string, scope?: TenantTriple): Promise<PrescriptionContractV1 | null> {
+  const scopedSql = scope
+    ? "SELECT * FROM prescription_contract_v1 WHERE prescription_id = $1 AND tenant_id = $2 AND project_id = $3 AND group_id = $4 LIMIT 1"
+    : "SELECT * FROM prescription_contract_v1 WHERE prescription_id = $1 LIMIT 1";
+  const res = await pool.query(scopedSql, scope
+    ? [prescription_id, scope.tenant_id, scope.project_id, scope.group_id]
+    : [prescription_id]);
   if (!res.rows.length) return null;
   return hydratePrescription(res.rows[0]);
 }
 
-export async function getPrescriptionByRecommendationId(pool: Pool, recommendation_id: string): Promise<PrescriptionContractV1 | null> {
-  const res = await pool.query("SELECT * FROM prescription_contract_v1 WHERE recommendation_id = $1 LIMIT 1", [recommendation_id]);
+export async function getPrescriptionByRecommendationId(pool: Pool, recommendation_id: string, scope?: TenantTriple): Promise<PrescriptionContractV1 | null> {
+  const scopedSql = scope
+    ? "SELECT * FROM prescription_contract_v1 WHERE recommendation_id = $1 AND tenant_id = $2 AND project_id = $3 AND group_id = $4 LIMIT 1"
+    : "SELECT * FROM prescription_contract_v1 WHERE recommendation_id = $1 LIMIT 1";
+  const res = await pool.query(scopedSql, scope
+    ? [recommendation_id, scope.tenant_id, scope.project_id, scope.group_id]
+    : [recommendation_id]);
   if (!res.rows.length) return null;
   return hydratePrescription(res.rows[0]);
 }
@@ -238,7 +252,11 @@ export async function loadRecommendationFact(pool: Pool, tenant: TenantTriple, r
 }
 
 export async function createPrescriptionFromRecommendation(pool: Pool, input: FromRecommendationInput, recPayload: any): Promise<{ prescription: PrescriptionContractV1; idempotent: boolean }> {
-  const exists = await getPrescriptionByRecommendationId(pool, input.recommendation_id);
+  const exists = await getPrescriptionByRecommendationId(pool, input.recommendation_id, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
   if (exists) return { prescription: exists, idempotent: true };
 
   const operation_type = deriveOperationType(recPayload);
@@ -266,6 +284,8 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     prescription_id,
     recommendation_id: input.recommendation_id,
     tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
     field_id: input.field_id,
     season_id: input.season_id ?? null,
     crop_id: input.crop_id ?? toText(recPayload?.crop_code) ?? null,
@@ -309,18 +329,20 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
 
   await pool.query(
     `INSERT INTO prescription_contract_v1 (
-      prescription_id, recommendation_id, tenant_id, field_id, season_id, crop_id, zone_id, operation_type,
+      prescription_id, recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, zone_id, operation_type,
       spatial_scope, timing_window, operation_amount, device_requirements, risk, evidence_refs,
       approval_requirement, acceptance_conditions, status, created_at, updated_at, created_by
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8,
-      $9::jsonb, $10::jsonb, $11::jsonb, $12::jsonb, $13::jsonb, $14::jsonb,
-      $15::jsonb, $16::jsonb, $17, NOW(), NOW(), $18
-    ) ON CONFLICT (recommendation_id) DO NOTHING`,
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+      $11::jsonb, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb,
+      $17::jsonb, $18::jsonb, $19, NOW(), NOW(), $20
+    ) ON CONFLICT (tenant_id, project_id, group_id, recommendation_id) DO NOTHING`,
     [
       prescription.prescription_id,
       prescription.recommendation_id,
       prescription.tenant_id,
+      prescription.project_id,
+      prescription.group_id,
       prescription.field_id,
       prescription.season_id,
       prescription.crop_id,
@@ -339,7 +361,11 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     ],
   );
 
-  const saved = await getPrescriptionByRecommendationId(pool, input.recommendation_id);
+  const saved = await getPrescriptionByRecommendationId(pool, input.recommendation_id, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
   if (!saved) throw new Error("PRESCRIPTION_PERSIST_FAILED");
   return { prescription: saved, idempotent: saved.prescription_id !== prescription_id };
 }
