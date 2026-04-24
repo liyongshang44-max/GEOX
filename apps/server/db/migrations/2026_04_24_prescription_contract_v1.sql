@@ -32,5 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_tenant_field
 CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_status
   ON prescription_contract_v1(status);
 
-CREATE UNIQUE INDEX IF NOT EXISTS ux_prescription_contract_v1_tenant_project_group_recommendation
-  ON prescription_contract_v1(tenant_id, project_id, group_id, recommendation_id);
+-- Scoped unique index is intentionally created in
+-- 2026_04_24_prescription_contract_v1_scope_fix.sql after:
+-- 1) project_id/group_id backfill from facts
+-- 2) NOT NULL enforcement on project_id/group_id
