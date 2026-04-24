@@ -25,59 +25,34 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     openapi.json.paths['/api/v1/prescriptions/from-recommendation']
   );
 
-  // Seed formal Stage1 summary source fields so /recommendations/generate can pass
-  // FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE boundary with current strict Stage1 contract.
+  // Seed formal Stage1 summary source fields via derived_sensing_state_index_v1
+  // so /recommendations/generate can pass FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE boundary.
   await pool.query(
-    `CREATE TABLE IF NOT EXISTS field_sensing_overview_v1 (
+    `CREATE TABLE IF NOT EXISTS derived_sensing_state_index_v1 (
       tenant_id text NOT NULL,
-      project_id text NULL,
-      group_id text NULL,
+      project_id text NOT NULL,
+      group_id text NOT NULL,
       field_id text NOT NULL,
-      observed_at_ts_ms bigint NULL,
-      freshness text NOT NULL DEFAULT 'fresh',
+      state_type text NOT NULL,
+      payload_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+      computed_at_ts_ms bigint NOT NULL,
       confidence double precision NULL,
-      soil_indicators_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-      irrigation_need_level text NULL,
-      sensor_quality_level text NULL,
-      canopy_temp_status text NULL,
-      evapotranspiration_risk text NULL,
-      sensor_quality text NULL,
-      irrigation_effectiveness text NULL,
-      leak_risk text NULL,
-      irrigation_action_hint text NULL,
-      computed_at_ts_ms bigint NULL,
-      source_observed_at_ts_ms bigint NULL,
-      explanation_codes_json jsonb NOT NULL DEFAULT '[]'::jsonb,
       source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-      updated_ts_ms bigint NOT NULL,
-      PRIMARY KEY (tenant_id, field_id)
+      PRIMARY KEY (tenant_id, project_id, group_id, field_id, state_type)
     )`
   );
   const nowMs = Date.now();
   await pool.query(
-    `INSERT INTO field_sensing_overview_v1
-      (tenant_id, project_id, group_id, field_id, observed_at_ts_ms, freshness, confidence, soil_indicators_json, sensor_quality_level, canopy_temp_status, evapotranspiration_risk, irrigation_effectiveness, leak_risk, irrigation_action_hint, computed_at_ts_ms, source_observed_at_ts_ms, explanation_codes_json, source_observation_ids_json, updated_ts_ms)
+    `INSERT INTO derived_sensing_state_index_v1
+      (tenant_id, project_id, group_id, field_id, state_type, payload_json, computed_at_ts_ms, confidence, source_observation_ids_json)
      VALUES
-      ($1,$2,$3,$4,$5,'fresh',0.93,'[]'::jsonb,'GOOD','normal','medium','low','low','irrigate_first',$5,$5,'[]'::jsonb,'[]'::jsonb,$5)
-     ON CONFLICT (tenant_id, field_id)
+      ($1,$2,$3,$4,'irrigation_effectiveness_state','{\"level\":\"LOW\"}'::jsonb,$5,0.9,'[\"obs_prescription_stage1\"]'::jsonb)
+     ON CONFLICT (tenant_id, project_id, group_id, field_id, state_type)
      DO UPDATE SET
-      project_id = EXCLUDED.project_id,
-      group_id = EXCLUDED.group_id,
-      observed_at_ts_ms = EXCLUDED.observed_at_ts_ms,
-      freshness = EXCLUDED.freshness,
-      confidence = EXCLUDED.confidence,
-      soil_indicators_json = EXCLUDED.soil_indicators_json,
-      sensor_quality_level = EXCLUDED.sensor_quality_level,
-      canopy_temp_status = EXCLUDED.canopy_temp_status,
-      evapotranspiration_risk = EXCLUDED.evapotranspiration_risk,
-      irrigation_effectiveness = EXCLUDED.irrigation_effectiveness,
-      leak_risk = EXCLUDED.leak_risk,
-      irrigation_action_hint = EXCLUDED.irrigation_action_hint,
+      payload_json = EXCLUDED.payload_json,
       computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
-      source_observed_at_ts_ms = EXCLUDED.source_observed_at_ts_ms,
-      explanation_codes_json = EXCLUDED.explanation_codes_json,
       source_observation_ids_json = EXCLUDED.source_observation_ids_json,
-      updated_ts_ms = EXCLUDED.updated_ts_ms`,
+      confidence = EXCLUDED.confidence`,
     [tenant_id, project_id, group_id, field_id, nowMs]
   );
 
@@ -262,7 +237,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const readDraftAfterSubmit = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(draftPrescriptionId)}`, { method: 'GET', token });
   const readDraftAfterSubmitJson = requireOk(readDraftAfterSubmit, 'read draft prescription after blocked submit');
-  const scopeFixMigrationSql = fs.readFileSync('apps/server/db/migrations/2026_04_24_prescription_contract_v1_scope_fix.sql', 'utf8');
+  const scopeFixMigrationSql = fs.readFileSync('apps/server/db/migrations/2026_04_24_prescription_contract_v1.sql', 'utf8');
   const scopeMigrationNoHardcodedDefault = !scopeFixMigrationSql.includes('projectA') && !scopeFixMigrationSql.includes('groupA');
 
   const out = {
