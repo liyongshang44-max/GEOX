@@ -19,7 +19,6 @@ type CreateAppOptions = {
 
 export function createApp(options: CreateAppOptions): { app: FastifyInstance; pool: Pool } {
   const { config, paths } = options;
-
   const pool = createDatabasePool(config.databaseUrl);
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
 
@@ -29,14 +28,12 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
     systemProfile: config.systemProfile,
     disableAppleII: config.disableAppleII,
   });
-
   registerStaticModule(app, {
     mediaDir: paths.mediaDir,
     acceptanceDir: paths.acceptanceDir,
     tenantHeaders: config.tenantHeaders,
     apiContractHeaders: config.apiContractHeaders,
   });
-
   registerDomainModules(app, pool, { mediaDir: paths.mediaDir });
   registerCompatibilityModules(app, pool, { mediaDir: paths.mediaDir });
   registerOpenApiModule(app);
