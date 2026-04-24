@@ -1,6 +1,7 @@
-import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAdminV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { createApprovalRequestV1, requireTenantMatchOr404 } from "../domain/approval/approval_request_service_v1.js";
 import {
   createPrescriptionFromRecommendation,
   getPrescriptionById,
@@ -13,35 +14,6 @@ type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
 function badRequest(reply: FastifyReply, error: string) {
   return reply.status(400).send({ ok: false, error });
-}
-
-function requireTenantMatchOr404(auth: TenantTriple, target: TenantTriple, reply: FastifyReply): boolean {
-  if (auth.tenant_id !== target.tenant_id || auth.project_id !== target.project_id || auth.group_id !== target.group_id) {
-    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    return false;
-  }
-  return true;
-}
-
-function hostBaseUrl(req: FastifyRequest): string {
-  const envBase = String(process.env.GEOX_INTERNAL_BASE_URL ?? "").trim();
-  if (envBase) return envBase;
-  const host = String((req.headers as any).host ?? "127.0.0.1:3001");
-  return `http://${host}`;
-}
-
-async function fetchJson(url: string, authz: string, body?: any): Promise<{ ok: boolean; status: number; json: any }> {
-  const res = await fetch(url, {
-    method: body === undefined ? "GET" : "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(authz ? { authorization: authz } : {}),
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-  let json: any = null;
-  try { json = await res.json(); } catch { json = null; }
-  return { ok: res.ok, status: res.status, json };
 }
 
 function deriveApprovalActionType(operationType: string): string {
@@ -114,6 +86,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   app.post("/api/v1/prescriptions/:prescription_id/submit-approval", async (req, reply) => {
     const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
     if (!auth) return;
+    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
@@ -123,8 +96,8 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const prescription = await getPrescriptionById(pool, prescription_id);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
     if (prescription.tenant_id !== auth.tenant_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (!["READY_FOR_APPROVAL", "DRAFT"].includes(String(prescription.status))) {
-      return badRequest(reply, "PRESCRIPTION_STATUS_INVALID_FOR_SUBMIT");
+    if (String(prescription.status) !== "READY_FOR_APPROVAL") {
+      return badRequest(reply, "PRESCRIPTION_NOT_READY_FOR_APPROVAL");
     }
 
     const tenant: TenantTriple = {
@@ -134,52 +107,53 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
-    const delegated = await fetchJson(`${hostBaseUrl(req)}/api/v1/approvals/request`, String((req.headers as any).authorization ?? ""), {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      program_id: body.program_id ?? null,
-      field_id: prescription.field_id,
-      season_id: prescription.season_id ?? null,
-      issuer: { kind: "human", id: auth.actor_id, namespace: "prescription_contract_v1" },
-      action_type: deriveApprovalActionType(prescription.operation_type),
-      target: { kind: "field", ref: prescription.field_id },
-      time_window: {
-        start_ts: Date.now(),
-        end_ts: Date.now() + 30 * 60 * 1000,
-      },
-      parameter_schema: {
-        keys: [
-          { name: "prescription_id", type: "enum", enum: [prescription.prescription_id] },
-          { name: "recommendation_id", type: "enum", enum: [prescription.recommendation_id] },
-          { name: "amount", type: "number" },
-          { name: "unit", type: "enum", enum: [prescription.operation_amount.unit] },
-        ],
-      },
-      parameters: {
-        prescription_id: prescription.prescription_id,
-        recommendation_id: prescription.recommendation_id,
-        operation_type: prescription.operation_type,
-        amount: prescription.operation_amount.amount,
-        unit: prescription.operation_amount.unit,
-        acceptance_conditions: prescription.acceptance_conditions,
-      },
-      constraints: { approval_required: Boolean(prescription.approval_requirement.required) },
-      meta: {
-        prescription_id: prescription.prescription_id,
-        recommendation_id: prescription.recommendation_id,
-        operation_type: prescription.operation_type,
+    let delegated: { ok: true; fact_id: string; request_id: string };
+    try {
+      delegated = await createApprovalRequestV1(pool, auth, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        program_id: body.program_id ?? null,
         field_id: prescription.field_id,
-        season_id: prescription.season_id,
-        approval_requirement: prescription.approval_requirement,
-      },
-    });
-
-    if (!delegated.ok || !delegated.json?.ok) {
-      return reply.status(delegated.status || 400).send({ ok: false, error: "APPROVAL_REQUEST_CREATE_FAILED", detail: delegated.json ?? null });
+        season_id: prescription.season_id ?? null,
+        issuer: { kind: "human", id: auth.actor_id, namespace: "prescription_contract_v1" },
+        action_type: deriveApprovalActionType(prescription.operation_type),
+        target: { kind: "field", ref: prescription.field_id },
+        time_window: {
+          start_ts: Date.now(),
+          end_ts: Date.now() + 30 * 60 * 1000,
+        },
+        parameter_schema: {
+          keys: [
+            { name: "prescription_id", type: "enum", enum: [prescription.prescription_id] },
+            { name: "recommendation_id", type: "enum", enum: [prescription.recommendation_id] },
+            { name: "amount", type: "number" },
+            { name: "unit", type: "enum", enum: [prescription.operation_amount.unit] },
+          ],
+        },
+        parameters: {
+          prescription_id: prescription.prescription_id,
+          recommendation_id: prescription.recommendation_id,
+          operation_type: prescription.operation_type,
+          amount: prescription.operation_amount.amount,
+          unit: prescription.operation_amount.unit,
+          acceptance_conditions: prescription.acceptance_conditions,
+        },
+        constraints: { approval_required: Boolean(prescription.approval_requirement.required) },
+        meta: {
+          prescription_id: prescription.prescription_id,
+          recommendation_id: prescription.recommendation_id,
+          operation_type: prescription.operation_type,
+          field_id: prescription.field_id,
+          season_id: prescription.season_id,
+          approval_requirement: prescription.approval_requirement,
+        },
+      });
+    } catch (e: any) {
+      return badRequest(reply, String(e?.message ?? "APPROVAL_REQUEST_CREATE_FAILED"));
     }
 
     const updated = await markPrescriptionStatus(pool, prescription_id, "APPROVAL_REQUESTED");
-    return reply.send({ ok: true, prescription_id, approval_request_id: delegated.json.request_id, prescription: updated });
+    return reply.send({ ok: true, prescription_id, approval_request_id: delegated.request_id, prescription: updated });
   });
 }
