@@ -1,5 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
+import { registerAdminImportModule } from "./registerAdminImportModule.js";
+import { registerAdminGroupsModule } from "./registerAdminGroupsModule.js";
 
 const REQUIRED_SCHEMA = {
   tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members"],
@@ -40,4 +42,7 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
       missing_views,
     });
   });
+
+  registerAdminImportModule(app, pool);
+  registerAdminGroupsModule(app, pool);
 }
