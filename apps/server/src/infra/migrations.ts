@@ -7,10 +7,18 @@ import type { Pool } from "pg";
 export async function runSqlMigrations(pool: Pool): Promise<void> {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
-  const migrationsDir = path.resolve(__dirname, "..", "db", "migrations");
 
-  if (!fs.existsSync(migrationsDir)) {
-    return;
+  const candidateDirs = [
+    path.resolve(process.cwd(), "apps", "server", "db", "migrations"),
+    path.resolve(process.cwd(), "db", "migrations"),
+    path.resolve(__dirname, "..", "..", "db", "migrations"),
+    path.resolve(__dirname, "..", "db", "migrations"),
+  ];
+
+  const migrationsDir = candidateDirs.find((dir) => fs.existsSync(dir));
+
+  if (!migrationsDir) {
+    throw new Error(`SQL migrations directory not found. Checked: ${candidateDirs.join(", ")}`);
   }
 
   const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort();
