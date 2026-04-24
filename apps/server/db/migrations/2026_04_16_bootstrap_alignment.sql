@@ -23,6 +23,17 @@ CREATE TABLE IF NOT EXISTS markers (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE markers
+  ADD COLUMN IF NOT EXISTS group_id text;
+
+ALTER TABLE markers
+  ADD COLUMN IF NOT EXISTS occurred_at timestamptz;
+
+UPDATE markers
+SET occurred_at = to_timestamp(ts_ms / 1000.0)
+WHERE occurred_at IS NULL
+  AND ts_ms IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_markers_group_occurred ON markers (group_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_markers_sensor_occurred ON markers (sensor_id, occurred_at DESC);
 
