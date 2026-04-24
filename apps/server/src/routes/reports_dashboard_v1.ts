@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { enforceRouteRoleAuth } from "../auth/route_role_authz.js";
-import { projectCustomerDashboardAggregateV1, projectFieldPortfolioSummaryV1 } from "../projections/report_dashboard_v1.js";
+import { projectCustomerDashboardAggregateFromStatesV1, projectFieldPortfolioSummaryV1 } from "../projections/report_dashboard_v1.js";
 import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
 import { projectReportV1 } from "./reports_v1.js";
 
@@ -325,36 +325,16 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       ? requestedFieldIds.filter((fieldId) => allowedFieldIds.includes(fieldId))
       : allowedFieldIds;
 
-    const scopedOperations = scopedFieldIds.length === 0
-      ? []
-      : await queryScopedOperations(pool, tenant, scopedFieldIds);
-
     const states = await projectOperationStateV1(pool, tenant);
-    const stateByOperationId = new Map<string, (typeof states)[number]>();
-    for (const state of states) {
-      const opId = String(state.operation_id ?? "").trim();
-      const planId = String(state.operation_plan_id ?? "").trim();
-      if (opId && !stateByOperationId.has(opId)) stateByOperationId.set(opId, state);
-      if (planId && !stateByOperationId.has(planId)) stateByOperationId.set(planId, state);
-    }
-
-    const reports = (await mapWithConcurrencyLimit(
-      scopedOperations,
-      DASHBOARD_REPORT_CONCURRENCY_LIMIT,
-      async (operation) => {
-        const state = stateByOperationId.get(operation.operation_id);
-        if (!state) return null;
-        if (scopedFieldIds.length > 0 && !scopedFieldIds.includes(String(state.field_id ?? "").trim())) return null;
-        return projectReportV1({ pool, tenant, operationState: state });
-      }
-    )).filter((report): report is NonNullable<typeof report> => Boolean(report));
-
-    const scopedFieldIdSet = new Set(scopedFieldIds);
-    for (const report of reports) {
-      const fieldId = String(report.identifiers.field_id ?? "").trim();
-      if (fieldId) scopedFieldIdSet.add(fieldId);
-    }
-    const aggregateFieldIds = [...scopedFieldIdSet];
+    const scopedStates = states.filter((state) => {
+      const fieldId = String(state.field_id ?? "").trim();
+      if (!fieldId) return false;
+      if (scopedFieldIds.length > 0 && !scopedFieldIds.includes(fieldId)) return false;
+      return true;
+    });
+    const aggregateFieldIds = scopedFieldIds.length > 0
+      ? scopedFieldIds
+      : Array.from(new Set(scopedStates.map((state) => String(state.field_id ?? "").trim()).filter(Boolean)));
 
     const [fieldNameById, openAlertsByField, pendingActionsSummary, deviceSummary] = await Promise.all([
       queryFieldNameMap(pool, tenant, aggregateFieldIds),
@@ -363,24 +343,12 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       queryDeviceSummary(pool, tenant, aggregateFieldIds),
     ]);
 
-    const pendingAcceptanceByField = new Map<string, number>();
-    for (const report of reports) {
-      const fieldId = String(report.identifiers.field_id ?? "").trim();
-      if (!fieldId) continue;
-      const finalStatus = String(report.execution.final_status ?? "").toUpperCase();
-      if (finalStatus !== "PENDING_ACCEPTANCE") continue;
-      pendingAcceptanceByField.set(fieldId, (pendingAcceptanceByField.get(fieldId) ?? 0) + 1);
-    }
-
-    const aggregate = projectCustomerDashboardAggregateV1({
-      reports,
+    const aggregate = projectCustomerDashboardAggregateFromStatesV1({
+      states: scopedStates,
+      field_ids: aggregateFieldIds,
       field_name_by_id: fieldNameById,
       open_alerts_by_field: openAlertsByField,
-      pending_acceptance_by_field: pendingAcceptanceByField,
-      pending_actions_summary: {
-        ...pendingActionsSummary,
-        pending_acceptance: [...pendingAcceptanceByField.values()].reduce((s, n) => s + n, 0),
-      },
+      pending_actions_summary: pendingActionsSummary,
       device_summary: deviceSummary,
     });
 
