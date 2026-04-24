@@ -23,6 +23,17 @@ CREATE TABLE IF NOT EXISTS markers (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE markers
+  ADD COLUMN IF NOT EXISTS group_id text;
+
+ALTER TABLE markers
+  ADD COLUMN IF NOT EXISTS occurred_at timestamptz;
+
+UPDATE markers
+SET occurred_at = to_timestamp(ts_ms / 1000.0)
+WHERE occurred_at IS NULL
+  AND ts_ms IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_markers_group_occurred ON markers (group_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_markers_sensor_occurred ON markers (sensor_id, occurred_at DESC);
 
@@ -45,7 +56,9 @@ CREATE TABLE IF NOT EXISTS sensor_group_members (
 
 CREATE INDEX IF NOT EXISTS idx_sensor_group_members_sensor_id ON sensor_group_members (sensor_id);
 
-CREATE OR REPLACE VIEW facts_replay_v1 AS
+DROP VIEW IF EXISTS facts_replay_v1;
+
+CREATE VIEW facts_replay_v1 AS
 SELECT
   fact_id,
   occurred_at,
