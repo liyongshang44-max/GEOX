@@ -24,6 +24,7 @@ export * from "./schema/agronomy_decision_context_v1.js";
 export * from "./schema/agronomy_recommendation_v1.js";
 export * from "./agronomy/rule_input_v1.js";
 export * from "./agronomy/recommendation_v2.js";
+export * from "./prescription/prescription_contract_v1.js";
 
 export * from "./product/metric_display_policy_v1.js";
 export * from "./schema/actuator_adapter_v1.js";
