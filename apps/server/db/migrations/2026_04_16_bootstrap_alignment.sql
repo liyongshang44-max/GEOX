@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS sensor_group_members (
 
 CREATE INDEX IF NOT EXISTS idx_sensor_group_members_sensor_id ON sensor_group_members (sensor_id);
 
-CREATE OR REPLACE VIEW facts_replay_v1 AS
+DROP VIEW IF EXISTS facts_replay_v1;
+
+CREATE VIEW facts_replay_v1 AS
 SELECT
   fact_id,
   occurred_at,
