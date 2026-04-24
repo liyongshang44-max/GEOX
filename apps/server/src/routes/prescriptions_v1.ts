@@ -7,7 +7,6 @@ import {
   getPrescriptionById,
   getPrescriptionByRecommendationId,
   loadRecommendationFact,
-  markPrescriptionStatus,
 } from "../domain/prescription/prescription_contract_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
@@ -110,53 +109,66 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const prescription_id = String(params.prescription_id ?? "").trim();
     if (!prescription_id) return badRequest(reply, "MISSING_PRESCRIPTION_ID");
 
-    const prescription = await getPrescriptionById(pool, prescription_id, auth);
-    if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
-    if (prescription.tenant_id !== auth.tenant_id) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    if (String(prescription.status) !== "READY_FOR_APPROVAL") {
-      return badRequest(reply, "PRESCRIPTION_NOT_READY_FOR_APPROVAL");
-    }
-
     const tenant: TenantTriple = {
-      tenant_id: prescription.tenant_id,
+      tenant_id: auth.tenant_id,
       project_id: String(body.project_id ?? auth.project_id),
       group_id: String(body.group_id ?? auth.group_id),
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
-    let delegated: { ok: true; fact_id: string; request_id: string };
+    const client = await pool.connect();
     try {
-      delegated = await createApprovalRequestV1(pool, auth, {
+      await client.query("BEGIN");
+      const locked = await client.query(
+        `SELECT * FROM prescription_contract_v1
+         WHERE prescription_id = $1
+           AND tenant_id = $2
+           AND project_id = $3
+           AND group_id = $4
+         FOR UPDATE`,
+        [prescription_id, tenant.tenant_id, tenant.project_id, tenant.group_id]
+      );
+      if (!locked.rows.length) {
+        await client.query("ROLLBACK");
+        return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
+      }
+      const prescription: any = locked.rows[0];
+      if (String(prescription.status) !== "READY_FOR_APPROVAL") {
+        await client.query("ROLLBACK");
+        return badRequest(reply, "PRESCRIPTION_NOT_READY_FOR_APPROVAL");
+      }
+
+      const delegated = await createApprovalRequestV1(client, auth, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
         program_id: body.program_id ?? null,
-        field_id: prescription.field_id,
+        field_id: String(prescription.field_id ?? ""),
         season_id: prescription.season_id ?? null,
         issuer: { kind: "human", id: auth.actor_id, namespace: "prescription_contract_v1" },
-        action_type: deriveApprovalActionType(prescription.operation_type),
-        target: { kind: "field", ref: prescription.field_id },
+        action_type: deriveApprovalActionType(String(prescription.operation_type ?? "")),
+        target: { kind: "field", ref: String(prescription.field_id ?? "") },
         time_window: {
           start_ts: Date.now(),
           end_ts: Date.now() + 30 * 60 * 1000,
         },
         parameter_schema: {
           keys: [
-            { name: "prescription_id", type: "enum", enum: [prescription.prescription_id] },
-            { name: "recommendation_id", type: "enum", enum: [prescription.recommendation_id] },
+            { name: "prescription_id", type: "enum", enum: [String(prescription.prescription_id ?? "")] },
+            { name: "recommendation_id", type: "enum", enum: [String(prescription.recommendation_id ?? "")] },
             { name: "amount", type: "number" },
-            { name: "unit", type: "enum", enum: [prescription.operation_amount.unit] },
+            { name: "unit", type: "enum", enum: [String(prescription.operation_amount?.unit ?? "unit")] },
           ],
         },
         parameters: {
           prescription_id: prescription.prescription_id,
           recommendation_id: prescription.recommendation_id,
           operation_type: prescription.operation_type,
-          amount: prescription.operation_amount.amount,
-          unit: prescription.operation_amount.unit,
+          amount: prescription.operation_amount?.amount,
+          unit: prescription.operation_amount?.unit,
           acceptance_conditions: prescription.acceptance_conditions,
         },
-        constraints: { approval_required: Boolean(prescription.approval_requirement.required) },
+        constraints: { approval_required: Boolean(prescription.approval_requirement?.required) },
         meta: {
           prescription_id: prescription.prescription_id,
           recommendation_id: prescription.recommendation_id,
@@ -166,11 +178,19 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
           approval_requirement: prescription.approval_requirement,
         },
       });
-    } catch (e: any) {
-      return badRequest(reply, String(e?.message ?? "APPROVAL_REQUEST_CREATE_FAILED"));
-    }
 
-    const updated = await markPrescriptionStatus(pool, prescription_id, "APPROVAL_REQUESTED");
-    return reply.send({ ok: true, prescription_id, approval_request_id: delegated.request_id, prescription: updated });
+      await client.query(
+        "UPDATE prescription_contract_v1 SET status = $2, updated_at = NOW() WHERE prescription_id = $1",
+        [prescription_id, "APPROVAL_REQUESTED"]
+      );
+      await client.query("COMMIT");
+      const updated = await getPrescriptionById(pool, prescription_id, tenant);
+      return reply.send({ ok: true, prescription_id, approval_request_id: delegated.request_id, prescription: updated });
+    } catch (e: any) {
+      try { await client.query("ROLLBACK"); } catch {}
+      return badRequest(reply, String(e?.message ?? "APPROVAL_REQUEST_CREATE_FAILED"));
+    } finally {
+      client.release();
+    }
   });
 }

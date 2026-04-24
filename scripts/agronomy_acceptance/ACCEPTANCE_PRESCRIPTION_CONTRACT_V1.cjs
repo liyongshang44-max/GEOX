@@ -1,4 +1,5 @@
 const { randomUUID } = require('node:crypto');
+const fs = require('node:fs');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
@@ -184,6 +185,22 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const submitApprovalJson = requireOk(submitApproval, 'submit prescription approval');
   const approval_request_id = String(submitApprovalJson.approval_request_id ?? '').trim();
   const latestStatus = String(submitApprovalJson.prescription?.status ?? '').trim();
+  const submitApprovalDuplicate = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id },
+  });
+  const approvalSingletonQuery = await pool.query(
+    `SELECT COUNT(*)::int AS c
+     FROM facts
+     WHERE (record_json::jsonb->>'type')='approval_request_v1'
+       AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+       AND (record_json::jsonb#>>'{payload,project_id}')=$2
+       AND (record_json::jsonb#>>'{payload,group_id}')=$3
+       AND (record_json::jsonb#>>'{payload,proposal,meta,prescription_id}')=$4`,
+    [tenant_id, project_id, group_id, prescription_id]
+  );
+  const approvalRequestCount = Number(approvalSingletonQuery.rows?.[0]?.c ?? 0);
 
   const draftRecommendationId = `rec_prescription_draft_${Date.now()}`;
   const draftFactId = randomUUID();
@@ -214,7 +231,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       },
     ],
   );
-  await pool.end();
 
   const createDraft = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
@@ -243,6 +259,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const readDraftAfterSubmit = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(draftPrescriptionId)}`, { method: 'GET', token });
   const readDraftAfterSubmitJson = requireOk(readDraftAfterSubmit, 'read draft prescription after blocked submit');
+  const scopeFixMigrationSql = fs.readFileSync('apps/server/db/migrations/2026_04_24_prescription_contract_v1_scope_fix.sql', 'utf8');
+  const scopeMigrationNoHardcodedDefault = !scopeFixMigrationSql.includes('projectA') && !scopeFixMigrationSql.includes('groupA');
 
   const out = {
     ok: true,
@@ -262,6 +280,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       field_mismatch_blocked: fieldMismatch.status === 400 && fieldMismatch.json?.error === 'PRESCRIPTION_FIELD_MISMATCH',
       cross_project_read_blocked: crossProjectRead.status === 404 && crossProjectRead.json?.error === 'NOT_FOUND',
       idempotency_scoped: idempotencyScoped,
+      duplicate_submit_blocked: submitApprovalDuplicate.status === 400 && submitApprovalDuplicate.json?.error === 'PRESCRIPTION_NOT_READY_FOR_APPROVAL',
+      approval_request_singleton: approvalRequestCount === 1,
+      scope_migration_no_hardcoded_default: scopeMigrationNoHardcodedDefault,
       healthz_ok: Boolean(healthzOk),
       openapi_contains_prescription_paths: Boolean(openapiContainsPrescriptionPaths),
     },
@@ -280,8 +301,12 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.equal(out.checks.field_mismatch_blocked, true, `field mismatch blocked failed status=${fieldMismatch.status} body=${fieldMismatch.text}`);
   assert.equal(out.checks.cross_project_read_blocked, true, `cross project read blocked failed status=${crossProjectRead.status} body=${crossProjectRead.text}`);
   assert.equal(out.checks.idempotency_scoped, true, 'idempotency scoped failed');
+  assert.equal(out.checks.duplicate_submit_blocked, true, `duplicate submit blocked failed status=${submitApprovalDuplicate.status} body=${submitApprovalDuplicate.text}`);
+  assert.equal(out.checks.approval_request_singleton, true, `approval request singleton failed count=${approvalRequestCount}`);
+  assert.equal(out.checks.scope_migration_no_hardcoded_default, true, 'scope migration contains hardcoded defaults');
   assert.equal(out.checks.healthz_ok, true, `healthz check failed status=${healthz.status} body=${healthz.text}`);
   assert.equal(out.checks.openapi_contains_prescription_paths, true, 'openapi missing prescription path');
+  await pool.end();
 })().catch((e) => {
   console.error(JSON.stringify({ ok: false, error: e?.message ?? String(e) }, null, 2));
   if (e?.stack) console.error(e.stack);

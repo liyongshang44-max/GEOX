@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import type { AoActAuthContextV0 } from "../../auth/ao_act_authz_v0.js";
 
 export type TenantTriple = {
@@ -66,7 +66,7 @@ export function validateApprovalRequestBody(body: any): void {
   if (start_ts > end_ts) throw new Error("TIME_WINDOW_INVALID");
 }
 
-export async function createApprovalRequestV1(pool: Pool, auth: AoActAuthContextV0, body: any): Promise<{ ok: true; fact_id: string; request_id: string }> {
+export async function createApprovalRequestV1(db: Pool | PoolClient, auth: AoActAuthContextV0, body: any): Promise<{ ok: true; fact_id: string; request_id: string }> {
   validateApprovalRequestBody(body);
   const tenant = assertTenantTriple(body);
 
@@ -103,7 +103,7 @@ export async function createApprovalRequestV1(pool: Pool, auth: AoActAuthContext
   };
 
   const fact_id = randomUUID();
-  await pool.query(
+  await db.query(
     "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
     [fact_id, "api/v1/approvals/request", record_json],
   );
