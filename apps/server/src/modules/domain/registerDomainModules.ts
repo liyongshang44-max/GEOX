@@ -1,12 +1,32 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
-import { registerV1Routes } from "../../routes/registerV1Routes.js";
+import { registerCoreV1Routes } from "../../routes/registerCoreV1Routes.js";
+import { registerDevtoolsModule } from "../devtools/registerDevtoolsModule.js";
+import { registerSensingModule } from "../sensing/registerSensingModule.js";
+import { registerFieldModule } from "../field/registerFieldModule.js";
+import { registerDecisionModule } from "../decision/registerDecisionModule.js";
+import { registerExecutionModule } from "../execution/registerExecutionModule.js";
+import { registerEvidenceModule } from "../evidence/registerEvidenceModule.js";
+import { registerAcceptanceModule } from "../acceptance/registerAcceptanceModule.js";
+import { registerReportingModule } from "../reporting/registerReportingModule.js";
+import { registerCommercialModule } from "../commercial/registerCommercialModule.js";
+import { registerAgronomyModule } from "../agronomy/registerAgronomyModule.js";
 
 type RegisterDomainModulesOptions = {
   mediaDir: string;
 };
 
 export function registerDomainModules(app: FastifyInstance, pool: Pool, options: RegisterDomainModulesOptions): void {
-  registerV1Routes(app, pool, { mediaDir: options.mediaDir });
+  registerCoreV1Routes(app, pool);
+  registerDevtoolsModule(app, pool);
+  registerSensingModule(app, pool);
+  registerFieldModule(app, pool);
+  registerDecisionModule(app, pool);
+  registerExecutionModule(app, pool);
+  registerEvidenceModule(app, pool);
+  registerAcceptanceModule(app, pool);
+  registerReportingModule(app, pool);
+  registerCommercialModule(app, pool);
+  registerAgronomyModule(app, pool, { mediaDir: options.mediaDir });
 }

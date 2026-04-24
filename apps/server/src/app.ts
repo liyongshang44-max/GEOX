@@ -8,7 +8,7 @@ import { registerCoreModule } from "./modules/core/registerCoreModule.js";
 import { registerJudgeModule } from "./modules/judge/registerJudgeModule.js";
 import { registerStaticModule } from "./modules/static/registerStaticModule.js";
 import { registerOpenApiModule } from "./modules/openapi/registerOpenApiModule.js";
-import { registerV1Routes } from "./routes/registerV1Routes.js";
+import { registerDomainModules } from "./modules/domain/registerDomainModules.js";
 import { registerCompatibilityModules } from "./modules/compat/registerCompatibilityModules.js";
 import { registerAdminModule } from "./modules/admin/registerAdminModule.js";
 
@@ -34,7 +34,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
     tenantHeaders: config.tenantHeaders,
     apiContractHeaders: config.apiContractHeaders,
   });
-  registerV1Routes(app, pool, { mediaDir: paths.mediaDir });
+  registerDomainModules(app, pool, { mediaDir: paths.mediaDir });
   registerCompatibilityModules(app, pool, { mediaDir: paths.mediaDir });
   registerOpenApiModule(app);
   registerAdminModule(app, pool);
