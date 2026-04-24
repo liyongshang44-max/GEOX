@@ -223,8 +223,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
           crop_code: 'corn',
           evidence_refs: ['fact:draft-recommendation'],
           suggested_action: {
-            action_type: 'FERTILIZE',
-            summary: 'Draft fertilization prescription without amount for acceptance negative check',
+            action_type: 'fertilization.apply',
+            summary: 'Draft fertilization dotted-action prescription without amount for acceptance negative check',
             parameters: {},
           },
         },
@@ -250,6 +250,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const draftPrescriptionId = String(createDraftJson.prescription?.prescription_id ?? '').trim();
   assert.ok(draftPrescriptionId, 'draft prescription_id missing');
   assert.equal(String(createDraftJson.prescription?.status ?? ''), 'DRAFT', 'draft prescription should be DRAFT');
+  assert.equal(String(createDraftJson.prescription?.operation_type ?? ''), 'FERTILIZATION', 'dotted fertilization should map to FERTILIZATION');
+  assert.equal(String(createDraftJson.prescription?.risk?.level ?? ''), 'HIGH', 'dotted fertilization missing amount should be HIGH risk');
+  assert.equal(Boolean(createDraftJson.prescription?.approval_requirement?.second_confirmation_required), true, 'dotted fertilization should require second confirmation');
 
   const submitDraft = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(draftPrescriptionId)}/submit-approval`, {
     method: 'POST',
@@ -277,6 +280,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       contract_shape_valid: checkShape,
       draft_submit_blocked: submitDraft.status === 400 && submitDraft.json?.error === 'PRESCRIPTION_NOT_READY_FOR_APPROVAL',
       draft_status_preserved: String(readDraftAfterSubmitJson.prescription?.status ?? '') === 'DRAFT',
+      fertilization_dotted_operation_type: String(createDraftJson.prescription?.operation_type ?? '') === 'FERTILIZATION',
+      fertilization_dotted_risk_high: String(createDraftJson.prescription?.risk?.level ?? '') === 'HIGH',
+      fertilization_dotted_second_confirmation: Boolean(createDraftJson.prescription?.approval_requirement?.second_confirmation_required) === true,
       field_mismatch_blocked: fieldMismatch.status === 400 && fieldMismatch.json?.error === 'PRESCRIPTION_FIELD_MISMATCH',
       cross_project_read_blocked: crossProjectRead.status === 404 && crossProjectRead.json?.error === 'NOT_FOUND',
       idempotency_scoped: idempotencyScoped,
@@ -298,6 +304,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.equal(out.checks.contract_shape_valid, true, 'contract shape failed');
   assert.equal(out.checks.draft_submit_blocked, true, `draft submit blocked failed status=${submitDraft.status} body=${submitDraft.text}`);
   assert.equal(out.checks.draft_status_preserved, true, 'draft status preserved failed');
+  assert.equal(out.checks.fertilization_dotted_operation_type, true, 'fertilization dotted operation_type failed');
+  assert.equal(out.checks.fertilization_dotted_risk_high, true, 'fertilization dotted risk level failed');
+  assert.equal(out.checks.fertilization_dotted_second_confirmation, true, 'fertilization dotted second confirmation failed');
   assert.equal(out.checks.field_mismatch_blocked, true, `field mismatch blocked failed status=${fieldMismatch.status} body=${fieldMismatch.text}`);
   assert.equal(out.checks.cross_project_read_blocked, true, `cross project read blocked failed status=${crossProjectRead.status} body=${crossProjectRead.text}`);
   assert.equal(out.checks.idempotency_scoped, true, 'idempotency scoped failed');

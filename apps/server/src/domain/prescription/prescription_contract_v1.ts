@@ -69,12 +69,34 @@ function normalizeEvidenceRefs(rec: any): string[] {
 }
 
 function deriveOperationType(rec: any): PrescriptionOperationTypeV1 {
-  const actionType = String(rec?.suggested_action?.action_type ?? rec?.action_type ?? "").trim().toUpperCase();
+  const suggestedAction = String(rec?.suggested_action?.action_type ?? "").trim().toLowerCase();
+  const topAction = String(rec?.action_type ?? "").trim().toUpperCase();
   const recommendationType = String(rec?.recommendation_type ?? "").trim().toLowerCase();
-  if (actionType === "IRRIGATE" || recommendationType === "irrigation_recommendation_v1") return "IRRIGATION";
-  if (actionType === "FERTILIZE") return "FERTILIZATION";
-  if (actionType === "SPRAY") return "SPRAYING";
-  if (actionType === "INSPECT" || recommendationType.includes("crop_health") || recommendationType.includes("pest_risk") || recommendationType === "inspection_recommendation_v1") return "INSPECTION";
+  if (
+    topAction === "IRRIGATE"
+    || suggestedAction === "irrigation.start"
+    || suggestedAction === "irrigation.apply"
+    || recommendationType === "irrigation_recommendation_v1"
+  ) return "IRRIGATION";
+  if (
+    topAction === "FERTILIZE"
+    || suggestedAction === "fertilization.apply"
+    || suggestedAction === "fertilizer.apply"
+    || recommendationType.includes("fertil")
+  ) return "FERTILIZATION";
+  if (
+    topAction === "SPRAY"
+    || suggestedAction === "spray.start"
+    || suggestedAction === "spraying.apply"
+    || recommendationType.includes("spray")
+  ) return "SPRAYING";
+  if (
+    topAction === "INSPECT"
+    || suggestedAction.includes("inspect")
+    || recommendationType.includes("crop_health")
+    || recommendationType.includes("pest_risk")
+    || recommendationType === "inspection_recommendation_v1"
+  ) return "INSPECTION";
   return "OTHER";
 }
 
