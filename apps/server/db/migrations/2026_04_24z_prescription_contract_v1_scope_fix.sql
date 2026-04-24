@@ -1,3 +1,26 @@
+CREATE TABLE IF NOT EXISTS prescription_contract_v1 (
+  prescription_id TEXT PRIMARY KEY,
+  recommendation_id TEXT NOT NULL,
+  tenant_id TEXT NOT NULL,
+  field_id TEXT NOT NULL,
+  season_id TEXT NULL,
+  crop_id TEXT NULL,
+  zone_id TEXT NULL,
+  operation_type TEXT NOT NULL,
+  spatial_scope JSONB NOT NULL DEFAULT '{}'::jsonb,
+  timing_window JSONB NOT NULL DEFAULT '{}'::jsonb,
+  operation_amount JSONB NOT NULL DEFAULT '{}'::jsonb,
+  device_requirements JSONB NOT NULL DEFAULT '{}'::jsonb,
+  risk JSONB NOT NULL DEFAULT '{}'::jsonb,
+  evidence_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+  approval_requirement JSONB NOT NULL DEFAULT '{}'::jsonb,
+  acceptance_conditions JSONB NOT NULL DEFAULT '{}'::jsonb,
+  status TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  created_by TEXT NULL
+);
+
 ALTER TABLE prescription_contract_v1
   ADD COLUMN IF NOT EXISTS project_id TEXT;
 
@@ -11,7 +34,8 @@ WITH recommendation_scope AS (
     record_json::jsonb#>>'{payload,project_id}' AS project_id,
     record_json::jsonb#>>'{payload,group_id}' AS group_id,
     ROW_NUMBER() OVER (
-      PARTITION BY record_json::jsonb#>>'{payload,tenant_id}', record_json::jsonb#>>'{payload,recommendation_id}'
+      PARTITION BY record_json::jsonb#>>'{payload,tenant_id}',
+                   record_json::jsonb#>>'{payload,recommendation_id}'
       ORDER BY occurred_at DESC, fact_id DESC
     ) AS rn
   FROM facts
@@ -42,33 +66,22 @@ BEGIN
 END $$;
 
 ALTER TABLE prescription_contract_v1
-  ALTER COLUMN project_id SET NOT NULL,
+  ALTER COLUMN project_id SET NOT NULL;
+
+ALTER TABLE prescription_contract_v1
   ALTER COLUMN group_id SET NOT NULL;
 
 DROP INDEX IF EXISTS ux_prescription_contract_v1_recommendation_id;
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'prescription_contract_v1'
-      AND column_name = 'project_id'
-  ) THEN
-    RAISE EXCEPTION 'PRESCRIPTION_SCOPE_COLUMN_MISSING: project_id';
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'prescription_contract_v1'
-      AND column_name = 'group_id'
-  ) THEN
-    RAISE EXCEPTION 'PRESCRIPTION_SCOPE_COLUMN_MISSING: group_id';
-  END IF;
-END $$;
-
 DROP INDEX IF EXISTS ux_prescription_contract_v1_tenant_project_group_recommendation;
+
 CREATE UNIQUE INDEX ux_prescription_contract_v1_tenant_project_group_recommendation
   ON prescription_contract_v1(tenant_id, project_id, group_id, recommendation_id);
+
+CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_recommendation_id
+  ON prescription_contract_v1(recommendation_id);
+
+CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_tenant_field
+  ON prescription_contract_v1(tenant_id, field_id);
+
+CREATE INDEX IF NOT EXISTS idx_prescription_contract_v1_status
+  ON prescription_contract_v1(status);
