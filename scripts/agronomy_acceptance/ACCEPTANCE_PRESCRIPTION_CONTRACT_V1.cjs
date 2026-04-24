@@ -27,33 +27,51 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   // Seed formal Stage1 summary source fields via derived_sensing_state_index_v1
   // so /recommendations/generate can pass FORMAL_STAGE1_TRIGGER_NOT_ELIGIBLE boundary.
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS derived_sensing_state_index_v1 (
-      tenant_id text NOT NULL,
-      project_id text NOT NULL,
-      group_id text NOT NULL,
-      field_id text NOT NULL,
-      state_type text NOT NULL,
-      payload_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-      computed_at_ts_ms bigint NOT NULL,
-      confidence double precision NULL,
-      source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb,
-      PRIMARY KEY (tenant_id, project_id, group_id, field_id, state_type)
-    )`
-  );
   const nowMs = Date.now();
+  const stage1FactId = randomUUID();
   await pool.query(
-    `INSERT INTO derived_sensing_state_index_v1
-      (tenant_id, project_id, group_id, field_id, state_type, payload_json, computed_at_ts_ms, confidence, source_observation_ids_json)
+    `ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text;
+     ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text;
+     ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+     DELETE FROM derived_sensing_state_index_v1
+     WHERE tenant_id = $1
+       AND field_id = $4
+       AND state_type = 'irrigation_effectiveness_state';
+
+     INSERT INTO derived_sensing_state_index_v1
+      (
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        state_type,
+        payload_json,
+        confidence,
+        explanation_codes_json,
+        source_device_ids_json,
+        computed_at,
+        computed_at_ts_ms,
+        fact_id,
+        source_observation_ids_json
+      )
      VALUES
-      ($1,$2,$3,$4,'irrigation_effectiveness_state','{\"level\":\"LOW\"}'::jsonb,$5,0.9,'[\"obs_prescription_stage1\"]'::jsonb)
-     ON CONFLICT (tenant_id, project_id, group_id, field_id, state_type)
-     DO UPDATE SET
-      payload_json = EXCLUDED.payload_json,
-      computed_at_ts_ms = EXCLUDED.computed_at_ts_ms,
-      source_observation_ids_json = EXCLUDED.source_observation_ids_json,
-      confidence = EXCLUDED.confidence`,
-    [tenant_id, project_id, group_id, field_id, nowMs]
+      (
+        $1,
+        $2,
+        $3,
+        $4,
+        'irrigation_effectiveness_state',
+        '{"level":"LOW"}'::jsonb,
+        0.9,
+        '[]'::jsonb,
+        '[]'::jsonb,
+        now(),
+        $5,
+        $6,
+        '["obs_prescription_stage1"]'::jsonb
+      );`,
+    [tenant_id, project_id, group_id, field_id, nowMs, stage1FactId]
   );
 
   const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
