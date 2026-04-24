@@ -12,6 +12,7 @@ import { registerAcceptanceModule } from "../acceptance/registerAcceptanceModule
 import { registerReportingModule } from "../reporting/registerReportingModule.js";
 import { registerCommercialModule } from "../commercial/registerCommercialModule.js";
 import { registerAgronomyModule } from "../agronomy/registerAgronomyModule.js";
+import { registerPrescriptionModule } from "../prescription/registerPrescriptionModule.js";
 
 type RegisterDomainModulesOptions = {
   mediaDir: string;
@@ -29,4 +30,5 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerReportingModule(app, pool);
   registerCommercialModule(app, pool);
   registerAgronomyModule(app, pool, { mediaDir: options.mediaDir });
+  registerPrescriptionModule(app, pool);
 }
