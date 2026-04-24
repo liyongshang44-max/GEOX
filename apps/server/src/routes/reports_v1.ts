@@ -150,6 +150,7 @@ type FieldReportDetailResponseV1 = {
   ok: true;
   field_report_v1: FieldReportDetailV1;
 };
+const FIELD_REPORT_OPERATION_LIMIT = 20;
 
 export async function projectReportV1(params: {
   pool: Pool;
@@ -341,7 +342,9 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
     if (!enforceFieldScopeOrDeny(auth, fieldId, reply, { asNotFound: true })) return;
     const fieldStates = states
       .filter((x) => String(x.field_id ?? "") === fieldId)
-      .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")));
+      .filter((x) => hasFieldAccess(auth, String(x.field_id ?? "")))
+      .sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0))
+      .slice(0, FIELD_REPORT_OPERATION_LIMIT);
 
     const workflowMap = await listOperationWorkflowV1(pool, {
       tenant_id: tenant.tenant_id,
