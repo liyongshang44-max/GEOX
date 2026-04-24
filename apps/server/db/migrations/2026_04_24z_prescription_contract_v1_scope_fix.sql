@@ -1,5 +1,7 @@
 ALTER TABLE prescription_contract_v1
-  ADD COLUMN IF NOT EXISTS project_id TEXT,
+  ADD COLUMN IF NOT EXISTS project_id TEXT;
+
+ALTER TABLE prescription_contract_v1
   ADD COLUMN IF NOT EXISTS group_id TEXT;
 
 WITH recommendation_scope AS (
@@ -44,5 +46,29 @@ ALTER TABLE prescription_contract_v1
   ALTER COLUMN group_id SET NOT NULL;
 
 DROP INDEX IF EXISTS ux_prescription_contract_v1_recommendation_id;
-CREATE UNIQUE INDEX IF NOT EXISTS ux_prescription_contract_v1_tenant_project_group_recommendation
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'prescription_contract_v1'
+      AND column_name = 'project_id'
+  ) THEN
+    RAISE EXCEPTION 'PRESCRIPTION_SCOPE_COLUMN_MISSING: project_id';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'prescription_contract_v1'
+      AND column_name = 'group_id'
+  ) THEN
+    RAISE EXCEPTION 'PRESCRIPTION_SCOPE_COLUMN_MISSING: group_id';
+  END IF;
+END $$;
+
+DROP INDEX IF EXISTS ux_prescription_contract_v1_tenant_project_group_recommendation;
+CREATE UNIQUE INDEX ux_prescription_contract_v1_tenant_project_group_recommendation
   ON prescription_contract_v1(tenant_id, project_id, group_id, recommendation_id);
