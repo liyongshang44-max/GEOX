@@ -38,10 +38,12 @@ BEGIN
       AND table_name = 'markers'
       AND column_name = 'ts_ms'
   ) THEN
-    UPDATE markers
-    SET occurred_at = to_timestamp(ts_ms / 1000.0)
-    WHERE occurred_at IS NULL
-      AND ts_ms IS NOT NULL;
+    EXECUTE '
+      UPDATE markers
+      SET occurred_at = to_timestamp(ts_ms / 1000.0)
+      WHERE occurred_at IS NULL
+        AND ts_ms IS NOT NULL
+    ';
   END IF;
 END $$;
 
