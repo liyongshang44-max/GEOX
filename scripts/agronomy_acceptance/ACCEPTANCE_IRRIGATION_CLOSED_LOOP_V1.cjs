@@ -96,7 +96,26 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'irrigation closed loop acceptance' },
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'irrigation closed loop acceptance',
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
+      execution_context: {
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+      device_requirements: {
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
   });
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
   const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
