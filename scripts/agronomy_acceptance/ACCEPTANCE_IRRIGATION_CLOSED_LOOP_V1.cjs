@@ -74,7 +74,37 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
     token,
-    body: { recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id: 'corn', zone_id: null },
+    body: {
+      recommendation_id,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      crop_id: 'corn',
+      zone_id: null,
+      device_requirements: {
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+        adapter_type: 'irrigation_simulator',
+      },
+      operation_amount: {
+        amount: 25,
+        unit: 'L',
+        parameters: {
+          duration_sec: 1200,
+          flow_lpm: 1,
+          adapter_type: 'irrigation_simulator',
+          device_type: 'IRRIGATION_CONTROLLER',
+          required_capabilities: ['device.irrigation.valve.open'],
+          metadata: {
+            adapter_type: 'irrigation_simulator',
+            device_type: 'IRRIGATION_CONTROLLER',
+            required_capabilities: ['device.irrigation.valve.open'],
+          },
+        },
+      },
+    },
   });
   const prescriptionJson = requireOk(createPrescription, 'create prescription');
   const prescription = prescriptionJson.prescription;
@@ -106,11 +136,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       device_type: 'IRRIGATION_CONTROLLER',
       required_capabilities: ['device.irrigation.valve.open'],
       execution_context: {
-        adapter_type: 'irrigation_simulator',
-        device_type: 'IRRIGATION_CONTROLLER',
-        required_capabilities: ['device.irrigation.valve.open'],
-      },
-      device_requirements: {
         adapter_type: 'irrigation_simulator',
         device_type: 'IRRIGATION_CONTROLLER',
         required_capabilities: ['device.irrigation.valve.open'],
