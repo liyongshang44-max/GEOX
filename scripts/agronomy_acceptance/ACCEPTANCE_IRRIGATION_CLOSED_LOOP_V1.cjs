@@ -169,7 +169,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     },
   });
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
-  const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
+  const operation_plan_id = String(
+    decideApprovalJson.operation_plan_id
+      ?? decideApprovalJson.operation_plan?.operation_plan_id
+      ?? decideApprovalJson.plan?.operation_plan_id
+      ?? ''
+  ).trim();
+  assert.ok(operation_plan_id, `operation_plan_id missing from approve response: ${JSON.stringify(decideApprovalJson)}`);
+  assert.ok(operation_plan_id && !operation_plan_id.startsWith('op_'), 'approve response must return real operation_plan_id');
   const operationPlanFactQ = await pool.query(
     `SELECT record_json
        FROM facts
@@ -181,6 +188,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       ORDER BY occurred_at DESC
       LIMIT 1`,
     [operation_plan_id]
+  );
+  assert.ok(
+    operationPlanFactQ.rows?.length > 0,
+    `operation_plan_v1 not found for operation_plan_id=${operation_plan_id}; approve response=${JSON.stringify(decideApprovalJson)}`
   );
   const operationPlanPayload = operationPlanFactQ.rows?.[0]?.record_json?.payload ?? {};
   assert.equal(operationPlanPayload.adapter_type, 'irrigation_simulator', 'operation_plan.payload.adapter_type must be irrigation_simulator');
