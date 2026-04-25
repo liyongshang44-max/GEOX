@@ -772,6 +772,7 @@ const expectedEvidenceRequirements = Array.isArray(task?.payload?.meta?.expected
   ? (task.payload.meta.expected_evidence_requirements as unknown[]).map((x) => String(x)).filter((x) => x.length > 0)
   : resolveExpectedEvidenceRequirementsV1(taskActionType, null);
 const providedEvidenceKinds = (Array.isArray(body.logs_refs) ? body.logs_refs : [])
+  .concat(Array.isArray((body as any).evidence_refs) ? (body as any).evidence_refs : [])
   .map((x) => String(x?.kind ?? "").trim())
   .filter((x) => x.length > 0);
 const missingEvidenceRequirements = expectedEvidenceRequirements.filter((reqItem) => !providedEvidenceKinds.includes(reqItem));
@@ -859,6 +860,7 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
           execution_time: body.execution_time,
           execution_coverage: body.execution_coverage,
           resource_usage: body.resource_usage,
+          evidence_refs: Array.isArray((body as any).evidence_refs) ? (body as any).evidence_refs : body.logs_refs,
           logs_refs: body.logs_refs,
           status: body.status,
           constraint_check: body.constraint_check,
