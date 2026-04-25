@@ -1,0 +1,20 @@
+export type AsExecutedRecordV1 = {
+  as_executed_id: string;
+  tenant_id: string;
+  project_id: string;
+  group_id: string;
+  task_id: string;
+  receipt_id: string;
+  prescription_id: string | null;
+  field_id?: string | null;
+  executor: Record<string, unknown>;
+  planned: Record<string, unknown>;
+  executed: Record<string, unknown>;
+  deviation: Record<string, unknown>;
+  evidence_refs: unknown[];
+  receipt_refs: unknown[];
+  log_refs: unknown[];
+  confidence: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
