@@ -276,7 +276,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const receipt_fact_id = String(receiptJson.fact_id ?? '').trim();
   assert.ok(receipt_fact_id, 'receipt_fact_id missing');
   const receiptFactQ = await pool.query(
-    `SELECT record_json
+    `SELECT record_json::jsonb AS record_json
        FROM facts
       WHERE fact_id = $1
       LIMIT 1`,
@@ -326,7 +326,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const acceptance_verdict = String(acceptanceJson.verdict ?? '').trim().toUpperCase();
   assert.ok(acceptance_fact_id, 'acceptance fact_id missing');
   const acceptanceFactQ = await pool.query(
-    `SELECT record_json
+    `SELECT record_json::jsonb AS record_json
        FROM facts
       WHERE fact_id = $1
       LIMIT 1`,
