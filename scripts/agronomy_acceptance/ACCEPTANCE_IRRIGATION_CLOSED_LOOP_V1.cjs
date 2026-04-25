@@ -95,9 +95,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       group_id,
       field_id,
       season_id,
+      device_id,
       crop_id: 'corn',
       zone_id: null,
       device_requirements: {
+        device_id,
         device_type: 'IRRIGATION_CONTROLLER',
         required_capabilities: ['device.irrigation.valve.open'],
         adapter_type: 'irrigation_simulator',
@@ -106,12 +108,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
         amount: 25,
         unit: 'L',
         parameters: {
+          device_id,
           duration_sec: 1200,
           flow_lpm: 1,
           adapter_type: 'irrigation_simulator',
           device_type: 'IRRIGATION_CONTROLLER',
           required_capabilities: ['device.irrigation.valve.open'],
           metadata: {
+            device_id,
             adapter_type: 'irrigation_simulator',
             device_type: 'IRRIGATION_CONTROLLER',
             required_capabilities: ['device.irrigation.valve.open'],
@@ -146,10 +150,18 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       group_id,
       decision: 'APPROVE',
       reason: 'irrigation closed loop acceptance',
+      device_id,
       adapter_type: 'irrigation_simulator',
       device_type: 'IRRIGATION_CONTROLLER',
       required_capabilities: ['device.irrigation.valve.open'],
+      device_requirements: {
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
       execution_context: {
+        device_id,
         adapter_type: 'irrigation_simulator',
         device_type: 'IRRIGATION_CONTROLLER',
         required_capabilities: ['device.irrigation.valve.open'],
@@ -169,6 +181,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   );
   const operationPlanPayload = operationPlanFactQ.rows?.[0]?.record_json?.payload ?? {};
   assert.equal(operationPlanPayload.adapter_type, 'irrigation_simulator', 'operation_plan.payload.adapter_type must be irrigation_simulator');
+  assert.equal(operationPlanPayload.device_id, device_id, 'operation_plan.payload.device_id must match device_id');
   assert.equal(operationPlanPayload.device_type, 'IRRIGATION_CONTROLLER', 'operation_plan.payload.device_type must be IRRIGATION_CONTROLLER');
   assert.ok(
     Array.isArray(operationPlanPayload.required_capabilities)
@@ -188,9 +201,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       approval_request_id,
       field_id,
       season_id,
+      device_id,
       issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
       action_type: 'IRRIGATE',
-      target: { kind: 'field', ref: field_id },
+      target: { kind: 'device', ref: device_id },
       time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
       parameter_schema: {
         keys: [
@@ -202,7 +216,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       },
       parameters: { amount: 20, coverage_percent: 88, duration_min: 20, prescription_id },
       constraints: {},
-      meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
+      meta: {
+        recommendation_id,
+        prescription_id,
+        task_type: 'IRRIGATION',
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
     },
   });
   const taskJson = requireOk(taskResp, 'create action task');

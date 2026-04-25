@@ -936,6 +936,17 @@ async function createOperationPlanForApproval(
     ?? requestBodyPayload?.execution_context?.device_type
     ?? null
   );
+  const resolvedDeviceId = asNonEmptyString(
+    approvalPayload?.device_id
+    ?? approvalPayload?.execution_context?.device_id
+    ?? approvalPayload?.device_requirements?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_id
+    ?? requestBodyPayload?.device_id
+    ?? requestBodyPayload?.execution_context?.device_id
+    ?? requestBodyPayload?.device_requirements?.device_id
+    ?? null
+  );
   const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -950,6 +961,7 @@ async function createOperationPlanForApproval(
       program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
       field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
       season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
+      device_id: resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
       approval_request_id: request_id,
       action_type: proposal?.action_type ?? null,
       adapter_type: resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
