@@ -110,7 +110,12 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const hasWaterOrCost = ledgers.some((x) => x?.roi_type === 'WATER_SAVED' || x?.roi_type === 'COST_IMPACT');
   const hasExecReliability = ledgers.some((x) => x?.roi_type === 'EXECUTION_RELIABILITY');
   const hasEvidenceRefs = ledgers.some((x) => Array.isArray(x?.evidence_refs) && x.evidence_refs.length > 0);
-  const hasConfidence = ledgers.some((x) => x?.confidence && typeof x.confidence === 'object');
+  const hasConfidence = ledgers.some((x) =>
+    x?.confidence &&
+    (x.confidence.level === 'HIGH' || x.confidence.level === 'MEDIUM' || x.confidence.level === 'LOW') &&
+    (x.confidence.basis === 'measured' || x.confidence.basis === 'estimated' || x.confidence.basis === 'assumed') &&
+    Array.isArray(x.confidence.reasons)
+  );
 
   const checks = {
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),

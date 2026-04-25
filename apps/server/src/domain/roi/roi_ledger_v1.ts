@@ -10,6 +10,15 @@ type TenantTriple = {
   group_id: string;
 };
 
+export type RoiConfidenceLevelV1 = "HIGH" | "MEDIUM" | "LOW";
+export type RoiConfidenceBasisV1 = "measured" | "estimated" | "assumed";
+
+export type RoiConfidenceV1 = {
+  level: RoiConfidenceLevelV1;
+  basis: RoiConfidenceBasisV1;
+  reasons: string[];
+};
+
 export type RoiLedgerRow = {
   roi_ledger_id: string;
   tenant_id: string;
@@ -27,8 +36,8 @@ export type RoiLedgerRow = {
   baseline: any;
   actual: any;
   delta: any;
-  confidence: any;
-  evidence_refs: any;
+  confidence: RoiConfidenceV1;
+  evidence_refs: any[];
   calculation_method: string;
   assumptions: any;
   uncertainty_notes: string | null;
@@ -46,16 +55,12 @@ type AsExecutedRow = {
   field_id: string | null;
   planned: any;
   executed: any;
-  deviation: any;
-  evidence_refs: any;
-  confidence: any;
+  evidence_refs: any[];
 };
 
 type AsAppliedRow = {
   as_applied_id: string;
   zone_id: string | null;
-  coverage: any;
-  application: any;
 };
 
 type RoiCandidate = {
@@ -63,7 +68,7 @@ type RoiCandidate = {
   baseline: any;
   actual: any;
   delta: any;
-  confidence: any;
+  confidence: RoiConfidenceV1;
   evidence_refs: any[];
   calculation_method: string;
   assumptions: any;
@@ -86,6 +91,7 @@ function toNum(v: unknown): number | null {
 }
 
 function mapRoiRow(row: any): RoiLedgerRow {
+  const confidence = parseJsonMaybe(row.confidence) ?? {};
   return {
     roi_ledger_id: String(row.roi_ledger_id ?? ""),
     tenant_id: String(row.tenant_id ?? ""),
@@ -103,7 +109,11 @@ function mapRoiRow(row: any): RoiLedgerRow {
     baseline: parseJsonMaybe(row.baseline) ?? {},
     actual: parseJsonMaybe(row.actual) ?? {},
     delta: parseJsonMaybe(row.delta) ?? {},
-    confidence: parseJsonMaybe(row.confidence) ?? {},
+    confidence: {
+      level: confidence.level === "HIGH" || confidence.level === "MEDIUM" || confidence.level === "LOW" ? confidence.level : "LOW",
+      basis: confidence.basis === "measured" || confidence.basis === "estimated" || confidence.basis === "assumed" ? confidence.basis : "assumed",
+      reasons: Array.isArray(confidence.reasons) ? confidence.reasons.map((x: unknown) => String(x)) : ["missing_confidence_payload"],
+    },
     evidence_refs: parseJsonMaybe(row.evidence_refs) ?? [],
     calculation_method: String(row.calculation_method ?? "manual_or_external_v1"),
     assumptions: parseJsonMaybe(row.assumptions) ?? {},
@@ -124,9 +134,7 @@ function mapAsExecutedRow(row: any): AsExecutedRow {
     field_id: row.field_id == null ? null : String(row.field_id),
     planned: parseJsonMaybe(row.planned) ?? {},
     executed: parseJsonMaybe(row.executed) ?? {},
-    deviation: parseJsonMaybe(row.deviation) ?? {},
     evidence_refs: parseJsonMaybe(row.evidence_refs) ?? [],
-    confidence: parseJsonMaybe(row.confidence) ?? {},
   };
 }
 
@@ -134,9 +142,29 @@ function mapAsAppliedRow(row: any): AsAppliedRow {
   return {
     as_applied_id: String(row.as_applied_id ?? ""),
     zone_id: row.zone_id == null ? null : String(row.zone_id),
-    coverage: parseJsonMaybe(row.coverage) ?? {},
-    application: parseJsonMaybe(row.application) ?? {},
   };
+}
+
+function buildConfidence(input: {
+  basis: RoiConfidenceBasisV1;
+  hasMeasuredActual: boolean;
+  hasBaseline: boolean;
+  reasons: string[];
+}): RoiConfidenceV1 {
+  if (input.basis === "assumed") {
+    return { level: "LOW", basis: "assumed", reasons: input.reasons };
+  }
+  if (input.hasMeasuredActual && input.hasBaseline && input.basis === "measured") {
+    return { level: "HIGH", basis: "measured", reasons: input.reasons };
+  }
+  if (!input.hasBaseline) {
+    return { level: "MEDIUM", basis: input.basis, reasons: input.reasons };
+  }
+  return { level: "MEDIUM", basis: input.basis, reasons: input.reasons };
+}
+
+function normalizeEvidenceRefs(value: unknown): any[] {
+  return Array.isArray(value) ? value.filter((x) => x != null) : [];
 }
 
 function toWaterLiters(amount: number | null, unitRaw: unknown): number | null {
@@ -147,47 +175,54 @@ function toWaterLiters(amount: number | null, unitRaw: unknown): number | null {
   return null;
 }
 
-function pickWaterSavedCandidate(asExecuted: AsExecutedRow): RoiCandidate | null {
+export function computeWaterSavedEntry(asExecuted: AsExecutedRow): RoiCandidate | null {
   const plannedAmount = toNum(asExecuted?.planned?.amount);
   const executedAmount = toNum(asExecuted?.executed?.amount);
   const plannedUnit = String(asExecuted?.planned?.unit ?? "").trim();
   const executedUnit = String(asExecuted?.executed?.unit ?? plannedUnit).trim();
 
-  if (plannedAmount == null || executedAmount == null) return null;
+  if (plannedAmount == null || executedAmount == null || !plannedUnit) return null;
 
   const unitNorm = plannedUnit.toLowerCase();
   const allowed = new Set(["l", "m³", "m3", "mm"]);
   if (!allowed.has(unitNorm)) return null;
-  if (String(executedUnit || plannedUnit).toLowerCase() !== unitNorm) return null;
+  if (executedUnit && executedUnit.toLowerCase() !== unitNorm) return null;
 
-  const baselineValue = plannedAmount;
-  const actualValue = executedAmount;
-  const deltaValue = baselineValue - actualValue;
-
+  const delta = plannedAmount - executedAmount;
   return {
     roi_type: "WATER_SAVED",
-    baseline: { amount: baselineValue, unit: plannedUnit },
-    actual: { amount: actualValue, unit: plannedUnit },
-    delta: {
-      amount: deltaValue,
+    baseline: {
+      source: "prescription_planned_amount",
+      amount: plannedAmount,
       unit: plannedUnit,
-      interpretation: deltaValue > 0 ? "water_saved" : deltaValue < 0 ? "water_overuse" : "no_change",
     },
-    confidence: {
-      ...(asExecuted.confidence ?? {}),
-      measured_or_estimated: "measured",
+    actual: {
+      source: "as_executed_amount",
+      amount: executedAmount,
+      unit: plannedUnit,
     },
-    evidence_refs: Array.isArray(asExecuted.evidence_refs) ? asExecuted.evidence_refs : [],
+    delta: {
+      amount: delta,
+      unit: plannedUnit,
+      interpretation: delta > 0 ? "water_saved" : delta < 0 ? "water_overuse" : "no_change",
+    },
+    confidence: buildConfidence({
+      basis: "measured",
+      hasMeasuredActual: true,
+      hasBaseline: true,
+      reasons: ["planned_amount_present", "executed_amount_present", "unit_supported"],
+    }),
+    evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "planned_minus_executed_amount_v1",
     assumptions: {
-      source: "as_executed_record_v1",
-      unit_consistent: true,
+      baseline_source: "prescription_planned_amount",
+      actual_source: "as_executed_observed_amount",
     },
     uncertainty_notes: null,
   };
 }
 
-function pickCostImpactCandidate(asExecuted: AsExecutedRow): RoiCandidate | null {
+export function computeCostImpactEntry(asExecuted: AsExecutedRow): RoiCandidate | null {
   const usage = asExecuted?.executed?.resource_usage ?? {};
   const water_l = toNum(usage?.water_l);
   const electric_kwh = toNum(usage?.electric_kwh);
@@ -209,68 +244,78 @@ function pickCostImpactCandidate(asExecuted: AsExecutedRow): RoiCandidate | null
     ? null
     : computeCostBreakdown({ water_l: plannedWaterL, electric_kwh: 0, chemical_ml: 0 });
 
-  const baselineTotal = baselineCost?.total_cost ?? null;
-  const actualTotal = actualCost.total_cost;
+  const hasBaseline = baselineCost != null;
+  const confidence = buildConfidence({
+    basis: hasBaseline ? "measured" : "estimated",
+    hasMeasuredActual: true,
+    hasBaseline,
+    reasons: hasBaseline
+      ? ["actual_resource_usage_measured", "baseline_from_prescription_planned_amount"]
+      : ["actual_resource_usage_measured", "baseline_missing_use_assumption"],
+  });
 
   return {
     roi_type: "COST_IMPACT",
-    baseline: baselineCost
+    baseline: hasBaseline
       ? {
+          source: "prescription_planned_amount",
           ...baselineCost,
           resource_usage: { water_l: plannedWaterL, electric_kwh: 0, chemical_ml: 0 },
         }
-      : {},
+      : {
+          source: "assumption",
+          note: "baseline unavailable: planned amount not convertible to water volume",
+        },
     actual: {
+      source: "as_executed_resource_usage",
       ...actualCost,
       resource_usage: { water_l, electric_kwh, chemical_ml },
     },
     delta: {
-      total_cost_delta: baselineTotal == null ? null : baselineTotal - actualTotal,
+      total_cost_delta: hasBaseline ? (baselineCost?.total_cost ?? 0) - actualCost.total_cost : null,
       currency: "cost_unit",
     },
-    confidence: {
-      ...(asExecuted.confidence ?? {}),
-      measured_or_estimated: "estimated",
-    },
-    evidence_refs: Array.isArray(asExecuted.evidence_refs) ? asExecuted.evidence_refs : [],
+    confidence,
+    evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "compute_cost_breakdown_v1",
-    assumptions: baselineCost
-      ? { baseline_from_planned_water_volume: true }
-      : { baseline_missing_reason: "planned_amount_unit_not_convertible_to_water_volume" },
-    uncertainty_notes: baselineCost ? null : "baseline cost unavailable due to planned unit conversion constraints",
+    assumptions: hasBaseline
+      ? { baseline_source: "prescription_planned_amount" }
+      : { baseline_source: "assumption_only" },
+    uncertainty_notes: hasBaseline ? null : "baseline cost relies on assumption because planned unit conversion is unavailable",
   };
 }
 
-function pickExecutionReliabilityCandidate(asExecuted: AsExecutedRow): RoiCandidate {
+export function computeExecutionReliabilityEntry(asExecuted: AsExecutedRow): RoiCandidate {
   const status = String(asExecuted?.executed?.status ?? "INSUFFICIENT_RECEIPT").toUpperCase();
   const sentiment = status === "CONFIRMED" ? "positive" : status === "FAILED" ? "negative" : "uncertain";
+
+  const basis: RoiConfidenceBasisV1 = status === "INSUFFICIENT_RECEIPT" ? "assumed" : "estimated";
 
   return {
     roi_type: "EXECUTION_RELIABILITY",
     baseline: {},
-    actual: {
-      status,
-      sentiment,
-    },
+    actual: { status, sentiment },
     delta: {},
-    confidence: {
-      ...(asExecuted.confidence ?? {}),
-      measured_or_estimated: "estimated",
-    },
-    evidence_refs: Array.isArray(asExecuted.evidence_refs) ? asExecuted.evidence_refs : [],
+    confidence: buildConfidence({
+      basis,
+      hasMeasuredActual: false,
+      hasBaseline: false,
+      reasons: ["mapped_from_as_executed_status"],
+    }),
+    evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "status_to_reliability_mapping_v1",
     assumptions: {
-      mapping: {
+      status_mapping: {
         CONFIRMED: "positive",
         FAILED: "negative",
         INSUFFICIENT_RECEIPT: "uncertain",
       },
     },
-    uncertainty_notes: status === "INSUFFICIENT_RECEIPT" ? "insufficient receipt evidence" : null,
+    uncertainty_notes: status === "INSUFFICIENT_RECEIPT" ? "insufficient execution receipt evidence" : null,
   };
 }
 
-function pickLaborSavedCandidate(asExecuted: AsExecutedRow): RoiCandidate | null {
+function computeLaborSavedEntry(asExecuted: AsExecutedRow): RoiCandidate | null {
   const labor = asExecuted?.executed?.labor;
   if (!labor || typeof labor !== "object") return null;
 
@@ -279,8 +324,11 @@ function pickLaborSavedCandidate(asExecuted: AsExecutedRow): RoiCandidate | null
 
   return {
     roi_type: "LABOR_SAVED",
-    baseline: plannedMinutes == null ? {} : { duration_minutes: plannedMinutes },
+    baseline: plannedMinutes == null
+      ? { source: "assumption", note: "planned labor missing" }
+      : { source: "planned_labor", duration_minutes: plannedMinutes },
     actual: {
+      source: "as_executed_labor",
       duration_minutes: actualMinutes,
       worker_count: toNum(labor?.worker_count),
       details: labor,
@@ -288,17 +336,42 @@ function pickLaborSavedCandidate(asExecuted: AsExecutedRow): RoiCandidate | null
     delta: plannedMinutes != null && actualMinutes != null
       ? { duration_minutes: plannedMinutes - actualMinutes }
       : {},
-    confidence: {
-      ...(asExecuted.confidence ?? {}),
-      measured_or_estimated: "estimated",
-    },
-    evidence_refs: Array.isArray(asExecuted.evidence_refs) ? asExecuted.evidence_refs : [],
+    confidence: buildConfidence({
+      basis: plannedMinutes == null ? "assumed" : "estimated",
+      hasMeasuredActual: actualMinutes != null,
+      hasBaseline: plannedMinutes != null,
+      reasons: plannedMinutes == null
+        ? ["actual_labor_present", "baseline_labor_missing"]
+        : ["actual_labor_present", "baseline_labor_present"],
+    }),
+    evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "labor_duration_comparison_v1",
     assumptions: plannedMinutes == null
-      ? { baseline_missing_reason: "planned_labor_missing" }
-      : { baseline_from_planned_labor: true },
-    uncertainty_notes: plannedMinutes == null ? "baseline labor missing from planned payload" : null,
+      ? { baseline_source: "assumption" }
+      : { baseline_source: "planned_labor" },
+    uncertainty_notes: plannedMinutes == null ? "planned labor baseline missing" : null,
   };
+}
+
+export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow): RoiCandidate[] {
+  const entries: RoiCandidate[] = [];
+  const waterSaved = computeWaterSavedEntry(asExecuted);
+  if (waterSaved) entries.push(waterSaved);
+
+  const costImpact = computeCostImpactEntry(asExecuted);
+  if (costImpact) entries.push(costImpact);
+
+  entries.push(computeExecutionReliabilityEntry(asExecuted));
+
+  const laborSaved = computeLaborSavedEntry(asExecuted);
+  if (laborSaved) entries.push(laborSaved);
+
+  // 禁止生成没有 evidence/confidence 的记录。
+  return entries.filter((entry) => {
+    const hasEvidence = Array.isArray(entry.evidence_refs) && entry.evidence_refs.length > 0;
+    const hasConfidence = Boolean(entry.confidence?.level && entry.confidence?.basis && Array.isArray(entry.confidence?.reasons));
+    return hasEvidence && hasConfidence;
+  });
 }
 
 async function getAsExecutedById(pool: Pool, input: TenantTriple & { as_executed_id: string }): Promise<AsExecutedRow | null> {
@@ -306,9 +379,7 @@ async function getAsExecutedById(pool: Pool, input: TenantTriple & { as_executed
     `SELECT as_executed_id, tenant_id, project_id, group_id, task_id, prescription_id, field_id,
             planned::jsonb AS planned,
             executed::jsonb AS executed,
-            deviation::jsonb AS deviation,
-            evidence_refs::jsonb AS evidence_refs,
-            confidence::jsonb AS confidence
+            evidence_refs::jsonb AS evidence_refs
        FROM as_executed_record_v1
       WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND as_executed_id = $4
       LIMIT 1`,
@@ -320,7 +391,7 @@ async function getAsExecutedById(pool: Pool, input: TenantTriple & { as_executed
 
 async function listAsAppliedByAsExecuted(pool: Pool, input: TenantTriple & { as_executed_id: string }): Promise<AsAppliedRow[]> {
   const q = await pool.query(
-    `SELECT as_applied_id, zone_id, coverage::jsonb AS coverage, application::jsonb AS application
+    `SELECT as_applied_id, zone_id
        FROM as_applied_map_v1
       WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND as_executed_id = $4
       ORDER BY created_at DESC, as_applied_id DESC`,
@@ -346,6 +417,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
       LIMIT 1`,
     [input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id, input.asExecuted.as_executed_id, input.candidate.roi_type]
   );
+
   if (existing.rows?.[0]) {
     return { row: mapRoiRow(existing.rows[0]), idempotent: true };
   }
@@ -396,8 +468,8 @@ async function upsertRoiCandidate(pool: Pool, input: {
       JSON.stringify(input.candidate.baseline ?? {}),
       JSON.stringify(input.candidate.actual ?? {}),
       JSON.stringify(input.candidate.delta ?? {}),
-      JSON.stringify(input.candidate.confidence ?? {}),
-      JSON.stringify(Array.isArray(input.candidate.evidence_refs) ? input.candidate.evidence_refs : []),
+      JSON.stringify(input.candidate.confidence),
+      JSON.stringify(input.candidate.evidence_refs),
       input.candidate.calculation_method,
       JSON.stringify(input.candidate.assumptions ?? {}),
       input.candidate.uncertainty_notes,
@@ -420,10 +492,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
     [input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id, input.asExecuted.as_executed_id, input.candidate.roi_type]
   );
 
-  if (!fallback.rows?.[0]) {
-    throw new Error("ROI_LEDGER_WRITE_FAILED");
-  }
-
+  if (!fallback.rows?.[0]) throw new Error("ROI_LEDGER_WRITE_FAILED");
   return { row: mapRoiRow(fallback.rows[0]), idempotent: true };
 }
 
@@ -435,29 +504,14 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
   if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
 
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
-
-  const candidates: RoiCandidate[] = [];
-  const waterSaved = pickWaterSavedCandidate(asExecuted);
-  if (waterSaved) candidates.push(waterSaved);
-
-  const costImpact = pickCostImpactCandidate(asExecuted);
-  if (costImpact) candidates.push(costImpact);
-
-  candidates.push(pickExecutionReliabilityCandidate(asExecuted));
-
-  const laborSaved = pickLaborSavedCandidate(asExecuted);
-  if (laborSaved) candidates.push(laborSaved);
+  const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted);
 
   const out: RoiLedgerRow[] = [];
   let allIdempotent = candidates.length > 0;
 
   for (const candidate of candidates) {
     const upserted = await upsertRoiCandidate(pool, {
-      tenant: {
-        tenant_id: input.tenant_id,
-        project_id: input.project_id,
-        group_id: input.group_id,
-      },
+      tenant: { tenant_id: input.tenant_id, project_id: input.project_id, group_id: input.group_id },
       asExecuted,
       asApplied,
       candidate,
