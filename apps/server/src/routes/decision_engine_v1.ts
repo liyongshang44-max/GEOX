@@ -86,6 +86,7 @@ type RecommendationV1 = {
   expected_effect?: Record<string, number> | null;
   program_id?: string | null;
   recommendation_type: RecommendationTypeV1;
+  action_type?: "IRRIGATE" | "FERTILIZE" | "INSPECT" | "WAIT";
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
   reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" | "stage1_sensing_summary_v1" | "support_path.field_fertility_state_v1" | "support_path.image_recognition" }>;
@@ -94,6 +95,10 @@ type RecommendationV1 = {
   evidence_refs: string[];
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
+  evidence_basis?: {
+    snapshot_id?: string;
+    telemetry_refs?: string[];
+  };
   suggested_action: {
     action_type: string;
     summary: string;
@@ -514,6 +519,15 @@ function buildRecommendationsFromStage1Summary(
         suggested_amount: { amount: irrigationDeficitSkill.recommended_amount, unit: irrigationDeficitSkill.unit },
         created_ts: now,
         confidence,
+        skill_trace: {
+          skill_id: "irrigation_deficit_skill_v1",
+          skill_version: "v1",
+          trace_id: `skill_trace_${now}_${field_id}`,
+          inputs: skillInputs,
+          outputs: irrigationDeficitSkill,
+          confidence: irrigationDeficitSkill.confidence,
+          evidence_refs: irrigationDeficitSkill.evidence_refs,
+        },
       });
       out.push({
         ...irrigationRecommendation,
@@ -896,15 +910,18 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     season_id: payload.season_id ?? null,
     device_id: payload.device_id ?? null,
     recommendation_type: payload.recommendation_type ?? null,
+    action_type: payload.action_type ?? null,
     status: payload.status ?? "proposed",
     reason_codes: Array.isArray(payload.reason_codes) ? payload.reason_codes : [],
     evidence_refs: Array.isArray(payload.evidence_refs) ? payload.evidence_refs : [],
     rule_hit: Array.isArray(payload.rule_hit) ? payload.rule_hit : [],
     confidence: payload.confidence ?? null,
+    evidence_basis: payload.evidence_basis ?? null,
     model_version: payload.model_version ?? null,
     title: payload.title ?? null,
     summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
+    skill_trace: payload.skill_trace ?? null,
     explain: normalizedExplain,
   };
 }
