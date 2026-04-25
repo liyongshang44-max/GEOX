@@ -884,9 +884,69 @@ async function createOperationPlanForApproval(
   tenant: TenantTriple,
   request_id: string,
   requestPayload: any,
+  requestBody: any,
   source: string
 ): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; transition_fact_id: string }> {
   const proposal = requestPayload?.proposal ?? {};
+  const approvalPayload = requestPayload ?? {};
+  const requestBodyPayload = requestBody ?? {};
+  const asNonEmptyString = (v: any): string | null => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return s || null;
+  };
+  const parsedRequiredCapabilities = normalizeCapabilities(
+    approvalPayload?.required_capabilities
+      ?? approvalPayload?.execution_context?.required_capabilities
+      ?? approvalPayload?.device_requirements?.required_capabilities
+      ?? approvalPayload?.operation_amount?.parameters?.required_capabilities
+      ?? approvalPayload?.operation_amount?.parameters?.metadata?.required_capabilities
+      ?? requestBodyPayload?.required_capabilities
+      ?? requestBodyPayload?.execution_context?.required_capabilities
+      ?? []
+  );
+  const operationTypeHint = String(
+    proposal?.action_type
+    ?? proposal?.task_type
+    ?? requestPayload?.operation_type
+    ?? requestPayload?.meta?.operation_type
+    ?? ""
+  ).trim().toUpperCase();
+  const irrigationCapabilityMatched = parsedRequiredCapabilities.includes("device.irrigation.valve.open");
+  const irrigationOperationHint = operationTypeHint.includes("IRRIGAT");
+  let resolvedAdapterType = asNonEmptyString(
+    approvalPayload?.adapter_type
+    ?? approvalPayload?.execution_context?.adapter_type
+    ?? approvalPayload?.device_requirements?.adapter_type
+    ?? approvalPayload?.operation_amount?.parameters?.adapter_type
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.adapter_type
+    ?? requestBodyPayload?.adapter_type
+    ?? requestBodyPayload?.execution_context?.adapter_type
+    ?? null
+  );
+  if (!resolvedAdapterType && (irrigationOperationHint || irrigationCapabilityMatched)) {
+    resolvedAdapterType = "irrigation_simulator";
+  }
+  const resolvedDeviceType = asNonEmptyString(
+    approvalPayload?.device_type
+    ?? approvalPayload?.execution_context?.device_type
+    ?? approvalPayload?.device_requirements?.device_type
+    ?? approvalPayload?.operation_amount?.parameters?.device_type
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_type
+    ?? requestBodyPayload?.device_type
+    ?? requestBodyPayload?.execution_context?.device_type
+    ?? null
+  );
+  const resolvedDeviceId = asNonEmptyString(
+    approvalPayload?.device_id
+    ?? approvalPayload?.execution_context?.device_id
+    ?? approvalPayload?.device_requirements?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_id
+    ?? requestBodyPayload?.device_id
+    ?? requestBodyPayload?.execution_context?.device_id
+    ?? requestBodyPayload?.device_requirements?.device_id
+    ?? null
+  );
   const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -901,9 +961,12 @@ async function createOperationPlanForApproval(
       program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
       field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
       season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
+      device_id: resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
       approval_request_id: request_id,
       action_type: proposal?.action_type ?? null,
-      adapter_type: requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      adapter_type: resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      device_type: resolvedDeviceType,
+      required_capabilities: parsedRequiredCapabilities,
       target: proposal?.target ?? null,
       parameters: proposal?.parameters ?? {},
       status: "CREATED",
@@ -2209,7 +2272,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     let operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
     if (!operationPlan && decision === "APPROVE") {
-      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, "api/v1/approvals");
+      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, body, "api/v1/approvals");
       operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
     }
     const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
