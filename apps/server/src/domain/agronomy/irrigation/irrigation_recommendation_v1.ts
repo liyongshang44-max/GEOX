@@ -13,6 +13,15 @@ export type IrrigationRecommendationInputV1 = {
   suggested_amount?: { amount: number; unit: "L" | "mm" };
   created_ts?: number;
   confidence?: number;
+  skill_trace?: {
+    skill_id: string;
+    skill_version?: string;
+    trace_id?: string;
+    inputs?: Record<string, any>;
+    outputs?: Record<string, any>;
+    confidence?: { level: "HIGH" | "MEDIUM" | "LOW"; basis: "measured" | "estimated" | "assumed"; reasons?: string[] };
+    evidence_refs?: string[];
+  };
 };
 
 export function buildIrrigationRecommendationV1(input: IrrigationRecommendationInputV1) {
@@ -41,6 +50,7 @@ export function buildIrrigationRecommendationV1(input: IrrigationRecommendationI
     rule_id: "irrigation_soil_moisture_threshold_v1",
     expected_effect: { soil_moisture: 0.03 },
     recommendation_type: "irrigation_recommendation_v1" as const,
+    action_type: "IRRIGATE" as const,
     status: "proposed" as const,
     reason_codes: diagnosis.reason_codes,
     reason_details: diagnosis.reason_codes.map((code) => ({
@@ -49,6 +59,10 @@ export function buildIrrigationRecommendationV1(input: IrrigationRecommendationI
       source: "field_sensing_overview_v1" as const,
     })),
     evidence_refs,
+    evidence_basis: {
+      snapshot_id: input.snapshot_id,
+      telemetry_refs: diagnosis.evidence_refs,
+    },
     rule_hit: [
       {
         rule_id: "irrigation_soil_moisture_threshold_v1",
@@ -87,5 +101,6 @@ export function buildIrrigationRecommendationV1(input: IrrigationRecommendationI
     },
     created_ts: createdTs,
     model_version: "decision_engine_v1" as const,
+    skill_trace: input.skill_trace,
   };
 }

@@ -11,6 +11,7 @@ import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agron
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
 import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
 import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
+import { runIrrigationDeficitSkillV1 } from "../domain/agronomy/skills/irrigation/irrigation_deficit_skill_v1.js";
 import {
   assertFormalTriggerInputLayer,
   assertNoForbiddenTriggerFields,
@@ -85,6 +86,7 @@ type RecommendationV1 = {
   expected_effect?: Record<string, number> | null;
   program_id?: string | null;
   recommendation_type: RecommendationTypeV1;
+  action_type?: "IRRIGATE" | "FERTILIZE" | "INSPECT" | "WAIT";
   status: "proposed" | "approved" | "rejected" | "executed";
   reason_codes: string[];
   reason_details?: Array<{ code: string; action_hint: "irrigate_first" | "inspect"; source: "request_constraints" | "field_fertility_state_v1" | "field_sensing_overview_v1" | "stage1_sensing_summary_v1" | "support_path.field_fertility_state_v1" | "support_path.image_recognition" }>;
@@ -93,6 +95,10 @@ type RecommendationV1 = {
   evidence_refs: string[];
   rule_hit: Array<{ rule_id: string; matched: boolean; threshold?: number | null; actual?: number | null }>;
   confidence: number;
+  evidence_basis?: {
+    snapshot_id?: string;
+    telemetry_refs?: string[];
+  };
   suggested_action: {
     action_type: string;
     summary: string;
@@ -105,6 +111,15 @@ type RecommendationV1 = {
   rule_performance_score?: number;
   rule_score?: number;
   rule_confidence?: "low" | "medium" | "high";
+  skill_trace?: {
+    skill_id: string;
+    skill_version?: string;
+    trace_id?: string;
+    inputs?: Record<string, any>;
+    outputs?: Record<string, any>;
+    confidence?: { level: "HIGH" | "MEDIUM" | "LOW"; basis: "measured" | "estimated" | "assumed"; reasons?: string[] };
+    evidence_refs?: string[];
+  };
 };
 
 type HardRuleConstraintInputV1 = {
@@ -381,6 +396,9 @@ function buildRecommendationsFromStage1Summary(
   hardRuleInput?: HardRuleConstraintInputV1 | null,
 ): RecommendationV1[] {
   const field_id = String(body.field_id ?? "").trim();
+  const tenant_id = String(body.tenant_id ?? "").trim();
+  const project_id = String(body.project_id ?? "").trim();
+  const group_id = String(body.group_id ?? "").trim();
   const season_id = String(body.season_id ?? "").trim();
   const device_id = String(body.device_id ?? "").trim();
   const crop_code = String(body.crop_code ?? "").trim();
@@ -456,22 +474,39 @@ function buildRecommendationsFromStage1Summary(
     const normalizedSoilMoisture = Number.isFinite(soilMoisture)
       ? (soilMoisture > 1 ? soilMoisture / 100 : soilMoisture)
       : null;
-    const diagnosis = diagnoseIrrigationV1({
-      soil_moisture: normalizedSoilMoisture,
-      soil_moisture_threshold: 0.22,
+    const skillInputs = {
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      soil_moisture: normalizedSoilMoisture ?? Number.NaN,
+      crop_stage: resolvedCropStage,
       rain_forecast_mm: 0,
-      crop_stage: "vegetative",
-      observed_at_ts_ms: now,
       evidence_refs: [
         "stage1_sensing_summary_v1:irrigation_effectiveness",
         "stage1_sensing_summary_v1:leak_risk",
         Number.isFinite(soilMoisture) ? "field_sensing_overview_v1:soil_moisture" : "",
       ],
+    };
+    const irrigationDeficitSkill = runIrrigationDeficitSkillV1(skillInputs);
+    const diagnosis = diagnoseIrrigationV1({
+      soil_moisture: normalizedSoilMoisture,
+      soil_moisture_threshold: 0.22,
+      rain_forecast_mm: 0,
+      crop_stage: resolvedCropStage,
+      observed_at_ts_ms: now,
+      evidence_refs: irrigationDeficitSkill.evidence_refs,
     });
-    if (diagnosis.water_deficit) {
+    if (irrigationDeficitSkill.deficit_detected && diagnosis.water_deficit) {
       const moistureTerm = normalizedSoilMoisture == null ? 0.4 : clamp01((diagnosis.threshold - normalizedSoilMoisture) / diagnosis.threshold);
       const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
-      const confidence = Number((0.55 + 0.25 * moistureTerm + 0.1 * heatTerm + 0.1 * imageConfidence).toFixed(3));
+      const skillConfidenceBonus =
+        irrigationDeficitSkill.confidence.level === "HIGH"
+          ? 0.08
+          : irrigationDeficitSkill.confidence.level === "MEDIUM"
+            ? 0.04
+            : 0;
+      const confidence = Number((0.5 + 0.23 * moistureTerm + 0.09 * heatTerm + 0.1 * imageConfidence + skillConfidenceBonus).toFixed(3));
       const irrigationRecommendation = buildIrrigationRecommendationV1({
         recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
         snapshot_id: snapshotId,
@@ -481,9 +516,18 @@ function buildRecommendationsFromStage1Summary(
         crop_code,
         crop_stage: resolvedCropStage,
         diagnosis,
-        suggested_amount: { amount: 25, unit: "L" },
+        suggested_amount: { amount: irrigationDeficitSkill.recommended_amount, unit: irrigationDeficitSkill.unit },
         created_ts: now,
         confidence,
+        skill_trace: {
+          skill_id: "irrigation_deficit_skill_v1",
+          skill_version: "v1",
+          trace_id: `skill_trace_${now}_${field_id}`,
+          inputs: skillInputs,
+          outputs: irrigationDeficitSkill,
+          confidence: irrigationDeficitSkill.confidence,
+          evidence_refs: irrigationDeficitSkill.evidence_refs,
+        },
       });
       out.push({
         ...irrigationRecommendation,
@@ -857,15 +901,18 @@ function normalizeRecommendationOutput(row: any, chain?: { approval_request_id: 
     season_id: payload.season_id ?? null,
     device_id: payload.device_id ?? null,
     recommendation_type: payload.recommendation_type ?? null,
+    action_type: payload.action_type ?? null,
     status: payload.status ?? "proposed",
     reason_codes: Array.isArray(payload.reason_codes) ? payload.reason_codes : [],
     evidence_refs: Array.isArray(payload.evidence_refs) ? payload.evidence_refs : [],
     rule_hit: Array.isArray(payload.rule_hit) ? payload.rule_hit : [],
     confidence: payload.confidence ?? null,
+    evidence_basis: payload.evidence_basis ?? null,
     model_version: payload.model_version ?? null,
     title: payload.title ?? null,
     summary: payload.summary ?? null,
     suggested_action: payload.suggested_action ?? null,
+    skill_trace: payload.skill_trace ?? null,
     explain: normalizedExplain,
   };
 }
