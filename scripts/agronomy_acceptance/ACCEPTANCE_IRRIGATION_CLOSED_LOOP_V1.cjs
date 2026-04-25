@@ -181,6 +181,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const asExecutedJson = requireOk(asExecutedResp, 'create as-executed and as-applied');
   const as_executed_id = String(asExecutedJson?.as_executed?.as_executed_id ?? '').trim();
   assert.ok(as_executed_id, 'as_executed_id missing');
+  const as_executed_prescription_id = String(asExecutedJson?.as_executed?.prescription_id ?? '').trim();
+  assert.equal(as_executed_prescription_id, prescription_id, 'as_executed.prescription_id must match prescription_id');
+  const as_applied_as_executed_id = String(asExecutedJson?.as_applied?.as_executed_id ?? '').trim();
+  assert.equal(as_applied_as_executed_id, as_executed_id, 'as_applied.as_executed_id must match as_executed_id');
 
   // Simulate post-irrigation moisture measurement.
   await pool.query(
@@ -228,6 +232,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     task_created: true,
     receipt_created: true,
     as_executed_created: Boolean(asExecutedJson?.as_executed?.as_executed_id),
+    as_executed_prescription_linked: String(asExecutedJson?.as_executed?.prescription_id ?? '') === prescription_id,
     as_applied_created: Boolean(asExecutedJson?.as_applied?.as_applied_id && String(asExecutedJson?.as_applied?.as_executed_id ?? '') === as_executed_id),
     post_soil_moisture_written: true,
     post_moisture_increase_verified: Boolean(postMoistureIncreaseVerified),
