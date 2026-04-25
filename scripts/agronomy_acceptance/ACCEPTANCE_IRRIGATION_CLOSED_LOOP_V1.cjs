@@ -16,7 +16,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const season_id = `season_irrigation_loop_${suffix}`;
   const device_id = `device_irrigation_loop_${suffix}`;
   const pre_soil_moisture = 0.18;
-  const post_soil_moisture = 0.23;
+  const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
 
   // Seed formal Stage1 trigger states and low moisture signal.
@@ -69,6 +69,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const recommendation = genJson.recommendations?.[0] ?? null;
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   assert.ok(recommendation_id, 'recommendation_id missing');
+  const recommendationSkillTrace = recommendation?.skill_trace ?? null;
 
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
@@ -79,6 +80,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription = prescriptionJson.prescription;
   const prescription_id = String(prescription?.prescription_id ?? '').trim();
   assert.ok(prescription_id, 'prescription_id missing');
+  const prescriptionSkillTrace = prescription?.operation_amount?.parameters?.metadata?.skill_trace
+    ?? prescription?.operation_amount?.parameters?.preserved_payload?.skill_trace
+    ?? null;
 
   const submitApproval = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
     method: 'POST',
@@ -208,7 +212,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const hasYieldFabrication = ledgers.some((x) => String(x?.roi_type ?? '').toUpperCase().includes('YIELD'));
 
   const postDelta = post_soil_moisture - pre_soil_moisture;
-  const postMoistureIncreaseVerified = post_soil_moisture > pre_soil_moisture || postDelta >= 0.03;
+  const postMoistureIncreaseVerified = post_soil_moisture > pre_soil_moisture && postDelta >= 0.03;
   const acceptanceOrEffectPassed = Boolean(postMoistureIncreaseVerified);
 
   const noDirectRecommendationToTaskQ = await pool.query(
@@ -225,9 +229,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const checks = {
     pre_soil_moisture_written: true,
+    irrigation_skill_invoked: Boolean(recommendationSkillTrace),
     water_deficit_diagnosed: Boolean(recommendation?.rule_id === 'irrigation_soil_moisture_threshold_v1'),
     irrigation_recommendation_created: Boolean(recommendation_id && recommendation?.recommendation_type === 'irrigation_recommendation_v1'),
+    recommendation_has_skill_trace: Boolean(recommendationSkillTrace),
+    skill_trace_skill_id_is_irrigation_deficit: String(recommendationSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1',
     prescription_created: Boolean(prescription_id && prescription?.operation_type === 'IRRIGATION' && Number(prescription?.operation_amount?.amount) > 0 && Boolean(prescription?.operation_amount?.unit)),
+    prescription_inherits_skill_trace: Boolean(prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'),
     approval_submitted_or_approved: Boolean(approval_request_id),
     task_created: true,
     receipt_created: true,
