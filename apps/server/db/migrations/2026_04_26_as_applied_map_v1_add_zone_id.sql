@@ -1,0 +1,2 @@
+ALTER TABLE as_applied_map_v1
+  ADD COLUMN IF NOT EXISTS zone_id TEXT NULL;

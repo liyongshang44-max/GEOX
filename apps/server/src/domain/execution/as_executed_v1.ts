@@ -62,6 +62,7 @@ export type AsAppliedRow = {
   project_id: string;
   group_id: string;
   field_id: string | null;
+  zone_id: string | null;
   task_id: string;
   receipt_id: string;
   prescription_id: string | null;
@@ -164,6 +165,7 @@ function mapAsAppliedRow(row: any): AsAppliedRow {
     project_id: String(row.project_id ?? ""),
     group_id: String(row.group_id ?? ""),
     field_id: row.field_id == null ? null : String(row.field_id),
+    zone_id: row.zone_id == null ? null : String(row.zone_id),
     task_id: String(row.task_id ?? ""),
     receipt_id: String(row.receipt_id ?? ""),
     prescription_id: row.prescription_id == null ? null : String(row.prescription_id),
@@ -477,6 +479,11 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
     project_id: params.as_executed.project_id,
     group_id: params.as_executed.group_id,
     field_id: params.as_executed.field_id,
+    zone_id:
+      getByPath(payload, ["zone_id"]) ??
+      getByPath(payload, ["execution_coverage", "zone_id"]) ??
+      getByPath(planned, ["zone_id"]) ??
+      null,
     task_id: params.as_executed.task_id,
     receipt_id: params.as_executed.receipt_id,
     prescription_id: params.as_executed.prescription_id ?? null,
@@ -667,6 +674,7 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
         project_id,
         group_id,
         field_id,
+        zone_id,
         task_id,
         receipt_id,
         prescription_id,
@@ -676,7 +684,7 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
         evidence_refs,
         log_refs
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb,$15::jsonb
       )
       ON CONFLICT (tenant_id, project_id, group_id, task_id, receipt_id) DO NOTHING
       RETURNING *`,
@@ -687,6 +695,7 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
         payload.project_id,
         payload.group_id,
         payload.field_id,
+        payload.zone_id,
         payload.task_id,
         payload.receipt_id,
         payload.prescription_id,
@@ -770,6 +779,7 @@ export async function listAsExecutedByPrescription(pool: Pool, input: TenantTrip
       am.as_applied_id,
       am.as_executed_id AS am_as_executed_id,
       am.field_id AS am_field_id,
+      am.zone_id AS am_zone_id,
       am.geometry,
       am.coverage,
       am.application,
@@ -802,6 +812,7 @@ export async function listAsExecutedByPrescription(pool: Pool, input: TenantTrip
           project_id: row.project_id,
           group_id: row.group_id,
           field_id: row.am_field_id,
+          zone_id: row.am_zone_id,
           task_id: row.task_id,
           receipt_id: row.receipt_id,
           prescription_id: row.prescription_id,
