@@ -158,6 +158,23 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   });
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
   const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
+  const operationPlanFactQ = await pool.query(
+    `SELECT record_json
+       FROM facts
+      WHERE record_json::jsonb#>>'{payload,operation_plan_id}' = $1
+         OR record_json::jsonb#>>'{payload,plan_id}' = $1
+      ORDER BY occurred_at DESC
+      LIMIT 1`,
+    [operation_plan_id]
+  );
+  const operationPlanPayload = operationPlanFactQ.rows?.[0]?.record_json?.payload ?? {};
+  assert.equal(operationPlanPayload.adapter_type, 'irrigation_simulator', 'operation_plan.payload.adapter_type must be irrigation_simulator');
+  assert.equal(operationPlanPayload.device_type, 'IRRIGATION_CONTROLLER', 'operation_plan.payload.device_type must be IRRIGATION_CONTROLLER');
+  assert.ok(
+    Array.isArray(operationPlanPayload.required_capabilities)
+      && operationPlanPayload.required_capabilities.includes('device.irrigation.valve.open'),
+    'operation_plan.payload.required_capabilities must include device.irrigation.valve.open'
+  );
 
   // Step6-D: create action task through AO-ACT API (no direct facts insert).
   const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
