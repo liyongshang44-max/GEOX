@@ -121,10 +121,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
         keys: [
           { name: 'amount', type: 'number', min: 1, max: 1000 },
           { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
+          { name: 'duration_min', type: 'number', min: 1, max: 720 },
           { name: 'prescription_id', type: 'enum', enum: [prescription_id] },
         ],
       },
-      parameters: { amount: 20, coverage_percent: 88, prescription_id },
+      parameters: { amount: 20, coverage_percent: 88, duration_min: 20, prescription_id },
       constraints: {},
       meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
     },
@@ -147,7 +148,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
       execution_coverage: { kind: 'field', ref: field_id },
       resource_usage: { fuel_l: null, electric_kwh: null, water_l: 20, chemical_ml: null },
-      observed_parameters: { amount: 20, coverage_percent: 88, prescription_id },
+      observed_parameters: { amount: 20, coverage_percent: 88, duration_min: 20, prescription_id },
       evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }, { kind: 'sensor', ref: `sensor_${suffix}` }],
       logs_refs: [{ kind: 'water_delivery_receipt', ref: `water_${suffix}` }, { kind: 'dispatch_ack', ref: `dispatch_${suffix}` }, { kind: 'valve_open_confirmation', ref: `valve_${suffix}` }],
       status: 'executed',
@@ -174,6 +175,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.equal(Number(receiptPayload?.resource_usage?.water_l ?? NaN), 20, 'receipt.resource_usage.water_l must be 20');
   assert.equal(Number(receiptPayload?.observed_parameters?.amount ?? NaN), 20, 'receipt.observed_parameters.amount must be 20');
   assert.equal(Number(receiptPayload?.observed_parameters?.coverage_percent ?? NaN), 88, 'receipt.observed_parameters.coverage_percent must be 88');
+  assert.equal(Number(receiptPayload?.observed_parameters?.duration_min ?? NaN), 20, 'receipt.observed_parameters.duration_min must be 20');
   assert.equal(String(receiptPayload?.observed_parameters?.prescription_id ?? ''), prescription_id, 'receipt.observed_parameters.prescription_id mismatch');
   assert.ok(Array.isArray(receiptPayload?.evidence_refs) && receiptPayload.evidence_refs.length > 0, 'receipt.evidence_refs missing');
 
@@ -199,6 +201,26 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     [tenant_id, project_id, group_id, field_id, device_id, Date.now(), post_soil_moisture]
   );
 
+  // Step6-F: call system acceptance path to create acceptance_result_v1 verdict.
+  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id, act_task_id: task_id },
+  });
+  const acceptanceJson = requireOk(acceptanceResp, 'evaluate acceptance verdict');
+  const acceptance_fact_id = String(acceptanceJson.fact_id ?? '').trim();
+  const acceptance_verdict = String(acceptanceJson.verdict ?? '').trim().toUpperCase();
+  assert.ok(acceptance_fact_id, 'acceptance fact_id missing');
+  const acceptanceFactQ = await pool.query(
+    `SELECT record_json
+       FROM facts
+      WHERE fact_id = $1
+      LIMIT 1`,
+    [acceptance_fact_id]
+  );
+  const acceptancePayload = acceptanceFactQ.rows?.[0]?.record_json?.payload ?? {};
+  assert.equal(String(acceptancePayload?.verdict ?? '').toUpperCase(), acceptance_verdict, 'acceptance verdict persistence mismatch');
+
   const roiResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
@@ -213,7 +235,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const postDelta = post_soil_moisture - pre_soil_moisture;
   const postMoistureIncreaseVerified = post_soil_moisture > pre_soil_moisture && postDelta >= 0.03;
-  const acceptanceOrEffectPassed = Boolean(postMoistureIncreaseVerified);
+  const acceptanceOrEffectPassed = Boolean(postMoistureIncreaseVerified && acceptance_verdict === 'PASS');
 
   const noDirectRecommendationToTaskQ = await pool.query(
     `SELECT COUNT(*)::int AS c
