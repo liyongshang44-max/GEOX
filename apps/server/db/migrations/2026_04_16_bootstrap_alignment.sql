@@ -29,10 +29,21 @@ ALTER TABLE markers
 ALTER TABLE markers
   ADD COLUMN IF NOT EXISTS occurred_at timestamptz;
 
-UPDATE markers
-SET occurred_at = to_timestamp(ts_ms / 1000.0)
-WHERE occurred_at IS NULL
-  AND ts_ms IS NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'markers'
+      AND column_name = 'ts_ms'
+  ) THEN
+    UPDATE markers
+    SET occurred_at = to_timestamp(ts_ms / 1000.0)
+    WHERE occurred_at IS NULL
+      AND ts_ms IS NOT NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_markers_group_occurred ON markers (group_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_markers_sensor_occurred ON markers (sensor_id, occurred_at DESC);
