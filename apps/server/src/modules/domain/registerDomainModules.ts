@@ -13,6 +13,7 @@ import { registerReportingModule } from "../reporting/registerReportingModule.js
 import { registerCommercialModule } from "../commercial/registerCommercialModule.js";
 import { registerAgronomyModule } from "../agronomy/registerAgronomyModule.js";
 import { registerPrescriptionModule } from "../prescription/registerPrescriptionModule.js";
+import { registerAsExecutedModule } from "../as_executed/registerAsExecutedModule.js";
 
 type RegisterDomainModulesOptions = {
   mediaDir: string;
@@ -31,4 +32,5 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerCommercialModule(app, pool);
   registerAgronomyModule(app, pool, { mediaDir: options.mediaDir });
   registerPrescriptionModule(app, pool);
+  registerAsExecutedModule(app, pool);
 }
