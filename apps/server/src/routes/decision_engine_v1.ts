@@ -9,6 +9,8 @@ import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine.js";
 import { ensureRulePerformanceTable, listRulePerformance } from "../domain/agronomy/effect_engine.js";
 import { evaluateHardRuleHintsV1, getHardRuleRecommendationBlueprintV1 } from "../domain/decision_engine_v1.js";
+import { diagnoseIrrigationV1 } from "../domain/agronomy/irrigation/irrigation_diagnosis_v1.js";
+import { buildIrrigationRecommendationV1 } from "../domain/agronomy/irrigation/irrigation_recommendation_v1.js";
 import {
   assertFormalTriggerInputLayer,
   assertNoForbiddenTriggerFields,
@@ -24,7 +26,6 @@ import {
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 import {
   IRRIGATION_CONTROL_PLANE_ACTION,
-  IRRIGATION_RECOMMENDATION_ACTION,
   mapRecommendationActionToControlPlane,
   toCustomerFacingActionLabel
 } from "../domain/controlplane/irrigation_action_mapping_v1.js";
@@ -452,56 +453,44 @@ function buildRecommendationsFromStage1Summary(
   const formalLeakRisk = String(stage1Summary.leak_risk ?? "").trim().toLowerCase();
   const irrigationNeed = formalIrrigationEffectiveness === "low" || formalLeakRisk === "high";
   if (irrigationNeed) {
-    const moistureTerm = Number.isFinite(soilMoisture) ? clamp01((45 - soilMoisture) / 45) : 0.2;
-    const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
-    const confidence = Number((0.45 + 0.3 * moistureTerm + 0.15 * heatTerm + 0.1 * imageConfidence).toFixed(3));
-    const durationMin = Number.isFinite(soilMoisture) && soilMoisture < 25 ? 35 : 20;
-    const irrigationRuleId = formalLeakRisk === "high"
-      ? "irrigation_rule_leak_risk_v1"
-      : "irrigation_rule_irrigation_effectiveness_v1";
-    const reasonCode = formalLeakRisk === "high" ? "leak_risk_high" : "irrigation_effectiveness_low";
-    out.push({
-      recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
-      snapshot_id: snapshotId,
-      field_id,
-      season_id,
-      device_id,
-      crop_code,
-      crop_stage: resolvedCropStage,
-      rule_id: irrigationRuleId,
-      expected_effect: { soil_moisture: durationMin >= 30 ? 10 : 6 },
-      program_id,
-      recommendation_type: "irrigation_recommendation_v1",
-      status: "proposed",
-      reason_codes: [reasonCode],
-      reason_details: [{ code: reasonCode, action_hint: "irrigate_first", source: "stage1_sensing_summary_v1" }],
-      explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
-      evidence_refs: ["field_sensing_overview_v1:soil_moisture", "field_sensing_overview_v1:canopy_temp", "image:stress_score"],
-      rule_hit: [
-        { rule_id: "irrigation_rule_irrigation_effectiveness_v1", matched: formalIrrigationEffectiveness === "low", threshold: 1, actual: formalIrrigationEffectiveness === "low" ? 1 : 0 },
-        { rule_id: "irrigation_rule_leak_risk_v1", matched: formalLeakRisk === "high", threshold: 1, actual: formalLeakRisk === "high" ? 1 : 0 }
+    const normalizedSoilMoisture = Number.isFinite(soilMoisture)
+      ? (soilMoisture > 1 ? soilMoisture / 100 : soilMoisture)
+      : null;
+    const diagnosis = diagnoseIrrigationV1({
+      soil_moisture: normalizedSoilMoisture,
+      soil_moisture_threshold: 0.22,
+      rain_forecast_mm: 0,
+      crop_stage: "vegetative",
+      observed_at_ts_ms: now,
+      evidence_refs: [
+        "stage1_sensing_summary_v1:irrigation_effectiveness",
+        "stage1_sensing_summary_v1:leak_risk",
+        Number.isFinite(soilMoisture) ? "field_sensing_overview_v1:soil_moisture" : "",
       ],
-      confidence,
-      suggested_action: {
-        action_type: IRRIGATION_RECOMMENDATION_ACTION,
-        summary: `${crop_code}土壤湿度偏低（${Number.isFinite(soilMoisture) ? `${soilMoisture}%` : "未知"}），建议执行灌溉。`,
-        parameters: {
-          crop_code,
-          duration_min: durationMin,
-          water_l_per_min: 18,
-          trigger: {
-            formal_source: "stage1_sensing_summary_v1",
-            support_path: "field_sensing_overview_v1",
-            soil_moisture_pct: Number.isFinite(soilMoisture) ? soilMoisture : null,
-            canopy_temp_c: Number.isFinite(canopyTemp) ? canopyTemp : null,
-            image_stress_score: stressScore,
-            stage1_support_signals: supportSignals,
-          }
-        }
-      },
-      created_ts: now,
-      model_version: "decision_engine_v1"
     });
+    if (diagnosis.water_deficit) {
+      const moistureTerm = normalizedSoilMoisture == null ? 0.4 : clamp01((diagnosis.threshold - normalizedSoilMoisture) / diagnosis.threshold);
+      const heatTerm = Number.isFinite(canopyTemp) ? clamp01((canopyTemp - 28) / 12) : 0.2;
+      const confidence = Number((0.55 + 0.25 * moistureTerm + 0.1 * heatTerm + 0.1 * imageConfidence).toFixed(3));
+      const irrigationRecommendation = buildIrrigationRecommendationV1({
+        recommendation_id: `rec_${randomUUID().replace(/-/g, "")}`,
+        snapshot_id: snapshotId,
+        field_id,
+        season_id,
+        device_id,
+        crop_code,
+        crop_stage: resolvedCropStage,
+        diagnosis,
+        suggested_amount: { amount: 25, unit: "L" },
+        created_ts: now,
+        confidence,
+      });
+      out.push({
+        ...irrigationRecommendation,
+        program_id,
+        explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
+      });
+    }
   }
 
   const healthRisk = Math.max(stressScore, diseaseScore, pestRisk);
