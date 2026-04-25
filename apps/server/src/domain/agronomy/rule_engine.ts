@@ -1,6 +1,7 @@
 import type { AgronomyRecommendationV2, AgronomyRuleInput } from "@geox/contracts";
 import type { AgronomyContext } from "./types.js";
 import { cropSkills, ruleSkills } from "./skills/index.js";
+import { buildSkillTraceV1 } from "./skill_trace_v1.js";
 import type { CropStage } from "./skills/types.js";
 
 function normalizeSkillStage(stage: string): CropStage {
@@ -108,6 +109,28 @@ function mapRuleRecommendationToV2(params: {
       snapshot_id: String((params.input.context as Record<string, unknown> | undefined)?.snapshot_id ?? ""),
       telemetry_refs: [],
     },
+    skill_trace: buildSkillTraceV1({
+      skill_id: params.skillId,
+      skill_version: String(params.recommendation.version ?? "v1").toLowerCase(),
+      inputs: {
+        crop_code: params.input.crop_code,
+        crop_stage: params.input.crop_stage,
+        telemetry: params.input.telemetry,
+      },
+      outputs: {
+        recommendation_id: `pending:${params.recommendation.rule_id}`,
+        action_type: params.recommendation.action_type,
+        reason_codes: params.recommendation.reason_codes,
+      },
+      confidence: {
+        level: "MEDIUM",
+        basis: "estimated",
+        reasons: ["rule_skill_match"],
+      },
+      evidence_refs: Array.isArray((params.input.context as any)?.telemetry_refs)
+        ? (params.input.context as any).telemetry_refs.map((x: any) => String(x))
+        : [],
+    }),
   };
   return recommendation;
 }

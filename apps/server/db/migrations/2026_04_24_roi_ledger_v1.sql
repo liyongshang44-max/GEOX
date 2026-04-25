@@ -45,6 +45,3 @@ CREATE INDEX IF NOT EXISTS idx_roi_ledger_v1_field_id
 
 CREATE INDEX IF NOT EXISTS idx_roi_ledger_v1_roi_type
   ON roi_ledger_v1(roi_type);
-
-CREATE UNIQUE INDEX IF NOT EXISTS ux_roi_ledger_v1_as_executed_type
-  ON roi_ledger_v1(tenant_id, project_id, group_id, as_executed_id, roi_type);
