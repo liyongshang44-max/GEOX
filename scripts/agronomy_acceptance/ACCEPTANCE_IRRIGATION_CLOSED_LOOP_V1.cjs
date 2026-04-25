@@ -178,7 +178,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.ok(operation_plan_id, `operation_plan_id missing from approve response: ${JSON.stringify(decideApprovalJson)}`);
   assert.ok(operation_plan_id && !operation_plan_id.startsWith('op_'), 'approve response must return real operation_plan_id');
   const operationPlanFactQ = await pool.query(
-    `SELECT record_json
+    `SELECT record_json::jsonb AS record_json
        FROM facts
       WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
         AND (
