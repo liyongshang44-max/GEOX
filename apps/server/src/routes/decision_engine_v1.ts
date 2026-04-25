@@ -532,6 +532,15 @@ function buildRecommendationsFromStage1Summary(
       out.push({
         ...irrigationRecommendation,
         program_id,
+        skill_trace: {
+          skill_id: "irrigation_deficit_skill_v1",
+          skill_version: "v1",
+          trace_id: `skill_trace_${now}_${field_id}`,
+          inputs: skillInputs,
+          outputs: irrigationDeficitSkill,
+          confidence: irrigationDeficitSkill.confidence,
+          evidence_refs: irrigationDeficitSkill.evidence_refs,
+        },
         explanation_codes: (supportOverview?.explanation_codes_json ?? []).map((code) => ({ code, source: "field_sensing_overview_v1" })),
       });
     }

@@ -262,6 +262,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     task_created: true,
     receipt_created: true,
     as_executed_created: Boolean(asExecutedJson?.as_executed?.as_executed_id),
+    as_executed_prescription_linked: String(asExecutedJson?.as_executed?.prescription_id ?? '') === prescription_id,
     as_applied_created: Boolean(asExecutedJson?.as_applied?.as_applied_id && String(asExecutedJson?.as_applied?.as_executed_id ?? '') === as_executed_id),
     post_soil_moisture_written: true,
     post_moisture_increase_verified: Boolean(postMoistureIncreaseVerified),
