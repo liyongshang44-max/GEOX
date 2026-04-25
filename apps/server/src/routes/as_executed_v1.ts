@@ -6,6 +6,7 @@ import {
   getAsExecutedById,
   listAsExecutedByReceipt,
   listAsExecutedByTask,
+  listAsExecutedByPrescription,
 } from "../domain/execution/as_executed_v1.js";
 
 type TenantTriple = {
@@ -64,6 +65,7 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
       return reply.send({
         ok: true,
         as_executed: result.as_executed,
+        as_applied: result.as_applied,
         idempotent: result.idempotent,
       });
     } catch (error) {
@@ -124,4 +126,20 @@ export function registerAsExecutedV1Routes(app: FastifyInstance, pool: Pool): vo
     const rows = await listAsExecutedByReceipt(pool, { ...tenant, receipt_id });
     return reply.send({ ok: true, as_executed: rows });
   });
+
+  app.get("/api/v1/as-executed/by-prescription/:prescription_id", async (req, reply) => {
+    const query: any = req.query ?? {};
+    const params: any = req.params ?? {};
+    const tenant = tenantFromQuery(query);
+    if (!requireTenantScope(reply, tenant)) return;
+
+    const prescription_id = String(params?.prescription_id ?? "").trim();
+    if (!prescription_id) {
+      return reply.status(400).send({ ok: false, error: "MISSING_PRESCRIPTION_ID" });
+    }
+
+    const rows = await listAsExecutedByPrescription(pool, { ...tenant, prescription_id });
+    return reply.send({ ok: true, records: rows });
+  });
+
 }
