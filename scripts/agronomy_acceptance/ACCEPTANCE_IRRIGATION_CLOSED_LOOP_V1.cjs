@@ -218,7 +218,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       device_id,
       issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
       action_type: 'IRRIGATE',
-      target: { kind: 'device', ref: device_id },
+      target: { kind: 'field', ref: field_id },
       time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
       parameter_schema: {
         keys: [
