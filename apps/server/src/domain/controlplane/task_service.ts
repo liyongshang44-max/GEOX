@@ -2282,6 +2282,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
+      const planPayload = operationPlan?.record_json?.payload ?? {};
+      const approvalDeviceId =
+        String(planPayload?.device_id ?? "").trim()
+        || String(proposal?.target?.id ?? "").trim()
+        || String(proposal?.meta?.device_id ?? "").trim()
+        || (typeof proposal?.target === "string" ? String(proposal.target).trim() : "");
       const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
         ? String(operationPlan.record_json.payload.adapter_type)
         : String(proposal?.meta?.adapter_type ?? "");
@@ -2302,7 +2308,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? proposal?.target ?? "" }
+        field_id: planPayload?.field_id ?? requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? null,
+        meta: { device_id: approvalDeviceId }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
       const compatibilityCheck = checkCapabilityCompatibilityMatrix({
@@ -2332,7 +2339,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           error: compatibilityCheck.error
         });
       }
-      const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? "" } });
+      const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: approvalDeviceId } });
       if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
       await insertFact(pool, "api/v1/approvals", {
         type: "approval_request_v1",
@@ -2371,9 +2378,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           capability: parsedCapability.capability,
           capability_parameters: parsedCapability.parameters,
           evidence_requirements: parsedCapability.evidence_requirements,
+          device_id: approvalDeviceId || null,
           adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
             ? String(operationPlan.record_json.payload.adapter_type)
-            : (proposal?.meta?.adapter_type ?? null)
+            : (proposal?.meta?.adapter_type ?? null),
+          device_type: planPayload?.device_type ?? null,
+          required_capabilities: Array.isArray(planPayload?.required_capabilities) ? planPayload.required_capabilities : []
         }
       };
       console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({
