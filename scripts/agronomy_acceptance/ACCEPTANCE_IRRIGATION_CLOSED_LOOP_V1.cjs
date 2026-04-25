@@ -16,7 +16,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const season_id = `season_irrigation_loop_${suffix}`;
   const device_id = `device_irrigation_loop_${suffix}`;
   const pre_soil_moisture = 0.18;
-  const post_soil_moisture = 0.23;
+  const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
 
   // Seed formal Stage1 trigger states and low moisture signal.
@@ -69,6 +69,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const recommendation = genJson.recommendations?.[0] ?? null;
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   assert.ok(recommendation_id, 'recommendation_id missing');
+  const recommendationSkillTrace = recommendation?.skill_trace ?? null;
 
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
@@ -79,6 +80,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription = prescriptionJson.prescription;
   const prescription_id = String(prescription?.prescription_id ?? '').trim();
   assert.ok(prescription_id, 'prescription_id missing');
+  const prescriptionSkillTrace = prescription?.operation_amount?.parameters?.metadata?.skill_trace
+    ?? prescription?.operation_amount?.parameters?.preserved_payload?.skill_trace
+    ?? null;
 
   const submitApproval = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
     method: 'POST',
@@ -97,71 +101,81 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
   const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
 
-  // Create task fact only after prescription+approval path.
-  const task_id = `act_irrigation_loop_${suffix}`;
-  const task_fact_id = `fact_task_irrigation_loop_${suffix}`;
-  await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-     VALUES ($1, NOW(), $2, $3::jsonb)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [
-      task_fact_id,
-      'scripts/agronomy_acceptance/irrigation_closed_loop_v1',
-      {
-        type: 'ao_act_task_v0',
-        payload: {
-          tenant_id,
-          project_id,
-          group_id,
-          operation_plan_id,
-          approval_request_id,
-          field_id,
-          season_id,
-          act_task_id: task_id,
-          issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
-          action_type: 'IRRIGATION',
-          task_type: 'IRRIGATION',
-          target: { kind: 'field', ref: field_id },
-          time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
-          parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1, max: 1000 }, { name: 'unit', type: 'enum', enum: ['L', 'mm'] }] },
-          parameters: { amount: 25, unit: 'L' },
-          constraints: {},
-          meta: { prescription_id, recommendation_id },
-        },
+  // Step6-D: create action task through AO-ACT API (no direct facts insert).
+  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      approval_request_id,
+      field_id,
+      season_id,
+      issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
+      action_type: 'IRRIGATE',
+      target: { kind: 'field', ref: field_id },
+      time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
+      parameter_schema: {
+        keys: [
+          { name: 'amount', type: 'number', min: 1, max: 1000 },
+          { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
+          { name: 'prescription_id', type: 'enum', enum: [prescription_id] },
+        ],
       },
-    ]
-  );
+      parameters: { amount: 20, coverage_percent: 88, prescription_id },
+      constraints: {},
+      meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
+    },
+  });
+  const taskJson = requireOk(taskResp, 'create action task');
+  const task_id = String(taskJson.act_task_id ?? '').trim();
+  assert.ok(task_id, 'act_task_id missing');
 
-  const receipt_fact_id = `fact_receipt_irrigation_loop_${suffix}`;
-  const payload_receipt_id = `receipt_irrigation_loop_${suffix}`;
-  await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-     VALUES ($1, NOW(), $2, $3::jsonb)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [
-      receipt_fact_id,
-      'scripts/agronomy_acceptance/irrigation_closed_loop_v1',
-      {
-        type: 'ao_act_receipt_v1',
-        payload: {
-          tenant_id,
-          project_id,
-          group_id,
-          act_task_id: task_id,
-          receipt_id: payload_receipt_id,
-          recommendation_id,
-          status: 'executed',
-          execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
-          execution_coverage: { kind: 'field', ref: field_id },
-          resource_usage: { water_l: 25 },
-          observed_parameters: { amount: 25, coverage_percent: 100, prescription_id },
-          parameters: { prescription_id },
-          evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }],
-          logs_refs: [{ kind: 'device_log', ref: `log_${suffix}` }],
-        },
+  // Step6-D: submit receipt through AO-ACT API with required payload.
+  const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      act_task_id: task_id,
+      executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+      execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+      execution_coverage: { kind: 'field', ref: field_id },
+      resource_usage: { fuel_l: null, electric_kwh: null, water_l: 20, chemical_ml: null },
+      observed_parameters: { amount: 20, coverage_percent: 88, prescription_id },
+      evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }, { kind: 'sensor', ref: `sensor_${suffix}` }],
+      logs_refs: [{ kind: 'water_delivery_receipt', ref: `water_${suffix}` }, { kind: 'dispatch_ack', ref: `dispatch_${suffix}` }, { kind: 'valve_open_confirmation', ref: `valve_${suffix}` }],
+      status: 'executed',
+      constraint_check: { violated: false, violations: [] },
+      meta: {
+        command_id: task_id,
+        idempotency_key: `acceptance_receipt_${suffix}`,
+        recommendation_id,
+        prescription_id,
       },
-    ]
+    },
+  });
+  const receiptJson = requireOk(receiptResp, 'submit action receipt');
+  const receipt_fact_id = String(receiptJson.fact_id ?? '').trim();
+  assert.ok(receipt_fact_id, 'receipt_fact_id missing');
+  const receiptFactQ = await pool.query(
+    `SELECT record_json
+       FROM facts
+      WHERE fact_id = $1
+      LIMIT 1`,
+    [receipt_fact_id]
   );
+  const receiptPayload = receiptFactQ.rows?.[0]?.record_json?.payload ?? {};
+  assert.equal(Number(receiptPayload?.resource_usage?.water_l ?? NaN), 20, 'receipt.resource_usage.water_l must be 20');
+  assert.equal(Number(receiptPayload?.observed_parameters?.amount ?? NaN), 20, 'receipt.observed_parameters.amount must be 20');
+  assert.equal(Number(receiptPayload?.observed_parameters?.coverage_percent ?? NaN), 88, 'receipt.observed_parameters.coverage_percent must be 88');
+  assert.equal(String(receiptPayload?.observed_parameters?.prescription_id ?? ''), prescription_id, 'receipt.observed_parameters.prescription_id mismatch');
+  assert.ok(Array.isArray(receiptPayload?.evidence_refs) && receiptPayload.evidence_refs.length > 0, 'receipt.evidence_refs missing');
 
   const asExecutedResp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, {
     method: 'POST',
@@ -171,6 +185,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const asExecutedJson = requireOk(asExecutedResp, 'create as-executed and as-applied');
   const as_executed_id = String(asExecutedJson?.as_executed?.as_executed_id ?? '').trim();
   assert.ok(as_executed_id, 'as_executed_id missing');
+  const as_executed_prescription_id = String(asExecutedJson?.as_executed?.prescription_id ?? '').trim();
+  assert.equal(as_executed_prescription_id, prescription_id, 'as_executed.prescription_id must match prescription_id');
+  const as_applied_as_executed_id = String(asExecutedJson?.as_applied?.as_executed_id ?? '').trim();
+  assert.equal(as_applied_as_executed_id, as_executed_id, 'as_applied.as_executed_id must match as_executed_id');
 
   // Simulate post-irrigation moisture measurement.
   await pool.query(
@@ -194,7 +212,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const hasYieldFabrication = ledgers.some((x) => String(x?.roi_type ?? '').toUpperCase().includes('YIELD'));
 
   const postDelta = post_soil_moisture - pre_soil_moisture;
-  const postMoistureIncreaseVerified = post_soil_moisture > pre_soil_moisture || postDelta >= 0.03;
+  const postMoistureIncreaseVerified = post_soil_moisture > pre_soil_moisture && postDelta >= 0.03;
   const acceptanceOrEffectPassed = Boolean(postMoistureIncreaseVerified);
 
   const noDirectRecommendationToTaskQ = await pool.query(
@@ -211,9 +229,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const checks = {
     pre_soil_moisture_written: true,
+    irrigation_skill_invoked: Boolean(recommendationSkillTrace),
     water_deficit_diagnosed: Boolean(recommendation?.rule_id === 'irrigation_soil_moisture_threshold_v1'),
     irrigation_recommendation_created: Boolean(recommendation_id && recommendation?.recommendation_type === 'irrigation_recommendation_v1'),
+    recommendation_has_skill_trace: Boolean(recommendationSkillTrace),
+    skill_trace_skill_id_is_irrigation_deficit: String(recommendationSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1',
     prescription_created: Boolean(prescription_id && prescription?.operation_type === 'IRRIGATION' && Number(prescription?.operation_amount?.amount) > 0 && Boolean(prescription?.operation_amount?.unit)),
+    prescription_inherits_skill_trace: Boolean(prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'),
     approval_submitted_or_approved: Boolean(approval_request_id),
     task_created: true,
     receipt_created: true,

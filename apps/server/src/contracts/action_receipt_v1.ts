@@ -27,6 +27,7 @@ export const actionReceiptRequestSchemaV1 = z.object({
     water_l: z.number().nullable(),
     chemical_ml: z.number().nullable(),
   }),
+  evidence_refs: z.array(z.object({ kind: z.string().min(1), ref: z.string().min(1) })).min(1).optional(),
   logs_refs: z.array(z.object({ kind: z.string().min(1), ref: z.string().min(1) })).min(1),
   status: z.enum(["executed", "not_executed"]).optional(),
   constraint_check: z.object({ violated: z.boolean(), violations: z.array(z.string()) }),
