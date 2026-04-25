@@ -14,6 +14,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const recommendation_id = `rec_roi_${suffix}`;
   const prescription_id = `prc_roi_${suffix}`;
   const task_id = `task_roi_${suffix}`;
+  const field_id = `field_${suffix}`;
   const receipt_fact_id = `fact_roi_${suffix}`;
 
   await pool.query(
@@ -29,7 +30,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       tenant_id,
       project_id,
       group_id,
-      `field_${suffix}`,
+      field_id,
       `season_${suffix}`,
       'corn',
       `zone_${suffix}`,
@@ -55,7 +56,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
           recommendation_id,
           parameters: { prescription_id },
           status: 'executed',
-          execution_coverage: { kind: 'field', ref: `field_${suffix}` },
+          execution_coverage: { kind: 'field', ref: field_id },
           resource_usage: { water_l: 20, electric_kwh: 1.5, chemical_ml: 25 },
           observed_parameters: { amount: 20, coverage_percent: 88, prescription_id },
           labor: { duration_minutes: 12, worker_count: 1 },
@@ -63,6 +64,20 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
         },
       },
     ],
+  );
+
+  const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
+  const healthz_ok = Boolean(healthz.ok && healthz.json?.ok === true);
+
+  const openapi = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token });
+  const openapi_contains_roi_ledger_paths = Boolean(
+    openapi.ok &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/health'] &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/from-as-executed'] &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/by-as-executed/{as_executed_id}'] &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/by-task/{task_id}'] &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/by-prescription/{prescription_id}'] &&
+    openapi.json?.paths?.['/api/v1/roi-ledger/by-field/{field_id}']
   );
 
   const asExecutedResp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, {
@@ -106,9 +121,16 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   );
   const readByPrescriptionJson = requireOk(readByPrescriptionResp, 'read roi ledger by prescription');
 
+  const readByFieldResp = await fetchJson(
+    `${base}/api/v1/roi-ledger/by-field/${encodeURIComponent(field_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+    { method: 'GET', token },
+  );
+  const readByFieldJson = requireOk(readByFieldResp, 'read roi ledger by field');
+
   const ledgers = Array.isArray(createJson.roi_ledgers) ? createJson.roi_ledgers : [];
   const hasWaterOrCost = ledgers.some((x) => x?.roi_type === 'WATER_SAVED' || x?.roi_type === 'COST_IMPACT');
   const hasExecReliability = ledgers.some((x) => x?.roi_type === 'EXECUTION_RELIABILITY');
+  const hasBaselineActualDelta = ledgers.some((x) => x?.baseline && x?.actual && x?.delta);
   const hasEvidenceRefs = ledgers.some((x) => Array.isArray(x?.evidence_refs) && x.evidence_refs.length > 0);
   const hasConfidence = ledgers.some((x) =>
     x?.confidence &&
@@ -116,8 +138,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     (x.confidence.basis === 'measured' || x.confidence.basis === 'estimated' || x.confidence.basis === 'assumed') &&
     Array.isArray(x.confidence.reasons)
   );
+  const roiNotBillingSource = ledgers.every((x) => x?.calculation_method !== 'compute_billing_v1' && x?.roi_type !== 'BILLING_CHARGE');
 
   const checks = {
+    healthz_ok,
+    openapi_contains_roi_ledger_paths,
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
     water_saved_or_cost_impact_generated: Boolean(hasWaterOrCost),
@@ -125,8 +150,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     read_by_as_executed: Boolean(Array.isArray(readByAsExecutedJson.roi_ledgers) && readByAsExecutedJson.roi_ledgers.length > 0),
     read_by_task: Boolean(Array.isArray(readByTaskJson.roi_ledgers) && readByTaskJson.roi_ledgers.length > 0),
     read_by_prescription: Boolean(Array.isArray(readByPrescriptionJson.roi_ledgers) && readByPrescriptionJson.roi_ledgers.length > 0),
+    read_by_field: Boolean(Array.isArray(readByFieldJson.roi_ledgers) && readByFieldJson.roi_ledgers.length > 0),
+    ledger_has_baseline_actual_delta: Boolean(hasBaselineActualDelta),
     ledger_has_evidence_refs: Boolean(hasEvidenceRefs),
     ledger_has_confidence: Boolean(hasConfidence),
+    roi_not_used_as_billing_source: Boolean(roiNotBillingSource),
   };
 
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
