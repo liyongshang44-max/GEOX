@@ -74,7 +74,37 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
     token,
-    body: { recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id: 'corn', zone_id: null },
+    body: {
+      recommendation_id,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      crop_id: 'corn',
+      zone_id: null,
+      device_requirements: {
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+        adapter_type: 'irrigation_simulator',
+      },
+      operation_amount: {
+        amount: 25,
+        unit: 'L',
+        parameters: {
+          duration_sec: 1200,
+          flow_lpm: 1,
+          adapter_type: 'irrigation_simulator',
+          device_type: 'IRRIGATION_CONTROLLER',
+          required_capabilities: ['device.irrigation.valve.open'],
+          metadata: {
+            adapter_type: 'irrigation_simulator',
+            device_type: 'IRRIGATION_CONTROLLER',
+            required_capabilities: ['device.irrigation.valve.open'],
+          },
+        },
+      },
+    },
   });
   const prescriptionJson = requireOk(createPrescription, 'create prescription');
   const prescription = prescriptionJson.prescription;
@@ -96,7 +126,21 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'irrigation closed loop acceptance' },
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'irrigation closed loop acceptance',
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
+      execution_context: {
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
   });
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
   const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
