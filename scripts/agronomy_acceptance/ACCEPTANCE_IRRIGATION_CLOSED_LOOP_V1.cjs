@@ -173,8 +173,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const operationPlanFactQ = await pool.query(
     `SELECT record_json
        FROM facts
-      WHERE record_json::jsonb#>>'{payload,operation_plan_id}' = $1
-         OR record_json::jsonb#>>'{payload,plan_id}' = $1
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+        AND (
+          record_json::jsonb#>>'{payload,operation_plan_id}' = $1
+          OR record_json::jsonb#>>'{payload,plan_id}' = $1
+        )
       ORDER BY occurred_at DESC
       LIMIT 1`,
     [operation_plan_id]
