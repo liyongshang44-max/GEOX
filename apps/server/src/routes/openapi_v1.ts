@@ -2624,6 +2624,7 @@ function applyP13OpenApiAlignment(spec: any) {
         project_id: { type: "string" },
         group_id: { type: "string" },
         field_id: { type: ["string", "null"] },
+        zone_id: { type: ["string", "null"] },
         task_id: { type: "string" },
         receipt_id: { type: "string" },
         prescription_id: { type: "string" },

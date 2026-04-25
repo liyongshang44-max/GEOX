@@ -8,6 +8,7 @@ export type AsAppliedMapV1 = {
   receipt_id: string;
   prescription_id?: string | null;
   field_id?: string | null;
+  zone_id?: string | null;
   geometry: Record<string, unknown>;
   coverage: Record<string, unknown>;
   application: Record<string, unknown>;
