@@ -65,6 +65,14 @@ function normalizeEvidenceRefs(rec: any): string[] {
       }
     }
   }
+  if (rec?.evidence_basis && typeof rec.evidence_basis === "object") {
+    const telemetryRefs = Array.isArray(rec.evidence_basis.telemetry_refs) ? rec.evidence_basis.telemetry_refs : [];
+    for (const ref of telemetryRefs) add(ref);
+    add(rec.evidence_basis.snapshot_id);
+  }
+  if (Array.isArray(rec?.skill_trace?.evidence_refs)) {
+    for (const x of rec.skill_trace.evidence_refs) add(x);
+  }
   return [...out];
 }
 
@@ -113,10 +121,14 @@ function escalateRisk(level: PrescriptionRiskLevelV1, target: PrescriptionRiskLe
   return rank[target] > rank[level] ? target : level;
 }
 
-function deriveOperationAmount(rec: any, operationType: PrescriptionOperationTypeV1): { amount: PrescriptionContractV1["operation_amount"]; missingAmount: boolean } {
-  const params = (rec?.suggested_action?.parameters && typeof rec.suggested_action.parameters === "object")
+function deriveOperationAmount(
+  rec: any,
+  operationType: PrescriptionOperationTypeV1,
+  paramsOverride?: Record<string, unknown>,
+): { amount: PrescriptionContractV1["operation_amount"]; missingAmount: boolean } {
+  const params = paramsOverride ?? ((rec?.suggested_action?.parameters && typeof rec.suggested_action.parameters === "object")
     ? rec.suggested_action.parameters
-    : {};
+    : {});
 
   const amountExplicit = toNumber(params.amount);
   const waterMm = toNumber(params.water_mm ?? params.irrigation_mm);
@@ -142,7 +154,7 @@ function deriveOperationAmount(rec: any, operationType: PrescriptionOperationTyp
     return { amount: { amount: fertilizerKgHa, unit: "kg/ha", parameters: params }, missingAmount: false };
   }
   if (operationType === "IRRIGATION") {
-    return { amount: { amount: 25, unit: "mm", rate, parameters: params }, missingAmount: false };
+    return { amount: { amount: 25, unit: "L", rate, parameters: params }, missingAmount: false };
   }
   if (operationType === "INSPECTION") {
     return { amount: { amount: 1, unit: "visit", parameters: params }, missingAmount: false };
@@ -170,13 +182,13 @@ function deriveAcceptanceConditions(operationType: PrescriptionOperationTypeV1):
       required_coverage_percent: 95,
       required_execution_window: true,
       required_post_metric: {
-        metric: "soil_moisture",
+        metric: "soil_moisture_delta",
         operator: ">",
         value: 0,
         unit: "delta",
         observation_window_hours: 24,
       },
-      evidence_required: ["receipt", "post_soil_moisture"],
+      evidence_required: ["receipt", "post_soil_moisture", "soil_moisture_delta"],
       failure_conditions: ["NO_RECEIPT", "NO_POST_MOISTURE_INCREASE"],
       insufficient_evidence_conditions: ["MISSING_RECEIPT", "MISSING_POST_SENSOR_DATA"],
     };
@@ -282,7 +294,23 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
   if (exists) return { prescription: exists, idempotent: true };
 
   const operation_type = deriveOperationType(recPayload);
-  const { amount: operation_amount, missingAmount } = deriveOperationAmount(recPayload, operation_type);
+  const recommendationSkillTrace = (recPayload?.skill_trace && typeof recPayload.skill_trace === "object") ? recPayload.skill_trace : null;
+  const suggestionParams = (recPayload?.suggested_action?.parameters && typeof recPayload.suggested_action.parameters === "object") ? recPayload.suggested_action.parameters : {};
+  const operationParamsWithTrace = {
+    ...suggestionParams,
+    metadata: {
+      recommendation_id: toText(recPayload?.recommendation_id),
+      recommendation_type: toText(recPayload?.recommendation_type),
+      action_type: toText(recPayload?.action_type),
+      skill_trace: recommendationSkillTrace,
+    },
+    preserved_payload: {
+      skill_trace: recommendationSkillTrace,
+      evidence_basis: recPayload?.evidence_basis ?? null,
+      rule_hit: Array.isArray(recPayload?.rule_hit) ? recPayload.rule_hit : [],
+    },
+  };
+  const { amount: operation_amount, missingAmount } = deriveOperationAmount(recPayload, operation_type, operationParamsWithTrace);
   const evidence_refs = normalizeEvidenceRefs(recPayload);
 
   let riskLevel = baseRiskLevel(operation_type);
@@ -300,7 +328,6 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
   const status = deriveStatus(operation_type, missingAmount);
   const now = new Date().toISOString();
   const prescription_id = `prc_${randomUUID().replace(/-/g, "")}`;
-  const suggestionParams = (recPayload?.suggested_action?.parameters && typeof recPayload.suggested_action.parameters === "object") ? recPayload.suggested_action.parameters : {};
 
   const prescription: PrescriptionContractV1 = {
     prescription_id,
