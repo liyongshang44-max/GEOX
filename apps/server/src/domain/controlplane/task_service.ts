@@ -884,9 +884,69 @@ async function createOperationPlanForApproval(
   tenant: TenantTriple,
   request_id: string,
   requestPayload: any,
+  requestBody: any,
   source: string
 ): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; transition_fact_id: string }> {
   const proposal = requestPayload?.proposal ?? {};
+  const approvalPayload = requestPayload ?? {};
+  const requestBodyPayload = requestBody ?? {};
+  const asNonEmptyString = (v: any): string | null => {
+    const s = typeof v === "string" ? v.trim() : "";
+    return s || null;
+  };
+  const parsedRequiredCapabilities = normalizeCapabilities(
+    approvalPayload?.required_capabilities
+      ?? approvalPayload?.execution_context?.required_capabilities
+      ?? approvalPayload?.device_requirements?.required_capabilities
+      ?? approvalPayload?.operation_amount?.parameters?.required_capabilities
+      ?? approvalPayload?.operation_amount?.parameters?.metadata?.required_capabilities
+      ?? requestBodyPayload?.required_capabilities
+      ?? requestBodyPayload?.execution_context?.required_capabilities
+      ?? []
+  );
+  const operationTypeHint = String(
+    proposal?.action_type
+    ?? proposal?.task_type
+    ?? requestPayload?.operation_type
+    ?? requestPayload?.meta?.operation_type
+    ?? ""
+  ).trim().toUpperCase();
+  const irrigationCapabilityMatched = parsedRequiredCapabilities.includes("device.irrigation.valve.open");
+  const irrigationOperationHint = operationTypeHint.includes("IRRIGAT");
+  let resolvedAdapterType = asNonEmptyString(
+    approvalPayload?.adapter_type
+    ?? approvalPayload?.execution_context?.adapter_type
+    ?? approvalPayload?.device_requirements?.adapter_type
+    ?? approvalPayload?.operation_amount?.parameters?.adapter_type
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.adapter_type
+    ?? requestBodyPayload?.adapter_type
+    ?? requestBodyPayload?.execution_context?.adapter_type
+    ?? null
+  );
+  if (!resolvedAdapterType && (irrigationOperationHint || irrigationCapabilityMatched)) {
+    resolvedAdapterType = "irrigation_simulator";
+  }
+  const resolvedDeviceType = asNonEmptyString(
+    approvalPayload?.device_type
+    ?? approvalPayload?.execution_context?.device_type
+    ?? approvalPayload?.device_requirements?.device_type
+    ?? approvalPayload?.operation_amount?.parameters?.device_type
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_type
+    ?? requestBodyPayload?.device_type
+    ?? requestBodyPayload?.execution_context?.device_type
+    ?? null
+  );
+  const resolvedDeviceId = asNonEmptyString(
+    approvalPayload?.device_id
+    ?? approvalPayload?.execution_context?.device_id
+    ?? approvalPayload?.device_requirements?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.device_id
+    ?? approvalPayload?.operation_amount?.parameters?.metadata?.device_id
+    ?? requestBodyPayload?.device_id
+    ?? requestBodyPayload?.execution_context?.device_id
+    ?? requestBodyPayload?.device_requirements?.device_id
+    ?? null
+  );
   const operation_plan_id = `opl_${randomUUID().replace(/-/g, "")}`;
   const operation_plan_fact_id = await insertFact(pool, source, {
     type: "operation_plan_v1",
@@ -901,9 +961,12 @@ async function createOperationPlanForApproval(
       program_id: requestPayload?.program_id ?? requestPayload?.meta?.program_id ?? null,
       field_id: requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? proposal?.target?.ref ?? null,
       season_id: requestPayload?.season_id ?? requestPayload?.meta?.season_id ?? null,
+      device_id: resolvedDeviceId ?? requestPayload?.device_id ?? requestPayload?.meta?.device_id ?? proposal?.meta?.device_id ?? null,
       approval_request_id: request_id,
       action_type: proposal?.action_type ?? null,
-      adapter_type: requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      adapter_type: resolvedAdapterType ?? requestPayload?.meta?.adapter_type ?? proposal?.meta?.adapter_type ?? null,
+      device_type: resolvedDeviceType,
+      required_capabilities: parsedRequiredCapabilities,
       target: proposal?.target ?? null,
       parameters: proposal?.parameters ?? {},
       status: "CREATED",
@@ -1028,6 +1091,10 @@ if (!allowed.includes(next_status)) {
       program_id: payload.program_id ?? null,
       field_id: payload.field_id ?? payload.target?.ref ?? null,
       season_id: payload.season_id ?? null,
+      adapter_type: payload.adapter_type ?? null,
+      device_id: payload.device_id ?? payload.meta?.device_id ?? null,
+      device_type: payload.device_type ?? null,
+      required_capabilities: Array.isArray(payload.required_capabilities) ? payload.required_capabilities : [],
       from_status: current_status,
       status: next_status,
       trigger: transition.trigger,
@@ -1051,6 +1118,10 @@ if (!allowed.includes(next_status)) {
       program_id: payload.program_id ?? null,
       field_id: payload.field_id ?? payload.target?.ref ?? null,
       season_id: payload.season_id ?? null,
+      adapter_type: payload.adapter_type ?? null,
+      device_id: payload.device_id ?? payload.meta?.device_id ?? null,
+      device_type: payload.device_type ?? null,
+      required_capabilities: Array.isArray(payload.required_capabilities) ? payload.required_capabilities : [],
       status: next_status,
       approval_request_id: transition.approval_request_id ?? payload.approval_request_id ?? null,
       act_task_id: transition.act_task_id ?? payload.act_task_id ?? null,
@@ -2209,7 +2280,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     let operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
     if (!operationPlan && decision === "APPROVE") {
-      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, "api/v1/approvals");
+      await createOperationPlanForApproval(pool, tenant, request_id, requestPayload, body, "api/v1/approvals");
       operationPlan = await loadLatestOperationPlanByApprovalRequestId(pool, request_id, tenant);
     }
     const operation_plan_id = operationPlan?.record_json?.payload?.operation_plan_id ? String(operationPlan.record_json.payload.operation_plan_id) : null;
@@ -2219,6 +2290,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
 
     if (decision === "APPROVE") {
       const proposal = requestPayload.proposal; // Reuse request proposal as AO-ACT task input.
+      const planPayload = operationPlan?.record_json?.payload ?? {};
+      const approvalDeviceId =
+        String(planPayload?.device_id ?? "").trim()
+        || String(proposal?.target?.id ?? "").trim()
+        || String(proposal?.meta?.device_id ?? "").trim()
+        || (typeof proposal?.target === "string" ? String(proposal.target).trim() : "");
       const planAdapterType = typeof operationPlan?.record_json?.payload?.adapter_type === "string"
         ? String(operationPlan.record_json.payload.adapter_type)
         : String(proposal?.meta?.adapter_type ?? "");
@@ -2239,7 +2316,8 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? proposal?.target ?? "" }
+        field_id: planPayload?.field_id ?? requestPayload?.field_id ?? requestPayload?.meta?.field_id ?? null,
+        meta: { device_id: approvalDeviceId }
       });
       if (!tripleValidation.ok) return badRequest(reply, tripleValidation.reason);
       const compatibilityCheck = checkCapabilityCompatibilityMatrix({
@@ -2269,7 +2347,7 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           error: compatibilityCheck.error
         });
       }
-      const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: proposal?.target?.id ?? proposal?.meta?.device_id ?? "" } });
+      const adapterValidation = validateAdapterTask(planAdapterType, { meta: { device_id: approvalDeviceId } });
       if (!adapterValidation.ok) return badRequest(reply, adapterValidation.reason);
       await insertFact(pool, "api/v1/approvals", {
         type: "approval_request_v1",
@@ -2308,9 +2386,12 @@ export function registerControlPlaneV1Routes(app: FastifyInstance, pool: Pool): 
           capability: parsedCapability.capability,
           capability_parameters: parsedCapability.parameters,
           evidence_requirements: parsedCapability.evidence_requirements,
+          device_id: approvalDeviceId || null,
           adapter_type: typeof operationPlan?.record_json?.payload?.adapter_type === "string"
             ? String(operationPlan.record_json.payload.adapter_type)
-            : (proposal?.meta?.adapter_type ?? null)
+            : (proposal?.meta?.adapter_type ?? null),
+          device_type: planPayload?.device_type ?? null,
+          required_capabilities: Array.isArray(planPayload?.required_capabilities) ? planPayload.required_capabilities : []
         }
       };
       console.info("[AO_ACT_TASK_CREATE_DEBUG]", JSON.stringify({

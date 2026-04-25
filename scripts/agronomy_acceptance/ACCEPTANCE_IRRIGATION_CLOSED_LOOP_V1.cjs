@@ -34,14 +34,28 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     [tenant_id, project_id, group_id, field_id, ts0, randomUUID(), randomUUID()]
   );
 
+  const preSoilObservationFactId = `obs_soil_irrigation_loop_${randomUUID()}`;
+  const preCanopyObservationFactId = `obs_canopy_irrigation_loop_${randomUUID()}`;
+
   await pool.query(
     `INSERT INTO device_observation_index_v1
-      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at_ts_ms, value_num, confidence)
+      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
      VALUES
-      ($1,$2,$3,$4,$5,'soil_moisture',$6,$7,0.92),
-      ($1,$2,$3,$4,$5,'canopy_temp_c',$6,$8,0.88)
+      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$9),
+      ($1,$2,$3,$4,$5,'canopy_temp_c',to_timestamp($6 / 1000.0),$6,$8,0.88,$10)
      ON CONFLICT DO NOTHING`,
-    [tenant_id, project_id, group_id, field_id, device_id, ts0, pre_soil_moisture, 31.2]
+    [
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      ts0,
+      pre_soil_moisture,
+      31.2,
+      preSoilObservationFactId,
+      preCanopyObservationFactId,
+    ]
   );
 
   const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
@@ -74,7 +88,41 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
     token,
-    body: { recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id: 'corn', zone_id: null },
+    body: {
+      recommendation_id,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      season_id,
+      device_id,
+      crop_id: 'corn',
+      zone_id: null,
+      device_requirements: {
+        device_id,
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+        adapter_type: 'irrigation_simulator',
+      },
+      operation_amount: {
+        amount: 25,
+        unit: 'L',
+        parameters: {
+          device_id,
+          duration_sec: 1200,
+          flow_lpm: 1,
+          adapter_type: 'irrigation_simulator',
+          device_type: 'IRRIGATION_CONTROLLER',
+          required_capabilities: ['device.irrigation.valve.open'],
+          metadata: {
+            device_id,
+            adapter_type: 'irrigation_simulator',
+            device_type: 'IRRIGATION_CONTROLLER',
+            required_capabilities: ['device.irrigation.valve.open'],
+          },
+        },
+      },
+    },
   });
   const prescriptionJson = requireOk(createPrescription, 'create prescription');
   const prescription = prescriptionJson.prescription;
@@ -96,10 +144,64 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'irrigation closed loop acceptance' },
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'irrigation closed loop acceptance',
+      device_id,
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
+      device_requirements: {
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+      execution_context: {
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
   });
   const decideApprovalJson = requireOk(decideApproval, 'approve prescription request');
-  const operation_plan_id = String(decideApprovalJson.operation_plan_id ?? `op_${suffix}`).trim();
+  const operation_plan_id = String(
+    decideApprovalJson.operation_plan_id
+      ?? decideApprovalJson.operation_plan?.operation_plan_id
+      ?? decideApprovalJson.plan?.operation_plan_id
+      ?? ''
+  ).trim();
+  assert.ok(operation_plan_id, `operation_plan_id missing from approve response: ${JSON.stringify(decideApprovalJson)}`);
+  assert.ok(operation_plan_id && !operation_plan_id.startsWith('op_'), 'approve response must return real operation_plan_id');
+  const operationPlanFactQ = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+        AND (
+          record_json::jsonb#>>'{payload,operation_plan_id}' = $1
+          OR record_json::jsonb#>>'{payload,plan_id}' = $1
+        )
+      ORDER BY occurred_at DESC
+      LIMIT 1`,
+    [operation_plan_id]
+  );
+  assert.ok(
+    operationPlanFactQ.rows?.length > 0,
+    `operation_plan_v1 not found for operation_plan_id=${operation_plan_id}; approve response=${JSON.stringify(decideApprovalJson)}`
+  );
+  const operationPlanPayload = operationPlanFactQ.rows?.[0]?.record_json?.payload ?? {};
+  assert.equal(operationPlanPayload.adapter_type, 'irrigation_simulator', 'operation_plan.payload.adapter_type must be irrigation_simulator');
+  assert.equal(operationPlanPayload.device_id, device_id, 'operation_plan.payload.device_id must match device_id');
+  assert.equal(operationPlanPayload.device_type, 'IRRIGATION_CONTROLLER', 'operation_plan.payload.device_type must be IRRIGATION_CONTROLLER');
+  assert.ok(
+    Array.isArray(operationPlanPayload.required_capabilities)
+      && operationPlanPayload.required_capabilities.includes('device.irrigation.valve.open'),
+    'operation_plan.payload.required_capabilities must include device.irrigation.valve.open'
+  );
 
   // Step6-D: create action task through AO-ACT API (no direct facts insert).
   const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
@@ -113,9 +215,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       approval_request_id,
       field_id,
       season_id,
+      device_id,
       issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
       action_type: 'IRRIGATE',
-      target: { kind: 'field', ref: field_id },
+      target: { kind: 'device', ref: device_id },
       time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
       parameter_schema: {
         keys: [
@@ -127,7 +230,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       },
       parameters: { amount: 20, coverage_percent: 88, duration_min: 20, prescription_id },
       constraints: {},
-      meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
+      meta: {
+        recommendation_id,
+        prescription_id,
+        task_type: 'IRRIGATION',
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
     },
   });
   const taskJson = requireOk(taskResp, 'create action task');
@@ -193,12 +304,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   assert.equal(as_applied_as_executed_id, as_executed_id, 'as_applied.as_executed_id must match as_executed_id');
 
   // Simulate post-irrigation moisture measurement.
+  const postTs = Date.now();
+  const postSoilObservationFactId = `obs_post_soil_irrigation_loop_${randomUUID()}`;
+
   await pool.query(
     `INSERT INTO device_observation_index_v1
-      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at_ts_ms, value_num, confidence)
-     VALUES ($1,$2,$3,$4,$5,'soil_moisture',$6,$7,0.95)
+      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
+     VALUES ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.95,$8)
      ON CONFLICT DO NOTHING`,
-    [tenant_id, project_id, group_id, field_id, device_id, Date.now(), post_soil_moisture]
+    [tenant_id, project_id, group_id, field_id, device_id, postTs, post_soil_moisture, postSoilObservationFactId]
   );
 
   // Step6-F: call system acceptance path to create acceptance_result_v1 verdict.
