@@ -142,11 +142,16 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     asApplied &&
     asApplied.as_applied_id &&
     String(asApplied.as_executed_id || "") === String(as_executed_id) &&
+    (asApplied.zone_id === null || typeof asApplied.zone_id === 'string' || typeof asApplied.zone_id === 'undefined') &&
     asApplied.task_id === task_id &&
     String(asApplied.receipt_id || '') === payload_receipt_id &&
     asApplied.geometry &&
     asApplied.coverage &&
     asApplied.application
+  );
+
+  const as_applied_zone_id_present = Boolean(
+    typeof asApplied?.zone_id === 'string' && asApplied.zone_id.length > 0
   );
 
   const checks = {
@@ -158,6 +163,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     read_by_prescription: Boolean(Array.isArray(readByPrescriptionJson.records) && readByPrescriptionJson.records.some((r) => r?.as_executed?.as_executed_id === as_executed_id)),
     as_executed_shape_valid,
     as_applied_shape_valid,
+    as_applied_zone_id_present,
     receipt_not_treated_as_execution_fact: as_executed_id !== receipt_fact_id,
     prescription_linked: String(asExecuted?.prescription_id || '') === prescription_id,
     planned_from_prescription: Boolean(plannedFromPrescription),
