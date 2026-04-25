@@ -64,7 +64,7 @@ export type AsAppliedRow = {
   field_id: string | null;
   task_id: string;
   receipt_id: string;
-  prescription_id: string;
+  prescription_id: string | null;
   geometry: any;
   coverage: any;
   application: any;
@@ -166,7 +166,7 @@ function mapAsAppliedRow(row: any): AsAppliedRow {
     field_id: row.field_id == null ? null : String(row.field_id),
     task_id: String(row.task_id ?? ""),
     receipt_id: String(row.receipt_id ?? ""),
-    prescription_id: String(row.prescription_id ?? ""),
+    prescription_id: row.prescription_id == null ? null : String(row.prescription_id),
     geometry: parseJsonMaybe(row.geometry) ?? {},
     coverage: parseJsonMaybe(row.coverage) ?? {},
     application: parseJsonMaybe(row.application) ?? {},
@@ -479,7 +479,7 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
     field_id: params.as_executed.field_id,
     task_id: params.as_executed.task_id,
     receipt_id: params.as_executed.receipt_id,
-    prescription_id: params.as_executed.prescription_id ?? "",
+    prescription_id: params.as_executed.prescription_id ?? null,
     geometry,
     coverage,
     application: {

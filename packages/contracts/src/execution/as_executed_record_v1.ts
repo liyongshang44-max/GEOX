@@ -5,7 +5,7 @@ export type AsExecutedRecordV1 = {
   group_id: string;
   task_id: string;
   receipt_id: string;
-  prescription_id: string;
+  prescription_id: string | null;
   field_id?: string | null;
   executor: Record<string, unknown>;
   planned: Record<string, unknown>;
