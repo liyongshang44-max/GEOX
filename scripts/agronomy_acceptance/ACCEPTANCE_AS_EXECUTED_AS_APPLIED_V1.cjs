@@ -141,6 +141,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const as_applied_shape_valid = Boolean(
     asApplied &&
     asApplied.as_applied_id &&
+    String(asApplied.as_executed_id || "") === String(as_executed_id) &&
     asApplied.task_id === task_id &&
     String(asApplied.receipt_id || '') === payload_receipt_id &&
     asApplied.geometry &&
@@ -162,6 +163,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     planned_from_prescription: Boolean(plannedFromPrescription),
     openapi_contains_as_executed_paths,
     healthz_ok,
+    as_applied_references_as_executed: String(asApplied?.as_executed_id || "") === String(asExecuted?.as_executed_id || ""),
   };
 
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));

@@ -1,5 +1,6 @@
 export type AsAppliedMapV1 = {
   as_applied_id: string;
+  as_executed_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;

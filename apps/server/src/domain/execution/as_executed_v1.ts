@@ -57,6 +57,7 @@ export type AsExecutedRow = {
 
 export type AsAppliedRow = {
   as_applied_id: string;
+  as_executed_id: string;
   tenant_id: string;
   project_id: string;
   group_id: string;
@@ -158,6 +159,7 @@ function mapAsExecutedRow(row: any): AsExecutedRow {
 function mapAsAppliedRow(row: any): AsAppliedRow {
   return {
     as_applied_id: String(row.as_applied_id ?? ""),
+    as_executed_id: String(row.as_executed_id ?? ""),
     tenant_id: String(row.tenant_id ?? ""),
     project_id: String(row.project_id ?? ""),
     group_id: String(row.group_id ?? ""),
@@ -470,6 +472,7 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
   const coverage = buildCoverage(payload);
 
   return {
+    as_executed_id: params.as_executed.as_executed_id,
     tenant_id: params.as_executed.tenant_id,
     project_id: params.as_executed.project_id,
     group_id: params.as_executed.group_id,
@@ -480,7 +483,6 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
     geometry,
     coverage,
     application: {
-      as_executed_id: params.as_executed.as_executed_id,
       zone_id: planned?.zone_id ?? null,
       planned_amount: toNum(planned?.amount),
       planned_unit: planned?.unit ?? null,
@@ -660,6 +662,7 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
     const insertedApplied = await pool.query(
       `INSERT INTO as_applied_map_v1 (
         as_applied_id,
+        as_executed_id,
         tenant_id,
         project_id,
         group_id,
@@ -673,12 +676,13 @@ export async function createAsExecutedFromReceipt(pool: Pool, input: CreateAsExe
         evidence_refs,
         log_refs
       ) VALUES (
-        $1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb
+        $1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12::jsonb,$13::jsonb,$14::jsonb
       )
       ON CONFLICT (tenant_id, project_id, group_id, task_id, receipt_id) DO NOTHING
       RETURNING *`,
       [
         randomUUID(),
+        payload.as_executed_id,
         payload.tenant_id,
         payload.project_id,
         payload.group_id,
@@ -764,6 +768,7 @@ export async function listAsExecutedByPrescription(pool: Pool, input: TenantTrip
     `SELECT
       ae.*,
       am.as_applied_id,
+      am.as_executed_id AS am_as_executed_id,
       am.field_id AS am_field_id,
       am.geometry,
       am.coverage,
@@ -792,6 +797,7 @@ export async function listAsExecutedByPrescription(pool: Pool, input: TenantTrip
     const as_applied = row.as_applied_id
       ? mapAsAppliedRow({
           as_applied_id: row.as_applied_id,
+          as_executed_id: row.am_as_executed_id,
           tenant_id: row.tenant_id,
           project_id: row.project_id,
           group_id: row.group_id,
