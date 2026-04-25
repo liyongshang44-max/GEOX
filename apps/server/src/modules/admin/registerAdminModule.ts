@@ -4,7 +4,7 @@ import { registerAdminImportModule } from "./registerAdminImportModule.js";
 import { registerAdminGroupsModule } from "./registerAdminGroupsModule.js";
 
 const REQUIRED_SCHEMA = {
-  tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members", "prescription_contract_v1", "as_executed_record_v1", "as_applied_map_v1"],
+  tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members", "prescription_contract_v1", "as_executed_record_v1", "as_applied_map_v1", "roi_ledger_v1"],
   views: ["facts_replay_v1"],
 } as const;
 
