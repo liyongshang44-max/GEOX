@@ -57,16 +57,23 @@ const EvaluateAgronomyRequestSchema = TenantSchema.extend({
 });
 
 const EvaluateExecutionRequestSchema = TenantSchema.extend({
-  task_id: z.string().min(1),
-  receipt_id: z.string().min(1).optional(),
-  prescription_id: z.string().min(1).optional(),
-  as_executed_id: z.string().min(1).optional(),
-  as_applied_id: z.string().min(1).optional(),
   field_id: z.string().min(1).optional(),
   device_id: z.string().min(1).optional(),
-  expected_amount: z.number().optional(),
-  executed_amount: z.number().optional(),
-  tolerance_percent: z.number().nonnegative().optional(),
+  receipt: z.object({
+    receipt_id: z.string().min(1).optional(),
+    task_id: z.string().min(1).optional(),
+    status: z.string().min(1).optional(),
+    evidence_refs: z.array(z.unknown()).optional(),
+  }).nullable().optional(),
+  as_executed: z.object({
+    as_executed_id: z.string().min(1).optional(),
+    task_id: z.string().min(1).optional(),
+  }).nullable().optional(),
+  as_applied: z.object({
+    as_applied_id: z.string().min(1).optional(),
+  }).nullable().optional(),
+  pre_soil_moisture: z.number().optional(),
+  post_soil_moisture: z.number().optional(),
   evidence_refs: z.array(z.unknown()).optional(),
   source_refs: z.array(z.unknown()).optional(),
 });
