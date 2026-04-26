@@ -78,23 +78,36 @@ const EvaluateExecutionRequestSchema = TenantSchema.extend({
   source_refs: z.array(z.unknown()).optional(),
 });
 
-const ListJudgeRequestSchema = TenantSchema.extend({
-  judge_kind: z.enum(["EVIDENCE", "AGRONOMY", "EXECUTION"]).optional(),
-  task_id: z.string().min(1).optional(),
-  recommendation_id: z.string().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(200).optional(),
-});
-
 const ReadJudgeRequestSchema = TenantSchema.extend({
   judge_id: z.string().min(1),
 });
 
-export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
-  app.get("/api/v2/judge/health", async () => ({ ok: true, module: "judge_v2" }));
+const ListByKindSchema = TenantSchema.extend({
+  judge_kind: z.enum(["EVIDENCE", "AGRONOMY", "EXECUTION"]),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
 
-  app.post("/api/v2/judge/evidence/evaluate", async (req, reply) => {
+const ListByFieldSchema = TenantSchema.extend({
+  field_id: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+const ListByTaskSchema = TenantSchema.extend({
+  task_id: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+const ListByPrescriptionSchema = TenantSchema.extend({
+  prescription_id: z.string().min(1),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
+
+export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/judge/health", async () => ({ ok: true, module: "judge_v2" }));
+
+  app.post("/api/v1/judge/evidence/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -107,9 +120,9 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
     }
   });
 
-  app.post("/api/v2/judge/agronomy/evaluate", async (req, reply) => {
+  app.post("/api/v1/judge/agronomy/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
       const body = EvaluateAgronomyRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -122,9 +135,9 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
     }
   });
 
-  app.post("/api/v2/judge/execution/evaluate", async (req, reply) => {
+  app.post("/api/v1/judge/execution/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
       if (!auth) return;
       const body = EvaluateExecutionRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -137,21 +150,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
     }
   });
 
-  app.get("/api/v2/judge/results", async (req, reply) => {
-    try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
-      if (!auth) return;
-      const query = ListJudgeRequestSchema.parse((req as any).query ?? {});
-      if (!requireTenantMatchOr404(reply, auth, query)) return;
-
-      const items = await listJudgeResultsV2(pool, query);
-      return reply.send({ ok: true, items });
-    } catch (error: any) {
-      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
-    }
-  });
-
-  app.get("/api/v2/judge/results/:judge_id", async (req, reply) => {
+  app.get("/api/v1/judge/results/:judge_id", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
       if (!auth) return;
@@ -161,6 +160,58 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const item = await loadJudgeResultV2(pool, params);
       if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
       return reply.send({ ok: true, judge_result: item });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
+
+  app.get("/api/v1/judge/results/by-kind/:judge_kind", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+      const input = ListByKindSchema.parse({ ...(req as any).query, ...(req as any).params });
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const items = await listJudgeResultsV2(pool, input);
+      return reply.send({ ok: true, items });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
+
+  app.get("/api/v1/judge/results/by-field/:field_id", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+      const input = ListByFieldSchema.parse({ ...(req as any).query, ...(req as any).params });
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const items = await listJudgeResultsV2(pool, input);
+      return reply.send({ ok: true, items });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
+
+  app.get("/api/v1/judge/results/by-task/:task_id", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+      const input = ListByTaskSchema.parse({ ...(req as any).query, ...(req as any).params });
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const items = await listJudgeResultsV2(pool, input);
+      return reply.send({ ok: true, items });
+    } catch (error: any) {
+      return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
+    }
+  });
+
+  app.get("/api/v1/judge/results/by-prescription/:prescription_id", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      if (!auth) return;
+      const input = ListByPrescriptionSchema.parse({ ...(req as any).query, ...(req as any).params });
+      if (!requireTenantMatchOr404(reply, auth, input)) return;
+      const items = await listJudgeResultsV2(pool, input);
+      return reply.send({ ok: true, items });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
     }
