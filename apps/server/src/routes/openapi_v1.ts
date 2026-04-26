@@ -2811,35 +2811,19 @@ function applyP13OpenApiAlignment(spec: any) {
     "/api/v1/simulators/irrigation/execute": {
       post: { tags: ["operations"], summary: "Execute irrigation simulator", responses: { "200": jsonResponse(ref("GenericOkResponse"), "Simulator execution result") } }
     },
-    "/api/v2/judge/health": {
+    "/api/v1/judge/health": {
       get: { tags: ["judge"], summary: "Judge V2 module health", responses: { "200": jsonResponse(ref("GenericOkResponse"), "Judge V2 health") } }
     },
-    "/api/v2/judge/evidence/evaluate": {
+    "/api/v1/judge/evidence/evaluate": {
       post: { tags: ["judge"], summary: "Evaluate evidence judge", responses: { "200": { description: "Judge result created" } } }
     },
-    "/api/v2/judge/agronomy/evaluate": {
+    "/api/v1/judge/agronomy/evaluate": {
       post: { tags: ["judge"], summary: "Evaluate agronomy judge", responses: { "200": { description: "Judge result created" } } }
     },
-    "/api/v2/judge/execution/evaluate": {
+    "/api/v1/judge/execution/evaluate": {
       post: { tags: ["judge"], summary: "Evaluate execution judge", responses: { "200": { description: "Judge result created" } } }
     },
-    "/api/v2/judge/results": {
-      get: {
-        tags: ["judge"],
-        summary: "List judge results",
-        parameters: [
-          queryParam("tenant_id", { type: "string" }, true),
-          queryParam("project_id", { type: "string" }, true),
-          queryParam("group_id", { type: "string" }, true),
-          queryParam("judge_kind", { type: "string" }),
-          queryParam("task_id", { type: "string" }),
-          queryParam("recommendation_id", { type: "string" }),
-          queryParam("limit", { type: "integer" })
-        ],
-        responses: { "200": { description: "Judge result list" } }
-      }
-    },
-    "/api/v2/judge/results/{judge_id}": {
+    "/api/v1/judge/results/{judge_id}": {
       get: {
         tags: ["judge"],
         summary: "Read judge result by id",
@@ -2847,9 +2831,65 @@ function applyP13OpenApiAlignment(spec: any) {
           pathParam("judge_id"),
           queryParam("tenant_id", { type: "string" }, true),
           queryParam("project_id", { type: "string" }, true),
-          queryParam("group_id", { type: "string" }, true)
+          queryParam("group_id", { type: "string" }, true),
         ],
         responses: { "200": { description: "Judge result detail" } }
+      }
+    },
+    "/api/v1/judge/results/by-kind/{judge_kind}": {
+      get: {
+        tags: ["judge"],
+        summary: "List judge results by kind",
+        parameters: [
+          pathParam("judge_kind"),
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true),
+          queryParam("limit", { type: "integer" })
+        ],
+        responses: { "200": { description: "Judge result list" } }
+      }
+    },
+    "/api/v1/judge/results/by-field/{field_id}": {
+      get: {
+        tags: ["judge"],
+        summary: "List judge results by field",
+        parameters: [
+          pathParam("field_id"),
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true),
+          queryParam("limit", { type: "integer" })
+        ],
+        responses: { "200": { description: "Judge result list" } }
+      }
+    },
+    "/api/v1/judge/results/by-task/{task_id}": {
+      get: {
+        tags: ["judge"],
+        summary: "List judge results by task",
+        parameters: [
+          pathParam("task_id"),
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true),
+          queryParam("limit", { type: "integer" })
+        ],
+        responses: { "200": { description: "Judge result list" } }
+      }
+    },
+    "/api/v1/judge/results/by-prescription/{prescription_id}": {
+      get: {
+        tags: ["judge"],
+        summary: "List judge results by prescription",
+        parameters: [
+          pathParam("prescription_id"),
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true),
+          queryParam("limit", { type: "integer" })
+        ],
+        responses: { "200": { description: "Judge result list" } }
       }
     },
   });
