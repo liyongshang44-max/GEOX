@@ -51,7 +51,7 @@ const EvaluateAgronomyRequestSchema = TenantSchema.extend({
   season_id: z.string().min(1).optional(),
   device_id: z.string().min(1).optional(),
   soil_moisture: z.number().optional(),
-  deficit_threshold: z.number().optional(),
+  evidence_judge_verdict: z.string().min(1).optional(),
   evidence_refs: z.array(z.unknown()).optional(),
   source_refs: z.array(z.unknown()).optional(),
 });
