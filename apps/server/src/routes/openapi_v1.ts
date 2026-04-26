@@ -21,6 +21,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       { name: "alerts", description: "Alert rules, events, and notification records" },
       { name: "exports", description: "Evidence export and audit downloads" },
       { name: "operations", description: "Approvals, execution, and operations workbench" },
+      { name: "judge", description: "Judge V2 evaluation and result query" },
       { name: "dashboard", description: "Commercial dashboard overview" }
     ],
     components: {
@@ -2726,6 +2727,31 @@ function applyP13OpenApiAlignment(spec: any) {
 
   });
 
+  Object.assign(spec.components.schemas, {
+    JudgeResultV2: {
+      type: "object",
+      required: ["judge_id", "judge_kind", "tenant_id", "project_id", "group_id", "verdict", "severity", "reasons", "inputs", "outputs", "confidence", "evidence_refs", "source_refs", "created_at", "created_ts_ms"],
+      properties: {
+        judge_id: { type: "string" },
+        judge_kind: { type: "string", enum: ["EVIDENCE", "AGRONOMY", "EXECUTION"] },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        verdict: { type: "string" },
+        severity: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        reasons: { type: "array", items: { type: "string" } },
+        inputs: { type: "object", additionalProperties: true },
+        outputs: { type: "object", additionalProperties: true },
+        confidence: { type: "object", additionalProperties: true },
+        evidence_refs: { type: "array", items: {} },
+        source_refs: { type: "array", items: {} },
+        created_at: { type: "string", format: "date-time" },
+        created_ts_ms: { type: "integer", format: "int64" },
+      },
+      additionalProperties: true,
+    },
+  });
+
 
   Object.assign(spec.paths, {
     "/api/v1/actions/index": {
@@ -2784,6 +2810,47 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     "/api/v1/simulators/irrigation/execute": {
       post: { tags: ["operations"], summary: "Execute irrigation simulator", responses: { "200": jsonResponse(ref("GenericOkResponse"), "Simulator execution result") } }
+    },
+    "/api/v2/judge/health": {
+      get: { tags: ["judge"], summary: "Judge V2 module health", responses: { "200": jsonResponse(ref("GenericOkResponse"), "Judge V2 health") } }
+    },
+    "/api/v2/judge/evidence/evaluate": {
+      post: { tags: ["judge"], summary: "Evaluate evidence judge", responses: { "200": { description: "Judge result created" } } }
+    },
+    "/api/v2/judge/agronomy/evaluate": {
+      post: { tags: ["judge"], summary: "Evaluate agronomy judge", responses: { "200": { description: "Judge result created" } } }
+    },
+    "/api/v2/judge/execution/evaluate": {
+      post: { tags: ["judge"], summary: "Evaluate execution judge", responses: { "200": { description: "Judge result created" } } }
+    },
+    "/api/v2/judge/results": {
+      get: {
+        tags: ["judge"],
+        summary: "List judge results",
+        parameters: [
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true),
+          queryParam("judge_kind", { type: "string" }),
+          queryParam("task_id", { type: "string" }),
+          queryParam("recommendation_id", { type: "string" }),
+          queryParam("limit", { type: "integer" })
+        ],
+        responses: { "200": { description: "Judge result list" } }
+      }
+    },
+    "/api/v2/judge/results/{judge_id}": {
+      get: {
+        tags: ["judge"],
+        summary: "Read judge result by id",
+        parameters: [
+          pathParam("judge_id"),
+          queryParam("tenant_id", { type: "string" }, true),
+          queryParam("project_id", { type: "string" }, true),
+          queryParam("group_id", { type: "string" }, true)
+        ],
+        responses: { "200": { description: "Judge result detail" } }
+      }
     },
   });
 
