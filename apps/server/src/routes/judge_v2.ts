@@ -34,11 +34,14 @@ const TenantSchema = z.object({
 });
 
 const EvaluateEvidenceRequestSchema = TenantSchema.extend({
-  task_id: z.string().min(1).optional(),
-  receipt_id: z.string().min(1).optional(),
+  field_id: z.string().min(1).optional(),
+  device_id: z.string().min(1).optional(),
+  soil_moisture: z.number().optional(),
+  observed_at_ts_ms: z.number().optional(),
+  now_ts_ms: z.number().optional(),
+  last_heartbeat_ts_ms: z.number().optional(),
+  last_telemetry_ts_ms: z.number().optional(),
   evidence_refs: z.array(z.unknown()).optional(),
-  source_refs: z.array(z.unknown()).optional(),
-  min_evidence_count: z.number().int().min(1).optional(),
 });
 
 const EvaluateAgronomyRequestSchema = TenantSchema.extend({

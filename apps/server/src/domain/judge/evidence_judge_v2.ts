@@ -4,43 +4,145 @@ export type EvidenceJudgeEvaluateInput = {
   tenant_id: string;
   project_id: string;
   group_id: string;
-  task_id?: string | null;
-  receipt_id?: string | null;
+  field_id?: string | null;
+  device_id?: string | null;
+  soil_moisture?: number | null;
+  observed_at_ts_ms?: number | null;
+  now_ts_ms?: number | null;
+  last_heartbeat_ts_ms?: number | null;
+  last_telemetry_ts_ms?: number | null;
   evidence_refs?: unknown[];
-  source_refs?: unknown[];
-  min_evidence_count?: number;
 };
 
 export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): JudgeResultV2CreateInput {
+  const nowTs = Number(input.now_ts_ms ?? Date.now());
+  const observedAt = Number(input.observed_at_ts_ms);
+  const soilMoisture = Number(input.soil_moisture);
+  const heartbeatTs = Number(input.last_heartbeat_ts_ms);
+  const telemetryTs = Number(input.last_telemetry_ts_ms);
   const evidenceRefs = Array.isArray(input.evidence_refs) ? input.evidence_refs : [];
-  const sourceRefs = Array.isArray(input.source_refs) ? input.source_refs : [];
-  const minEvidenceCount = Number(input.min_evidence_count ?? 1);
-  const hasEnoughEvidence = evidenceRefs.length >= Math.max(1, minEvidenceCount);
+
+  if (!Number.isFinite(soilMoisture)) {
+    return {
+      judge_kind: "EVIDENCE",
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id ?? null,
+      device_id: input.device_id ?? null,
+      verdict: "INSUFFICIENT_EVIDENCE",
+      severity: "MEDIUM",
+      reasons: ["soil_moisture_missing"],
+      inputs: {
+        soil_moisture: null,
+        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
+        now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
+      },
+      outputs: { stale_data: false, device_offline: false, sensor_drift: false },
+      confidence: { level: "LOW", basis: "assumed", reasons: ["soil_moisture_required"] },
+      evidence_refs: evidenceRefs,
+      source_refs: [],
+    };
+  }
+
+  if (soilMoisture < 0 || soilMoisture > 1.2) {
+    return {
+      judge_kind: "EVIDENCE",
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id ?? null,
+      device_id: input.device_id ?? null,
+      verdict: "SENSOR_DRIFT",
+      severity: "HIGH",
+      reasons: ["soil_moisture_out_of_range"],
+      inputs: {
+        soil_moisture: soilMoisture,
+        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
+        now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
+      },
+      outputs: { stale_data: false, device_offline: false, sensor_drift: true },
+      confidence: { level: "MEDIUM", basis: "measured", reasons: ["value_range_rule"] },
+      evidence_refs: evidenceRefs,
+      source_refs: [],
+    };
+  }
+
+  if (Number.isFinite(observedAt) && Number.isFinite(nowTs) && nowTs - observedAt > 10 * 60 * 1000) {
+    return {
+      judge_kind: "EVIDENCE",
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id ?? null,
+      device_id: input.device_id ?? null,
+      verdict: "STALE_DATA",
+      severity: "HIGH",
+      reasons: ["observation_too_old"],
+      inputs: {
+        soil_moisture: soilMoisture,
+        observed_at_ts_ms: observedAt,
+        now_ts_ms: nowTs,
+      },
+      outputs: { stale_data: true, device_offline: false, sensor_drift: false },
+      confidence: { level: "HIGH", basis: "measured", reasons: ["timestamp_freshness_rule"] },
+      evidence_refs: evidenceRefs,
+      source_refs: [],
+    };
+  }
+
+  if (Number.isFinite(heartbeatTs) && Number.isFinite(nowTs) && nowTs - heartbeatTs > 5 * 60 * 1000) {
+    return {
+      judge_kind: "EVIDENCE",
+      tenant_id: input.tenant_id,
+      project_id: input.project_id,
+      group_id: input.group_id,
+      field_id: input.field_id ?? null,
+      device_id: input.device_id ?? null,
+      verdict: "DEVICE_OFFLINE",
+      severity: "CRITICAL",
+      reasons: ["heartbeat_timeout"],
+      inputs: {
+        soil_moisture: soilMoisture,
+        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
+        now_ts_ms: nowTs,
+        last_heartbeat_ts_ms: heartbeatTs,
+      },
+      outputs: { stale_data: false, device_offline: true, sensor_drift: false },
+      confidence: { level: "HIGH", basis: "measured", reasons: ["heartbeat_freshness_rule"] },
+      evidence_refs: evidenceRefs,
+      source_refs: [],
+    };
+  }
 
   return {
     judge_kind: "EVIDENCE",
     tenant_id: input.tenant_id,
     project_id: input.project_id,
     group_id: input.group_id,
-    task_id: input.task_id ?? null,
-    receipt_id: input.receipt_id ?? null,
-    verdict: hasEnoughEvidence ? "PASS" : "INSUFFICIENT_EVIDENCE",
-    severity: hasEnoughEvidence ? "LOW" : "HIGH",
-    reasons: hasEnoughEvidence ? ["evidence_count_ok"] : ["missing_minimum_evidence"],
+    field_id: input.field_id ?? null,
+    device_id: input.device_id ?? null,
+    verdict: "PASS",
+    severity: "LOW",
+    reasons: ["evidence_guard_pass"],
     inputs: {
-      min_evidence_count: Math.max(1, minEvidenceCount),
-      evidence_count: evidenceRefs.length,
-      source_count: sourceRefs.length,
+      soil_moisture: soilMoisture,
+      observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
+      now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
+      last_heartbeat_ts_ms: Number.isFinite(heartbeatTs) ? heartbeatTs : null,
+      last_telemetry_ts_ms: Number.isFinite(telemetryTs) ? telemetryTs : null,
     },
     outputs: {
-      has_enough_evidence: hasEnoughEvidence,
+      stale_data: false,
+      device_offline: false,
+      sensor_drift: false,
     },
     confidence: {
-      level: hasEnoughEvidence ? "HIGH" : "LOW",
+      level: "HIGH",
       basis: "measured",
-      reasons: ["counted_evidence_refs"],
+      reasons: ["soil_moisture_and_freshness_checks_passed"],
     },
     evidence_refs: evidenceRefs,
-    source_refs: sourceRefs,
+    source_refs: [],
   };
 }
