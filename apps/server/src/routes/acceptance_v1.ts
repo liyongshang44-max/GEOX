@@ -9,6 +9,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import { listJudgeResultsV2 } from "../domain/judge/judge_result_v2.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
@@ -22,7 +23,8 @@ const EvaluateRequestSchema = z.object({
   tenant_id: z.string().min(1),
   project_id: z.string().min(1),
   group_id: z.string().min(1),
-  act_task_id: z.string().min(1)
+  act_task_id: z.string().min(1),
+  judge_result_ids: z.array(z.string().min(1)).optional()
 });
 
 const AcceptanceReadQuerySchema = z.object({
@@ -204,6 +206,16 @@ async function loadProgramAcceptancePolicyRef(
   return value || null;
 }
 
+async function loadLatestExecutionJudgeForTask(pool: Pool, tenant: TenantTriple, task_id: string): Promise<string | null> {
+  const rows = await listJudgeResultsV2(pool, {
+    ...tenant,
+    judge_kind: "EXECUTION",
+    task_id,
+    limit: 1,
+  });
+  return rows[0]?.judge_id ?? null;
+}
+
 
 
 type AcceptanceDerivedStates = {
@@ -299,6 +311,11 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         loadProgramAcceptancePolicyRef(pool, tenant, program_id),
         loadAcceptanceDerivedStates(pool, tenant, field_id)
       ]);
+      const executionJudgeId = await loadLatestExecutionJudgeForTask(pool, tenant, body.act_task_id);
+      const judgeResultIds = Array.from(new Set([
+        ...(body.judge_result_ids ?? []),
+        ...(executionJudgeId ? [executionJudgeId] : [])
+      ]));
 
       const evaluated = evaluateAcceptanceV1({
         action_type: String(taskPayload.action_type ?? ""),
@@ -356,7 +373,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
           output_digest: digestJson({ result: evaluated.result, verdict: toVerdict(evaluated.result), explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
           evaluated_at: nowIso,
-          evidence_refs: [taskFact.fact_id, receiptFact.fact_id]
+          evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds]
         })
       };
 
@@ -368,7 +385,8 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       return reply.send({
         ok: true,
         verdict: acceptanceRecord.payload.verdict,
-        fact_id: acceptanceFactId
+        fact_id: acceptanceFactId,
+        judge_result_ids_used: judgeResultIds
       });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
