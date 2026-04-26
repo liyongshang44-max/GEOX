@@ -254,7 +254,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const healthz = requireOk(await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token }), 'admin healthz');
     checks.healthz_ok = Boolean(healthz.ok);
 
-    const openapi = requireOk(await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token }), 'openapi');
+    const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token });
+    assert.equal(openapiResp.status, 200, `openapi status=${openapiResp.status}`);
+    const openapi = openapiResp.json ?? {};
     const paths = openapi.paths ?? {};
     const requiredPaths = [
       '/api/v1/judge/health',
