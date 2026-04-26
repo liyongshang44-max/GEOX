@@ -9,7 +9,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
-import { listJudgeResultsV2 } from "../domain/judge/judge_result_v2.js";
+import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
@@ -24,7 +24,8 @@ const EvaluateRequestSchema = z.object({
   project_id: z.string().min(1),
   group_id: z.string().min(1),
   act_task_id: z.string().min(1),
-  judge_result_ids: z.array(z.string().min(1)).optional()
+  judge_result_ids: z.array(z.string().min(1)).optional(),
+  execution_judge_id: z.string().min(1).optional()
 });
 
 const AcceptanceReadQuerySchema = z.object({
@@ -312,9 +313,20 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         loadAcceptanceDerivedStates(pool, tenant, field_id)
       ]);
       const executionJudgeId = await loadLatestExecutionJudgeForTask(pool, tenant, body.act_task_id);
+      const executionJudgeIdFromInput = typeof body.execution_judge_id === "string" ? body.execution_judge_id.trim() : "";
+      let executionJudge = null as Awaited<ReturnType<typeof loadJudgeResultV2>> | null;
+      if (executionJudgeIdFromInput) {
+        executionJudge = await loadJudgeResultV2(pool, { ...tenant, judge_id: executionJudgeIdFromInput });
+        if (!executionJudge) return reply.status(404).send({ ok: false, error: "EXECUTION_JUDGE_NOT_FOUND" });
+        if (executionJudge.judge_kind !== "EXECUTION") {
+          return reply.status(400).send({ ok: false, error: "INVALID_EXECUTION_JUDGE_KIND" });
+        }
+      }
+
+      const effectiveExecutionJudgeId = executionJudgeIdFromInput || executionJudgeId || "";
       const judgeResultIds = Array.from(new Set([
         ...(body.judge_result_ids ?? []),
-        ...(executionJudgeId ? [executionJudgeId] : [])
+        ...(effectiveExecutionJudgeId ? [effectiveExecutionJudgeId] : [])
       ]));
 
       const evaluated = evaluateAcceptanceV1({
@@ -373,7 +385,9 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           input_digest: digestJson({ action_type: taskPayload.action_type, parameters: taskPayload.parameters, receipt: receiptFact.record_json?.payload ?? {}, derived_states, acceptance_policy_ref }),
           output_digest: digestJson({ result: evaluated.result, verdict: toVerdict(evaluated.result), explanation_codes: evaluated.explanation_codes, metrics: evaluated.metrics }),
           evaluated_at: nowIso,
-          evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds]
+          evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
+          execution_judge_id: effectiveExecutionJudgeId || undefined,
+          execution_judge_verdict: executionJudge?.verdict || undefined
         })
       };
 

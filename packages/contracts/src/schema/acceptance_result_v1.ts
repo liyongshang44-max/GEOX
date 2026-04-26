@@ -28,7 +28,9 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   acceptance_skill_id: z.string().min(1).optional(),
   acceptance_skill_version: z.string().min(1).optional(),
   input_digest: z.string().min(1).optional(),
-  output_digest: z.string().min(1).optional()
+  output_digest: z.string().min(1).optional(),
+  execution_judge_id: z.string().min(1).optional(),
+  execution_judge_verdict: z.string().min(1).optional()
 });
 
 export type AcceptanceResultV1Payload = z.infer<typeof AcceptanceResultV1PayloadSchema>;
