@@ -173,7 +173,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
         executor_id: { kind: 'script', id: 'executor', namespace: 'qa' },
         execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
         execution_coverage: { kind: 'field', ref: field_id },
-        resource_usage: { water_l: 20 }, observed_parameters: { duration_min: 20, prescription_id },
+        resource_usage: { fuel_l: null, electric_kwh: null, water_l: 20, chemical_ml: null },
+        observed_parameters: { duration_min: 20, prescription_id },
         evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `dispatch_${suffix}` }],
         status: 'executed', constraint_check: { violated: false, violations: [] },
         meta: { command_id: task_id, idempotency_key: `acceptance_receipt_${suffix}`, recommendation_id, prescription_id }
