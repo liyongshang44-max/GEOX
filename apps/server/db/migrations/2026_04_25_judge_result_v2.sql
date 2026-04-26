@@ -32,20 +32,20 @@ CREATE TABLE IF NOT EXISTS judge_result_v2 (
   created_ts_ms BIGINT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_tenant_scope_kind
-  ON judge_result_v2(tenant_id, project_id, group_id, judge_kind, created_ts_ms DESC);
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_scope
+  ON judge_result_v2(tenant_id, project_id, group_id);
 
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_task_id
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_kind
+  ON judge_result_v2(judge_kind);
+
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_field
+  ON judge_result_v2(field_id);
+
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_task
   ON judge_result_v2(task_id);
 
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_receipt_id
-  ON judge_result_v2(receipt_id);
-
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_as_executed_id
-  ON judge_result_v2(as_executed_id);
-
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_recommendation_id
-  ON judge_result_v2(recommendation_id);
-
-CREATE INDEX IF NOT EXISTS idx_judge_result_v2_prescription_id
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_prescription
   ON judge_result_v2(prescription_id);
+
+CREATE INDEX IF NOT EXISTS ix_judge_result_v2_created
+  ON judge_result_v2(created_ts_ms);
