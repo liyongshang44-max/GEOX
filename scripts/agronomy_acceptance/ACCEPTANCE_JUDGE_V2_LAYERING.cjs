@@ -202,7 +202,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const executionJson = requireOk(await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
       method: 'POST', token,
       body: {
-        tenant_id, project_id, group_id, field_id, device_id,
+        tenant_id, project_id, group_id, field_id, device_id, prescription_id,
         receipt: { receipt_id: receipt_fact_id, task_id, status: 'executed', evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }] },
         as_executed: { as_executed_id, task_id },
         as_applied: { as_applied_id },
@@ -218,7 +218,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const executionNegativeJson = requireOk(await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
       method: 'POST', token,
       body: {
-        tenant_id, project_id, group_id, field_id, device_id,
+        tenant_id, project_id, group_id, field_id, device_id, prescription_id,
         receipt: { receipt_id: `${receipt_fact_id}_neg`, task_id: `${task_id}_neg`, status: 'executed', evidence_refs: [] },
         pre_soil_moisture, post_soil_moisture
       }

@@ -58,6 +58,7 @@ const EvaluateAgronomyRequestSchema = TenantSchema.extend({
 });
 
 const EvaluateExecutionRequestSchema = TenantSchema.extend({
+  prescription_id: z.string().min(1).optional(),
   field_id: z.string().min(1).optional(),
   device_id: z.string().min(1).optional(),
   receipt: z.object({

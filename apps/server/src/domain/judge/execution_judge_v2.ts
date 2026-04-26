@@ -20,6 +20,7 @@ export type ExecutionJudgeEvaluateInput = {
   tenant_id: string;
   project_id: string;
   group_id: string;
+  prescription_id?: string | null;
   field_id?: string | null;
   device_id?: string | null;
   receipt?: ExecutionReceiptInput | null;
@@ -60,6 +61,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
   const soilDelta = preSoilMoisture != null && postSoilMoisture != null
     ? postSoilMoisture - preSoilMoisture
     : null;
+  const prescriptionId = String(input.prescription_id ?? "").trim() || null;
 
   if (!receipt) {
     return {
@@ -67,6 +69,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
+      prescription_id: prescriptionId,
       field_id: input.field_id ?? null,
       device_id: input.device_id ?? null,
       verdict: "INSUFFICIENT_EVIDENCE",
@@ -98,6 +101,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
+      prescription_id: prescriptionId,
       field_id: input.field_id ?? null,
       device_id: input.device_id ?? null,
       task_id: String(receipt.task_id ?? asExecuted?.task_id ?? "").trim() || null,
@@ -133,6 +137,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
+      prescription_id: prescriptionId,
       field_id: input.field_id ?? null,
       device_id: input.device_id ?? null,
       task_id: String(receipt.task_id ?? asExecuted?.task_id ?? "").trim() || null,
@@ -168,6 +173,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
+      prescription_id: prescriptionId,
       field_id: input.field_id ?? null,
       device_id: input.device_id ?? null,
       task_id: String(receipt.task_id ?? "").trim() || null,
@@ -201,6 +207,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       tenant_id: input.tenant_id,
       project_id: input.project_id,
       group_id: input.group_id,
+      prescription_id: prescriptionId,
       field_id: input.field_id ?? null,
       device_id: input.device_id ?? null,
       task_id: String(receipt.task_id ?? asExecuted.task_id ?? "").trim() || null,
@@ -236,6 +243,7 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
     tenant_id: input.tenant_id,
     project_id: input.project_id,
     group_id: input.group_id,
+    prescription_id: prescriptionId,
     field_id: input.field_id ?? null,
     device_id: input.device_id ?? null,
     task_id: String(receipt.task_id ?? asExecuted.task_id ?? "").trim() || null,
