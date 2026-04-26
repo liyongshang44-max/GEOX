@@ -30,6 +30,13 @@ export type JudgeResultV2CreateInput = TenantTriple & {
   as_applied_id?: string | null;
 };
 
+export type JudgeResultV2ListInput = TenantTriple & {
+  judge_kind?: JudgeKindV2;
+  task_id?: string;
+  recommendation_id?: string;
+  limit?: number;
+};
+
 function normalizeJson(v: unknown): any {
   if (v === null || v === undefined) return null;
   if (typeof v === "string") {
@@ -80,11 +87,39 @@ export function mapJudgeResultV2Row(row: any): JudgeResultV2 {
   };
 }
 
-export async function createJudgeResultV2(pool: Pool, input: JudgeResultV2CreateInput): Promise<JudgeResultV2> {
+export function buildJudgeResultV2(input: JudgeResultV2CreateInput): JudgeResultV2 {
   const judge_id = randomUUID();
-  const createdTsMs = Date.now();
-  const createdAt = new Date(createdTsMs).toISOString();
+  const created_ts_ms = Date.now();
+  const created_at = new Date(created_ts_ms).toISOString();
+  return {
+    judge_id,
+    judge_kind: input.judge_kind,
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id ?? null,
+    season_id: input.season_id ?? null,
+    device_id: input.device_id ?? null,
+    recommendation_id: input.recommendation_id ?? null,
+    prescription_id: input.prescription_id ?? null,
+    task_id: input.task_id ?? null,
+    receipt_id: input.receipt_id ?? null,
+    as_executed_id: input.as_executed_id ?? null,
+    as_applied_id: input.as_applied_id ?? null,
+    verdict: input.verdict,
+    severity: input.severity,
+    reasons: input.reasons ?? [],
+    inputs: input.inputs ?? {},
+    outputs: input.outputs ?? {},
+    confidence: input.confidence ?? { level: "LOW", basis: "assumed", reasons: ["manual"] },
+    evidence_refs: input.evidence_refs ?? [],
+    source_refs: input.source_refs ?? [],
+    created_at,
+    created_ts_ms,
+  };
+}
 
+export async function insertJudgeResultV2(pool: Pool, result: JudgeResultV2): Promise<JudgeResultV2> {
   const r = await pool.query(
     `INSERT INTO judge_result_v2 (
       judge_id, judge_kind,
@@ -106,36 +141,36 @@ export async function createJudgeResultV2(pool: Pool, input: JudgeResultV2Create
       $23::timestamptz, $24
     ) RETURNING *`,
     [
-      judge_id,
-      input.judge_kind,
-      input.tenant_id,
-      input.project_id,
-      input.group_id,
-      input.field_id ?? null,
-      input.season_id ?? null,
-      input.device_id ?? null,
-      input.recommendation_id ?? null,
-      input.prescription_id ?? null,
-      input.task_id ?? null,
-      input.receipt_id ?? null,
-      input.as_executed_id ?? null,
-      input.as_applied_id ?? null,
-      input.verdict,
-      input.severity,
-      JSON.stringify(input.reasons ?? []),
-      JSON.stringify(input.inputs ?? {}),
-      JSON.stringify(input.outputs ?? {}),
-      JSON.stringify(input.confidence ?? { level: "LOW", basis: "assumed", reasons: ["manual"] }),
-      JSON.stringify(input.evidence_refs ?? []),
-      JSON.stringify(input.source_refs ?? []),
-      createdAt,
-      createdTsMs,
+      result.judge_id,
+      result.judge_kind,
+      result.tenant_id,
+      result.project_id,
+      result.group_id,
+      result.field_id ?? null,
+      result.season_id ?? null,
+      result.device_id ?? null,
+      result.recommendation_id ?? null,
+      result.prescription_id ?? null,
+      result.task_id ?? null,
+      result.receipt_id ?? null,
+      result.as_executed_id ?? null,
+      result.as_applied_id ?? null,
+      result.verdict,
+      result.severity,
+      JSON.stringify(result.reasons ?? []),
+      JSON.stringify(result.inputs ?? {}),
+      JSON.stringify(result.outputs ?? {}),
+      JSON.stringify(result.confidence ?? { level: "LOW", basis: "assumed", reasons: ["manual"] }),
+      JSON.stringify(result.evidence_refs ?? []),
+      JSON.stringify(result.source_refs ?? []),
+      result.created_at,
+      result.created_ts_ms,
     ]
   );
   return mapJudgeResultV2Row(r.rows[0]);
 }
 
-export async function getJudgeResultV2ById(pool: Pool, input: TenantTriple & { judge_id: string }): Promise<JudgeResultV2 | null> {
+export async function loadJudgeResultV2(pool: Pool, input: TenantTriple & { judge_id: string }): Promise<JudgeResultV2 | null> {
   const r = await pool.query(
     `SELECT *
        FROM judge_result_v2
@@ -149,7 +184,7 @@ export async function getJudgeResultV2ById(pool: Pool, input: TenantTriple & { j
 
 export async function listJudgeResultsV2(
   pool: Pool,
-  input: TenantTriple & { judge_kind?: JudgeKindV2; task_id?: string; recommendation_id?: string; limit?: number }
+  input: JudgeResultV2ListInput
 ): Promise<JudgeResultV2[]> {
   const params: unknown[] = [input.tenant_id, input.project_id, input.group_id];
   const where: string[] = ["tenant_id = $1", "project_id = $2", "group_id = $3"];
@@ -171,4 +206,12 @@ export async function listJudgeResultsV2(
   const sql = `SELECT * FROM judge_result_v2 WHERE ${where.join(" AND ")} ORDER BY created_ts_ms DESC LIMIT ${limit}`;
   const r = await pool.query(sql, params);
   return (r.rows ?? []).map(mapJudgeResultV2Row);
+}
+
+export async function createJudgeResultV2(pool: Pool, input: JudgeResultV2CreateInput): Promise<JudgeResultV2> {
+  return insertJudgeResultV2(pool, buildJudgeResultV2(input));
+}
+
+export async function getJudgeResultV2ById(pool: Pool, input: TenantTriple & { judge_id: string }): Promise<JudgeResultV2 | null> {
+  return loadJudgeResultV2(pool, input);
 }

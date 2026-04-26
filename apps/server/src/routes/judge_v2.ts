@@ -6,7 +6,12 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { evaluateEvidenceJudgeV2 } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
-import { createJudgeResultV2, getJudgeResultV2ById, listJudgeResultsV2 } from "../domain/judge/judge_result_v2.js";
+import {
+  buildJudgeResultV2,
+  insertJudgeResultV2,
+  listJudgeResultsV2,
+  loadJudgeResultV2,
+} from "../domain/judge/judge_result_v2.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -84,9 +89,9 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
 
-      const evaluated = evaluateEvidenceJudgeV2(body);
-      const created = await createJudgeResultV2(pool, evaluated);
-      return reply.send({ ok: true, judge_result: created });
+      const judgeResult = buildJudgeResultV2(evaluateEvidenceJudgeV2(body));
+      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
     }
@@ -99,9 +104,9 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const body = EvaluateAgronomyRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
 
-      const evaluated = evaluateAgronomyJudgeV2(body);
-      const created = await createJudgeResultV2(pool, evaluated);
-      return reply.send({ ok: true, judge_result: created });
+      const judgeResult = buildJudgeResultV2(evaluateAgronomyJudgeV2(body));
+      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
     }
@@ -114,9 +119,9 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const body = EvaluateExecutionRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
 
-      const evaluated = evaluateExecutionJudgeV2(body);
-      const created = await createJudgeResultV2(pool, evaluated);
-      return reply.send({ ok: true, judge_result: created });
+      const judgeResult = buildJudgeResultV2(evaluateExecutionJudgeV2(body));
+      const inserted = await insertJudgeResultV2(pool, judgeResult);
+      return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
     }
@@ -143,7 +148,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       const params = ReadJudgeRequestSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, params)) return;
 
-      const item = await getJudgeResultV2ById(pool, params);
+      const item = await loadJudgeResultV2(pool, params);
       if (!item) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
       return reply.send({ ok: true, judge_result: item });
     } catch (error: any) {
