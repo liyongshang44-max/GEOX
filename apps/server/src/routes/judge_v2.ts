@@ -45,6 +45,7 @@ const EvaluateEvidenceRequestSchema = TenantSchema.extend({
 });
 
 const EvaluateAgronomyRequestSchema = TenantSchema.extend({
+  evidence_judge_id: z.string().min(1).optional(),
   recommendation_id: z.string().min(1).optional(),
   prescription_id: z.string().min(1).optional(),
   field_id: z.string().min(1).optional(),
