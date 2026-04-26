@@ -5,7 +5,6 @@ import type { ServerConfig } from "./config/index.js";
 import { createDatabasePool } from "./infra/database.js";
 import type { RuntimePaths } from "./infra/runtimePaths.js";
 import { registerCoreModule } from "./modules/core/registerCoreModule.js";
-import { registerJudgeModule } from "./modules/judge/registerJudgeModule.js";
 import { registerStaticModule } from "./modules/static/registerStaticModule.js";
 import { registerOpenApiModule } from "./modules/openapi/registerOpenApiModule.js";
 import { registerDomainModules } from "./modules/domain/registerDomainModules.js";
@@ -23,11 +22,6 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
 
   registerCoreModule(app);
-  registerJudgeModule(app, {
-    databaseUrl: config.databaseUrl,
-    systemProfile: config.systemProfile,
-    disableAppleII: config.disableAppleII,
-  });
   registerStaticModule(app, {
     mediaDir: paths.mediaDir,
     acceptanceDir: paths.acceptanceDir,

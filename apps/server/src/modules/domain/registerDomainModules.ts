@@ -29,6 +29,7 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerDecisionModule(app, pool);
   registerExecutionModule(app, pool);
   registerEvidenceModule(app, pool);
+  registerJudgeModule(app, pool);
   registerAcceptanceModule(app, pool);
   registerReportingModule(app, pool);
   registerCommercialModule(app, pool);
@@ -36,5 +37,4 @@ export function registerDomainModules(app: FastifyInstance, pool: Pool, options:
   registerPrescriptionModule(app, pool);
   registerAsExecutedModule(app, pool);
   registerRoiLedgerModule(app, pool);
-  registerJudgeModule(app, pool);
 }

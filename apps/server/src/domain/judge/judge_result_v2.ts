@@ -34,6 +34,8 @@ export type JudgeResultV2ListInput = TenantTriple & {
   judge_kind?: JudgeKindV2;
   task_id?: string;
   recommendation_id?: string;
+  field_id?: string;
+  prescription_id?: string;
   limit?: number;
 };
 
@@ -200,6 +202,14 @@ export async function listJudgeResultsV2(
   if (input.recommendation_id) {
     params.push(input.recommendation_id);
     where.push(`recommendation_id = $${params.length}`);
+  }
+  if (input.field_id) {
+    params.push(input.field_id);
+    where.push(`field_id = $${params.length}`);
+  }
+  if (input.prescription_id) {
+    params.push(input.prescription_id);
+    where.push(`prescription_id = $${params.length}`);
   }
 
   const limit = Math.max(1, Math.min(200, Number(input.limit ?? 20) || 20));
