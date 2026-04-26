@@ -23,11 +23,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
 
   registerCoreModule(app);
-  registerJudgeModule(app, {
-    databaseUrl: config.databaseUrl,
-    systemProfile: config.systemProfile,
-    disableAppleII: config.disableAppleII,
-  });
+  registerJudgeModule(app, pool);
   registerStaticModule(app, {
     mediaDir: paths.mediaDir,
     acceptanceDir: paths.acceptanceDir,
