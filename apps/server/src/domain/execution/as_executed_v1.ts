@@ -25,6 +25,7 @@ type PrescriptionRow = {
   field_id: string | null;
   season_id: string | null;
   zone_id: string | null;
+  trace_id: string | null;
   operation_type: string | null;
   operation_amount: any;
 };
@@ -210,6 +211,13 @@ function pickExecutedAmount(payload: any, plannedUnit: string | null): { amount:
   return { amount: null, unit: plannedUnit };
 }
 
+function extractTraceId(payload: any): string | null {
+  const candidate = getByPath(payload, ["parameters", "metadata", "trace_id"])
+    || getByPath(payload, ["parameters", "trace_id"])
+    || getByPath(payload, ["metadata", "trace_id"]);
+  return candidate ? String(candidate) : null;
+}
+
 function buildDeviation(plannedAmount: number | null, executedAmount: number | null): any {
   if (plannedAmount == null || executedAmount == null || plannedAmount === 0) return {};
   const amount_delta = executedAmount - plannedAmount;
@@ -261,6 +269,7 @@ async function findPrescriptionById(pool: Pool, input: TenantTriple & { prescrip
     field_id: row.field_id == null ? null : String(row.field_id),
     season_id: row.season_id == null ? null : String(row.season_id),
     zone_id: row.zone_id == null ? null : String(row.zone_id),
+    trace_id: extractTraceId(parseJsonMaybe(row.operation_amount) ?? {}),
     operation_type: row.operation_type == null ? null : String(row.operation_type),
     operation_amount: parseJsonMaybe(row.operation_amount) ?? {},
   };
@@ -286,6 +295,7 @@ async function findPrescriptionByRecommendation(pool: Pool, input: TenantTriple 
     field_id: row.field_id == null ? null : String(row.field_id),
     season_id: row.season_id == null ? null : String(row.season_id),
     zone_id: row.zone_id == null ? null : String(row.zone_id),
+    trace_id: extractTraceId(parseJsonMaybe(row.operation_amount) ?? {}),
     operation_type: row.operation_type == null ? null : String(row.operation_type),
     operation_amount: parseJsonMaybe(row.operation_amount) ?? {},
   };
@@ -392,6 +402,7 @@ function toAsExecutedPayload(params: {
           amount: plannedAmount,
           unit: plannedUnit,
           prescription_id: params.prescription.prescription_id,
+          trace_id: params.prescription.trace_id ?? null,
           recommendation_id: params.prescription.recommendation_id,
           field_id: params.prescription.field_id,
           season_id: params.prescription.season_id,
@@ -420,6 +431,7 @@ function toAsExecutedPayload(params: {
     confidence: {
       score: params.prescriptionConfidence,
       prescription_resolved_by: params.prescriptionResolvedBy,
+      trace_id: params.prescription?.trace_id ?? null,
     },
   };
 }
@@ -496,6 +508,7 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
       applied_amount: toNum(executed?.amount),
       applied_unit: executed?.unit ?? planned?.unit ?? null,
       rate: null,
+      trace_id: getByPath(planned, ["trace_id"]) ?? getByPath(executed, ["trace_id"]) ?? null,
     },
     evidence_refs: params.as_executed.evidence_refs,
     log_refs: params.as_executed.log_refs,
