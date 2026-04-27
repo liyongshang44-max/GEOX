@@ -1,4 +1,8 @@
+const { randomUUID } = require('node:crypto');
+const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
+
+let pool;
 
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
@@ -6,15 +10,63 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
+  const databaseUrl = env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox');
+  pool = new Pool({ connectionString: databaseUrl });
   const suffix = Date.now();
   const field_id = env('FIELD_ID', `field_memory_${suffix}`);
   const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
   const device_id = env('DEVICE_ID', `device_field_memory_${suffix}`);
   const pre_soil_moisture = 0.18;
   const post_soil_moisture = 0.24;
+  const ts0 = Date.now() - 60_000;
 
   const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
   const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
+
+  // Seed formal Stage1 trigger states and low moisture signal.
+  // recommendations.generate does not trust body.stage1_sensing_summary as formal trigger.
+  // It refreshes field read models from derived_sensing_state_index_v1 and device_observation_index_v1.
+  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text`);
+  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text`);
+  await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+
+  await pool.query(
+    `INSERT INTO derived_sensing_state_index_v1
+      (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence, explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id, source_observation_ids_json)
+     VALUES
+      ($1,$2,$3,$4,'irrigation_effectiveness_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$6,'["obs_field_memory_irrigation"]'::jsonb),
+      ($1,$2,$3,$4,'leak_risk_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$7,'["obs_field_memory_leak"]'::jsonb)
+     ON CONFLICT DO NOTHING`,
+    [tenant_id, project_id, group_id, field_id, ts0, randomUUID(), randomUUID()]
+  );
+
+  await pool.query(
+    `INSERT INTO device_observation_index_v1
+      (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
+     VALUES
+      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$9),
+      ($1,$2,$3,$4,$5,'canopy_temp_c',to_timestamp($6 / 1000.0),$6,$8,0.88,$10)
+     ON CONFLICT DO NOTHING`,
+    [
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      ts0,
+      pre_soil_moisture,
+      31.2,
+      `obs_soil_field_memory_${randomUUID()}`,
+      `obs_canopy_field_memory_${randomUUID()}`,
+    ]
+  );
+
+  process.stdout.write(`${JSON.stringify({
+    stage1_seeded: true,
+    field_id,
+    trigger: { irrigation_effectiveness: 'low', leak_risk: 'low' },
+    soil_moisture: pre_soil_moisture
+  })}\n`);
 
   const recGen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST', token,
@@ -24,13 +76,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       season_id,
       device_id,
       crop_code: 'corn',
-      stage1_sensing_summary: {
-        irrigation_effectiveness: 'low',
-        leak_risk: 'low',
-        canopy_temp_status: 'normal',
-        evapotranspiration_risk: 'medium',
-        sensor_quality_level: 'GOOD',
-      },
       image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 }
     }
   });
@@ -142,7 +187,12 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
   process.stdout.write(`${JSON.stringify({ ok: true, checks }, null, 2)}\n`);
-})().catch((err) => {
+  await pool.end();
+  pool = null;
+})().catch(async (err) => {
+  try {
+    if (pool) await pool.end();
+  } catch {}
   console.error(err);
   process.exit(1);
 });
