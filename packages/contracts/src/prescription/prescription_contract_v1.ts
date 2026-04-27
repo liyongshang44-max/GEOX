@@ -1,3 +1,5 @@
+import type { SkillTraceV1 } from "../agronomy/recommendation_v2.js";
+
 export type PrescriptionRiskLevelV1 = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
 export type PrescriptionStatusV1 =
@@ -71,6 +73,8 @@ export type PrescriptionContractV1 = {
     reasons: string[];
   };
   evidence_refs: string[];
+  skill_trace_id?: string;
+  skill_trace?: SkillTraceV1;
   approval_requirement: {
     required: boolean;
     role?: string | null;

@@ -4,6 +4,7 @@ import type {
   PrescriptionOperationTypeV1,
   PrescriptionRiskLevelV1,
   PrescriptionStatusV1,
+  SkillTraceV1,
 } from "@geox/contracts";
 import type { Pool } from "pg";
 
@@ -218,6 +219,10 @@ function deriveStatus(operationType: PrescriptionOperationTypeV1, missingAmount:
 }
 
 function hydratePrescription(row: any): PrescriptionContractV1 {
+  const skillTrace = parseJsonMaybe(row.skill_trace);
+  const hydratedSkillTrace = (skillTrace && typeof skillTrace === "object" && typeof (skillTrace as any).skill_id === "string")
+    ? skillTrace as SkillTraceV1
+    : undefined;
   return {
     prescription_id: String(row.prescription_id),
     recommendation_id: String(row.recommendation_id),
@@ -235,6 +240,8 @@ function hydratePrescription(row: any): PrescriptionContractV1 {
     device_requirements: parseJsonMaybe(row.device_requirements) ?? {},
     risk: parseJsonMaybe(row.risk) ?? { level: "MEDIUM", reasons: [] },
     evidence_refs: Array.isArray(parseJsonMaybe(row.evidence_refs)) ? parseJsonMaybe(row.evidence_refs) : [],
+    skill_trace_id: row.skill_trace_id ? String(row.skill_trace_id) : undefined,
+    skill_trace: hydratedSkillTrace,
     approval_requirement: parseJsonMaybe(row.approval_requirement) ?? {},
     acceptance_conditions: parseJsonMaybe(row.acceptance_conditions) ?? { evidence_required: [] },
     status: String(row.status) as PrescriptionStatusV1,
@@ -294,7 +301,10 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
   if (exists) return { prescription: exists, idempotent: true };
 
   const operation_type = deriveOperationType(recPayload);
-  const recommendationSkillTrace = (recPayload?.skill_trace && typeof recPayload.skill_trace === "object") ? recPayload.skill_trace : null;
+  const recommendationSkillTrace = (recPayload?.skill_trace && typeof recPayload.skill_trace === "object") ? recPayload.skill_trace as SkillTraceV1 : null;
+  const skill_trace_id = toText(recPayload?.skill_trace_id)
+    ?? toText(recommendationSkillTrace?.trace_id)
+    ?? null;
   const suggestionParams = (recPayload?.suggested_action?.parameters && typeof recPayload.suggested_action.parameters === "object") ? recPayload.suggested_action.parameters : {};
   const operationParamsWithTrace = {
     ...suggestionParams,
@@ -368,6 +378,8 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     },
     risk: { level: riskLevel, reasons },
     evidence_refs,
+    skill_trace_id: skill_trace_id ?? undefined,
+    skill_trace: recommendationSkillTrace ?? undefined,
     approval_requirement: deriveApprovalRequirement(operation_type),
     acceptance_conditions: deriveAcceptanceConditions(operation_type),
     status,
@@ -380,11 +392,11 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     `INSERT INTO prescription_contract_v1 (
       prescription_id, recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, zone_id, operation_type,
       spatial_scope, timing_window, operation_amount, device_requirements, risk, evidence_refs,
-      approval_requirement, acceptance_conditions, status, created_at, updated_at, created_by
+      skill_trace_id, skill_trace, approval_requirement, acceptance_conditions, status, created_at, updated_at, created_by
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
       $11::jsonb, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb,
-      $17::jsonb, $18::jsonb, $19, NOW(), NOW(), $20
+      $17, $18::jsonb, $19::jsonb, $20::jsonb, $21, NOW(), NOW(), $22
     ) ON CONFLICT (tenant_id, project_id, group_id, recommendation_id) DO NOTHING`,
     [
       prescription.prescription_id,
@@ -403,6 +415,8 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
       JSON.stringify(prescription.device_requirements),
       JSON.stringify(prescription.risk),
       JSON.stringify(prescription.evidence_refs),
+      prescription.skill_trace_id ?? null,
+      prescription.skill_trace ? JSON.stringify(prescription.skill_trace) : null,
       JSON.stringify(prescription.approval_requirement),
       JSON.stringify(prescription.acceptance_conditions),
       prescription.status,
