@@ -295,10 +295,12 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
 
   const operation_type = deriveOperationType(recPayload);
   const recommendationSkillTrace = (recPayload?.skill_trace && typeof recPayload.skill_trace === "object") ? recPayload.skill_trace : null;
+  const recommendationTraceId = toText(recPayload?.trace_id) ?? toText(recommendationSkillTrace?.trace_id);
   const suggestionParams = (recPayload?.suggested_action?.parameters && typeof recPayload.suggested_action.parameters === "object") ? recPayload.suggested_action.parameters : {};
   const operationParamsWithTrace = {
     ...suggestionParams,
     metadata: {
+      trace_id: recommendationTraceId,
       recommendation_id: toText(recPayload?.recommendation_id),
       recommendation_type: toText(recPayload?.recommendation_type),
       action_type: toText(recPayload?.action_type),
@@ -332,6 +334,7 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
   const prescription: PrescriptionContractV1 = {
     prescription_id,
     recommendation_id: input.recommendation_id,
+    trace_id: recommendationTraceId,
     tenant_id: input.tenant_id,
     project_id: input.project_id,
     group_id: input.group_id,

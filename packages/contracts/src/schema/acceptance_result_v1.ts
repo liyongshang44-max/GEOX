@@ -23,6 +23,7 @@ export const AcceptanceResultV1PayloadSchema = z.object({
   group_id: z.string().min(1).optional(),
   program_id: z.string().min(1).optional(),
   operation_plan_id: z.string().min(1).optional(),
+  trace_id: z.string().min(1).optional(),
   rule_id: z.string().min(1).optional(),
   explanation_codes: z.array(z.string().min(1)).optional(),
   acceptance_skill_id: z.string().min(1).optional(),

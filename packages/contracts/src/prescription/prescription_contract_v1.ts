@@ -20,6 +20,7 @@ export type PrescriptionOperationTypeV1 =
 export type PrescriptionContractV1 = {
   prescription_id: string;
   recommendation_id: string;
+  trace_id?: string | null;
   tenant_id: string;
   project_id: string;
   group_id: string;
