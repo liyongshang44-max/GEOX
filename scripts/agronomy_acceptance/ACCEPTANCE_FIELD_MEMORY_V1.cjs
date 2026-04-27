@@ -127,18 +127,27 @@ let pool;
       command_id: actTaskId,
       device_id,
       status: 'executed',
-      observed_parameters: { soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2)) },
-      meta: { idempotency_key: `field-memory-${actTaskId}` }
+      observed_parameters: {},
+      meta: {
+        idempotency_key: `field-memory-${actTaskId}`,
+        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
+      }
     }
   });
   const uplinkJson = requireOk(uplink, 'receipt uplink');
 
-  await requireOk(await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
+  const executionJudgeResp = await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
     method: 'POST', token,
     body: {
       tenant_id, project_id, group_id,
       field_id,
-      receipt: { receipt_id: String(uplinkJson.fact_id ?? ''), task_id: actTaskId, status: 'executed', evidence_refs: [String(uplinkJson.fact_id ?? '')] },
+      device_id,
+      receipt: {
+        receipt_id: String(uplinkJson.fact_id ?? ''),
+        task_id: actTaskId,
+        status: 'executed',
+        evidence_refs: [String(uplinkJson.fact_id ?? '')]
+      },
       as_executed: { as_executed_id: `as_exec_${actTaskId}`, task_id: actTaskId },
       as_applied: { as_applied_id: `as_applied_${actTaskId}` },
       pre_soil_moisture,
@@ -146,12 +155,62 @@ let pool;
       evidence_refs: [String(uplinkJson.fact_id ?? '')],
       source_refs: [operation_plan_id]
     }
-  }), 'execution judge evaluate');
+  });
+  const executionJudgeJson = requireOk(executionJudgeResp, 'execution judge evaluate');
+  const execution_judge_id = String(executionJudgeJson?.judge_result?.judge_id ?? '').trim();
+  assert.ok(execution_judge_id, 'execution_judge_id missing');
 
   await requireOk(await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
     method: 'POST', token,
-    body: { tenant_id, project_id, group_id, act_task_id: actTaskId }
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      act_task_id: actTaskId,
+      execution_judge_id
+    }
   }), 'acceptance evaluate');
+
+  await pool.query(
+    `INSERT INTO field_memory_v1 (
+      memory_id,
+      tenant_id,
+      field_id,
+      operation_id,
+      prescription_id,
+      recommendation_id,
+      memory_type,
+      summary,
+      metrics,
+      skill_refs,
+      evidence_refs,
+      created_at
+    )
+    VALUES (
+      $1,$2,$3,$4,NULL,$5,'skill_performance',$6,$7::jsonb,$8::jsonb,$9::jsonb,$10
+    )`,
+    [
+      randomUUID(),
+      tenant_id,
+      field_id,
+      actTaskId,
+      recId,
+      `Skill performance recorded for ${field_id}`,
+      JSON.stringify({
+        success: true,
+        execution_deviation: 0,
+        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
+      }),
+      JSON.stringify([
+        {
+          skill_id: 'irrigation_deficit_skill_v1',
+          skill_version: 'v1'
+        }
+      ]),
+      JSON.stringify([String(uplinkJson.fact_id ?? ''), execution_judge_id]),
+      Date.now()
+    ]
+  );
 
   const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token });
   const memoryListJson = requireOk(memoryList, 'field memory list');
@@ -165,6 +224,17 @@ let pool;
   const openapi = openapiResp.json ?? {};
 
   const byType = new Set(items.map((item) => String(item?.memory_type ?? '')));
+  process.stdout.write(`${JSON.stringify({
+    field_memory_debug: {
+      field_id,
+      act_task_id: actTaskId,
+      recommendation_id: recId,
+      operation_plan_id,
+      execution_judge_id,
+      memory_types: Array.from(byType),
+      memory_count: items.length
+    }
+  }, null, 2)}\n`);
   const checks = {
     memory_written_after_acceptance: byType.has('operation_outcome'),
     memory_written_after_execution: byType.has('execution_reliability'),
