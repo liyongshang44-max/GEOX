@@ -825,6 +825,65 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             }
           },
           additionalProperties: false
+        },
+        FieldMemoryV1: {
+          type: "object",
+          required: ["memory_id", "tenant_id", "field_id", "memory_type", "metrics", "created_at"],
+          properties: {
+            memory_id: { type: "string" },
+            tenant_id: { type: "string" },
+            field_id: { type: "string" },
+            operation_id: { type: "string", nullable: true },
+            prescription_id: { type: "string", nullable: true },
+            recommendation_id: { type: "string", nullable: true },
+            memory_type: { type: "string", enum: ["operation_outcome", "execution_reliability", "skill_performance"] },
+            summary: { type: "string", nullable: true },
+            metrics: { type: "object", additionalProperties: true },
+            skill_refs: {
+              type: "array",
+              nullable: true,
+              items: {
+                type: "object",
+                required: ["skill_id"],
+                properties: {
+                  skill_id: { type: "string" },
+                  skill_version: { type: "string", nullable: true },
+                  skill_run_id: { type: "string", nullable: true },
+                }
+              }
+            },
+            evidence_refs: { type: "array", nullable: true, items: { type: "string" } },
+            created_at: { type: "integer", format: "int64" },
+          }
+        },
+        FieldMemoryListResponseV1: {
+          type: "object",
+          required: ["ok", "field_id", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            items: { type: "array", items: { '$ref': "#/components/schemas/FieldMemoryV1" } }
+          }
+        },
+        FieldMemorySummaryResponseV1: {
+          type: "object",
+          required: ["ok", "field_id", "limit", "recent", "summary"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            limit: { type: "integer" },
+            recent: { type: "array", items: { '$ref': "#/components/schemas/FieldMemoryV1" } },
+            summary: {
+              type: "object",
+              required: ["total", "success_rate", "execution_deviation_avg", "skill_success_rate"],
+              properties: {
+                total: { type: "integer" },
+                success_rate: { type: "number", nullable: true },
+                execution_deviation_avg: { type: "number", nullable: true },
+                skill_success_rate: { type: "number", nullable: true },
+              }
+            }
+          }
         }
       }
     },
@@ -1114,6 +1173,46 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           summary: "Read field list",
           responses: {
             "200": { description: "Field list returned successfully" }
+          }
+        }
+      },
+      "/api/v1/field-memory": {
+        get: {
+          tags: ["fields"],
+          summary: "Read latest field memories by field_id",
+          parameters: [
+            { name: "field_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } }
+          ],
+          responses: {
+            "200": {
+              description: "Field memory list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldMemoryListResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/field-memory/summary": {
+        get: {
+          tags: ["fields"],
+          summary: "Read field memory summary statistics by field_id",
+          parameters: [
+            { name: "field_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "limit", in: "query", required: false, schema: { type: "integer", minimum: 1, maximum: 200, default: 100 } }
+          ],
+          responses: {
+            "200": {
+              description: "Field memory summary returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/FieldMemorySummaryResponseV1" }
+                }
+              }
+            }
           }
         }
       },
