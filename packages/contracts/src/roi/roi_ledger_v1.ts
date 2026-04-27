@@ -22,6 +22,7 @@ export type RoiLedgerV1 = {
   prescription_id?: string | null;
   as_executed_id?: string | null;
   as_applied_id?: string | null;
+  trace_id?: string | null;
 
   field_id?: string | null;
   season_id?: string | null;
@@ -36,6 +37,13 @@ export type RoiLedgerV1 = {
   calculation_method: string;
   assumptions: Record<string, unknown>;
   uncertainty_notes?: string | null;
+  skill_trace_id?: string | null;
+  skill_refs?: Array<{
+    skill_id: string;
+    skill_version?: string;
+    trace_id?: string;
+    run_id?: string;
+  }>;
 
   created_at: string;
   updated_at: string;
