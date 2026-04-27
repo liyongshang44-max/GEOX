@@ -95,7 +95,7 @@ let pool;
     method: 'POST', token,
     body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'field memory acceptance' }
   });
-  const decideJson = requireOk(decide, 'approval decide');
+  requireOk(decide, 'approval decide');
   const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
     method: 'POST',
     token,
@@ -114,15 +114,17 @@ let pool;
       time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
       parameter_schema: {
         keys: [
+          { name: 'duration_sec', type: 'number', min: 1, max: 7200 },
+          { name: 'duration_min', type: 'number', min: 1, max: 720 },
           { name: 'amount', type: 'number', min: 1, max: 1000 },
           { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
-          { name: 'duration_min', type: 'number', min: 1, max: 720 },
         ],
       },
       parameters: {
+        duration_sec: 1200,
+        duration_min: 20,
         amount: 20,
         coverage_percent: 95,
-        duration_min: 20,
       },
       constraints: {},
       meta: {
@@ -158,9 +160,10 @@ let pool;
         chemical_ml: null,
       },
       observed_parameters: {
+        duration_sec: 1200,
+        duration_min: 20,
         amount: 20,
         coverage_percent: 95,
-        duration_min: 20,
       },
       evidence_refs: [
         { kind: 'sensor', ref: `sensor_${suffix}` },
@@ -262,47 +265,6 @@ let pool;
         }
       ]),
       JSON.stringify([receipt_fact_id, execution_judge_id, acceptance_fact_id]),
-      Date.now()
-    ]
-  );
-
-  await pool.query(
-    `INSERT INTO field_memory_v1 (
-      memory_id,
-      tenant_id,
-      field_id,
-      operation_id,
-      prescription_id,
-      recommendation_id,
-      memory_type,
-      summary,
-      metrics,
-      skill_refs,
-      evidence_refs,
-      created_at
-    )
-    VALUES (
-      $1,$2,$3,$4,NULL,$5,'skill_performance',$6,$7::jsonb,$8::jsonb,$9::jsonb,$10
-    )`,
-    [
-      randomUUID(),
-      tenant_id,
-      field_id,
-      actTaskId,
-      recId,
-      `Skill performance recorded for ${field_id}`,
-      JSON.stringify({
-        success: true,
-        execution_deviation: 0,
-        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
-      }),
-      JSON.stringify([
-        {
-          skill_id: 'irrigation_deficit_skill_v1',
-          skill_version: 'v1'
-        }
-      ]),
-      JSON.stringify([String(uplinkJson.fact_id ?? ''), execution_judge_id]),
       Date.now()
     ]
   );
