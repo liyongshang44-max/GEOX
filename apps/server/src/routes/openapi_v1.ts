@@ -2758,6 +2758,50 @@ function applyP13OpenApiAlignment(spec: any) {
   });
 
   Object.assign(spec.components.schemas, {
+    SkillContractV1: {
+      type: "object",
+      required: ["skill_id", "version", "name", "entrypoint", "inputs_schema", "outputs_schema", "trace_schema", "status", "created_at_ts_ms"],
+      properties: {
+        skill_id: { type: "string" },
+        version: { type: "string" },
+        name: { type: "string" },
+        description: { type: "string" },
+        category: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance", "roi", "other"] },
+        owner: { type: "string" },
+        entrypoint: { type: "string", description: "Skill execution entrypoint URI / identifier." },
+        inputs_schema: { type: "object", additionalProperties: true },
+        outputs_schema: { type: "object", additionalProperties: true },
+        trace_schema: { type: "object", additionalProperties: true },
+        status: { type: "string", enum: ["active", "disabled", "deprecated"] },
+        created_at_ts_ms: { type: "integer", format: "int64" },
+        updated_at_ts_ms: { type: "integer", format: "int64" },
+      },
+      additionalProperties: true,
+    },
+    SkillTraceV1: {
+      type: "object",
+      required: ["trace_id", "skill_run_id", "skill_id", "stage", "status", "created_at_ts_ms"],
+      properties: {
+        trace_id: { type: "string" },
+        skill_run_id: { type: "string" },
+        skill_id: { type: "string" },
+        stage: { type: "string", enum: ["recommendation", "prescription", "execution", "acceptance", "roi", "other"] },
+        status: { type: "string", enum: ["started", "success", "failed"] },
+        recommendation_id: { type: "string" },
+        prescription_id: { type: "string" },
+        task_id: { type: "string" },
+        execution_id: { type: "string" },
+        acceptance_id: { type: "string" },
+        roi_ledger_id: { type: "string" },
+        parent_trace_id: { type: "string" },
+        input: { type: "object", additionalProperties: true },
+        output: { type: "object", additionalProperties: true },
+        evidence_refs: { type: "array", items: { type: "string" } },
+        created_at_ts_ms: { type: "integer", format: "int64" },
+        finished_at_ts_ms: { type: "integer", format: "int64" },
+      },
+      additionalProperties: true,
+    },
     JudgeResultV2: {
       type: "object",
       required: ["judge_id", "judge_kind", "tenant_id", "project_id", "group_id", "verdict", "severity", "reasons", "inputs", "outputs", "confidence", "evidence_refs", "source_refs", "created_at", "created_ts_ms"],
@@ -2777,6 +2821,30 @@ function applyP13OpenApiAlignment(spec: any) {
         source_refs: { type: "array", items: {} },
         created_at: { type: "string", format: "date-time" },
         created_ts_ms: { type: "integer", format: "int64" },
+      },
+      additionalProperties: true,
+    },
+    SkillRunV2: {
+      type: "object",
+      required: ["skill_run_id", "skill_id", "status", "created_at_ts_ms"],
+      properties: {
+        skill_run_id: { type: "string" },
+        skill_id: { type: "string" },
+        contract: ref("SkillContractV1"),
+        status: { type: "string", enum: ["queued", "running", "success", "failed", "cancelled"] },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        input: { type: "object", additionalProperties: true },
+        output: { type: "object", additionalProperties: true },
+        error: { type: "string" },
+        trace: {
+          type: "array",
+          items: ref("SkillTraceV1"),
+        },
+        created_at_ts_ms: { type: "integer", format: "int64" },
+        started_at_ts_ms: { type: "integer", format: "int64" },
+        finished_at_ts_ms: { type: "integer", format: "int64" },
       },
       additionalProperties: true,
     },
@@ -2819,6 +2887,61 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     "/api/v1/skills/{skill_id}/disable": {
       post: { tags: ["operations"], summary: "Disable skill", parameters: [pathParam("skill_id")], responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill disabled") } }
+    },
+    "/api/v1/skill/register": {
+      post: {
+        tags: ["operations"],
+        summary: "Register a skill contract",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillContractV1") } } },
+        responses: { "200": jsonResponse(ref("SkillContractV1"), "Skill contract registered") }
+      }
+    },
+    "/api/v1/skill/bind": {
+      post: {
+        tags: ["operations"],
+        summary: "Bind skill to target scope",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingCreateRequest") } } },
+        responses: { "200": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding created") }
+      }
+    },
+    "/api/v1/skill/run": {
+      post: {
+        tags: ["operations"],
+        summary: "Run a skill instance",
+        requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
+        responses: { "200": jsonResponse(ref("SkillRunV2"), "Skill run accepted") }
+      }
+    },
+    "/api/v1/skill/trace": {
+      post: {
+        tags: ["operations"],
+        summary: "Write skill trace event",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillTraceV1") } } },
+        responses: { "200": jsonResponse(ref("SkillTraceV1"), "Skill trace created") }
+      }
+    },
+    "/api/v1/skill/health": {
+      get: {
+        tags: ["operations"],
+        summary: "Skill module health",
+        responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill module health") }
+      }
+    },
+    "/api/v1/skill/results/{skill_run_id}": {
+      get: {
+        tags: ["operations"],
+        summary: "Read skill run result by run id",
+        parameters: [pathParam("skill_run_id")],
+        responses: { "200": jsonResponse(ref("SkillRunV2"), "Skill run detail") }
+      }
+    },
+    "/api/v1/skill/trace/{trace_id}": {
+      get: {
+        tags: ["operations"],
+        summary: "Read skill trace by trace id",
+        parameters: [pathParam("trace_id")],
+        responses: { "200": jsonResponse(ref("SkillTraceV1"), "Skill trace detail") }
+      }
     },
     "/api/v1/agronomy/rule-performance": {
       get: { tags: ["operations"], summary: "Read agronomy rule performance list", responses: { "200": jsonResponse(ref("RulePerformanceResponse"), "Rule performance list") } }
