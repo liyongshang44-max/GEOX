@@ -516,6 +516,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             skill_id: { type: "string" },
             category: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance"] },
             status: { type: "string", enum: ["success", "failed"] },
+            recommendation_id: { type: "string", nullable: true },
+            prescription_id: { type: "string", nullable: true },
+            task_id: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            device_id: { type: "string", nullable: true },
+            trigger_stage: { type: "string", enum: ["recommendation", "prescription", "execution", "acceptance", "roi", "other"], nullable: true },
             started_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
             finished_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
             target: {
@@ -2728,6 +2735,71 @@ function applyP13OpenApiAlignment(spec: any) {
   });
 
   Object.assign(spec.components.schemas, {
+    SkillContractV1: {
+      type: "object",
+      required: ["skill_id", "skill_version", "skill_category", "input_schema", "output_schema", "capabilities", "risk_level", "required_evidence", "tenant_scope", "crop_scope", "device_scope", "binding_priority", "enabled", "rollout_mode", "fallback_policy", "audit_policy"],
+      properties: {
+        skill_id: { type: "string" },
+        skill_version: { type: "string" },
+        skill_category: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance", "roi", "other"] },
+        input_schema: { type: "object", additionalProperties: true },
+        output_schema: { type: "object", additionalProperties: true },
+        capabilities: { type: "array", items: { type: "string" } },
+        risk_level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        required_evidence: { type: "array", items: { type: "string" } },
+        tenant_scope: { type: "array", items: { type: "string" } },
+        crop_scope: { type: "array", items: { type: "string" } },
+        device_scope: { type: "array", items: { type: "string" } },
+        binding_priority: { type: "integer" },
+        enabled: { type: "boolean" },
+        rollout_mode: { type: "string", enum: ["all", "allowlist", "canary", "shadow"] },
+        fallback_policy: {
+          type: "object",
+          required: ["mode"],
+          properties: {
+            mode: { type: "string", enum: ["none", "static_default", "delegate_skill"] },
+            delegate_skill_id: { type: "string", nullable: true },
+            reason: { type: "string", nullable: true },
+          },
+          additionalProperties: false,
+        },
+        audit_policy: {
+          type: "object",
+          required: ["level"],
+          properties: {
+            level: { type: "string", enum: ["minimal", "standard", "strict"] },
+            retention_days: { type: "integer", nullable: true },
+            include_input_snapshot: { type: "boolean" },
+            include_output_snapshot: { type: "boolean" },
+          },
+          additionalProperties: false,
+        },
+      },
+      additionalProperties: false,
+    },
+    SkillTraceV1: {
+      type: "object",
+      required: ["skill_id"],
+      properties: {
+        skill_id: { type: "string" },
+        skill_version: { type: "string" },
+        trace_id: { type: "string" },
+        inputs: { type: "object", additionalProperties: true },
+        outputs: { type: "object", additionalProperties: true },
+        confidence: {
+          type: "object",
+          required: ["level", "basis"],
+          properties: {
+            level: { type: "string", enum: ["HIGH", "MEDIUM", "LOW"] },
+            basis: { type: "string", enum: ["measured", "estimated", "assumed"] },
+            reasons: { type: "array", items: { type: "string" } },
+          },
+          additionalProperties: false,
+        },
+        evidence_refs: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
     JudgeResultV2: {
       type: "object",
       required: ["judge_id", "judge_kind", "tenant_id", "project_id", "group_id", "verdict", "severity", "reasons", "inputs", "outputs", "confidence", "evidence_refs", "source_refs", "created_at", "created_ts_ms"],
@@ -2747,6 +2819,30 @@ function applyP13OpenApiAlignment(spec: any) {
         source_refs: { type: "array", items: {} },
         created_at: { type: "string", format: "date-time" },
         created_ts_ms: { type: "integer", format: "int64" },
+      },
+      additionalProperties: true,
+    },
+    SkillRunV2: {
+      type: "object",
+      required: ["skill_run_id", "skill_id", "status", "created_at_ts_ms"],
+      properties: {
+        skill_run_id: { type: "string" },
+        skill_id: { type: "string" },
+        contract: ref("SkillContractV1"),
+        status: { type: "string", enum: ["queued", "running", "success", "failed", "cancelled"] },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        input: { type: "object", additionalProperties: true },
+        output: { type: "object", additionalProperties: true },
+        error: { type: "string" },
+        trace: {
+          type: "array",
+          items: ref("SkillTraceV1"),
+        },
+        created_at_ts_ms: { type: "integer", format: "int64" },
+        started_at_ts_ms: { type: "integer", format: "int64" },
+        finished_at_ts_ms: { type: "integer", format: "int64" },
       },
       additionalProperties: true,
     },
@@ -2789,6 +2885,45 @@ function applyP13OpenApiAlignment(spec: any) {
     },
     "/api/v1/skills/{skill_id}/disable": {
       post: { tags: ["operations"], summary: "Disable skill", parameters: [pathParam("skill_id")], responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill disabled") } }
+    },
+    "/api/v1/skill/register": {
+      post: {
+        tags: ["operations"],
+        summary: "Register a skill contract",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillContractV1") } } },
+        responses: { "200": jsonResponse(ref("SkillContractV1"), "Skill contract registered") }
+      }
+    },
+    "/api/v1/skill/bind": {
+      post: {
+        tags: ["operations"],
+        summary: "Bind skill to target scope",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillBindingCreateRequest") } } },
+        responses: { "200": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding created") }
+      }
+    },
+    "/api/v1/skill/health": {
+      get: {
+        tags: ["operations"],
+        summary: "Skill module health",
+        responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill module health") }
+      }
+    },
+    "/api/v1/skill/results/{skill_run_id}": {
+      get: {
+        tags: ["operations"],
+        summary: "Read skill run result by run id",
+        parameters: [pathParam("skill_run_id")],
+        responses: { "200": jsonResponse(ref("SkillRunV2"), "Skill run detail") }
+      }
+    },
+    "/api/v1/skill/trace/{trace_id}": {
+      get: {
+        tags: ["operations"],
+        summary: "Read skill trace by trace id",
+        parameters: [pathParam("trace_id")],
+        responses: { "200": jsonResponse(ref("SkillTraceV1"), "Skill trace detail") }
+      }
     },
     "/api/v1/agronomy/rule-performance": {
       get: { tags: ["operations"], summary: "Read agronomy rule performance list", responses: { "200": jsonResponse(ref("RulePerformanceResponse"), "Rule performance list") } }
