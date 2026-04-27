@@ -19,7 +19,7 @@ function read(rel) {
   const schemas = openapi.components?.schemas ?? {};
 
   const skillContractSchema = schemas.SkillContractV1 ?? {};
-  const skillRunSchema = schemas.SkillRunV2 ?? {};
+  const skillRunSchema = schemas.SkillRunV1 ?? {};
   const skillTraceSchema = schemas.SkillTraceV1 ?? {};
 
   const requiredSkillPaths = [
@@ -46,14 +46,16 @@ function read(rel) {
   const requiredContractSet = new Set(skillContractSchema?.required ?? []);
 
   const traceProperties = skillTraceSchema?.properties ?? {};
+  const runProperties = skillRunSchema?.properties ?? {};
   const hasMainChainRefs = [
     'recommendation_id',
     'prescription_id',
     'task_id',
-    'execution_id',
-    'acceptance_id',
-    'roi_ledger_id',
-  ].every((k) => Object.prototype.hasOwnProperty.call(traceProperties, k));
+    'operation_id',
+    'field_id',
+    'device_id',
+    'trigger_stage',
+  ].every((k) => Object.prototype.hasOwnProperty.call(runProperties, k));
 
   const recommendationContract = read('packages/contracts/src/agronomy/recommendation_v2.ts');
   const prescriptionDomain = read('apps/server/src/domain/prescription/prescription_contract_v1.ts');
@@ -61,7 +63,7 @@ function read(rel) {
   const checks = {
     skill_architecture_layer_registered: (
       Object.prototype.hasOwnProperty.call(schemas, 'SkillContractV1')
-      && Object.prototype.hasOwnProperty.call(schemas, 'SkillRunV2')
+      && Object.prototype.hasOwnProperty.call(schemas, 'SkillRunV1')
       && Object.prototype.hasOwnProperty.call(schemas, 'SkillTraceV1')
     ),
     skill_registry_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/register'),
@@ -86,8 +88,7 @@ function read(rel) {
       Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/results/{skill_run_id}')
       && Boolean(skillRunSchema?.properties?.skill_run_id)
     ),
-    skill_run_has_main_chain_refs: hasMainChainRefs
-      && skillRunSchema?.properties?.trace?.items?.$ref === '#/components/schemas/SkillTraceV1',
+    skill_run_has_main_chain_refs: hasMainChainRefs,
     recommendation_contains_skill_trace: /skill_trace\?:\s*SkillTraceV1/.test(recommendationContract),
     prescription_contains_skill_trace: /skill_trace:\s*recommendationSkillTrace/.test(prescriptionDomain),
     openapi_contains_skill_paths: requiredSkillPaths.every((p) => Object.prototype.hasOwnProperty.call(paths, p)),

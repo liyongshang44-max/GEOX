@@ -516,6 +516,13 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             skill_id: { type: "string" },
             category: { type: "string", enum: ["sensing", "agronomy", "device", "acceptance"] },
             status: { type: "string", enum: ["success", "failed"] },
+            recommendation_id: { type: "string", nullable: true },
+            prescription_id: { type: "string", nullable: true },
+            task_id: { type: "string", nullable: true },
+            operation_id: { type: "string", nullable: true },
+            field_id: { type: "string", nullable: true },
+            device_id: { type: "string", nullable: true },
+            trigger_stage: { type: "string", enum: ["recommendation", "prescription", "execution", "acceptance", "roi", "other"], nullable: true },
             started_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
             finished_at_ts_ms: { type: "integer", format: "int64", description: "Unix epoch timestamp in milliseconds." },
             target: {
