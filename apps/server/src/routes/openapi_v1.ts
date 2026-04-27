@@ -2697,6 +2697,21 @@ function applyP13OpenApiAlignment(spec: any) {
         calculation_method: { type: "string" },
         assumptions: { type: "object", additionalProperties: true },
         uncertainty_notes: { type: ["string", "null"] },
+        skill_trace_id: { type: ["string", "null"] },
+        skill_refs: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["skill_id"],
+            properties: {
+              skill_id: { type: "string" },
+              skill_version: { type: "string" },
+              trace_id: { type: "string" },
+              run_id: { type: "string" },
+            },
+            additionalProperties: false,
+          },
+        },
         created_at: { type: "string", format: "date-time" },
         updated_at: { type: "string", format: "date-time" },
       },
@@ -2710,6 +2725,21 @@ function applyP13OpenApiAlignment(spec: any) {
         tenant_id: { type: "string" },
         project_id: { type: "string" },
         group_id: { type: "string" },
+        skill_trace_id: { type: "string" },
+        skill_refs: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["skill_id"],
+            properties: {
+              skill_id: { type: "string" },
+              skill_version: { type: "string" },
+              trace_id: { type: "string" },
+              run_id: { type: "string" },
+            },
+            additionalProperties: false,
+          },
+        },
       },
       additionalProperties: false,
     },

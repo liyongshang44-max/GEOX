@@ -64,12 +64,14 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
     if (!requireTenantMatchOr404(reply, auth, tenant)) return;
 
     const as_executed_id = String(body?.as_executed_id ?? "").trim();
+    const skill_trace_id = String(body?.skill_trace_id ?? "").trim() || null;
+    const skill_refs = Array.isArray(body?.skill_refs) ? body.skill_refs : [];
     if (!as_executed_id) {
       return reply.status(400).send({ ok: false, error: "MISSING_AS_EXECUTED_ID" });
     }
 
     try {
-      const result = await createRoiLedgersFromAsExecuted(pool, { ...tenant, as_executed_id });
+      const result = await createRoiLedgersFromAsExecuted(pool, { ...tenant, as_executed_id, skill_trace_id, skill_refs });
       return reply.send({ ok: true, idempotent: result.idempotent, roi_ledgers: result.roi_ledgers });
     } catch (error) {
       const code = String((error as Error)?.message ?? "");
