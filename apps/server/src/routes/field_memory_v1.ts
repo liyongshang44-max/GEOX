@@ -30,6 +30,16 @@ function toNumberOrNull(v: unknown): number | null {
 }
 
 export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): void {
+  app.get("/api/v1/field-memory/health", async (_req, reply) => {
+    try {
+      const q = await pool.query(`SELECT to_regclass('public.field_memory_v1')::text AS tbl`);
+      const table_ready = Boolean(q.rows?.[0]?.tbl);
+      return reply.send({ ok: table_ready, table_ready, module: "field_memory_v1" });
+    } catch {
+      return reply.send({ ok: false, table_ready: false, module: "field_memory_v1" });
+    }
+  });
+
   app.get("/api/v1/field-memory", async (req, reply) => {
     try {
       const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");

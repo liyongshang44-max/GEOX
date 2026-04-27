@@ -1196,6 +1196,30 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           }
         }
       },
+      "/api/v1/field-memory/health": {
+        get: {
+          tags: ["fields"],
+          summary: "Field memory module health",
+          responses: {
+            "200": {
+              description: "Field memory module health status",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "table_ready", "module"],
+                    properties: {
+                      ok: { type: "boolean" },
+                      table_ready: { type: "boolean" },
+                      module: { type: "string" },
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "/api/v1/field-memory/summary": {
         get: {
           tags: ["fields"],

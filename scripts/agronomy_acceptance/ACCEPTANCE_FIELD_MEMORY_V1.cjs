@@ -10,8 +10,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const season_id = env('SEASON_ID', 'season_demo_1');
   const device_id = env('DEVICE_ID', 'device_demo_1');
 
-  const health = await fetchJson(`${base}/api/health`, { method: 'GET' });
-  const healthz_ok = health.ok && health.json?.ok === true;
+  const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
+  const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
 
   const recGen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST', token,
