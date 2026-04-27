@@ -24,7 +24,7 @@ import {
   ensureDerivedSensingStateProjectionV1,
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1.js";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import {
   IRRIGATION_CONTROL_PLANE_ACTION,
   mapRecommendationActionToControlPlane,
@@ -1383,7 +1383,23 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     const resolvedRecommendations: RecommendationV1[] = [];
     for (const rec of recommendations) {
       const resolvedProgramId = await resolveProgramIdForRecommendation(pool, tenant, rec);
-      const recommendationPayload = { ...rec, program_id: resolvedProgramId };
+      const trace_id =
+        String(rec?.skill_trace?.trace_id ?? "").trim()
+        || `trace_${randomUUID().replace(/-/g, "")}`;
+      const recommendationPayload = {
+        ...rec,
+        program_id: resolvedProgramId,
+        trace_id,
+        skill_trace: {
+          skill_id: String(rec?.skill_trace?.skill_id ?? "agronomy_rule"),
+          skill_version: rec?.skill_trace?.skill_version,
+          trace_id,
+          inputs: rec?.skill_trace?.inputs ?? {},
+          outputs: rec?.skill_trace?.outputs ?? {},
+          confidence: rec?.skill_trace?.confidence ?? { level: "LOW", basis: "assumed", reasons: ["auto_generated_trace_confidence"] },
+          evidence_refs: Array.isArray(rec?.skill_trace?.evidence_refs) ? rec.skill_trace.evidence_refs : [],
+        },
+      };
       const chainValidation = validateRecommendationMainChainFields(recommendationPayload);
       const matchedRuleHit = (Array.isArray(recommendationPayload.rule_hit) ? recommendationPayload.rule_hit : [])
         .find((item) => Boolean(item?.matched) && String(item?.rule_id ?? "").trim().length > 0);
@@ -1425,6 +1441,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           rollout_mode: "DIRECT",
           bind_target: recommendationPayload.recommendation_id,
           operation_id: recommendationPayload.recommendation_id,
+          recommendation_id: recommendationPayload.recommendation_id,
           operation_plan_id: null,
           field_id: recommendationPayload.field_id,
           device_id: recommendationPayload.device_id,
@@ -1463,6 +1480,23 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           created_ts: Date.now()
         }
       });
+      await appendSkillTraceFact(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        trace_id,
+        skill_run_id: null,
+        inputs: recommendationPayload.skill_trace?.inputs ?? {},
+        outputs: recommendationPayload.skill_trace?.outputs ?? {},
+        confidence: recommendationPayload.skill_trace?.confidence
+          ? {
+              level: recommendationPayload.skill_trace.confidence.level,
+              basis: recommendationPayload.skill_trace.confidence.basis,
+              reasons: Array.isArray(recommendationPayload.skill_trace.confidence.reasons) ? recommendationPayload.skill_trace.confidence.reasons : [],
+            }
+          : { level: "LOW", basis: "assumed", reasons: ["missing_skill_trace_confidence"] },
+        evidence_refs: Array.isArray(recommendationPayload.skill_trace?.evidence_refs) ? recommendationPayload.skill_trace.evidence_refs : [],
+      });
       const fact_id = await insertFact(pool, "api/v1/recommendations/generate", {
         type: "decision_recommendation_v1",
         payload: {
@@ -1498,6 +1532,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rollout_mode: "DIRECT",
         bind_target: recommendationPayload.recommendation_id,
         operation_id: recommendationPayload.recommendation_id,
+        recommendation_id: recommendationPayload.recommendation_id,
         operation_plan_id: null,
         field_id: recommendationPayload.field_id,
         device_id: recommendationPayload.device_id,
@@ -1544,6 +1579,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (!row) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
 
     const rec = row.record_json?.payload ?? {};
+    const trace_id = String(rec.trace_id ?? rec.skill_trace?.trace_id ?? "").trim() || null;
     if (!recommendationFormalTriggerEligibleForApproval(rec)) {
       return badRequest(reply, "FORMAL_TRIGGER_PROVENANCE_REQUIRED");
     }
@@ -1608,6 +1644,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rule_id: rec.rule_id ?? rec.rule_hit?.[0]?.rule_id ?? null,
         expected_effect: rec.expected_effect ?? rec.suggested_action?.parameters?.expected_effect ?? null,
         recommendation_fact_id: row.fact_id,
+        trace_id,
         approval_request_id: delegated.json.request_id,
         created_ts: Date.now()
       }
@@ -1630,6 +1667,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         rule_id: rec.rule_id ?? rec.rule_hit?.[0]?.rule_id ?? null,
         expected_effect: rec.expected_effect ?? rec.suggested_action?.parameters?.expected_effect ?? null,
         recommendation_fact_id: row.fact_id,
+        trace_id,
         approval_request_id: delegated.json.request_id,
         action_type: actionType,
         adapter_type,
