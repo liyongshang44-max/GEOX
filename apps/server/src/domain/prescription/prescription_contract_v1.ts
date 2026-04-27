@@ -7,6 +7,7 @@ import type {
   SkillTraceV1,
 } from "@geox/contracts";
 import type { Pool } from "pg";
+import { buildSkillTraceRef } from "../../services/skill_trace_service.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -74,6 +75,7 @@ function normalizeEvidenceRefs(rec: any): string[] {
   if (Array.isArray(rec?.skill_trace?.evidence_refs)) {
     for (const x of rec.skill_trace.evidence_refs) add(x);
   }
+  add(buildSkillTraceRef(rec?.skill_trace));
   return [...out];
 }
 

@@ -59,6 +59,7 @@ function read(rel) {
 
   const recommendationContract = read('packages/contracts/src/agronomy/recommendation_v2.ts');
   const prescriptionDomain = read('apps/server/src/domain/prescription/prescription_contract_v1.ts');
+  const skillTraceService = read('apps/server/src/services/skill_trace_service.ts');
 
   const checks = {
     skill_architecture_layer_registered: (
@@ -75,6 +76,9 @@ function read(rel) {
       && Object.prototype.hasOwnProperty.call(traceProperties, 'skill_run_id')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'stage')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'status')
+      && /export function buildSkillTraceRef\(/.test(skillTraceService)
+      && /export function extractSkillTraceRef\(/.test(skillTraceService)
+      && /export function normalizeSkillTrace\(/.test(skillTraceService)
     ),
     skill_categories_supported: (
       categoryEnum.includes('sensing')
