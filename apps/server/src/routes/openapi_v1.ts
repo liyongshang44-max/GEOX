@@ -2911,22 +2911,6 @@ function applyP13OpenApiAlignment(spec: any) {
         responses: { "200": jsonResponse(ref("SkillBindingWriteResponse"), "Skill binding created") }
       }
     },
-    "/api/v1/skill/run": {
-      post: {
-        tags: ["operations"],
-        summary: "Run a skill instance",
-        requestBody: { required: true, content: { "application/json": { schema: { type: "object", additionalProperties: true } } } },
-        responses: { "200": jsonResponse(ref("SkillRunV2"), "Skill run accepted") }
-      }
-    },
-    "/api/v1/skill/trace": {
-      post: {
-        tags: ["operations"],
-        summary: "Write skill trace event",
-        requestBody: { required: true, content: { "application/json": { schema: ref("SkillTraceV1") } } },
-        responses: { "200": jsonResponse(ref("SkillTraceV1"), "Skill trace created") }
-      }
-    },
     "/api/v1/skill/health": {
       get: {
         tags: ["operations"],

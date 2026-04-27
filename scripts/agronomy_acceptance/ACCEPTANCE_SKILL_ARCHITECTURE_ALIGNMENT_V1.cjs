@@ -23,13 +23,11 @@ function read(rel) {
   const skillTraceSchema = schemas.SkillTraceV1 ?? {};
 
   const requiredSkillPaths = [
-    '/api/v1/skill/register',
-    '/api/v1/skill/bind',
-    '/api/v1/skill/run',
-    '/api/v1/skill/trace',
-    '/api/v1/skill/health',
-    '/api/v1/skill/results/{skill_run_id}',
-    '/api/v1/skill/trace/{trace_id}',
+    '/api/v1/skills',
+    '/api/v1/skills/{skill_id}',
+    '/api/v1/skills/bindings',
+    '/api/v1/skills/bindings/override',
+    '/api/v1/skill-runs',
   ];
 
   const categoryEnum = skillContractSchema?.properties?.category?.enum ?? [];
@@ -67,11 +65,11 @@ function read(rel) {
       && Object.prototype.hasOwnProperty.call(schemas, 'SkillRunV1')
       && Object.prototype.hasOwnProperty.call(schemas, 'SkillTraceV1')
     ),
-    skill_registry_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/register'),
-    skill_binding_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/bind'),
-    skill_runtime_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/run'),
+    skill_registry_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills'),
+    skill_binding_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/bindings'),
+    skill_runtime_service_exists: Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs'),
     skill_trace_service_has_trace_responsibility: (
-      Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/trace')
+      Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'trace_id')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'skill_run_id')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'stage')
@@ -89,7 +87,7 @@ function read(rel) {
     ),
     skill_contract_shape_supported: requiredContractFields.every((k) => requiredContractSet.has(k)),
     skill_run_query_available: (
-      Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/results/{skill_run_id}')
+      Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs')
       && Boolean(skillRunSchema?.properties?.skill_run_id)
     ),
     skill_run_has_main_chain_refs: hasMainChainRefs,

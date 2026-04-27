@@ -307,21 +307,19 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       '/api/v1/judge/results/by-prescription/{prescription_id}',
     ];
     const requiredSkillPaths = [
-      '/api/v1/skill/register',
-      '/api/v1/skill/bind',
-      '/api/v1/skill/run',
-      '/api/v1/skill/trace',
-      '/api/v1/skill/health',
-      '/api/v1/skill/results/{skill_run_id}',
-      '/api/v1/skill/trace/{trace_id}',
+      '/api/v1/skills',
+      '/api/v1/skills/{skill_id}',
+      '/api/v1/skills/bindings',
+      '/api/v1/skills/bindings/override',
+      '/api/v1/skill-runs',
     ];
-    checks.skill_registry_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/register');
-    checks.skill_binding_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/bind');
-    checks.skill_runtime_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/run');
-    checks.skill_trace_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/trace');
+    checks.skill_registry_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills');
+    checks.skill_binding_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/bindings');
+    checks.skill_runtime_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs');
+    checks.skill_trace_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}');
     checks.skill_health_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/health');
-    checks.skill_results_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/results/{skill_run_id}');
-    checks.skill_trace_query_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/trace/{trace_id}');
+    checks.skill_results_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs');
+    checks.skill_trace_query_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}');
     checks.openapi_contains_skill_v1_paths = requiredSkillPaths.every((p) => Object.prototype.hasOwnProperty.call(paths, p));
     checks.openapi_contains_judge_v2_paths = requiredPaths.every((p) => Object.prototype.hasOwnProperty.call(paths, p));
 
