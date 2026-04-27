@@ -1,6 +1,15 @@
 import { randomUUID, createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import { z } from "zod";
+import {
+  SkillDefinitionAuditPolicySchema,
+  SkillDefinitionCapabilitiesSchema,
+  SkillDefinitionFallbackPolicySchema,
+  SkillDefinitionIoSchemaSchema,
+  SkillDefinitionRequiredEvidenceSchema,
+  SkillDefinitionRiskLevelSchema,
+  SkillDefinitionScopeSchema,
+} from "@geox/contracts";
 
 const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
 const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
@@ -29,6 +38,7 @@ const TenantTripleSchema = z.object({
 const SkillDefinitionPayloadSchema = TenantTripleSchema.extend({
   skill_id: z.string().min(1),
   version: z.string().min(1),
+  skill_version: z.string().min(1),
   display_name: z.string().min(1),
   category: SkillCategorySchema,
   status: SkillStatusSchema,
@@ -37,6 +47,18 @@ const SkillDefinitionPayloadSchema = TenantTripleSchema.extend({
   rollout_mode: RolloutModeSchema,
   input_schema_digest: z.string().min(1),
   output_schema_digest: z.string().min(1),
+  input_schema: SkillDefinitionIoSchemaSchema.optional(),
+  output_schema: SkillDefinitionIoSchemaSchema.optional(),
+  capabilities: SkillDefinitionCapabilitiesSchema.optional(),
+  risk_level: SkillDefinitionRiskLevelSchema.optional(),
+  required_evidence: SkillDefinitionRequiredEvidenceSchema.optional(),
+  tenant_scope: SkillDefinitionScopeSchema.optional(),
+  crop_scope: SkillDefinitionScopeSchema.optional(),
+  device_scope: SkillDefinitionScopeSchema.optional(),
+  binding_priority: z.number().int().default(0),
+  enabled: z.boolean().default(true),
+  fallback_policy: SkillDefinitionFallbackPolicySchema.optional(),
+  audit_policy: SkillDefinitionAuditPolicySchema.optional(),
   device_type: DeviceTypeSchema.optional(),
   crop_code: z.string().trim().min(1).optional(),
 });
@@ -80,6 +102,10 @@ const SkillRunPayloadSchema = TenantTripleSchema.extend({
 });
 
 export type SkillDefinitionFactPayload = z.infer<typeof SkillDefinitionPayloadSchema>;
+export type SkillDefinitionFactInput = Omit<SkillDefinitionFactPayload, "version" | "skill_version"> & {
+  version?: string;
+  skill_version?: string;
+};
 export type SkillBindingFactPayload = z.infer<typeof SkillBindingPayloadSchema>;
 export type SkillRunFactPayload = z.infer<typeof SkillRunPayloadSchema>;
 
@@ -219,10 +245,21 @@ export function digestJson(input: unknown): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: SkillDefinitionFactPayload): Promise<{ fact_id: string; occurred_at: string; payload: SkillDefinitionFactPayload }> {
+function normalizeSkillVersion(input: { version?: unknown; skill_version?: unknown }): string {
+  const fromSkillVersion = typeof input.skill_version === "string" ? input.skill_version.trim() : "";
+  if (fromSkillVersion) return fromSkillVersion;
+  const fromVersion = typeof input.version === "string" ? input.version.trim() : "";
+  if (fromVersion) return fromVersion;
+  throw new Error("INVALID_SKILL_VERSION: version or skill_version is required");
+}
+
+export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: SkillDefinitionFactInput): Promise<{ fact_id: string; occurred_at: string; payload: SkillDefinitionFactPayload }> {
   ensureWritableTriggerStage(input.trigger_stage, "skill_definition_v1");
+  const skillVersion = normalizeSkillVersion(input);
   const payload = SkillDefinitionPayloadSchema.parse({
     ...input,
+    version: skillVersion,
+    skill_version: skillVersion,
     category: normalizeCategory(input.category),
     status: normalizeSkillStatus(input.status),
     trigger_stage: normalizeTriggerStage(input.trigger_stage),
