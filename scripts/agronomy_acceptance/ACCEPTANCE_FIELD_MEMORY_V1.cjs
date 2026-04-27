@@ -6,9 +6,12 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
-  const field_id = env('FIELD_ID', 'field_demo_1');
-  const season_id = env('SEASON_ID', 'season_demo_1');
-  const device_id = env('DEVICE_ID', 'device_demo_1');
+  const suffix = Date.now();
+  const field_id = env('FIELD_ID', `field_memory_${suffix}`);
+  const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
+  const device_id = env('DEVICE_ID', `device_field_memory_${suffix}`);
+  const pre_soil_moisture = 0.18;
+  const post_soil_moisture = 0.24;
 
   const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
   const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
@@ -20,7 +23,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       field_id,
       season_id,
       device_id,
-      telemetry: { soil_moisture_pct: 20, canopy_temp_c: 33 },
+      crop_code: 'corn',
+      stage1_sensing_summary: {
+        irrigation_effectiveness: 'low',
+        leak_risk: 'low',
+        canopy_temp_status: 'normal',
+        evapotranspiration_risk: 'medium',
+        sensor_quality_level: 'GOOD',
+      },
       image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 }
     }
   });
@@ -72,7 +82,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       command_id: actTaskId,
       device_id,
       status: 'executed',
-      observed_parameters: { soil_moisture_delta: 6 },
+      observed_parameters: { soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2)) },
       meta: { idempotency_key: `field-memory-${actTaskId}` }
     }
   });
@@ -86,8 +96,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       receipt: { receipt_id: String(uplinkJson.fact_id ?? ''), task_id: actTaskId, status: 'executed', evidence_refs: [String(uplinkJson.fact_id ?? '')] },
       as_executed: { as_executed_id: `as_exec_${actTaskId}`, task_id: actTaskId },
       as_applied: { as_applied_id: `as_applied_${actTaskId}` },
-      pre_soil_moisture: 20,
-      post_soil_moisture: 26,
+      pre_soil_moisture,
+      post_soil_moisture,
       evidence_refs: [String(uplinkJson.fact_id ?? '')],
       source_refs: [operation_plan_id]
     }
