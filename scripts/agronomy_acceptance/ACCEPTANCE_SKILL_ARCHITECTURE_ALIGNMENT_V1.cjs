@@ -30,16 +30,13 @@ function read(rel) {
     '/api/v1/skill-runs',
   ];
 
-  const categoryEnum = skillContractSchema?.properties?.category?.enum ?? [];
+  const categoryEnum = skillContractSchema?.properties?.skill_category?.enum ?? [];
   const requiredContractFields = [
     'skill_id',
-    'version',
-    'name',
-    'entrypoint',
-    'inputs_schema',
-    'outputs_schema',
-    'trace_schema',
-    'status',
+    'skill_version',
+    'skill_category',
+    'input_schema',
+    'output_schema',
   ];
   const requiredContractSet = new Set(skillContractSchema?.required ?? []);
 
@@ -71,9 +68,9 @@ function read(rel) {
     skill_trace_service_has_trace_responsibility: (
       Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}')
       && Object.prototype.hasOwnProperty.call(traceProperties, 'trace_id')
-      && Object.prototype.hasOwnProperty.call(traceProperties, 'skill_run_id')
-      && Object.prototype.hasOwnProperty.call(traceProperties, 'stage')
-      && Object.prototype.hasOwnProperty.call(traceProperties, 'status')
+      && Object.prototype.hasOwnProperty.call(traceProperties, 'skill_id')
+      && Object.prototype.hasOwnProperty.call(traceProperties, 'inputs')
+      && Object.prototype.hasOwnProperty.call(traceProperties, 'outputs')
       && /export function buildSkillTraceRef\(/.test(skillTraceService)
       && /export function extractSkillTraceRef\(/.test(skillTraceService)
       && /export function normalizeSkillTrace\(/.test(skillTraceService)
