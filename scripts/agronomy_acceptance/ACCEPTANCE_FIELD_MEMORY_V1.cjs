@@ -96,45 +96,94 @@ let pool;
     body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'field memory acceptance' }
   });
   const decideJson = requireOk(decide, 'approval decide');
-  const actTaskId = String(decideJson.act_task_id ?? '');
-  assert.ok(actTaskId, 'act_task_id missing');
-
-  const dispatch = await fetchJson(`${base}/api/v1/ao-act/tasks/${encodeURIComponent(actTaskId)}/dispatch`, {
-    method: 'POST', token,
-    body: { tenant_id, project_id, group_id, adapter_hint: 'mqtt', device_id }
-  });
-  const dispatchJson = requireOk(dispatch, 'dispatch');
-
-  const downlink = await fetchJson(`${base}/api/v1/ao-act/downlinks/published`, {
-    method: 'POST', token,
+  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
+    method: 'POST',
+    token,
     body: {
-      tenant_id, project_id, group_id,
-      act_task_id: actTaskId,
-      outbox_fact_id: dispatchJson.outbox_fact_id,
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      approval_request_id: String(submitJson.approval_request_id),
+      field_id,
+      season_id,
       device_id,
-      topic: `/device/${device_id}/cmd`,
-      payload: { cmd: 'execute' }
+      issuer: { kind: 'human', id: 'field_memory_acceptance', namespace: 'qa' },
+      action_type: 'IRRIGATE',
+      target: { kind: 'field', ref: field_id },
+      time_window: { start_ts: ts0, end_ts: ts0 + 3600_000 },
+      parameter_schema: {
+        keys: [
+          { name: 'amount', type: 'number', min: 1, max: 1000 },
+          { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
+          { name: 'duration_min', type: 'number', min: 1, max: 720 },
+        ],
+      },
+      parameters: {
+        amount: 20,
+        coverage_percent: 95,
+        duration_min: 20,
+      },
+      constraints: {},
+      meta: {
+        recommendation_id: recId,
+        task_type: 'IRRIGATION',
+        device_id,
+        adapter_type: 'irrigation_simulator',
+        device_type: 'IRRIGATION_CONTROLLER',
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
     }
   });
-  requireOk(downlink, 'downlink published');
+  const taskJson = requireOk(taskResp, 'create action task');
+  const actTaskId = String(taskJson.act_task_id ?? '').trim();
+  assert.ok(actTaskId, 'act_task_id missing');
 
-  const uplink = await fetchJson(`${base}/api/v1/ao-act/receipts/uplink`, {
-    method: 'POST', token,
+  const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
+    method: 'POST',
+    token,
     body: {
-      tenant_id, project_id, group_id,
-      task_id: actTaskId,
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
       act_task_id: actTaskId,
-      command_id: actTaskId,
-      device_id,
+      executor_id: { kind: 'script', id: 'field_memory_acceptance_executor', namespace: 'qa' },
+      execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+      execution_coverage: { kind: 'field', ref: field_id },
+      resource_usage: {
+        fuel_l: null,
+        electric_kwh: null,
+        water_l: 20,
+        chemical_ml: null,
+      },
+      observed_parameters: {
+        amount: 20,
+        coverage_percent: 95,
+        duration_min: 20,
+      },
+      evidence_refs: [
+        { kind: 'sensor', ref: `sensor_${suffix}` },
+        { kind: 'photo', ref: `photo_${suffix}` },
+      ],
+      logs_refs: [
+        { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+        { kind: 'dispatch_ack', ref: `dispatch_${suffix}` },
+        { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
+      ],
       status: 'executed',
-      observed_parameters: {},
+      constraint_check: { violated: false, violations: [] },
       meta: {
-        idempotency_key: `field-memory-${actTaskId}`,
+        command_id: actTaskId,
+        idempotency_key: `field-memory-receipt-${actTaskId}`,
+        recommendation_id: recId,
         soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
       }
     }
   });
-  const uplinkJson = requireOk(uplink, 'receipt uplink');
+  const receiptJson = requireOk(receiptResp, 'submit action receipt');
+  const receipt_fact_id = String(receiptJson.fact_id ?? '').trim();
+  assert.ok(receipt_fact_id, 'receipt_fact_id missing');
 
   const executionJudgeResp = await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
     method: 'POST', token,
@@ -143,16 +192,16 @@ let pool;
       field_id,
       device_id,
       receipt: {
-        receipt_id: String(uplinkJson.fact_id ?? ''),
+        receipt_id: receipt_fact_id,
         task_id: actTaskId,
         status: 'executed',
-        evidence_refs: [String(uplinkJson.fact_id ?? '')]
+        evidence_refs: [receipt_fact_id]
       },
       as_executed: { as_executed_id: `as_exec_${actTaskId}`, task_id: actTaskId },
       as_applied: { as_applied_id: `as_applied_${actTaskId}` },
       pre_soil_moisture,
       post_soil_moisture,
-      evidence_refs: [String(uplinkJson.fact_id ?? '')],
+      evidence_refs: [receipt_fact_id],
       source_refs: [operation_plan_id]
     }
   });
@@ -160,7 +209,7 @@ let pool;
   const execution_judge_id = String(executionJudgeJson?.judge_result?.judge_id ?? '').trim();
   assert.ok(execution_judge_id, 'execution_judge_id missing');
 
-  await requireOk(await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
+  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
     method: 'POST', token,
     body: {
       tenant_id,
@@ -169,7 +218,53 @@ let pool;
       act_task_id: actTaskId,
       execution_judge_id
     }
-  }), 'acceptance evaluate');
+  });
+  const acceptanceJson = requireOk(acceptanceResp, 'acceptance evaluate');
+  const acceptance_verdict = String(acceptanceJson?.verdict ?? '').trim().toUpperCase();
+  const acceptance_fact_id = String(acceptanceJson?.fact_id ?? '').trim();
+  assert.ok(acceptance_fact_id, 'acceptance_fact_id missing');
+  assert.equal(acceptance_verdict, 'PASS', `acceptance verdict must be PASS, got ${acceptance_verdict}`);
+
+  await pool.query(
+    `INSERT INTO field_memory_v1 (
+      memory_id,
+      tenant_id,
+      field_id,
+      operation_id,
+      prescription_id,
+      recommendation_id,
+      memory_type,
+      summary,
+      metrics,
+      skill_refs,
+      evidence_refs,
+      created_at
+    )
+    VALUES (
+      $1,$2,$3,$4,NULL,$5,'skill_performance',$6,$7::jsonb,$8::jsonb,$9::jsonb,$10
+    )`,
+    [
+      randomUUID(),
+      tenant_id,
+      field_id,
+      actTaskId,
+      recId,
+      `Skill performance recorded for ${field_id}`,
+      JSON.stringify({
+        success: true,
+        execution_deviation: 0,
+        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
+      }),
+      JSON.stringify([
+        {
+          skill_id: 'irrigation_deficit_skill_v1',
+          skill_version: 'v1'
+        }
+      ]),
+      JSON.stringify([receipt_fact_id, execution_judge_id, acceptance_fact_id]),
+      Date.now()
+    ]
+  );
 
   await pool.query(
     `INSERT INTO field_memory_v1 (
@@ -231,6 +326,8 @@ let pool;
       recommendation_id: recId,
       operation_plan_id,
       execution_judge_id,
+      acceptance_verdict,
+      acceptance_fact_id,
       memory_types: Array.from(byType),
       memory_count: items.length
     }
