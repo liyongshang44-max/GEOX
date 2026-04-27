@@ -38,6 +38,7 @@ export * from "./product/metric_display_policy_v1.js";
 export * from "./schema/actuator_adapter_v1.js";
 export * from "./schema/operation_plan_v1.js";
 export * from "./schema/operation_plan_transition_v1.js";
+export * from "./schema/skill_definition_payload_v1.js";
 export {
   AgronomySignalSnapshotV1Schema,
   type AgronomySignalSnapshotV1
