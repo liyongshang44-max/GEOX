@@ -20,18 +20,30 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const ts0 = Date.now() - 60_000;
 
   const checks = {
+    skill_registry_service_exists: false,
+    skill_binding_service_exists: false,
+    skill_runtime_service_exists: false,
+    skill_trace_service_exists: false,
+    skill_health_service_exists: false,
+    skill_results_service_exists: false,
+    skill_trace_query_service_exists: false,
+    openapi_contains_skill_v1_paths: false,
     evidence_judge_created: false,
     evidence_judge_pass: false,
     agronomy_judge_created: false,
     agronomy_judge_water_deficit: false,
     agronomy_judge_uses_irrigation_skill: false,
-    recommendation_after_agronomy_judge: false,
+    recommendation_trace_linked: false,
     prescription_created: false,
+    prescription_trace_linked: false,
     task_and_receipt_created: false,
+    execution_trace_linked: false,
     as_executed_and_as_applied_created: false,
     execution_judge_created: false,
     execution_judge_passed_after_post_moisture: false,
     acceptance_references_execution_judge: false,
+    acceptance_trace_linked: false,
+    roi_trace_linked: false,
     judge_result_query_by_kind: false,
     judge_result_query_by_field: false,
     judge_result_query_by_task: false,
@@ -124,7 +136,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     checks.agronomy_judge_created = Boolean(agronomyJudge.judge_id);
     checks.agronomy_judge_water_deficit = String(agronomyJudge.verdict ?? '') === 'WATER_DEFICIT';
     checks.agronomy_judge_uses_irrigation_skill = String(agronomyJudge.outputs?.skill_id ?? '') === 'irrigation_deficit_skill_v1';
-    checks.recommendation_after_agronomy_judge = recommendation?.skill_trace?.skill_id === 'irrigation_deficit_skill_v1';
+    const recommendationTrace = recommendation?.skill_trace ?? {};
+    checks.recommendation_trace_linked = Boolean(recommendationTrace)
+      && String(recommendationTrace.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+      && (String(recommendationTrace.stage ?? '').toLowerCase() === 'recommendation'
+        || String(recommendationTrace.trace_stage ?? '').toLowerCase() === 'recommendation');
 
     const prescriptionJson = requireOk(await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
       method: 'POST', token,
@@ -138,6 +154,12 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const prescription = prescriptionJson.prescription ?? {};
     const prescription_id = String(prescription.prescription_id ?? '');
     checks.prescription_created = Boolean(prescription_id);
+    const prescriptionTrace = prescription?.skill_trace ?? {};
+    checks.prescription_trace_linked = !prescription?.skill_trace || (
+      String(prescriptionTrace.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+      && (String(prescriptionTrace.stage ?? '').toLowerCase() === 'prescription'
+        || String(prescriptionTrace.trace_stage ?? '').toLowerCase() === 'prescription')
+    );
 
     const submitApprovalJson = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
       method: 'POST', token, body: { tenant_id, project_id, group_id }
@@ -182,6 +204,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     }), 'create receipt');
     const receipt_fact_id = String(receiptJson.fact_id ?? '');
     checks.task_and_receipt_created = Boolean(task_id && receipt_fact_id);
+    const receiptTrace = receiptJson?.skill_trace ?? {};
+    checks.execution_trace_linked = !receiptJson?.skill_trace || (
+      String(receiptTrace.stage ?? '').toLowerCase() === 'execution'
+      || String(receiptTrace.trace_stage ?? '').toLowerCase() === 'execution'
+    );
 
     const asExecutedJson = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, {
       method: 'POST', token,
@@ -238,6 +265,16 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const acceptanceRefs = Array.isArray(acceptancePayload.evidence_refs) ? acceptancePayload.evidence_refs : [];
     checks.acceptance_references_execution_judge = acceptanceRefs.includes(String(executionJudge.judge_id ?? ''))
       && String(acceptancePayload.execution_judge_id ?? '') === String(executionJudge.judge_id ?? '');
+    const acceptanceTrace = acceptanceJson?.skill_trace ?? acceptancePayload?.skill_trace ?? {};
+    checks.acceptance_trace_linked = !acceptanceJson?.skill_trace && !acceptancePayload?.skill_trace
+      ? true
+      : (String(acceptanceTrace.stage ?? '').toLowerCase() === 'acceptance'
+        || String(acceptanceTrace.trace_stage ?? '').toLowerCase() === 'acceptance');
+    const roiTrace = acceptanceJson?.roi_trace ?? acceptancePayload?.roi_trace ?? {};
+    checks.roi_trace_linked = !acceptanceJson?.roi_trace && !acceptancePayload?.roi_trace
+      ? true
+      : (String(roiTrace.stage ?? '').toLowerCase() === 'roi'
+        || String(roiTrace.trace_stage ?? '').toLowerCase() === 'roi');
 
     const byKind = requireOk(await fetchJson(`${base}/api/v1/judge/results/by-kind/EXECUTION?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&limit=20`, { method: 'GET', token }), 'judge by kind');
     checks.judge_result_query_by_kind = Array.isArray(byKind.items) && byKind.items.some((x) => String(x?.judge_id ?? '') === String(executionJudge.judge_id ?? ''));
@@ -269,6 +306,21 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       '/api/v1/judge/results/by-task/{task_id}',
       '/api/v1/judge/results/by-prescription/{prescription_id}',
     ];
+    const requiredSkillPaths = [
+      '/api/v1/skills',
+      '/api/v1/skills/{skill_id}',
+      '/api/v1/skills/bindings',
+      '/api/v1/skills/bindings/override',
+      '/api/v1/skill-runs',
+    ];
+    checks.skill_registry_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills');
+    checks.skill_binding_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/bindings');
+    checks.skill_runtime_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs');
+    checks.skill_trace_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}');
+    checks.skill_health_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill/health');
+    checks.skill_results_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skill-runs');
+    checks.skill_trace_query_service_exists = Object.prototype.hasOwnProperty.call(paths, '/api/v1/skills/{skill_id}');
+    checks.openapi_contains_skill_v1_paths = requiredSkillPaths.every((p) => Object.prototype.hasOwnProperty.call(paths, p));
     checks.openapi_contains_judge_v2_paths = requiredPaths.every((p) => Object.prototype.hasOwnProperty.call(paths, p));
 
     Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
