@@ -28,6 +28,7 @@ export * from "./prescription/prescription_contract_v1.js";
 export * from "./skills/skill_contract_v1.js";
 export * from "./skills/skill_run_v1.js";
 export * from "./skills/skill_trace_v1.js";
+export * from "./field_memory/field_memory_v1.js";
 
 export * from "./execution/as_executed_record_v1.js";
 export * from "./execution/as_applied_map_v1.js";
