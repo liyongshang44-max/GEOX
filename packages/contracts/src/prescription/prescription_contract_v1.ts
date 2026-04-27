@@ -1,4 +1,4 @@
-import type { SkillTraceV1 } from "../agronomy/recommendation_v2.js";
+import type { SkillTraceV1 } from "../skills/skill_trace_v1.js";
 
 export type PrescriptionRiskLevelV1 = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
