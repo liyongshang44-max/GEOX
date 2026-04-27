@@ -10,6 +10,7 @@ import {
   SkillDefinitionRiskLevelSchema,
   SkillDefinitionScopeSchema,
 } from "@geox/contracts";
+import { recordMemoryV1 } from "../../services/field_memory_service.js";
 
 const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
 const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
@@ -339,6 +340,21 @@ export async function appendSkillRunFact(
     rollout_mode: normalizeRolloutMode(input.rollout_mode),
   });
   const appended = await appendFact(db, "skill_run_v1", payload);
+  const fieldId = typeof payload.field_id === "string" ? payload.field_id.trim() : "";
+  if (fieldId) {
+    await recordMemoryV1(db, payload.tenant_id, {
+      type: "skill_performance",
+      operation_id: payload.operation_id ?? undefined,
+      prescription_id: payload.prescription_id ?? undefined,
+      recommendation_id: payload.recommendation_id ?? undefined,
+      field_id: fieldId,
+      skill_refs: [{ skill_id: payload.skill_id, skill_run_id: payload.run_id, skill_version: payload.version }],
+      metrics: {
+        success: payload.result_status === "SUCCESS",
+      },
+      summary: `Skill run ${payload.skill_id} (${payload.result_status})`,
+    }).catch(() => undefined);
+  }
   return { ...appended, payload };
 }
 

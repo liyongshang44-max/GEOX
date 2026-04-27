@@ -10,6 +10,7 @@ import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
+import { recordMemoryV1 } from "../services/field_memory_service.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
@@ -419,6 +420,23 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
         [acceptanceFactId, FACT_SOURCE_ACCEPTANCE_V1, acceptanceRecord]
       );
+
+      if (acceptanceRecord.payload.verdict === "PASS" && field_id) {
+        const soilMoistureDeltaRaw = Number((receiptFact.record_json?.payload?.observed_parameters ?? {})?.soil_moisture_delta);
+        const soil_moisture_delta = Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined;
+        await recordMemoryV1(pool, tenant.tenant_id, {
+          type: "operation_outcome",
+          operation_id: typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : undefined,
+          field_id,
+          metrics: {
+            success: true,
+            acceptance_passed: true,
+            soil_moisture_delta,
+          },
+          evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
+          summary: `Acceptance passed for task ${body.act_task_id}`,
+        }).catch(() => undefined);
+      }
 
       return reply.send({
         ok: true,

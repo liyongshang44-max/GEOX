@@ -12,6 +12,7 @@ import {
   listJudgeResultsV2,
   loadJudgeResultV2,
 } from "../domain/judge/judge_result_v2.js";
+import { recordMemoryV1 } from "../services/field_memory_service.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -146,6 +147,25 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
       const judgeResult = buildJudgeResultV2(evaluateExecutionJudgeV2(body));
       const inserted = await insertJudgeResultV2(pool, judgeResult);
+      const executionDeviationRaw = Number((inserted.outputs as any)?.execution_deviation);
+      const execution_deviation = Number.isFinite(executionDeviationRaw) ? executionDeviationRaw : undefined;
+      const field_id = String(inserted.field_id ?? body.field_id ?? "").trim();
+      if (field_id) {
+        await recordMemoryV1(pool, body.tenant_id, {
+          type: "execution_reliability",
+          operation_id: String(inserted.task_id ?? body.receipt?.task_id ?? "").trim() || undefined,
+          prescription_id: String(inserted.prescription_id ?? body.prescription_id ?? "").trim() || undefined,
+          field_id,
+          metrics: {
+            execution_deviation,
+            success: inserted.verdict === "PASS",
+          },
+          evidence_refs: Array.isArray(inserted.evidence_refs)
+            ? inserted.evidence_refs.map((v) => String(v)).filter((v) => v.length > 0)
+            : [],
+          summary: `Execution judge ${inserted.verdict} for ${field_id}`,
+        }).catch(() => undefined);
+      }
       return reply.send({ ok: true, judge_result: inserted });
     } catch (error: any) {
       return reply.status(400).send({ ok: false, error: String(error?.message ?? error ?? "INVALID_REQUEST") });
