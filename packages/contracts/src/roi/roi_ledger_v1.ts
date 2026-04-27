@@ -22,6 +22,7 @@ export type RoiLedgerV1 = {
   prescription_id?: string | null;
   as_executed_id?: string | null;
   as_applied_id?: string | null;
+  trace_id?: string | null;
 
   field_id?: string | null;
   season_id?: string | null;

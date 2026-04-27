@@ -8,7 +8,7 @@ import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
-import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
+import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
@@ -339,6 +339,28 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         sensor_quality_state: derived_states.sensor_quality_state,
         acceptance_policy_ref
       });
+      const trace_id =
+        String(taskPayload?.trace_id ?? taskPayload?.meta?.trace_id ?? "").trim()
+        || `trace_${randomUUID().replace(/-/g, "")}`;
+      await appendSkillTraceFact(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        trace_id,
+        skill_run_id: null,
+        inputs: {
+          action_type: String(taskPayload.action_type ?? ""),
+          parameters: taskPayload.parameters ?? {},
+          acceptance_policy_ref,
+        },
+        outputs: {
+          result: evaluated.result,
+          metrics: evaluated.metrics,
+          explanation_codes: evaluated.explanation_codes ?? [],
+        },
+        confidence: { level: "MEDIUM", basis: "estimated", reasons: ["acceptance_engine_v1"] },
+        evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
+      });
       await appendSkillRunFact(pool, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -353,6 +375,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         rollout_mode: "DIRECT",
         bind_target: field_id ?? body.act_task_id,
         operation_id: null,
+        task_id: body.act_task_id,
         operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : null,
         field_id,
         device_id,
@@ -375,6 +398,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           act_task_id: body.act_task_id,
           field_id: field_id ?? "unknown_field",
           operation_plan_id: typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : undefined,
+          trace_id,
           program_id: typeof taskPayload.program_id === "string" ? taskPayload.program_id : undefined,
           verdict: toVerdict(evaluated.result),
           metrics: buildAcceptanceMetrics({ evaluated, expectedDurationMin: Number.isFinite(expectedDurationMin) ? expectedDurationMin : null }),

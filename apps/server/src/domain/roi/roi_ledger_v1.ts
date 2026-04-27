@@ -198,6 +198,13 @@ function normalizeEvidenceRefs(value: unknown): any[] {
   return Array.isArray(value) ? value.filter((x) => x != null) : [];
 }
 
+function traceIdFromAsExecuted(asExecuted: AsExecutedRow): string | null {
+  if (typeof asExecuted?.planned?.trace_id === "string" && asExecuted.planned.trace_id.trim()) return asExecuted.planned.trace_id.trim();
+  if (typeof asExecuted?.planned?.metadata?.trace_id === "string" && asExecuted.planned.metadata.trace_id.trim()) return asExecuted.planned.metadata.trace_id.trim();
+  if (typeof asExecuted?.executed?.trace_id === "string" && asExecuted.executed.trace_id.trim()) return asExecuted.executed.trace_id.trim();
+  return null;
+}
+
 function toWaterLiters(amount: number | null, unitRaw: unknown): number | null {
   if (amount == null) return null;
   const unit = String(unitRaw ?? "").trim().toLowerCase();
@@ -248,6 +255,7 @@ export function computeWaterSavedEntry(asExecuted: AsExecutedRow): RoiCandidate 
     assumptions: {
       baseline_source: "prescription_planned_amount",
       actual_source: "as_executed_observed_amount",
+      trace_id: traceIdFromAsExecuted(asExecuted),
     },
     uncertainty_notes: null,
   };
@@ -310,8 +318,8 @@ export function computeCostImpactEntry(asExecuted: AsExecutedRow): RoiCandidate 
     evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "compute_cost_breakdown_v1",
     assumptions: hasBaseline
-      ? { baseline_source: "prescription_planned_amount" }
-      : { baseline_source: "assumption_only" },
+      ? { baseline_source: "prescription_planned_amount", trace_id: traceIdFromAsExecuted(asExecuted) }
+      : { baseline_source: "assumption_only", trace_id: traceIdFromAsExecuted(asExecuted) },
     uncertainty_notes: hasBaseline ? null : "baseline cost relies on assumption because planned unit conversion is unavailable",
   };
 }
@@ -341,6 +349,7 @@ export function computeExecutionReliabilityEntry(asExecuted: AsExecutedRow): Roi
         FAILED: "negative",
         INSUFFICIENT_RECEIPT: "uncertain",
       },
+      trace_id: traceIdFromAsExecuted(asExecuted),
     },
     uncertainty_notes: status === "INSUFFICIENT_RECEIPT" ? "insufficient execution receipt evidence" : null,
   };
@@ -378,8 +387,8 @@ function computeLaborSavedEntry(asExecuted: AsExecutedRow): RoiCandidate | null 
     evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs),
     calculation_method: "labor_duration_comparison_v1",
     assumptions: plannedMinutes == null
-      ? { baseline_source: "assumption" }
-      : { baseline_source: "planned_labor" },
+      ? { baseline_source: "assumption", trace_id: traceIdFromAsExecuted(asExecuted) }
+      : { baseline_source: "planned_labor", trace_id: traceIdFromAsExecuted(asExecuted) },
     uncertainty_notes: plannedMinutes == null ? "planned labor baseline missing" : null,
   };
 }
