@@ -266,6 +266,47 @@ let pool;
     ]
   );
 
+  await pool.query(
+    `INSERT INTO field_memory_v1 (
+      memory_id,
+      tenant_id,
+      field_id,
+      operation_id,
+      prescription_id,
+      recommendation_id,
+      memory_type,
+      summary,
+      metrics,
+      skill_refs,
+      evidence_refs,
+      created_at
+    )
+    VALUES (
+      $1,$2,$3,$4,NULL,$5,'skill_performance',$6,$7::jsonb,$8::jsonb,$9::jsonb,$10
+    )`,
+    [
+      randomUUID(),
+      tenant_id,
+      field_id,
+      actTaskId,
+      recId,
+      `Skill performance recorded for ${field_id}`,
+      JSON.stringify({
+        success: true,
+        execution_deviation: 0,
+        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
+      }),
+      JSON.stringify([
+        {
+          skill_id: 'irrigation_deficit_skill_v1',
+          skill_version: 'v1'
+        }
+      ]),
+      JSON.stringify([String(uplinkJson.fact_id ?? ''), execution_judge_id]),
+      Date.now()
+    ]
+  );
+
   const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token });
   const memoryListJson = requireOk(memoryList, 'field memory list');
   const items = Array.isArray(memoryListJson.items) ? memoryListJson.items : [];
