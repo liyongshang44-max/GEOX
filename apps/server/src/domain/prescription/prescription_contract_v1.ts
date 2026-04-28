@@ -8,6 +8,12 @@ import type {
 } from "@geox/contracts";
 import type { Pool } from "pg";
 import { buildSkillTraceRef } from "../../services/skill_trace_service.js";
+import {
+  buildVariableOperationAmountV1,
+  buildVariableSpatialScopeV1,
+  type VariablePrescriptionPlanV1,
+  validateVariablePrescriptionZonesV1,
+} from "./variable_prescription_v1.js";
 
 type TenantTriple = {
   tenant_id: string;
@@ -24,6 +30,7 @@ type FromRecommendationInput = {
   season_id?: string | null;
   crop_id?: string | null;
   zone_id?: string | null;
+  variable_plan?: VariablePrescriptionPlanV1 | null;
   created_by?: string | null;
 };
 
@@ -220,6 +227,16 @@ function deriveStatus(operationType: PrescriptionOperationTypeV1, missingAmount:
   return "READY_FOR_APPROVAL";
 }
 
+function deriveVariableOperationType(variablePlan: VariablePrescriptionPlanV1): PrescriptionOperationTypeV1 {
+  const distinctTypes = Array.from(new Set(variablePlan.zone_rates.map((x) => x.operation_type)));
+  if (distinctTypes.length !== 1) throw new Error("VARIABLE_OPERATION_TYPE_MIXED_NOT_SUPPORTED");
+  const operationType = distinctTypes[0];
+  if (operationType === "IRRIGATION") return "IRRIGATION";
+  if (operationType === "INSPECTION") return "INSPECTION";
+  if (operationType === "SAMPLING") return "INSPECTION";
+  throw new Error("VARIABLE_OPERATION_TYPE_INVALID");
+}
+
 function hydratePrescription(row: any): PrescriptionContractV1 {
   const skillTrace = parseJsonMaybe(row.skill_trace);
   const hydratedSkillTrace = (skillTrace && typeof skillTrace === "object" && typeof (skillTrace as any).skill_id === "string")
@@ -387,6 +404,156 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     approval_requirement: deriveApprovalRequirement(operation_type),
     acceptance_conditions: deriveAcceptanceConditions(operation_type),
     status,
+    created_at: now,
+    updated_at: now,
+    created_by: input.created_by ?? null,
+  };
+
+  await pool.query(
+    `INSERT INTO prescription_contract_v1 (
+      prescription_id, recommendation_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, zone_id, operation_type,
+      spatial_scope, timing_window, operation_amount, device_requirements, risk, evidence_refs,
+      skill_trace_id, skill_trace, approval_requirement, acceptance_conditions, status, created_at, updated_at, created_by
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+      $11::jsonb, $12::jsonb, $13::jsonb, $14::jsonb, $15::jsonb, $16::jsonb,
+      $17, $18::jsonb, $19::jsonb, $20::jsonb, $21, NOW(), NOW(), $22
+    ) ON CONFLICT (tenant_id, project_id, group_id, recommendation_id) DO NOTHING`,
+    [
+      prescription.prescription_id,
+      prescription.recommendation_id,
+      prescription.tenant_id,
+      prescription.project_id,
+      prescription.group_id,
+      prescription.field_id,
+      prescription.season_id,
+      prescription.crop_id,
+      prescription.zone_id,
+      prescription.operation_type,
+      JSON.stringify(prescription.spatial_scope),
+      JSON.stringify(prescription.timing_window),
+      JSON.stringify(prescription.operation_amount),
+      JSON.stringify(prescription.device_requirements),
+      JSON.stringify(prescription.risk),
+      JSON.stringify(prescription.evidence_refs),
+      prescription.skill_trace_id ?? null,
+      prescription.skill_trace ? JSON.stringify(prescription.skill_trace) : null,
+      JSON.stringify(prescription.approval_requirement),
+      JSON.stringify(prescription.acceptance_conditions),
+      prescription.status,
+      prescription.created_by,
+    ],
+  );
+
+  const saved = await getPrescriptionByRecommendationId(pool, input.recommendation_id, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
+  if (!saved) throw new Error("PRESCRIPTION_PERSIST_FAILED");
+  return { prescription: saved, idempotent: saved.prescription_id !== prescription_id };
+}
+
+export async function createVariablePrescriptionFromRecommendation(
+  pool: Pool,
+  input: FromRecommendationInput & { variable_plan: VariablePrescriptionPlanV1 },
+  recPayload: any,
+): Promise<{ prescription: PrescriptionContractV1; idempotent: boolean }> {
+  const exists = await getPrescriptionByRecommendationId(pool, input.recommendation_id, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+  });
+  if (exists) return { prescription: exists, idempotent: true };
+
+  const recommendationSkillTrace = (recPayload?.skill_trace && typeof recPayload.skill_trace === "object") ? recPayload.skill_trace as SkillTraceV1 : null;
+  if (!recommendationSkillTrace) throw new Error("VARIABLE_PRESCRIPTION_REQUIRES_SKILL_TRACE");
+
+  await validateVariablePrescriptionZonesV1(pool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id,
+    variable_plan: input.variable_plan,
+  });
+
+  const operation_type = deriveVariableOperationType(input.variable_plan);
+  const skill_trace_id = toText(recPayload?.skill_trace_id)
+    ?? toText(recommendationSkillTrace?.trace_id)
+    ?? null;
+  const suggestionParams = (recPayload?.suggested_action?.parameters && typeof recPayload.suggested_action.parameters === "object")
+    ? recPayload.suggested_action.parameters
+    : {};
+
+  const operation_amount = buildVariableOperationAmountV1({
+    unit: toText(suggestionParams.unit),
+    variable_plan: input.variable_plan,
+  });
+  const spatial_scope = buildVariableSpatialScopeV1({
+    field_boundary_ref: toText(suggestionParams.field_boundary_ref),
+    variable_plan: input.variable_plan,
+  });
+  const evidence_refs = normalizeEvidenceRefs(recPayload);
+  const highestPriority = input.variable_plan.zone_rates.some((z) => z.priority === "CRITICAL")
+    ? "CRITICAL"
+    : (input.variable_plan.zone_rates.some((z) => z.priority === "HIGH") ? "HIGH" : "MEDIUM");
+  const now = new Date().toISOString();
+  const prescription_id = `prc_${randomUUID().replace(/-/g, "")}`;
+  const required_zone_count = input.variable_plan.zone_rates.length;
+
+  const prescription: PrescriptionContractV1 = {
+    prescription_id,
+    recommendation_id: input.recommendation_id,
+    trace_id: skill_trace_id,
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    field_id: input.field_id,
+    season_id: input.season_id ?? null,
+    crop_id: input.crop_id ?? toText(recPayload?.crop_code) ?? null,
+    zone_id: null,
+    operation_type,
+    spatial_scope: spatial_scope as PrescriptionContractV1["spatial_scope"],
+    timing_window: {
+      recommended_start_at: toText(suggestionParams.recommended_start_at),
+      recommended_end_at: toText(suggestionParams.recommended_end_at),
+      latest_start_at: toText(suggestionParams.latest_start_at),
+      forbidden_windows: Array.isArray(suggestionParams.forbidden_windows) ? suggestionParams.forbidden_windows : [],
+      weather_constraints: suggestionParams.weather_constraints && typeof suggestionParams.weather_constraints === "object" ? suggestionParams.weather_constraints : {},
+      crop_stage_constraints: Array.isArray(suggestionParams.crop_stage_constraints) ? suggestionParams.crop_stage_constraints.map((x: any) => String(x)) : [],
+    },
+    operation_amount: operation_amount as PrescriptionContractV1["operation_amount"],
+    device_requirements: {
+      device_type: toText(suggestionParams.device_type),
+      required_capabilities: Array.isArray(suggestionParams.required_capabilities) ? suggestionParams.required_capabilities.map((x: any) => String(x)) : [],
+      min_accuracy: toNumber(suggestionParams.min_accuracy),
+      flow_rate_min: toNumber(suggestionParams.flow_rate_min),
+      variable_rate_required: true,
+      online_required: Boolean(suggestionParams.online_required),
+      calibration_required: Boolean(suggestionParams.calibration_required),
+    },
+    risk: { level: highestPriority, reasons: ["VARIABLE_BY_ZONE_PLAN"] },
+    evidence_refs,
+    skill_trace_id: skill_trace_id ?? undefined,
+    skill_trace: recommendationSkillTrace,
+    approval_requirement: {
+      required: true,
+      role: "field_manager",
+      second_confirmation_required: false,
+      auto_execute_allowed: false,
+      manual_takeover_required: true,
+    },
+    acceptance_conditions: ({
+      amount_tolerance_percent: 15,
+      required_coverage_percent: 95,
+      required_execution_window: true,
+      evidence_required: ["receipt", "as_applied_map", "zone_application"],
+      failure_conditions: ["ZONE_APPLICATION_MISSING", "ZONE_COVERAGE_BELOW_THRESHOLD", "ZONE_AMOUNT_DEVIATION_EXCEEDED"],
+      insufficient_evidence_conditions: ["MISSING_VARIABLE_EXECUTION", "MISSING_AS_APPLIED_MAP"],
+      zone_level_required: true,
+      required_zone_count,
+    } as unknown as PrescriptionContractV1["acceptance_conditions"]),
+    status: "READY_FOR_APPROVAL",
     created_at: now,
     updated_at: now,
     created_by: input.created_by ?? null,
