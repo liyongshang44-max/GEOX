@@ -3,11 +3,13 @@ import type { Pool } from "pg";
 import { requireAoActAdminV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { createApprovalRequestV1, requireTenantMatchOr404 } from "../domain/approval/approval_request_service_v1.js";
 import {
+  createVariablePrescriptionFromRecommendation,
   createPrescriptionFromRecommendation,
   getPrescriptionById,
   getPrescriptionByRecommendationId,
   loadRecommendationFact,
 } from "../domain/prescription/prescription_contract_v1.js";
+import { normalizeVariablePrescriptionPlanV1 } from "../domain/prescription/variable_prescription_v1.js";
 
 type TenantTriple = { tenant_id: string; project_id: string; group_id: string };
 
@@ -59,6 +61,68 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     }, recFact.payload);
 
     return reply.send({ ok: true, idempotent: result.idempotent, prescription: result.prescription });
+  });
+
+  app.post("/api/v1/prescriptions/variable/from-recommendation", async (req, reply) => {
+    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    if (!auth) return;
+
+    const body: any = req.body ?? {};
+    const recommendation_id = String(body.recommendation_id ?? "").trim();
+    const tenant: TenantTriple = {
+      tenant_id: String(body.tenant_id ?? auth.tenant_id),
+      project_id: String(body.project_id ?? auth.project_id),
+      group_id: String(body.group_id ?? auth.group_id),
+    };
+    if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
+    if (!body.variable_plan) return badRequest(reply, "MISSING_VARIABLE_PLAN");
+    if (!requireTenantMatchOr404(auth, tenant, reply)) return;
+
+    let variable_plan;
+    try {
+      variable_plan = normalizeVariablePrescriptionPlanV1(body.variable_plan);
+    } catch (error: any) {
+      return badRequest(reply, String(error?.message ?? "VARIABLE_PLAN_INVALID"));
+    }
+
+    const recFact = await loadRecommendationFact(pool, tenant, recommendation_id);
+    if (!recFact) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
+    const recFieldId = String(recFact.payload?.field_id ?? "").trim();
+    if (!recFieldId) return badRequest(reply, "RECOMMENDATION_FIELD_MISSING");
+    if (body.field_id !== undefined && String(body.field_id ?? "").trim() !== recFieldId) {
+      return badRequest(reply, "PRESCRIPTION_FIELD_MISMATCH");
+    }
+
+    try {
+      const result = await createVariablePrescriptionFromRecommendation(pool, {
+        recommendation_id,
+        tenant_id: String(recFact.payload?.tenant_id ?? tenant.tenant_id),
+        project_id: String(recFact.payload?.project_id ?? tenant.project_id),
+        group_id: String(recFact.payload?.group_id ?? tenant.group_id),
+        field_id: recFieldId,
+        season_id: recFact.payload?.season_id ?? null,
+        crop_id: recFact.payload?.crop_code ?? null,
+        created_by: auth.actor_id,
+        variable_plan,
+      }, recFact.payload);
+
+      return reply.send({ ok: true, idempotent: result.idempotent, prescription: result.prescription });
+    } catch (error: any) {
+      const code = String(error?.message ?? "");
+      if (
+        code === "VARIABLE_PRESCRIPTION_REQUIRES_SKILL_TRACE" ||
+        code === "VARIABLE_OPERATION_TYPE_MIXED_NOT_SUPPORTED" ||
+        code === "MANAGEMENT_ZONE_FIELD_MISMATCH" ||
+        code.startsWith("VARIABLE_")
+      ) {
+        return badRequest(reply, code);
+      }
+      if (code === "MANAGEMENT_ZONE_NOT_FOUND") {
+        return reply.status(404).send({ ok: false, error: code });
+      }
+      req.log.error({ err: error }, "create variable prescription from recommendation failed");
+      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
+    }
   });
 
   app.get("/api/v1/prescriptions/:prescription_id", async (req, reply) => {
