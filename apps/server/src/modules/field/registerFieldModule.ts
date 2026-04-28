@@ -8,6 +8,7 @@ import { registerFieldProgramStateV1Routes } from "../../routes/field_program_st
 import { registerFieldPortfolioV1Routes } from "../../routes/field_portfolio_v1.js";
 import { registerProgramsV1Routes } from "../../routes/programs_v1.js";
 import { registerFieldMemoryV1Routes } from "../../routes/field_memory_v1.js";
+import { registerManagementZonesV1Routes } from "../../routes/management_zones_v1.js";
 
 export function registerFieldModule(app: FastifyInstance, pool: Pool): void {
   registerFieldsV1Routes(app, pool);
@@ -17,4 +18,5 @@ export function registerFieldModule(app: FastifyInstance, pool: Pool): void {
   registerFieldPortfolioV1Routes(app, pool);
   registerProgramsV1Routes(app, pool);
   registerFieldMemoryV1Routes(app, pool);
+  registerManagementZonesV1Routes(app, pool);
 }
