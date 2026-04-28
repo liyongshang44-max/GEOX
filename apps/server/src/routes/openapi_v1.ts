@@ -884,6 +884,60 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               }
             }
           }
+        },
+        ManagementZoneV1: {
+          type: "object",
+          required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type", "geometry", "risk_tags", "agronomy_tags", "source_refs", "created_at", "updated_at"],
+          properties: {
+            zone_id: { type: "string" },
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" },
+            field_id: { type: "string" },
+            zone_name: { type: "string", nullable: true },
+            zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+            geometry: { type: "object", additionalProperties: true },
+            area_ha: { type: "number", nullable: true },
+            risk_tags: { type: "array", items: { type: "string" } },
+            agronomy_tags: { type: "array", items: { type: "string" } },
+            source_refs: { type: "array", items: { type: "string" } },
+            created_at: { type: "integer", format: "int64" },
+            updated_at: { type: "integer", format: "int64" },
+          }
+        },
+        ManagementZoneCreateRequest: {
+          type: "object",
+          required: ["tenant_id", "project_id", "group_id", "zone_id", "zone_type", "geometry"],
+          properties: {
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" },
+            zone_id: { type: "string" },
+            zone_name: { type: "string", nullable: true },
+            zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+            geometry: { type: "object", additionalProperties: true },
+            area_ha: { type: "number", nullable: true },
+            risk_tags: { type: "array", items: { type: "string" } },
+            agronomy_tags: { type: "array", items: { type: "string" } },
+            source_refs: { type: "array", items: { type: "string" } },
+          }
+        },
+        ManagementZoneListResponse: {
+          type: "object",
+          required: ["ok", "field_id", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            items: { type: "array", items: { '$ref': "#/components/schemas/ManagementZoneV1" } },
+          }
+        },
+        ManagementZoneReadResponse: {
+          type: "object",
+          required: ["ok", "zone"],
+          properties: {
+            ok: { type: "boolean" },
+            zone: { '$ref': "#/components/schemas/ManagementZoneV1" },
+          }
         }
       }
     },
@@ -1397,6 +1451,94 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               content: {
                 "application/json": {
                   schema: { '$ref': "#/components/schemas/FieldTagsResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/zones": {
+        post: {
+          tags: ["fields"],
+          summary: "Create or upsert a management zone",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/ManagementZoneCreateRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Management zone upserted successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "zone"],
+                    properties: {
+                      ok: { type: "boolean" },
+                      zone: {
+                        type: "object",
+                        required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type"],
+                        properties: {
+                          zone_id: { type: "string" },
+                          tenant_id: { type: "string" },
+                          project_id: { type: "string" },
+                          group_id: { type: "string" },
+                          field_id: { type: "string" },
+                          zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        get: {
+          tags: ["fields"],
+          summary: "List management zones by field",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tenant_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Management zones list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/ManagementZoneListResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/zones/{zone_id}": {
+        get: {
+          tags: ["fields"],
+          summary: "Read one management zone by field and zone id",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "zone_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tenant_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Management zone returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/ManagementZoneReadResponse" }
                 }
               }
             }
