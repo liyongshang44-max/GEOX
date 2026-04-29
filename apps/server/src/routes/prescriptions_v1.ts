@@ -202,6 +202,20 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
         return badRequest(reply, "PRESCRIPTION_NOT_READY_FOR_APPROVAL");
       }
 
+      const operationAmount = prescription.operation_amount ?? {};
+      const isVariableByZone = String(operationAmount.mode ?? "").toUpperCase() === "VARIABLE_BY_ZONE";
+      const primitiveParameters = {
+        prescription_id: String(prescription.prescription_id ?? ""),
+        recommendation_id: String(prescription.recommendation_id ?? ""),
+        operation_type: String(prescription.operation_type ?? ""),
+        amount: Number(prescription.operation_amount?.amount ?? 0),
+        unit: String(prescription.operation_amount?.unit ?? "unit"),
+        ...(isVariableByZone ? {
+          variable_mode: "VARIABLE_BY_ZONE",
+          zone_count: Array.isArray(prescription.operation_amount?.zone_rates) ? prescription.operation_amount.zone_rates.length : 0,
+        } : {}),
+      };
+
       const delegated = await createApprovalRequestV1(client, auth, {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
@@ -220,18 +234,16 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
           keys: [
             { name: "prescription_id", type: "enum", enum: [String(prescription.prescription_id ?? "")] },
             { name: "recommendation_id", type: "enum", enum: [String(prescription.recommendation_id ?? "")] },
+            { name: "operation_type", type: "enum", enum: [String(prescription.operation_type ?? "")] },
             { name: "amount", type: "number" },
             { name: "unit", type: "enum", enum: [String(prescription.operation_amount?.unit ?? "unit")] },
+            ...(isVariableByZone ? [
+              { name: "variable_mode", type: "enum", enum: ["VARIABLE_BY_ZONE"] },
+              { name: "zone_count", type: "number" },
+            ] : []),
           ],
         },
-        parameters: {
-          prescription_id: prescription.prescription_id,
-          recommendation_id: prescription.recommendation_id,
-          operation_type: prescription.operation_type,
-          amount: prescription.operation_amount?.amount,
-          unit: prescription.operation_amount?.unit,
-          acceptance_conditions: prescription.acceptance_conditions,
-        },
+        parameters: primitiveParameters,
         constraints: { approval_required: Boolean(prescription.approval_requirement?.required) },
         meta: {
           prescription_id: prescription.prescription_id,
@@ -240,6 +252,17 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
           field_id: prescription.field_id,
           season_id: prescription.season_id,
           approval_requirement: prescription.approval_requirement,
+          acceptance_conditions: prescription.acceptance_conditions,
+          ...(isVariableByZone ? {
+            skip_auto_task_issue: true,
+            variable_prescription: true,
+            variable_plan: {
+              mode: "VARIABLE_BY_ZONE",
+              zone_rates: prescription.operation_amount?.zone_rates ?? [],
+            },
+            spatial_scope: prescription.spatial_scope,
+            device_requirements: prescription.device_requirements,
+          } : {}),
         },
       });
 
