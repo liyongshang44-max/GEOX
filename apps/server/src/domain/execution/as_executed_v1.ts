@@ -30,6 +30,53 @@ type PrescriptionRow = {
   operation_amount: any;
 };
 
+
+
+type VariableZoneApplicationV1 = {
+  zone_id: string;
+  planned_amount: number;
+  applied_amount: number;
+  unit: string;
+  coverage_percent: number;
+  deviation_amount: number;
+  deviation_percent: number;
+  status: "APPLIED" | "PARTIAL" | "SKIPPED";
+};
+
+function normalizeVariableExecutionV1(payload: any): {
+  mode: "VARIABLE_BY_ZONE";
+  zone_applications: VariableZoneApplicationV1[];
+  total_planned_amount: number;
+  total_applied_amount: number;
+  avg_coverage_percent: number;
+} | null {
+  const raw = payload?.meta?.variable_execution;
+  if (!raw || typeof raw !== "object") return null;
+  if (raw.mode !== "VARIABLE_BY_ZONE") return null;
+  const zones = Array.isArray(raw.zone_applications) ? raw.zone_applications : [];
+  if (!zones.length) return null;
+
+  const normalized: VariableZoneApplicationV1[] = [];
+  for (const item of zones) {
+    const zone_id = typeof item?.zone_id === "string" ? item.zone_id.trim() : "";
+    const unit = typeof item?.unit === "string" ? item.unit.trim() : "";
+    const planned_amount = toNum(item?.planned_amount);
+    const applied_amount = toNum(item?.applied_amount);
+    const coverage_percent = toNum(item?.coverage_percent);
+    const status = String(item?.status ?? "").trim().toUpperCase();
+    if (!zone_id || !unit || planned_amount == null || planned_amount <= 0 || applied_amount == null || applied_amount < 0 || coverage_percent == null || coverage_percent < 0 || coverage_percent > 100) return null;
+    if (status !== "APPLIED" && status !== "PARTIAL" && status !== "SKIPPED") return null;
+    const deviation_amount = Number((applied_amount - planned_amount).toFixed(2));
+    const deviation_percent = Number((((applied_amount - planned_amount) / planned_amount) * 100).toFixed(2));
+    normalized.push({ zone_id, planned_amount, applied_amount, unit, coverage_percent, deviation_amount, deviation_percent, status: status as VariableZoneApplicationV1['status'] });
+  }
+
+  const total_planned_amount = Number(normalized.reduce((acc, z) => acc + z.planned_amount, 0).toFixed(2));
+  const total_applied_amount = Number(normalized.reduce((acc, z) => acc + z.applied_amount, 0).toFixed(2));
+  const avg_coverage_percent = Number((normalized.reduce((acc, z) => acc + z.coverage_percent, 0) / normalized.length).toFixed(2));
+  return { mode: "VARIABLE_BY_ZONE", zone_applications: normalized, total_planned_amount, total_applied_amount, avg_coverage_percent };
+}
+
 type CreateAsExecutedInput = TenantTriple & {
   task_id: string;
   receipt_id?: string | null;
@@ -243,6 +290,14 @@ function buildGeometry(payload: any): any {
 }
 
 function buildCoverage(payload: any): any {
+  const variableExecution = normalizeVariableExecutionV1(payload);
+  if (variableExecution) {
+    return {
+      coverage_percent: variableExecution.avg_coverage_percent,
+      mode: variableExecution.mode,
+      zone_coverage: variableExecution.zone_applications.map((z) => ({ zone_id: z.zone_id, coverage_percent: z.coverage_percent })),
+    };
+  }
   const observed = payload?.observed_parameters ?? {};
   const coverage_percent = toNum(observed?.coverage_percent);
   if (coverage_percent != null) return { coverage_percent };
@@ -423,6 +478,7 @@ function toAsExecutedPayload(params: {
       exception: payload?.exception ?? null,
       amount: executedAmountInfo.amount,
       unit: executedAmountInfo.unit,
+      variable_execution: payload?.meta?.variable_execution ?? null,
     },
     deviation: buildDeviation(plannedAmount, executedAmountInfo.amount),
     evidence_refs: buildEvidenceRefs(payload),
@@ -485,31 +541,51 @@ function buildAsAppliedPayload(params: { as_executed: AsExecutedRow; receipt: Re
   const geometry = buildGeometry(payload);
   const coverage = buildCoverage(payload);
 
+  const variableExecution = normalizeVariableExecutionV1(payload);
+  const variableUnit = variableExecution?.zone_applications?.[0]?.unit ?? null;
+  const isVariable = Boolean(variableExecution);
   return {
     as_executed_id: params.as_executed.as_executed_id,
     tenant_id: params.as_executed.tenant_id,
     project_id: params.as_executed.project_id,
     group_id: params.as_executed.group_id,
     field_id: params.as_executed.field_id,
-    zone_id:
-      getByPath(payload, ["zone_id"]) ??
-      getByPath(payload, ["execution_coverage", "zone_id"]) ??
-      getByPath(planned, ["zone_id"]) ??
-      null,
+    zone_id: isVariable
+      ? null
+      : (
+        getByPath(payload, ["zone_id"]) ??
+        getByPath(payload, ["execution_coverage", "zone_id"]) ??
+        getByPath(planned, ["zone_id"]) ??
+        null
+      ),
     task_id: params.as_executed.task_id,
     receipt_id: params.as_executed.receipt_id,
     prescription_id: params.as_executed.prescription_id ?? null,
     geometry,
     coverage,
-    application: {
-      zone_id: planned?.zone_id ?? null,
-      planned_amount: toNum(planned?.amount),
-      planned_unit: planned?.unit ?? null,
-      applied_amount: toNum(executed?.amount),
-      applied_unit: executed?.unit ?? planned?.unit ?? null,
-      rate: null,
-      trace_id: getByPath(planned, ["trace_id"]) ?? getByPath(executed, ["trace_id"]) ?? null,
-    },
+    application: isVariable
+      ? {
+          mode: variableExecution!.mode,
+          zone_id: null,
+          planned_amount: variableExecution!.total_planned_amount,
+          planned_unit: variableUnit,
+          applied_amount: variableExecution!.total_applied_amount,
+          applied_unit: variableUnit,
+          total_planned_amount: variableExecution!.total_planned_amount,
+          total_applied_amount: variableExecution!.total_applied_amount,
+          avg_coverage_percent: variableExecution!.avg_coverage_percent,
+          zone_applications: variableExecution!.zone_applications,
+          trace_id: getByPath(planned, ["trace_id"]) ?? getByPath(executed, ["trace_id"]) ?? null,
+        }
+      : {
+          zone_id: planned?.zone_id ?? null,
+          planned_amount: toNum(planned?.amount),
+          planned_unit: planned?.unit ?? null,
+          applied_amount: toNum(executed?.amount),
+          applied_unit: executed?.unit ?? planned?.unit ?? null,
+          rate: null,
+          trace_id: getByPath(planned, ["trace_id"]) ?? getByPath(executed, ["trace_id"]) ?? null,
+        },
     evidence_refs: params.as_executed.evidence_refs,
     log_refs: params.as_executed.log_refs,
   };

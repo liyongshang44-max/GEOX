@@ -2946,6 +2946,53 @@ function applyP13OpenApiAlignment(spec: any) {
     },
 
 
+
+    VariableZoneApplicationV1: {
+      type: "object",
+      required: ["zone_id", "planned_amount", "applied_amount", "unit", "coverage_percent", "deviation_amount", "deviation_percent", "status"],
+      properties: {
+        zone_id: { type: "string" },
+        planned_amount: { type: "number" },
+        applied_amount: { type: "number" },
+        unit: { type: "string" },
+        coverage_percent: { type: "number" },
+        deviation_amount: { type: "number" },
+        deviation_percent: { type: "number" },
+        status: { type: "string", enum: ["APPLIED", "PARTIAL", "SKIPPED"] },
+      },
+      additionalProperties: false,
+    },
+    VariableExecutionV1: {
+      type: "object",
+      required: ["mode", "zone_applications", "total_planned_amount", "total_applied_amount", "avg_coverage_percent"],
+      properties: {
+        mode: { type: "string", enum: ["VARIABLE_BY_ZONE"] },
+        zone_applications: { type: "array", items: ref("VariableZoneApplicationV1") },
+        total_planned_amount: { type: "number" },
+        total_applied_amount: { type: "number" },
+        avg_coverage_percent: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+    AsAppliedApplicationV1: {
+      type: "object",
+      properties: {
+        mode: { type: "string", enum: ["VARIABLE_BY_ZONE"], nullable: true },
+        zone_id: { type: ["string", "null"] },
+        planned_amount: { type: ["number", "null"] },
+        planned_unit: { type: ["string", "null"] },
+        applied_amount: { type: ["number", "null"] },
+        applied_unit: { type: ["string", "null"] },
+        total_planned_amount: { type: "number", nullable: true },
+        total_applied_amount: { type: "number", nullable: true },
+        avg_coverage_percent: { type: "number", nullable: true },
+        zone_applications: { type: "array", items: ref("VariableZoneApplicationV1"), nullable: true },
+        rate: { nullable: true },
+        trace_id: { type: ["string", "null"] },
+      },
+      additionalProperties: true,
+    },
+
     AsExecutedRecordV1: {
       type: "object",
       required: ["as_executed_id", "tenant_id", "project_id", "group_id", "task_id", "receipt_id", "executor", "planned", "executed", "deviation", "evidence_refs", "receipt_refs", "log_refs", "confidence", "created_at", "updated_at"],
@@ -2986,7 +3033,7 @@ function applyP13OpenApiAlignment(spec: any) {
         prescription_id: { type: "string" },
         geometry: { type: "object", additionalProperties: true },
         coverage: { type: "object", additionalProperties: true },
-        application: { type: "object", additionalProperties: true },
+        application: ref("AsAppliedApplicationV1"),
         evidence_refs: { type: "array", items: {} },
         log_refs: { type: "array", items: {} },
         created_at: { type: "string", format: "date-time" },
