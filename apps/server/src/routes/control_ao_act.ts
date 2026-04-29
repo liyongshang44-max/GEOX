@@ -157,11 +157,24 @@ function requireTenantMatchOr404V0(
   return true; // Allow request to proceed.
 } // End requireTenantMatchOr404V0.
 
-function scanForForbiddenKeys(value: unknown): string | null {
+function isAllowedStructuredActionMetaPath(path: string[]): boolean {
+  // Step9 variable prescription:
+  // variable_plan is approved prescription execution context.
+  // It must stay outside parameters/constraints, but it may contain
+  // domain keys such as mode / priority inside meta for auditability.
+  return path.length >= 2 && path[0] === "meta" && path[1] === "variable_plan";
+}
+
+function scanForForbiddenKeys(value: unknown, path: string[] = []): string | null {
   if (value === null || value === undefined) return null; // Nothing to scan
+
+  if (isAllowedStructuredActionMetaPath(path)) {
+    return null;
+  }
+
   if (Array.isArray(value)) {
     for (const it of value) {
-      const hit = scanForForbiddenKeys(it); // Recurse into array elements
+      const hit = scanForForbiddenKeys(it, path); // Recurse into array elements
       if (hit) return hit; // Fail fast
     }
     return null; // No hit
@@ -169,8 +182,10 @@ function scanForForbiddenKeys(value: unknown): string | null {
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>; // Narrow
     for (const k of Object.keys(obj)) {
-      if (FORBID_KEYS_V0.has(k)) return k; // Exact match
-      const hit = scanForForbiddenKeys(obj[k]); // Recurse
+      const nextPath = [...path, k];
+
+      if (!isAllowedStructuredActionMetaPath(nextPath) && FORBID_KEYS_V0.has(k)) return k; // Exact match
+      const hit = scanForForbiddenKeys(obj[k], nextPath); // Recurse
       if (hit) return hit; // Fail fast
     }
     return null; // No hit
@@ -426,6 +441,98 @@ async function loadLatestApprovalRequestStatusV0(
   if (!res.rows?.length) return null;
   const status = String(res.rows[0].status ?? "").trim().toUpperCase();
   return status || null;
+}
+
+async function ensureVariableOperationPlanV1(
+  pool: Pool,
+  input: {
+    tenant: TenantTripleV0;
+    operation_plan_id: string;
+    act_command_id: string;
+    prescription: any;
+    approval_request_id: string;
+    actor_id: string;
+    token_id: string;
+  }
+): Promise<{ operation_plan_id: string; operation_plan_fact_id: string; created: boolean }> {
+  const existing = await pool.query(
+    `SELECT fact_id
+       FROM facts
+      WHERE (record_json::jsonb->>'type') = 'operation_plan_v1'
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $1
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+        AND (record_json::jsonb#>>'{payload,project_id}') = $3
+        AND (record_json::jsonb#>>'{payload,group_id}') = $4
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [input.operation_plan_id, input.tenant.tenant_id, input.tenant.project_id, input.tenant.group_id],
+  );
+  if ((existing.rowCount ?? 0) > 0) {
+    return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: String(existing.rows[0].fact_id), created: false };
+  }
+  const nowTs = Date.now();
+  const operationPlanFactId = randomUUID();
+  const prescription = input.prescription ?? {};
+  const operationAmount = prescription.operation_amount ?? {};
+  const variablePlan = { mode: "VARIABLE_BY_ZONE", zone_rates: Array.isArray(operationAmount.zone_rates) ? operationAmount.zone_rates : [] };
+  const record = {
+    type: "operation_plan_v1",
+    payload: {
+      tenant_id: input.tenant.tenant_id,
+      project_id: input.tenant.project_id,
+      group_id: input.tenant.group_id,
+      operation_plan_id: input.operation_plan_id,
+      operation_id: input.operation_plan_id,
+      command_id: input.act_command_id,
+      approval_request_id: input.approval_request_id,
+      prescription_id: String(prescription.prescription_id ?? ""),
+      recommendation_id: String(prescription.recommendation_id ?? ""),
+      field_id: String(prescription.field_id ?? ""),
+      season_id: prescription.season_id ?? null,
+      operation_type: String(prescription.operation_type ?? "IRRIGATION"),
+      action_type: "IRRIGATE",
+      status: "ACKED",
+      operation_amount: operationAmount,
+      variable_plan: variablePlan,
+      device_requirements: prescription.device_requirements ?? {},
+      acceptance_conditions: prescription.acceptance_conditions ?? {},
+      source: "variable_prescription_contract_v1",
+      actor_id: input.actor_id,
+      token_id: input.token_id,
+      created_at_ts: nowTs,
+      updated_at_ts: nowTs,
+      meta: {
+        command_id: input.act_command_id,
+        variable_prescription: true,
+        prescription_id: String(prescription.prescription_id ?? ""),
+        recommendation_id: String(prescription.recommendation_id ?? ""),
+      },
+    },
+  };
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [operationPlanFactId, FACT_SOURCE_AO_ACT_V0, record],
+  );
+  const transitionFactId = randomUUID();
+  await pool.query(
+    "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+    [transitionFactId, FACT_SOURCE_AO_ACT_V0, {
+      type: "operation_plan_transition_v1",
+      payload: {
+        tenant_id: input.tenant.tenant_id,
+        project_id: input.tenant.project_id,
+        group_id: input.tenant.group_id,
+        operation_plan_id: input.operation_plan_id,
+        from_status: null,
+        to_status: "ACKED",
+        reason: "VARIABLE_ACTION_TASK_CREATED",
+        actor_id: input.actor_id,
+        token_id: input.token_id,
+        created_at_ts: nowTs,
+      },
+    }],
+  );
+  return { operation_plan_id: input.operation_plan_id, operation_plan_fact_id: operationPlanFactId, created: true };
 }
 
 
@@ -1186,20 +1293,30 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
 
       const authorization = String((req.headers as any).authorization ?? "");
       const delegated = await postJsonInternal(req, authorization, "/api/v1/actions/task", taskPayload);
-      if (!delegated.ok) {
-        return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "ACTION_TASK_CREATE_FAILED" });
+      if (!delegated.ok || delegated.json?.ok !== true) {
+        return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "VARIABLE_ACTION_TASK_CREATE_FAILED" });
       }
+      const actTaskId = String(delegated.json?.act_task_id ?? "").trim();
+      if (!actTaskId) return reply.status(500).send({ ok: false, error: "VARIABLE_ACTION_TASK_ID_MISSING" });
+
+      const operationPlanAnchor = await ensureVariableOperationPlanV1(pool, {
+        tenant,
+        operation_plan_id: body.operation_plan_id,
+        act_command_id: actTaskId,
+        prescription,
+        approval_request_id: body.approval_request_id,
+        actor_id: auth.actor_id,
+        token_id: auth.token_id,
+      });
 
       return reply.send({
         ok: true,
-        act_task_id: delegated.json?.act_task_id ?? null,
-        task_fact_id: delegated.json?.fact_id ?? null,
-        task_meta: {
-          prescription_id: taskPayload.meta?.prescription_id ?? null,
-          recommendation_id: taskPayload.meta?.recommendation_id ?? null,
-          operation_type: taskPayload.meta?.operation_type ?? null,
-          variable_plan: taskPayload.meta?.variable_plan ?? null,
-        },
+        act_task_id: actTaskId,
+        task_fact_id: delegated.json?.fact_id ?? delegated.json?.task_fact_id ?? null,
+        operation_plan_id: body.operation_plan_id,
+        operation_plan_fact_id: operationPlanAnchor.operation_plan_fact_id,
+        operation_plan_anchor_created: operationPlanAnchor.created,
+        task_meta: delegated.json?.task_meta ?? delegated.json?.task?.meta ?? null,
       });
     } catch (e: any) {
       const code = String(e?.message ?? "BAD_REQUEST");

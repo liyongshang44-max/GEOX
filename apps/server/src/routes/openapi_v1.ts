@@ -2946,6 +2946,77 @@ function applyP13OpenApiAlignment(spec: any) {
     },
 
 
+
+    VariableZoneApplicationV1: {
+      type: "object",
+      required: ["zone_id", "planned_amount", "applied_amount", "unit", "coverage_percent", "deviation_amount", "deviation_percent", "status"],
+      properties: {
+        zone_id: { type: "string" },
+        planned_amount: { type: "number" },
+        applied_amount: { type: "number" },
+        unit: { type: "string" },
+        coverage_percent: { type: "number" },
+        deviation_amount: { type: "number" },
+        deviation_percent: { type: "number" },
+        status: { type: "string", enum: ["APPLIED", "PARTIAL", "SKIPPED"] },
+      },
+      additionalProperties: false,
+    },
+    VariableExecutionV1: {
+      type: "object",
+      required: ["mode", "zone_applications", "total_planned_amount", "total_applied_amount", "avg_coverage_percent"],
+      properties: {
+        mode: { type: "string", enum: ["VARIABLE_BY_ZONE"] },
+        zone_applications: { type: "array", items: ref("VariableZoneApplicationV1") },
+        total_planned_amount: { type: "number" },
+        total_applied_amount: { type: "number" },
+        avg_coverage_percent: { type: "number" },
+      },
+      additionalProperties: false,
+    },
+    AsAppliedApplicationV1: {
+      type: "object",
+      properties: {
+        mode: { type: "string", enum: ["VARIABLE_BY_ZONE"], nullable: true },
+        zone_id: { type: ["string", "null"] },
+        planned_amount: { type: ["number", "null"] },
+        planned_unit: { type: ["string", "null"] },
+        applied_amount: { type: ["number", "null"] },
+        applied_unit: { type: ["string", "null"] },
+        total_planned_amount: { type: "number", nullable: true },
+        total_applied_amount: { type: "number", nullable: true },
+        avg_coverage_percent: { type: "number", nullable: true },
+        zone_applications: { type: "array", items: ref("VariableZoneApplicationV1"), nullable: true },
+        rate: { nullable: true },
+        trace_id: { type: ["string", "null"] },
+      },
+      additionalProperties: true,
+    },
+
+
+    VariableAcceptanceExplanationCodeV1: {
+      type: "string",
+      enum: [
+        "VARIABLE_IRRIGATION_APPLICATION_OK",
+        "ZONE_APPLICATIONS_OK",
+        "MISSING_VARIABLE_EXECUTION",
+        "MISSING_ZONE_APPLICATIONS",
+        "INVALID_ZONE_APPLICATION",
+        "ZONE_APPLICATION_SKIPPED",
+        "ZONE_COVERAGE_BELOW_THRESHOLD",
+        "ZONE_AMOUNT_DEVIATION_EXCEEDED"
+      ]
+    },
+    VariableAcceptanceMetricsV1: {
+      type: "object",
+      properties: {
+        zone_application_count: { type: "number" },
+        zone_completion_rate: { type: "number" },
+        avg_zone_coverage_percent: { type: "number" },
+        max_zone_deviation_percent: { type: "number" }
+      },
+      additionalProperties: true,
+    },
     AsExecutedRecordV1: {
       type: "object",
       required: ["as_executed_id", "tenant_id", "project_id", "group_id", "task_id", "receipt_id", "executor", "planned", "executed", "deviation", "evidence_refs", "receipt_refs", "log_refs", "confidence", "created_at", "updated_at"],
@@ -2986,7 +3057,7 @@ function applyP13OpenApiAlignment(spec: any) {
         prescription_id: { type: "string" },
         geometry: { type: "object", additionalProperties: true },
         coverage: { type: "object", additionalProperties: true },
-        application: { type: "object", additionalProperties: true },
+        application: ref("AsAppliedApplicationV1"),
         evidence_refs: { type: "array", items: {} },
         log_refs: { type: "array", items: {} },
         created_at: { type: "string", format: "date-time" },
@@ -3018,6 +3089,10 @@ function applyP13OpenApiAlignment(spec: any) {
       additionalProperties: false,
     },
 
+    RoiTypeV1: {
+      type: "string",
+      enum: ["WATER_SAVED", "COST_IMPACT", "EXECUTION_RELIABILITY", "LABOR_SAVED", "VARIABLE_WATER_SAVED", "ZONE_COMPLETION_RATE", "VARIABLE_EXECUTION_RELIABILITY"],
+    },
     RoiLedgerV1: {
       type: "object",
       required: ["roi_ledger_id", "tenant_id", "project_id", "group_id", "roi_type", "baseline", "actual", "delta", "confidence", "evidence_refs", "calculation_method", "created_at", "updated_at"],
@@ -3034,10 +3109,10 @@ function applyP13OpenApiAlignment(spec: any) {
         field_id: { type: ["string", "null"] },
         season_id: { type: ["string", "null"] },
         zone_id: { type: ["string", "null"] },
-        roi_type: { type: "string" },
-        baseline: { type: "object", additionalProperties: true },
-        actual: { type: "object", additionalProperties: true },
-        delta: { type: "object", additionalProperties: true },
+        roi_type: ref("RoiTypeV1"),
+        baseline: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
+        actual: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
+        delta: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
         confidence: {
           type: "object",
           required: ["level", "basis", "reasons"],
@@ -3050,7 +3125,7 @@ function applyP13OpenApiAlignment(spec: any) {
         },
         evidence_refs: { type: "array", items: {} },
         calculation_method: { type: "string" },
-        assumptions: { type: "object", additionalProperties: true },
+        assumptions: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
         uncertainty_notes: { type: ["string", "null"] },
         skill_trace_id: { type: ["string", "null"] },
         skill_refs: {

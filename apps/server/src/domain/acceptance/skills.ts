@@ -55,6 +55,46 @@ export const irrigationAcceptanceV1: AcceptanceSkill = {
   }
 };
 
+
+
+export const variableIrrigationAcceptanceV1: AcceptanceSkill = {
+  skill_id: "variable_irrigation_acceptance_v1",
+  version: "v1",
+  action_type: "IRRIGATE",
+  run(input) {
+    const variableExecution = input.receipt?.payload?.meta?.variable_execution;
+    const mode = String(variableExecution?.mode ?? "").trim().toUpperCase();
+    if (mode !== "VARIABLE_BY_ZONE") {
+      return { verdict: "PENDING", explanation_codes: ["MISSING_VARIABLE_EXECUTION"] };
+    }
+    const zones = Array.isArray(variableExecution?.zone_applications) ? variableExecution.zone_applications : [];
+    if (!zones.length) {
+      return { verdict: "PENDING", explanation_codes: ["MISSING_ZONE_APPLICATIONS"] };
+    }
+
+    for (const z of zones) {
+      const zone_id = String(z?.zone_id ?? "").trim();
+      const planned_amount = Number(z?.planned_amount);
+      const applied_amount = Number(z?.applied_amount);
+      const coverage_percent = Number(z?.coverage_percent);
+      const status = String(z?.status ?? "").trim().toUpperCase();
+      const valid = zone_id
+        && Number.isFinite(planned_amount) && planned_amount > 0
+        && Number.isFinite(applied_amount) && applied_amount >= 0
+        && Number.isFinite(coverage_percent) && coverage_percent >= 0 && coverage_percent <= 100
+        && (status === "APPLIED" || status === "PARTIAL" || status === "SKIPPED");
+      if (!valid) return { verdict: "PENDING", explanation_codes: ["INVALID_ZONE_APPLICATION"] };
+
+      if (status === "SKIPPED") return { verdict: "FAIL", explanation_codes: ["ZONE_APPLICATION_SKIPPED"] };
+      if (coverage_percent < 95) return { verdict: "FAIL", explanation_codes: ["ZONE_COVERAGE_BELOW_THRESHOLD"] };
+      const deviationPercent = Math.abs(((applied_amount - planned_amount) / planned_amount) * 100);
+      if (deviationPercent > 15) return { verdict: "FAIL", explanation_codes: ["ZONE_AMOUNT_DEVIATION_EXCEEDED"] };
+    }
+
+    return { verdict: "PASS", explanation_codes: ["VARIABLE_IRRIGATION_APPLICATION_OK", "ZONE_APPLICATIONS_OK"] };
+  }
+};
+
 export const fertilizationAcceptanceV1: AcceptanceSkill = {
   skill_id: "fertilization_acceptance_v1",
   version: "v1",
@@ -108,6 +148,7 @@ export const sensorEvidenceAcceptanceV1: AcceptanceSkill = {
 };
 
 export const acceptanceSkillRegistryV1: AcceptanceSkill[] = [
+  variableIrrigationAcceptanceV1,
   irrigationAcceptanceV1,
   fertilizationAcceptanceV1,
   sensorEvidenceAcceptanceV1,
