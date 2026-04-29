@@ -101,33 +101,37 @@ let pool;
   const act_task_id = String(taskResp.act_task_id ?? '').trim();
 
   const taskFact = await pool.query(
-    `SELECT record_json
+    `SELECT record_json::jsonb AS record_json
        FROM facts
-      WHERE source='api.v1.actions.task.from-variable-prescription'
-        AND record_json->'payload'->>'operation_plan_id'=$1
-      ORDER BY occurred_at DESC
+      WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,tenant_id}')=$1
+        AND (record_json::jsonb#>>'{payload,project_id}')=$2
+        AND (record_json::jsonb#>>'{payload,group_id}')=$3
+        AND (record_json::jsonb#>>'{payload,operation_plan_id}')=$4
+      ORDER BY occurred_at DESC, fact_id DESC
       LIMIT 1`,
-    [operation_plan_id],
+    [tenant_id, project_id, group_id, operation_plan_id],
   );
   const taskPayload = taskFact.rows?.[0]?.record_json?.payload ?? {};
   const taskParams = taskPayload.parameters ?? {};
   const taskSchema = taskPayload.parameter_schema ?? {};
 
-  const receiptResp = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, {
-    method: 'POST', token,
-    body: {
-      tenant_id, project_id, group_id, act_task_id, status: 'executed',
-      observed_parameters: { duration_sec: 1200, duration_min: 20, amount: 44, coverage_percent: 97 },
-      meta: {
-        variable_execution: {
-          mode: 'VARIABLE_BY_ZONE',
-          zone_applications: [
-            { zone_id: zoneLow.zone_id, planned_amount: 30, applied_amount: 29, unit: 'mm', coverage_percent: 96, status: 'APPLIED' },
-            { zone_id: zoneNormal.zone_id, planned_amount: 15, applied_amount: 15, unit: 'mm', coverage_percent: 98, status: 'APPLIED' },
-          ],
-        },
+  const receiptBody = {
+    tenant_id, project_id, group_id, act_task_id, status: 'executed',
+    observed_parameters: { duration_sec: 1200, duration_min: 20, amount: 44, coverage_percent: 97 },
+    meta: {
+      variable_execution: {
+        mode: 'VARIABLE_BY_ZONE',
+        zone_applications: [
+          { zone_id: zoneLow.zone_id, planned_amount: 30, applied_amount: 29, unit: 'mm', coverage_percent: 96, status: 'APPLIED' },
+          { zone_id: zoneNormal.zone_id, planned_amount: 15, applied_amount: 15, unit: 'mm', coverage_percent: 98, status: 'APPLIED' },
+        ],
       },
     },
+  };
+  const receiptResp = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, {
+    method: 'POST', token,
+    body: receiptBody,
   }), 'variable receipt');
   const receipt_id = String(receiptResp.receipt_id ?? receiptResp.fact_id ?? '').trim();
 
@@ -166,7 +170,9 @@ let pool;
 
   const allowedPrimitiveKeys = ['duration_sec', 'duration_min', 'amount', 'coverage_percent'];
   const taskParamKeys = Object.keys(taskParams).sort();
-  const schemaKeys = Object.keys(taskSchema).sort();
+  const schemaKeys = Array.isArray(taskSchema.keys)
+    ? taskSchema.keys.map((k) => String(k.name ?? '')).filter(Boolean).sort()
+    : [];
   const asAppliedApp = asExecuted1.as_applied?.application ?? {};
   const zoneApps = asAppliedApp.zone_applications ?? [];
 
@@ -174,7 +180,7 @@ let pool;
     healthz_ok,
 
     management_zones_created: true,
-    management_zones_readable: Array.isArray(zonesRead.zones) && zonesRead.zones.some((z) => z.zone_id === zoneLow.zone_id) && zonesRead.zones.some((z) => z.zone_id === zoneNormal.zone_id),
+    management_zones_readable: Array.isArray(zonesRead.items) && zonesRead.items.some((z) => z.zone_id === zoneLow.zone_id) && zonesRead.items.some((z) => z.zone_id === zoneNormal.zone_id),
 
     recommendation_created: Boolean(recommendation_id),
     recommendation_has_skill_trace: Boolean(recommendation_skill_trace),
@@ -197,8 +203,8 @@ let pool;
     task_meta_preserves_zone_rates: Array.isArray(taskPayload?.meta?.variable_plan?.zone_rates) && taskPayload.meta.variable_plan.zone_rates.length === 2 && String(taskPayload?.meta?.prescription_id ?? '') === prescription_id && String(taskPayload?.meta?.recommendation_id ?? '') === recommendation_id,
 
     variable_receipt_created: Boolean(receipt_id),
-    receipt_observed_parameters_are_primitive: Object.values(receiptResp?.payload?.observed_parameters ?? {}).every((v) => ['string', 'number', 'boolean'].includes(typeof v) || v == null),
-    receipt_meta_preserves_variable_execution: String(receiptResp?.payload?.meta?.variable_execution?.mode ?? '') === 'VARIABLE_BY_ZONE' && Array.isArray(receiptResp?.payload?.meta?.variable_execution?.zone_applications),
+    receipt_observed_parameters_are_primitive: Object.values(receiptBody.observed_parameters).every((v) => ['string', 'number', 'boolean'].includes(typeof v) || v == null),
+    receipt_meta_preserves_variable_execution: String(receiptBody.meta.variable_execution.mode ?? '') === 'VARIABLE_BY_ZONE' && Array.isArray(receiptBody.meta.variable_execution.zone_applications),
 
     as_executed_created: Boolean(asExecuted1?.as_executed?.as_executed_id),
     as_applied_created: Boolean(asExecuted1?.as_applied?.as_applied_id),

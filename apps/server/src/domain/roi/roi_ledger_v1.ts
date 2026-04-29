@@ -410,7 +410,16 @@ function getVariableZoneApplications(asApplied: AsAppliedRow | null): Array<{
   if (!asApplied || String(asApplied?.application?.mode ?? "").trim().toUpperCase() !== "VARIABLE_BY_ZONE") return [];
   const zones = asApplied?.application?.zone_applications;
   if (!Array.isArray(zones) || zones.length === 0) return [];
-  const out = [];
+  const out: Array<{
+    zone_id: string;
+    planned_amount: number;
+    applied_amount: number;
+    unit: string;
+    coverage_percent: number;
+    deviation_amount?: number;
+    deviation_percent?: number;
+    status?: string;
+  }> = [];
   for (const zone of zones) {
     const zone_id = String(zone?.zone_id ?? "").trim();
     const planned_amount = toNum(zone?.planned_amount);
