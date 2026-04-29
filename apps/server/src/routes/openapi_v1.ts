@@ -2300,6 +2300,41 @@ function applyP13OpenApiAlignment(spec: any) {
       },
       additionalProperties: false,
     },
+    VariableActionTaskFromPrescriptionRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "prescription_id", "approval_request_id", "operation_plan_id", "device_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        prescription_id: { type: "string" },
+        approval_request_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        device_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    VariableActionTaskFromPrescriptionResponse: {
+      type: "object",
+      required: ["ok", "act_task_id", "task_fact_id", "task_meta"],
+      properties: {
+        ok: { type: "boolean" },
+        act_task_id: { type: "string" },
+        task_fact_id: { type: "string" },
+        task_meta: {
+          type: "object",
+          required: ["prescription_id", "recommendation_id", "operation_type", "variable_plan"],
+          properties: {
+            prescription_id: { type: "string" },
+            recommendation_id: { type: "string" },
+            operation_type: { type: "string" },
+            variable_plan: { type: "object", additionalProperties: true },
+          },
+          additionalProperties: true,
+        },
+      },
+      additionalProperties: false,
+    },
     ActionReceiptRequest: {
       type: "object",
       required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "act_task_id", "executor_id", "execution_time", "execution_coverage", "resource_usage", "logs_refs", "constraint_check", "observed_parameters"],
@@ -3375,6 +3410,7 @@ function applyP13OpenApiAlignment(spec: any) {
 
   Object.assign(spec.paths, {
     "/api/v1/actions/task": { post: { tags: ["operations"], summary: "Create AO-ACT task", requestBody: { required: true, content: { "application/json": { schema: ref("ActionTaskRequest") } } }, responses: { "200": jsonResponse(ref("ActionTaskResponse"), "AO-ACT task accepted") } } },
+    "/api/v1/actions/task/from-variable-prescription": { post: { tags: ["operations"], summary: "Create AO-ACT task from variable prescription", requestBody: { required: true, content: { "application/json": { schema: ref("VariableActionTaskFromPrescriptionRequest") } } }, responses: { "200": jsonResponse(ref("VariableActionTaskFromPrescriptionResponse"), "Variable action task accepted") } } },
     "/api/v1/actions/receipt": { post: { tags: ["operations"], summary: "Submit AO-ACT receipt", requestBody: { required: true, content: { "application/json": { schema: ref("ActionReceiptRequest") } } }, responses: { "200": jsonResponse(ref("ActionReceiptResponse"), "AO-ACT receipt accepted") } } },
     "/api/v1/actions/execute": { post: { tags: ["operations"], summary: "Execute action via control plane", requestBody: { required: true, content: { "application/json": { schema: ref("ActionExecuteRequest") } } }, responses: { "200": jsonResponse(ref("ActionExecuteResponse"), "Action execution accepted") } } },
     "/api/v1/operations/manual": { post: { tags: ["operations"], summary: "Create manual operation", requestBody: { required: true, content: { "application/json": { schema: ref("OperationManualRequest") } } }, responses: { "200": jsonResponse(ref("OperationManualResponse"), "Manual operation created") } } },
