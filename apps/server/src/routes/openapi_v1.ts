@@ -2993,6 +2993,30 @@ function applyP13OpenApiAlignment(spec: any) {
       additionalProperties: true,
     },
 
+
+    VariableAcceptanceExplanationCodeV1: {
+      type: "string",
+      enum: [
+        "VARIABLE_IRRIGATION_APPLICATION_OK",
+        "ZONE_APPLICATIONS_OK",
+        "MISSING_VARIABLE_EXECUTION",
+        "MISSING_ZONE_APPLICATIONS",
+        "INVALID_ZONE_APPLICATION",
+        "ZONE_APPLICATION_SKIPPED",
+        "ZONE_COVERAGE_BELOW_THRESHOLD",
+        "ZONE_AMOUNT_DEVIATION_EXCEEDED"
+      ]
+    },
+    VariableAcceptanceMetricsV1: {
+      type: "object",
+      properties: {
+        zone_application_count: { type: "number" },
+        zone_completion_rate: { type: "number" },
+        avg_zone_coverage_percent: { type: "number" },
+        max_zone_deviation_percent: { type: "number" }
+      },
+      additionalProperties: true,
+    },
     AsExecutedRecordV1: {
       type: "object",
       required: ["as_executed_id", "tenant_id", "project_id", "group_id", "task_id", "receipt_id", "executor", "planned", "executed", "deviation", "evidence_refs", "receipt_refs", "log_refs", "confidence", "created_at", "updated_at"],
