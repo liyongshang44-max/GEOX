@@ -116,22 +116,77 @@ let pool;
   const taskParams = taskPayload.parameters ?? {};
   const taskSchema = taskPayload.parameter_schema ?? {};
 
-  const receiptBody = {
-    tenant_id, project_id, group_id, act_task_id, status: 'executed',
-    observed_parameters: { duration_sec: 1200, duration_min: 20, amount: 44, coverage_percent: 97 },
+  const receiptPayload = {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id,
+    executor_id: {
+      kind: 'script',
+      id: 'acceptance_variable_prescription_v1',
+      namespace: 'agronomy_acceptance',
+    },
+    execution_time: {
+      start_ts: Date.now() - 1200 * 1000,
+      end_ts: Date.now(),
+    },
+    execution_coverage: {
+      kind: 'field',
+      ref: field_id,
+    },
+    resource_usage: {
+      fuel_l: null,
+      electric_kwh: null,
+      water_l: 440,
+      chemical_ml: null,
+    },
+    logs_refs: [
+      {
+        kind: 'acceptance_log',
+        ref: `variable_receipt_${act_task_id}`,
+      },
+    ],
+    status: 'executed',
+    constraint_check: {
+      violated: false,
+      violations: [],
+    },
+    observed_parameters: {
+      duration_sec: 1200,
+      duration_min: 20,
+      amount: 44,
+      coverage_percent: 97,
+    },
     meta: {
+      command_id: act_task_id,
+      idempotency_key: `variable-prescription-${act_task_id}`,
       variable_execution: {
         mode: 'VARIABLE_BY_ZONE',
         zone_applications: [
-          { zone_id: zoneLow.zone_id, planned_amount: 30, applied_amount: 29, unit: 'mm', coverage_percent: 96, status: 'APPLIED' },
-          { zone_id: zoneNormal.zone_id, planned_amount: 15, applied_amount: 15, unit: 'mm', coverage_percent: 98, status: 'APPLIED' },
+          {
+            zone_id: zoneLow.zone_id,
+            planned_amount: 30,
+            applied_amount: 29,
+            unit: 'mm',
+            coverage_percent: 96,
+            status: 'APPLIED',
+          },
+          {
+            zone_id: zoneNormal.zone_id,
+            planned_amount: 15,
+            applied_amount: 15,
+            unit: 'mm',
+            coverage_percent: 98,
+            status: 'APPLIED',
+          },
         ],
       },
     },
   };
   const receiptResp = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST', token,
-    body: receiptBody,
+    body: receiptPayload,
   }), 'variable receipt');
   const receipt_id = String(receiptResp.receipt_id ?? receiptResp.fact_id ?? '').trim();
 
@@ -203,8 +258,8 @@ let pool;
     task_meta_preserves_zone_rates: Array.isArray(taskPayload?.meta?.variable_plan?.zone_rates) && taskPayload.meta.variable_plan.zone_rates.length === 2 && String(taskPayload?.meta?.prescription_id ?? '') === prescription_id && String(taskPayload?.meta?.recommendation_id ?? '') === recommendation_id,
 
     variable_receipt_created: Boolean(receipt_id),
-    receipt_observed_parameters_are_primitive: Object.values(receiptBody.observed_parameters).every((v) => ['string', 'number', 'boolean'].includes(typeof v) || v == null),
-    receipt_meta_preserves_variable_execution: String(receiptBody.meta.variable_execution.mode ?? '') === 'VARIABLE_BY_ZONE' && Array.isArray(receiptBody.meta.variable_execution.zone_applications),
+    receipt_observed_parameters_are_primitive: Object.values(receiptPayload.observed_parameters).every((v) => ['string', 'number', 'boolean'].includes(typeof v) || v == null),
+    receipt_meta_preserves_variable_execution: String(receiptPayload.meta.variable_execution.mode ?? '') === 'VARIABLE_BY_ZONE' && Array.isArray(receiptPayload.meta.variable_execution.zone_applications),
 
     as_executed_created: Boolean(asExecuted1?.as_executed?.as_executed_id),
     as_applied_created: Boolean(asExecuted1?.as_applied?.as_applied_id),
