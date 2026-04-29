@@ -68,6 +68,7 @@ type AsExecutedRow = {
 type AsAppliedRow = {
   as_applied_id: string;
   zone_id: string | null;
+  application: any;
 };
 
 type RoiCandidate = {
@@ -173,6 +174,7 @@ function mapAsAppliedRow(row: any): AsAppliedRow {
   return {
     as_applied_id: String(row.as_applied_id ?? ""),
     zone_id: row.zone_id == null ? null : String(row.zone_id),
+    application: parseJsonMaybe(row.application) ?? {},
   };
 }
 
@@ -393,8 +395,100 @@ function computeLaborSavedEntry(asExecuted: AsExecutedRow): RoiCandidate | null 
   };
 }
 
-export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow): RoiCandidate[] {
+
+
+function getVariableZoneApplications(asApplied: AsAppliedRow | null): Array<{
+  zone_id: string;
+  planned_amount: number;
+  applied_amount: number;
+  unit: string;
+  coverage_percent: number;
+  deviation_amount?: number;
+  deviation_percent?: number;
+  status?: string;
+}> {
+  if (!asApplied || String(asApplied?.application?.mode ?? "").trim().toUpperCase() !== "VARIABLE_BY_ZONE") return [];
+  const zones = asApplied?.application?.zone_applications;
+  if (!Array.isArray(zones) || zones.length === 0) return [];
+  const out: Array<{
+    zone_id: string;
+    planned_amount: number;
+    applied_amount: number;
+    unit: string;
+    coverage_percent: number;
+    deviation_amount?: number;
+    deviation_percent?: number;
+    status?: string;
+  }> = [];
+  for (const zone of zones) {
+    const zone_id = String(zone?.zone_id ?? "").trim();
+    const planned_amount = toNum(zone?.planned_amount);
+    const applied_amount = toNum(zone?.applied_amount);
+    const coverage_percent = toNum(zone?.coverage_percent);
+    const unit = String(zone?.unit ?? "").trim();
+    if (!zone_id || planned_amount == null || applied_amount == null || coverage_percent == null || !unit) return [];
+    out.push({
+      zone_id,
+      planned_amount,
+      applied_amount,
+      unit,
+      coverage_percent,
+      deviation_amount: toNum(zone?.deviation_amount) ?? (applied_amount - planned_amount),
+      deviation_percent: toNum(zone?.deviation_percent) ?? (planned_amount > 0 ? ((applied_amount - planned_amount) / planned_amount) * 100 : undefined),
+      status: String(zone?.status ?? "").trim() || undefined,
+    });
+  }
+  return out;
+}
+
+export function computeVariableWaterSavedEntry(asExecuted: AsExecutedRow, asApplied: AsAppliedRow | null): RoiCandidate | null {
+  const zones = getVariableZoneApplications(asApplied);
+  if (!zones.length) return null;
+  const supported = new Set(["mm", "l", "m3", "m³"]);
+  const units = Array.from(new Set(zones.map((z) => z.unit.toLowerCase())));
+  if (units.length !== 1 || !supported.has(units[0])) return null;
+  const unit = zones[0].unit;
+  const planned_total = zones.reduce((s, z) => s + z.planned_amount, 0);
+  const actual_total = zones.reduce((s, z) => s + z.applied_amount, 0);
+  const delta = planned_total - actual_total;
+  return { roi_type: "VARIABLE_WATER_SAVED", baseline: { source: "variable_prescription_zone_rates", total_planned_amount: planned_total, unit, zone_count: zones.length, zone_baselines: zones.map((z) => ({ zone_id: z.zone_id, planned_amount: z.planned_amount, unit: z.unit })) }, actual: { source: "as_applied_zone_applications", total_applied_amount: actual_total, unit, zone_actuals: zones.map((z) => ({ zone_id: z.zone_id, applied_amount: z.applied_amount, unit: z.unit })) }, delta: { amount: delta, unit, interpretation: delta > 0 ? "water_saved" : delta < 0 ? "water_overuse" : "no_change" }, confidence: { level: "HIGH", basis: "measured", reasons: ["variable_zone_planned_amount_present", "variable_zone_applied_amount_present", "as_applied_zone_applications_present"] }, evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs), calculation_method: "variable_zone_planned_minus_applied_v1", assumptions: { baseline_source: "prescription_zone_rates", actual_source: "as_applied_zone_applications", trace_id: traceIdFromAsExecuted(asExecuted) }, uncertainty_notes: null };
+}
+
+export function computeZoneCompletionRateEntry(asExecuted: AsExecutedRow, asApplied: AsAppliedRow | null): RoiCandidate | null {
+  const zones = getVariableZoneApplications(asApplied);
+  if (!zones.length) return null;
+  const completed_count = zones.filter((z) => ["APPLIED", "PARTIAL"].includes(String(z.status ?? "").toUpperCase())).length;
+  const zone_count = zones.length;
+  const completion_rate = zone_count > 0 ? completed_count / zone_count : 0;
+  const avg_coverage_percent = zones.reduce((s, z) => s + z.coverage_percent, 0) / zone_count;
+  return { roi_type: "ZONE_COMPLETION_RATE", baseline: { source: "variable_prescription_expected_zones", expected_zone_count: zone_count, required_coverage_percent: 95 }, actual: { source: "as_applied_zone_applications", completed_zone_count: completed_count, zone_count, completion_rate, avg_coverage_percent }, delta: { missing_zone_count: zone_count - completed_count, coverage_gap_percent: 95 - avg_coverage_percent }, confidence: { level: "HIGH", basis: "measured", reasons: ["zone_applications_present", "coverage_percent_present"] }, evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs), calculation_method: "zone_completion_rate_v1", assumptions: { required_coverage_percent: 95, trace_id: traceIdFromAsExecuted(asExecuted) }, uncertainty_notes: null };
+}
+
+export function computeVariableExecutionReliabilityEntry(asExecuted: AsExecutedRow, asApplied: AsAppliedRow | null): RoiCandidate | null {
+  const zones = getVariableZoneApplications(asApplied);
+  if (!zones.length) return null;
+  const zone_count = zones.length;
+  const skipped_count = zones.filter((z) => String(z.status ?? "").toUpperCase() === "SKIPPED").length;
+  const partial_count = zones.filter((z) => String(z.status ?? "").toUpperCase() === "PARTIAL").length;
+  const applied_count = zones.filter((z) => String(z.status ?? "").toUpperCase() === "APPLIED").length;
+  const deviations = zones.map((z) => Math.abs(toNum(z.deviation_percent) ?? (z.planned_amount > 0 ? ((z.applied_amount - z.planned_amount) / z.planned_amount) * 100 : 0)));
+  const max_abs_deviation_percent = deviations.length ? Math.max(...deviations) : 0;
+  const avg_abs_deviation_percent = deviations.length ? deviations.reduce((s, v) => s + v, 0) / deviations.length : 0;
+  const deviation_over_threshold_count = deviations.filter((d) => d > 15).length;
+  return { roi_type: "VARIABLE_EXECUTION_RELIABILITY", baseline: { source: "variable_prescription_execution_expectation", expected_status: "APPLIED", expected_zone_count: zone_count, expected_max_deviation_percent: 15 }, actual: { source: "as_applied_zone_applications", zone_count, applied_count, partial_count, skipped_count, max_abs_deviation_percent, avg_abs_deviation_percent }, delta: { skipped_count, partial_count, deviation_over_threshold_count }, confidence: { level: "HIGH", basis: "measured", reasons: ["zone_status_present", "zone_deviation_present"] }, evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs), calculation_method: "variable_execution_reliability_v1", assumptions: { expected_max_deviation_percent: 15, trace_id: traceIdFromAsExecuted(asExecuted) }, uncertainty_notes: null };
+}
+
+export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow, asApplied?: AsAppliedRow | null): RoiCandidate[] {
   const entries: RoiCandidate[] = [];
+  const variableWaterSaved = computeVariableWaterSavedEntry(asExecuted, asApplied ?? null);
+  if (variableWaterSaved) entries.push(variableWaterSaved);
+
+  const zoneCompletion = computeZoneCompletionRateEntry(asExecuted, asApplied ?? null);
+  if (zoneCompletion) entries.push(zoneCompletion);
+
+  const variableReliability = computeVariableExecutionReliabilityEntry(asExecuted, asApplied ?? null);
+  if (variableReliability) entries.push(variableReliability);
+
   const waterSaved = computeWaterSavedEntry(asExecuted);
   if (waterSaved) entries.push(waterSaved);
 
@@ -431,7 +525,7 @@ async function getAsExecutedById(pool: Pool, input: TenantTriple & { as_executed
 
 async function listAsAppliedByAsExecuted(pool: Pool, input: TenantTriple & { as_executed_id: string }): Promise<AsAppliedRow[]> {
   const q = await pool.query(
-    `SELECT as_applied_id, zone_id
+    `SELECT as_applied_id, zone_id, application::jsonb AS application
        FROM as_applied_map_v1
       WHERE tenant_id = $1 AND project_id = $2 AND group_id = $3 AND as_executed_id = $4
       ORDER BY created_at DESC, as_applied_id DESC`,
@@ -574,7 +668,7 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
   if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
 
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
-  const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted);
+  const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied);
   const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
   const executionTraceId = String(asExecuted?.executed?.skill_trace_id ?? executionTrace?.trace_id ?? "").trim() || null;
   const baseSkillRefs = normalizeSkillRefs(asExecuted?.executed?.skill_refs);

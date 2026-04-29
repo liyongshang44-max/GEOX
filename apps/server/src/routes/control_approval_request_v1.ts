@@ -93,6 +93,18 @@ function normalizeAoActMeta(m: any): any {
   return {};
 }
 
+
+function normalizePrimitiveParameters(input: any): Record<string, number | boolean | string> {
+  const out: Record<string, number | boolean | string> = {};
+  if (!input || typeof input !== "object" || Array.isArray(input)) return out;
+  for (const [k, v] of Object.entries(input)) {
+    if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === "boolean") out[k] = v;
+    else if (typeof v === "string") out[k] = v;
+  }
+  return out;
+}
+
 function parseRecordJsonMaybe(v: any): any {
   // pg may return jsonb as string depending on type parser configuration; accept both.
   if (v && typeof v === "object") return v;
@@ -220,7 +232,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
         tenant_id: tenant.tenant_id,
         project_id: tenant.project_id,
         group_id: tenant.group_id,
-        program_id: body.program_id ?? body.meta?.program_id ?? null,
+        program_id: String(body.program_id ?? body.meta?.program_id ?? payload.program_id ?? "").trim() || null,
         field_id: body.field_id ?? body.meta?.field_id ?? body.target?.ref ?? null,
         season_id: body.season_id ?? body.meta?.season_id ?? null,
         request_id,
@@ -235,20 +247,54 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       [randomUUID(), "api/v1/approvals/approve", approvedRequestRecord]
     );
 
+    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+    const skipAutoTaskIssue = Boolean(proposal?.meta?.skip_auto_task_issue === true);
+    if (skipAutoTaskIssue) {
+      const decision_fact_id = randomUUID();
+      const decision_record = {
+        type: "approval_decision_v1",
+        payload: {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          decision_id,
+          request_id,
+          decision: "APPROVED",
+          act_task_id: null,
+          ao_act_fact_id: null,
+          actor_id: auth.actor_id,
+          token_id: auth.token_id,
+          created_at_ts: Date.now(),
+        }
+      };
+      await pool.query(
+        "INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES ($1, NOW(), $2, $3::jsonb)",
+        [decision_fact_id, "api/v1/approvals/approve", decision_record]
+      );
+      return reply.send({ ok: true, request_id, decision_id, decision: "APPROVED", auto_task_issue_skipped: true, act_task_id: null, ao_act_fact_id: null });
+    }
+
+    const operationPlanId =
+      String(payload.operation_plan_id ?? proposal?.meta?.operation_plan_id ?? proposal?.parameters?.operation_plan_id ?? "").trim()
+      || `opl_${request_id}`;
+    const programId = String(body.program_id ?? proposal?.meta?.program_id ?? "").trim();
+    const primitiveParameters = normalizePrimitiveParameters(proposal?.parameters);
+    const parameterSchema = normalizeAoActParameterSchema(primitiveParameters, null);
     const aoActBody = {
       tenant_id: tenant.tenant_id,
       project_id: tenant.project_id,
       group_id: tenant.group_id,
+      operation_plan_id: operationPlanId,
       approval_request_id: request_id,
-      program_id: payload.program_id ?? proposal?.meta?.program_id ?? null,
+      ...(programId ? { program_id: programId } : {}),
       field_id: payload.field_id ?? proposal?.meta?.field_id ?? proposal?.target?.ref ?? null,
       season_id: payload.season_id ?? proposal?.meta?.season_id ?? null,
       issuer: normalizeAoActIssuer(auth, proposal.issuer),
       action_type: proposal.action_type,
       target: normalizeAoActTarget(proposal.target),
       time_window: proposal.time_window,
-      parameter_schema: normalizeAoActParameterSchema(proposal.parameters, proposal.parameter_schema),
-      parameters: (proposal.parameters && typeof proposal.parameters === "object") ? proposal.parameters : {},
+      parameter_schema: parameterSchema,
+      parameters: primitiveParameters,
       constraints: normalizeAoActConstraints(proposal.constraints),
       meta: normalizeAoActMeta(proposal.meta)
     };
@@ -268,7 +314,6 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
 
     const act_task_id = String(aoJson.act_task_id ?? "");
     const ao_fact_id = String(aoJson.fact_id ?? "");
-    const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
     const created_at_ts = Date.now();
     const decision_record = {
       type: "approval_decision_v1",
