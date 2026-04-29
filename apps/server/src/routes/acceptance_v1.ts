@@ -258,6 +258,11 @@ export function toVerdict(result: "PASSED" | "FAILED" | "INCONCLUSIVE"): "PASS" 
   return "PARTIAL";
 }
 
+function finiteOptionalMetric(value: unknown): number | undefined {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: Record<string, number> }; expectedDurationMin: number | null }): AcceptanceResultV1Payload["metrics"] {
   const m = params.evaluated.metrics ?? {};
   const inFieldRatio = Number(m.in_field_ratio);
@@ -267,11 +272,25 @@ function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: 
   const telemetryDelta = Number.isFinite(expected) && expected > 0 && Number.isFinite(actual)
     ? Math.abs(actual - expected) / expected
     : 0;
-  return {
+  const out: AcceptanceResultV1Payload["metrics"] = {
     coverage_ratio: Number.isFinite(coverageRatio) ? coverageRatio : 0,
     in_field_ratio: Number.isFinite(inFieldRatio) ? inFieldRatio : 0,
     telemetry_delta: Number.isFinite(telemetryDelta) ? telemetryDelta : 0
   };
+
+  const zoneApplicationCount = finiteOptionalMetric(m.zone_application_count);
+  if (zoneApplicationCount !== undefined) out.zone_application_count = zoneApplicationCount;
+
+  const zoneCompletionRate = finiteOptionalMetric(m.zone_completion_rate);
+  if (zoneCompletionRate !== undefined) out.zone_completion_rate = zoneCompletionRate;
+
+  const avgZoneCoveragePercent = finiteOptionalMetric(m.avg_zone_coverage_percent);
+  if (avgZoneCoveragePercent !== undefined) out.avg_zone_coverage_percent = avgZoneCoveragePercent;
+
+  const maxZoneDeviationPercent = finiteOptionalMetric(m.max_zone_deviation_percent);
+  if (maxZoneDeviationPercent !== undefined) out.max_zone_deviation_percent = maxZoneDeviationPercent;
+
+  return out;
 }
 
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {

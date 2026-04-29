@@ -6,7 +6,14 @@ export type AcceptanceVerdictV1 = z.infer<typeof AcceptanceVerdictV1Schema>;
 export const AcceptanceMetricsV1Schema = z.object({
   coverage_ratio: z.number().finite(),
   in_field_ratio: z.number().finite(),
-  telemetry_delta: z.number().finite()
+  telemetry_delta: z.number().finite(),
+
+  // Step9 Variable Acceptance V1 metrics.
+  // Optional to preserve compatibility with ordinary acceptance results.
+  zone_application_count: z.number().finite().optional(),
+  zone_completion_rate: z.number().finite().optional(),
+  avg_zone_coverage_percent: z.number().finite().optional(),
+  max_zone_deviation_percent: z.number().finite().optional()
 });
 export type AcceptanceMetricsV1 = z.infer<typeof AcceptanceMetricsV1Schema>;
 
