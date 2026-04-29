@@ -157,11 +157,24 @@ function requireTenantMatchOr404V0(
   return true; // Allow request to proceed.
 } // End requireTenantMatchOr404V0.
 
-function scanForForbiddenKeys(value: unknown): string | null {
+function isAllowedStructuredActionMetaPath(path: string[]): boolean {
+  // Step9 variable prescription:
+  // variable_plan is approved prescription execution context.
+  // It must stay outside parameters/constraints, but it may contain
+  // domain keys such as mode / priority inside meta for auditability.
+  return path.length >= 2 && path[0] === "meta" && path[1] === "variable_plan";
+}
+
+function scanForForbiddenKeys(value: unknown, path: string[] = []): string | null {
   if (value === null || value === undefined) return null; // Nothing to scan
+
+  if (isAllowedStructuredActionMetaPath(path)) {
+    return null;
+  }
+
   if (Array.isArray(value)) {
     for (const it of value) {
-      const hit = scanForForbiddenKeys(it); // Recurse into array elements
+      const hit = scanForForbiddenKeys(it, path); // Recurse into array elements
       if (hit) return hit; // Fail fast
     }
     return null; // No hit
@@ -169,8 +182,10 @@ function scanForForbiddenKeys(value: unknown): string | null {
   if (typeof value === "object") {
     const obj = value as Record<string, unknown>; // Narrow
     for (const k of Object.keys(obj)) {
-      if (FORBID_KEYS_V0.has(k)) return k; // Exact match
-      const hit = scanForForbiddenKeys(obj[k]); // Recurse
+      const nextPath = [...path, k];
+
+      if (!isAllowedStructuredActionMetaPath(nextPath) && FORBID_KEYS_V0.has(k)) return k; // Exact match
+      const hit = scanForForbiddenKeys(obj[k], nextPath); // Recurse
       if (hit) return hit; // Fail fast
     }
     return null; // No hit
