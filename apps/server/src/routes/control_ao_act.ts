@@ -159,10 +159,12 @@ function requireTenantMatchOr404V0(
 
 function isAllowedStructuredActionMetaPath(path: string[]): boolean {
   // Step9 variable prescription:
-  // variable_plan is approved prescription execution context.
-  // It must stay outside parameters/constraints, but it may contain
-  // domain keys such as mode / priority inside meta for auditability.
-  return path.length >= 2 && path[0] === "meta" && path[1] === "variable_plan";
+  // variable_plan belongs to Action Task metadata.
+  // variable_execution belongs to Receipt metadata.
+  // Both must stay outside parameters / observed_parameters / constraints.
+  if (path.length < 2) return false;
+  if (path[0] !== "meta") return false;
+  return path[1] === "variable_plan" || path[1] === "variable_execution";
 }
 
 function scanForForbiddenKeys(value: unknown, path: string[] = []): string | null {

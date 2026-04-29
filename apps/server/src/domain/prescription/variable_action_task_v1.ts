@@ -129,10 +129,10 @@ export function buildVariableActionTaskPayloadV1(input: {
       coverage_percent: 95,
     },
     constraints: {
-      approval_required: true,
-      variable_rate_required: true,
-      variable_plan_mode: "VARIABLE_BY_ZONE",
-    },
+  approval_required: true,
+  variable_rate_required: true,
+  zone_count: sanitizedZoneRates.length,
+},
     meta: {
       prescription_id: asText(prescription.prescription_id),
       recommendation_id: asText(prescription.recommendation_id),
@@ -143,7 +143,7 @@ export function buildVariableActionTaskPayloadV1(input: {
         mode: "VARIABLE_BY_ZONE",
         zone_rates: sanitizedZoneRates,
       },
-      spatial_scope: prescription.spatial_scope ?? {},
+
       zone_count: sanitizedZoneRates.length,
     },
   };
