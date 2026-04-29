@@ -193,7 +193,25 @@ let pool;
   const asExecuted1 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 1');
   const asExecuted2 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 2');
 
-  const acceptance = requireOk(await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'acceptance');
+  const acceptance = requireOk(await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
+    method: 'POST',
+    token,
+    body: { act_task_id, tenant_id, project_id, group_id }
+  }), 'acceptance');
+  const acceptanceFactId = String(acceptance.fact_id ?? '').trim();
+  assert.ok(acceptanceFactId, 'acceptance fact_id missing');
+  const acceptanceFactRes = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE fact_id = $1
+        AND (record_json::jsonb->>'type') = 'acceptance_result_v1'
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+        AND (record_json::jsonb#>>'{payload,project_id}') = $3
+        AND (record_json::jsonb#>>'{payload,group_id}') = $4
+      LIMIT 1`,
+    [acceptanceFactId, tenant_id, project_id, group_id],
+  );
+  const acceptancePayload = acceptanceFactRes.rows?.[0]?.record_json?.payload ?? {};
 
   const as_executed_id = String(asExecuted1.as_executed?.as_executed_id ?? '').trim();
   const roi1 = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id } }), 'roi 1');
@@ -217,8 +235,8 @@ let pool;
       receipt_id,
       as_executed_id,
       as_applied_id: asExecuted1.as_applied?.as_applied_id ?? null,
-      acceptance_result: acceptance.result,
-      acceptance_skill_id: acceptance.acceptance_skill_id,
+      acceptance_result: acceptancePayload.verdict,
+      acceptance_skill_id: acceptancePayload.acceptance_skill_id,
       roi_types: roiTypes,
     },
   }, null, 2)}\n`);
@@ -270,9 +288,12 @@ let pool;
     zone_level_deviation_computed: zoneApps.every((z) => typeof z?.deviation_amount === 'number' && typeof z?.deviation_percent === 'number'),
     as_applied_totals_correct: Number(asAppliedApp?.total_planned_amount) === 45 && Number(asAppliedApp?.total_applied_amount) === 44 && Number(asAppliedApp?.avg_coverage_percent) === 97 && asExecuted1?.as_applied?.zone_id === null,
 
-    variable_acceptance_passed: String(acceptance?.result ?? '').toUpperCase() === 'PASSED',
-    variable_acceptance_skill_used: String(acceptance?.acceptance_skill_id ?? '') === 'variable_irrigation_acceptance_v1',
-    variable_acceptance_metrics_present: Number(acceptance?.metrics?.zone_application_count) === 2 && Number(acceptance?.metrics?.zone_completion_rate) === 1 && Number(acceptance?.metrics?.avg_zone_coverage_percent) === 97 && typeof acceptance?.metrics?.max_zone_deviation_percent === 'number',
+    variable_acceptance_passed: String(acceptancePayload?.verdict ?? '').toUpperCase() === 'PASS',
+    variable_acceptance_skill_used: String(acceptancePayload?.acceptance_skill_id ?? '') === 'variable_irrigation_acceptance_v1',
+    variable_acceptance_metrics_present: Number(acceptancePayload?.metrics?.zone_application_count) === 2
+      && Number(acceptancePayload?.metrics?.zone_completion_rate) === 1
+      && Number(acceptancePayload?.metrics?.avg_zone_coverage_percent) === 97
+      && typeof acceptancePayload?.metrics?.max_zone_deviation_percent === 'number',
 
     variable_roi_ledger_created: roi1.ok === true && roiLedgers.length > 0,
     variable_roi_ledger_idempotent: roi2.ok === true && roi2.idempotent === true,
