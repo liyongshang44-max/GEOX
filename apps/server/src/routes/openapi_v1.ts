@@ -884,6 +884,60 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               }
             }
           }
+        },
+        ManagementZoneV1: {
+          type: "object",
+          required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type", "geometry", "risk_tags", "agronomy_tags", "source_refs", "created_at", "updated_at"],
+          properties: {
+            zone_id: { type: "string" },
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" },
+            field_id: { type: "string" },
+            zone_name: { type: "string", nullable: true },
+            zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+            geometry: { type: "object", additionalProperties: true },
+            area_ha: { type: "number", nullable: true },
+            risk_tags: { type: "array", items: { type: "string" } },
+            agronomy_tags: { type: "array", items: { type: "string" } },
+            source_refs: { type: "array", items: { type: "string" } },
+            created_at: { type: "integer", format: "int64" },
+            updated_at: { type: "integer", format: "int64" },
+          }
+        },
+        ManagementZoneCreateRequest: {
+          type: "object",
+          required: ["tenant_id", "project_id", "group_id", "zone_id", "zone_type", "geometry"],
+          properties: {
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" },
+            zone_id: { type: "string" },
+            zone_name: { type: "string", nullable: true },
+            zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+            geometry: { type: "object", additionalProperties: true },
+            area_ha: { type: "number", nullable: true },
+            risk_tags: { type: "array", items: { type: "string" } },
+            agronomy_tags: { type: "array", items: { type: "string" } },
+            source_refs: { type: "array", items: { type: "string" } },
+          }
+        },
+        ManagementZoneListResponse: {
+          type: "object",
+          required: ["ok", "field_id", "items"],
+          properties: {
+            ok: { type: "boolean" },
+            field_id: { type: "string" },
+            items: { type: "array", items: { '$ref': "#/components/schemas/ManagementZoneV1" } },
+          }
+        },
+        ManagementZoneReadResponse: {
+          type: "object",
+          required: ["ok", "zone"],
+          properties: {
+            ok: { type: "boolean" },
+            zone: { '$ref': "#/components/schemas/ManagementZoneV1" },
+          }
         }
       }
     },
@@ -1397,6 +1451,94 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               content: {
                 "application/json": {
                   schema: { '$ref': "#/components/schemas/FieldTagsResponseV1" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/zones": {
+        post: {
+          tags: ["fields"],
+          summary: "Create or upsert a management zone",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { '$ref': "#/components/schemas/ManagementZoneCreateRequest" }
+              }
+            }
+          },
+          responses: {
+            "200": {
+              description: "Management zone upserted successfully",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    required: ["ok", "zone"],
+                    properties: {
+                      ok: { type: "boolean" },
+                      zone: {
+                        type: "object",
+                        required: ["zone_id", "tenant_id", "project_id", "group_id", "field_id", "zone_type"],
+                        properties: {
+                          zone_id: { type: "string" },
+                          tenant_id: { type: "string" },
+                          project_id: { type: "string" },
+                          group_id: { type: "string" },
+                          field_id: { type: "string" },
+                          zone_type: { type: "string", enum: ["IRRIGATION_ZONE", "INSPECTION_ZONE", "SAMPLING_ZONE", "MANAGEMENT_ZONE"] },
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        get: {
+          tags: ["fields"],
+          summary: "List management zones by field",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tenant_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Management zones list returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/ManagementZoneListResponse" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/api/v1/fields/{field_id}/zones/{zone_id}": {
+        get: {
+          tags: ["fields"],
+          summary: "Read one management zone by field and zone id",
+          parameters: [
+            { name: "field_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "zone_id", in: "path", required: true, schema: { type: "string" } },
+            { name: "tenant_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "project_id", in: "query", required: true, schema: { type: "string" } },
+            { name: "group_id", in: "query", required: true, schema: { type: "string" } }
+          ],
+          responses: {
+            "200": {
+              description: "Management zone returned successfully",
+              content: {
+                "application/json": {
+                  schema: { '$ref': "#/components/schemas/ManagementZoneReadResponse" }
                 }
               }
             }
@@ -2158,6 +2300,41 @@ function applyP13OpenApiAlignment(spec: any) {
       },
       additionalProperties: false,
     },
+    VariableActionTaskFromPrescriptionRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "prescription_id", "approval_request_id", "operation_plan_id", "device_id"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        prescription_id: { type: "string" },
+        approval_request_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        device_id: { type: "string" },
+      },
+      additionalProperties: false,
+    },
+    VariableActionTaskFromPrescriptionResponse: {
+      type: "object",
+      required: ["ok", "act_task_id", "task_fact_id", "task_meta"],
+      properties: {
+        ok: { type: "boolean" },
+        act_task_id: { type: "string" },
+        task_fact_id: { type: "string" },
+        task_meta: {
+          type: "object",
+          required: ["prescription_id", "recommendation_id", "operation_type", "variable_plan"],
+          properties: {
+            prescription_id: { type: "string" },
+            recommendation_id: { type: "string" },
+            operation_type: { type: "string" },
+            variable_plan: { type: "object", additionalProperties: true },
+          },
+          additionalProperties: true,
+        },
+      },
+      additionalProperties: false,
+    },
     ActionReceiptRequest: {
       type: "object",
       required: ["tenant_id", "project_id", "group_id", "operation_plan_id", "act_task_id", "executor_id", "execution_time", "execution_coverage", "resource_usage", "logs_refs", "constraint_check", "observed_parameters"],
@@ -2699,6 +2876,54 @@ function applyP13OpenApiAlignment(spec: any) {
       },
       additionalProperties: false,
     },
+    VariableZoneRateV1: {
+      type: "object",
+      required: ["zone_id", "operation_type", "planned_amount", "unit"],
+      properties: {
+        zone_id: { type: "string" },
+        operation_type: { type: "string", enum: ["IRRIGATION", "INSPECTION", "SAMPLING"] },
+        planned_amount: { type: "number" },
+        unit: { type: "string" },
+        priority: { type: "string", enum: ["LOW", "MEDIUM", "HIGH", "CRITICAL"] },
+        reason_codes: { type: "array", items: { type: "string" } },
+        source_refs: { type: "array", items: { type: "string" } },
+      },
+      additionalProperties: false,
+    },
+    VariablePrescriptionPlanV1: {
+      type: "object",
+      required: ["mode", "zone_rates"],
+      properties: {
+        mode: { type: "string", enum: ["VARIABLE_BY_ZONE"] },
+        zone_rates: { type: "array", minItems: 1, maxItems: 50, items: ref("VariableZoneRateV1") },
+      },
+      additionalProperties: false,
+    },
+    VariablePrescriptionCreateRequest: {
+      type: "object",
+      required: ["recommendation_id", "tenant_id", "project_id", "group_id", "field_id", "variable_plan"],
+      properties: {
+        recommendation_id: { type: "string" },
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        field_id: { type: "string" },
+        season_id: { type: ["string", "null"] },
+        crop_id: { type: ["string", "null"] },
+        variable_plan: ref("VariablePrescriptionPlanV1"),
+      },
+      additionalProperties: false,
+    },
+    VariablePrescriptionCreateResponse: {
+      type: "object",
+      required: ["ok", "idempotent", "prescription"],
+      properties: {
+        ok: { type: "boolean" },
+        idempotent: { type: "boolean" },
+        prescription: ref("PrescriptionContractV1"),
+      },
+      additionalProperties: false,
+    },
     PrescriptionReadResponse: {
       type: "object",
       required: ["ok", "prescription"],
@@ -3185,6 +3410,7 @@ function applyP13OpenApiAlignment(spec: any) {
 
   Object.assign(spec.paths, {
     "/api/v1/actions/task": { post: { tags: ["operations"], summary: "Create AO-ACT task", requestBody: { required: true, content: { "application/json": { schema: ref("ActionTaskRequest") } } }, responses: { "200": jsonResponse(ref("ActionTaskResponse"), "AO-ACT task accepted") } } },
+    "/api/v1/actions/task/from-variable-prescription": { post: { tags: ["operations"], summary: "Create AO-ACT task from variable prescription", requestBody: { required: true, content: { "application/json": { schema: ref("VariableActionTaskFromPrescriptionRequest") } } }, responses: { "200": jsonResponse(ref("VariableActionTaskFromPrescriptionResponse"), "Variable action task accepted") } } },
     "/api/v1/actions/receipt": { post: { tags: ["operations"], summary: "Submit AO-ACT receipt", requestBody: { required: true, content: { "application/json": { schema: ref("ActionReceiptRequest") } } }, responses: { "200": jsonResponse(ref("ActionReceiptResponse"), "AO-ACT receipt accepted") } } },
     "/api/v1/actions/execute": { post: { tags: ["operations"], summary: "Execute action via control plane", requestBody: { required: true, content: { "application/json": { schema: ref("ActionExecuteRequest") } } }, responses: { "200": jsonResponse(ref("ActionExecuteResponse"), "Action execution accepted") } } },
     "/api/v1/operations/manual": { post: { tags: ["operations"], summary: "Create manual operation", requestBody: { required: true, content: { "application/json": { schema: ref("OperationManualRequest") } } }, responses: { "200": jsonResponse(ref("OperationManualResponse"), "Manual operation created") } } },
@@ -3194,6 +3420,7 @@ function applyP13OpenApiAlignment(spec: any) {
     "/api/v1/recommendations/generate": { post: { tags: ["operations"], summary: "Generate agronomy recommendation", requestBody: { required: true, content: { "application/json": { schema: ref("RecommendationGenerateBody") } } }, responses: { "200": jsonResponse(ref("RecommendationGenerateResponse"), "Recommendation generation result") } } },
     "/api/v1/recommendations/{recommendation_id}/submit-approval": { post: { tags: ["operations"], summary: "Submit recommendation for approval", parameters: [pathParam("recommendation_id")], requestBody: { required: false, content: { "application/json": { schema: ref("RecommendationSubmitApprovalBody") } } }, responses: { "200": jsonResponse(ref("RecommendationSubmitApprovalResponse"), "Recommendation approval submitted") } } },
     "/api/v1/prescriptions/from-recommendation": { post: { tags: ["operations"], summary: "Create prescription from recommendation", requestBody: { required: true, content: { "application/json": { schema: ref("PrescriptionFromRecommendationRequest") } } }, responses: { "200": jsonResponse(ref("PrescriptionFromRecommendationResponse"), "Prescription created or reused") } } },
+    "/api/v1/prescriptions/variable/from-recommendation": { post: { tags: ["operations"], summary: "Create variable-by-zone prescription from recommendation", requestBody: { required: true, content: { "application/json": { schema: ref("VariablePrescriptionCreateRequest") } } }, responses: { "200": jsonResponse(ref("VariablePrescriptionCreateResponse"), "Variable prescription created or reused") } } },
     "/api/v1/prescriptions/{prescription_id}": { get: { tags: ["operations"], summary: "Read prescription by id", parameters: [pathParam("prescription_id")], responses: { "200": jsonResponse(ref("PrescriptionReadResponse"), "Prescription detail") } } },
     "/api/v1/prescriptions/by-recommendation/{recommendation_id}": { get: { tags: ["operations"], summary: "Read prescription by recommendation id", parameters: [pathParam("recommendation_id")], responses: { "200": jsonResponse(ref("PrescriptionReadResponse"), "Prescription detail") } } },
     "/api/v1/prescriptions/{prescription_id}/submit-approval": { post: { tags: ["operations"], summary: "Submit prescription for approval", parameters: [pathParam("prescription_id")], requestBody: { required: false, content: { "application/json": { schema: ref("GenericTenantBody") } } }, responses: { "200": jsonResponse(ref("PrescriptionSubmitApprovalResponse"), "Prescription approval submitted") } } },

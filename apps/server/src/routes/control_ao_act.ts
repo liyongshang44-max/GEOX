@@ -31,6 +31,8 @@ import { refreshFieldFertilityStateV1 } from "../projections/field_fertility_sta
 import { appendSkillRunFact, digestJson } from "../domain/skill_registry/facts.js";
 import { loadManualOperationByCommandId } from "../domain/controlplane/task_service.js";
 import { actionReceiptRequestSchemaV1, validateActionReceiptMetaV1 } from "../contracts/action_receipt_v1.js";
+import { getPrescriptionById } from "../domain/prescription/prescription_contract_v1.js";
+import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -1141,6 +1143,78 @@ return reply.send({ ok: true, rows: out.rows, note: "tenant_filtered_inline" });
 // 新流必须走本路由：action 执行主口径是 `/api/v1/actions/*`，并且禁止新代码依赖 legacy/deprecated route。
 export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
+  app.post("/api/v1/actions/task/from-variable-prescription", async (req, reply) => {
+    try {
+      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      if (!auth) return;
+
+      const body = z.object({
+        tenant_id: z.string().min(1),
+        project_id: z.string().min(1),
+        group_id: z.string().min(1),
+        prescription_id: z.string().min(1),
+        approval_request_id: z.string().min(1),
+        operation_plan_id: z.string().min(1),
+        device_id: z.string().min(1),
+      }).parse(req.body ?? {});
+
+      const tenant = assertTenantFieldsPresentV0(body, "body");
+      if (!requireTenantMatchOr404V0(auth, tenant, reply)) return;
+
+      const prescription = await getPrescriptionById(pool, body.prescription_id, tenant);
+      if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
+      if (String((prescription as any)?.operation_amount?.mode ?? "").trim().toUpperCase() !== "VARIABLE_BY_ZONE") {
+        return reply.status(400).send({ ok: false, error: "VARIABLE_PRESCRIPTION_MODE_REQUIRED" });
+      }
+
+      const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, body.approval_request_id, tenant);
+      if (approvalStatus !== "APPROVED") {
+        return reply.status(403).send({ ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
+      }
+
+      const taskPayload = buildVariableActionTaskPayloadV1({
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        prescription,
+        approval_request_id: body.approval_request_id,
+        operation_plan_id: body.operation_plan_id,
+        actor_id: auth.actor_id,
+        device_id: body.device_id,
+        now_ts_ms: Date.now(),
+      });
+
+      const authorization = String((req.headers as any).authorization ?? "");
+      const delegated = await postJsonInternal(req, authorization, "/api/v1/actions/task", taskPayload);
+      if (!delegated.ok) {
+        return reply.status(delegated.status || 400).send(delegated.json ?? { ok: false, error: "ACTION_TASK_CREATE_FAILED" });
+      }
+
+      return reply.send({
+        ok: true,
+        act_task_id: delegated.json?.act_task_id ?? null,
+        task_fact_id: delegated.json?.fact_id ?? null,
+        task_meta: {
+          prescription_id: taskPayload.meta?.prescription_id ?? null,
+          recommendation_id: taskPayload.meta?.recommendation_id ?? null,
+          operation_type: taskPayload.meta?.operation_type ?? null,
+          variable_plan: taskPayload.meta?.variable_plan ?? null,
+        },
+      });
+    } catch (e: any) {
+      const code = String(e?.message ?? "BAD_REQUEST");
+      if (
+        code === "VARIABLE_PRESCRIPTION_ONLY_SUPPORTS_IRRIGATION" ||
+        code === "VARIABLE_PRESCRIPTION_MODE_REQUIRED" ||
+        code === "VARIABLE_PRESCRIPTION_ZONE_RATES_REQUIRED" ||
+        code === "VARIABLE_RATE_DEVICE_REQUIREMENT_REQUIRED" ||
+        code === "VARIABLE_PRESCRIPTION_AMOUNT_INVALID"
+      ) {
+        return reply.status(400).send({ ok: false, error: code });
+      }
+      return reply.status(400).send({ ok: false, error: code });
+    }
+  });
   app.post("/api/v1/actions/receipt", async (req, reply) => handleAoActReceiptV1(app, pool, req, reply, false));
   app.get("/api/v1/actions/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, false));
   app.post("/api/v1/actions/execute", async (req, reply) => {
