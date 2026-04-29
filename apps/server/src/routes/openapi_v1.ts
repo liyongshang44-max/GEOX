@@ -3089,6 +3089,10 @@ function applyP13OpenApiAlignment(spec: any) {
       additionalProperties: false,
     },
 
+    RoiTypeV1: {
+      type: "string",
+      enum: ["WATER_SAVED", "COST_IMPACT", "EXECUTION_RELIABILITY", "LABOR_SAVED", "VARIABLE_WATER_SAVED", "ZONE_COMPLETION_RATE", "VARIABLE_EXECUTION_RELIABILITY"],
+    },
     RoiLedgerV1: {
       type: "object",
       required: ["roi_ledger_id", "tenant_id", "project_id", "group_id", "roi_type", "baseline", "actual", "delta", "confidence", "evidence_refs", "calculation_method", "created_at", "updated_at"],
@@ -3105,10 +3109,10 @@ function applyP13OpenApiAlignment(spec: any) {
         field_id: { type: ["string", "null"] },
         season_id: { type: ["string", "null"] },
         zone_id: { type: ["string", "null"] },
-        roi_type: { type: "string" },
-        baseline: { type: "object", additionalProperties: true },
-        actual: { type: "object", additionalProperties: true },
-        delta: { type: "object", additionalProperties: true },
+        roi_type: ref("RoiTypeV1"),
+        baseline: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
+        actual: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
+        delta: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
         confidence: {
           type: "object",
           required: ["level", "basis", "reasons"],
@@ -3121,7 +3125,7 @@ function applyP13OpenApiAlignment(spec: any) {
         },
         evidence_refs: { type: "array", items: {} },
         calculation_method: { type: "string" },
-        assumptions: { type: "object", additionalProperties: true },
+        assumptions: { type: "object", additionalProperties: true, description: "May include variable-zone fields such as zone_count, zone_baselines, zone_actuals, completion_rate, avg_coverage_percent, max_abs_deviation_percent, avg_abs_deviation_percent, deviation_over_threshold_count." },
         uncertainty_notes: { type: ["string", "null"] },
         skill_trace_id: { type: ["string", "null"] },
         skill_refs: {
