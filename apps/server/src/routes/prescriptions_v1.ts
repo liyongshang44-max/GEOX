@@ -129,6 +129,9 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const params: any = (req as any).params ?? {};
     const prescription_id = String(params.prescription_id ?? "").trim();
     if (!prescription_id) return badRequest(reply, "MISSING_PRESCRIPTION_ID");
+    if (body?.decision !== undefined || body?.approve !== undefined || body?.status !== undefined || body?.approved_by !== undefined) {
+      return badRequest(reply, "APPROVAL_DECISION_NOT_ALLOWED_ON_SUBMIT");
+    }
 
     const prescription = await getPrescriptionById(pool, prescription_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
