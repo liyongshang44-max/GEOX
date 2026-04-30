@@ -1,8 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { appendSkillBindingFact } from "../domain/skill_registry/facts.js";
+import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireFieldAllowedOr404V1, requireTenantMatchOr404V1, tenantFromQueryOrAuthV1 } from "../auth/tenant_scope_v1.js";
+import { assertSkillBindingWriteAllowedV1, assertSkillCategoryBoundaryV1 } from "../auth/skill_security_v1.js";
 import { projectSkillRegistryReadV1, querySkillRegistryReadV1 } from "../projections/skill_registry_read_v1.js";
 import { ensureDeviceSkillBindings } from "../services/device_skill_bindings.js";
+import { auditContextFromRequestV1, denyWithAuditV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 
 export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): void {
   const deprecatedSwitchHint = {
@@ -12,6 +16,8 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
   };
 
   app.get("/api/v1/skills/rules", async (req, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["skill.read", "ao_act.index.read"]);
+    if (!auth) return;
     const query = (req.query ?? {}) as {
       crop_code?: string;
       tenant_id?: string;
@@ -27,18 +33,17 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
     };
 
     const crop_code = typeof query.crop_code === "string" ? query.crop_code.trim().toLowerCase() : undefined;
-    const tenant_id = typeof query.tenant_id === "string" ? query.tenant_id.trim() : undefined;
-    const project_id = typeof query.project_id === "string" ? query.project_id.trim() : undefined;
-    const group_id = typeof query.group_id === "string" ? query.group_id.trim() : undefined;
+    const tenant = tenantFromQueryOrAuthV1(query, auth);
+    if (!requireTenantMatchOr404V1(reply, auth, tenant)) {
+      return denyWithAuditV1(reply, pool, { ...tenant, ...auditContextFromRequestV1(req, auth), action: "tenant.scope_denied", target_type: "skill_rules", source: "api/v1/skills/rules" }, 404, "NOT_FOUND");
+    }
+    const tenant_id = tenant.tenant_id;
+    const project_id = tenant.project_id;
+    const group_id = tenant.group_id;
     const enabledOnly = String(query.enabled_only ?? "true").trim().toLowerCase() !== "false";
 
-    if (!tenant_id || !project_id || !group_id) {
-      return reply.code(400).send({
-        ok: false,
-        error: "INVALID_QUERY",
-        message: "tenant_id/project_id/group_id are required",
-      });
-    }
+    if ((String(query.scope_type ?? "").toUpperCase() === "FIELD" || String(query.bind_target ?? "").startsWith("field_"))
+      && !requireFieldAllowedOr404V1(reply, auth, String(query.bind_target ?? ""))) return;
 
     await projectSkillRegistryReadV1(pool, { tenant_id, project_id, group_id });
     const readRows = await querySkillRegistryReadV1(pool, {
@@ -80,10 +85,13 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       }))
       .filter((item) => !enabledOnly || item.enabled);
 
+    try { await recordSecurityAuditEventV1(pool, { ...tenant, ...auditContextFromRequestV1(req, auth), action: "skill.rules_read", target_type: "skill_rules", result: "ALLOW", source: "api/v1/skills/rules" }); } catch (e) { req.log.error({ err: e }, "skill rules read audit failed"); }
     return reply.send(items);
   });
 
   app.post("/api/v1/skills/rules/switch", async (req, reply) => {
+    const auth = requireAoActAnyScopeV0(req, reply, ["skill.binding.write", "skill.admin"]);
+    if (!auth) return;
     const body = (req.body ?? {}) as {
       skill_id?: unknown;
       version?: unknown;
@@ -101,6 +109,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
         rollout_mode?: unknown;
         device_type?: unknown;
       };
+      reason?: unknown;
     };
 
     const skill_id = String(body.skill_id ?? "").trim();
@@ -114,6 +123,9 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       });
     }
 
+    const reason = String(body.reason ?? "").trim();
+    if (!reason) return reply.code(400).send({ ok: false, error: "SKILL_CHANGE_REASON_REQUIRED", ...deprecatedSwitchHint });
+
     try {
       const tenant_id = typeof body.scope?.tenant_id === "string" ? body.scope.tenant_id.trim() : "";
       const project_id = typeof body.scope?.project_id === "string" ? body.scope.project_id.trim() : "";
@@ -126,6 +138,19 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
           ...deprecatedSwitchHint,
         });
       }
+      if (!requireTenantMatchOr404V1(reply, auth, { tenant_id, project_id, group_id })) {
+        return denyWithAuditV1(reply, pool, { tenant_id, project_id, group_id, ...auditContextFromRequestV1(req, auth), action: "tenant.scope_denied", target_type: "skill_binding", source: "api/v1/skills/rules/switch" }, 404, "NOT_FOUND");
+      }
+      assertSkillCategoryBoundaryV1({
+        category: String(body.category ?? "AGRONOMY"),
+        trigger_stage: String(body.scope?.trigger_stage ?? "before_recommendation"),
+      });
+      assertSkillBindingWriteAllowedV1({
+        auth,
+        category: String(body.category ?? "AGRONOMY"),
+        trigger_stage: String(body.scope?.trigger_stage ?? "before_recommendation"),
+        rollout_mode: String(body.scope?.rollout_mode ?? "DIRECT"),
+      });
       const appended = await appendSkillBindingFact(pool, {
         tenant_id,
         project_id,
@@ -141,7 +166,12 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
         crop_code: typeof body.scope?.crop_code === "string" ? body.scope.crop_code.trim().toLowerCase() : null,
         device_type: typeof body.scope?.device_type === "string" ? body.scope.device_type.trim().toUpperCase() as any : null,
         priority: Number.isFinite(Number(body.priority)) ? Number(body.priority) : 0,
+        changed_by_actor_id: auth.actor_id,
+        changed_by_token_id: auth.token_id,
+        change_reason: reason,
+        security_boundary_version: "skill_safety_boundary_v1",
       });
+      await recordSecurityAuditEventV1(pool, { tenant_id, project_id, group_id, ...auditContextFromRequestV1(req, auth), action: "skill.binding_switched", target_type: "skill_binding", target_id: appended.payload.binding_id, result: "ALLOW", reason, source: "api/v1/skills/rules/switch" });
       await projectSkillRegistryReadV1(pool, { tenant_id, project_id, group_id });
       const rows = await querySkillRegistryReadV1(pool, {
         tenant_id,
@@ -190,6 +220,11 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown";
+      if (["SKILL_CATEGORY_BOUNDARY_VIOLATION", "SKILL_BINDING_ROLE_DENIED", "SKILL_BINDING_TRIGGER_STAGE_DENIED", "SKILL_ROLLOUT_MODE_DENIED", "SKILL_OUTPUT_FORBIDDEN_ACTION"].includes(message)) {
+        const s: any = body.scope ?? {};
+        await recordSecurityAuditEventV1(pool, { tenant_id: String(s.tenant_id ?? auth.tenant_id), project_id: String(s.project_id ?? auth.project_id), group_id: String(s.group_id ?? auth.group_id), ...auditContextFromRequestV1(req, auth), action: "skill.binding_denied", target_type: "skill_binding", result: "DENY", error_code: message, source: "api/v1/skills/rules/switch" }).catch(() => undefined);
+        return reply.code(403).send({ ok: false, error: message, ...deprecatedSwitchHint });
+      }
       if (message.includes("INVALID_TRIGGER_STAGE")) {
         return reply.code(400).send({
           ok: false,

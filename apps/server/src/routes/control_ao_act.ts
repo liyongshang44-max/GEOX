@@ -124,6 +124,18 @@ type TenantTripleV0 = { // Sprint 22: hard isolation scope triple used across AO
   project_id: string; // Project isolation field; MUST be present on token + request.
   group_id: string; // Group isolation field; MUST be present on token + request.
 }; // End TenantTripleV0.
+function requireActionTaskCreateRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator") return true;
+  reply.status(403).send({ ok: false, error: "ACTION_TASK_CREATE_ROLE_DENIED" });
+  return false;
+}
+function requireActionReceiptSubmitRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator" || role === "executor") return true;
+  reply.status(403).send({ ok: false, error: "ACTION_RECEIPT_SUBMIT_ROLE_DENIED" });
+  return false;
+}
 
 function isFeatureEnabledV0(envName: string, defaultEnabled: boolean): boolean {
   const raw = String(process.env[envName] ?? "").trim().toLowerCase();
@@ -679,6 +691,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
@@ -849,6 +862,7 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
       if (!auth) return;
+      if (!requireActionReceiptSubmitRoleV1(reply, auth)) return;
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
@@ -1256,6 +1270,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
 
       const body = z.object({
         tenant_id: z.string().min(1),

@@ -90,6 +90,8 @@ export async function ensureDeviceSkillBindings(input: EnsureDeviceSkillBindings
         AND project_id = $2
         AND group_id = $3
         AND fact_type = 'skill_binding_v1'
+        AND UPPER(COALESCE(category, '')) = 'DEVICE'
+        AND UPPER(COALESCE(scope_type, '')) IN ('DEVICE','TENANT')
         AND UPPER(COALESCE(status, '')) = 'ACTIVE'
       ORDER BY updated_at_ts_ms DESC
       LIMIT 500`,

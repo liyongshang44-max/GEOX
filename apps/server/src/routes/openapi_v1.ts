@@ -33,6 +33,43 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         }
       },
       schemas: {
+        SkillSafetyBoundaryV1: {
+          type: "object",
+          properties: {
+            note: { type: "string", example: "skill_trace is not an authorization token; skill_run success is not acceptance pass" },
+          }
+        },
+        SkillBindingSecurityMetadataV1: {
+          type: "object",
+          required: ["reason", "security_boundary_version"],
+          properties: {
+            reason: { type: "string" },
+            security_boundary_version: { type: "string", example: "skill_safety_boundary_v1" }
+          }
+        },
+        SkillForbiddenOutputActionV1: {
+          type: "string",
+          enum: ["approval_decision", "act_task_id", "dispatch_command", "device_command", "acceptance_result_override", "roi_override"]
+        },
+        SecurityAuditResultV1: {
+          type: "string",
+          enum: ["ALLOW", "DENY", "ERROR"]
+        },
+        SecurityAuditEventV1: {
+          type: "object",
+          properties: {
+            audit_event_id: { type: "string" },
+            tenant_id: { type: "string" },
+            project_id: { type: "string" },
+            group_id: { type: "string" },
+            actor_id: { type: "string", nullable: true },
+            token_id: { type: "string", nullable: true },
+            action: { type: "string" },
+            target_type: { type: "string" },
+            target_id: { type: "string", nullable: true },
+            result: { $ref: "#/components/schemas/SecurityAuditResultV1" }
+          }
+        },
         DeviceRegistrationRequest: {
           type: "object",
           required: ["device_id", "device_mode", "device_template"],
