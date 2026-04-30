@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   createRoiLedgersFromAsExecuted,
   listRoiLedgerByAsExecuted,
@@ -55,7 +55,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   }));
 
   app.post("/api/v1/roi-ledger/from-as-executed", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.write", "ao_act.task.write"]);
     if (!auth) return;
 
     const body: any = req.body ?? {};
@@ -84,7 +84,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   });
 
   app.get("/api/v1/roi-ledger/by-as-executed/:as_executed_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.read", "ao_act.index.read"]);
     if (!auth) return;
 
     const query: any = req.query ?? {};
@@ -101,7 +101,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   });
 
   app.get("/api/v1/roi-ledger/by-task/:task_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.read", "ao_act.index.read"]);
     if (!auth) return;
 
     const query: any = req.query ?? {};
@@ -118,7 +118,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   });
 
   app.get("/api/v1/roi-ledger/by-prescription/:prescription_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.read", "ao_act.index.read"]);
     if (!auth) return;
 
     const query: any = req.query ?? {};
@@ -135,7 +135,7 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
   });
 
   app.get("/api/v1/roi-ledger/by-field/:field_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["roi_ledger.read", "ao_act.index.read"]);
     if (!auth) return;
 
     const query: any = req.query ?? {};

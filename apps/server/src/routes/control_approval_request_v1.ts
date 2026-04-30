@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 
-import { requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
+import { requireAoActAnyScopeV0, requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 import {
   assertTenantTriple,
   createApprovalRequestV1,
@@ -138,7 +138,7 @@ function logLegacyApprovalWarning(req: any, legacyPath: string): void {
 
 async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
   try {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "approval.decide", "ao_act.task.write"]);
     if (!auth) return;
     (req as any).auth = auth;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
@@ -154,7 +154,7 @@ async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
 }
 
 async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
-  const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+  const auth = requireAoActAnyScopeV0(req, reply, ["approval.read", "ao_act.index.read"]);
   if (!auth) return;
   (req as any).auth = auth;
 
@@ -191,7 +191,7 @@ async function handleApprovalRequestsList(req: any, reply: any, pool: Pool) {
 
 async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
   try {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["approval.decide", "ao_act.task.write"]);
     if (!auth) return;
     (req as any).auth = auth;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
