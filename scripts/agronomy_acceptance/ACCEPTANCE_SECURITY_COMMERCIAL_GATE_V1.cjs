@@ -3,6 +3,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance_tokens.cjs');
 
 const BASE_DIR = __dirname;
 const SCRIPTS = [
@@ -20,6 +21,42 @@ const SCRIPTS = [
 const CHECK_KEYS = [
   'iam_scope_gate_passed','tenant_isolation_gate_passed','approval_execution_separation_gate_passed','skill_boundary_gate_passed','security_audit_gate_passed','fail_safe_manual_takeover_gate_passed','runtime_hardening_gate_passed','variable_prescription_gate_passed','field_memory_gate_passed',
 ];
+
+function assertNonTrivialAcceptanceScript(script) {
+  const full = path.join(BASE_DIR, script);
+  const text = fs.readFileSync(full, 'utf8');
+
+  const staticSuccessPatterns = [
+    /console\.log\s*\(\s*JSON\.stringify\s*\(\s*\{\s*ok\s*:\s*true/s,
+    /process\.stdout\.write\s*\(\s*`\$\{JSON\.stringify\s*\(\s*\{\s*ok\s*:\s*true/s,
+  ];
+
+  const looksStaticSuccess = staticSuccessPatterns.some((re) => re.test(text));
+  const hasHardcodedTrueCheck = /checks\.[A-Za-z0-9_]+\s*=\s*true\s*;/.test(text);
+  const hasRealAction =
+    text.includes('fetchJson(') ||
+    text.includes('spawn(') ||
+    text.includes('pool.query(') ||
+    text.includes('GET /') ||
+    text.includes('POST /');
+
+  if (looksStaticSuccess && !hasRealAction) {
+    return {
+      ok: false,
+      error: 'SECURITY_GATE_STATIC_SUCCESS_SCRIPT_FORBIDDEN',
+      script,
+    };
+  }
+  if (hasHardcodedTrueCheck) {
+    return {
+      ok: false,
+      error: 'SECURITY_GATE_HARDCODED_TRUE_CHECK_FORBIDDEN',
+      script,
+    };
+  }
+
+  return { ok: true };
+}
 
 function parseLastJson(stdout) {
   const t = String(stdout || '').trim();
@@ -52,8 +89,26 @@ function runScript(script) {
 }
 
 (async () => {
+  try {
+    await assertSecurityAcceptanceTokensLoaded(process.env.BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
+  } catch (err) {
+    const detail = String(err?.message || err);
+    return console.log(JSON.stringify({
+      ok: false, gate: 'SECURITY_COMMERCIAL_GATE_V1', error: detail.includes('SECURITY_ACCEPTANCE_TOKEN_FIXTURE_INCOMPLETE') ? 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_INCOMPLETE' : 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail, results: []
+    }, null, 2));
+  }
   const results = [];
   for (const s of SCRIPTS) {
+    const guard = assertNonTrivialAcceptanceScript(s);
+    if (!guard.ok) {
+      return console.log(JSON.stringify({
+        ok: false,
+        gate: 'SECURITY_COMMERCIAL_GATE_V1',
+        error: guard.error,
+        failed_script: s,
+        results,
+      }, null, 2));
+    }
     const r = await runScript(s);
     if (r.missing) {
       return console.log(JSON.stringify({ ok:false, gate:'SECURITY_COMMERCIAL_GATE_V1', error:'SECURITY_GATE_MISSING_ACCEPTANCE_SCRIPT', failed_script:s, results }, null, 2));
@@ -67,7 +122,7 @@ function runScript(script) {
   const totalChecks = results.reduce((n,r)=>n+Object.keys(r.checks||{}).length,0);
   const failedChecks = results.reduce((n,r)=>n+(r.failed_checks||[]).length,0);
   const checks = {
-    iam_scope_gate_passed:true, tenant_isolation_gate_passed:true, approval_execution_separation_gate_passed:true, skill_boundary_gate_passed:true, security_audit_gate_passed:true, fail_safe_manual_takeover_gate_passed:true, runtime_hardening_gate_passed:true, variable_prescription_gate_passed:true, field_memory_gate_passed:true, no_missing_acceptance_scripts:true, no_failed_checks:true
+    iam_scope_gate_passed:true, tenant_isolation_gate_passed:true, approval_execution_separation_gate_passed:true, skill_boundary_gate_passed:true, security_audit_gate_passed:true, fail_safe_manual_takeover_gate_passed:true, runtime_hardening_gate_passed:true, variable_prescription_gate_passed:true, field_memory_gate_passed:true, no_missing_acceptance_scripts:true, no_failed_checks:true, no_static_success_acceptance_scripts:true
   };
   console.log(JSON.stringify({ ok:true, gate:'SECURITY_COMMERCIAL_GATE_V1', summary:{ total_scripts:9, passed_scripts:9, failed_scripts:0, total_checks:totalChecks, failed_checks:failedChecks }, checks, results: results.map(r=>({script:r.script, ok:true, duration_ms:r.duration_ms, checks:r.checks})) }, null, 2));
 })();
