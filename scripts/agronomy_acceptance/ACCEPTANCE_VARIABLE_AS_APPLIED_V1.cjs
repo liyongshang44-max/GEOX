@@ -36,7 +36,74 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createTaskJson = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'create variable action task');
   const act_task_id = String(createTaskJson.act_task_id ?? '').trim();
 
-  const receiptPayload = { tenant_id, project_id, group_id, act_task_id, status: 'executed', observed_parameters: { duration_sec: 1200, duration_min: 20, amount: 44, coverage_percent: 97 }, meta: { variable_execution: { mode: 'VARIABLE_BY_ZONE', zone_applications: [{ zone_id: zoneLow.zone_id, planned_amount: 30, applied_amount: 29, unit: 'mm', coverage_percent: 96, status: 'APPLIED' }, { zone_id: zoneNormal.zone_id, planned_amount: 15, applied_amount: 15, unit: 'mm', coverage_percent: 98, status: 'APPLIED' }] } } };
+  const receiptPayload = {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id,
+    executor_id: {
+      kind: 'script',
+      id: 'acceptance_variable_as_applied_v1',
+      namespace: 'agronomy_acceptance',
+    },
+    execution_time: {
+      start_ts: Date.now() - 1200 * 1000,
+      end_ts: Date.now(),
+    },
+    execution_coverage: {
+      kind: 'field',
+      ref: field_id,
+    },
+    resource_usage: {
+      fuel_l: null,
+      electric_kwh: null,
+      water_l: 440,
+      chemical_ml: null,
+    },
+    logs_refs: [
+      {
+        kind: 'acceptance_log',
+        ref: `variable_receipt_${act_task_id}`,
+      },
+    ],
+    status: 'executed',
+    constraint_check: {
+      violated: false,
+      violations: [],
+    },
+    observed_parameters: {
+      duration_sec: 1200,
+      duration_min: 20,
+      amount: 44,
+      coverage_percent: 97,
+    },
+    meta: {
+      command_id: act_task_id,
+      idempotency_key: `variable-as-applied-${act_task_id}`,
+      variable_execution: {
+        mode: 'VARIABLE_BY_ZONE',
+        zone_applications: [
+          {
+            zone_id: zoneLow.zone_id,
+            planned_amount: 30,
+            applied_amount: 29,
+            unit: 'mm',
+            coverage_percent: 96,
+            status: 'APPLIED',
+          },
+          {
+            zone_id: zoneNormal.zone_id,
+            planned_amount: 15,
+            applied_amount: 15,
+            unit: 'mm',
+            coverage_percent: 98,
+            status: 'APPLIED',
+          },
+        ],
+      },
+    },
+  };
   const receiptJson = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, { method: 'POST', token, body: receiptPayload }), 'submit receipt');
   const receipt_id = String(receiptJson.receipt_id ?? receiptJson.fact_id ?? '').trim();
 
