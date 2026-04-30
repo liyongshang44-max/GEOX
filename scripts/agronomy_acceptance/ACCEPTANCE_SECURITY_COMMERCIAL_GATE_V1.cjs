@@ -92,8 +92,9 @@ function runScript(script) {
   try {
     await assertSecurityAcceptanceTokensLoaded(process.env.BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   } catch (err) {
+    const detail = String(err?.message || err);
     return console.log(JSON.stringify({
-      ok: false, gate: 'SECURITY_COMMERCIAL_GATE_V1', error: 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail: String(err?.message || err), results: []
+      ok: false, gate: 'SECURITY_COMMERCIAL_GATE_V1', error: detail.includes('SECURITY_ACCEPTANCE_TOKEN_FIXTURE_INCOMPLETE') ? 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_INCOMPLETE' : 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail, results: []
     }, null, 2));
   }
   const results = [];
