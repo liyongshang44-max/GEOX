@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActAdminV0, requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireFieldAllowedOr404V1, tenantFromBodyOrAuthV1, tenantFromQueryOrAuthV1 } from "../auth/tenant_scope_v1.js";
 import { createApprovalRequestV1, requireTenantMatchOr404 } from "../domain/approval/approval_request_service_v1.js";
 import {
   createVariablePrescriptionFromRecommendation,
@@ -32,11 +33,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
 
     const body: any = req.body ?? {};
     const recommendation_id = String(body.recommendation_id ?? "").trim();
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id),
-    };
+    const tenant: TenantTriple = tenantFromBodyOrAuthV1(body, auth);
     if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
 
@@ -44,6 +41,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     if (!recFact) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const recFieldId = String(recFact.payload?.field_id ?? "").trim();
     if (!recFieldId) return badRequest(reply, "RECOMMENDATION_FIELD_MISSING");
+    if (!requireFieldAllowedOr404V1(reply, auth, recFieldId)) return;
     if (body.field_id !== undefined && String(body.field_id ?? "").trim() !== recFieldId) {
       return badRequest(reply, "PRESCRIPTION_FIELD_MISMATCH");
     }
@@ -69,11 +67,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
 
     const body: any = req.body ?? {};
     const recommendation_id = String(body.recommendation_id ?? "").trim();
-    const tenant: TenantTriple = {
-      tenant_id: String(body.tenant_id ?? auth.tenant_id),
-      project_id: String(body.project_id ?? auth.project_id),
-      group_id: String(body.group_id ?? auth.group_id),
-    };
+    const tenant: TenantTriple = tenantFromBodyOrAuthV1(body, auth);
     if (!recommendation_id) return badRequest(reply, "MISSING_RECOMMENDATION_ID");
     if (!body.variable_plan) return badRequest(reply, "MISSING_VARIABLE_PLAN");
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
@@ -89,6 +83,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     if (!recFact) return reply.status(404).send({ ok: false, error: "RECOMMENDATION_NOT_FOUND" });
     const recFieldId = String(recFact.payload?.field_id ?? "").trim();
     if (!recFieldId) return badRequest(reply, "RECOMMENDATION_FIELD_MISSING");
+    if (!requireFieldAllowedOr404V1(reply, auth, recFieldId)) return;
     if (body.field_id !== undefined && String(body.field_id ?? "").trim() !== recFieldId) {
       return badRequest(reply, "PRESCRIPTION_FIELD_MISMATCH");
     }
@@ -129,11 +124,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const auth = requireAoActAnyScopeV0(req, reply, ["prescription.read", "ao_act.index.read"]);
     if (!auth) return;
     const query: any = (req as any).query ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(query.tenant_id ?? auth.tenant_id),
-      project_id: String(query.project_id ?? auth.project_id),
-      group_id: String(query.group_id ?? auth.group_id),
-    };
+    const tenant: TenantTriple = tenantFromQueryOrAuthV1(query, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const prescription_id = String(params.prescription_id ?? "").trim();
@@ -141,6 +132,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
 
     const prescription = await getPrescriptionById(pool, prescription_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
+    if (!requireFieldAllowedOr404V1(reply, auth, String((prescription as any)?.field_id ?? ""))) return;
     return reply.send({ ok: true, prescription });
   });
 
@@ -148,11 +140,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
     const auth = requireAoActAnyScopeV0(req, reply, ["prescription.read", "ao_act.index.read"]);
     if (!auth) return;
     const query: any = (req as any).query ?? {};
-    const tenant: TenantTriple = {
-      tenant_id: String(query.tenant_id ?? auth.tenant_id),
-      project_id: String(query.project_id ?? auth.project_id),
-      group_id: String(query.group_id ?? auth.group_id),
-    };
+    const tenant: TenantTriple = tenantFromQueryOrAuthV1(query, auth);
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     const params: any = (req as any).params ?? {};
     const recommendation_id = String(params.recommendation_id ?? "").trim();
@@ -160,6 +148,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
 
     const prescription = await getPrescriptionByRecommendationId(pool, recommendation_id, tenant);
     if (!prescription) return reply.status(404).send({ ok: false, error: "PRESCRIPTION_NOT_FOUND" });
+    if (!requireFieldAllowedOr404V1(reply, auth, String((prescription as any)?.field_id ?? ""))) return;
     return reply.send({ ok: true, prescription });
   });
 
