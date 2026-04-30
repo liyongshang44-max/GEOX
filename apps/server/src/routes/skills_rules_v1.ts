@@ -28,6 +28,7 @@ export function registerSkillRulesV1Routes(app: FastifyInstance, pool: Pool): vo
       device_type?: string;
       trigger_stage?: string;
       bind_target?: string;
+      scope_type?: string;
       fact_type?: string;
       enabled_only?: string;
     };

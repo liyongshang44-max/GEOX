@@ -8,3 +8,8 @@
 - Compose: commercial_v0 不等于 production；delivery overlay 仅资源，不代表安全达标。
 - healthz 暴露 runtime_security 检查项与错误列表。
 - 验收命令：运行 runtime/audit/fail-safe/variable/field-memory 安全脚本。
+
+## Acceptance fixture vs production source
+
+`security_acceptance_tokens.json` is only for test/dev acceptance.
+Staging/production must not use acceptance fixture and must use production token secret sources.
