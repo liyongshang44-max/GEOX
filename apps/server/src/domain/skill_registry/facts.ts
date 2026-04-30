@@ -11,6 +11,7 @@ import {
   SkillDefinitionScopeSchema,
 } from "@geox/contracts";
 import { recordMemoryV1 } from "../../services/field_memory_service.js";
+import { assertSkillOutputBoundaryV1 } from "../../auth/skill_security_v1.js";
 
 const SKILL_CATEGORY_VALUES = ["AGRONOMY", "OPS", "CONTROL", "OBSERVABILITY", "DEVICE", "ACCEPTANCE"] as const;
 const SKILL_STATUS_VALUES = ["DRAFT", "ACTIVE", "DISABLED", "DEPRECATED"] as const;
@@ -78,6 +79,10 @@ const SkillBindingPayloadSchema = TenantTripleSchema.extend({
   device_type: DeviceTypeSchema.nullable().optional(),
   priority: z.number().int().default(0),
   config_patch: z.record(z.any()).optional(),
+  changed_by_actor_id: z.string().min(1).optional(),
+  changed_by_token_id: z.string().min(1).optional(),
+  change_reason: z.string().min(1).optional(),
+  security_boundary_version: z.string().default("skill_safety_boundary_v1"),
 }).strict();
 
 const SkillRunPayloadSchema = TenantTripleSchema.extend({
@@ -307,7 +312,7 @@ export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: Sk
   return { ...appended, payload };
 }
 
-export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<SkillBindingFactPayload, "binding_id"> & { binding_id?: string }): Promise<{ fact_id: string; occurred_at: string; payload: SkillBindingFactPayload }> {
+export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<SkillBindingFactPayload, "binding_id"> & { binding_id?: string }, opts?: { source?: string; require_security_metadata?: boolean }): Promise<{ fact_id: string; occurred_at: string; payload: SkillBindingFactPayload }> {
   ensureWritableTriggerStage(input.trigger_stage, "skill_binding_v1");
   const payload = SkillBindingPayloadSchema.parse({
     ...input,
@@ -320,7 +325,12 @@ export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<
     crop_code: typeof input.crop_code === "string" ? input.crop_code.trim().toLowerCase() : input.crop_code,
     device_type: normalizeDeviceType(input.device_type),
   });
-  const appended = await appendFact(db, "skill_binding_v1", payload);
+  const source = String(opts?.source ?? "api/skill_registry/v1");
+  const requireMetadata = opts?.require_security_metadata ?? source.includes("/api/");
+  if (requireMetadata && (!payload.changed_by_actor_id || !payload.changed_by_token_id || !payload.change_reason)) {
+    throw new Error("SKILL_CHANGE_REASON_REQUIRED");
+  }
+  const appended = await appendFact(db, "skill_binding_v1", payload, source);
   return { ...appended, payload };
 }
 
@@ -363,6 +373,11 @@ export async function appendSkillTraceFact(
   input: SkillTraceFactPayload
 ): Promise<{ fact_id: string; occurred_at: string; payload: SkillTraceFactPayload }> {
   const payload = SkillTracePayloadSchema.parse(input);
+  assertSkillOutputBoundaryV1({
+    category: String((payload as any).category ?? "OBSERVABILITY"),
+    trigger_stage: String((payload as any).trigger_stage ?? "after_recommendation"),
+    outputs: payload.outputs,
+  });
   const appended = await appendFact(db, "skill_trace_v1", payload);
   return { ...appended, payload };
 }
