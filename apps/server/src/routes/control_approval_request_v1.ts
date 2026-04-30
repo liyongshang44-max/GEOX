@@ -4,7 +4,7 @@ import type { FastifyInstance } from "fastify"; // Fastify instance typing.
 import type { Pool } from "pg"; // Postgres pool typing.
 import { randomUUID } from "node:crypto"; // Generate UUIDs for request/decision ids.
 
-import { requireAoActAnyScopeV0, requireAoActScopeV0, requireAoActAdminV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
+import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Reuse AO-ACT token/scope auth for Sprint 25 approval runtime.
 import {
   assertTenantTriple,
   createApprovalRequestV1,
@@ -23,6 +23,12 @@ function isNonEmptyString(v: unknown): v is string {
 
 function badRequest(reply: any, error: string) {
   return reply.status(400).send({ ok: false, error }); // Deterministic 400 shape.
+}
+function requireApprovalDeciderRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "approver" || role === "admin") return true;
+  reply.status(403).send({ ok: false, error: "ROLE_APPROVER_REQUIRED" });
+  return false;
 }
 
 function parseLimit(v: any, def: number, max: number): number {
@@ -138,10 +144,9 @@ function logLegacyApprovalWarning(req: any, legacyPath: string): void {
 
 async function handleApprovalRequest(req: any, reply: any, pool: Pool) {
   try {
-    const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "approval.decide", "ao_act.task.write"]);
+    const auth = requireAoActAnyScopeV0(req, reply, ["approval.request", "prescription.submit_approval", "ao_act.task.write"]);
     if (!auth) return;
     (req as any).auth = auth;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 
     const body: any = req.body ?? {};
     const tenant = assertTenantTriple(body);
@@ -194,7 +199,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
     const auth = requireAoActAnyScopeV0(req, reply, ["approval.decide", "ao_act.task.write"]);
     if (!auth) return;
     (req as any).auth = auth;
-    if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
+    if (!requireApprovalDeciderRoleV1(reply, auth)) return;
 
     const body: any = req.body ?? {};
     if (!isNonEmptyString(body.request_id)) return badRequest(reply, "MISSING_OR_INVALID:request_id");
@@ -205,9 +210,12 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
       FROM facts
       WHERE (record_json::jsonb->>'type') = 'approval_request_v1'
         AND (record_json::jsonb->'payload'->>'request_id') = $1
+        AND (record_json::jsonb->'payload'->>'tenant_id') = $2
+        AND (record_json::jsonb->'payload'->>'project_id') = $3
+        AND (record_json::jsonb->'payload'->>'group_id') = $4
       ORDER BY occurred_at DESC
       LIMIT 1
-    `, [request_id]);
+    `, [request_id, auth.tenant_id, auth.project_id, auth.group_id]);
     if (!res.rows || res.rows.length < 1) return reply.status(404).send({ ok: false, error: "NOT_FOUND" });
 
     const rec = parseRecordJsonMaybe(res.rows[0].record_json);
@@ -221,6 +229,11 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
     };
     if (!requireTenantMatchOr404(auth, tenant, reply)) return;
     if (String(payload.status ?? "") !== "PENDING") return badRequest(reply, "REQUEST_NOT_PENDING");
+    const requesterActorId = String(payload?.requested_by_actor_id ?? payload?.issuer?.id ?? payload?.created_by_actor_id ?? payload?.actor_id ?? "").trim();
+    const requesterTokenId = String(payload?.requested_by_token_id ?? payload?.created_by_token_id ?? "").trim();
+    if ((requesterActorId && requesterActorId === auth.actor_id) || (requesterTokenId && requesterTokenId === auth.token_id)) {
+      return reply.status(403).send({ ok: false, error: "APPROVAL_SELF_APPROVAL_DENIED" });
+    }
 
     const proposal = payload.proposal ?? null;
     if (!proposal) return reply.status(500).send({ ok: false, error: "REQUEST_RECORD_INVALID" });
@@ -248,7 +261,11 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
     );
 
     const decision_id = `apd_${randomUUID().replace(/-/g, "")}`;
+    const allowAutoTaskIssue = Boolean(proposal?.meta?.allow_auto_task_issue === true);
     const skipAutoTaskIssue = Boolean(proposal?.meta?.skip_auto_task_issue === true);
+    if (!skipAutoTaskIssue && !allowAutoTaskIssue) {
+      return reply.status(403).send({ ok: false, error: "AUTO_TASK_ISSUE_NOT_ALLOWED" });
+    }
     if (skipAutoTaskIssue) {
       const decision_fact_id = randomUUID();
       const decision_record = {
@@ -265,6 +282,7 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
           actor_id: auth.actor_id,
           token_id: auth.token_id,
           created_at_ts: Date.now(),
+          auto_task_issued: false,
         }
       };
       await pool.query(
@@ -328,7 +346,8 @@ async function handleApprovalApprove(req: any, reply: any, pool: Pool) {
         ao_act_fact_id: ao_fact_id,
         actor_id: auth.actor_id,
         token_id: auth.token_id,
-        created_at_ts
+        created_at_ts,
+        auto_task_issued: true
       }
     };
 
