@@ -26,10 +26,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   if (!appr.ok) appr = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token, body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE' } });
   requireOk(appr, 'approve');
 
-  const task = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id: `opl_var_roi_${Date.now()}`, device_id } }), 'task');
+  const operation_plan_id = `opl_var_roi_${Date.now()}`;
+  const task = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'task');
   const act_task_id = String(task.act_task_id ?? '').trim();
 
-  const operation_plan_id = `opl_var_roi_${Date.now()}`;
   const receiptPayload = {
     tenant_id,
     project_id,
@@ -77,7 +77,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const checks = {
     variable_as_applied_ready: String(asExecutedResp.as_applied?.application?.mode ?? '') === 'VARIABLE_BY_ZONE',
-    variable_acceptance_passed: String(acceptance.result ?? '').toUpperCase() === 'PASSED',
+    variable_acceptance_passed: String(acceptance.verdict ?? '').toUpperCase() === 'PASS',
     roi_ledger_created: roiResp.ok === true && ledgers.length > 0,
     roi_ledger_idempotent: roiAgain.ok === true && roiAgain.idempotent === true,
     variable_water_saved_created: Boolean(vws),

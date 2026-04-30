@@ -26,10 +26,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   if (!appr.ok) appr = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token, body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE' } });
   requireOk(appr, 'approve');
 
-  const task = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id: `opl_var_accept_${Date.now()}`, device_id } }), 'task');
+  const operation_plan_id = `opl_var_accept_${Date.now()}`;
+  const task = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'task');
   const act_task_id = String(task.act_task_id ?? '').trim();
 
-  const operation_plan_id = `opl_var_accept_${Date.now()}`;
   const mkReceipt = (coverageLow) => ({
     tenant_id,
     project_id,
@@ -75,14 +75,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   const openapi = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token });
   const checks = {
-    variable_acceptance_passed: String(evalPass.verdict ?? '').toUpperCase() === 'PASSED',
+    variable_acceptance_passed: String(evalPass.verdict ?? '').toUpperCase() === 'PASS',
     variable_acceptance_skill_used: String(acceptancePass.acceptance_skill_id ?? '') === 'variable_irrigation_acceptance_v1',
     pass_explanation_codes_present: Array.isArray(acceptancePass.explanation_codes) && acceptancePass.explanation_codes.includes('VARIABLE_IRRIGATION_APPLICATION_OK'),
     zone_application_count_metric_present: typeof acceptancePass.metrics?.zone_application_count === 'number',
     zone_completion_rate_metric_present: typeof acceptancePass.metrics?.zone_completion_rate === 'number',
     avg_zone_coverage_metric_present: typeof acceptancePass.metrics?.avg_zone_coverage_percent === 'number',
     max_zone_deviation_metric_present: typeof acceptancePass.metrics?.max_zone_deviation_percent === 'number',
-    coverage_failure_rejected: String(evalFail.verdict ?? '').toUpperCase() === 'FAILED',
+    coverage_failure_rejected: String(evalFail.verdict ?? '').toUpperCase() === 'FAIL',
     failure_explanation_codes_present: Array.isArray(acceptanceFail.explanation_codes) && acceptanceFail.explanation_codes.includes('ZONE_COVERAGE_BELOW_THRESHOLD'),
     ordinary_irrigation_acceptance_not_broken: String(ordinary.fact_id ?? '').length > 0 && String(acceptancePass.acceptance_skill_id ?? '') === 'variable_irrigation_acceptance_v1',
     openapi_contains_variable_acceptance_metrics: Boolean(openapi.ok && openapi.json?.components?.schemas?.VariableAcceptanceMetricsV1 && openapi.json?.components?.schemas?.VariableAcceptanceExplanationCodeV1),
