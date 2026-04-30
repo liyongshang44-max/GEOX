@@ -48,6 +48,12 @@ function requireTenantMatchOr404(
   }
   return true;
 }
+function requireAcceptanceEvaluateRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator") return true;
+  reply.status(403).send({ ok: false, error: "ACCEPTANCE_EVALUATE_ROLE_DENIED" });
+  return false;
+}
 
 function normalizeRecordJson(v: unknown): any {
   if (v === null || v === undefined) return null;
@@ -296,8 +302,9 @@ function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: 
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.read", "ao_act.index.read"]);
+      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.evaluate", "ao_act.task.write"]);
       if (!auth) return;
+      if (!requireAcceptanceEvaluateRoleV1(reply, auth)) return;
 
       const body = EvaluateRequestSchema.parse((req as any).body ?? {});
       const tenant: TenantTriple = {

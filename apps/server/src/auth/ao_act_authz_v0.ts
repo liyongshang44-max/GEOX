@@ -47,6 +47,12 @@ export type AoActScopeV0 =
   | "field.zone.read"
   | "security.audit.read"
   | "security.admin"
+  | "skill.read"
+  | "skill.binding.write"
+  | "skill.definition.write"
+  | "skill.run.write"
+  | "skill.trace.write"
+  | "skill.admin"
 ;
 
 export type AoActRoleV0 = AuthRole | "executor";
