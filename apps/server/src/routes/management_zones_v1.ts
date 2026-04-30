@@ -1,50 +1,19 @@
-import type { FastifyInstance, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
+import {
+  requireFieldAllowedOr404V1,
+  requireTenantMatchOr404V1,
+  requireTenantScopeV1,
+  tenantFromBodyOrAuthV1,
+  tenantFromQueryOrAuthV1,
+} from "../auth/tenant_scope_v1.js";
 import {
   getManagementZoneByIdV1,
   listManagementZonesByFieldV1,
   upsertManagementZoneV1,
 } from "../domain/field/management_zone_v1.js";
-
-type TenantTriple = {
-  tenant_id: string;
-  project_id: string;
-  group_id: string;
-};
-
-function tenantFromBody(body: any): TenantTriple {
-  return {
-    tenant_id: String(body?.tenant_id ?? "").trim(),
-    project_id: String(body?.project_id ?? "").trim(),
-    group_id: String(body?.group_id ?? "").trim(),
-  };
-}
-
-function tenantFromQuery(query: any): TenantTriple {
-  return {
-    tenant_id: String(query?.tenant_id ?? "").trim(),
-    project_id: String(query?.project_id ?? "").trim(),
-    group_id: String(query?.group_id ?? "").trim(),
-  };
-}
-
-function requireTenantScope(reply: FastifyReply, tenant: TenantTriple): boolean {
-  if (!tenant.tenant_id || !tenant.project_id || !tenant.group_id) {
-    reply.status(400).send({ ok: false, error: "MISSING_TENANT_SCOPE" });
-    return false;
-  }
-  return true;
-}
-
-function requireTenantMatchOr404(reply: FastifyReply, auth: TenantTriple, tenant: TenantTriple): boolean {
-  if (auth.tenant_id !== tenant.tenant_id || auth.project_id !== tenant.project_id || auth.group_id !== tenant.group_id) {
-    reply.status(404).send({ ok: false, error: "NOT_FOUND" });
-    return false;
-  }
-  return true;
-}
 
 export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/fields/:field_id/zones", async (req, reply) => {
@@ -58,9 +27,10 @@ export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool
       const field_id = String(params?.field_id ?? "").trim();
       if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
 
-      const tenant = tenantFromBody(body);
-      if (!requireTenantScope(reply, tenant)) return;
-      if (!requireTenantMatchOr404(reply, auth, tenant)) return;
+      const tenant = tenantFromBodyOrAuthV1(body, auth);
+      if (!requireTenantScopeV1(reply, tenant)) return;
+      if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, field_id)) return;
 
       const zone = await upsertManagementZoneV1(pool, {
         zone_id: body?.zone_id,
@@ -104,9 +74,10 @@ export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool
       const field_id = String(params?.field_id ?? "").trim();
       if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
 
-      const tenant = tenantFromQuery(query);
-      if (!requireTenantScope(reply, tenant)) return;
-      if (!requireTenantMatchOr404(reply, auth, tenant)) return;
+      const tenant = tenantFromQueryOrAuthV1(query, auth);
+      if (!requireTenantScopeV1(reply, tenant)) return;
+      if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, field_id)) return;
 
       const items = await listManagementZonesByFieldV1(pool, {
         ...tenant,
@@ -132,9 +103,10 @@ export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool
       if (!field_id) return reply.status(400).send({ ok: false, error: "MISSING_FIELD_ID" });
       if (!zone_id) return reply.status(400).send({ ok: false, error: "MISSING_ZONE_ID" });
 
-      const tenant = tenantFromQuery(query);
-      if (!requireTenantScope(reply, tenant)) return;
-      if (!requireTenantMatchOr404(reply, auth, tenant)) return;
+      const tenant = tenantFromQueryOrAuthV1(query, auth);
+      if (!requireTenantScopeV1(reply, tenant)) return;
+      if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, field_id)) return;
 
       const zone = await getManagementZoneByIdV1(pool, {
         ...tenant,
