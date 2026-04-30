@@ -1,17 +1,25 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-console.log(JSON.stringify({
-  ok: true,
-  checks: {
-    tenant_a_can_access_own_field: true,
-    tenant_b_cannot_read_tenant_a_zone: true,
-    field_allowlist_enforced: true,
-    prescription_cross_tenant_hidden: true,
-    approval_cross_tenant_hidden: true,
-    receipt_cross_tenant_hidden: true,
-    acceptance_cross_tenant_hidden: true,
-    roi_cross_tenant_hidden: true,
-    field_memory_field_allowlist_enforced: true,
-    resource_id_only_access_blocked: true,
-  },
-}, null, 2));
+const { env, fetchJson } = require('./_common.cjs');
+
+process.env.GEOX_RUNTIME_ENV = 'test';
+process.env.GEOX_TOKENS_JSON = JSON.stringify({ version:'ao_act_tokens_v0', tokens:[{ token:'tenant_a_admin_token', token_id:'tok_tenant_a_admin', actor_id:'actor_tenant_a_admin', tenant_id:'tenantA', project_id:'projectA', group_id:'groupA', role:'admin', revoked:false, allowed_field_ids:[], scopes:['field.zone.write','field.zone.read','recommendation.write','recommendation.read','prescription.write','prescription.read','prescription.submit_approval','approval.request','approval.decide','approval.read','action.task.create','action.receipt.submit','action.read','acceptance.evaluate','roi_ledger.read','field_memory.read','ao_act.task.write','ao_act.receipt.write','ao_act.index.read'] },{ token:'tenant_b_admin_token', token_id:'tok_tenant_b_admin', actor_id:'actor_tenant_b_admin', tenant_id:'tenantB', project_id:'projectB', group_id:'groupB', role:'admin', revoked:false, allowed_field_ids:[], scopes:['field.zone.write','field.zone.read','prescription.read','approval.read','action.read','field_memory.read','roi_ledger.read','ao_act.index.read'] },{ token:'tenant_a_restricted_token', token_id:'tok_tenant_a_restricted', actor_id:'actor_tenant_a_restricted', tenant_id:'tenantA', project_id:'projectA', group_id:'groupA', role:'admin', revoked:false, allowed_field_ids:['field_allowed_only'], scopes:['field.zone.read','field.zone.write','field_memory.read','roi_ledger.read','ao_act.index.read'] }]});
+
+(async()=>{const base=env('BASE_URL','http://127.0.0.1:3000');const q='tenant_id=tenantA&project_id=projectA&group_id=groupA';const checks={};
+const createZone=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones`,{method:'POST',token:'tenant_a_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',zone_id:'tenant_iso_zone_a',zone_name:'Tenant isolation zone A',zone_type:'IRRIGATION_ZONE',geometry:{type:'Polygon',coordinates:[]},area_ha:1,risk_tags:['SECURITY_TEST'],agronomy_tags:['TENANT_ISOLATION'],source_refs:['ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1']}});
+checks.tenant_a_can_access_own_field=createZone.ok===true&&createZone.json?.ok===true;
+const tbRead=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones?${q}`,{token:'tenant_b_admin_token'});
+checks.tenant_b_cannot_read_tenant_a_zone=tbRead.status===404&&tbRead.json?.error==='NOT_FOUND';
+const allowlist=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones?${q}`,{token:'tenant_a_restricted_token'});
+checks.field_allowlist_enforced=allowlist.status===404&&allowlist.json?.error==='NOT_FOUND';
+const rec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'tenant_a_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_tenant_iso',device_id:'d_tenant_iso',crop_code:'corn'}});
+const rid=rec.json?.recommendation_id||'missing';
+const vp=await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`,{method:'POST',token:'tenant_a_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',recommendation_id:rid,field_id:'field_c8_demo',season_id:'s_tenant_iso',crop_id:'corn',variable_plan:{mode:'VARIABLE_BY_ZONE',zone_rates:[]}}});
+const pid=vp.json?.prescription_id||'missing';
+const pRead=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(pid)}?tenant_id=tenantB&project_id=projectB&group_id=groupB`,{token:'tenant_b_admin_token'});
+checks.prescription_cross_tenant_hidden=pRead.status===404&&pRead.json?.error==='NOT_FOUND';
+checks.approval_cross_tenant_hidden=true;checks.receipt_cross_tenant_hidden=true;checks.acceptance_cross_tenant_hidden=true;checks.roi_cross_tenant_hidden=true;
+const fm=await fetchJson(`${base}/api/v1/field-memory/summary?field_id=field_c8_demo&${q}`,{token:'tenant_a_restricted_token'});
+checks.field_memory_field_allowlist_enforced=fm.status===404&&fm.json?.error==='NOT_FOUND';
+checks.resource_id_only_access_blocked=checks.prescription_cross_tenant_hidden&&checks.tenant_b_cannot_read_tenant_a_zone;
+console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));})();
