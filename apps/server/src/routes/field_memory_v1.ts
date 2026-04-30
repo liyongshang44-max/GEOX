@@ -3,6 +3,11 @@ import type { Pool } from "pg";
 import { z } from "zod";
 
 import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
+import {
+  requireFieldAllowedOr404V1,
+  requireTenantMatchOr404V1,
+  tenantFromQueryOrAuthV1,
+} from "../auth/tenant_scope_v1.js";
 
 const FieldMemoryQuerySchema = z.object({
   field_id: z.string().min(1),
@@ -46,6 +51,9 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
       if (!auth) return;
 
       const query = FieldMemoryQuerySchema.parse((req as any).query ?? {});
+      const tenant = tenantFromQueryOrAuthV1((req as any).query ?? {}, auth);
+      if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, query.field_id)) return;
       const limit = query.limit ?? 50;
 
       const q = await pool.query<FieldMemoryRow>(
@@ -56,7 +64,7 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
             AND field_id = $2
           ORDER BY created_at DESC
           LIMIT $3`,
-        [auth.tenant_id, query.field_id, limit],
+        [tenant.tenant_id, query.field_id, limit],
       );
 
       return reply.send({
@@ -75,6 +83,9 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
       if (!auth) return;
 
       const query = FieldMemoryQuerySchema.parse((req as any).query ?? {});
+      const tenant = tenantFromQueryOrAuthV1((req as any).query ?? {}, auth);
+      if (!requireTenantMatchOr404V1(reply, auth, tenant)) return;
+      if (!requireFieldAllowedOr404V1(reply, auth, query.field_id)) return;
       const limit = query.limit ?? 100;
 
       const q = await pool.query<FieldMemoryRow>(
@@ -85,7 +96,7 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
             AND field_id = $2
           ORDER BY created_at DESC
           LIMIT $3`,
-        [auth.tenant_id, query.field_id, limit],
+        [tenant.tenant_id, query.field_id, limit],
       );
 
       const rows = q.rows ?? [];
