@@ -11,6 +11,7 @@ import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
 import { recordMemoryV1 } from "../services/field_memory_service.js";
+import { createFailSafeEventV1, createManualTakeoverV1 } from "../services/fail_safe_service_v1.js";
 
 const FACT_SOURCE_ACCEPTANCE_V1 = "api/v1/acceptance";
 
@@ -462,6 +463,11 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
           summary: `Acceptance passed for task ${body.act_task_id}`,
         }).catch(() => undefined);
+      }
+      if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL") {
+        const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_INCONCLUSIVE";
+        const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, field_id: field_id ?? null, trigger_type: trigger, severity: acceptanceRecord.payload.verdict === "FAIL" ? "HIGH" : "MEDIUM", reason_code: trigger, blocked_action: "acceptance.evaluate", source: "api/v1/acceptance/evaluate" });
+        await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, act_task_id: body.act_task_id, field_id: field_id ?? null, reason_code: trigger });
       }
 
       return reply.send({

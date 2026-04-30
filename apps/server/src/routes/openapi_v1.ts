@@ -70,6 +70,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             result: { $ref: "#/components/schemas/SecurityAuditResultV1" }
           }
         },
+        FailSafeEventV1: { type: "object", properties: { fail_safe_event_id: { type: "string" }, trigger_type: { type: "string" }, severity: { type: "string" }, status: { type: "string" } } },
+        ManualTakeoverV1: { type: "object", properties: { takeover_id: { type: "string" }, fail_safe_event_id: { type: "string" }, status: { type: "string" } } },
         DeviceRegistrationRequest: {
           type: "object",
           required: ["device_id", "device_mode", "device_template"],
