@@ -33,6 +33,8 @@ import { loadManualOperationByCommandId } from "../domain/controlplane/task_serv
 import { actionReceiptRequestSchemaV1, validateActionReceiptMetaV1 } from "../contracts/action_receipt_v1.js";
 import { getPrescriptionById } from "../domain/prescription/prescription_contract_v1.js";
 import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
+import { createFailSafeEventV1, createManualTakeoverV1, evaluateDeviceDispatchSafetyV1, findOpenFailSafeForDeviceV1 } from "../services/fail_safe_service_v1.js";
+import { recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -124,6 +126,18 @@ type TenantTripleV0 = { // Sprint 22: hard isolation scope triple used across AO
   project_id: string; // Project isolation field; MUST be present on token + request.
   group_id: string; // Group isolation field; MUST be present on token + request.
 }; // End TenantTripleV0.
+function requireActionTaskCreateRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator") return true;
+  reply.status(403).send({ ok: false, error: "ACTION_TASK_CREATE_ROLE_DENIED" });
+  return false;
+}
+function requireActionReceiptSubmitRoleV1(reply: any, auth: any): boolean {
+  const role = String(auth?.role ?? "").trim();
+  if (role === "admin" || role === "operator" || role === "executor") return true;
+  reply.status(403).send({ ok: false, error: "ACTION_RECEIPT_SUBMIT_ROLE_DENIED" });
+  return false;
+}
 
 function isFeatureEnabledV0(envName: string, defaultEnabled: boolean): boolean {
   const raw = String(process.env[envName] ?? "").trim().toLowerCase();
@@ -679,6 +693,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
@@ -740,6 +755,18 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
       const approvalStatus = await loadLatestApprovalRequestStatusV0(pool, body.approval_request_id, tenant);
       if (approvalStatus !== "APPROVED") {
         return reply.status(403).send({ ok: false, error: "APPROVAL_REQUEST_NOT_APPROVED" });
+      }
+      const deviceId = String((body.meta as any)?.device_id ?? "").trim();
+      if (deviceId) {
+        const existingFs = await findOpenFailSafeForDeviceV1(pool, { ...tenant, device_id: deviceId });
+        if (existingFs) return reply.status(409).send({ ok: false, error: "FAIL_SAFE_OPEN", fail_safe_event_id: existingFs.fail_safe_event_id });
+        const safety = await evaluateDeviceDispatchSafetyV1(pool, { ...tenant, device_id: deviceId });
+        if (!safety.safe) {
+          const fs = await createFailSafeEventV1(pool, { ...tenant, device_id: deviceId, trigger_type: safety.reason_code, severity: "HIGH", reason_code: safety.reason_code, blocked_action: "action.task.create", source: "api/v1/actions/task" });
+          await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN") });
+          await recordSecurityAuditEventV1(pool, { ...tenant, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, action: "fail_safe.triggered", target_type: "device", target_id: deviceId, result: "ALLOW", reason: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN"), source: "api/v1/actions/task" });
+          return reply.status(409).send({ ok: false, error: "FAIL_SAFE_TRIGGERED", fail_safe_event_id: fs.fail_safe_event_id, manual_takeover_required: true, reason_code: safety.reason_code });
+        }
       }
 
       const schemaKeys = body.parameter_schema.keys.map((k) => ({
@@ -849,6 +876,7 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
       if (!auth) return;
+      if (!requireActionReceiptSubmitRoleV1(reply, auth)) return;
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
@@ -878,6 +906,11 @@ if (body.execution_time.start_ts > body.execution_time.end_ts) {
       
 const task = await findAoActTaskByActTaskId(pool, body.act_task_id, tenant);
 if (!task) return reply.status(400).send({ ok: false, error: "UNKNOWN_TASK" });
+if (["FAILED","ERROR"].includes(String(body.status ?? "").toUpperCase())) {
+  const fs = await createFailSafeEventV1(pool, { ...tenant, act_task_id: body.act_task_id, trigger_type: "EXECUTION_FAILED", severity: "HIGH", reason_code: "EXECUTION_FAILED", blocked_action: "acceptance.evaluate", source: "api/v1/actions/receipt" });
+  await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, act_task_id: body.act_task_id, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: "EXECUTION_FAILED" });
+  await recordSecurityAuditEventV1(pool, { ...tenant, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, action: "fail_safe.triggered", target_type: "act_task", target_id: body.act_task_id, result: "ALLOW", reason: "EXECUTION_FAILED", source: "api/v1/actions/receipt" });
+}
 const taskActionType = String(task?.payload?.action_type ?? "").trim().toUpperCase();
 const expectedEvidenceRequirements = Array.isArray(task?.payload?.meta?.expected_evidence_requirements)
   ? (task.payload.meta.expected_evidence_requirements as unknown[]).map((x) => String(x)).filter((x) => x.length > 0)
@@ -1256,6 +1289,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
 
       const body = z.object({
         tenant_id: z.string().min(1),
