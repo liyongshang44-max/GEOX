@@ -13,6 +13,15 @@ const GATE_SCRIPTS = [
   'ACCEPTANCE_VARIABLE_PRESCRIPTION_V1.cjs',
   'ACCEPTANCE_FIELD_MEMORY_V1.cjs',
 ];
+const securityAcceptanceScripts = [
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_IAM_SCOPE_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_SKILL_BOUNDARY_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_AUDIT_LOG_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_FAIL_SAFE_MANUAL_TAKEOVER_V1.cjs',
+  'scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_RUNTIME_HARDENING_V1.cjs',
+];
 
 const mustExist = {
   fieldMemory: [
@@ -100,6 +109,27 @@ function runGate(script) {
   });
 }
 
+function detectStaticSuccessScript(relativePath) {
+  const full = path.join(REPO_ROOT, relativePath);
+  if (!fs.existsSync(full)) return { missing: true, static_success: false };
+
+  const text = fs.readFileSync(full, 'utf8');
+  const staticSuccess =
+    /console\.log\s*\(\s*JSON\.stringify\s*\(\s*\{\s*ok\s*:\s*true/s.test(text);
+
+  const hasRealAction =
+    text.includes('fetchJson(') ||
+    text.includes('spawn(') ||
+    text.includes('pool.query(') ||
+    text.includes('GET /') ||
+    text.includes('POST /');
+
+  return {
+    missing: false,
+    static_success: staticSuccess && !hasRealAction,
+  };
+}
+
 async function getOpenApiSnapshot() {
   const res = await fetch(`${BASE_URL}/api/v1/openapi.json`);
   if (!res.ok) throw new Error(`OPENAPI_FETCH_FAILED_${res.status}`);
@@ -127,6 +157,7 @@ async function getOpenApiSnapshot() {
   const prodCodeText = findText(path.join(REPO_ROOT, 'apps/server/src'), ['VARIABLE_BY_ZONE', 'variable_irrigation_acceptance_v1', 'VARIABLE_WATER_SAVED', 'ZONE_COMPLETION_RATE', 'VARIABLE_EXECUTION_RELIABILITY', 'GEOX_ALLOWED_ORIGINS', 'GEOX_RUNTIME_ENV', 'AUTH_PRODUCTION_TOKEN_SOURCE_INVALID']);
 
   const securityEverywhere = findText(REPO_ROOT, ['security_audit_event_v1', 'fail_safe_event_v1', 'manual_takeover_v1']);
+  const staticSecurityAcceptanceScripts = securityAcceptanceScripts.map((p) => ({ path: p, ...detectStaticSuccessScript(p) }));
 
   let openapi = {};
   let openapiError = null;
@@ -155,7 +186,7 @@ async function getOpenApiSnapshot() {
   fs.writeFileSync(path.join(evidenceDir, 'variable_prescription_result.json'), JSON.stringify(gateResults[1] || {}, null, 2));
   fs.writeFileSync(path.join(evidenceDir, 'field_memory_result.json'), JSON.stringify(gateResults[2] || {}, null, 2));
   fs.writeFileSync(path.join(evidenceDir, 'openapi_contract_snapshot.json'), JSON.stringify({ openapi_error: openapiError, schemas: Object.keys(schemas), paths: Object.keys(paths) }, null, 2));
-  fs.writeFileSync(path.join(evidenceDir, 'repo_static_checks.json'), JSON.stringify({ staticChecks, migrationText, prodCodeText, securityEverywhere, legacyViolations }, null, 2));
+  fs.writeFileSync(path.join(evidenceDir, 'repo_static_checks.json'), JSON.stringify({ staticChecks, migrationText, prodCodeText, securityEverywhere, legacyViolations, staticSecurityAcceptanceScripts }, null, 2));
 
   const rootPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
   const serverPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'apps/server/package.json'), 'utf8'));
@@ -170,6 +201,8 @@ async function getOpenApiSnapshot() {
     field_memory_files_present: staticChecks.fieldMemoryFiles,
     variable_prescription_files_present: staticChecks.variablePrescriptionFiles,
     security_files_present: staticChecks.securityFiles && staticChecks.securityDocs,
+    no_static_security_acceptance_scripts:
+      securityAcceptanceScripts.every((p) => !detectStaticSuccessScript(p).static_success),
     field_memory_migration_present: migrationText.field_memory_v1,
     management_zone_migration_present: migrationText.management_zone_v1,
     security_audit_migration_present: migrationText.security_audit_event_v1,
