@@ -1,15 +1,9 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 const { env, fetchJson } = require('./_common.cjs');
-process.env.GEOX_RUNTIME_ENV='test';
-process.env.GEOX_TOKENS_JSON=JSON.stringify({version:'ao_act_tokens_v0',tokens:[
-{token:'agronomist_token',token_id:'t1',actor_id:'a1',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'agronomist',revoked:false,allowed_field_ids:[],scopes:['field.zone.write','recommendation.write','prescription.write','prescription.submit_approval','approval.request']},
-{token:'approver_token',token_id:'t2',actor_id:'a2',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'approver',revoked:false,allowed_field_ids:[],scopes:['approval.decide','approval.read']},
-{token:'operator_token',token_id:'t3',actor_id:'a3',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'operator',revoked:false,allowed_field_ids:[],scopes:['action.task.create','action.read']},
-{token:'executor_token',token_id:'t4',actor_id:'a4',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'executor',revoked:false,allowed_field_ids:[],scopes:['action.receipt.submit']}
-,{token:'self_approval_admin_token',token_id:'t7',actor_id:'a7',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'admin',revoked:false,allowed_field_ids:[],scopes:['field.zone.write','recommendation.write','prescription.write','prescription.submit_approval','approval.request','approval.decide']}
-]});
+const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance_tokens.cjs');
 (async()=>{const base=env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001'); const checks={};
+try { await assertSecurityAcceptanceTokensLoaded(base); } catch (err) { console.log(JSON.stringify({ ok:false, error:'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail:String(err?.message||err) }, null, 2)); process.exit(1); }
 await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',zone_id:'sep_zone',zone_name:'sep',zone_type:'IRRIGATION_ZONE',geometry:{type:'Polygon',coordinates:[]},area_ha:1,risk_tags:['SECURITY_TEST'],agronomy_tags:['SEP'],source_refs:['ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1']}});
 const rec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_sep',device_id:'dev_sep',crop_code:'corn'}});
 checks.agronomist_generate_allowed=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(rec.json?.error);

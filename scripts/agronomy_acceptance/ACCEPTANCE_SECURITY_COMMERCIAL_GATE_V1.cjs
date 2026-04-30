@@ -3,6 +3,7 @@
 const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance_tokens.cjs');
 
 const BASE_DIR = __dirname;
 const SCRIPTS = [
@@ -88,6 +89,13 @@ function runScript(script) {
 }
 
 (async () => {
+  try {
+    await assertSecurityAcceptanceTokensLoaded(process.env.BASE_URL || process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
+  } catch (err) {
+    return console.log(JSON.stringify({
+      ok: false, gate: 'SECURITY_COMMERCIAL_GATE_V1', error: 'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail: String(err?.message || err), results: []
+    }, null, 2));
+  }
   const results = [];
   for (const s of SCRIPTS) {
     const guard = assertNonTrivialAcceptanceScript(s);

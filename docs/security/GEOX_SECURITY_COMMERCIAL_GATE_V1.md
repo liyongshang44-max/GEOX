@@ -35,3 +35,16 @@ Security Commercial Gate is the release gate for Step10 A-H.
 
 ## Local command
 node scripts/agronomy_acceptance/ACCEPTANCE_SECURITY_COMMERCIAL_GATE_V1.cjs
+
+## Security acceptance token fixture
+
+Security Commercial Gate requires the server process to be started with:
+
+```powershell
+$env:GEOX_RUNTIME_ENV="test"
+$env:GEOX_TOKENS_FILE="config/auth/security_acceptance_tokens.json"
+```
+
+For Docker/container runtime, mount the file into server container and point `GEOX_TOKENS_FILE` to in-container path.
+
+Acceptance scripts do not mutate server environment variables; they only send Bearer tokens to running server.

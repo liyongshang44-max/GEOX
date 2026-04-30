@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 const { env, fetchJson } = require('./_common.cjs');
-process.env.GEOX_RUNTIME_ENV='test';
-process.env.GEOX_TOKENS_JSON=JSON.stringify({version:'ao_act_tokens_v0',tokens:[{token:'admin_token',token_id:'tok_audit_admin',actor_id:'actor_audit_admin',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'admin',revoked:false,allowed_field_ids:[],scopes:['field.zone.write','recommendation.write','prescription.write','prescription.submit_approval','approval.decide','action.task.create','action.read','security.audit.read']},{token:'client_token',token_id:'tok_audit_client',actor_id:'actor_audit_client',tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',role:'client',revoked:false,allowed_field_ids:[],scopes:['field_memory.read']}]});
+const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance_tokens.cjs');
 (async()=>{const base=env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');const checks={};
+try { await assertSecurityAcceptanceTokensLoaded(base); } catch (err) { console.log(JSON.stringify({ ok:false, error:'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail:String(err?.message||err) }, null, 2)); process.exit(1); }
 const normalTask=await fetchJson(`${base}/api/v1/actions/task`,{method:'POST',token:'admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',device_id:'audit_dev_normal',operation_type:'IRRIGATION',planned_amount:2,unit:'mm'}});
 const normalId=normalTask.json?.act_task_id;
 const normalAudit=await fetchJson(`${base}/api/v1/security/audit-events?action=action.task_created&tenant_id=tenantA&project_id=projectA&group_id=groupA`,{token:'admin_token'});
