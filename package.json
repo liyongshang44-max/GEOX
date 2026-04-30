@@ -42,7 +42,8 @@
     "ci:route-dependency-guard": "node scripts/check_route_dependency_guard.cjs",
     "selfcheck:smoke:pending-acceptance": "node --test scripts/acceptance/__tests__/pending_acceptance_smoke_selfcheck.test.cjs",
     "selfcheck:p1-skill-loop-minimal": "node apps/server/scripts/p1_skill_loop_minimal_selfcheck.mjs",
-    "test:acceptance": "node scripts/acceptance/run_acceptance.cjs"
+    "test:acceptance": "node scripts/acceptance/run_acceptance.cjs",
+    "acceptance:release-audit:evidence-bundle:v1": "node scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs"
   },
   "volta": {
     "node": "20.11.1"

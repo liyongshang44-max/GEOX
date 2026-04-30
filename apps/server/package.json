@@ -24,26 +24,19 @@
   },
   "scripts": {
     "dev": "pnpm -w exec tsx watch apps/server/src/server.ts",
-
     "build": "pnpm -w exec tsc -p apps/server/tsconfig.json && node scripts/write_dist_entries.cjs",
-
     "typecheck": "pnpm -w exec tsc --noEmit -p apps/server/tsconfig.json",
-
     "seed:p6.1-real-chain": "pnpm -w exec tsx scripts/generate_p6_1_real_chain_sample.ts",
-
     "test:agronomy:stage5": "node --import tsx --test src/domain/agronomy/stage5.acceptance.test.ts",
-
     "test:stage5:frontend": "pnpm -w exec tsx scripts/stage5_frontend_acceptance.ts",
-
     "test:sensing:closed-loop": "node --import tsx --test src/domain/sensing/fertility_precheck_e2e.test.ts",
-
     "check:smoke:param-keys": "node scripts/check_smoke_parameter_keys.mjs",
     "check:route-dependency-guard": "node ../../scripts/check_route_dependency_guard.cjs",
     "test:evidence-export:s3-smoke": "node scripts/evidence_export_s3_smoke.mjs",
-
     "test:p1:smoke": "node scripts/p1_skill_loop_minimal.mjs",
     "test:p1:acceptance-smoke": "node scripts/p1_skill_loop_acceptance_smoke.mjs",
     "test:p1:selfcheck": "node scripts/p1_skill_loop_minimal_selfcheck.mjs",
-    "test:p1:openapi-selfcheck": "node scripts/p1_3_openapi_alignment_selfcheck.mjs"
+    "test:p1:openapi-selfcheck": "node scripts/p1_3_openapi_alignment_selfcheck.mjs",
+    "acceptance:release-audit:evidence-bundle:v1": "node ../../scripts/agronomy_acceptance/ACCEPTANCE_RELEASE_AUDIT_EVIDENCE_BUNDLE_V1.cjs"
   }
 }
