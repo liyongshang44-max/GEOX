@@ -1,20 +1,30 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-console.log(JSON.stringify({
-  ok: true,
-  checks: {
-    agronomist_can_create_recommendation_and_prescription: true,
-    agronomist_cannot_approve: true,
-    approver_can_approve: true,
-    self_approval_denied: true,
-    approver_cannot_create_action_task: true,
-    operator_can_create_action_task: true,
-    executor_cannot_create_action_task: true,
-    executor_can_submit_receipt: true,
-    approver_cannot_submit_receipt: true,
-    executor_cannot_evaluate_acceptance: true,
-    operator_can_evaluate_acceptance: true,
-    submit_approval_cannot_include_decision: true,
-    variable_prescription_still_passes_with_separated_roles: true,
-  },
-}, null, 2));
+const { env, fetchJson } = require('./_common.cjs');
+const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance_tokens.cjs');
+(async()=>{const base=env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001'); const checks={};
+try { await assertSecurityAcceptanceTokensLoaded(base); } catch (err) { console.log(JSON.stringify({ ok:false, error:'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail:String(err?.message||err) }, null, 2)); process.exit(1); }
+await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',zone_id:'sep_zone',zone_name:'sep',zone_type:'IRRIGATION_ZONE',geometry:{type:'Polygon',coordinates:[]},area_ha:1,risk_tags:['SECURITY_TEST'],agronomy_tags:['SEP'],source_refs:['ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1']}});
+const rec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_sep',device_id:'dev_sep',crop_code:'corn'}});
+checks.agronomist_generate_allowed=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(rec.json?.error);
+const vp=await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',recommendation_id:rec.json?.recommendation_id,field_id:'field_c8_demo',season_id:'s_sep',crop_id:'corn',variable_plan:{mode:'VARIABLE_BY_ZONE',zone_rates:[{zone_id:'sep_zone',operation_type:'IRRIGATION',planned_amount:10,unit:'mm',priority:'HIGH',reason_codes:['SECURITY_TEST'],source_refs:['ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1']}]}}});
+checks.agronomist_prescription_allowed=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(vp.json?.error);
+const pid=vp.json?.prescription_id;
+const sub=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(pid)}/submit-approval`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA'}});
+const arid=sub.json?.approval_request_id;
+const agrDec=await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(arid)}/decide`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',decision:'APPROVE'}}); checks.agronomist_cannot_approve=agrDec.status===403;
+const appDec=await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(arid)}/decide`,{method:'POST',token:'approver_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',decision:'APPROVE'}}); checks.approver_can_approve=appDec.ok===true&&appDec.json?.ok===true;
+const apTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'approver_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id:sub.json?.operation_plan_id,device_id:'dev_sep'}}); checks.approver_cannot_create_task=apTask.status===403;
+const opTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'operator_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id:sub.json?.operation_plan_id,device_id:'dev_sep'}}); checks.operator_can_create_task=opTask.ok===true&&opTask.json?.ok===true;
+const exTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'executor_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id:sub.json?.operation_plan_id,device_id:'dev_sep'}}); checks.executor_cannot_create_task=exTask.status===403;
+const taskId=opTask.json?.act_task_id;
+const exReceipt=await fetchJson(`${base}/api/v1/actions/receipt`,{method:'POST',token:'executor_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',act_task_id:taskId,status:'executed'}}); checks.executor_can_submit_receipt=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(exReceipt.json?.error);
+const exAcceptance=await fetchJson(`${base}/api/v1/acceptance/evaluate`,{method:'POST',token:'executor_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',act_task_id:taskId}}); checks.executor_cannot_acceptance=exAcceptance.status===403;
+const submitDecision=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(pid)}/submit-approval`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',decision:'APPROVE',approve:true,status:'APPROVED',approved_by:'x'}});
+checks.submit_approval_cannot_carry_decision=submitDecision.status===400&&submitDecision.json?.error==='APPROVAL_DECISION_NOT_ALLOWED_ON_SUBMIT';
+const selfRec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'self_approval_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_self',device_id:'dev_self',crop_code:'corn'}});
+const selfVp=await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`,{method:'POST',token:'self_approval_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',recommendation_id:selfRec.json?.recommendation_id,field_id:'field_c8_demo',season_id:'s_self',crop_id:'corn',variable_plan:{mode:'VARIABLE_BY_ZONE',zone_rates:[{zone_id:'sep_zone',operation_type:'IRRIGATION',planned_amount:9,unit:'mm',priority:'HIGH',reason_codes:['SECURITY_TEST'],source_refs:['SELF_APPROVAL_TEST']}]}}});
+const selfSub=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(selfVp.json?.prescription_id)}/submit-approval`,{method:'POST',token:'self_approval_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA'}});
+const selfDec=await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(selfSub.json?.approval_request_id)}/decide`,{method:'POST',token:'self_approval_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',decision:'APPROVE'}});
+checks.self_approval_denied=selfDec.status===403&&selfDec.json?.error==='APPROVAL_SELF_APPROVAL_DENIED';
+console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));})();
