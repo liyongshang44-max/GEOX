@@ -1,9 +1,29 @@
 services:
   server:
     environment:
-      GEOX_RUNTIME_ENV: prod
-      GEOX_EXPORTS_ROOT: /app/runtime/exports/prod
-      GEOX_TOKENS_FILE: /run/secrets/geox_ao_act_tokens_prod.json
+      GEOX_RUNTIME_ENV: production
+      GEOX_TOKENS_FILE: /run/secrets/geox_tokens_json
+      GEOX_ALLOWED_ORIGINS: ${GEOX_ALLOWED_ORIGINS}
+      GEOX_EXECUTION_DEFAULT_DISABLED: "1"
+      GEOX_PUBLIC_BASE_URL: ${GEOX_PUBLIC_BASE_URL}
+      GEOX_APP_SECRET_FILE: /run/secrets/geox_app_secret
+      MQTT_AUTH_REQUIRED: "1"
       NODE_ENV: production
-    ports:
-      - "3201:3000"
+    secrets:
+      - geox_tokens_json
+      - geox_app_secret
+      - postgres_password
+      - minio_root_password
+      - mqtt_password
+
+secrets:
+  geox_tokens_json:
+    file: ./secrets/geox_tokens_json
+  geox_app_secret:
+    file: ./secrets/geox_app_secret
+  postgres_password:
+    file: ./secrets/postgres_password
+  minio_root_password:
+    file: ./secrets/minio_root_password
+  mqtt_password:
+    file: ./secrets/mqtt_password

@@ -6,7 +6,7 @@
 services:  # Compose service overlay root.
   server:  # Overlay server service only (no new semantics).
     environment:  # Inject commercial profile flags into runtime environment.
-      GEOX_SYSTEM_PROFILE: commercial_v0  # System profile marker used for fail-fast governance (Task 5).
+      GEOX_SYSTEM_PROFILE: commercial_v0  # commercial_v0 is not production unless GEOX_RUNTIME_ENV=production/staging.
       GEOX_EXECUTION_DEFAULT_DISABLED: "1"  # Default-safe execution marker (enforced in code in Task 5).
 
   web:  # Web UI service for full-stack commercial demo (Apple I–IV UI).
