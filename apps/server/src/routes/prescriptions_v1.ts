@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
-import { requireAoActAdminV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAdminV0, requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { createApprovalRequestV1, requireTenantMatchOr404 } from "../domain/approval/approval_request_service_v1.js";
 import {
   createVariablePrescriptionFromRecommendation,
@@ -27,7 +27,7 @@ function deriveApprovalActionType(operationType: string): string {
 
 export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/prescriptions/from-recommendation", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.write", "ao_act.task.write"]);
     if (!auth) return;
 
     const body: any = req.body ?? {};
@@ -64,7 +64,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.post("/api/v1/prescriptions/variable/from-recommendation", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.write", "ao_act.task.write"]);
     if (!auth) return;
 
     const body: any = req.body ?? {};
@@ -126,7 +126,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.get("/api/v1/prescriptions/:prescription_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.read", "ao_act.index.read"]);
     if (!auth) return;
     const query: any = (req as any).query ?? {};
     const tenant: TenantTriple = {
@@ -145,7 +145,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.get("/api/v1/prescriptions/by-recommendation/:recommendation_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.read", "ao_act.index.read"]);
     if (!auth) return;
     const query: any = (req as any).query ?? {};
     const tenant: TenantTriple = {
@@ -164,7 +164,7 @@ export function registerPrescriptionsV1Routes(app: FastifyInstance, pool: Pool):
   });
 
   app.post("/api/v1/prescriptions/:prescription_id/submit-approval", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["prescription.submit_approval", "approval.request", "ao_act.task.write"]);
     if (!auth) return;
     if (!requireAoActAdminV0(req, reply, { deniedError: "ROLE_APPROVAL_ADMIN_REQUIRED" })) return;
 

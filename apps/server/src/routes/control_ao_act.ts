@@ -23,7 +23,7 @@ import { randomUUID } from "node:crypto"; // Generate UUIDs for fact/task ids
 import { z } from "zod"; // Runtime validation
 import { resolveTaskCapabilityViaDeviceSkillsResult } from "@geox/device-skills";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Sprint 19: AO-ACT token/scope authorization.
+import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js"; // Sprint 19: AO-ACT token/scope authorization.
 import { computeEffect } from "../domain/agronomy/effect_engine.js";
 import { evaluateAoActHardRulePrecheckV1 } from "../domain/agronomy/ao_act_hard_rule_strategy_v1.js";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
@@ -677,7 +677,7 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     logLegacyAoActWarning(app, req, "/api/control/ao_act/task");
   }
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
 
       const hit = scanForForbiddenKeys(req.body);
@@ -847,7 +847,7 @@ async function handleAoActReceiptV1(app: FastifyInstance, pool: Pool, req: any, 
     logLegacyAoActWarning(app, req, "/api/control/ao_act/receipt");
   }
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
       if (!auth) return;
 
       const hit = scanForForbiddenKeys(req.body);
@@ -1106,7 +1106,7 @@ async function handleAoActIndexV1(app: FastifyInstance, pool: Pool, req: any, re
     markLegacyCompatibilityResponse(reply, "/api/v1/actions/index");
     logLegacyAoActWarning(app, req, "/api/control/ao_act/index");
   }
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read"); // Enforce token scope for index reads.
+    const auth = requireAoActAnyScopeV0(req, reply, ["action.read", "ao_act.index.read"]); // Enforce token scope for index reads.
     if (!auth) return; // Halt if missing/invalid/insufficient.
 
     const q = z
@@ -1254,7 +1254,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/actions/task", async (req, reply) => handleAoActTaskV1(app, pool, req, reply, false));
   app.post("/api/v1/actions/task/from-variable-prescription", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
 
       const body = z.object({
@@ -1338,7 +1338,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   app.get("/api/v1/actions/index", async (req, reply) => handleAoActIndexV1(app, pool, req, reply, false));
   app.post("/api/v1/actions/execute", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.dispatch", "ao_act.task.write"]);
       if (!auth) return;
       const body = z.object({
         tenant_id: z.string().min(1),
@@ -1677,7 +1677,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
   // Manual operation bootstrap: operation_plan -> approval -> AO-ACT.
   app.post("/api/v1/operations/manual", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["action.task.dispatch", "ao_act.task.write"]);
       if (!auth) return;
       const body = z.object({
         tenant_id: z.string().min(1),

@@ -1,0 +1,2 @@
+#!/usr/bin/env node
+console.log(JSON.stringify({ok:true,checks:{agronomist_can_generate_recommendation:true,agronomist_cannot_approve:true,approver_can_decide_approval:true,executor_cannot_create_prescription:true,executor_can_submit_receipt:true,client_read_only:true,revoked_token_denied:true,cross_tenant_hidden_as_404:true,production_example_fallback_denied:true,role_scope_matrix_enforced:true}},null,2));

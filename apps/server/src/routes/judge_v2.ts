@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAgronomyJudgeV2 } from "../domain/judge/agronomy_judge_v2.js";
 import { evaluateEvidenceJudgeV2 } from "../domain/judge/evidence_judge_v2.js";
 import { evaluateExecutionJudgeV2 } from "../domain/judge/execution_judge_v2.js";
@@ -110,7 +110,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.post("/api/v1/judge/evidence/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.execution.write", "ao_act.task.write"]);
       if (!auth) return;
       const body = EvaluateEvidenceRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -125,7 +125,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.post("/api/v1/judge/agronomy/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.execution.write", "ao_act.task.write"]);
       if (!auth) return;
       const body = EvaluateAgronomyRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -140,7 +140,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.post("/api/v1/judge/execution/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.execution.write", "ao_act.task.write"]);
       if (!auth) return;
       const body = EvaluateExecutionRequestSchema.parse((req as any).body ?? {});
       if (!requireTenantMatchOr404(reply, auth, body)) return;
@@ -174,7 +174,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.get("/api/v1/judge/results/:judge_id", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
       if (!auth) return;
       const params = ReadJudgeRequestSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, params)) return;
@@ -189,7 +189,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.get("/api/v1/judge/results/by-kind/:judge_kind", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
       if (!auth) return;
       const input = ListByKindSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, input)) return;
@@ -202,7 +202,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.get("/api/v1/judge/results/by-field/:field_id", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
       if (!auth) return;
       const input = ListByFieldSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, input)) return;
@@ -215,7 +215,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.get("/api/v1/judge/results/by-task/:task_id", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
       if (!auth) return;
       const input = ListByTaskSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, input)) return;
@@ -228,7 +228,7 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
 
   app.get("/api/v1/judge/results/by-prescription/:prescription_id", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["judge.read", "ao_act.index.read"]);
       if (!auth) return;
       const input = ListByPrescriptionSchema.parse({ ...(req as any).query, ...(req as any).params });
       if (!requireTenantMatchOr404(reply, auth, input)) return;
