@@ -3,8 +3,13 @@ import { resolveServerConfig } from "../config/index.js";
 import { runSqlMigrations } from "../infra/migrations.js";
 import { ensureRuntimeDirectories, resolveRuntimePaths } from "../infra/runtimePaths.js";
 import { startBackgroundWorkers } from "./workers.js";
+import { getRuntimeSecurityStatusV1, isProductionLikeRuntimeV1 } from "../runtime/runtime_security_v1.js";
 
 export async function startServer(): Promise<void> {
+  const runtimeStatus = getRuntimeSecurityStatusV1();
+  if (!runtimeStatus.ok && isProductionLikeRuntimeV1()) {
+    throw new Error(`RUNTIME_SECURITY_CHECK_FAILED:${runtimeStatus.errors.join(",")}`);
+  }
   const config = resolveServerConfig();
   const paths = resolveRuntimePaths();
   ensureRuntimeDirectories(paths);

@@ -4,6 +4,7 @@ import { registerAdminImportModule } from "./registerAdminImportModule.js";
 import { registerAdminGroupsModule } from "./registerAdminGroupsModule.js";
 import { registerSecurityAuditV1Routes } from "../../routes/security_audit_v1.js";
 import { registerFailSafeV1Routes } from "../../routes/fail_safe_v1.js";
+import { getRuntimeSecurityStatusV1 } from "../../runtime/runtime_security_v1.js";
 
 const REQUIRED_SCHEMA = {
   tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members", "prescription_contract_v1", "as_executed_record_v1", "as_applied_map_v1", "roi_ledger_v1", "judge_result_v2", "field_memory_v1"],
@@ -42,6 +43,7 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
       ok: missing_tables.length === 0 && missing_views.length === 0,
       missing_tables,
       missing_views,
+      runtime_security: getRuntimeSecurityStatusV1(),
     });
   });
 

@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from "fastify";
+import cors from "@fastify/cors";
 import type { Pool } from "pg";
 
 import type { ServerConfig } from "./config/index.js";
@@ -10,6 +11,7 @@ import { registerOpenApiModule } from "./modules/openapi/registerOpenApiModule.j
 import { registerDomainModules } from "./modules/domain/registerDomainModules.js";
 import { registerCompatibilityModules } from "./modules/compat/registerCompatibilityModules.js";
 import { registerAdminModule } from "./modules/admin/registerAdminModule.js";
+import { buildCorsOptionsV1 } from "./runtime/cors_v1.js";
 
 type CreateAppOptions = {
   config: ServerConfig;
@@ -20,6 +22,7 @@ export function createApp(options: CreateAppOptions): { app: FastifyInstance; po
   const { config, paths } = options;
   const pool = createDatabasePool(config.databaseUrl);
   const app = Fastify({ logger: true, bodyLimit: 50 * 1024 * 1024 });
+  void app.register(cors, buildCorsOptionsV1());
 
   registerCoreModule(app);
   registerStaticModule(app, {

@@ -177,6 +177,7 @@ export function readTokenFileV0(fp?: string): TokenFileV0 {
   if (envBacked) return envBacked;
   if (isProductionLikeRuntimeV0() && !hasStructuredTokenSourceV0()) return { version: "ao_act_tokens_v0", tokens: [] };
   const resolved = fp ?? defaultAoActTokenFilePathV0();
+  if (isProductionLikeRuntimeV0() && resolved.includes("example_tokens.json")) return { version: "ao_act_tokens_v0", tokens: [] };
   if (!fs.existsSync(resolved)) return { version: "ao_act_tokens_v0", tokens: [] };
   const raw = fs.readFileSync(resolved, "utf8").replace(/^﻿/, "");
   return parseTokenFileV0(raw);

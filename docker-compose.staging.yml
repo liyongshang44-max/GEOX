@@ -2,7 +2,8 @@ services:
   server:
     environment:
       GEOX_RUNTIME_ENV: staging
-      GEOX_EXPORTS_ROOT: /app/runtime/exports/staging
-      GEOX_TOKENS_FILE: /run/secrets/geox_ao_act_tokens_staging.json
-    ports:
-      - "3101:3000"
+      GEOX_TOKENS_FILE: ${GEOX_TOKENS_FILE}
+      GEOX_ALLOWED_ORIGINS: ${GEOX_ALLOWED_ORIGINS}
+      GEOX_EXECUTION_DEFAULT_DISABLED: "1"
+      GEOX_PUBLIC_BASE_URL: ${GEOX_PUBLIC_BASE_URL}
+      MQTT_AUTH_REQUIRED: "1"
