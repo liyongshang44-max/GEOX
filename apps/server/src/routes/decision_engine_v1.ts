@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0, requireAoActScopeV0, type AoActAuthContextV0 } from "../auth/ao_act_authz_v0.js";
 import { deriveFertilityPrecheckConstraintsV1 } from "../domain/agronomy/fertility_precheck_constraints_v1.js";
 import { resolveCropStage } from "../domain/agronomy/stage_resolver.js";
 import { validateRecommendationMainChainFields } from "../domain/agronomy/rule_engine.js";
@@ -1043,7 +1043,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/rule-performance", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const tenant: TenantTriple = {
@@ -1058,7 +1058,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/rule-performance/:rule_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const p: any = (req as any).params ?? {};
@@ -1075,7 +1075,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/recommendations", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const tenant: TenantTriple = {
@@ -1099,7 +1099,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/recommendations/:recommendation_id", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const p: any = (req as any).params ?? {};
@@ -1128,7 +1128,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/recommendations/control-plane", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const tenant: TenantTriple = {
@@ -1192,7 +1192,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.get("/api/v1/agronomy/recommendations/:recommendation_id/control-plane", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const q: any = (req as any).query ?? {};
     const p: any = (req as any).params ?? {};
@@ -1275,7 +1275,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.post("/api/v1/recommendations/generate", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.read", "ao_act.index.read"]);
     if (!auth) return;
     const body: any = req.body ?? {};
     const tenant: TenantTriple = {
@@ -1561,7 +1561,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
   });
 
   app.post("/api/v1/recommendations/:recommendation_id/submit-approval", async (req, reply) => {
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["recommendation.write", "ao_act.task.write"]);
     if (!auth) return;
     const params: any = (req as any).params ?? {};
     const body: any = req.body ?? {};
@@ -1700,7 +1700,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     // This endpoint is executor-only.
     // Never callable from recommendation / UI / approval flows.
     // All execution must originate from approved AO-ACT tasks.
-    const auth = requireAoActScopeV0(req, reply, "ao_act.receipt.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["action.receipt.submit", "ao_act.receipt.write"]);
     if (!auth) return;
     if (!hasExecutorRuntimeScopes(auth)) {
       return reply.status(403).send({ ok: false, error: "EXECUTOR_SCOPE_REQUIRED" });

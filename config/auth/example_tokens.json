@@ -1,33 +1,11 @@
 {
   "version": "ao_act_tokens_v0",
   "tokens": [
-    {
-      "token": "set-via-env-or-external-secret-file",
-      "token_id": "tok_example_local_admin",
-      "actor_id": "example_admin",
-      "tenant_id": "tenantA",
-      "project_id": "projectA",
-      "group_id": "groupA",
-      "role": "admin",
-      "revoked": false,
-      "scopes": [
-        "alerts.read",
-        "alerts.write",
-        "ao_act.index.read",
-        "ao_act.receipt.write",
-        "ao_act.task.write",
-        "devices.bind",
-        "devices.credentials.revoke",
-        "devices.credentials.write",
-        "devices.read",
-        "devices.status.read",
-        "devices.write",
-        "evidence_export.read",
-        "evidence_export.write",
-        "fields.read",
-        "fields.write",
-        "telemetry.read"
-      ]
-    }
+    {"token":"set-via-env-or-external-secret-file-admin","token_id":"tok_example_local_admin","actor_id":"example_admin","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"admin","revoked":false,"scopes":["recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","approval.request","approval.decide","approval.read","action.task.create","action.task.dispatch","action.receipt.submit","action.read","judge.execution.write","judge.read","acceptance.evaluate","acceptance.read","field_memory.read","field_memory.write","roi_ledger.write","roi_ledger.read","field.zone.write","field.zone.read","security.audit.read","security.admin","ao_act.task.write","ao_act.receipt.write","ao_act.index.read"]},
+    {"token":"set-via-env-or-external-secret-file-agronomist","token_id":"tok_example_agronomist","actor_id":"example_agronomist","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"agronomist","revoked":false,"scopes":["recommendation.write","recommendation.read","prescription.write","prescription.read","prescription.submit_approval","field.zone.read","field_memory.read","roi_ledger.read"]},
+    {"token":"set-via-env-or-external-secret-file-approver","token_id":"tok_example_approver","actor_id":"example_approver","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"approver","revoked":false,"scopes":["approval.read","approval.decide","prescription.read","recommendation.read","field.zone.read"]},
+    {"token":"set-via-env-or-external-secret-file-executor","token_id":"tok_example_executor","actor_id":"example_executor","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"executor","revoked":false,"scopes":["action.read","action.receipt.submit","field.zone.read"]},
+    {"token":"set-via-env-or-external-secret-file-auditor","token_id":"tok_example_auditor","actor_id":"example_auditor","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"auditor","revoked":false,"scopes":["recommendation.read","prescription.read","approval.read","action.read","judge.read","acceptance.read","field_memory.read","roi_ledger.read","security.audit.read"]},
+    {"token":"set-via-env-or-external-secret-file-client","token_id":"tok_example_client","actor_id":"example_client","tenant_id":"tenantA","project_id":"projectA","group_id":"groupA","role":"client","revoked":false,"scopes":["recommendation.read","prescription.read","action.read","field_memory.read","roi_ledger.read","field.zone.read"]}
   ]
 }

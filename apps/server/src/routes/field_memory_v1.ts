@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { z } from "zod";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 
 const FieldMemoryQuerySchema = z.object({
   field_id: z.string().min(1),
@@ -42,7 +42,7 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
 
   app.get("/api/v1/field-memory", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["field_memory.read", "ao_act.index.read"]);
       if (!auth) return;
 
       const query = FieldMemoryQuerySchema.parse((req as any).query ?? {});
@@ -71,7 +71,7 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
 
   app.get("/api/v1/field-memory/summary", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["field_memory.read", "ao_act.index.read"]);
       if (!auth) return;
 
       const query = FieldMemoryQuerySchema.parse((req as any).query ?? {});

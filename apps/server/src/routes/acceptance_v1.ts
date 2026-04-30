@@ -6,7 +6,7 @@ import { z } from "zod";
 import GeoxContracts from "@geox/contracts";
 import type { AcceptanceResultV1Payload } from "@geox/contracts";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0, requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { evaluateAcceptanceV1 } from "../domain/acceptance/engine_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import { listJudgeResultsV2, loadJudgeResultV2 } from "../domain/judge/judge_result_v2.js";
@@ -296,7 +296,7 @@ function buildAcceptanceMetrics(params: { evaluated: { score?: number; metrics: 
 export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/acceptance/evaluate", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.read", "ao_act.index.read"]);
       if (!auth) return;
 
       const body = EvaluateRequestSchema.parse((req as any).body ?? {});
@@ -470,7 +470,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
 
   app.get("/api/v1/acceptance/results", async (req, reply) => {
     try {
-      const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+      const auth = requireAoActAnyScopeV0(req, reply, ["acceptance.read", "ao_act.index.read"]);
       if (!auth) return;
 
       const q = AcceptanceReadQuerySchema.parse((req as any).query ?? {});

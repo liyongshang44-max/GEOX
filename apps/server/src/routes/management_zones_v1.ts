@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Pool } from "pg";
 
-import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
+import { requireAoActAnyScopeV0 } from "../auth/ao_act_authz_v0.js";
 import {
   getManagementZoneByIdV1,
   listManagementZonesByFieldV1,
@@ -49,7 +49,7 @@ function requireTenantMatchOr404(reply: FastifyReply, auth: TenantTriple, tenant
 export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool): void {
   app.post("/api/v1/fields/:field_id/zones", async (req, reply) => {
     // Temporary authorization compatibility: reuse AO-ACT write scope; Step10 can split field.zone.write.
-    const auth = requireAoActScopeV0(req, reply, "ao_act.task.write");
+    const auth = requireAoActAnyScopeV0(req, reply, ["field.zone.write", "ao_act.task.write"]);
     if (!auth) return;
 
     try {
@@ -95,7 +95,7 @@ export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool
 
   app.get("/api/v1/fields/:field_id/zones", async (req, reply) => {
     // Temporary authorization compatibility: reuse AO-ACT read scope; Step10 can split field.zone.read.
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["field.zone.read", "ao_act.index.read"]);
     if (!auth) return;
 
     try {
@@ -121,7 +121,7 @@ export function registerManagementZonesV1Routes(app: FastifyInstance, pool: Pool
 
   app.get("/api/v1/fields/:field_id/zones/:zone_id", async (req, reply) => {
     // Temporary authorization compatibility: reuse AO-ACT read scope; Step10 can split field.zone.read.
-    const auth = requireAoActScopeV0(req, reply, "ao_act.index.read");
+    const auth = requireAoActAnyScopeV0(req, reply, ["field.zone.read", "ao_act.index.read"]);
     if (!auth) return;
 
     try {
