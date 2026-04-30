@@ -15,6 +15,5 @@ const pid=vp.json?.prescription_id;
 const pRead=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(pid)}?tenant_id=tenantB&project_id=projectB&group_id=groupB`,{token:'tenant_b_admin_token'});
 checks.prescription_cross_tenant_hidden=pRead.status===404&&pRead.json?.error==='NOT_FOUND';
 const fm=await fetchJson(`${base}/api/v1/field-memory/summary?field_id=field_c8_demo&${q}`,{token:'tenant_a_restricted_token'}); checks.field_memory_field_allowlist_enforced=fm.status===404&&fm.json?.error==='NOT_FOUND';
-checks.approval_cross_tenant_hidden=true; checks.receipt_cross_tenant_hidden=true; checks.acceptance_cross_tenant_hidden=true; checks.roi_cross_tenant_hidden=true;
 checks.resource_id_only_access_blocked=checks.prescription_cross_tenant_hidden&&checks.tenant_b_cannot_read_tenant_a_zone;
 console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));})();

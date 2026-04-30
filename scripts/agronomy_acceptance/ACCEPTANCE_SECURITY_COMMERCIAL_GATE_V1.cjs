@@ -31,6 +31,7 @@ function assertNonTrivialAcceptanceScript(script) {
   ];
 
   const looksStaticSuccess = staticSuccessPatterns.some((re) => re.test(text));
+  const hasHardcodedTrueCheck = /checks\.[A-Za-z0-9_]+\s*=\s*true\s*;/.test(text);
   const hasRealAction =
     text.includes('fetchJson(') ||
     text.includes('spawn(') ||
@@ -42,6 +43,13 @@ function assertNonTrivialAcceptanceScript(script) {
     return {
       ok: false,
       error: 'SECURITY_GATE_STATIC_SUCCESS_SCRIPT_FORBIDDEN',
+      script,
+    };
+  }
+  if (hasHardcodedTrueCheck) {
+    return {
+      ok: false,
+      error: 'SECURITY_GATE_HARDCODED_TRUE_CHECK_FORBIDDEN',
       script,
     };
   }
