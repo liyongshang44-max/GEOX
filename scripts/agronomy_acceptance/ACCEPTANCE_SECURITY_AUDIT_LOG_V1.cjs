@@ -76,15 +76,15 @@ VALUES
   const accAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=acceptance.evaluated&target_id=${encodeURIComponent(acc.fact_id)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
   checks.acceptance_evaluated_audit_exists = Array.isArray(accAudit.json?.items) && accAudit.json.items.some((i)=>i.target_id===acc.fact_id&&i.result==='ALLOW');
 
-  const skillSwitch = await fetchJson(`${base}/api/v1/skills/rules/switch`, { method:'POST', token:'admin_token', body:{ skill_id:`security_audit_skill_${Date.now()}`, version:'v1', enabled:true, category:'AGRONOMY', scope:{ tenant_id, project_id, group_id, scope_type:'TENANT', bind_target:'tenantA', trigger_stage:'before_recommendation', rollout_mode:'DIRECT' }, priority:10, reason:'audit skill switch' } });
-  const bindingId = String(skillSwitch.json?.binding_id ?? skillSwitch.json?.payload?.binding_id ?? '');
-  const skillAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=skill.binding_switched&target_id=${encodeURIComponent(bindingId)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
-  checks.skill_binding_switched_audit_exists = Array.isArray(skillAudit.json?.items) && skillAudit.json.items.some((i)=>i.target_id===bindingId&&i.result==='ALLOW');
+  const skillSwitchReason = `audit skill switch ${Date.now()}`;
+  await fetchJson(`${base}/api/v1/skills/rules/switch`, { method:'POST', token:'admin_token', body:{ skill_id:`security_audit_skill_${Date.now()}`, version:'v1', enabled:true, category:'AGRONOMY', scope:{ tenant_id, project_id, group_id, scope_type:'TENANT', bind_target:'tenantA', trigger_stage:'before_recommendation', rollout_mode:'DIRECT' }, priority:10, reason:skillSwitchReason } });
+  const skillAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=skill.binding_switched&result=ALLOW&actor_id=tok_admin_actor&token_id=tok_admin&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
+  checks.skill_binding_switched_audit_exists = Array.isArray(skillAudit.json?.items) && skillAudit.json.items.some((i)=>i.action==='skill.binding_switched'&&i.result==='ALLOW'&&i.actor_id==='tok_admin_actor'&&i.token_id==='tok_admin'&&i.reason===skillSwitchReason);
 
-  const deny = await fetchJson(`${base}/api/v1/actions/task`,{method:'POST',token:'client_token',body:{tenant_id,project_id,group_id,field_id:'field_c8_demo',device_id:'audit_dev_client',operation_type:'IRRIGATION',planned_amount:1,unit:'mm'}});
-  checks.deny_triggered = deny.status === 403;
-  const denyAudit = await fetchJson(`${base}/api/v1/security/audit-events?result=DENY&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`,{token:'admin_token'});
-  checks.deny_audit_exists = Array.isArray(denyAudit.json?.items)&&denyAudit.json.items.some((i)=>i.result==='DENY'&&i.actor_id==='tok_client_actor'&&i.token_id==='tok_client');
+  const deny = await fetchJson(`${base}/api/v1/skills/rules/switch`,{method:'POST',token:'skill_admin_token',body:{skill_id:`security_audit_deny_${Date.now()}`,version:'v1',enabled:true,category:'AGRONOMY',scope:{tenant_id,project_id,group_id,scope_type:'TENANT',bind_target:'tenantA',trigger_stage:'before_dispatch',rollout_mode:'DIRECT'},priority:11,reason:'audit deny boundary test'}});
+  checks.deny_triggered = deny.status === 403 && String(deny.json?.error ?? '') === 'SKILL_CATEGORY_BOUNDARY_VIOLATION';
+  const denyAudit = await fetchJson(`${base}/api/v1/security/audit-events?result=DENY&actor_id=actor_skill_admin&token_id=tok_skill_admin&error_code=SKILL_CATEGORY_BOUNDARY_VIOLATION&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`,{token:'admin_token'});
+  checks.deny_audit_exists = Array.isArray(denyAudit.json?.items)&&denyAudit.json.items.some((i)=>i.result==='DENY'&&i.actor_id==='actor_skill_admin'&&i.token_id==='tok_skill_admin'&&i.error_code==='SKILL_CATEGORY_BOUNDARY_VIOLATION');
 
   await pool.end();
   console.log(JSON.stringify({ ok:Object.values(checks).every(Boolean), checks }, null, 2));
