@@ -83,7 +83,7 @@ const { Pool } = require('pg');
   const auditItems = Array.isArray(audits.json?.items) ? audits.json.items : [];
   const takeoverId = String(takeover?.takeover_id || takeover?.id || '');
   checks.manual_takeover_audit_exists = Boolean(blocked_event_id) && Boolean(takeoverId) &&
-    auditItems.some((i)=>i.action==='manual_override.requested' && String(i.target_id||'')===blocked_event_id) &&
+    auditItems.some((i)=>i.action==='manual_override.requested' && String(i.target_id||'')===takeoverId) &&
     auditItems.some((i)=>i.action==='manual_override.acked' && String(i.target_id||'')===takeoverId) &&
     auditItems.some((i)=>i.action==='manual_override.completed' && String(i.target_id||'')===takeoverId) &&
     auditItems.some((i)=>i.action==='fail_safe.resolved' && String(i.target_id||'')===blocked_event_id);

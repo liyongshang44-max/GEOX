@@ -780,7 +780,22 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         const safety = await evaluateDeviceDispatchSafetyV1(pool, { ...tenant, device_id: deviceId });
         if (!safety.safe) {
           const fs = await createFailSafeEventV1(pool, { ...tenant, device_id: deviceId, trigger_type: safety.reason_code, severity: "HIGH", reason_code: safety.reason_code, blocked_action: "action.task.create", source: "api/v1/actions/task" });
-          await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN") });
+          const takeover = await createManualTakeoverV1(pool, { ...tenant, fail_safe_event_id: fs.fail_safe_event_id, device_id: deviceId, requested_by_actor_id: auth.actor_id, requested_by_token_id: auth.token_id, reason_code: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN") });
+          await recordSecurityAuditEventV1(pool, {
+            ...tenant,
+            ...auditContextFromRequestV1(req, auth),
+            action: "manual_override.requested",
+            target_type: "manual_takeover",
+            target_id: takeover.takeover_id,
+            result: "ALLOW",
+            source: "api/v1/actions/task",
+            metadata: {
+              fail_safe_event_id: fs.fail_safe_event_id,
+              device_id: deviceId,
+              reason_code: safety.reason_code,
+              blocked_action: "action.task.create"
+            }
+          });
           await recordSecurityAuditEventV1(pool, { ...tenant, actor_id: auth.actor_id, token_id: auth.token_id, role: auth.role, action: "fail_safe.triggered", target_type: "device", target_id: deviceId, result: "ALLOW", reason: String(safety.reason_code ?? "DEVICE_STATUS_UNKNOWN"), source: "api/v1/actions/task" });
           return reply.status(409).send({ ok: false, error: "FAIL_SAFE_TRIGGERED", fail_safe_event_id: fs.fail_safe_event_id, manual_takeover_required: true, reason_code: safety.reason_code });
         }
