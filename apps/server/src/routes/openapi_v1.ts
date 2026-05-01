@@ -21,6 +21,8 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
       { name: "alerts", description: "Alert rules, events, and notification records" },
       { name: "exports", description: "Evidence export and audit downloads" },
       { name: "operations", description: "Approvals, execution, and operations workbench" },
+      { name: "acceptance", description: "Acceptance evaluation and execution verification" },
+      { name: "security", description: "Security audit, fail-safe, and manual takeover" },
       { name: "judge", description: "Judge V2 evaluation and result query" },
       { name: "dashboard", description: "Commercial dashboard overview" }
     ],
@@ -3552,6 +3554,144 @@ function applyP13OpenApiAlignment(spec: any) {
     "/api/v1/roi-ledger/by-task/{task_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by task", parameters: [pathParam("task_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by task") } } },
     "/api/v1/roi-ledger/by-prescription/{prescription_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by prescription", parameters: [pathParam("prescription_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by prescription") } } },
     "/api/v1/roi-ledger/by-field/{field_id}": { get: { tags: ["operations"], summary: "List ROI ledger entries by field", parameters: [pathParam("field_id"), queryParam("tenant_id", { type: "string" }, true), queryParam("project_id", { type: "string" }, true), queryParam("group_id", { type: "string" }, true)], responses: { "200": jsonResponse(ref("RoiLedgerFromAsExecutedResponse"), "ROI ledger entries by field") } } },
+    "/api/v1/acceptance/evaluate": {
+      post: {
+        tags: ["acceptance"],
+        summary: "Evaluate acceptance for an AO-ACT task",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["tenant_id", "project_id", "group_id", "act_task_id"],
+                properties: {
+                  tenant_id: { type: "string" },
+                  project_id: { type: "string" },
+                  group_id: { type: "string" },
+                  act_task_id: { type: "string" }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Acceptance evaluation result",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    result: { type: "string" },
+                    verdict: { type: "string" },
+                    acceptance_skill_id: { type: "string" },
+                    metrics: { oneOf: [{ type: "object" }, { $ref: "#/components/schemas/VariableAcceptanceMetricsV1" }] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/security/audit-events": {
+      get: {
+        tags: ["security"],
+        summary: "List security audit events",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "tenant_id", in: "query", schema: { type: "string" } },
+          { name: "project_id", in: "query", schema: { type: "string" } },
+          { name: "group_id", in: "query", schema: { type: "string" } },
+          { name: "actor_id", in: "query", schema: { type: "string" } },
+          { name: "token_id", in: "query", schema: { type: "string" } },
+          { name: "action", in: "query", schema: { type: "string" } },
+          { name: "target_type", in: "query", schema: { type: "string" } },
+          { name: "target_id", in: "query", schema: { type: "string" } },
+          { name: "field_id", in: "query", schema: { type: "string" } },
+          { name: "result", in: "query", schema: { $ref: "#/components/schemas/SecurityAuditResultV1" } },
+          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 500 } }
+        ],
+        responses: {
+          "200": {
+            description: "Security audit events",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["ok", "items"],
+                  properties: {
+                    ok: { type: "boolean" },
+                    items: { type: "array", items: { $ref: "#/components/schemas/SecurityAuditEventV1" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/fail-safe/events": {
+      get: {
+        tags: ["security"],
+        summary: "List fail-safe events",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "tenant_id", in: "query", schema: { type: "string" } },
+          { name: "project_id", in: "query", schema: { type: "string" } },
+          { name: "group_id", in: "query", schema: { type: "string" } }
+        ],
+        responses: {
+          "200": {
+            description: "Fail-safe events",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["ok", "items"],
+                  properties: {
+                    ok: { type: "boolean" },
+                    items: { type: "array", items: { $ref: "#/components/schemas/FailSafeEventV1" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/manual-takeovers": {
+      get: {
+        tags: ["security"],
+        summary: "List manual takeover records",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "tenant_id", in: "query", schema: { type: "string" } },
+          { name: "project_id", in: "query", schema: { type: "string" } },
+          { name: "group_id", in: "query", schema: { type: "string" } }
+        ],
+        responses: {
+          "200": {
+            description: "Manual takeover records",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["ok", "items"],
+                  properties: {
+                    ok: { type: "boolean" },
+                    items: { type: "array", items: { $ref: "#/components/schemas/ManualTakeoverV1" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices": { post: { tags: ["devices"], summary: "Register or upsert device", requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device upsert result") } }, get: { tags: ["devices"], summary: "List devices", responses: { "200": jsonResponse(ref("DevicesListResponse"), "Devices list") } } },
     "/api/v1/devices/{device_id}": { get: { tags: ["devices"], summary: "Read device detail", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceDetailResponse"), "Device detail") } }, post: { tags: ["devices"], summary: "Update device metadata", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceUpsertRequest") } } }, responses: { "200": jsonResponse(ref("DeviceUpsertResponse"), "Device updated") } } },
     "/api/v1/devices/{device_id}/capabilities": { get: { tags: ["devices"], summary: "Read device capabilities", parameters: [pathParam("device_id")], responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities") } }, put: { tags: ["devices"], summary: "Update device capabilities", parameters: [pathParam("device_id")], requestBody: { required: true, content: { "application/json": { schema: ref("DeviceCapabilitiesRequest") } } }, responses: { "200": jsonResponse(ref("DeviceCapabilitiesResponse"), "Device capabilities updated") } } },

@@ -130,6 +130,10 @@ function detectStaticSuccessScript(relativePath) {
   };
 }
 
+function missingFrom(expected, actual) {
+  return expected.filter((x) => !actual.includes(x));
+}
+
 async function getOpenApiSnapshot() {
   const res = await fetch(`${BASE_URL}/api/v1/openapi.json`);
   if (!res.ok) throw new Error(`OPENAPI_FETCH_FAILED_${res.status}`);
@@ -165,9 +169,77 @@ async function getOpenApiSnapshot() {
 
   const schemas = openapi?.components?.schemas || {};
   const paths = openapi?.paths || {};
+  function hasSchemas(names) {
+    return names.every((k) => Object.prototype.hasOwnProperty.call(schemas, k));
+  }
+  function hasPaths(names) {
+    return names.every((k) => Object.prototype.hasOwnProperty.call(paths, k));
+  }
   const openapiChecks = {
-    schemas: ['FieldMemoryV1', 'ManagementZoneV1', 'VariablePrescriptionPlanV1', 'VariableActionTaskFromPrescriptionRequest', 'VariableZoneApplicationV1', 'VariableAcceptanceMetricsV1', 'SecurityAuditEventV1', 'FailSafeEventV1', 'ManualTakeoverV1'].every((k) => Object.prototype.hasOwnProperty.call(schemas, k)),
-    paths: ['/api/v1/field-memory', '/api/v1/field-memory/summary', '/api/v1/fields/{field_id}/zones', '/api/v1/prescriptions/variable/from-recommendation', '/api/v1/actions/task/from-variable-prescription', '/api/v1/as-executed/from-receipt', '/api/v1/acceptance/evaluate', '/api/v1/roi-ledger/from-as-executed', '/api/v1/security/audit-events', '/api/v1/fail-safe/events', '/api/v1/manual-takeovers'].every((k) => Object.prototype.hasOwnProperty.call(paths, k)),
+    field_memory:
+      hasSchemas(['FieldMemoryV1']) &&
+      hasPaths([
+        '/api/v1/field-memory',
+        '/api/v1/field-memory/summary',
+      ]),
+    variable_prescription:
+      hasSchemas([
+        'ManagementZoneV1',
+        'VariablePrescriptionPlanV1',
+        'VariableActionTaskFromPrescriptionRequest',
+        'VariableZoneApplicationV1',
+        'VariableAcceptanceMetricsV1',
+      ]) &&
+      hasPaths([
+        '/api/v1/fields/{field_id}/zones',
+        '/api/v1/prescriptions/variable/from-recommendation',
+        '/api/v1/actions/task/from-variable-prescription',
+        '/api/v1/as-executed/from-receipt',
+        '/api/v1/acceptance/evaluate',
+        '/api/v1/roi-ledger/from-as-executed',
+      ]),
+    security_audit:
+      hasSchemas(['SecurityAuditEventV1']) &&
+      hasPaths([
+        '/api/v1/security/audit-events',
+      ]),
+    fail_safe:
+      hasSchemas(['FailSafeEventV1', 'ManualTakeoverV1']) &&
+      hasPaths([
+        '/api/v1/fail-safe/events',
+        '/api/v1/manual-takeovers',
+      ]),
+  };
+
+  const expectedSchemas = [
+    'FieldMemoryV1',
+    'ManagementZoneV1',
+    'VariablePrescriptionPlanV1',
+    'VariableActionTaskFromPrescriptionRequest',
+    'VariableZoneApplicationV1',
+    'VariableAcceptanceMetricsV1',
+    'SecurityAuditEventV1',
+    'FailSafeEventV1',
+    'ManualTakeoverV1',
+  ];
+
+  const expectedPaths = [
+    '/api/v1/field-memory',
+    '/api/v1/field-memory/summary',
+    '/api/v1/fields/{field_id}/zones',
+    '/api/v1/prescriptions/variable/from-recommendation',
+    '/api/v1/actions/task/from-variable-prescription',
+    '/api/v1/as-executed/from-receipt',
+    '/api/v1/acceptance/evaluate',
+    '/api/v1/roi-ledger/from-as-executed',
+    '/api/v1/security/audit-events',
+    '/api/v1/fail-safe/events',
+    '/api/v1/manual-takeovers',
+  ];
+
+  const openapiMissing = {
+    schemas: missingFrom(expectedSchemas, Object.keys(schemas)),
+    paths: missingFrom(expectedPaths, Object.keys(paths)),
   };
 
   const releaseFiles = [
@@ -185,7 +257,7 @@ async function getOpenApiSnapshot() {
   fs.writeFileSync(path.join(evidenceDir, 'security_gate_result.json'), JSON.stringify(gateResults[0] || {}, null, 2));
   fs.writeFileSync(path.join(evidenceDir, 'variable_prescription_result.json'), JSON.stringify(gateResults[1] || {}, null, 2));
   fs.writeFileSync(path.join(evidenceDir, 'field_memory_result.json'), JSON.stringify(gateResults[2] || {}, null, 2));
-  fs.writeFileSync(path.join(evidenceDir, 'openapi_contract_snapshot.json'), JSON.stringify({ openapi_error: openapiError, schemas: Object.keys(schemas), paths: Object.keys(paths) }, null, 2));
+  fs.writeFileSync(path.join(evidenceDir, 'openapi_contract_snapshot.json'), JSON.stringify({ openapi_error: openapiError, schemas: Object.keys(schemas), paths: Object.keys(paths), openapiMissing }, null, 2));
   fs.writeFileSync(path.join(evidenceDir, 'repo_static_checks.json'), JSON.stringify({ staticChecks, migrationText, prodCodeText, securityEverywhere, legacyViolations, staticSecurityAcceptanceScripts }, null, 2));
 
   const rootPkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
@@ -207,10 +279,10 @@ async function getOpenApiSnapshot() {
     management_zone_migration_present: migrationText.management_zone_v1,
     security_audit_migration_present: migrationText.security_audit_event_v1,
     fail_safe_migration_present: migrationText.fail_safe_event_v1 && migrationText.manual_takeover_v1,
-    openapi_contains_field_memory: openapiChecks.schemas && openapiChecks.paths,
-    openapi_contains_variable_prescription: openapiChecks.schemas && openapiChecks.paths,
-    openapi_contains_security_audit: openapiChecks.schemas && openapiChecks.paths,
-    openapi_contains_fail_safe: openapiChecks.schemas && openapiChecks.paths,
+    openapi_contains_field_memory: openapiChecks.field_memory,
+    openapi_contains_variable_prescription: openapiChecks.variable_prescription,
+    openapi_contains_security_audit: openapiChecks.security_audit,
+    openapi_contains_fail_safe: openapiChecks.fail_safe,
     no_legacy_routes_in_release_acceptance: legacyViolations.length === 0,
     package_release_script_present: packageScriptPresent,
     release_evidence_bundle_written: true,
@@ -228,6 +300,7 @@ async function getOpenApiSnapshot() {
       evidence_files_written: checks.release_evidence_bundle_written,
     },
     checks,
+    openapiMissing,
   };
   fs.writeFileSync(path.join(evidenceDir, 'release_audit_summary.json'), JSON.stringify(summary, null, 2));
   console.log(JSON.stringify({ ok: summary.ok, release_audit: RELEASE_AUDIT, checks, evidence_dir: path.relative(REPO_ROOT, evidenceDir) }, null, 2));
