@@ -6,20 +6,23 @@ let pool;
 
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
-  const token = env('AO_ACT_TOKEN', '');
+  const adminToken = env('ADMIN_TOKEN', 'admin_token');
+  const approverToken = env('APPROVER_TOKEN', 'approver_token');
+  const operatorToken = env('OPERATOR_TOKEN', 'operator_token');
+  const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
   const field_id = env('FIELD_ID', 'field_c8_demo');
   const season_id = env('SEASON_ID', 'season_demo');
   const device_id = env('DEVICE_ID', 'dev_onboard_accept_001');
-  const databaseUrl = env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox');
+  const databaseUrl = env('DATABASE_URL', 'postgres://landos:landos_pwd@127.0.0.1:5433/landos');
   pool = new Pool({ connectionString: databaseUrl });
 
   const suffix = Date.now();
   const operation_plan_id = `opl_variable_prescription_${suffix}`;
 
-  const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
+  const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token: adminToken });
   const healthz_ok = Boolean(healthz.ok && healthz.json?.ok === true);
 
   const zoneLow = {
@@ -45,9 +48,9 @@ let pool;
     source_refs: ['acceptance_variable_prescription_v1'],
   };
 
-  requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones`, { method: 'POST', token, body: zoneLow }), 'create zone low');
-  requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones`, { method: 'POST', token, body: zoneNormal }), 'create zone normal');
-  const zonesRead = requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token }), 'read zones');
+  requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones`, { method: 'POST', token: adminToken, body: zoneLow }), 'create zone low');
+  requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones`, { method: 'POST', token: adminToken, body: zoneNormal }), 'create zone normal');
+  const zonesRead = requireOk(await fetchJson(`${base}/api/v1/fields/${encodeURIComponent(field_id)}/zones?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken }), 'read zones');
 
   const nowMs = Date.now();
   await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text`);
@@ -70,7 +73,7 @@ let pool;
     [tenant_id, project_id, group_id, field_id, nowMs, randomUUID()],
   );
 
-  const recommendation = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
+  const recommendation = requireOk(await fetchJson(`${base}/api/v1/recommendations/generate`, { method: 'POST', token: adminToken, body: { tenant_id, project_id, group_id, field_id, season_id, device_id, crop_code: 'corn' } }), 'recommendation');
   const recommendation_id = String(recommendation.recommendations?.[0]?.recommendation_id ?? '').trim();
   const recommendation_skill_trace = recommendation.recommendations?.[0]?.skill_trace ?? recommendation.recommendations?.[0]?.meta?.skill_trace;
 
@@ -82,22 +85,54 @@ let pool;
     ],
   };
 
-  const variablePrescription = requireOk(await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`, { method: 'POST', token, body: { tenant_id, project_id, group_id, recommendation_id, field_id, season_id, crop_id: 'corn', variable_plan } }), 'variable prescription');
+  const variablePrescription = requireOk(await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`, { method: 'POST', token: adminToken, body: { tenant_id, project_id, group_id, recommendation_id, field_id, season_id, crop_id: 'corn', variable_plan } }), 'variable prescription');
   const prescription_id = String(variablePrescription.prescription?.prescription_id ?? '').trim();
-  const variablePrescriptionAgain = requireOk(await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`, { method: 'POST', token, body: { tenant_id, project_id, group_id, recommendation_id, field_id, season_id, crop_id: 'corn', variable_plan } }), 'variable prescription idempotent');
+  const variablePrescriptionAgain = requireOk(await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`, { method: 'POST', token: adminToken, body: { tenant_id, project_id, group_id, recommendation_id, field_id, season_id, crop_id: 'corn', variable_plan } }), 'variable prescription idempotent');
 
-  const prescriptionRead = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token }), 'read prescription');
+  const prescriptionRead = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken }), 'read prescription');
   const p = prescriptionRead.prescription ?? {};
 
-  const submit = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token, body: { tenant_id, project_id, group_id } }), 'submit approval');
+  const submit = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method: 'POST', token: adminToken, body: { tenant_id, project_id, group_id } }), 'submit approval');
   const approval_request_id = String(submit.approval_request_id ?? '').trim();
-  let approve = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, { method: 'POST', token, body: { tenant_id, project_id, group_id, decision: 'APPROVE' } });
+  let approve = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, { method: 'POST', token: approverToken, body: { tenant_id, project_id, group_id, decision: 'APPROVE' } });
   if (!approve.ok) {
-    approve = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token, body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE' } });
+    approve = await fetchJson(`${base}/api/v1/approvals/approve`, { method: 'POST', token: approverToken, body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE' } });
   }
   requireOk(approve, 'approve decision');
 
-  const taskResp = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'variable action task');
+  await pool.query(
+    `UPDATE fail_safe_event_v1
+        SET status='RESOLVED',
+            resolved_at=$5,
+            resolved_by_actor_id='acceptance_cleanup',
+            resolved_by_token_id='acceptance_cleanup',
+            resolution_note='cleanup before variable prescription acceptance'
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND device_id=$4
+        AND status='OPEN'`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
+  await pool.query(
+    `DELETE FROM device_status_index_v1
+     WHERE tenant_id=$1
+       AND project_id=$2
+       AND group_id=$3
+       AND device_id=$4`,
+    [tenant_id, project_id, group_id, device_id]
+  );
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
+  const taskResp = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token: operatorToken, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'variable action task');
   const act_task_id = String(taskResp.act_task_id ?? '').trim();
 
   const taskFact = await pool.query(
@@ -185,17 +220,17 @@ let pool;
     },
   };
   const receiptResp = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, {
-    method: 'POST', token,
+    method: 'POST', token: executorToken,
     body: receiptPayload,
   }), 'variable receipt');
   const receipt_id = String(receiptResp.receipt_id ?? receiptResp.fact_id ?? '').trim();
 
-  const asExecuted1 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 1');
-  const asExecuted2 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 2');
+  const asExecuted1 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token: adminToken, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 1');
+  const asExecuted2 = requireOk(await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token: adminToken, body: { task_id: act_task_id, receipt_id, tenant_id, project_id, group_id } }), 'as-executed 2');
 
   const acceptance = requireOk(await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
     method: 'POST',
-    token,
+    token: adminToken,
     body: { act_task_id, tenant_id, project_id, group_id }
   }), 'acceptance');
   const acceptanceFactId = String(acceptance.fact_id ?? '').trim();
@@ -214,14 +249,14 @@ let pool;
   const acceptancePayload = acceptanceFactRes.rows?.[0]?.record_json?.payload ?? {};
 
   const as_executed_id = String(asExecuted1.as_executed?.as_executed_id ?? '').trim();
-  const roi1 = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id } }), 'roi 1');
-  const roi2 = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id } }), 'roi 2');
-  const roiBy = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/by-as-executed/${encodeURIComponent(as_executed_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token }), 'roi by as-executed');
+  const roi1 = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token: adminToken, body: { as_executed_id, tenant_id, project_id, group_id } }), 'roi 1');
+  const roi2 = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, { method: 'POST', token: adminToken, body: { as_executed_id, tenant_id, project_id, group_id } }), 'roi 2');
+  const roiBy = requireOk(await fetchJson(`${base}/api/v1/roi-ledger/by-as-executed/${encodeURIComponent(as_executed_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken }), 'roi by as-executed');
   const roiLedgers = Array.isArray(roiBy.roi_ledgers) ? roiBy.roi_ledgers : [];
   const roiTypes = roiLedgers.map((x) => String(x?.roi_type ?? ''));
   const roiMap = Object.fromEntries(roiLedgers.map((x) => [x.roi_type, x]));
 
-  const openapi = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token });
+  const openapi = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET', token: adminToken });
 
   process.stdout.write(`${JSON.stringify({
     variable_prescription_debug: {

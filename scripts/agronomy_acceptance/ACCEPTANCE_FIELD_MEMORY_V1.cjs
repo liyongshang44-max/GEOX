@@ -6,11 +6,14 @@ let pool;
 
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
-  const token = env('AO_ACT_TOKEN', '');
+  const adminToken = env('ADMIN_TOKEN', 'admin_token');
+  const approverToken = env('APPROVER_TOKEN', 'approver_token');
+  const operatorToken = env('OPERATOR_TOKEN', 'operator_token');
+  const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
   const tenant_id = env('TENANT_ID', 'tenantA');
   const project_id = env('PROJECT_ID', 'projectA');
   const group_id = env('GROUP_ID', 'groupA');
-  const databaseUrl = env('DATABASE_URL', 'postgres://postgres:postgres@127.0.0.1:5432/geox');
+  const databaseUrl = env('DATABASE_URL', 'postgres://landos:landos_pwd@127.0.0.1:5433/landos');
   pool = new Pool({ connectionString: databaseUrl });
   const suffix = Date.now();
   const field_id = env('FIELD_ID', `field_memory_${suffix}`);
@@ -69,7 +72,7 @@ let pool;
   })}\n`);
 
   const recGen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
-    method: 'POST', token,
+    method: 'POST', token: adminToken,
     body: {
       tenant_id, project_id, group_id,
       field_id,
@@ -84,21 +87,120 @@ let pool;
   assert.ok(recId, 'recommendation_id missing');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
-    method: 'POST', token,
+    method: 'POST', token: adminToken,
     body: { tenant_id, project_id, group_id }
   });
   const submitJson = requireOk(submit, 'submit approval');
   const operation_plan_id = String(submitJson.operation_plan_id ?? '');
   assert.ok(operation_plan_id, 'operation_plan_id missing');
 
-  const decide = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(String(submitJson.approval_request_id))}/decide`, {
-    method: 'POST', token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'field memory acceptance' }
+  await pool.query(
+    `
+    INSERT INTO facts (fact_id, occurred_at, source, record_json)
+    SELECT
+      $5,
+      NOW(),
+      'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue',
+      jsonb_set(
+        src.record_json::jsonb,
+        '{payload,proposal,meta}',
+        COALESCE((src.record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
+          || '{"skip_auto_task_issue": true}'::jsonb,
+        true
+      )
+    FROM (
+      SELECT record_json
+        FROM facts
+       WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
+         AND (record_json::jsonb #>> '{payload,request_id}') = $1
+         AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
+         AND (record_json::jsonb #>> '{payload,project_id}') = $3
+         AND (record_json::jsonb #>> '{payload,group_id}') = $4
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 1
+    ) src
+    `,
+    [
+      String(submitJson.approval_request_id),
+      tenant_id,
+      project_id,
+      group_id,
+      randomUUID()
+    ]
+  );
+
+  const patchedApproval = await pool.query(
+    `
+    SELECT fact_id
+      FROM facts
+     WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
+       AND (record_json::jsonb #>> '{payload,request_id}') = $1
+       AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
+       AND (record_json::jsonb #>> '{payload,project_id}') = $3
+       AND (record_json::jsonb #>> '{payload,group_id}') = $4
+       AND COALESCE((record_json::jsonb #>> '{payload,proposal,meta,skip_auto_task_issue}')::boolean, false) = true
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1
+    `,
+    [
+      String(submitJson.approval_request_id),
+      tenant_id,
+      project_id,
+      group_id
+    ]
+  );
+
+  assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
+
+  const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
+    method: 'POST',
+    token: approverToken,
+    body: {
+      request_id: String(submitJson.approval_request_id),
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'field memory acceptance'
+    }
   });
   requireOk(decide, 'approval decide');
+
+  await pool.query(
+    `UPDATE fail_safe_event_v1
+        SET status='RESOLVED',
+            resolved_at=$5,
+            resolved_by_actor_id='acceptance_cleanup',
+            resolved_by_token_id='acceptance_cleanup',
+            resolution_note='cleanup before field memory acceptance'
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND device_id=$4
+        AND status='OPEN'`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
+  await pool.query(
+    `DELETE FROM device_status_index_v1
+     WHERE tenant_id=$1
+       AND project_id=$2
+       AND group_id=$3
+       AND device_id=$4`,
+    [tenant_id, project_id, group_id, device_id]
+  );
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
   const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
     method: 'POST',
-    token,
+    token: operatorToken,
     body: {
       tenant_id,
       project_id,
@@ -143,7 +245,7 @@ let pool;
 
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
-    token,
+    token: executorToken,
     body: {
       tenant_id,
       project_id,
@@ -189,7 +291,7 @@ let pool;
   assert.ok(receipt_fact_id, 'receipt_fact_id missing');
 
   const executionJudgeResp = await fetchJson(`${base}/api/v1/judge/execution/evaluate`, {
-    method: 'POST', token,
+    method: 'POST', token: adminToken,
     body: {
       tenant_id, project_id, group_id,
       field_id,
@@ -213,7 +315,7 @@ let pool;
   assert.ok(execution_judge_id, 'execution_judge_id missing');
 
   const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
-    method: 'POST', token,
+    method: 'POST', token: adminToken,
     body: {
       tenant_id,
       project_id,
@@ -269,11 +371,11 @@ let pool;
     ]
   );
 
-  const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token });
+  const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token: adminToken });
   const memoryListJson = requireOk(memoryList, 'field memory list');
   const items = Array.isArray(memoryListJson.items) ? memoryListJson.items : [];
 
-  const summaryResp = await fetchJson(`${base}/api/v1/field-memory/summary?field_id=${encodeURIComponent(field_id)}&limit=100`, { method: 'GET', token });
+  const summaryResp = await fetchJson(`${base}/api/v1/field-memory/summary?field_id=${encodeURIComponent(field_id)}&limit=100`, { method: 'GET', token: adminToken });
   const summaryJson = requireOk(summaryResp, 'field memory summary');
 
   const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET' });
