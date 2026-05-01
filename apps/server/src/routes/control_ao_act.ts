@@ -34,7 +34,7 @@ import { actionReceiptRequestSchemaV1, validateActionReceiptMetaV1 } from "../co
 import { getPrescriptionById } from "../domain/prescription/prescription_contract_v1.js";
 import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
 import { createFailSafeEventV1, createManualTakeoverV1, evaluateDeviceDispatchSafetyV1, findOpenFailSafeForDeviceV1 } from "../services/fail_safe_service_v1.js";
-import { recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
+import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -693,7 +693,24 @@ async function handleAoActTaskV1(app: FastifyInstance, pool: Pool, req: any, rep
     try {
       const auth = requireAoActAnyScopeV0(req, reply, ["action.task.create", "ao_act.task.write"]);
       if (!auth) return;
-      if (!requireActionTaskCreateRoleV1(reply, auth)) return;
+      if (!requireActionTaskCreateRoleV1(reply, auth)) {
+        const raw = (req as any).body ?? {};
+        const tenant_id = String(raw.tenant_id ?? auth.tenant_id ?? "").trim();
+        const project_id = String(raw.project_id ?? auth.project_id ?? "").trim();
+        const group_id = String(raw.group_id ?? auth.group_id ?? "").trim();
+        if (tenant_id && project_id && group_id) {
+          await recordSecurityAuditEventV1(pool, {
+            tenant_id, project_id, group_id,
+            ...auditContextFromRequestV1(req, auth),
+            action: "security.denied",
+            target_type: "act_task",
+            result: "DENY",
+            error_code: "ACTION_TASK_CREATE_ROLE_DENIED",
+            source: "api/v1/actions/task"
+          }).catch(() => undefined);
+        }
+        return;
+      }
 
       const hit = scanForForbiddenKeys(req.body);
       if (hit) return reply.status(400).send({ ok: false, error: `FORBIDDEN_KEY:${hit}` });
@@ -860,6 +877,24 @@ if (!requireTenantMatchOr404V0(auth, tenant, reply)) return; // Enforce hard iso
         token_id: auth.token_id,
         target_fact_id: fact_id,
         act_task_id
+      });
+      await recordSecurityAuditEventV1(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        ...auditContextFromRequestV1(req, auth),
+        action: "action.task_created",
+        target_type: "act_task",
+        target_id: act_task_id,
+        field_id: String(body.field_id ?? body.meta?.field_id ?? "").trim() || undefined,
+        result: "ALLOW",
+        source: "api/v1/actions/task",
+        metadata: {
+          operation_plan_id: body.operation_plan_id,
+          approval_request_id: body.approval_request_id,
+          device_id: String(body.meta?.device_id ?? "").trim() || undefined,
+          action_type: body.action_type
+        }
       });
 
       return reply.send({ ok: true, fact_id, act_task_id, precheck: hardRulePrecheck });
@@ -1040,6 +1075,19 @@ if (dup) { // If a duplicate exists, reject to avoid semantic pollution from ret
         token_id: auth.token_id,
         target_fact_id: fact_id,
         act_task_id: body.act_task_id
+      });
+      await recordSecurityAuditEventV1(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        ...auditContextFromRequestV1(req, auth),
+        action: "action.receipt_submitted",
+        target_type: "receipt",
+        target_id: fact_id,
+        field_id: String((task?.payload?.field_id ?? task?.payload?.meta?.field_id ?? "")).trim() || undefined,
+        result: "ALLOW",
+        source: "api/v1/actions/receipt",
+        metadata: { act_task_id: body.act_task_id, status: body.status }
       });
 
       const latestPlanSql = `
@@ -1334,6 +1382,24 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
       }
       const actTaskId = String(delegated.json?.act_task_id ?? "").trim();
       if (!actTaskId) return reply.status(500).send({ ok: false, error: "VARIABLE_ACTION_TASK_ID_MISSING" });
+      await recordSecurityAuditEventV1(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        ...auditContextFromRequestV1(req, auth),
+        action: "action.variable_task_created",
+        target_type: "act_task",
+        target_id: actTaskId,
+        field_id: String((prescription as any)?.field_id ?? "").trim() || undefined,
+        result: "ALLOW",
+        source: "api/v1/actions/task/from-variable-prescription",
+        metadata: {
+          prescription_id: body.prescription_id,
+          approval_request_id: body.approval_request_id,
+          operation_plan_id: body.operation_plan_id,
+          device_id: body.device_id
+        }
+      });
 
       const operationPlanAnchor = await ensureVariableOperationPlanV1(pool, {
         tenant,
