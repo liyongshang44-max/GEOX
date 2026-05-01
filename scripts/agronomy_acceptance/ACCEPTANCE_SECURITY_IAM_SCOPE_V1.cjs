@@ -16,9 +16,9 @@ async function req(path, token, method = 'GET', body) { return fetchJson(`${base
   const checks = {};
   const rec = await req('/api/v1/recommendations/generate', 'agronomist_token', 'POST', { tenant_id, project_id, group_id, field_id: 'f_iam', season_id: 's_iam', device_id: 'd_iam', crop_code: 'corn' });
   checks.agronomist_can_generate_recommendation = !['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED'].includes(String(rec.json?.error ?? ''));
-  const reqCreate = await req('/api/v1/approvals/request', 'agronomist_token', 'POST', {
+  const reqCreate = await req('/api/v1/approvals/request', 'admin_token', 'POST', {
     tenant_id, project_id, group_id,
-    issuer: { kind: 'human', id: 'agronomist_token' },
+    issuer: { kind: 'human', id: 'tok_admin_actor', namespace: 'iam_scope_acceptance' },
     action_type: 'IRRIGATE',
     target: { kind: 'field', ref: 'f_iam' },
     time_window: { start_ts: Date.now(), end_ts: Date.now() + 60000 },
@@ -27,11 +27,21 @@ async function req(path, token, method = 'GET', body) { return fetchJson(`${base
     constraints: { approval_required: true },
     meta: { skip_auto_task_issue: true },
   });
-  const request_id = reqCreate.json?.request_id;
+  const request_id = String(
+    reqCreate.json?.request_id ??
+    reqCreate.json?.approval_request_id ??
+    reqCreate.json?.payload?.request_id ??
+    ''
+  );
   const agApprove = await req('/api/v1/approvals/approve', 'agronomist_token', 'POST', { tenant_id, project_id, group_id, request_id });
   checks.agronomist_cannot_approve = agApprove.status === 403 && ['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','ROLE_APPROVER_REQUIRED'].includes(String(agApprove.json?.error ?? ''));
   const apprApprove = await req('/api/v1/approvals/approve', 'approver_token', 'POST', { tenant_id, project_id, group_id, request_id });
-  checks.approver_can_decide_approval = apprApprove.ok === true && apprApprove.json?.ok === true;
+  checks.approver_can_decide_approval =
+    reqCreate.ok === true &&
+    reqCreate.json?.ok === true &&
+    Boolean(request_id) &&
+    apprApprove.ok === true &&
+    apprApprove.json?.ok === true;
   const exPres = await req('/api/v1/prescriptions/variable/from-recommendation', 'executor_token', 'POST', { tenant_id, project_id, group_id, recommendation_id: 'missing', variable_plan: { mode: 'VARIABLE_BY_ZONE', zone_rates: [] } });
   checks.executor_cannot_create_prescription = exPres.status === 403 && ['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED'].includes(String(exPres.json?.error ?? ''));
   const exReceipt = await req('/api/v1/actions/receipt', 'executor_token', 'POST', { tenant_id, project_id, group_id, act_task_id: 'missing', status: 'executed' });
