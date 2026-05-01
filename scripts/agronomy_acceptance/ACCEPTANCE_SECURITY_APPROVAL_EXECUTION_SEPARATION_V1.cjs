@@ -161,9 +161,26 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
     );
 
     const apTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'approver_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id,device_id:'dev_sep'}}); checks.approver_cannot_create_task=apTask.status===403;
-    const opTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'operator_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id,device_id:'dev_sep'}});
-    if (!(opTask.ok === true && opTask.json?.ok === true)) {
-      checks.operator_can_create_task = false;
+    const opTask = await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, {
+      method: 'POST',
+      token: 'operator_token',
+      body: {
+        tenant_id: 'tenantA',
+        project_id: 'projectA',
+        group_id: 'groupA',
+        prescription_id: pid,
+        approval_request_id: arid,
+        operation_plan_id,
+        device_id: 'dev_sep'
+      }
+    });
+
+    checks.operator_can_create_task =
+      opTask.ok === true &&
+      opTask.json?.ok === true &&
+      Boolean(String(opTask.json?.act_task_id ?? '').trim());
+
+    if (!checks.operator_can_create_task) {
       console.log(JSON.stringify({
         ok: false,
         error: 'APPROVAL_SEPARATION_OPERATOR_CREATE_TASK_FAILED',
@@ -173,7 +190,6 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
       await pool.end();
       process.exit(1);
     }
-    checks.operator_can_create_task = true;
     const exTask=await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`,{method:'POST',token:'executor_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',prescription_id:pid,approval_request_id:arid,operation_plan_id,device_id:'dev_sep'}}); checks.executor_cannot_create_task=exTask.status===403;
     const taskId=opTask.json?.act_task_id;
     const exReceipt=await fetchJson(`${base}/api/v1/actions/receipt`,{method:'POST',token:'executor_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',act_task_id:taskId,status:'executed'}}); checks.executor_can_submit_receipt=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(exReceipt.json?.error);
