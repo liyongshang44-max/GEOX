@@ -80,7 +80,13 @@ const { Pool } = require('pg');
   const events2=await fetchJson(`${base}/api/v1/fail-safe/events?tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`,{token:'admin_token'});
   checks.fail_safe_resolved=Array.isArray(events2.json?.items)&&events2.json.items.some((i)=>String(i.fail_safe_event_id||i.id)===blocked_event_id&&['RESOLVED','resolved'].includes(String(i.status)));
   const audits=await fetchJson(`${base}/api/v1/security/audit-events?tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`,{token:'admin_token'});
-  checks.manual_takeover_audit_exists=Array.isArray(audits.json?.items)&&audits.json.items.some((i)=>['manual_override.requested','manual_override.acked','manual_override.completed','fail_safe.resolved'].includes(i.action));
+  const auditItems = Array.isArray(audits.json?.items) ? audits.json.items : [];
+  const takeoverId = String(takeover?.takeover_id || takeover?.id || '');
+  checks.manual_takeover_audit_exists = Boolean(blocked_event_id) && Boolean(takeoverId) &&
+    auditItems.some((i)=>i.action==='manual_override.requested' && String(i.target_id||'')===blocked_event_id) &&
+    auditItems.some((i)=>i.action==='manual_override.acked' && String(i.target_id||'')===takeoverId) &&
+    auditItems.some((i)=>i.action==='manual_override.completed' && String(i.target_id||'')===takeoverId) &&
+    auditItems.some((i)=>i.action==='fail_safe.resolved' && String(i.target_id||'')===blocked_event_id);
 
   console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));
   await pool.end();
