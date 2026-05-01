@@ -199,6 +199,8 @@ CREATE INDEX IF NOT EXISTS device_credential_index_v1_lookup_idx
 
 CREATE TABLE IF NOT EXISTS device_status_index_v1 (
   tenant_id TEXT NOT NULL,
+  project_id TEXT NULL,
+  group_id TEXT NULL,
   device_id TEXT NOT NULL,
   last_telemetry_ts_ms BIGINT NULL,
   last_heartbeat_ts_ms BIGINT NULL,
@@ -208,6 +210,9 @@ CREATE TABLE IF NOT EXISTS device_status_index_v1 (
   updated_ts_ms BIGINT NOT NULL,
   PRIMARY KEY (tenant_id, device_id)
 );
+
+CREATE INDEX IF NOT EXISTS device_status_index_v1_scope_device_idx
+  ON device_status_index_v1 (tenant_id, project_id, group_id, device_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_device_binding_index_v1_tenant_device
   ON device_binding_index_v1 (tenant_id, device_id);
