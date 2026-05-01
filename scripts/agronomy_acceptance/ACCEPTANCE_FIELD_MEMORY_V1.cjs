@@ -94,6 +94,30 @@ let pool;
   const operation_plan_id = String(submitJson.operation_plan_id ?? '');
   assert.ok(operation_plan_id, 'operation_plan_id missing');
 
+  await pool.query(
+    `
+    UPDATE facts
+       SET record_json = jsonb_set(
+         record_json::jsonb,
+         '{payload,proposal,meta}',
+         COALESCE((record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
+           || '{"skip_auto_task_issue": true}'::jsonb,
+         true
+       )
+     WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
+       AND (record_json::jsonb #>> '{payload,request_id}') = $1
+       AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
+       AND (record_json::jsonb #>> '{payload,project_id}') = $3
+       AND (record_json::jsonb #>> '{payload,group_id}') = $4
+    `,
+    [
+      String(submitJson.approval_request_id),
+      tenant_id,
+      project_id,
+      group_id
+    ]
+  );
+
   const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
     method: 'POST',
     token: approverToken,
