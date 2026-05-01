@@ -56,7 +56,33 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
       ]
     );
 
-    await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',zone_id:'sep_zone',zone_name:'sep',zone_type:'IRRIGATION_ZONE',geometry:{type:'Polygon',coordinates:[]},area_ha:1,risk_tags:['SECURITY_TEST'],agronomy_tags:['SEP'],source_refs:['ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1']}});
+    const zoneCreate = await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones`, {
+      method: 'POST',
+      token: 'admin_token',
+      body: {
+        tenant_id: 'tenantA',
+        project_id: 'projectA',
+        group_id: 'groupA',
+        zone_id: 'sep_zone',
+        zone_name: 'sep',
+        zone_type: 'IRRIGATION_ZONE',
+        geometry: { type: 'Polygon', coordinates: [] },
+        area_ha: 1,
+        risk_tags: ['SECURITY_TEST'],
+        agronomy_tags: ['SEP'],
+        source_refs: ['ACCEPTANCE_SECURITY_APPROVAL_EXECUTION_SEPARATION_V1']
+      }
+    });
+
+    if (!(zoneCreate.ok === true && zoneCreate.json?.ok === true)) {
+      console.log(JSON.stringify({
+        ok: false,
+        error: 'APPROVAL_SEPARATION_ZONE_CREATE_FAILED',
+        detail: zoneCreate.json
+      }, null, 2));
+      await pool.end();
+      process.exit(1);
+    }
     const rec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'agronomist_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_sep',device_id:'dev_sep',crop_code:'corn'}});
     checks.agronomist_generate_allowed=!['AUTH_SCOPE_DENIED','AUTH_ROLE_SCOPE_DENIED','AUTH_INVALID','AUTH_MISSING'].includes(rec.json?.error);
 
