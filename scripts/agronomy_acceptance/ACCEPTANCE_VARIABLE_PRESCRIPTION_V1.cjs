@@ -100,6 +100,38 @@ let pool;
   }
   requireOk(approve, 'approve decision');
 
+  await pool.query(
+    `UPDATE fail_safe_event_v1
+        SET status='RESOLVED',
+            resolved_at=$5,
+            resolved_by_actor_id='acceptance_cleanup',
+            resolved_by_token_id='acceptance_cleanup',
+            resolution_note='cleanup before variable prescription acceptance'
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND device_id=$4
+        AND status='OPEN'`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
+  await pool.query(
+    `DELETE FROM device_status_index_v1
+     WHERE tenant_id=$1
+       AND project_id=$2
+       AND group_id=$3
+       AND device_id=$4`,
+    [tenant_id, project_id, group_id, device_id]
+  );
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    [tenant_id, project_id, group_id, device_id, Date.now()]
+  );
+
   const taskResp = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method: 'POST', token: operatorToken, body: { tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id } }), 'variable action task');
   const act_task_id = String(taskResp.act_task_id ?? '').trim();
 

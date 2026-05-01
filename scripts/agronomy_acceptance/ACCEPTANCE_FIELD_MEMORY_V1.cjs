@@ -96,19 +96,51 @@ let pool;
 
   await pool.query(
     `
-    UPDATE facts
-       SET record_json = jsonb_set(
-         record_json::jsonb,
-         '{payload,proposal,meta}',
-         COALESCE((record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
-           || '{"skip_auto_task_issue": true}'::jsonb,
-         true
-       )
+    INSERT INTO facts (fact_id, occurred_at, source, record_json)
+    SELECT
+      $5,
+      NOW(),
+      'ACCEPTANCE_FIELD_MEMORY_V1_skip_auto_task_issue',
+      jsonb_set(
+        src.record_json::jsonb,
+        '{payload,proposal,meta}',
+        COALESCE((src.record_json::jsonb #> '{payload,proposal,meta}'), '{}'::jsonb)
+          || '{"skip_auto_task_issue": true}'::jsonb,
+        true
+      )
+    FROM (
+      SELECT record_json
+        FROM facts
+       WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
+         AND (record_json::jsonb #>> '{payload,request_id}') = $1
+         AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
+         AND (record_json::jsonb #>> '{payload,project_id}') = $3
+         AND (record_json::jsonb #>> '{payload,group_id}') = $4
+       ORDER BY occurred_at DESC, fact_id DESC
+       LIMIT 1
+    ) src
+    `,
+    [
+      String(submitJson.approval_request_id),
+      tenant_id,
+      project_id,
+      group_id,
+      randomUUID()
+    ]
+  );
+
+  const patchedApproval = await pool.query(
+    `
+    SELECT fact_id
+      FROM facts
      WHERE (record_json::jsonb ->> 'type') = 'approval_request_v1'
        AND (record_json::jsonb #>> '{payload,request_id}') = $1
        AND (record_json::jsonb #>> '{payload,tenant_id}') = $2
        AND (record_json::jsonb #>> '{payload,project_id}') = $3
        AND (record_json::jsonb #>> '{payload,group_id}') = $4
+       AND COALESCE((record_json::jsonb #>> '{payload,proposal,meta,skip_auto_task_issue}')::boolean, false) = true
+     ORDER BY occurred_at DESC, fact_id DESC
+     LIMIT 1
     `,
     [
       String(submitJson.approval_request_id),
@@ -117,6 +149,8 @@ let pool;
       group_id
     ]
   );
+
+  assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
 
   const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
     method: 'POST',
