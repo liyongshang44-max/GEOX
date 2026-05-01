@@ -117,8 +117,7 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
         duration_sec: 60
       },
       constraints: {
-        approval_required: true,
-        device_id: 'dev_audit'
+        approval_required: true
       },
       meta: {
         device_id: 'dev_audit',
