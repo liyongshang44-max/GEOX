@@ -44,7 +44,11 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
 
   const sub = requireOk(await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, { method:'POST', token:'admin_token', body:{ tenant_id, project_id, group_id } }), 'submit approval');
   const approval_request_id = String(sub.approval_request_id ?? '');
-  requireOk(await fetchJson(`${base}/api/v1/approvals/approve`, { method:'POST', token:'admin_token', body:{ tenant_id, project_id, group_id, request_id: approval_request_id } }), 'approve request');
+  requireOk(await fetchJson(`${base}/api/v1/approvals/approve`, {
+    method: 'POST',
+    token: 'approver_token',
+    body: { tenant_id, project_id, group_id, request_id: approval_request_id }
+  }), 'approve request');
 
   const operation_plan_id = `opl_security_audit_${Date.now()}`;
 
