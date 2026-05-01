@@ -145,7 +145,55 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
   const varAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=action.variable_task_created&target_id=${encodeURIComponent(act_task_id)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
   checks.variable_task_audit_exists = Array.isArray(varAudit.json?.items) && varAudit.json.items.some((i)=>i.target_id===act_task_id&&i.result==='ALLOW');
 
-  const receipt = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, { method:'POST', token:'admin_token', body:{ tenant_id, project_id, group_id, operation_plan_id, act_task_id, executor_id:{kind:'device',id:'dev_audit',namespace:'device'}, execution_time:{start_ts:Date.now()-60000,end_ts:Date.now()}, execution_coverage:{percent:100,area_ha:1}, resource_usage:{water_liters:100,energy_kwh:1}, logs_refs:[], status:'executed', constraint_check:{violated:false,violations:[]}, observed_parameters:{duration_sec:60}, meta:{idempotency_key:`rcpt_${Date.now()}`,command_id:`cmd_${Date.now()}`,device_id:'dev_audit'} } }), 'submit receipt');
+  const receipt = requireOk(await fetchJson(`${base}/api/v1/actions/receipt`, {
+    method: 'POST',
+    token: 'admin_token',
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      act_task_id,
+      executor_id: {
+        kind: 'device',
+        id: 'dev_audit',
+        namespace: 'device'
+      },
+      execution_time: {
+        start_ts: Date.now() - 60_000,
+        end_ts: Date.now()
+      },
+      execution_coverage: {
+        kind: 'field',
+        ref: 'field_c8_demo'
+      },
+      resource_usage: {
+        fuel_l: null,
+        electric_kwh: 1,
+        water_l: 100,
+        chemical_ml: null
+      },
+      logs_refs: [
+        {
+          kind: 'log',
+          ref: `audit_receipt_log_${act_task_id}`
+        }
+      ],
+      status: 'executed',
+      constraint_check: {
+        violated: false,
+        violations: []
+      },
+      observed_parameters: {
+        duration_sec: 60
+      },
+      meta: {
+        idempotency_key: `rcpt_${act_task_id}_${Date.now()}`,
+        command_id: act_task_id,
+        device_id: 'dev_audit'
+      }
+    }
+  }), 'submit receipt');
   const receipt_fact_id = String(receipt.fact_id || '');
   const receiptAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=action.receipt_submitted&target_id=${encodeURIComponent(receipt_fact_id)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
   checks.receipt_submitted_audit_exists = Array.isArray(receiptAudit.json?.items) && receiptAudit.json.items.some((i)=>i.target_id===receipt_fact_id&&i.result==='ALLOW');
