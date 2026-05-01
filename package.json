@@ -12,7 +12,8 @@
     "@vitejs/plugin-react": "^4.3.1",
     "mqtt": "5.15.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0"
   },
   "dependencies": {
     "@fastify/multipart": "^8.3.1",
