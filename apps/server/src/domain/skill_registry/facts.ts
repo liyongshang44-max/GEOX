@@ -146,6 +146,7 @@ export type SkillDefinitionFactInput = Omit<SkillDefinitionFactPayload, "version
   skill_version?: string;
 };
 export type SkillBindingFactPayload = z.infer<typeof SkillBindingPayloadSchema>;
+export type SkillBindingFactInput = Omit<z.input<typeof SkillBindingPayloadSchema>, "binding_id"> & { binding_id?: string };
 export type SkillRunFactPayload = z.infer<typeof SkillRunPayloadSchema>;
 export type SkillTraceFactPayload = z.infer<typeof SkillTracePayloadSchema>;
 
@@ -312,7 +313,7 @@ export async function appendSkillDefinitionFact(db: Pool | PoolClient, input: Sk
   return { ...appended, payload };
 }
 
-export async function appendSkillBindingFact(db: Pool | PoolClient, input: Omit<SkillBindingFactPayload, "binding_id"> & { binding_id?: string }, opts?: { source?: string; require_security_metadata?: boolean }): Promise<{ fact_id: string; occurred_at: string; payload: SkillBindingFactPayload }> {
+export async function appendSkillBindingFact(db: Pool | PoolClient, input: SkillBindingFactInput, opts?: { source?: string; require_security_metadata?: boolean }): Promise<{ fact_id: string; occurred_at: string; payload: SkillBindingFactPayload }> {
   ensureWritableTriggerStage(input.trigger_stage, "skill_binding_v1");
   const payload = SkillBindingPayloadSchema.parse({
     ...input,
