@@ -52,6 +52,37 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
 
   const operation_plan_id = `opl_security_audit_${Date.now()}`;
 
+  await pool.query(
+    `UPDATE fail_safe_event_v1
+      SET status='RESOLVED',
+          resolved_at=$5,
+          resolved_by_actor_id='tok_admin_actor',
+          resolved_by_token_id='tok_admin',
+          resolution_note='acceptance cleanup before audit task'
+    WHERE tenant_id=$1
+      AND project_id=$2
+      AND group_id=$3
+      AND device_id=$4
+      AND status='OPEN'`,
+    [tenant_id, project_id, group_id, 'dev_audit', Date.now()]
+  );
+
+  await pool.query(
+    `DELETE FROM device_status_index_v1
+   WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND device_id=$4`,
+    [tenant_id, project_id, group_id, 'dev_audit']
+  );
+
+  const nowTs = Date.now();
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+    (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+   VALUES
+    ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    [tenant_id, project_id, group_id, 'dev_audit', nowTs]
+  );
+
   const normal_operation_plan_id = `opl_security_audit_normal_${Date.now()}`;
 
   const normalTask = requireOk(await fetchJson(`${base}/api/v1/actions/task`, {
@@ -108,14 +139,6 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
   }
   const normalAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=action.task_created&target_id=${encodeURIComponent(normal_task_id)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
   checks.normal_task_audit_exists = Array.isArray(normalAudit.json?.items) && normalAudit.json.items.some((i)=>i.target_id===normal_task_id&&i.result==='ALLOW');
-
-  await pool.query(`DELETE FROM device_status_index_v1
-WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND device_id=$4;`, [tenant_id, project_id, group_id, 'dev_audit']);
-  const nowTs = Date.now();
-  await pool.query(`INSERT INTO device_status_index_v1
-  (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
-VALUES
-  ($1,$2,$3,$4,'ONLINE',$5,$5,$5);`, [tenant_id, project_id, group_id, 'dev_audit', nowTs]);
 
   const varTask = requireOk(await fetchJson(`${base}/api/v1/actions/task/from-variable-prescription`, { method:'POST', token:'admin_token', body:{ tenant_id, project_id, group_id, prescription_id, approval_request_id, operation_plan_id, device_id:'dev_audit' } }), 'create variable task');
   const act_task_id = String(varTask.act_task_id || '');
