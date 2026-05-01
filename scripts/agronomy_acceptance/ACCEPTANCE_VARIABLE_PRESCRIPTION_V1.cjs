@@ -6,7 +6,7 @@ let pool;
 
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
-  const adminToken = env('ADMIN_TOKEN', env('AO_ACT_TOKEN', 'admin_token'));
+  const adminToken = env('ADMIN_TOKEN', 'admin_token');
   const approverToken = env('APPROVER_TOKEN', 'approver_token');
   const operatorToken = env('OPERATOR_TOKEN', 'operator_token');
   const executorToken = env('EXECUTOR_TOKEN', 'executor_token');
