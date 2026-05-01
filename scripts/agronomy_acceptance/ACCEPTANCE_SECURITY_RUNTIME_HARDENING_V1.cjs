@@ -3,7 +3,7 @@
 const { env, fetchJson } = require('./_common.cjs');
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
-function runWith(e){const out=execFileSync('node',['--import','tsx','-e',`import { getRuntimeSecurityStatusV1 } from './apps/server/src/runtime/runtime_security_v1.ts';console.log(JSON.stringify(getRuntimeSecurityStatusV1()));`],{cwd:path.resolve(__dirname,'../..'),env:{...process.env,...e},encoding:'utf8'});return JSON.parse(out.trim().split('\n').pop());}
+function runWith(e){const out=execFileSync('node',['--import','tsx','-e',`import { getRuntimeSecurityStatusV1 } from './apps/server/src/runtime/runtime_security_v1.ts';console.log(JSON.stringify(getRuntimeSecurityStatusV1()));`],{cwd:path.resolve(__dirname,'../..'),env:{...process.env,GEOX_TOKEN:'',GEOX_AO_ACT_TOKEN:'',AO_ACT_TOKEN:'',GEOX_TOKENS_FILE:'',GEOX_TOKEN_SSOT_PATH:'',GEOX_TOKENS_JSON:'',...e},encoding:'utf8'});return JSON.parse(out.trim().split('\n').pop());}
 (async()=>{const checks={};
 const dev=runWith({GEOX_RUNTIME_ENV:'development',GEOX_ALLOWED_ORIGINS:''}); checks.development_returns_status=dev.runtime_env==='development'&&Array.isArray(dev.errors);
 const noToken=runWith({GEOX_RUNTIME_ENV:'production',GEOX_TOKENS_JSON:'',GEOX_TOKENS_FILE:'',GEOX_TOKEN_SSOT_PATH:''}); checks.production_token_source_required=(noToken.errors||[]).includes('RUNTIME_TOKEN_SOURCE_REQUIRED');

@@ -16,24 +16,31 @@ const { Pool } = require('pg');
   try { await assertSecurityAcceptanceTokensLoaded(base); } catch (err) { console.log(JSON.stringify({ ok:false, error:'SECURITY_ACCEPTANCE_TOKEN_FIXTURE_NOT_LOADED', detail:String(err?.message||err) }, null, 2)); process.exit(1); }
 
   await pool.query(`DELETE FROM device_status_index_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND device_id=$4`, [tenant_id, project_id, group_id, device_id]);
-  await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,device_id,status,last_heartbeat_ts_ms) VALUES ($1,$2,$3,$4,'OFFLINE',$5)`, [tenant_id, project_id, group_id, device_id, Date.now()-600000]);
+  await pool.query(`INSERT INTO device_status_index_v1(tenant_id,project_id,group_id,device_id,status,last_heartbeat_ts_ms,last_telemetry_ts_ms,updated_ts_ms) VALUES ($1,$2,$3,$4,'OFFLINE',$5,$6,$7)`, [tenant_id, project_id, group_id, device_id, Date.now()-600000, Date.now()-600000, Date.now()]);
 
-  const approvalCreate = await fetchJson(`${base}/api/v1/approvals/requests`, {
-    method: 'POST', token: 'admin_token', body: { tenant_id, project_id, group_id, subject: { type: 'manual_takeover_fail_safe', ref: `fs_${device_id}_${Date.now()}` }, reason: 'fail_safe_acceptance_task' }
+  const approvalCreate = await fetchJson(`${base}/api/v1/approvals/request`, {
+    method: 'POST', token: 'admin_token', body: {
+      tenant_id,
+      project_id,
+      group_id,
+      issuer: { kind: 'human', id: 'tok_admin_actor', namespace: 'fail_safe_acceptance' },
+      action_type: 'IRRIGATE',
+      target: { kind: 'device', ref: device_id },
+      time_window: { start_ts: Date.now(), end_ts: Date.now() + 15 * 60 * 1000 },
+      parameter_schema: { keys: [{ name: 'duration_sec', type: 'number', min: 1 }] },
+      parameters: { duration_sec: 60 },
+      constraints: { approval_required: true },
+      meta: { skip_auto_task_issue: true }
+    }
   });
   const approval_request_id = String(approvalCreate.json?.request_id ?? approvalCreate.json?.approval_request_id ?? '');
   checks.approval_request_created = approvalCreate.ok && Boolean(approval_request_id);
 
   let approvalApprove = { ok: false, status: 0, json: {} };
   if (approval_request_id) {
-    approvalApprove = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_request_id)}/decide`, {
-      method: 'POST', token: 'approver_token', body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'fail_safe_acceptance_approve' }
+    approvalApprove = await fetchJson(`${base}/api/v1/approvals/approve`, {
+      method: 'POST', token: 'approver_token', body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'fail_safe_acceptance_approve' }
     });
-    if (!approvalApprove.ok) {
-      approvalApprove = await fetchJson(`${base}/api/v1/approvals/approve`, {
-        method: 'POST', token: 'approver_token', body: { request_id: approval_request_id, tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'fail_safe_acceptance_approve' }
-      });
-    }
   }
   checks.approval_request_approved = approvalApprove.ok;
 
