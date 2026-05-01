@@ -153,7 +153,7 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
 
     await pool.query(
       `INSERT INTO device_status_index_v1
-        (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_at_ts_ms)
+        (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
        VALUES ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
       ['tenantA', 'projectA', 'groupA', 'dev_sep', Date.now()]
     );
