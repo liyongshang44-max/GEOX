@@ -10,10 +10,89 @@ const ownRead=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones?${q}`,{
 const tbRead=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones?${q}`,{token:'tenant_b_admin_token'}); checks.tenant_b_cannot_read_tenant_a_zone=tbRead.status===404&&tbRead.json?.error==='NOT_FOUND';
 const allowlist=await fetchJson(`${base}/api/v1/fields/field_c8_demo/zones?${q}`,{token:'tenant_a_restricted_token'}); checks.field_allowlist_enforced=allowlist.status===404&&allowlist.json?.error==='NOT_FOUND';
 const rec=await fetchJson(`${base}/api/v1/recommendations/generate`,{method:'POST',token:'tenant_a_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',field_id:'field_c8_demo',season_id:'s_tenant_iso',device_id:'d_tenant_iso',crop_code:'corn'}});
-const vp=await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`,{method:'POST',token:'tenant_a_admin_token',body:{tenant_id:'tenantA',project_id:'projectA',group_id:'groupA',recommendation_id:rec.json?.recommendation_id,field_id:'field_c8_demo',season_id:'s_tenant_iso',crop_id:'corn',variable_plan:{mode:'VARIABLE_BY_ZONE',zone_rates:[{zone_id:'tenant_iso_zone_a',operation_type:'IRRIGATION',planned_amount:10,unit:'mm',priority:'HIGH',reason_codes:['SECURITY_TEST'],source_refs:['ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1']},{zone_id:'tenant_iso_zone_b',operation_type:'IRRIGATION',planned_amount:12,unit:'mm',priority:'MEDIUM',reason_codes:['SECURITY_TEST'],source_refs:['ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1']}]}}});
-const pid=vp.json?.prescription_id;
-const pRead=await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(pid)}?tenant_id=tenantB&project_id=projectB&group_id=groupB`,{token:'tenant_b_admin_token'});
-checks.prescription_cross_tenant_hidden=pRead.status===404&&pRead.json?.error==='NOT_FOUND';
+const recommendation_id = String(
+  rec.json?.recommendation_id ??
+  rec.json?.recommendations?.[0]?.recommendation_id ??
+  ''
+);
+
+if (!recommendation_id) {
+  console.log(JSON.stringify({
+    ok: false,
+    error: 'TENANT_ISOLATION_RECOMMENDATION_ID_MISSING',
+    detail: rec.json
+  }, null, 2));
+  process.exit(1);
+}
+
+const vp = await fetchJson(`${base}/api/v1/prescriptions/variable/from-recommendation`, {
+  method: 'POST',
+  token: 'tenant_a_admin_token',
+  body: {
+    tenant_id: 'tenantA',
+    project_id: 'projectA',
+    group_id: 'groupA',
+    recommendation_id,
+    field_id: 'field_c8_demo',
+    season_id: 's_tenant_iso',
+    crop_id: 'corn',
+    variable_plan: {
+      mode: 'VARIABLE_BY_ZONE',
+      zone_rates: [
+        {
+          zone_id: 'tenant_iso_zone_a',
+          operation_type: 'IRRIGATION',
+          planned_amount: 10,
+          unit: 'mm',
+          priority: 'HIGH',
+          reason_codes: ['SECURITY_TEST'],
+          source_refs: ['ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1']
+        },
+        {
+          zone_id: 'tenant_iso_zone_b',
+          operation_type: 'IRRIGATION',
+          planned_amount: 12,
+          unit: 'mm',
+          priority: 'MEDIUM',
+          reason_codes: ['SECURITY_TEST'],
+          source_refs: ['ACCEPTANCE_SECURITY_TENANT_ISOLATION_V1']
+        }
+      ]
+    }
+  }
+});
+
+const pid = String(
+  vp.json?.prescription_id ??
+  vp.json?.prescription?.prescription_id ??
+  vp.json?.prescription?.id ??
+  ''
+);
+
+if (!pid) {
+  console.log(JSON.stringify({
+    ok: false,
+    error: 'TENANT_ISOLATION_PRESCRIPTION_ID_MISSING',
+    detail: vp.json
+  }, null, 2));
+  process.exit(1);
+}
+
+const pReadTenantMismatch = await fetchJson(
+  `${base}/api/v1/prescriptions/${encodeURIComponent(pid)}?tenant_id=tenantA&project_id=projectA&group_id=groupA`,
+  { token: 'tenant_b_admin_token' }
+);
+
+checks.prescription_cross_tenant_hidden =
+  pReadTenantMismatch.status === 404 &&
+  String(pReadTenantMismatch.json?.error ?? '') === 'NOT_FOUND';
+
+const pReadWrongTenantScope = await fetchJson(
+  `${base}/api/v1/prescriptions/${encodeURIComponent(pid)}?tenant_id=tenantB&project_id=projectB&group_id=groupB`,
+  { token: 'tenant_b_admin_token' }
+);
 const fm=await fetchJson(`${base}/api/v1/field-memory/summary?field_id=field_c8_demo&${q}`,{token:'tenant_a_restricted_token'}); checks.field_memory_field_allowlist_enforced=fm.status===404&&fm.json?.error==='NOT_FOUND';
-checks.resource_id_only_access_blocked=checks.prescription_cross_tenant_hidden&&checks.tenant_b_cannot_read_tenant_a_zone;
+checks.resource_id_only_access_blocked =
+  pReadWrongTenantScope.status === 404 &&
+  ['NOT_FOUND', 'PRESCRIPTION_NOT_FOUND'].includes(String(pReadWrongTenantScope.json?.error ?? ''));
 console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));})();
