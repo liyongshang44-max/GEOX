@@ -52,8 +52,60 @@ const { assertSecurityAcceptanceTokensLoaded } = require('./_security_acceptance
 
   const operation_plan_id = `opl_security_audit_${Date.now()}`;
 
-  const normalTask = requireOk(await fetchJson(`${base}/api/v1/actions/task`, { method:'POST', token:'admin_token', body:{ tenant_id, project_id, group_id, field_id:'field_c8_demo', device_id:'dev_audit', operation_type:'IRRIGATION', planned_amount:3, unit:'mm' } }), 'create normal task');
+  const normal_operation_plan_id = `opl_security_audit_normal_${Date.now()}`;
+
+  const normalTask = requireOk(await fetchJson(`${base}/api/v1/actions/task`, {
+    method: 'POST',
+    token: 'admin_token',
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id: normal_operation_plan_id,
+      approval_request_id,
+      issuer: {
+        kind: 'human',
+        id: 'tok_admin_actor',
+        namespace: 'security_audit_acceptance'
+      },
+      action_type: 'IRRIGATE',
+      target: {
+        kind: 'field',
+        ref: 'field_c8_demo'
+      },
+      time_window: {
+        start_ts: Date.now(),
+        end_ts: Date.now() + 30 * 60 * 1000
+      },
+      parameter_schema: {
+        keys: [
+          { name: 'duration_sec', type: 'number', min: 1 }
+        ]
+      },
+      parameters: {
+        duration_sec: 60
+      },
+      constraints: {
+        approval_required: true,
+        device_id: 'dev_audit'
+      },
+      meta: {
+        device_id: 'dev_audit',
+        audit_acceptance: true
+      }
+    }
+  }), 'create normal task');
+
   const normal_task_id = String(normalTask.act_task_id || '');
+
+  if (!normal_task_id) {
+    console.log(JSON.stringify({
+      ok: false,
+      error: 'AUDIT_NORMAL_TASK_ID_MISSING',
+      detail: normalTask
+    }, null, 2));
+    process.exit(1);
+  }
   const normalAudit = await fetchJson(`${base}/api/v1/security/audit-events?action=action.task_created&target_id=${encodeURIComponent(normal_task_id)}&tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token:'admin_token' });
   checks.normal_task_audit_exists = Array.isArray(normalAudit.json?.items) && normalAudit.json.items.some((i)=>i.target_id===normal_task_id&&i.result==='ALLOW');
 
