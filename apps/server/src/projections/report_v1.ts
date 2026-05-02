@@ -465,11 +465,17 @@ export function projectOperationReportV1(input: {
       reasons: computedRisk.reasons,
     },
     field_memory: {
-    field_response_memory: FieldMemorySummary[];
-    device_reliability_memory: FieldMemorySummary[];
-    skill_performance_memory: FieldMemorySummary[];
-  };
-  workflow: {
+      field_response_memory: Array.isArray((input as any).field_memory?.field_response_memory)
+        ? ((input as any).field_memory.field_response_memory as FieldMemorySummary[])
+        : [],
+      device_reliability_memory: Array.isArray((input as any).field_memory?.device_reliability_memory)
+        ? ((input as any).field_memory.device_reliability_memory as FieldMemorySummary[])
+        : [],
+      skill_performance_memory: Array.isArray((input as any).field_memory?.skill_performance_memory)
+        ? ((input as any).field_memory.skill_performance_memory as FieldMemorySummary[])
+        : [],
+    },
+    workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
       owner_name: toText(input.operation_workflow?.owner_name),
       last_note: toText(input.operation_workflow?.last_note),
