@@ -47,6 +47,25 @@ export function registerSkillRuntimeV1Routes(app: FastifyInstance, pool: Pool): 
     if (!skill_id || !version) {
       return reply.code(400).send({ ok: false, error: "INVALID_BODY", message: "skill_id and version are required" });
     }
+    const category = String(body.category ?? "").trim().toUpperCase();
+    const approvalId = String(body?.input?.approval_id ?? "").trim();
+    if (category === "DEVICE" || skill_id === "mock_valve_control_skill_v1") {
+      if (!approvalId) return reply.code(403).send({ ok: false, error: "APPROVAL_REQUIRED" });
+      const approvalQ = await pool.query(
+        `SELECT record_json::jsonb AS record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type') IN ('approval_decision_v1','approval_decision_made_v1')
+            AND ((record_json::jsonb#>>'{payload,approval_request_id}') = $1 OR (record_json::jsonb#>>'{payload,approval_id}') = $1)
+            AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
+            AND (record_json::jsonb#>>'{payload,project_id}') = $3
+            AND (record_json::jsonb#>>'{payload,group_id}') = $4
+          ORDER BY occurred_at DESC
+          LIMIT 1`,
+        [approvalId, tenant.tenant_id, tenant.project_id, tenant.group_id]
+      );
+      const decision = String(approvalQ.rows?.[0]?.record_json?.payload?.decision ?? "").toUpperCase();
+      if (!["APPROVE", "APPROVED"].includes(decision)) return reply.code(403).send({ ok: false, error: "DEVICE_SKILL_EXECUTION_BLOCKED" });
+    }
 
     const created = await executeSkillRuntimeV1(pool, {
       ...tenant,
