@@ -130,6 +130,11 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     },
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
+    field_memory: (report as any).field_memory ?? {
+      field_response_memory: [],
+      device_reliability_memory: [],
+      skill_performance_memory: [],
+    },
   };
 }
 
@@ -321,9 +326,36 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         }
         : null),
     });
+    const candidateIds = Array.from(new Set([
+      state.operation_id,
+      state.operation_plan_id,
+      state.recommendation_id,
+      state.act_task_id,
+      state.acceptance?.acceptance_id,
+    ].map((x) => String(x ?? "").trim()).filter(Boolean)));
+    const fm = await pool.query(
+      `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+       FROM field_memory_v1
+       WHERE tenant_id = $1
+         AND (
+          operation_id = ANY($2::text[])
+          OR task_id = ANY($2::text[])
+          OR recommendation_id = ANY($2::text[])
+          OR prescription_id = ANY($2::text[])
+          OR acceptance_id = ANY($2::text[])
+         )
+       ORDER BY occurred_at DESC LIMIT 50`,
+      [tenant.tenant_id, candidateIds],
+    );
+    const enrichedReport = ensureReportV1ExtendedFields(operation_report_v1);
+    enrichedReport.field_memory = {
+      field_response_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
+      device_reliability_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
+      skill_performance_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
+    };
     const payload: OperationReportSingleResponseV1 = {
       ok: true,
-      operation_report_v1: ensureReportV1ExtendedFields(operation_report_v1),
+      operation_report_v1: enrichedReport,
     };
     return reply.send(payload);
   });

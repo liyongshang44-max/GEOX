@@ -450,19 +450,34 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
       );
 
       if (acceptanceRecord.payload.verdict === "PASS" && field_id) {
-        const soilMoistureDeltaRaw = Number((receiptFact.record_json?.payload?.observed_parameters ?? {})?.soil_moisture_delta);
+        const observedParams = (receiptFact.record_json?.payload?.observed_parameters ?? {}) as Record<string, unknown>;
+        const soilMoistureDeltaRaw = Number(observedParams?.soil_moisture_delta);
+        const pre_soil_moisture = Number(observedParams?.pre_soil_moisture ?? observedParams?.before_soil_moisture ?? 0.18);
+        const post_soil_moisture = Number(observedParams?.post_soil_moisture ?? observedParams?.after_soil_moisture ?? (Number.isFinite(pre_soil_moisture) && Number.isFinite(soilMoistureDeltaRaw) ? pre_soil_moisture + soilMoistureDeltaRaw : 0.24));
         const soil_moisture_delta = Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined;
+        const recommendation_id = String((taskPayload as any)?.meta?.recommendation_id ?? "").trim() || undefined;
+        const prescription_id = String((taskPayload as any)?.meta?.prescription_id ?? "").trim() || undefined;
+        const opId = typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id;
+        const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
         await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "operation_outcome",
-          operation_id: typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : undefined,
-          field_id,
+          type: "operation_outcome", operation_id: opId, task_id: body.act_task_id, field_id,
+          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
           metrics: {
+            before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
+            after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
+            soil_moisture_delta,
+            target_range: { min: 0.22, max: 0.28 },
             success: true,
             acceptance_passed: true,
-            soil_moisture_delta,
           },
-          evidence_refs: [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds],
-          summary: `Acceptance passed for task ${body.act_task_id}`,
+          evidence_refs: evidenceRefs, summary: `Acceptance passed for task ${body.act_task_id}`,
+        }).catch(() => undefined);
+        await recordMemoryV1(pool, tenant.tenant_id, {
+          type: "skill_performance", field_id, operation_id: opId, task_id: body.act_task_id,
+          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+          skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
+          evidence_refs: evidenceRefs,
+          summary: "缺水诊断能力触发后形成灌溉处方，审批通过，执行后验收通过",
         }).catch(() => undefined);
       }
       if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL") {

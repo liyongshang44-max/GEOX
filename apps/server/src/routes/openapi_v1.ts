@@ -299,6 +299,15 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
           properties: {
             field_id: { type: "string" },
             field_name: { type: "string", nullable: true },
+            field_memory: {
+              type: "object",
+              required: ["field_response_memory", "device_reliability_memory", "skill_performance_memory"],
+              properties: {
+                field_response_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } },
+                device_reliability_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } },
+                skill_performance_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } }
+              }
+            },
             risk: {
               type: "object",
               required: ["level", "reasons"],
@@ -593,7 +602,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "risk", "workflow"],
+          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "workflow"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -727,6 +736,15 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
                 },
                 pending_acceptance_elapsed_ms: { type: "number", nullable: true },
                 pending_acceptance_over_30m: { type: "boolean" }
+              }
+            },
+            field_memory: {
+              type: "object",
+              required: ["field_response_memory", "device_reliability_memory", "skill_performance_memory"],
+              properties: {
+                field_response_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } },
+                device_reliability_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } },
+                skill_performance_memory: { type: "array", items: { "$ref": "#/components/schemas/FieldMemorySummaryItemV1" } }
               }
             },
             risk: {
@@ -904,6 +922,18 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
             ok: { type: "boolean" },
             field_id: { type: "string" },
             items: { type: "array", items: { '$ref': "#/components/schemas/FieldMemoryV1" } }
+          }
+        },
+        FieldMemorySummaryItemV1: {
+          type: "object",
+          required: ["memory_id","memory_type","metric_key","confidence","summary_text","evidence_refs","occurred_at"],
+          properties: {
+            memory_id: { type: "string" }, memory_type: { type: "string" }, metric_key: { type: "string" },
+            before_value: { type: "number", nullable: true }, after_value: { type: "number", nullable: true },
+            delta_value: { type: "number", nullable: true }, confidence: { type: "number" },
+            summary_text: { type: "string" }, evidence_refs: { type: "array", items: {} },
+            skill_id: { type: "string", nullable: true }, skill_trace_ref: { type: "string", nullable: true },
+            occurred_at: { type: "string", format: "date-time" }
           }
         },
         FieldMemorySummaryResponseV1: {
