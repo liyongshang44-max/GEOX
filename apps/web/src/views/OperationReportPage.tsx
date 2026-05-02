@@ -97,6 +97,32 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
+
+      <SectionCard title={vm.fieldMemory.title}>
+        {vm.fieldMemory.items.length ? (
+          <ul>
+            {vm.fieldMemory.items.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="muted">暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title={vm.roiLedger.title}>
+        {vm.roiLedger.items.length ? (
+          <ul>
+            {vm.roiLedger.items.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="muted">暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。</div>
+        )}
+        <div className="muted">{vm.roiLedger.confidenceText}</div>
+      </SectionCard>
+
       <SectionCard title="最终结论">
         <div><strong>{vm.conclusion.finalStatusText}</strong></div>
         <div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div>

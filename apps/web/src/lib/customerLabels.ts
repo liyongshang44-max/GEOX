@@ -43,12 +43,26 @@ export function labelRiskLevel(raw: unknown): string {
 
 export function labelFinalStatus(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "CLOSED"].includes(key)) return "已完成";
+  if (["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "CLOSED"].includes(key)) return "作业已完成并通过验收";
   if (["PENDING_ACCEPTANCE", "WAIT_ACCEPTANCE", "TO_ACCEPT"].includes(key)) return "待验收";
   if (["RUNNING", "IN_PROGRESS", "PROCESSING"].includes(key)) return "执行中";
-  if (["INVALID_EXECUTION", "ERROR", "FAILED", "FAIL", "REJECTED", "ABNORMAL"].includes(key)) return "执行异常";
+  if (["INVALID_EXECUTION", "ERROR", "FAILED", "FAIL", "REJECTED", "ABNORMAL"].includes(key)) return "作业未达到预期效果";
   if (["PENDING", "TODO", "NEW", "QUEUED", "UNKNOWN", ""].includes(key)) return "待确认";
   return "待确认";
+}
+
+export function labelEvidenceQuality(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，建议人工复核";
+  if (["DEVICE_NOT_RESPONDING", "NO_DEVICE_ACK", "TIMEOUT"].includes(key)) return "设备未响应，已阻断自动执行";
+  return labelEmptyFallback(raw, "证据充分");
+}
+
+export function labelConfidenceHint(raw: unknown): string {
+  const score = typeof raw === "number" ? raw : Number(raw);
+  if (!Number.isFinite(score)) return "收益为估算值，可信度有限";
+  if (score < 0.6) return "收益为估算值，可信度有限";
+  return "可信度较高";
 }
 
 export function labelAcceptanceStatus(raw: unknown): string {
