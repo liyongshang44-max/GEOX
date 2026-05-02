@@ -372,7 +372,7 @@ export function computeExecutionReliabilityEntry(asExecuted: AsExecutedRow): Roi
   const basis: RoiConfidenceBasisV1 = status === "INSUFFICIENT_RECEIPT" ? "assumed" : "estimated";
 
   return {
-    roi_type: "EXECUTION_RELIABILITY",
+    roi_type: "FIRST_PASS_ACCEPTANCE_RATE",
     baseline: {},
     actual: { status, sentiment },
     delta: {},
@@ -534,9 +534,9 @@ function enrichCommercialFields(entry: RoiCandidate): RoiCandidate {
     unit: entry.unit ?? unit,
     estimated_money_value: entry.estimated_money_value ?? null,
     currency: entry.currency ?? null,
-    source_skill_id: entry.source_skill_id ?? null,
-    skill_trace_ref: entry.skill_trace_ref ?? null,
-    field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : [],
+    source_skill_id: entry.source_skill_id ?? String((entry.assumptions as any)?.source_skill_id ?? "").trim() || null,
+    skill_trace_ref: entry.skill_trace_ref ?? String((entry.assumptions as any)?.trace_id ?? "").trim() || null,
+    field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : []),
     value_kind: entry.value_kind ?? value_kind,
   };
 }
@@ -562,11 +562,18 @@ export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow,
   const laborSaved = computeLaborSavedEntry(asExecuted);
   if (laborSaved) entries.push(laborSaved);
 
-  // 禁止生成没有 evidence/confidence 的记录。
+  const allowedMvp0 = new Set(["WATER_SAVED", "LABOR_SAVED", "EARLY_WARNING_LEAD_TIME", "FIRST_PASS_ACCEPTANCE_RATE"]);
+  // 商业可信度门禁：MVP-0 只保留允许类型，且必须具备 baseline/confidence/evidence，并满足 value_kind 约束。
   return entries.map(enrichCommercialFields).filter((entry) => {
+    if (!allowedMvp0.has(entry.roi_type)) return false;
     const hasEvidence = Array.isArray(entry.evidence_refs) && entry.evidence_refs.length > 0;
+    const hasBaseline = entry.baseline_value != null;
     const hasConfidence = Boolean(entry.confidence?.level && entry.confidence?.basis && Array.isArray(entry.confidence?.reasons));
-    return hasEvidence && hasConfidence;
+    const measuredNeedsEvidence = entry.value_kind !== "MEASURED" || hasEvidence;
+    const defaultAssumptionNotMeasured = entry.baseline_type !== "DEFAULT_ASSUMPTION" || (entry.value_kind !== "MEASURED");
+    const traceabilityCount = [entry.skill_trace_ref, entry.source_skill_id, entry.field_memory_refs?.length ? "field_memory" : null, (entry as any).operation_id].filter(Boolean).length;
+    const hasTraceability = traceabilityCount >= 2;
+    return hasEvidence && hasBaseline && hasConfidence && measuredNeedsEvidence && defaultAssumptionNotMeasured && hasTraceability;
   });
 }
 

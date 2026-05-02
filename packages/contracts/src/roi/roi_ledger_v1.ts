@@ -1,12 +1,8 @@
 export const RoiTypeV1Values = [
   "WATER_SAVED",
-  "FERTILIZER_SAVED",
   "LABOR_SAVED",
-  "EARLY_ANOMALY_DETECTED",
-  "ACCEPTANCE_PASS_RATE",
-  "EXECUTION_RELIABILITY",
-  "RISK_REDUCTION",
-  "COST_IMPACT",
+  "EARLY_WARNING_LEAD_TIME",
+  "FIRST_PASS_ACCEPTANCE_RATE",
 ] as const;
 
 export type RoiTypeV1 = (typeof RoiTypeV1Values)[number];
