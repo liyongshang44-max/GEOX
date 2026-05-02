@@ -179,7 +179,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
         ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
         ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "设备可靠性记录")}（阀门响应/超时/回执完整性已留痕）`)),
         ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "Skill 表现记录")}（诊断采纳与验收结果已记录）`)),
-      ]).concat(["地块响应：记录已归档","设备可靠性：已记录阀门回执与超时情况","Skill 表现：采纳与验收结论已沉淀"]).slice(0,3),
+      ]),
     },
     roiLedger: {
       title: "本次价值账本",
@@ -188,7 +188,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
         ...((roi.labor_saved ?? []).slice(0, 1).map((item: any) => `${formatRoiLine(item)}，计算方法：${labelEmptyFallback(item?.calculation_method, "后端口径")}`)),
         ...((roi.early_warning_lead_time ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.customer_text, "异常提前发现：已记录检测结果"))),
         ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1).map((item: any) => `验收一次通过：${labelEmptyFallback(item?.customer_text, "待补充证据")}`)),
-      ]).concat(["节水：数值与baseline已记录","少跑田/人工节省：按后端方法估算","验收一次通过：证据充分性已记录"]).slice(0,4),
+      ]),
       confidenceText: labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score),
     },
     debug: {
