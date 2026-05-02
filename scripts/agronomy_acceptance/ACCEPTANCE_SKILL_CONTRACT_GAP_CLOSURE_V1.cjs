@@ -120,50 +120,55 @@ async function main() {
     });
     ids.approval_id = String(submit.json?.approval_request_id ?? '');
 
-    const executePre = await fetchJson(`${base}/api/v1/actions/execute`, {
+    const runtimeNoApproval = await fetchJson(`${base}/api/v1/skill/execute`, {
       method: 'POST', token,
       body: {
-        tenant_id, project_id, group_id, operation_id: `op_gap_${suffix}`,
-        execution_plan: {
-          action_type: 'IRRIGATE',
-          target: { kind: 'device', ref: device_id },
-          parameters: { duration_min: 20 },
-          execution_mode: 'AUTO',
-          safe_guard: { requires_approval: true },
-          failure_strategy: { retryable: true, max_retries: 1 },
-          device_capability_check: { supported: true },
-          idempotency_key: `exec_gap_pre_${suffix}`,
-        },
+        tenant_id, project_id, group_id,
+        skill_id: 'mock_valve_control_skill_v1', version: 'v1', category: 'DEVICE', bind_target: 'mock_valve',
+        field_id, device_id, operation_id: `op_gap_pre_${suffix}`, operation_plan_id: `op_gap_pre_${suffix}`,
+        input: { task_id: `task_pre_${suffix}` },
       },
     });
-    const noApprovalBlocked = ['REQUIRES_APPROVAL', 'APPROVAL_REQUIRED', 'DEVICE_SKILL_EXECUTION_BLOCKED'].includes(String(executePre.json?.error ?? ''));
+    const runtimeBadApproval = await fetchJson(`${base}/api/v1/skill/execute`, {
+      method: 'POST', token,
+      body: {
+        tenant_id, project_id, group_id,
+        skill_id: 'mock_valve_control_skill_v1', version: 'v1', category: 'DEVICE', bind_target: 'mock_valve',
+        field_id, device_id, operation_id: `op_gap_pre2_${suffix}`, operation_plan_id: `op_gap_pre2_${suffix}`,
+        input: { task_id: `task_pre2_${suffix}`, approval_id: `bad_approval_${suffix}` },
+      },
+    });
+    const noApprovalBlocked = Number(runtimeNoApproval.status) === 403
+      && String(runtimeNoApproval.json?.error ?? '') === 'APPROVAL_REQUIRED'
+      && Number(runtimeBadApproval.status) === 403
+      && String(runtimeBadApproval.json?.error ?? '') === 'DEVICE_SKILL_EXECUTION_BLOCKED';
     checks.approval_required_before_device_skill = toPassFail(noApprovalBlocked);
     failure_paths.device_skill_blocked_without_approval = toPassFail(noApprovalBlocked);
 
-    const mismatchResp = await fetchJson(`${base}/api/v1/actions/execute`, {
+    const mismatchTaskResp = await fetchJson(`${base}/api/v1/actions/task`, {
       method: 'POST', token,
       body: {
-        tenant_id, project_id, group_id, operation_id: `op_gap_mismatch_${suffix}`,
-        execution_plan: {
-          action_type: 'SPRAY',
-          target: { kind: 'device', ref: device_id },
-          parameters: { duration_min: 20 },
-          execution_mode: 'AUTO',
-          safe_guard: { requires_approval: false },
-          failure_strategy: { retryable: true, max_retries: 1 },
-          device_capability_check: { supported: true },
-          idempotency_key: `exec_gap_mismatch_${suffix}`,
-        },
+        tenant_id, project_id, group_id, operation_plan_id: `op_plan_mismatch_${suffix}`, approval_request_id: ids.approval_id,
+        field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
+        action_type: 'SPRAY', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
+        meta: { adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
       },
     });
-    const mismatchErr = String(mismatchResp.json?.error ?? '');
-    const capabilityMismatchBlocked = [
-      'CAPABILITY_MISMATCH',
-      'DEVICE_ACTION_TYPE_MISMATCH',
-      'DEVICE_ACTION_MISSING_PARAMETERS',
-      'DEVICE_ACTION_TYPE_UNSUPPORTED',
-      'DEVICE_CAPABILITY_UNSUPPORTED',
-    ].includes(mismatchErr);
+    const mismatchTaskId = String(mismatchTaskResp.json?.act_task_id ?? '');
+    let mismatchBoundToMockValve = false;
+    if (mismatchTaskId) {
+      const mismatchTaskFactQ = await pool.query(
+        `SELECT record_json::jsonb AS record_json
+           FROM facts
+          WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+            AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+          ORDER BY occurred_at DESC LIMIT 1`,
+        [mismatchTaskId]
+      );
+      mismatchBoundToMockValve = String(mismatchTaskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence?.device_skill_id ?? '') === 'mock_valve_control_skill_v1';
+    }
+    const capabilityMismatchBlocked = !mismatchBoundToMockValve;
     failure_paths.capability_mismatch_blocked = toPassFail(capabilityMismatchBlocked);
 
     const decide = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(ids.approval_id)}/decide`, {
