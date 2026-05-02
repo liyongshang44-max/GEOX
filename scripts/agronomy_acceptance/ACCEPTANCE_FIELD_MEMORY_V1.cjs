@@ -330,47 +330,6 @@ let pool;
   assert.ok(acceptance_fact_id, 'acceptance_fact_id missing');
   assert.equal(acceptance_verdict, 'PASS', `acceptance verdict must be PASS, got ${acceptance_verdict}`);
 
-  await pool.query(
-    `INSERT INTO field_memory_v1 (
-      memory_id,
-      tenant_id,
-      field_id,
-      operation_id,
-      prescription_id,
-      recommendation_id,
-      memory_type,
-      summary,
-      metrics,
-      skill_refs,
-      evidence_refs,
-      created_at
-    )
-    VALUES (
-      $1,$2,$3,$4,NULL,$5,'skill_performance',$6,$7::jsonb,$8::jsonb,$9::jsonb,$10
-    )`,
-    [
-      randomUUID(),
-      tenant_id,
-      field_id,
-      actTaskId,
-      recId,
-      `Skill performance recorded for ${field_id}`,
-      JSON.stringify({
-        success: true,
-        execution_deviation: 0,
-        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
-      }),
-      JSON.stringify([
-        {
-          skill_id: 'irrigation_deficit_skill_v1',
-          skill_version: 'v1'
-        }
-      ]),
-      JSON.stringify([receipt_fact_id, execution_judge_id, acceptance_fact_id]),
-      Date.now()
-    ]
-  );
-
   const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token: adminToken });
   const memoryListJson = requireOk(memoryList, 'field memory list');
   const items = Array.isArray(memoryListJson.items) ? memoryListJson.items : [];
@@ -378,11 +337,25 @@ let pool;
   const summaryResp = await fetchJson(`${base}/api/v1/field-memory/summary?field_id=${encodeURIComponent(field_id)}&limit=100`, { method: 'GET', token: adminToken });
   const summaryJson = requireOk(summaryResp, 'field memory summary');
 
+
+  const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(actTaskId)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken });
+  const reportOk = reportResp.ok && reportResp.json?.ok === true;
+
   const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET' });
   assert.equal(openapiResp.ok, true, `openapi fetch failed status=${openapiResp.status}`);
   const openapi = openapiResp.json ?? {};
 
   const byType = new Set(items.map((item) => String(item?.memory_type ?? '')));
+  const colCheck = await pool.query(`
+    SELECT data_type, udt_name, column_default, is_nullable
+      FROM information_schema.columns
+     WHERE table_schema='public' AND table_name='field_memory_v1' AND column_name='created_at'
+  `);
+  const c = colCheck.rows?.[0] ?? {};
+  const dbContractAligned = String(c.data_type ?? '').includes('timestamp with time zone')
+    && String(c.is_nullable ?? '').toUpperCase() === 'NO'
+    && /now\(\)/i.test(String(c.column_default ?? ''));
+
   process.stdout.write(`${JSON.stringify({
     field_memory_debug: {
       field_id,
@@ -397,13 +370,22 @@ let pool;
     }
   }, null, 2)}\n`);
   const checks = {
-    memory_written_after_acceptance: byType.has('operation_outcome'),
-    memory_written_after_execution: byType.has('execution_reliability'),
-    skill_memory_recorded: byType.has('skill_performance'),
+    db_contract_aligned: dbContractAligned,
+    field_response_memory_written:
+     byType.has('FIELD_RESPONSE_MEMORY'),
+    device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
+    skill_performance_memory_written: byType.has('SKILL_PERFORMANCE_MEMORY'),
     memory_query_by_field: items.length > 0 && items.every((item) => String(item?.field_id ?? '') === field_id),
-    memory_has_metrics: items.some((item) => item && typeof item.metrics === 'object' && item.metrics !== null),
-    memory_links_operation: items.some((item) => String(item?.operation_id ?? '').trim().length > 0),
-    openapi_contains_field_memory: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
+    memory_has_confidence: items.every((item) => Number(item?.confidence) > 0),
+    memory_has_summary_text: items.every((item) => String(item?.summary_text ?? "").trim().length > 0),
+    memory_has_evidence_refs: items.every((item) => Array.isArray(item?.evidence_refs)),
+    skill_memory_has_skill_trace_ref: items.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
+    memory_query_by_operation: items.some((item) => String(item?.operation_id ?? "").trim().length > 0),
+    report_reads_field_memory: reportOk
+      && (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory?.length ?? 0) > 0
+      && (reportResp.json?.operation_report_v1?.field_memory?.device_reliability_memory?.length ?? 0) > 0
+      && (reportResp.json?.operation_report_v1?.field_memory?.skill_performance_memory?.length ?? 0) > 0,
+    openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),
     healthz_ok,
@@ -412,10 +394,7 @@ let pool;
   // Sanity-check summary shape for this stage.
   assert.equal(summaryJson?.ok, true, 'summary endpoint ok=false');
   assert.ok(summaryJson?.summary && typeof summaryJson.summary === 'object', 'summary object missing');
-  assert.ok(Object.prototype.hasOwnProperty.call(summaryJson.summary, 'success_rate'), 'summary.success_rate missing');
-  assert.ok(Object.prototype.hasOwnProperty.call(summaryJson.summary, 'execution_deviation_avg'), 'summary.execution_deviation_avg missing');
-  assert.ok(Object.prototype.hasOwnProperty.call(summaryJson.summary, 'skill_success_rate'), 'summary.skill_success_rate missing');
-
+  
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
   process.stdout.write(`${JSON.stringify({ ok: true, checks }, null, 2)}\n`);
   await pool.end();
