@@ -92,14 +92,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
   });
   const createJson = requireOk(createResp, 'create roi ledger from as-executed');
 
   const createAgainResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
   });
   const createAgainJson = requireOk(createAgainResp, 'idempotent roi ledger generation');
 
@@ -167,8 +167,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     { method: 'GET', token },
   );
   const fieldReportJson = requireOk(fieldReportResp, 'read field report');
-  const reportItem = Array.isArray(fieldReportJson.items) ? fieldReportJson.items[0] : null;
-  const operation_id = String(reportItem?.identifiers?.operation_id ?? '').trim();
+  const reportItem = Array.isArray(fieldReportJson.field_report_v1?.recent_operations)
+    ? fieldReportJson.field_report_v1.recent_operations[0]
+    : null;
+  const operation_id = String(reportItem?.operation_id ?? '').trim();
   assert.ok(operation_id, 'missing operation_id from field report');
 
   const operationReportResp = await fetchJson(
