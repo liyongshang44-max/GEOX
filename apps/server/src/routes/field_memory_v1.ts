@@ -31,11 +31,25 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     if (query.memory_type) push("memory_type", query.memory_type);
     if (query.skill_id) push("skill_id", query.skill_id);
     vals.push(limit);
-    const sql = `SELECT memory_id,memory_type,metric_key,metric_value,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+    const sql = `SELECT memory_id,tenant_id,field_id,operation_id,memory_type,metric_key,metric_value,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,source_id,source_type,skill_id,skill_trace_ref,occurred_at
       FROM field_memory_v1 WHERE ${where.join(" AND ")} ORDER BY occurred_at DESC LIMIT $${vals.length}`;
     const q = await pool.query(sql, vals);
     return reply.send({ ok: true, items: q.rows ?? [] });
   };
+
+
+  app.get("/api/v1/field-memory/health", async (_req, reply) => {
+    const q = await pool.query(`SELECT to_regclass('public.field_memory_v1')::text AS tbl`);
+    const table_ready = Boolean(q.rows?.[0]?.tbl);
+    return reply.send({ ok: table_ready, table_ready, module: "field_memory_v1" });
+  });
+
+  app.get("/api/v1/field-memory/summary", async (req: any, reply) => {
+    const out = await handler(req, { send: (v:any)=>v, status: (_:any)=>({send:(v:any)=>v}) } as any);
+    if (!out?.ok) return reply.send(out);
+    const items = out.items ?? [];
+    return reply.send({ ok: true, total: items.length, recent: items, summary: { total: items.length } });
+  });
 
   app.get("/api/v1/field-memory", (req, reply) => handler(req, reply));
   app.get("/api/v1/fields/:field_id/memory", (req: any, reply) => handler(req, reply, { field_id: req.params?.field_id }));

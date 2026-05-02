@@ -321,9 +321,22 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
         }
         : null),
     });
+    const fm = await pool.query(
+      `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+       FROM field_memory_v1
+       WHERE tenant_id=$1 AND operation_id=$2
+       ORDER BY occurred_at DESC LIMIT 50`,
+      [tenant.tenant_id, state.operation_id],
+    );
+    const enrichedReport: any = ensureReportV1ExtendedFields(operation_report_v1);
+    enrichedReport.field_memory = {
+      field_response_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
+      device_reliability_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
+      skill_performance_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
+    };
     const payload: OperationReportSingleResponseV1 = {
       ok: true,
-      operation_report_v1: ensureReportV1ExtendedFields(operation_report_v1),
+      operation_report_v1: enrichedReport,
     };
     return reply.send(payload);
   });
