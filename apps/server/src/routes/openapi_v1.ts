@@ -602,7 +602,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         },
         OperationReportV1: {
           type: "object",
-          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "workflow"],
+          required: ["type", "version", "generated_at", "approval", "why", "operation_title", "customer_title", "identifiers", "execution", "acceptance", "evidence", "cost", "sla", "field_memory", "risk", "roi_ledger", "workflow"],
           properties: {
             type: { type: "string", enum: ["operation_report_v1"] },
             version: { type: "string", enum: ["v1"] },
@@ -753,6 +753,18 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
               properties: {
                 level: { type: "string", enum: ["LOW", "MEDIUM", "HIGH"] },
                 reasons: { type: "array", items: { type: "string" } }
+              }
+            },
+
+            roi_ledger: {
+              type: "object",
+              required: ["water_saved", "labor_saved", "early_warning_lead_time", "first_pass_acceptance_rate", "low_confidence_items"],
+              properties: {
+                water_saved: { type: "array", items: ref("RoiLedgerSummary") },
+                labor_saved: { type: "array", items: ref("RoiLedgerSummary") },
+                early_warning_lead_time: { type: "array", items: ref("RoiLedgerSummary") },
+                first_pass_acceptance_rate: { type: "array", items: ref("RoiLedgerSummary") },
+                low_confidence_items: { type: "array", items: ref("RoiLedgerSummary") }
               }
             },
             workflow: {
@@ -3159,6 +3171,30 @@ function applyP13OpenApiAlignment(spec: any) {
         idempotent: { type: "boolean" },
       },
       additionalProperties: false,
+    },
+
+
+    RoiLedgerSummary: {
+      type: "object",
+      required: ["roi_ledger_id","roi_type","baseline_type","baseline_value","actual_value","delta_value","unit","value_kind","confidence","calculation_method","evidence_refs","source_skill_id","skill_trace_ref","field_memory_refs","customer_text"],
+      properties: {
+        roi_ledger_id: { type: "string" },
+        roi_type: { type: "string" },
+        baseline_type: { type: "string" },
+        baseline_value: { type: ["number", "null"] },
+        actual_value: { type: ["number", "null"] },
+        delta_value: { type: ["number", "null"] },
+        unit: { type: ["string", "null"] },
+        value_kind: { type: "string" },
+        confidence: { type: "object", additionalProperties: true },
+        calculation_method: { type: "string" },
+        evidence_refs: { type: "array", items: {} },
+        source_skill_id: { type: ["string", "null"] },
+        skill_trace_ref: { type: ["string", "null"] },
+        field_memory_refs: { type: "array", items: {} },
+        customer_text: { type: "string" },
+      },
+      additionalProperties: true,
     },
 
     RoiTypeV1: {
