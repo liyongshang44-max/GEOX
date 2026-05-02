@@ -35,6 +35,7 @@ import { getPrescriptionById } from "../domain/prescription/prescription_contrac
 import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
 import { createFailSafeEventV1, createManualTakeoverV1, evaluateDeviceDispatchSafetyV1, findOpenFailSafeForDeviceV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
+import { resolveDeviceSkillBindingForTask } from "../services/skills/skill_binding_service.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -1531,6 +1532,13 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         return reply.status(400).send(deviceActionValidation);
       }
       const expectedEvidenceRequirements = resolveExpectedEvidenceRequirementsV1(actionType, skillCapabilityResolution);
+      const requiredCapabilities = actionType === "IRRIGATE" ? ["device.irrigation.valve.open"] : [];
+      const bindingEvidence = await resolveDeviceSkillBindingForTask(pool, tenant, {
+        action_type: actionType,
+        device_type: "IRRIGATION_CONTROLLER",
+        adapter_type: "irrigation_simulator",
+        required_capabilities: requiredCapabilities,
+      });
       const normalizedDeviceCapabilityCheck = body.execution_plan.device_capability_check ?? { supported: true as const };
       if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
         return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
@@ -1659,6 +1667,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
             capability_resolution: skillCapabilityResolution?.ok
               ? skillCapabilityResolution.resolution
               : null,
+            skill_binding_evidence: bindingEvidence,
             expected_evidence_requirements: expectedEvidenceRequirements,
             execution_context: {
               execution_key: executionKey,
@@ -1765,6 +1774,8 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
             operation_id: body.operation_id,
             target: body.execution_plan.target,
             parameters: body.execution_plan.parameters,
+            skill_binding_fact_id: bindingEvidence?.skill_binding_fact_id ?? null,
+            device_skill_id: bindingEvidence?.device_skill_id ?? null,
           }),
           output_digest: digestJson({
             act_task_id,
@@ -1781,7 +1792,9 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         act_task_id,
         idempotent: false,
         expected_evidence_requirements: expectedEvidenceRequirements,
-        capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null
+        capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null,
+        skill_binding_fact_id: bindingEvidence?.skill_binding_fact_id ?? null,
+        device_skill_id: bindingEvidence?.device_skill_id ?? null
       });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });

@@ -88,6 +88,39 @@ VALUES
   )
 ON CONFLICT (fact_id) DO NOTHING;
 
+INSERT INTO facts (fact_id, occurred_at, source, record_json)
+VALUES
+  (
+    'seed_skill_binding_v1_mvp0_mock_valve_control_001',
+    '2026-05-02T00:00:03Z'::timestamptz,
+    'seed:mvp0_skill_registry',
+    jsonb_build_object(
+      'type', 'skill_binding_v1',
+      'payload', jsonb_build_object(
+        'tenant_id', 'tenantA',
+        'project_id', 'projectA',
+        'group_id', 'groupA',
+        'binding_id', 'bind_mock_valve_control_default_v1',
+        'skill_id', 'mock_valve_control_skill_v1',
+        'version', 'v1',
+        'category', 'DEVICE',
+        'status', 'ACTIVE',
+        'scope_type', 'DEVICE',
+        'rollout_mode', 'DIRECT',
+        'trigger_stage', 'before_dispatch',
+        'bind_target', 'irrigation_simulator',
+        'device_type', 'IRRIGATION_CONTROLLER',
+        'priority', 100,
+        'config_patch', jsonb_build_object(
+          'action_type', 'IRRIGATE',
+          'adapter_type', 'irrigation_simulator',
+          'required_capabilities', jsonb_build_array('device.irrigation.valve.open')
+        )
+      )
+    )
+  )
+ON CONFLICT (fact_id) DO NOTHING;
+
 -- Same seed flow: append baseline skill bindings used by querySkillBindingProjectionV1 verification.
 INSERT INTO facts (fact_id, occurred_at, source, record_json)
 VALUES
