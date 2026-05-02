@@ -128,10 +128,31 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const readByFieldJson = requireOk(readByFieldResp, 'read roi ledger by field');
 
   const ledgers = Array.isArray(createJson.roi_ledgers) ? createJson.roi_ledgers : [];
-  const hasWaterOrCost = ledgers.some((x) => x?.roi_type === 'WATER_SAVED' || x?.roi_type === 'COST_IMPACT');
-  const hasExecReliability = ledgers.some((x) => x?.roi_type === 'EXECUTION_RELIABILITY');
+  const hasWaterSaved = ledgers.some((x) => x?.roi_type === 'WATER_SAVED');
+  const hasFirstPass = ledgers.some((x) => x?.roi_type === 'FIRST_PASS_ACCEPTANCE_RATE');
   const hasBaselineActualDelta = ledgers.some((x) => x?.baseline && x?.actual && x?.delta);
   const hasEvidenceRefs = ledgers.some((x) => Array.isArray(x?.evidence_refs) && x.evidence_refs.length > 0);
+  const hasNoForbiddenTypes = ledgers.every((x) => !['YIELD_INCREASE','PROFIT_INCREASE_FROM_YIELD','QUALITY_PREMIUM'].includes(x?.roi_type));
+  const defaultAssumptionNotMeasured = ledgers.every((x) => x?.baseline_type !== 'DEFAULT_ASSUMPTION' || (x?.value_kind !== 'MEASURED'));
+  const hasCommercialCredibilityFields = ledgers.some((x) =>
+    x &&
+    ['MEASURED', 'ESTIMATED', 'ASSUMPTION_BASED', 'INSUFFICIENT_EVIDENCE'].includes(x.value_kind) &&
+    ['CUSTOMER_PROVIDED', 'HISTORICAL_AVERAGE', 'CONTROL_FIELD', 'SEASON_PLAN', 'DEFAULT_ASSUMPTION'].includes(x.baseline_type) &&
+    Object.prototype.hasOwnProperty.call(x, 'baseline_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'planned_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'actual_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'delta_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'unit') &&
+    Object.prototype.hasOwnProperty.call(x, 'estimated_money_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'currency') &&
+    Object.prototype.hasOwnProperty.call(x, 'calculation_method') &&
+    Object.prototype.hasOwnProperty.call(x, 'assumptions') &&
+    Object.prototype.hasOwnProperty.call(x, 'uncertainty_notes') &&
+    Object.prototype.hasOwnProperty.call(x, 'evidence_refs') &&
+    Object.prototype.hasOwnProperty.call(x, 'source_skill_id') &&
+    Object.prototype.hasOwnProperty.call(x, 'skill_trace_ref') &&
+    Array.isArray(x.field_memory_refs)
+  );
   const hasConfidence = ledgers.some((x) =>
     x?.confidence &&
     (x.confidence.level === 'HIGH' || x.confidence.level === 'MEDIUM' || x.confidence.level === 'LOW') &&
@@ -145,8 +166,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     openapi_contains_roi_ledger_paths,
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
-    water_saved_or_cost_impact_generated: Boolean(hasWaterOrCost),
-    execution_reliability_generated: Boolean(hasExecReliability),
+    water_saved_generated: Boolean(hasWaterSaved),
+    first_pass_acceptance_rate_generated: Boolean(hasFirstPass),
     read_by_as_executed: Boolean(Array.isArray(readByAsExecutedJson.roi_ledgers) && readByAsExecutedJson.roi_ledgers.length > 0),
     read_by_task: Boolean(Array.isArray(readByTaskJson.roi_ledgers) && readByTaskJson.roi_ledgers.length > 0),
     read_by_prescription: Boolean(Array.isArray(readByPrescriptionJson.roi_ledgers) && readByPrescriptionJson.roi_ledgers.length > 0),
@@ -154,6 +175,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     ledger_has_baseline_actual_delta: Boolean(hasBaselineActualDelta),
     ledger_has_evidence_refs: Boolean(hasEvidenceRefs),
     ledger_has_confidence: Boolean(hasConfidence),
+    ledger_has_commercial_credibility_fields: Boolean(hasCommercialCredibilityFields),
+    default_assumption_not_measured: Boolean(defaultAssumptionNotMeasured),
+    no_forbidden_types: Boolean(hasNoForbiddenTypes),
     roi_not_used_as_billing_source: Boolean(roiNotBillingSource),
   };
 
