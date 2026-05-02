@@ -51,6 +51,8 @@ const SkillDefinitionPayloadSchema = TenantTripleSchema.extend({
   output_schema_digest: z.string().min(1),
   input_schema: SkillDefinitionIoSchemaSchema.optional(),
   output_schema: SkillDefinitionIoSchemaSchema.optional(),
+  input_schema_ref: z.string().min(1).optional(),
+  output_schema_ref: z.string().min(1).optional(),
   capabilities: SkillDefinitionCapabilitiesSchema.optional(),
   risk_level: SkillDefinitionRiskLevelSchema.optional(),
   required_evidence: SkillDefinitionRequiredEvidenceSchema.optional(),
@@ -61,6 +63,7 @@ const SkillDefinitionPayloadSchema = TenantTripleSchema.extend({
   enabled: z.boolean().default(true),
   fallback_policy: SkillDefinitionFallbackPolicySchema.optional(),
   audit_policy: SkillDefinitionAuditPolicySchema.optional(),
+  binding_conditions: z.record(z.unknown()).optional(),
   device_type: DeviceTypeSchema.optional(),
   crop_code: z.string().trim().min(1).optional(),
 });
@@ -130,6 +133,14 @@ const SkillRunPayloadSchema = TenantTripleSchema.extend({
 const SkillTracePayloadSchema = TenantTripleSchema.extend({
   trace_id: z.string().min(1),
   skill_run_id: z.string().min(1).nullable().optional(),
+  skill_id: z.string().min(1).optional(),
+  skill_category: z.string().min(1).optional(),
+  risk_level: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]).optional(),
+  input_schema_ref: z.string().min(1).optional(),
+  output_schema_ref: z.string().min(1).optional(),
+  binding_conditions: z.record(z.unknown()).optional(),
+  fallback_policy: z.record(z.unknown()).optional(),
+  audit_policy: z.record(z.unknown()).optional(),
   inputs: z.record(z.any()),
   outputs: z.record(z.any()),
   confidence: z.object({
