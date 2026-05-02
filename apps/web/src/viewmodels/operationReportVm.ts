@@ -93,8 +93,18 @@ function toNum(v: unknown): number | null {
 function formatMemoryLine(item: any): string {
   const before = toNum(item?.before_value);
   const after = toNum(item?.after_value);
-  const reached = after != null && before != null && after >= before;
-  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${reached ? "达到目标" : "未达到目标"}）`;
+  const min = toNum(item?.target_range?.min);
+  const max = toNum(item?.target_range?.max);
+  const hasTargetRange = min != null || max != null;
+  let statusText = "湿度变化待确认";
+  if (hasTargetRange) {
+    const hitMin = min == null || (after != null && after >= min);
+    const hitMax = max == null || (after != null && after <= max);
+    statusText = hitMin && hitMax ? "达到目标区间" : "未达到目标区间";
+  } else if (before != null && after != null) {
+    statusText = after > before ? "湿度已回升" : "湿度未回升";
+  }
+  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
 }
 
 function formatRoiLine(item: any): string {
@@ -175,20 +185,26 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     fieldMemory: {
       title: "系统记住了什么",
-      items: ([
-        ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
-        ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "设备可靠性记录")}（阀门响应/超时/回执完整性已留痕）`)),
-        ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "Skill 表现记录")}（诊断采纳与验收结果已记录）`)),
-      ]),
+      items: (() => {
+        const items = [
+          ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
+          ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "设备可靠性记录")}（阀门响应、超时与回执完整性见证据）`)),
+          ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "Skill 表现记录")}（诊断采纳与验收结果见证据）`)),
+        ];
+        return items.length ? items : ["暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。"];
+      })(),
     },
     roiLedger: {
       title: "本次价值账本",
-      items: ([
-        ...((roi.water_saved ?? []).slice(0, 1).map(formatRoiLine)),
-        ...((roi.labor_saved ?? []).slice(0, 1).map((item: any) => `${formatRoiLine(item)}，计算方法：${labelEmptyFallback(item?.calculation_method, "后端口径")}`)),
-        ...((roi.early_warning_lead_time ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.customer_text, "异常提前发现：已记录检测结果"))),
-        ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1).map((item: any) => `验收一次通过：${labelEmptyFallback(item?.customer_text, "待补充证据")}`)),
-      ]),
+      items: (() => {
+        const items = [
+          ...((roi.water_saved ?? []).slice(0, 1).map(formatRoiLine)),
+          ...((roi.labor_saved ?? []).slice(0, 1).map((item: any) => `${formatRoiLine(item)}，计算方法：${labelEmptyFallback(item?.calculation_method, "后端口径")}`)),
+          ...((roi.early_warning_lead_time ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.customer_text, "异常提前发现：暂无可展示数据"))),
+          ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1).map((item: any) => `验收一次通过：${labelEmptyFallback(item?.customer_text, "待补充证据")}`)),
+        ];
+        return items.length ? items : ["暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。"];
+      })(),
       confidenceText: labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score),
     },
     debug: {
