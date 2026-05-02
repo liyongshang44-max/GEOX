@@ -77,15 +77,21 @@ FROM seed_rows s
 WHERE NOT EXISTS (
   SELECT 1
   FROM facts f
-  WHERE (f.record_json::jsonb->>'type') = 'skill_definition_v1'
-    AND (f.record_json::jsonb#>>'{payload,tenant_id}') = 'tenantA'
+  WHERE (f.record_json::jsonb#>>'{payload,tenant_id}') = 'tenantA'
     AND (f.record_json::jsonb#>>'{payload,project_id}') = 'projectA'
     AND (f.record_json::jsonb#>>'{payload,group_id}') = 'groupA'
-    AND (f.record_json::jsonb#>>'{payload,skill_id}') = (s.record_json::jsonb#>>'{payload,skill_id}')
-    AND (f.record_json::jsonb#>>'{payload,version}') = 'v1'
     AND (
-      ((s.record_json::jsonb->>'type') = 'skill_definition_v1' AND (f.record_json::jsonb->>'type') = 'skill_definition_v1')
+      (
+        (s.record_json::jsonb->>'type') = 'skill_definition_v1'
+        AND (f.record_json::jsonb->>'type') = 'skill_definition_v1'
+        AND (f.record_json::jsonb#>>'{payload,skill_id}') = (s.record_json::jsonb#>>'{payload,skill_id}')
+        AND (f.record_json::jsonb#>>'{payload,version}') = (s.record_json::jsonb#>>'{payload,version}')
+      )
       OR
-      ((s.record_json::jsonb->>'type') = 'skill_binding_v1' AND (f.record_json::jsonb->>'type') = 'skill_binding_v1')
+      (
+        (s.record_json::jsonb->>'type') = 'skill_binding_v1'
+        AND (f.record_json::jsonb->>'type') = 'skill_binding_v1'
+        AND (f.record_json::jsonb#>>'{payload,binding_id}') = (s.record_json::jsonb#>>'{payload,binding_id}')
+      )
     )
 );

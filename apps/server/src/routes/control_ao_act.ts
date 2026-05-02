@@ -1520,7 +1520,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         const unsupportedAction = reasonSet.has("no_skill_capability_match");
         return reply.status(400).send({
           ok: false,
-          error: unsupportedAction ? "DEVICE_ACTION_TYPE_UNSUPPORTED" : "DEVICE_CAPABILITY_UNSUPPORTED",
+          error: unsupportedAction ? "DEVICE_ACTION_TYPE_UNSUPPORTED" : "CAPABILITY_MISMATCH",
           detail: skillCapabilityResolution.error
         });
       }

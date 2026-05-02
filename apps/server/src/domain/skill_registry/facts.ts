@@ -19,7 +19,7 @@ const SCOPE_TYPE_VALUES = ["GLOBAL", "TENANT", "FIELD", "DEVICE", "PROGRAM"] as 
 const ROLLOUT_MODE_VALUES = ["DIRECT", "CANARY", "DRY_RUN"] as const;
 const RESULT_STATUS_VALUES = ["SUCCESS", "FAILED", "PENDING", "SKIPPED", "TIMEOUT"] as const;
 const TRIGGER_STAGE_VALUES = ["before_recommendation", "after_recommendation", "before_dispatch", "before_acceptance", "after_acceptance"] as const;
-const DEVICE_TYPE_VALUES = ["PUMP", "DRONE", "SENSOR", "HUMAN", "UNKNOWN"] as const;
+const DEVICE_TYPE_VALUES = ["PUMP", "DRONE", "SENSOR", "HUMAN", "IRRIGATION_CONTROLLER", "UNKNOWN"] as const;
 const BINDING_STATUS_VALUES = ["ACTIVE", "DISABLED"] as const;
 
 const SkillCategorySchema = z.enum(SKILL_CATEGORY_VALUES);
@@ -227,6 +227,7 @@ const DEVICE_TYPE_COMPAT: Record<string, NonNullable<SkillDefinitionFactPayload[
   DRONE: "DRONE",
   SENSOR: "SENSOR",
   HUMAN: "HUMAN",
+  IRRIGATION_CONTROLLER: "IRRIGATION_CONTROLLER",
   UNKNOWN: "UNKNOWN",
 };
 

@@ -57,10 +57,18 @@ async function main() {
     const skillB = await fetchJson(`${base}/api/v1/skills/mock_valve_control_skill_v1?tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token });
     checks.irrigation_deficit_skill_query_or_register = toPassFail(skillA.ok && skillA.json?.ok === true);
     checks.mock_valve_control_skill_query_or_register = toPassFail(skillB.ok && skillB.json?.ok === true);
-    checks.skill_contract_fields_complete = toPassFail(
-      skillA.json?.skill_id && skillA.json?.skill_version && skillA.json?.skill_category && Array.isArray(skillA.json?.capabilities)
-      && skillB.json?.skill_id && skillB.json?.skill_version && skillB.json?.skill_category && Array.isArray(skillB.json?.required_evidence)
+    const requiredContract = (s) => Boolean(
+      s?.skill_category
+      && s?.risk_level
+      && s?.definition?.input_schema_ref
+      && s?.definition?.output_schema_ref
+      && Array.isArray(s?.capabilities)
+      && Array.isArray(s?.required_evidence)
+      && s?.binding_conditions && typeof s.binding_conditions === 'object'
+      && s?.fallback_policy && typeof s.fallback_policy === 'object'
+      && s?.audit_policy && typeof s.audit_policy === 'object'
     );
+    checks.skill_contract_fields_complete = toPassFail(requiredContract(skillA.json) && requiredContract(skillB.json));
 
     const bindingsResp = await fetchJson(`${base}/api/v1/skills/bindings?tenant_id=${tenant_id}&project_id=${project_id}&group_id=${group_id}`, { token });
     const bindingItems = bindingsResp.json?.items_effective ?? [];
@@ -180,7 +188,16 @@ async function main() {
     });
     ids.skill_run_id = String(executeSkill.json?.skill_run_id ?? '');
     checks.mock_valve_skill_run_created = toPassFail(Boolean(ids.skill_run_id && executeSkill.json?.fact_id && executeSkill.json?.occurred_at));
-    checks.task_binds_device_skill = toPassFail(Boolean(mockBinding && ids.task_id));
+    const taskFactQ = await pool.query(
+      `SELECT record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+          AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [ids.task_id]
+    );
+    const taskDeviceSkillId = String(taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence?.device_skill_id ?? '');
+    checks.task_binds_device_skill = toPassFail(taskDeviceSkillId === 'mock_valve_control_skill_v1');
 
     const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
