@@ -28,6 +28,10 @@ async function main() {
     roi_refs_skill_trace_or_source_skill: 'FAIL',
     approval_required_before_device_skill: 'FAIL',
   };
+  const failure_paths = {
+    device_skill_blocked_without_approval: 'FAIL',
+    capability_mismatch_blocked: 'FAIL',
+  };
 
   const ids = {
     field_id: '',
@@ -123,7 +127,29 @@ async function main() {
         },
       },
     });
-    checks.approval_required_before_device_skill = toPassFail(executePre.json?.error === 'REQUIRES_APPROVAL');
+    const noApprovalBlocked = ['REQUIRES_APPROVAL', 'APPROVAL_REQUIRED', 'DEVICE_SKILL_EXECUTION_BLOCKED'].includes(String(executePre.json?.error ?? ''));
+    checks.approval_required_before_device_skill = toPassFail(noApprovalBlocked);
+    failure_paths.device_skill_blocked_without_approval = toPassFail(noApprovalBlocked);
+
+    const mismatchResp = await fetchJson(`${base}/api/v1/actions/execute`, {
+      method: 'POST', token,
+      body: {
+        tenant_id, project_id, group_id, operation_id: `op_gap_mismatch_${suffix}`,
+        execution_plan: {
+          action_type: 'SPRAY',
+          target: { kind: 'device', ref: device_id },
+          parameters: { duration_min: 20 },
+          execution_mode: 'AUTO',
+          safe_guard: { requires_approval: false },
+          failure_strategy: { retryable: true, max_retries: 1 },
+          device_capability_check: { supported: true },
+          idempotency_key: `exec_gap_mismatch_${suffix}`,
+        },
+      },
+    });
+    const mismatchErr = String(mismatchResp.json?.error ?? '');
+    const capabilityMismatchBlocked = ['CAPABILITY_MISMATCH', 'DEVICE_ACTION_TYPE_UNSUPPORTED', 'DEVICE_CAPABILITY_UNSUPPORTED'].includes(mismatchErr);
+    failure_paths.capability_mismatch_blocked = toPassFail(capabilityMismatchBlocked);
 
     const decide = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(ids.approval_id)}/decide`, {
       method: 'POST', token,
@@ -197,11 +223,11 @@ async function main() {
     const roiRefOk = roiRows.some((x) => (Array.isArray(x.skill_refs) && x.skill_refs.some((s) => String(s.skill_id).trim())) || String(x.skill_trace_id ?? '').trim());
     checks.roi_refs_skill_trace_or_source_skill = toPassFail(roiRefOk);
 
-    const allPass = Object.values(checks).every((x) => x === 'PASS');
-    process.stdout.write(`${JSON.stringify({ ok: allPass, task: TASK_NAME, checks, ids }, null, 2)}\n`);
+    const allPass = Object.values(checks).every((x) => x === 'PASS') && Object.values(failure_paths).every((x) => x === 'PASS');
+    process.stdout.write(`${JSON.stringify({ ok: allPass, task: TASK_NAME, checks, failure_paths, ids }, null, 2)}\n`);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    process.stdout.write(`${JSON.stringify({ ok: false, task: TASK_NAME, checks, ids, failed_reason: message }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ ok: false, task: TASK_NAME, checks, failure_paths, ids, failed_reason: message }, null, 2)}\n`);
     process.exitCode = 1;
   } finally {
     await pool.end().catch(() => {});
