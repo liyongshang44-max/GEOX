@@ -534,8 +534,8 @@ function enrichCommercialFields(entry: RoiCandidate): RoiCandidate {
     unit: entry.unit ?? unit,
     estimated_money_value: entry.estimated_money_value ?? null,
     currency: entry.currency ?? null,
-    source_skill_id: entry.source_skill_id ?? String((entry.assumptions as any)?.source_skill_id ?? "").trim() || null,
-    skill_trace_ref: entry.skill_trace_ref ?? String((entry.assumptions as any)?.trace_id ?? "").trim() || null,
+    source_skill_id: entry.source_skill_id ?? (String((entry.assumptions as any)?.source_skill_id ?? "").trim() || null),
+    skill_trace_ref: entry.skill_trace_ref ?? (String((entry.assumptions as any)?.trace_id ?? "").trim() || null),
     field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : []),
     value_kind: entry.value_kind ?? value_kind,
   };

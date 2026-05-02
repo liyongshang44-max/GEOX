@@ -123,15 +123,14 @@ export type OperationReportV1 = {
     device_reliability_memory: FieldMemorySummary[];
     skill_performance_memory: FieldMemorySummary[];
   };
-
-    roi_ledger: {
-      water_saved: roiSummaries.filter((x) => x.roi_type === "WATER_SAVED"),
-      labor_saved: roiSummaries.filter((x) => x.roi_type === "LABOR_SAVED"),
-      early_warning_lead_time: roiSummaries.filter((x) => x.roi_type === "EARLY_WARNING_LEAD_TIME"),
-      first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
-      low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
-    },
-    workflow: {
+  roi_ledger: {
+    water_saved: RoiLedgerSummary[];
+    labor_saved: RoiLedgerSummary[];
+    early_warning_lead_time: RoiLedgerSummary[];
+    first_pass_acceptance_rate: RoiLedgerSummary[];
+    low_confidence_items: RoiLedgerSummary[];
+  };
+  workflow: {
     owner_actor_id: string | null;
     owner_name: string | null;
     last_note: string | null;
@@ -139,6 +138,7 @@ export type OperationReportV1 = {
     updated_by: string | null;
     linked_alert_ids?: string[];
   };
+
 };
 
 export type OperationReportSingleResponseV1 = {
