@@ -3,6 +3,21 @@ import type { OperationStateV1 } from "./operation_state_v1.js";
 
 export type OperationReportRiskLevel = "LOW" | "MEDIUM" | "HIGH";
 
+export type FieldMemorySummary = {
+  memory_id: string;
+  memory_type: string;
+  metric_key: string;
+  before_value?: number | null;
+  after_value?: number | null;
+  delta_value?: number | null;
+  confidence: number;
+  summary_text: string;
+  evidence_refs: unknown[];
+  skill_id?: string | null;
+  skill_trace_ref?: string | null;
+  occurred_at: string;
+};
+
 export type OperationReportV1 = {
   type: "operation_report_v1";
   version: "v1";
@@ -83,6 +98,11 @@ export type OperationReportV1 = {
   risk: {
     level: OperationReportRiskLevel;
     reasons: string[];
+  };
+  field_memory: {
+    field_response_memory: FieldMemorySummary[];
+    device_reliability_memory: FieldMemorySummary[];
+    skill_performance_memory: FieldMemorySummary[];
   };
   workflow: {
     owner_actor_id: string | null;
@@ -444,7 +464,12 @@ export function projectOperationReportV1(input: {
       level: computedRisk.level as OperationReportRiskLevel,
       reasons: computedRisk.reasons,
     },
-    workflow: {
+    field_memory: {
+    field_response_memory: FieldMemorySummary[];
+    device_reliability_memory: FieldMemorySummary[];
+    skill_performance_memory: FieldMemorySummary[];
+  };
+  workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
       owner_name: toText(input.operation_workflow?.owner_name),
       last_note: toText(input.operation_workflow?.last_note),

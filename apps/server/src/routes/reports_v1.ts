@@ -130,6 +130,11 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
     },
     operation_title: report.operation_title ?? null,
     customer_title: report.customer_title ?? report.operation_title ?? null,
+    field_memory: (report as any).field_memory ?? {
+      field_response_memory: [],
+      device_reliability_memory: [],
+      skill_performance_memory: [],
+    },
   };
 }
 
@@ -342,7 +347,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
        ORDER BY occurred_at DESC LIMIT 50`,
       [tenant.tenant_id, candidateIds],
     );
-    const enrichedReport: any = ensureReportV1ExtendedFields(operation_report_v1);
+    const enrichedReport = ensureReportV1ExtendedFields(operation_report_v1);
     enrichedReport.field_memory = {
       field_response_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
       device_reliability_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),

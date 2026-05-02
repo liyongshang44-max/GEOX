@@ -346,6 +346,9 @@ let pool;
   const openapi = openapiResp.json ?? {};
 
   const byType = new Set(items.map((item) => String(item?.memory_type ?? '')));
+
+  const fieldResponseItems = items.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
+  const deviceItems = items.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
   const colCheck = await pool.query(`
     SELECT data_type, udt_name, column_default, is_nullable
       FROM information_schema.columns
@@ -381,6 +384,12 @@ let pool;
     memory_has_evidence_refs: items.every((item) => Array.isArray(item?.evidence_refs)),
     skill_memory_has_skill_trace_ref: items.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
     memory_query_by_operation: items.some((item) => String(item?.operation_id ?? "").trim().length > 0),
+    field_response_has_before_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.before_value))),
+    field_response_has_after_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.after_value))),
+    field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),
+    device_memory_has_skill_id: deviceItems.some((x) => String(x?.skill_id ?? "").trim().length > 0),
+    device_memory_has_response_metric: deviceItems.some((x) => String(x?.metric_key ?? "") === "valve_response_status"),
+    report_field_response_contains_delta: (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory ?? []).some((x) => Number.isFinite(Number(x?.delta_value))),
     report_reads_field_memory: reportOk
       && (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory?.length ?? 0) > 0
       && (reportResp.json?.operation_report_v1?.field_memory?.device_reliability_memory?.length ?? 0) > 0
