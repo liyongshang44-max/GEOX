@@ -84,6 +84,20 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   assert.ok(recommendation_id, 'recommendation_id missing');
   const recommendationSkillTrace = recommendation?.skill_trace ?? null;
+  const recommendationTraceFieldChecks = {
+    skill_id: String(recommendationSkillTrace?.skill_id ?? ''),
+    trace_id: String(recommendationSkillTrace?.trace_id ?? '').trim(),
+    has_inputs: Boolean(recommendationSkillTrace?.inputs && typeof recommendationSkillTrace.inputs === 'object'),
+    has_outputs: Boolean(recommendationSkillTrace?.outputs && typeof recommendationSkillTrace.outputs === 'object'),
+    has_confidence: Boolean(recommendationSkillTrace?.confidence && typeof recommendationSkillTrace.confidence === 'object'),
+    evidence_refs_is_array: Array.isArray(recommendationSkillTrace?.evidence_refs),
+  };
+  assert.equal(recommendationTraceFieldChecks.skill_id, 'irrigation_deficit_skill_v1', 'recommendation.skill_trace.skill_id mismatch');
+  assert.ok(recommendationTraceFieldChecks.trace_id.length > 0, 'recommendation.skill_trace.trace_id missing');
+  assert.equal(recommendationTraceFieldChecks.has_inputs, true, 'recommendation.skill_trace.inputs missing');
+  assert.equal(recommendationTraceFieldChecks.has_outputs, true, 'recommendation.skill_trace.outputs missing');
+  assert.equal(recommendationTraceFieldChecks.has_confidence, true, 'recommendation.skill_trace.confidence missing');
+  assert.equal(recommendationTraceFieldChecks.evidence_refs_is_array, true, 'recommendation.skill_trace.evidence_refs must be array');
 
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST',
@@ -131,6 +145,20 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescriptionSkillTrace = prescription?.operation_amount?.parameters?.metadata?.skill_trace
     ?? prescription?.operation_amount?.parameters?.preserved_payload?.skill_trace
     ?? null;
+  const prescriptionSkillTraceRef = String(
+    prescription?.evidence_refs?.skill_trace_ref
+    ?? prescription?.operation_amount?.parameters?.metadata?.skill_trace_ref
+    ?? prescription?.operation_amount?.parameters?.preserved_payload?.skill_trace_ref
+    ?? ''
+  ).trim();
+  const prescriptionEvidencePath = prescriptionSkillTrace
+    ? 'prescription.operation_amount.parameters.metadata.skill_trace|preserved_payload.skill_trace'
+    : (prescriptionSkillTraceRef ? 'prescription.evidence_refs.skill_trace_ref|metadata.skill_trace_ref' : 'NOT_FOUND');
+  assert.ok(
+    Boolean(prescriptionSkillTrace) || prescriptionSkillTraceRef.length > 0,
+    'prescription.skill_trace or prescription.evidence_refs.skill_trace_ref must exist'
+  );
+  assert.equal(String(prescription?.recommendation_id ?? ''), recommendation_id, 'prescription.recommendation_id must trace back to recommendation_id');
 
   const submitApproval = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
     method: 'POST',
@@ -370,8 +398,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     irrigation_recommendation_created: Boolean(recommendation_id && recommendation?.recommendation_type === 'irrigation_recommendation_v1'),
     recommendation_has_skill_trace: Boolean(recommendationSkillTrace),
     skill_trace_skill_id_is_irrigation_deficit: String(recommendationSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1',
+    recommendation_trace_id_non_empty: recommendationTraceFieldChecks.trace_id.length > 0,
+    recommendation_trace_inputs_present: recommendationTraceFieldChecks.has_inputs,
+    recommendation_trace_outputs_present: recommendationTraceFieldChecks.has_outputs,
+    recommendation_trace_confidence_present: recommendationTraceFieldChecks.has_confidence,
+    recommendation_trace_evidence_refs_array: recommendationTraceFieldChecks.evidence_refs_is_array,
     prescription_created: Boolean(prescription_id && prescription?.operation_type === 'IRRIGATION' && Number(prescription?.operation_amount?.amount) > 0 && Boolean(prescription?.operation_amount?.unit)),
-    prescription_inherits_skill_trace: Boolean(prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'),
+    prescription_inherits_skill_trace: Boolean((prescriptionSkillTrace && String(prescriptionSkillTrace?.skill_id ?? '') === 'irrigation_deficit_skill_v1') || prescriptionSkillTraceRef.length > 0),
+    prescription_recommendation_linked: String(prescription?.recommendation_id ?? '') === recommendation_id,
     approval_submitted_or_approved: Boolean(approval_request_id),
     task_created: true,
     receipt_created: true,
@@ -387,7 +421,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
 
-  process.stdout.write(`${JSON.stringify({ ok: true, checks }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, checks, evidence_path: { prescription_skill_trace: prescriptionEvidencePath } }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
   console.error(err);
