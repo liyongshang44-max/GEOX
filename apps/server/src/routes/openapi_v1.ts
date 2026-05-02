@@ -1064,6 +1064,7 @@ function buildOpenApiSpec() { // Build a minimal Commercial v1 OpenAPI document.
         get: {
           tags: ["operations"],
           summary: "List normalized skill runs (v1 taskbook enum mapping)",
+          description: "Formal read index for skill runs. Runtime execution/write endpoints are under /api/v1/skill/* (execute/status/results).",
           parameters: [
             { name: "tenant_id", in: "query", required: false, schema: { type: "string" } },
             { name: "field_id", in: "query", required: false, schema: { type: "string" } },
@@ -3370,6 +3371,46 @@ function applyP13OpenApiAlignment(spec: any) {
       },
       additionalProperties: true,
     },
+    SkillRuntimeExecuteRequest: {
+      type: "object",
+      required: ["tenant_id", "project_id", "group_id", "skill_id", "version"],
+      properties: {
+        tenant_id: { type: "string" },
+        project_id: { type: "string" },
+        group_id: { type: "string" },
+        skill_id: { type: "string" },
+        version: { type: "string" },
+        category: { type: "string" },
+        bind_target: { type: "string" },
+        field_id: { type: "string" },
+        device_id: { type: "string" },
+        operation_id: { type: "string" },
+        operation_plan_id: { type: "string" },
+        input: { type: "object", additionalProperties: true },
+      },
+      additionalProperties: true,
+    },
+    SkillRuntimeExecuteResponse: {
+      type: "object",
+      required: ["ok", "skill_run_id", "fact_id", "occurred_at"],
+      properties: {
+        ok: { type: "boolean" },
+        skill_run_id: { type: "string" },
+        fact_id: { type: "string" },
+        occurred_at: { type: "string", format: "date-time" },
+      },
+      additionalProperties: true,
+    },
+    SkillRuntimeStatusResponse: {
+      type: "object",
+      properties: { ok: { type: "boolean" }, item: { type: "object", additionalProperties: true } },
+      additionalProperties: true,
+    },
+    SkillRuntimeResultResponse: {
+      type: "object",
+      properties: { ok: { type: "boolean" }, item: { type: "object", additionalProperties: true }, source: { type: "string" } },
+      additionalProperties: true,
+    },
   });
 
 
@@ -3433,12 +3474,31 @@ function applyP13OpenApiAlignment(spec: any) {
         responses: { "200": jsonResponse(ref("GenericOkResponse"), "Skill module health") }
       }
     },
+    "/api/v1/skill/execute": {
+      post: {
+        tags: ["operations"],
+        summary: "Execute runtime skill and create formal skill_run_id",
+        description: "Runtime write endpoint. Creates a skill_run_v1 fact and returns skill_run_id/fact_id/occurred_at.",
+        requestBody: { required: true, content: { "application/json": { schema: ref("SkillRuntimeExecuteRequest") } } },
+        responses: { "202": jsonResponse(ref("SkillRuntimeExecuteResponse"), "Skill runtime accepted") }
+      }
+    },
+    "/api/v1/skill/status/{skill_run_id}": {
+      get: {
+        tags: ["operations"],
+        summary: "Read runtime skill status by skill_run_id",
+        description: "Runtime read endpoint for per-run status.",
+        parameters: [pathParam("skill_run_id")],
+        responses: { "200": jsonResponse(ref("SkillRuntimeStatusResponse"), "Skill runtime status") }
+      }
+    },
     "/api/v1/skill/results/{skill_run_id}": {
       get: {
         tags: ["operations"],
         summary: "Read skill run result by run id",
+        description: "Runtime read endpoint for per-run result payload.",
         parameters: [pathParam("skill_run_id")],
-        responses: { "200": jsonResponse(ref("SkillRunV2"), "Skill run detail") }
+        responses: { "200": jsonResponse(ref("SkillRuntimeResultResponse"), "Skill run detail") }
       }
     },
     "/api/v1/skill/trace/{trace_id}": {
