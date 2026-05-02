@@ -330,21 +330,6 @@ let pool;
   assert.ok(acceptance_fact_id, 'acceptance_fact_id missing');
   assert.equal(acceptance_verdict, 'PASS', `acceptance verdict must be PASS, got ${acceptance_verdict}`);
 
-  await pool.query(
-    `INSERT INTO field_memory_v1 (
-      memory_id, tenant_id, field_id, season_id, memory_type, metric_key, confidence, source_type, source_id,
-      operation_id, recommendation_id, acceptance_id, skill_id, skill_trace_ref, evidence_refs, summary_text, occurred_at
-    ) VALUES (
-      $1,$2,$3,$4,'SKILL_PERFORMANCE_MEMORY','irrigation_skill_outcome',$5,'skill_run',$6,$7,$8,$9,$10,$11,$12::jsonb,$13,NOW()
-    )`,
-    [
-      randomUUID(), tenant_id, field_id, season_id, 0.95, `skillrun_${randomUUID()}`,
-      actTaskId, recId, acceptance_fact_id, 'irrigation_deficit_skill_v1', `trace_${randomUUID()}`,
-      JSON.stringify([receipt_fact_id, execution_judge_id, acceptance_fact_id]),
-      `Skill performance recorded for ${field_id}`,
-    ]
-  );
-
   const memoryList = await fetchJson(`${base}/api/v1/field-memory?field_id=${encodeURIComponent(field_id)}&limit=50`, { method: 'GET', token: adminToken });
   const memoryListJson = requireOk(memoryList, 'field memory list');
   const items = Array.isArray(memoryListJson.items) ? memoryListJson.items : [];
@@ -361,6 +346,16 @@ let pool;
   const openapi = openapiResp.json ?? {};
 
   const byType = new Set(items.map((item) => String(item?.memory_type ?? '')));
+  const colCheck = await pool.query(`
+    SELECT data_type, udt_name, column_default, is_nullable
+      FROM information_schema.columns
+     WHERE table_schema='public' AND table_name='field_memory_v1' AND column_name='created_at'
+  `);
+  const c = colCheck.rows?.[0] ?? {};
+  const dbContractAligned = String(c.data_type ?? '').includes('timestamp with time zone')
+    && String(c.is_nullable ?? '').toUpperCase() === 'NO'
+    && /now\(\)/i.test(String(c.column_default ?? ''));
+
   process.stdout.write(`${JSON.stringify({
     field_memory_debug: {
       field_id,
@@ -375,7 +370,7 @@ let pool;
     }
   }, null, 2)}\n`);
   const checks = {
-    db_contract_aligned: true,
+    db_contract_aligned: dbContractAligned,
     field_response_memory_written:
      byType.has('FIELD_RESPONSE_MEMORY'),
     device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
@@ -386,7 +381,10 @@ let pool;
     memory_has_evidence_refs: items.every((item) => Array.isArray(item?.evidence_refs)),
     skill_memory_has_skill_trace_ref: items.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
     memory_query_by_operation: items.some((item) => String(item?.operation_id ?? "").trim().length > 0),
-    report_reads_field_memory: reportOk && !!reportResp.json?.operation_report_v1?.field_memory,
+    report_reads_field_memory: reportOk
+      && (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory?.length ?? 0) > 0
+      && (reportResp.json?.operation_report_v1?.field_memory?.device_reliability_memory?.length ?? 0) > 0
+      && (reportResp.json?.operation_report_v1?.field_memory?.skill_performance_memory?.length ?? 0) > 0,
     openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),

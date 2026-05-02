@@ -10,6 +10,10 @@ const QuerySchema = z.object({
   field_id: z.string().optional(),
   season_id: z.string().optional(),
   operation_id: z.string().optional(),
+  task_id: z.string().optional(),
+  recommendation_id: z.string().optional(),
+  prescription_id: z.string().optional(),
+  acceptance_id: z.string().optional(),
   memory_type: z.string().optional(),
   skill_id: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
@@ -28,6 +32,10 @@ export function registerFieldMemoryV1Routes(app: FastifyInstance, pool: Pool): v
     if (query.field_id) push("field_id", query.field_id);
     if (query.season_id) push("season_id", query.season_id);
     if (query.operation_id) push("operation_id", query.operation_id);
+    if (query.task_id) push("task_id", query.task_id);
+    if (query.recommendation_id) push("recommendation_id", query.recommendation_id);
+    if (query.prescription_id) push("prescription_id", query.prescription_id);
+    if (query.acceptance_id) push("acceptance_id", query.acceptance_id);
     if (query.memory_type) push("memory_type", query.memory_type);
     if (query.skill_id) push("skill_id", query.skill_id);
     vals.push(limit);
