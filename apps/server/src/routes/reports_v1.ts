@@ -135,6 +135,13 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
       device_reliability_memory: [],
       skill_performance_memory: [],
     },
+    roi_ledger: (report as any).roi_ledger ?? {
+      water_saved: [],
+      labor_saved: [],
+      early_warning_lead_time: [],
+      first_pass_acceptance_rate: [],
+      low_confidence_items: [],
+    },
   };
 }
 
