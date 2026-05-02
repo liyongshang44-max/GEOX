@@ -95,9 +95,19 @@ export async function getSkillDetail(pool: Pool, tenant: TenantTriple, skill_id:
   const activeVersion = defs.find((d) => String(d.status ?? "").toUpperCase() === "ACTIVE")?.version ?? latestDef.version;
   const latestRuns = runs.slice(0, 20);
 
+  const definition = latestDef.payload_json ?? {};
   return {
     skill_id,
-    definition: latestDef.payload_json,
+    skill_version: String(definition.skill_version ?? definition.version ?? latestDef.version ?? "v1"),
+    skill_category: String(definition.skill_category ?? definition.category ?? latestDef.category ?? "unknown").toLowerCase(),
+    risk_level: definition.risk_level ?? null,
+    capabilities: Array.isArray(definition.capabilities) ? definition.capabilities : [],
+    required_evidence: Array.isArray(definition.required_evidence) ? definition.required_evidence : [],
+    binding_conditions: definition.binding_conditions ?? {},
+    fallback_policy: definition.fallback_policy ?? {},
+    audit_policy: definition.audit_policy ?? {},
+    enabled: typeof definition.enabled === "boolean" ? definition.enabled : String(latestDef.status ?? "").toUpperCase() === "ACTIVE",
+    definition,
     current_enabled_version: activeVersion,
     compatibility: {
       crop_code: latestDef.crop_code,
