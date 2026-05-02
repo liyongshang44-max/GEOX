@@ -373,6 +373,26 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       device_reliability_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
       skill_performance_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
     };
+    const roiRows = Array.isArray(enrichedReport.roi_ledger?.water_saved)
+      ? [
+        ...(enrichedReport.roi_ledger.water_saved ?? []),
+        ...(enrichedReport.roi_ledger.labor_saved ?? []),
+        ...(enrichedReport.roi_ledger.early_warning_lead_time ?? []),
+        ...(enrichedReport.roi_ledger.first_pass_acceptance_rate ?? []),
+        ...(enrichedReport.roi_ledger.low_confidence_items ?? []),
+      ]
+      : [];
+    const skillTraceFromMemory = (fm.rows ?? []).map((x: any) => toText(x.skill_trace_ref)).find(Boolean) ?? null;
+    const skillRunFromFacts = toText((state as any).skill_run_id);
+    const asExecutedFromFacts = toText((state as any).as_executed_id);
+    enrichedReport.identifiers = {
+      ...enrichedReport.identifiers,
+      prescription_id: enrichedReport.identifiers.prescription_id ?? toText((state as any).prescription_id),
+      approval_id: enrichedReport.identifiers.approval_id ?? toText(state.approval_request_id),
+      skill_trace_id: enrichedReport.identifiers.skill_trace_id ?? skillTraceFromMemory ?? toText((roiRows[0] as any)?.skill_trace_ref),
+      skill_run_id: enrichedReport.identifiers.skill_run_id ?? skillRunFromFacts,
+      as_executed_id: enrichedReport.identifiers.as_executed_id ?? asExecutedFromFacts,
+    } as any;
     const payload: OperationReportSingleResponseV1 = {
       ok: true,
       operation_report_v1: enrichedReport,

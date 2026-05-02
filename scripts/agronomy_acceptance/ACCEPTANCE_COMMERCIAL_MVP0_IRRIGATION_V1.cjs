@@ -175,10 +175,10 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   }
 
   const memoryQ = await pool.query(
-    `SELECT fact_id, memory_type FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 ORDER BY occurred_at DESC LIMIT 500`,
+    `SELECT memory_id, memory_type FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 ORDER BY occurred_at DESC LIMIT 500`,
     [tenant_id, project_id, group_id, field_id]
   );
-  const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.fact_id ?? '').trim()).filter(Boolean);
+  const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
   assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
 
   const blocked = failureReasons.length > 0;
