@@ -132,6 +132,25 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const hasExecReliability = ledgers.some((x) => x?.roi_type === 'EXECUTION_RELIABILITY');
   const hasBaselineActualDelta = ledgers.some((x) => x?.baseline && x?.actual && x?.delta);
   const hasEvidenceRefs = ledgers.some((x) => Array.isArray(x?.evidence_refs) && x.evidence_refs.length > 0);
+  const hasCommercialCredibilityFields = ledgers.some((x) =>
+    x &&
+    ['MEASURED', 'ESTIMATED', 'ASSUMPTION_BASED', 'INSUFFICIENT_EVIDENCE'].includes(x.value_kind) &&
+    ['CUSTOMER_PROVIDED', 'HISTORICAL_AVERAGE', 'CONTROL_FIELD', 'SEASON_PLAN', 'DEFAULT_ASSUMPTION'].includes(x.baseline_type) &&
+    Object.prototype.hasOwnProperty.call(x, 'baseline_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'planned_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'actual_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'delta_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'unit') &&
+    Object.prototype.hasOwnProperty.call(x, 'estimated_money_value') &&
+    Object.prototype.hasOwnProperty.call(x, 'currency') &&
+    Object.prototype.hasOwnProperty.call(x, 'calculation_method') &&
+    Object.prototype.hasOwnProperty.call(x, 'assumptions') &&
+    Object.prototype.hasOwnProperty.call(x, 'uncertainty_notes') &&
+    Object.prototype.hasOwnProperty.call(x, 'evidence_refs') &&
+    Object.prototype.hasOwnProperty.call(x, 'source_skill_id') &&
+    Object.prototype.hasOwnProperty.call(x, 'skill_trace_ref') &&
+    Array.isArray(x.field_memory_refs)
+  );
   const hasConfidence = ledgers.some((x) =>
     x?.confidence &&
     (x.confidence.level === 'HIGH' || x.confidence.level === 'MEDIUM' || x.confidence.level === 'LOW') &&
@@ -154,6 +173,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     ledger_has_baseline_actual_delta: Boolean(hasBaselineActualDelta),
     ledger_has_evidence_refs: Boolean(hasEvidenceRefs),
     ledger_has_confidence: Boolean(hasConfidence),
+    ledger_has_commercial_credibility_fields: Boolean(hasCommercialCredibilityFields),
     roi_not_used_as_billing_source: Boolean(roiNotBillingSource),
   };
 
