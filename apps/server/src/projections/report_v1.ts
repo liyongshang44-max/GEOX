@@ -18,6 +18,25 @@ export type FieldMemorySummary = {
   occurred_at: string;
 };
 
+
+export type RoiLedgerSummary = {
+  roi_ledger_id: string;
+  roi_type: string;
+  baseline_type: string;
+  baseline_value: number | null;
+  actual_value: number | null;
+  delta_value: number | null;
+  unit: string | null;
+  value_kind: string;
+  confidence: Record<string, unknown>;
+  calculation_method: string;
+  evidence_refs: unknown[];
+  source_skill_id: string | null;
+  skill_trace_ref: string | null;
+  field_memory_refs: unknown[];
+  customer_text: string;
+};
+
 export type OperationReportV1 = {
   type: "operation_report_v1";
   version: "v1";
@@ -104,7 +123,15 @@ export type OperationReportV1 = {
     device_reliability_memory: FieldMemorySummary[];
     skill_performance_memory: FieldMemorySummary[];
   };
-  workflow: {
+
+    roi_ledger: {
+      water_saved: roiSummaries.filter((x) => x.roi_type === "WATER_SAVED"),
+      labor_saved: roiSummaries.filter((x) => x.roi_type === "LABOR_SAVED"),
+      early_warning_lead_time: roiSummaries.filter((x) => x.roi_type === "EARLY_WARNING_LEAD_TIME"),
+      first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
+      low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
+    },
+    workflow: {
     owner_actor_id: string | null;
     owner_name: string | null;
     last_note: string | null;
@@ -331,6 +358,7 @@ export function projectOperationReportV1(input: {
   operation_title?: unknown;
   customer_title?: unknown;
   now?: Date;
+  roi_ledger?: any[];
 }): OperationReportV1 {
   const now = input.now ?? new Date();
   const acceptanceMissingItems = Array.isArray(input.acceptance?.missing_evidence)
@@ -362,6 +390,24 @@ export function projectOperationReportV1(input: {
   const pendingAcceptanceOver30m = pendingAcceptanceElapsedMs != null && pendingAcceptanceElapsedMs > 30 * 60 * 1000;
 
   const missingEvidence = acceptanceMissingFlag;
+  const roiRows = Array.isArray(input.roi_ledger) ? input.roi_ledger : [];
+  const valueKindText = (vk: string, low: boolean) => vk === "MEASURED" ? "实测值" : vk === "ESTIMATED" ? "估算值" : vk === "ASSUMPTION_BASED" ? "基于默认假设的估算" : "证据不足，仅供参考";
+  const toSummary = (x: any): RoiLedgerSummary => {
+    const confidenceLevel = String(x?.confidence?.level ?? "").toUpperCase();
+    const low = confidenceLevel === "LOW";
+    const vk = String(x?.value_kind ?? "INSUFFICIENT_EVIDENCE");
+    return {
+      roi_ledger_id: String(x?.roi_ledger_id ?? ""), roi_type: String(x?.roi_type ?? ""), baseline_type: String(x?.baseline_type ?? "DEFAULT_ASSUMPTION"),
+      baseline_value: typeof x?.baseline_value === "number" ? x.baseline_value : Number(x?.baseline_value ?? NaN) || null,
+      actual_value: typeof x?.actual_value === "number" ? x.actual_value : Number(x?.actual_value ?? NaN) || null,
+      delta_value: typeof x?.delta_value === "number" ? x.delta_value : Number(x?.delta_value ?? NaN) || null,
+      unit: x?.unit == null ? null : String(x.unit), value_kind: vk, confidence: x?.confidence ?? {}, calculation_method: String(x?.calculation_method ?? ""),
+      evidence_refs: Array.isArray(x?.evidence_refs) ? x.evidence_refs : [], source_skill_id: x?.source_skill_id == null ? null : String(x.source_skill_id),
+      skill_trace_ref: x?.skill_trace_ref == null ? null : String(x.skill_trace_ref), field_memory_refs: Array.isArray(x?.field_memory_refs) ? x.field_memory_refs : [],
+      customer_text: `${valueKindText(vk, low)}${low ? '；可信度有限。' : ''}`,
+    };
+  };
+  const roiSummaries = roiRows.map(toSummary);
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -474,6 +520,14 @@ export function projectOperationReportV1(input: {
       skill_performance_memory: Array.isArray((input as any).field_memory?.skill_performance_memory)
         ? ((input as any).field_memory.skill_performance_memory as FieldMemorySummary[])
         : [],
+    },
+  
+    roi_ledger: {
+      water_saved: roiSummaries.filter((x) => x.roi_type === "WATER_SAVED"),
+      labor_saved: roiSummaries.filter((x) => x.roi_type === "LABOR_SAVED"),
+      early_warning_lead_time: roiSummaries.filter((x) => x.roi_type === "EARLY_WARNING_LEAD_TIME"),
+      first_pass_acceptance_rate: roiSummaries.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE"),
+      low_confidence_items: roiSummaries.filter((x) => String((x.confidence as any)?.level ?? "").toUpperCase() === "LOW"),
     },
     workflow: {
       owner_actor_id: toText(input.operation_workflow?.owner_actor_id),
