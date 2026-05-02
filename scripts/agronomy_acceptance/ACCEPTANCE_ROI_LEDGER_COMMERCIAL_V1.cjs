@@ -101,6 +101,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     openapi.json?.paths?.['/api/v1/roi-ledger/by-field/{field_id}']
   );
 
+  const operationReportSchema =
+    openapi.json?.components?.schemas?.OperationReportV1;
+
+  const openapi_contains_operation_report_roi_ledger =
+    Boolean(operationReportSchema?.properties?.roi_ledger);
+
+
   const asExecutedResp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, {
     method: 'POST',
     token,
@@ -217,6 +224,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const checks = {
     healthz_ok,
     openapi_contains_roi_ledger_paths,
+    openapi_contains_operation_report_roi_ledger,
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
     water_saved_generated: Boolean(hasWaterSaved),
