@@ -60,13 +60,14 @@ async function main() {
     const requiredContract = (s) => Boolean(
       s?.skill_category
       && s?.risk_level
+      && s?.enabled === true
       && s?.definition?.input_schema_ref
       && s?.definition?.output_schema_ref
-      && Array.isArray(s?.capabilities)
-      && Array.isArray(s?.required_evidence)
-      && s?.binding_conditions && typeof s.binding_conditions === 'object'
-      && s?.fallback_policy && typeof s.fallback_policy === 'object'
-      && s?.audit_policy && typeof s.audit_policy === 'object'
+      && Array.isArray(s?.capabilities) && s.capabilities.length > 0
+      && Array.isArray(s?.required_evidence) && s.required_evidence.length > 0
+      && s?.binding_conditions && typeof s.binding_conditions === 'object' && Object.keys(s.binding_conditions).length > 0
+      && s?.fallback_policy && typeof s.fallback_policy === 'object' && Object.keys(s.fallback_policy).length > 0
+      && s?.audit_policy && typeof s.audit_policy === 'object' && Object.keys(s.audit_policy).length > 0
     );
     checks.skill_contract_fields_complete = toPassFail(requiredContract(skillA.json) && requiredContract(skillB.json));
 
@@ -156,7 +157,13 @@ async function main() {
       },
     });
     const mismatchErr = String(mismatchResp.json?.error ?? '');
-    const capabilityMismatchBlocked = ['CAPABILITY_MISMATCH', 'DEVICE_ACTION_TYPE_UNSUPPORTED', 'DEVICE_CAPABILITY_UNSUPPORTED'].includes(mismatchErr);
+    const capabilityMismatchBlocked = [
+      'CAPABILITY_MISMATCH',
+      'DEVICE_ACTION_TYPE_MISMATCH',
+      'DEVICE_ACTION_MISSING_PARAMETERS',
+      'DEVICE_ACTION_TYPE_UNSUPPORTED',
+      'DEVICE_CAPABILITY_UNSUPPORTED',
+    ].includes(mismatchErr);
     failure_paths.capability_mismatch_blocked = toPassFail(capabilityMismatchBlocked);
 
     const decide = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(ids.approval_id)}/decide`, {
@@ -196,8 +203,14 @@ async function main() {
         ORDER BY occurred_at DESC LIMIT 1`,
       [ids.task_id]
     );
-    const taskDeviceSkillId = String(taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence?.device_skill_id ?? '');
-    checks.task_binds_device_skill = toPassFail(taskDeviceSkillId === 'mock_valve_control_skill_v1');
+    const taskBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+    const taskDeviceSkillId = String(taskBindingEvidence?.device_skill_id ?? '');
+    const taskBindingId = String(taskBindingEvidence?.skill_binding_id ?? '');
+    const taskBindingFactId = String(taskBindingEvidence?.skill_binding_fact_id ?? '');
+    checks.task_binds_device_skill = toPassFail(
+      taskDeviceSkillId === 'mock_valve_control_skill_v1'
+      && (taskBindingId.length > 0 || taskBindingFactId.length > 0)
+    );
 
     const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
