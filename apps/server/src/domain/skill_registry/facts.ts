@@ -371,7 +371,7 @@ export async function appendSkillRunFact(
       prescription_id: payload.prescription_id ?? undefined,
       recommendation_id: payload.recommendation_id ?? undefined,
       field_id: fieldId,
-      skill_refs: [{ skill_id: payload.skill_id, skill_run_id: payload.run_id, skill_version: payload.version }],
+      skill_refs: [{ skill_id: payload.skill_id, skill_run_id: payload.run_id }],
       metrics: {
         success: payload.result_status === "SUCCESS",
       },
