@@ -11,6 +11,25 @@ export const RoiTypeV1Values = [
 
 export type RoiTypeV1 = (typeof RoiTypeV1Values)[number];
 
+export const RoiValueKindV1Values = [
+  "MEASURED",
+  "ESTIMATED",
+  "ASSUMPTION_BASED",
+  "INSUFFICIENT_EVIDENCE",
+] as const;
+
+export type RoiValueKindV1 = (typeof RoiValueKindV1Values)[number];
+
+export const RoiBaselineTypeV1Values = [
+  "CUSTOMER_PROVIDED",
+  "HISTORICAL_AVERAGE",
+  "CONTROL_FIELD",
+  "SEASON_PLAN",
+  "DEFAULT_ASSUMPTION",
+] as const;
+
+export type RoiBaselineTypeV1 = (typeof RoiBaselineTypeV1Values)[number];
+
 export type RoiLedgerV1 = {
   roi_ledger_id: string;
   tenant_id: string;
@@ -29,6 +48,19 @@ export type RoiLedgerV1 = {
   zone_id?: string | null;
 
   roi_type: RoiTypeV1;
+
+  baseline_type: RoiBaselineTypeV1;
+  baseline_value: number | null;
+  planned_value: number | null;
+  actual_value: number | null;
+  delta_value: number | null;
+  unit: string | null;
+  estimated_money_value: number | null;
+  currency: string | null;
+  source_skill_id: string | null;
+  skill_trace_ref: string | null;
+  field_memory_refs: unknown[];
+  value_kind: RoiValueKindV1;
   baseline: Record<string, unknown>;
   actual: Record<string, unknown>;
   delta: Record<string, unknown>;

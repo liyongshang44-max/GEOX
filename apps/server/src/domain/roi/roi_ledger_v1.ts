@@ -13,6 +13,9 @@ type TenantTriple = {
 export type RoiConfidenceLevelV1 = "HIGH" | "MEDIUM" | "LOW";
 export type RoiConfidenceBasisV1 = "measured" | "estimated" | "assumed";
 
+export type RoiValueKindV1 = "MEASURED" | "ESTIMATED" | "ASSUMPTION_BASED" | "INSUFFICIENT_EVIDENCE";
+export type RoiBaselineTypeV1 = "CUSTOMER_PROVIDED" | "HISTORICAL_AVERAGE" | "CONTROL_FIELD" | "SEASON_PLAN" | "DEFAULT_ASSUMPTION";
+
 export type RoiConfidenceV1 = {
   level: RoiConfidenceLevelV1;
   basis: RoiConfidenceBasisV1;
@@ -33,6 +36,18 @@ export type RoiLedgerRow = {
   season_id: string | null;
   zone_id: string | null;
   roi_type: string;
+  baseline_type: RoiBaselineTypeV1;
+  baseline_value: number | null;
+  planned_value: number | null;
+  actual_value: number | null;
+  delta_value: number | null;
+  unit: string | null;
+  estimated_money_value: number | null;
+  currency: string | null;
+  source_skill_id: string | null;
+  skill_trace_ref: string | null;
+  field_memory_refs: any[];
+  value_kind: RoiValueKindV1;
   baseline: any;
   actual: any;
   delta: any;
@@ -73,6 +88,18 @@ type AsAppliedRow = {
 
 type RoiCandidate = {
   roi_type: string;
+  baseline_type?: RoiBaselineTypeV1;
+  baseline_value?: number | null;
+  planned_value?: number | null;
+  actual_value?: number | null;
+  delta_value?: number | null;
+  unit?: string | null;
+  estimated_money_value?: number | null;
+  currency?: string | null;
+  source_skill_id?: string | null;
+  skill_trace_ref?: string | null;
+  field_memory_refs?: any[];
+  value_kind?: RoiValueKindV1;
   baseline: any;
   actual: any;
   delta: any;
@@ -121,6 +148,18 @@ function mapRoiRow(row: any): RoiLedgerRow {
     season_id: row.season_id == null ? null : String(row.season_id),
     zone_id: row.zone_id == null ? null : String(row.zone_id),
     roi_type: String(row.roi_type ?? ""),
+    baseline_type: ["CUSTOMER_PROVIDED","HISTORICAL_AVERAGE","CONTROL_FIELD","SEASON_PLAN","DEFAULT_ASSUMPTION"].includes(String(row.baseline_type ?? "")) ? String(row.baseline_type) as RoiBaselineTypeV1 : "DEFAULT_ASSUMPTION",
+    baseline_value: toNum(row.baseline_value),
+    planned_value: toNum(row.planned_value),
+    actual_value: toNum(row.actual_value),
+    delta_value: toNum(row.delta_value),
+    unit: row.unit == null ? null : String(row.unit),
+    estimated_money_value: toNum(row.estimated_money_value),
+    currency: row.currency == null ? null : String(row.currency),
+    source_skill_id: row.source_skill_id == null ? null : String(row.source_skill_id),
+    skill_trace_ref: row.skill_trace_ref == null ? null : String(row.skill_trace_ref),
+    field_memory_refs: parseJsonMaybe(row.field_memory_refs) ?? [],
+    value_kind: ["MEASURED","ESTIMATED","ASSUMPTION_BASED","INSUFFICIENT_EVIDENCE"].includes(String(row.value_kind ?? "")) ? String(row.value_kind) as RoiValueKindV1 : "ASSUMPTION_BASED",
     baseline: parseJsonMaybe(row.baseline) ?? {},
     actual: parseJsonMaybe(row.actual) ?? {},
     delta: parseJsonMaybe(row.delta) ?? {},
@@ -478,6 +517,29 @@ export function computeVariableExecutionReliabilityEntry(asExecuted: AsExecutedR
   return { roi_type: "VARIABLE_EXECUTION_RELIABILITY", baseline: { source: "variable_prescription_execution_expectation", expected_status: "APPLIED", expected_zone_count: zone_count, expected_max_deviation_percent: 15 }, actual: { source: "as_applied_zone_applications", zone_count, applied_count, partial_count, skipped_count, max_abs_deviation_percent, avg_abs_deviation_percent }, delta: { skipped_count, partial_count, deviation_over_threshold_count }, confidence: { level: "HIGH", basis: "measured", reasons: ["zone_status_present", "zone_deviation_present"] }, evidence_refs: normalizeEvidenceRefs(asExecuted.evidence_refs), calculation_method: "variable_execution_reliability_v1", assumptions: { expected_max_deviation_percent: 15, trace_id: traceIdFromAsExecuted(asExecuted) }, uncertainty_notes: null };
 }
 
+
+function enrichCommercialFields(entry: RoiCandidate): RoiCandidate {
+  const baseline_value = toNum((entry.baseline as any)?.amount ?? (entry.baseline as any)?.total_planned_amount) ?? null;
+  const actual_value = toNum((entry.actual as any)?.amount ?? (entry.actual as any)?.total_applied_amount) ?? null;
+  const delta_value = toNum((entry.delta as any)?.amount) ?? (baseline_value != null && actual_value != null ? baseline_value - actual_value : null);
+  const unit = String((entry.delta as any)?.unit ?? (entry.actual as any)?.unit ?? (entry.baseline as any)?.unit ?? "").trim() || null;
+  const value_kind: RoiValueKindV1 = entry.confidence?.basis === "measured" ? "MEASURED" : entry.confidence?.basis === "estimated" ? "ESTIMATED" : "ASSUMPTION_BASED";
+  return {
+    ...entry,
+    baseline_type: entry.baseline_type ?? "SEASON_PLAN",
+    baseline_value: entry.baseline_value ?? baseline_value,
+    planned_value: entry.planned_value ?? baseline_value,
+    actual_value: entry.actual_value ?? actual_value,
+    delta_value: entry.delta_value ?? delta_value,
+    unit: entry.unit ?? unit,
+    estimated_money_value: entry.estimated_money_value ?? null,
+    currency: entry.currency ?? null,
+    source_skill_id: entry.source_skill_id ?? null,
+    skill_trace_ref: entry.skill_trace_ref ?? null,
+    field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : [],
+    value_kind: entry.value_kind ?? value_kind,
+  };
+}
 export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow, asApplied?: AsAppliedRow | null): RoiCandidate[] {
   const entries: RoiCandidate[] = [];
   const variableWaterSaved = computeVariableWaterSavedEntry(asExecuted, asApplied ?? null);
@@ -501,7 +563,7 @@ export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow,
   if (laborSaved) entries.push(laborSaved);
 
   // 禁止生成没有 evidence/confidence 的记录。
-  return entries.filter((entry) => {
+  return entries.map(enrichCommercialFields).filter((entry) => {
     const hasEvidence = Array.isArray(entry.evidence_refs) && entry.evidence_refs.length > 0;
     const hasConfidence = Boolean(entry.confidence?.level && entry.confidence?.basis && Array.isArray(entry.confidence?.reasons));
     return hasEvidence && hasConfidence;
@@ -593,6 +655,18 @@ async function upsertRoiCandidate(pool: Pool, input: {
       season_id,
       zone_id,
       roi_type,
+      baseline_type,
+      baseline_value,
+      planned_value,
+      actual_value,
+      delta_value,
+      unit,
+      estimated_money_value,
+      currency,
+      source_skill_id,
+      skill_trace_ref,
+      field_memory_refs,
+      value_kind,
       baseline,
       actual,
       delta,
@@ -604,7 +678,7 @@ async function upsertRoiCandidate(pool: Pool, input: {
       skill_trace_id,
       skill_refs
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15::jsonb,$16::jsonb,$17::jsonb,$18::jsonb,$19,$20::jsonb,$21,$22,$23::jsonb
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23::jsonb,$24,$25::jsonb,$26::jsonb,$27::jsonb,$28::jsonb,$29,$30::jsonb,$31,$32,$33::jsonb
     )
     ON CONFLICT (tenant_id, project_id, group_id, as_executed_id, roi_type)
     DO NOTHING
@@ -623,6 +697,18 @@ async function upsertRoiCandidate(pool: Pool, input: {
       input.asExecuted?.planned?.season_id ?? null,
       input.asApplied?.zone_id ?? input.asExecuted?.planned?.zone_id ?? null,
       input.candidate.roi_type,
+      input.candidate.baseline_type,
+      input.candidate.baseline_value,
+      input.candidate.planned_value,
+      input.candidate.actual_value,
+      input.candidate.delta_value,
+      input.candidate.unit,
+      input.candidate.estimated_money_value,
+      input.candidate.currency,
+      input.candidate.source_skill_id,
+      input.candidate.skill_trace_ref,
+      JSON.stringify(input.candidate.field_memory_refs ?? []),
+      input.candidate.value_kind,
       JSON.stringify(input.candidate.baseline ?? {}),
       JSON.stringify(input.candidate.actual ?? {}),
       JSON.stringify(input.candidate.delta ?? {}),
