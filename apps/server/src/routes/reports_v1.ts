@@ -168,9 +168,9 @@ async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: Oper
   const q = await pool.query(
     `SELECT * FROM roi_ledger_v1
       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
-        AND (operation_id=$4 OR task_id=$5 OR prescription_id=$6 OR field_id=$7)
+        AND (operation_id=$4 OR task_id=$5 OR prescription_id=$6)
       ORDER BY created_at DESC`,
-    [tenant.tenant_id, tenant.project_id, tenant.group_id, s.operation_id, s.task_id ?? s.act_task_id ?? null, (s as any).prescription_id ?? null, s.field_id ?? null]
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, s.operation_id, s.task_id ?? s.act_task_id ?? null, (s as any).prescription_id ?? null]
   );
   return q.rows ?? [];
 }

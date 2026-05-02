@@ -210,6 +210,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     report_summary_has_confidence: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "confidence"))),
     report_summary_has_calculation_method: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "calculation_method"))),
     report_summary_has_evidence_refs: Boolean(allRoiSummaries.some((x) => Array.isArray(x?.evidence_refs))),
+    report_summary_has_customer_text: Boolean(allRoiSummaries.some((x) => typeof x?.customer_text === "string" && x.customer_text.length > 0)),
     low_confidence_has_customer_text: Boolean((Array.isArray(roiLedgerBlock?.low_confidence_items) ? roiLedgerBlock.low_confidence_items : []).every((x) => String(x?.customer_text ?? "").includes("可信度有限"))),
     default_assumption_not_measured_in_report: Boolean(allRoiSummaries.every((x) => x?.baseline_type !== "DEFAULT_ASSUMPTION" || x?.value_kind !== "MEASURED")),
     no_forbidden_types_in_report: Boolean(allRoiSummaries.every((x) => !["YIELD_INCREASE","PROFIT_INCREASE_FROM_YIELD","QUALITY_PREMIUM"].includes(x?.roi_type))),
