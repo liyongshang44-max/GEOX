@@ -35,6 +35,8 @@ import { getPrescriptionById } from "../domain/prescription/prescription_contrac
 import { buildVariableActionTaskPayloadV1 } from "../domain/prescription/variable_action_task_v1.js";
 import { createFailSafeEventV1, createManualTakeoverV1, evaluateDeviceDispatchSafetyV1, findOpenFailSafeForDeviceV1 } from "../services/fail_safe_service_v1.js";
 import { auditContextFromRequestV1, recordSecurityAuditEventV1 } from "../services/security_audit_service_v1.js";
+import { resolveDeviceSkillBindingForTask } from "../services/skills/skill_binding_service.js";
+import { executeSkillRuntimeV1 } from "../services/skills/runtime_v1.js";
 // Semantic guardrail: decision payloads use APPROVE/REJECT inputs, while internal runtime status persists APPROVED/terminal state machine values.
 
 // Sprint 10 v0: 7-item minimal allowlist for action_type (frozen by acceptance).
@@ -1531,6 +1533,13 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         return reply.status(400).send(deviceActionValidation);
       }
       const expectedEvidenceRequirements = resolveExpectedEvidenceRequirementsV1(actionType, skillCapabilityResolution);
+      const requiredCapabilities = actionType === "IRRIGATE" ? ["device.irrigation.valve.open"] : [];
+      const bindingEvidence = await resolveDeviceSkillBindingForTask(pool, tenant, {
+        action_type: actionType,
+        device_type: "IRRIGATION_CONTROLLER",
+        adapter_type: "irrigation_simulator",
+        required_capabilities: requiredCapabilities,
+      });
       const normalizedDeviceCapabilityCheck = body.execution_plan.device_capability_check ?? { supported: true as const };
       if (body.execution_plan.device_capability_check && !body.execution_plan.device_capability_check.supported) {
         return reply.status(400).send({ ok: false, error: body.execution_plan.device_capability_check.reason ?? "DEVICE_CAPABILITY_UNSUPPORTED" });
@@ -1659,6 +1668,7 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
             capability_resolution: skillCapabilityResolution?.ok
               ? skillCapabilityResolution.resolution
               : null,
+            skill_binding_evidence: bindingEvidence,
             expected_evidence_requirements: expectedEvidenceRequirements,
             execution_context: {
               execution_key: executionKey,
@@ -1740,7 +1750,34 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         }]
       );
       const executionSkillMeta = resolveDeviceExecutionSkillMeta(actionType);
-      if (executionSkillMeta) {
+      let runtimeSkillRun: { run_id: string; fact_id: string; occurred_at: string } | null = null;
+      if (bindingEvidence?.device_skill_id === "mock_valve_control_skill_v1") {
+        const relatedFieldId = body.execution_plan.target.kind === "field" ? String(body.execution_plan.target.ref) : null;
+        const relatedDeviceId = body.execution_plan.target.kind === "device" ? String(body.execution_plan.target.ref) : null;
+        runtimeSkillRun = await executeSkillRuntimeV1(pool, {
+          tenant_id: tenant.tenant_id,
+          project_id: tenant.project_id,
+          group_id: tenant.group_id,
+          skill_id: "mock_valve_control_skill_v1",
+          version: "v1",
+          category: "DEVICE",
+          bind_target: "mock_valve",
+          field_id: relatedFieldId,
+          device_id: relatedDeviceId,
+          operation_id: body.operation_id,
+          operation_plan_id: body.operation_id,
+          input: {
+            task_id: act_task_id,
+            approval_id: `direct_${body.execution_plan.idempotency_key}`,
+            planned_amount: body.execution_plan.parameters?.planned_amount ?? 20,
+            unit: body.execution_plan.parameters?.unit ?? "mm",
+            duration_min: body.execution_plan.parameters?.duration_min ?? 20,
+            required_capabilities: requiredCapabilities,
+            skill_binding_fact_id: bindingEvidence.skill_binding_fact_id,
+            device_skill_id: bindingEvidence.device_skill_id,
+          },
+        });
+      } else if (executionSkillMeta) {
         const relatedFieldId = body.execution_plan.target.kind === "field" ? String(body.execution_plan.target.ref) : null;
         const relatedDeviceId = body.execution_plan.target.kind === "device" ? String(body.execution_plan.target.ref) : null;
         await appendSkillRunFact(pool, {
@@ -1765,6 +1802,8 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
             operation_id: body.operation_id,
             target: body.execution_plan.target,
             parameters: body.execution_plan.parameters,
+            skill_binding_fact_id: bindingEvidence?.skill_binding_fact_id ?? null,
+            device_skill_id: bindingEvidence?.device_skill_id ?? null,
           }),
           output_digest: digestJson({
             act_task_id,
@@ -1781,7 +1820,12 @@ export function registerAoActV1Routes(app: FastifyInstance, pool: Pool): void {
         act_task_id,
         idempotent: false,
         expected_evidence_requirements: expectedEvidenceRequirements,
-        capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null
+        capability_resolution: skillCapabilityResolution?.ok ? skillCapabilityResolution.resolution : null,
+        skill_binding_fact_id: bindingEvidence?.skill_binding_fact_id ?? null,
+        device_skill_id: bindingEvidence?.device_skill_id ?? null,
+        skill_run_id: runtimeSkillRun?.run_id ?? null,
+        skill_run_fact_id: runtimeSkillRun?.fact_id ?? null,
+        skill_run_occurred_at: runtimeSkillRun?.occurred_at ?? null
       });
     } catch (e: any) {
       return reply.status(400).send({ ok: false, error: e?.message ?? "BAD_REQUEST" });
