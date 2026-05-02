@@ -27,10 +27,15 @@ export type SkillContractV1 = {
   skill_id: string;
   skill_version: string;
   skill_category: SkillCategoryV1;
+  // Optional schema references for lightweight adapters.
+  input_schema_ref?: string;
+  output_schema_ref?: string;
   input_schema: Record<string, unknown>;
   output_schema: Record<string, unknown>;
   capabilities: string[];
   risk_level: SkillRiskLevelV1;
+  // Optional runtime binding gate constraints.
+  binding_conditions?: Record<string, unknown>;
   required_evidence: string[];
   tenant_scope: string[];
   crop_scope: string[];
