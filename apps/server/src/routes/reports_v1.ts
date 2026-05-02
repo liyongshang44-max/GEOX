@@ -135,6 +135,13 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
       device_reliability_memory: [],
       skill_performance_memory: [],
     },
+    roi_ledger: (report as any).roi_ledger ?? {
+      water_saved: [],
+      labor_saved: [],
+      early_warning_lead_time: [],
+      first_pass_acceptance_rate: [],
+      low_confidence_items: [],
+    },
   };
 }
 
@@ -156,6 +163,18 @@ type FieldReportDetailResponseV1 = {
   field_report_v1: FieldReportDetailV1;
 };
 const FIELD_REPORT_OPERATION_LIMIT = 20;
+
+async function queryRoiLedgerForReport(pool: Pool, tenant: TenantTriple, s: OperationStateV1): Promise<any[]> {
+  const q = await pool.query(
+    `SELECT * FROM roi_ledger_v1
+      WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3
+        AND (operation_id=$4 OR task_id=$5 OR prescription_id=$6 OR field_id=$7)
+      ORDER BY created_at DESC`,
+    [tenant.tenant_id, tenant.project_id, tenant.group_id, s.operation_id, s.task_id ?? s.act_task_id ?? null, (s as any).prescription_id ?? null, s.field_id ?? null]
+  );
+  return q.rows ?? [];
+}
+
 
 export async function projectReportV1(params: {
   pool: Pool;
@@ -263,6 +282,7 @@ export async function projectReportV1(params: {
       approved_at: approvalStatus === "APPROVED" ? (approvalDecisionFact?.occurred_at ?? null) : null,
       note: toText(approvalDecisionFact?.record_json?.payload?.note ?? approvalDecisionFact?.record_json?.payload?.reason),
     },
+    roi_ledger: await queryRoiLedgerForReport(pool, tenant, operationState),
     why: {
       explain_human: explainHuman,
       objective_text: objectiveText,
@@ -331,7 +351,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       state.operation_plan_id,
       state.recommendation_id,
       state.act_task_id,
-      state.acceptance?.acceptance_id,
+      (state.acceptance as any)?.acceptance_id,
     ].map((x) => String(x ?? "").trim()).filter(Boolean)));
     const fm = await pool.query(
       `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
