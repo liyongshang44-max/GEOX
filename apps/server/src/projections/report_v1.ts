@@ -63,6 +63,11 @@ export type OperationReportV1 = {
     operation_plan_id: string;
     operation_id: string;
     recommendation_id: string | null;
+    prescription_id: string | null;
+    approval_id: string | null;
+    skill_trace_id: string | null;
+    skill_run_id: string | null;
+    as_executed_id: string | null;
     act_task_id: string | null;
     receipt_id: string | null;
   };
@@ -441,6 +446,11 @@ export function projectOperationReportV1(input: {
       operation_plan_id: input.operation_plan_id,
       operation_id: input.operation_state.operation_id,
       recommendation_id: toText(input.operation_state.recommendation_id),
+      prescription_id: toText((input.operation_state as any).prescription_id),
+      approval_id: toText((input.operation_state as any).approval_request_id ?? (input.operation_state as any).approval_id),
+      skill_trace_id: toText((input.operation_state as any).skill_trace_id),
+      skill_run_id: toText((input.operation_state as any).skill_run_id),
+      as_executed_id: toText((input.operation_state as any).as_executed_id),
       act_task_id: toText(input.operation_state.act_task_id ?? input.operation_state.task_id),
       receipt_id: toText(input.operation_state.receipt_id),
     },
