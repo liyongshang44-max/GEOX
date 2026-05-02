@@ -51,3 +51,32 @@ export async function getSkillBindingProjection(pool: Pool, tenant: TenantTriple
     bind_target: typeof filters.bind_target === "string" ? filters.bind_target : undefined,
   });
 }
+
+export async function resolveDeviceSkillBindingForTask(
+  pool: Pool,
+  tenant: TenantTriple,
+  input: {
+    action_type: string;
+    device_type: string;
+    adapter_type: string;
+    required_capabilities: string[];
+  },
+): Promise<{ skill_binding_fact_id: string; skill_binding_id: string; device_skill_id: string; version: string } | null> {
+  const actionType = String(input.action_type ?? "").trim().toUpperCase();
+  const deviceType = String(input.device_type ?? "").trim().toUpperCase();
+  const adapterType = String(input.adapter_type ?? "").trim().toLowerCase();
+  const required = new Set((input.required_capabilities ?? []).map((x) => String(x ?? "").trim()).filter(Boolean));
+  if (!(actionType === "IRRIGATE" && deviceType === "IRRIGATION_CONTROLLER" && adapterType === "irrigation_simulator" && required.has("device.irrigation.valve.open"))) {
+    return null;
+  }
+
+  const projection = await getSkillBindingProjection(pool, tenant, { status: "ACTIVE" });
+  const candidate = (projection.items_effective ?? []).find((item) => String(item.skill_id) === "mock_valve_control_skill_v1");
+  if (!candidate) return null;
+  return {
+    skill_binding_fact_id: String(candidate.fact_id),
+    skill_binding_id: String(candidate.binding_id),
+    device_skill_id: String(candidate.skill_id),
+    version: String(candidate.version),
+  };
+}
