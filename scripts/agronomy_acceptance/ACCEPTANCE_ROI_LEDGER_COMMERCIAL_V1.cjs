@@ -92,14 +92,14 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
   });
   const createJson = requireOk(createResp, 'create roi ledger from as-executed');
 
   const createAgainResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
   });
   const createAgainJson = requireOk(createAgainResp, 'idempotent roi ledger generation');
 
@@ -161,6 +161,32 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   );
   const roiNotBillingSource = ledgers.every((x) => x?.calculation_method !== 'compute_billing_v1' && x?.roi_type !== 'BILLING_CHARGE');
 
+
+  const fieldReportResp = await fetchJson(
+    `${base}/api/v1/reports/field/${encodeURIComponent(field_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+    { method: 'GET', token },
+  );
+  const fieldReportJson = requireOk(fieldReportResp, 'read field report');
+  const reportItem = Array.isArray(fieldReportJson.field_report_v1?.recent_operations)
+    ? fieldReportJson.field_report_v1.recent_operations[0]
+    : null;
+  const operation_id = String(reportItem?.operation_id ?? '').trim();
+  assert.ok(operation_id, 'missing operation_id from field report');
+
+  const operationReportResp = await fetchJson(
+    `${base}/api/v1/reports/operation/${encodeURIComponent(operation_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+    { method: 'GET', token },
+  );
+  const operationReportJson = requireOk(operationReportResp, 'read operation report with roi ledger');
+  const roiLedgerBlock = operationReportJson?.operation_report_v1?.roi_ledger;
+  const waterSavedItems = Array.isArray(roiLedgerBlock?.water_saved) ? roiLedgerBlock.water_saved : [];
+  const allRoiSummaries = [
+    ...(Array.isArray(roiLedgerBlock?.water_saved) ? roiLedgerBlock.water_saved : []),
+    ...(Array.isArray(roiLedgerBlock?.labor_saved) ? roiLedgerBlock.labor_saved : []),
+    ...(Array.isArray(roiLedgerBlock?.early_warning_lead_time) ? roiLedgerBlock.early_warning_lead_time : []),
+    ...(Array.isArray(roiLedgerBlock?.first_pass_acceptance_rate) ? roiLedgerBlock.first_pass_acceptance_rate : []),
+  ];
+
   const checks = {
     healthz_ok,
     openapi_contains_roi_ledger_paths,
@@ -179,6 +205,17 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     default_assumption_not_measured: Boolean(defaultAssumptionNotMeasured),
     no_forbidden_types: Boolean(hasNoForbiddenTypes),
     roi_not_used_as_billing_source: Boolean(roiNotBillingSource),
+    report_contains_roi_ledger_block: Boolean(roiLedgerBlock && typeof roiLedgerBlock === "object"),
+    report_contains_water_saved: Boolean(waterSavedItems.length > 0),
+    report_summary_has_baseline_type: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "baseline_type"))),
+    report_summary_has_value_kind: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "value_kind"))),
+    report_summary_has_confidence: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "confidence"))),
+    report_summary_has_calculation_method: Boolean(allRoiSummaries.some((x) => Object.prototype.hasOwnProperty.call(x, "calculation_method"))),
+    report_summary_has_evidence_refs: Boolean(allRoiSummaries.some((x) => Array.isArray(x?.evidence_refs))),
+    report_summary_has_customer_text: Boolean(allRoiSummaries.some((x) => typeof x?.customer_text === "string" && x.customer_text.length > 0)),
+    low_confidence_has_customer_text: Boolean((Array.isArray(roiLedgerBlock?.low_confidence_items) ? roiLedgerBlock.low_confidence_items : []).every((x) => String(x?.customer_text ?? "").includes("可信度有限"))),
+    default_assumption_not_measured_in_report: Boolean(allRoiSummaries.every((x) => x?.baseline_type !== "DEFAULT_ASSUMPTION" || x?.value_kind !== "MEASURED")),
+    no_forbidden_types_in_report: Boolean(allRoiSummaries.every((x) => !["YIELD_INCREASE","PROFIT_INCREASE_FROM_YIELD","QUALITY_PREMIUM"].includes(x?.roi_type))),
   };
 
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
