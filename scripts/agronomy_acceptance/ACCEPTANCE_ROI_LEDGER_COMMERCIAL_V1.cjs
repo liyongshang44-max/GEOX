@@ -49,13 +49,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     [
       `fact_op_plan_${suffix}`,
       'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'operation_plan_v1', payload: { tenant_id, project_id, group_id, field_id, operation_plan_id, operation_id, recommendation_id, action_type: 'IRRIGATION' } },
+      { type: 'operation_plan_v1', payload: { tenant_id, project_id, group_id, field_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, action_type: 'IRRIGATION' } },
       `fact_task_${suffix}`,
       'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'ao_act_task_v0', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, recommendation_id, task_id, field_id, status: 'DISPATCHED' } },
+      { type: 'ao_act_task_v0', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, task_id, field_id, status: 'DISPATCHED' } },
       `fact_acceptance_${suffix}`,
       'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'acceptance_result_v1', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, field_id, recommendation_id, task_id, verdict: 'PASS', generated_at: new Date().toISOString(), missing_evidence: false } },
+      { type: 'acceptance_result_v1', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, field_id, recommendation_id, act_task_id: task_id, task_id, verdict: 'PASS', generated_at: new Date().toISOString(), missing_evidence: false } },
     ],
   );
 
@@ -200,6 +200,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     { method: 'GET', token },
   );
   const operationReportJson = requireOk(operationReportResp, 'read operation report with roi ledger');
+  assert.equal(
+    operationReportJson.operation_report_v1?.identifiers?.act_task_id,
+    task_id,
+    'operation report did not project expected act_task_id'
+  );
   const roiLedgerBlock = operationReportJson?.operation_report_v1?.roi_ledger;
   const waterSavedItems = Array.isArray(roiLedgerBlock?.water_saved) ? roiLedgerBlock.water_saved : [];
   const allRoiSummaries = [
