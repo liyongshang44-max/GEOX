@@ -52,9 +52,46 @@ const pass = (v) => (v ? 'PASS' : 'FAIL');
 const isFilled = (x) => String(x || '').trim().length > 0;
 const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
 
-async function existsFactById(pool, factId) {
-  if (!isFilled(factId)) return false;
-  const q = await pool.query('SELECT 1 FROM facts WHERE fact_id=$1 LIMIT 1', [factId]);
+async function existsFieldMemoryId(pool, memoryId) {
+  const q = await pool.query('SELECT 1 FROM field_memory_v1 WHERE memory_id=$1 LIMIT 1', [memoryId]);
+  return (q.rows?.length ?? 0) > 0;
+}
+async function existsRoiLedgerId(pool, roiLedgerId) {
+  const q = await pool.query('SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 LIMIT 1', [roiLedgerId]);
+  return (q.rows?.length ?? 0) > 0;
+}
+async function existsSkillRunId(pool, skillRunId) {
+  const q = await pool.query(
+    `SELECT 1 FROM facts
+      WHERE (record_json::jsonb->>'type') IN ('skill_run_v1','skill_execution_v1')
+        AND (record_json::jsonb#>>'{payload,skill_run_id}')=$1
+      LIMIT 1`,
+    [skillRunId]
+  );
+  return (q.rows?.length ?? 0) > 0;
+}
+async function existsReportId(pool, reportId) {
+  const q = await pool.query(
+    `SELECT 1 FROM facts
+      WHERE (record_json::jsonb#>>'{payload,report_id}')=$1
+         OR (record_json::jsonb#>>'{payload,fact_id}')=$1
+      LIMIT 1`,
+    [reportId]
+  );
+  return (q.rows?.length ?? 0) > 0;
+}
+async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
+  const q = await pool.query(
+    `SELECT 1 FROM facts
+      WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+        AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+        AND (
+          (record_json::jsonb#>>'{payload,meta,skill_binding_evidence,skill_binding_id}')=$2
+          OR (record_json::jsonb#>>'{payload,meta,skill_binding_evidence,skill_binding_fact_id}')=$2
+        )
+      LIMIT 1`,
+    [taskId, skillBindingId]
+  );
   return (q.rows?.length ?? 0) > 0;
 }
 
@@ -108,11 +145,15 @@ async function existsFactById(pool, factId) {
     : 0;
   const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 3;
 
-  const skillBindingExists = await existsFactById(pool, chain.skill_binding_id);
-  const skillRunExists = await existsFactById(pool, chain.skill_run_id);
-  const reportExists = await existsFactById(pool, chain.report_id);
-  const fieldMemoryExists = fieldMemoryIds.length > 0;
-  const roiLedgerExists = roiLedgerIds.length > 0;
+  const skillBindingExists = isFilled(chain.task_id) && isFilled(chain.skill_binding_id)
+    ? await existsSkillBindingFromTaskFact(pool, chain.task_id, chain.skill_binding_id)
+    : false;
+  const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
+  const reportExists = isFilled(chain.report_id) ? await existsReportId(pool, chain.report_id) : false;
+  const fieldMemoryExists = fieldMemoryIds.length > 0
+    && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x)))).every(Boolean);
+  const roiLedgerExists = roiLedgerIds.length > 0
+    && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x)))).every(Boolean);
   const dRoiStrong = Array.isArray(irrigation?.roi_ledgers) && irrigation.roi_ledgers.every((x) => x.baseline != null && Number(x.confidence ?? 0) > 0 && Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
 
   const checks = {

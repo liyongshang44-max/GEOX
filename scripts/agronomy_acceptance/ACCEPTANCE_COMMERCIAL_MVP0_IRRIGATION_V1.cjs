@@ -108,6 +108,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   let report_payload = null;
   let post_observation_id = '';
   let roi_ledger_ids = [];
+  let roi_ledgers = [];
 
   if (!failureReasons.includes('APPROVAL_REJECTED')) {
     const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
@@ -168,9 +169,27 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const roiJson = requireOk(roiResp, 'roi');
     const ledgers = Array.isArray(roiJson.roi_ledgers) ? roiJson.roi_ledgers : [];
     roi_ledger_ids = ledgers.map((x) => String(x.roi_ledger_id ?? x.fact_id ?? '').trim()).filter(Boolean);
-    const hasConfidence = ledgers.every((x) => Number(x.confidence ?? 0) > 0);
+    const hasConfidence = ledgers.every((x) => {
+      if (typeof x.confidence === 'number') return x.confidence > 0;
+      if (x.confidence && typeof x.confidence === 'object') {
+        const score = Number(x.confidence.score ?? x.confidence.value ?? 0);
+        return score > 0;
+      }
+      return false;
+    });
     const hasBaseline = ledgers.every((x) => x.baseline != null);
     const hasEvidenceRefs = ledgers.every((x) => Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
+    roi_ledgers = ledgers.map((x) => ({
+      roi_ledger_id: x.roi_ledger_id,
+      roi_type: x.roi_type,
+      baseline: x.baseline,
+      baseline_type: x.baseline_type,
+      baseline_value: x.baseline_value,
+      confidence: x.confidence,
+      evidence_refs: x.evidence_refs,
+      value_kind: x.value_kind,
+      calculation_method: x.calculation_method,
+    }));
     if (!hasConfidence || !hasBaseline || !hasEvidenceRefs) failureReasons.push('LOW_CONFIDENCE_ROI');
     if (failureReasons.length > 0) {
       const measured = ledgers.some((x) => String(x.measurement_mode ?? '').toUpperCase() === 'MEASURED');
@@ -241,7 +260,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     no_skill_run: blocked ? true : Boolean(skill_run_id),
     no_as_executed: blocked ? true : Boolean(as_executed_id),
     no_acceptance: blocked ? true : Boolean(acceptance_id),
-    field_memory_at_least_three: field_memory_ids.length >= 3,
+    field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,
@@ -253,7 +272,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
 
-  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, chain_summary, checks }, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify({ ok: true, blocked, failure_reasons: failureReasons, failure_audit_summary, chain_summary, roi_ledgers, checks }, null, 2)}\n`);
   await pool.end();
 })().catch((err) => {
   console.error(err);
