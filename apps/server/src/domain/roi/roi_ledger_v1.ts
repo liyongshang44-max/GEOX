@@ -256,9 +256,11 @@ function toWaterLiters(amount: number | null, unitRaw: unknown): number | null {
 
 export function computeWaterSavedEntry(asExecuted: AsExecutedRow): RoiCandidate | null {
   const plannedAmount = toNum(asExecuted?.planned?.amount);
-  const executedAmount = toNum(asExecuted?.executed?.amount);
+  const executedAmountDirect = toNum(asExecuted?.executed?.amount);
+  const executedAmountFromUsage = toNum(asExecuted?.executed?.resource_usage?.water_l);
+  const executedAmount = executedAmountDirect ?? executedAmountFromUsage;
   const plannedUnit = String(asExecuted?.planned?.unit ?? "").trim();
-  const executedUnit = String(asExecuted?.executed?.unit ?? plannedUnit).trim();
+  const executedUnit = String(asExecuted?.executed?.unit ?? (executedAmountDirect == null && executedAmountFromUsage != null ? "L" : plannedUnit)).trim();
 
   if (plannedAmount == null || executedAmount == null || !plannedUnit) return null;
 

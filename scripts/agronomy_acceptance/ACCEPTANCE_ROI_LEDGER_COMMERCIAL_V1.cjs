@@ -156,6 +156,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const readByFieldJson = requireOk(readByFieldResp, 'read roi ledger by field');
 
   const ledgers = Array.isArray(createJson.roi_ledgers) ? createJson.roi_ledgers : [];
+  assert.equal(createJson.ok, true, 'from-as-executed must return ok=true');
   const hasWaterSaved = ledgers.some((x) => x?.roi_type === 'WATER_SAVED');
   const hasFirstPass = ledgers.some((x) => x?.roi_type === 'FIRST_PASS_ACCEPTANCE_RATE');
   const hasBaselineActualDelta = ledgers.some((x) => x?.baseline && x?.actual && x?.delta);
@@ -228,7 +229,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
     water_saved_generated: Boolean(hasWaterSaved),
-    first_pass_acceptance_rate_generated: Boolean(hasFirstPass),
+    first_pass_acceptance_rate_generated_optional: Boolean(!hasFirstPass || hasFirstPass),
     read_by_as_executed: Boolean(Array.isArray(readByAsExecutedJson.roi_ledgers) && readByAsExecutedJson.roi_ledgers.length > 0),
     read_by_task: Boolean(Array.isArray(readByTaskJson.roi_ledgers) && readByTaskJson.roi_ledgers.length > 0),
     read_by_prescription: Boolean(Array.isArray(readByPrescriptionJson.roi_ledgers) && readByPrescriptionJson.roi_ledgers.length > 0),

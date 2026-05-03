@@ -460,7 +460,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         const opId = typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id;
         const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
         await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "operation_outcome", operation_id: opId, task_id: body.act_task_id, field_id,
+          type: "FIELD_RESPONSE_MEMORY", operation_id: opId, task_id: body.act_task_id, field_id,
           project_id: tenant.project_id, group_id: tenant.group_id,
           recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
           metrics: {
@@ -474,7 +474,16 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
           evidence_refs: evidenceRefs, summary: `Acceptance passed for task ${body.act_task_id}`,
         }).catch(() => undefined);
         await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "skill_performance", field_id, operation_id: opId, task_id: body.act_task_id,
+          type: "DEVICE_RELIABILITY_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
+          project_id: tenant.project_id, group_id: tenant.group_id,
+          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+          skill_refs: [{ skill_id: "mock_valve_control_skill_v1", skill_run_id: trace_id }],
+          metrics: { success: true, confidence: 0.9 },
+          evidence_refs: evidenceRefs,
+          summary: `Valve response confirmed for task ${body.act_task_id}`,
+        }).catch(() => undefined);
+        await recordMemoryV1(pool, tenant.tenant_id, {
+          type: "SKILL_PERFORMANCE_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
           project_id: tenant.project_id, group_id: tenant.group_id,
           recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
           skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
