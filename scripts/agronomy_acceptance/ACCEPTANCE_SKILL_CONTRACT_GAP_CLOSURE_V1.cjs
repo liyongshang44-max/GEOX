@@ -55,6 +55,9 @@ async function main() {
     roi_id: '',
   };
 
+
+  let deviceObservationInserted = false;
+  let derivedStatesInserted = false;
   try {
     const suffix = Date.now();
     const field_id = `field_gap_closure_${suffix}`;
@@ -93,6 +96,24 @@ async function main() {
        ON CONFLICT DO NOTHING`,
       [tenant_id, project_id, group_id, field_id, device_id, Date.now(), 0.16, `obs_gap_${randomUUID()}`]
     );
+    deviceObservationInserted = true;
+
+    await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS project_id text`);
+    await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS group_id text`);
+    await pool.query(`ALTER TABLE derived_sensing_state_index_v1 ADD COLUMN IF NOT EXISTS source_observation_ids_json jsonb NOT NULL DEFAULT '[]'::jsonb`);
+
+    await pool.query(
+      `INSERT INTO derived_sensing_state_index_v1
+        (tenant_id, project_id, group_id, field_id, state_type, payload_json, confidence,
+         explanation_codes_json, source_device_ids_json, computed_at, computed_at_ts_ms, fact_id,
+         source_observation_ids_json)
+       VALUES
+        ($1,$2,$3,$4,'irrigation_effectiveness_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$6,'["obs_gap_irrigation"]'::jsonb),
+        ($1,$2,$3,$4,'leak_risk_state','{"level":"LOW"}'::jsonb,0.95,'[]'::jsonb,'[]'::jsonb,NOW(),$5,$7,'["obs_gap_leak"]'::jsonb)
+       ON CONFLICT DO NOTHING`,
+      [tenant_id, project_id, group_id, field_id, Date.now(), randomUUID(), randomUUID()]
+    );
+    derivedStatesInserted = true;
     const deviceNow = Date.now();
     await pool.query(
       `INSERT INTO device_status_index_v1
@@ -132,6 +153,15 @@ async function main() {
       const reason = !gen.ok
         ? 'NO_RECOMMENDATION_RETURNED'
         : String(gen.json?.reason ?? 'NO_RECOMMENDATION_RETURNED');
+      process.stdout.write(`${JSON.stringify({
+        stage1_seed_debug: {
+          derived_states_inserted: derivedStatesInserted,
+          device_observation_inserted: deviceObservationInserted,
+          field_id,
+          device_id,
+        },
+        recommendation_generate_response: gen.json ?? {}
+      }, null, 2)}\n`);
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
     }
     const recommendation = gen.json?.recommendations?.[0] ?? {};
