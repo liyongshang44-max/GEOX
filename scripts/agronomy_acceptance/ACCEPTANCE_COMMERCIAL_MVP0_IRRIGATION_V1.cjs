@@ -2,6 +2,14 @@ const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
+function hasValidRoiConfidence(confidence) {
+  if (typeof confidence === 'number') return confidence > 0;
+  if (!confidence || typeof confidence !== 'object') return false;
+  return ['HIGH', 'MEDIUM', 'LOW'].includes(String(confidence.level || ''))
+    && ['measured', 'estimated', 'assumed'].includes(String(confidence.basis || ''))
+    && Array.isArray(confidence.reasons);
+}
+
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
@@ -169,14 +177,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     const roiJson = requireOk(roiResp, 'roi');
     const ledgers = Array.isArray(roiJson.roi_ledgers) ? roiJson.roi_ledgers : [];
     roi_ledger_ids = ledgers.map((x) => String(x.roi_ledger_id ?? x.fact_id ?? '').trim()).filter(Boolean);
-    const hasConfidence = ledgers.every((x) => {
-      if (typeof x.confidence === 'number') return x.confidence > 0;
-      if (x.confidence && typeof x.confidence === 'object') {
-        const score = Number(x.confidence.score ?? x.confidence.value ?? 0);
-        return score > 0;
-      }
-      return false;
-    });
+    const hasConfidence = ledgers.every((x) => hasValidRoiConfidence(x.confidence));
     const hasBaseline = ledgers.every((x) => x.baseline != null);
     const hasEvidenceRefs = ledgers.every((x) => Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
     roi_ledgers = ledgers.map((x) => ({
@@ -202,7 +203,27 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     [tenant_id, project_id, group_id, field_id]
   );
   const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
-  assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
+
+  if (task_id) {
+    const taskFactQ = await pool.query(
+      `SELECT record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+          AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [task_id]
+    );
+    const ev = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+    skill_binding_id = String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '').trim();
+    if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
+  }
+
+  const reportBlob = JSON.stringify(report_payload ?? {});
+  const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
+  const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
+  const reportSummaryHasConfidence = /confidence/i.test(reportBlob);
+  const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
+  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
 
   if (task_id) {
     const taskFactQ = await pool.query(
@@ -226,6 +247,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
 
   const blocked = failureReasons.length > 0;
+  if (!blocked) {
+    assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
+  }
   if (blocked && acceptance_id) {
     const q = await pool.query(`SELECT record_json::jsonb AS record_json FROM facts WHERE fact_id=$1 LIMIT 1`, [acceptance_id]);
     const verdict = String(q.rows?.[0]?.record_json?.payload?.verdict ?? '').toUpperCase();

@@ -1,5 +1,12 @@
 const { spawnSync } = require('node:child_process');
 const { Pool } = require('pg');
+function hasValidRoiConfidence(confidence) {
+  if (typeof confidence === 'number') return confidence > 0;
+  if (!confidence || typeof confidence !== 'object') return false;
+  return ['HIGH', 'MEDIUM', 'LOW'].includes(String(confidence.level || ''))
+    && ['measured', 'estimated', 'assumed'].includes(String(confidence.basis || ''))
+    && Array.isArray(confidence.reasons);
+}
 
 function extractJsonBlock(text) {
   const marker = '::ACCEPTANCE_JSON::';
@@ -154,7 +161,13 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x)))).every(Boolean);
   const roiLedgerExists = roiLedgerIds.length > 0
     && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x)))).every(Boolean);
-  const dRoiStrong = Array.isArray(irrigation?.roi_ledgers) && irrigation.roi_ledgers.every((x) => x.baseline != null && Number(x.confidence ?? 0) > 0 && Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
+  const dRoiStrong = Array.isArray(irrigation?.roi_ledgers)
+    && irrigation.roi_ledgers.every((x) =>
+      x.baseline != null
+      && hasValidRoiConfidence(x.confidence)
+      && Array.isArray(x.evidence_refs)
+      && x.evidence_refs.length > 0
+    );
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
