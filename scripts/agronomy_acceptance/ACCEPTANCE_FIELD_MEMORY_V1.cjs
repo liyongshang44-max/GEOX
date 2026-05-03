@@ -4,6 +4,21 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
 let pool;
 
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
+
+async function assertFieldMemoryIdsExist(pool, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  const q = await pool.query(`SELECT memory_id FROM field_memory_v1 WHERE memory_id = ANY($1::text[])`, [ids]);
+  return q.rows.length === ids.length;
+}
+
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const adminToken = env('ADMIN_TOKEN', 'admin_token');
@@ -345,10 +360,16 @@ let pool;
   assert.equal(openapiResp.ok, true, `openapi fetch failed status=${openapiResp.status}`);
   const openapi = openapiResp.json ?? {};
 
-  const byType = new Set(items.map((item) => String(item?.memory_type ?? '')));
+  const byScopeQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
+  const byOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id });
+  const byScopeItems = byScopeQ.rows ?? [];
+  const byOperationItems = byOperationQ.rows ?? [];
+  const byScopeIds = byScopeItems.slice(0, 3).map((x) => String(x.memory_id ?? '')).filter(Boolean);
+  const byIdsExist = await assertFieldMemoryIdsExist(pool, byScopeIds);
+  const byType = new Set(byScopeItems.map((item) => String(item?.memory_type ?? '')));
 
-  const fieldResponseItems = items.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
-  const deviceItems = items.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
+  const fieldResponseItems = byScopeItems.filter((x) => x?.memory_type === 'FIELD_RESPONSE_MEMORY');
+  const deviceItems = byScopeItems.filter((x) => x?.memory_type === 'DEVICE_RELIABILITY_MEMORY');
   const colCheck = await pool.query(`
     SELECT data_type, udt_name, column_default, is_nullable
       FROM information_schema.columns
@@ -369,7 +390,7 @@ let pool;
       acceptance_verdict,
       acceptance_fact_id,
       memory_types: Array.from(byType),
-      memory_count: items.length
+      memory_count: byScopeItems.length
     }
   }, null, 2)}\n`);
   const checks = {
@@ -378,12 +399,13 @@ let pool;
      byType.has('FIELD_RESPONSE_MEMORY'),
     device_reliability_memory_written: byType.has('DEVICE_RELIABILITY_MEMORY'),
     skill_performance_memory_written: byType.has('SKILL_PERFORMANCE_MEMORY'),
-    memory_query_by_field: items.length > 0 && items.every((item) => String(item?.field_id ?? '') === field_id),
-    memory_has_confidence: items.every((item) => Number(item?.confidence) > 0),
-    memory_has_summary_text: items.every((item) => String(item?.summary_text ?? "").trim().length > 0),
-    memory_has_evidence_refs: items.every((item) => Array.isArray(item?.evidence_refs)),
-    skill_memory_has_skill_trace_ref: items.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
-    memory_query_by_operation: items.some((item) => String(item?.operation_id ?? "").trim().length > 0),
+    memory_query_by_field: byScopeItems.length >= 3 && byScopeItems.every((item) => String(item?.field_id ?? '') === field_id),
+    memory_query_by_operation: byOperationItems.length >= 3,
+    memory_query_by_id_all_exist: byIdsExist,
+    memory_has_confidence: byScopeItems.every((item) => Number(item?.confidence) > 0),
+    memory_has_summary_text: byScopeItems.every((item) => String(item?.summary_text ?? "").trim().length > 0),
+    memory_has_evidence_refs: byScopeItems.every((item) => Array.isArray(item?.evidence_refs)),
+    skill_memory_has_skill_trace_ref: byScopeItems.filter((x)=>x.memory_type==='SKILL_PERFORMANCE_MEMORY').every((x)=>String(x.skill_trace_ref??'').trim().length>0),
     field_response_has_before_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.before_value))),
     field_response_has_after_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.after_value))),
     field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),

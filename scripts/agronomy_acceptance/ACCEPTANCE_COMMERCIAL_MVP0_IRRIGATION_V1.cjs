@@ -10,6 +10,21 @@ function hasValidRoiConfidence(confidence) {
     && Array.isArray(confidence.reasons);
 }
 
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
+
+async function assertFieldMemoryIdsExist(pool, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  const q = await pool.query(`SELECT memory_id FROM field_memory_v1 WHERE memory_id = ANY($1::text[])`, [ids]);
+  return q.rows.length === ids.length;
+}
+
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
@@ -198,11 +213,10 @@ function hasValidRoiConfidence(confidence) {
     }
   }
 
-  const memoryQ = await pool.query(
-    `SELECT memory_id, memory_type FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 ORDER BY occurred_at DESC LIMIT 500`,
-    [tenant_id, project_id, group_id, field_id]
-  );
+  const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
   const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
+  const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: task_id || undefined });
+  const memoryIdsExist = await assertFieldMemoryIdsExist(pool, field_memory_ids);
 
   if (task_id) {
     const taskFactQ = await pool.query(
@@ -264,6 +278,8 @@ function hasValidRoiConfidence(confidence) {
     no_as_executed: blocked ? true : Boolean(as_executed_id),
     no_acceptance: blocked ? true : Boolean(acceptance_id),
     field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
+    field_memory_query_by_operation: blocked ? true : (memoryByOperation.rows?.length ?? 0) >= 1,
+    field_memory_ids_exist: blocked ? true : memoryIdsExist,
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,
