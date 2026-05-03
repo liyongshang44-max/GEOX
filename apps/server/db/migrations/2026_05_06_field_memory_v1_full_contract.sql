@@ -81,3 +81,18 @@ CREATE INDEX IF NOT EXISTS idx_field_memory_v1_scope_operation
 
 CREATE INDEX IF NOT EXISTS idx_field_memory_v1_scope_skill
   ON field_memory_v1(tenant_id, project_id, group_id, skill_id);
+
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'field_memory_v1'
+       AND column_name = 'created_at_legacy_ms'
+  ) THEN
+    ALTER TABLE field_memory_v1
+      ALTER COLUMN created_at_legacy_ms DROP NOT NULL;
+  END IF;
+END $$;
