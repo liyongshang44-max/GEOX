@@ -43,8 +43,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   await pool.query(
     `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES
       ($1, NOW(), $2, $3::jsonb),
-      ($4, NOW(), $5, $6::jsonb),
-      ($7, NOW(), $8, $9::jsonb)
+      ($4, NOW(), $5, $6::jsonb)
      ON CONFLICT (fact_id) DO NOTHING`,
     [
       `fact_op_plan_${suffix}`,
@@ -53,9 +52,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       `fact_task_${suffix}`,
       'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
       { type: 'ao_act_task_v0', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, task_id, field_id, status: 'DISPATCHED' } },
-      `fact_acceptance_${suffix}`,
-      'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'acceptance_result_v1', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, field_id, recommendation_id, act_task_id: task_id, task_id, verdict: 'PASS', generated_at: new Date().toISOString(), missing_evidence: false } },
     ],
   );
 
@@ -116,6 +112,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const asExecutedJson = requireOk(asExecutedResp, 'create as-executed first');
   const as_executed_id = String(asExecutedJson?.as_executed?.as_executed_id ?? '').trim();
   assert.ok(as_executed_id, 'missing as_executed_id');
+
+  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id, act_task_id: task_id },
+  });
+  const acceptanceJson = requireOk(acceptanceResp, 'evaluate acceptance before roi ledger');
+  const acceptance_fact_id = String(acceptanceJson?.acceptance?.fact_id ?? '').trim();
+  assert.ok(acceptance_fact_id, 'missing acceptance fact_id');
 
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
