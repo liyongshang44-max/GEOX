@@ -79,8 +79,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       memory_type, metric_key, metric_value ?? null, null, before_value ?? null, after_value ?? null, null, delta_value ?? null,
       JSON.stringify((metrics as any).target_range ?? null), confidence, memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance",
       input.acceptance_id ?? input.operation_id ?? memory_id, input.operation_id ?? null, input.recommendation_id ?? null,
-      input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id ?? null,
-      skill_trace_ref ?? null, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
+      input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id,
+      skill_trace_ref, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
     ],
   );
 
