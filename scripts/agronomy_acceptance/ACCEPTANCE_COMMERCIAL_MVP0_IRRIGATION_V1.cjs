@@ -234,7 +234,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
-      body: { tenant_id, project_id, group_id, operation_plan_id, act_task_id: task_id, executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' }, execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 }, execution_coverage: { kind: 'field', ref: field_id }, resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 }, logs_refs: [{ kind: 'log', ref: `log://${task_id}/mock-valve-open`, label: 'mock valve open command' }], constraint_check: { violated: false, violations: [] }, observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20, prescription_id }, status: 'executed', meta: { command_id: task_id, idempotency_key: `acceptance_receipt_${suffix}` } },
+      body: { tenant_id, project_id, group_id, operation_plan_id, act_task_id: task_id, executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' }, execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 }, execution_coverage: { kind: 'field', ref: field_id }, resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 }, logs_refs: [{ kind: 'log', ref: `log://${task_id}/mock-valve-open`, label: 'mock valve open command' }], constraint_check: { violated: false, violations: [] }, observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20 }, status: 'executed', meta: { command_id: task_id, idempotency_key: `acceptance_receipt_${suffix}` } },
     });
     receipt_id = String(requireOk(receiptResp, 'receipt').fact_id ?? '').trim();
 
