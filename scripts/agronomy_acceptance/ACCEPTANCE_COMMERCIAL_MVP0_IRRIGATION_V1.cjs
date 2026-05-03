@@ -363,6 +363,33 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     });
     const acceptanceJson = requireOk(acceptanceResp, 'acceptance');
     acceptance_id = String(acceptanceJson.fact_id ?? '').trim();
+    process.stdout.write(JSON.stringify({
+      roi_precheck_debug: {
+        task_id,
+        receipt_id,
+        as_executed_id,
+        acceptance_id,
+        operation_plan_id,
+      }
+    }, null, 2) + '\n');
+    const acceptanceFactsQ = await pool.query(
+      `SELECT fact_id, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('acceptance_result_v1','acceptance_evaluation_v1')
+          AND (
+            (record_json::jsonb#>>'{payload,act_task_id}') = $1
+            OR (record_json::jsonb#>>'{payload,task_id}') = $1
+          )
+        ORDER BY occurred_at DESC
+        LIMIT 5`,
+      [task_id]
+    );
+    process.stdout.write(JSON.stringify({
+      roi_acceptance_lookup_debug: {
+        task_id,
+        acceptance_facts: acceptanceFactsQ.rows ?? [],
+      }
+    }, null, 2) + '\n');
 
     const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, {
       method: 'GET', token,
