@@ -133,7 +133,7 @@ function normalizeGeoPoint(raw: any): { lat: number; lon: number } | null {
 
 async function loadFieldPolygon(pool: Pool, tenantId: string, fieldId: string | null): Promise<any | null> {
   if (!fieldId) return null;
-  const q = await pool.query(`SELECT geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2`, [tenantId, fieldId]);
+  const q = await pool.query(`SELECT polygon_geojson_json AS geojson FROM field_polygon_v1 WHERE tenant_id = $1 AND field_id = $2`, [tenantId, fieldId]);
   if (!q.rows?.length) return null;
   return normalizeRecordJson(q.rows[0].geojson);
 }
