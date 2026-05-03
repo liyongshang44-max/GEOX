@@ -15,7 +15,6 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription_id = `prc_roi_${suffix}`;
   const task_id = `task_roi_${suffix}`;
   const field_id = `field_${suffix}`;
-  const operation_plan_id = `op_plan_${suffix}`;
   const operation_id = `op_${suffix}`;
 
   await pool.query(
@@ -39,16 +38,28 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     ],
   );
 
-  await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES
-      ($1, NOW(), $2, $3::jsonb)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [
-      `fact_op_plan_${suffix}`,
-      'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'operation_plan_v1', payload: { tenant_id, project_id, group_id, field_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, action_type: 'IRRIGATION' } },
-    ],
-  );
+  const submitApprovalResp = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id },
+  });
+  const submitApprovalJson = requireOk(submitApprovalResp, 'submit prescription approval');
+  const approval_id = String(submitApprovalJson?.approval_request_id ?? '').trim();
+  assert.ok(approval_id, 'missing approval_request_id');
+
+  const decideApprovalResp = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'roi ledger commercial acceptance' },
+  });
+  const decideApprovalJson = requireOk(decideApprovalResp, 'approve prescription request');
+  const operation_plan_id = String(
+    decideApprovalJson?.operation_plan_id
+      ?? decideApprovalJson?.operation_plan?.operation_plan_id
+      ?? decideApprovalJson?.plan?.operation_plan_id
+      ?? ''
+  ).trim();
+  assert.ok(operation_plan_id, 'missing operation_plan_id');
 
   const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
   const healthz_ok = Boolean(healthz.ok && healthz.json?.ok === true);
@@ -79,6 +90,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       project_id,
       group_id,
       operation_plan_id,
+      approval_request_id: approval_id,
       field_id,
       season_id: `season_${suffix}`,
       device_id: `device_${suffix}`,
