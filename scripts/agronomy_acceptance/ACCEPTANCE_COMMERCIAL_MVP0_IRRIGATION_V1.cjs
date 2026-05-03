@@ -55,6 +55,52 @@ function hasValidRoiConfidence(confidence) {
     && ['measured', 'estimated', 'assumed'].includes(String(confidence.basis || ''))
     && Array.isArray(confidence.reasons);
 }
+function pickIrrigationRecommendation(genJson) {
+  const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
+  return recommendations.find((x) =>
+    String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+    || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+  ) ?? null;
+}
+
+async function executeMockValveSkill({
+  base,
+  token,
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  device_id,
+  operation_plan_id,
+  task_id,
+  approval_id,
+}) {
+  return fetchJson(`${base}/api/v1/skill/execute`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
+      field_id,
+      device_id,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
+  });
+}
 
 async function executeMockValveSkill({
   base,
@@ -173,7 +219,8 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     },
   });
   const genJson = requireOk(gen, 'generate irrigation recommendation');
-  const recommendation = genJson.recommendations?.[0] ?? null;
+  const recommendation = pickIrrigationRecommendation(genJson);
+  assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   const skill_trace_id = String(recommendation?.skill_trace?.trace_id ?? '').trim();
   const recommendation_skill_id = String(recommendation?.skill_trace?.skill_id ?? '').trim();

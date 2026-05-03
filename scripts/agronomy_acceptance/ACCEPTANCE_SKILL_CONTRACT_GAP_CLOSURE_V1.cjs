@@ -1,6 +1,6 @@
 const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
-const { env, fetchJson } = require('./_common.cjs');
+const { assert, env, fetchJson } = require('./_common.cjs');
 
 const TASK_NAME = 'COMMERCIAL_MVP0_B_SKILL_CONTRACT_GAP_CLOSURE_FIX';
 function buildIrrigationReceiptBody({
@@ -84,6 +84,14 @@ async function executeMockValveSkill({
       },
     },
   });
+}
+function pickIrrigationRecommendation(genJson) {
+  const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
+  return recommendations.find((x) =>
+    String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+    || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+  ) ?? null;
 }
 
 function toPassFail(v) { return v ? 'PASS' : 'FAIL'; }
@@ -252,20 +260,8 @@ async function main() {
       }, null, 2)}\n`);
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
     }
-    const recommendations = Array.isArray(gen.json?.recommendations) ? gen.json.recommendations : [];
-    const recommendation =
-      recommendations.find((x) =>
-        String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
-        || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
-        || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
-      ) ?? null;
-
-    if (!recommendation) {
-      throw new Error(JSON.stringify({
-        recommendation_generate_response: gen.json ?? {},
-        reason: 'NO_IRRIGATION_RECOMMENDATION_RETURNED'
-      }));
-    }
+    const recommendation = pickIrrigationRecommendation(gen.json);
+    assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
     if (!recommendation?.skill_trace) {
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason: 'MISSING_SKILL_TRACE' }));
     }

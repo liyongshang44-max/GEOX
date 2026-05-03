@@ -3,6 +3,14 @@ const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
 let pool;
+function pickIrrigationRecommendation(genJson) {
+  const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
+  return recommendations.find((x) =>
+    String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+    || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+  ) ?? null;
+}
 function buildIrrigationReceiptBody({
   tenant_id,
   project_id,
@@ -158,7 +166,9 @@ async function assertProjectionTablesReady(pool) {
     }
   });
   const recJson = requireOk(recGen, 'generate recommendation');
-  const recId = String(recJson.recommendations?.[0]?.recommendation_id ?? '');
+  const recommendation = pickIrrigationRecommendation(recJson);
+  assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
+  const recId = String(recommendation?.recommendation_id ?? '');
   assert.ok(recId, 'recommendation_id missing');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
