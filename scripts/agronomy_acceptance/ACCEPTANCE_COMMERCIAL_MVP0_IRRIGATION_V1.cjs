@@ -209,8 +209,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
           keys: [
             { name: "duration_min", type: "number", min: 1, max: 720 },
             { name: "amount", type: "number", min: 1, max: 1000 },
-            { name: "coverage_percent", type: "number", min: 0, max: 100 },
-            { name: "prescription_id", type: "string" }
+            { name: "coverage_percent", type: "number", min: 0, max: 100 }
           ]
         },
         constraints: {},
