@@ -11,6 +11,11 @@ const REQUIRED_SCHEMA = {
   views: ["facts_replay_v1"],
 } as const;
 
+const REQUIRED_TABLE_COLUMNS: Record<string, string[]> = {
+  field_memory_v1: ["project_id", "group_id", "occurred_at", "metric_key", "source_type", "source_id"],
+  device_observation_index_v1: ["project_id", "group_id", "field_id", "metric", "observed_at_ts_ms", "fact_id"],
+};
+
 export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
   app.get("/health", async () => ({ ok: true }));
   app.get("/api/health", async () => ({ ok: true }));
@@ -18,6 +23,7 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
   app.get("/api/admin/healthz", async (_req, reply) => {
     const missing_tables: string[] = [];
     const missing_views: string[] = [];
+    const missing_table_columns: Record<string, string[]> = {};
 
     try {
       await pool.query("select now() as now, version() as version");
@@ -39,10 +45,28 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
       if (!r.rows?.[0]?.reg) missing_views.push(v);
     }
 
+    for (const [tableName, columns] of Object.entries(REQUIRED_TABLE_COLUMNS)) {
+      const tableExists = await pool.query("select to_regclass($1) as reg", [`public.${tableName}`]);
+      if (!tableExists.rows?.[0]?.reg) continue;
+      const missingColumns: string[] = [];
+      for (const columnName of columns) {
+        const col = await pool.query(
+          `SELECT 1
+             FROM information_schema.columns
+            WHERE table_schema='public' AND table_name=$1 AND column_name=$2
+            LIMIT 1`,
+          [tableName, columnName]
+        );
+        if ((col.rowCount ?? 0) < 1) missingColumns.push(columnName);
+      }
+      if (missingColumns.length > 0) missing_table_columns[tableName] = missingColumns;
+    }
+
     return reply.send({
-      ok: missing_tables.length === 0 && missing_views.length === 0,
+      ok: missing_tables.length === 0 && missing_views.length === 0 && Object.keys(missing_table_columns).length === 0,
       missing_tables,
       missing_views,
+      missing_table_columns,
       runtime_security: getRuntimeSecurityStatusV1(),
     });
   });

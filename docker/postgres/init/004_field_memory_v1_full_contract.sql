@@ -1,3 +1,45 @@
+CREATE TABLE IF NOT EXISTS field_memory_v1 (
+  memory_id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  field_id TEXT NOT NULL,
+  operation_id TEXT,
+  prescription_id TEXT,
+  recommendation_id TEXT,
+  memory_type TEXT NOT NULL,
+  summary TEXT,
+  metrics JSONB,
+  skill_refs JSONB,
+  evidence_refs JSONB,
+  created_at BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
+  tenant_id text NOT NULL,
+  project_id text NULL,
+  group_id text NULL,
+  device_id text NOT NULL,
+  field_id text NULL,
+  metric text NOT NULL,
+  observed_at timestamptz NOT NULL,
+  observed_at_ts_ms bigint NOT NULL,
+  value_num double precision NULL,
+  value_text text NULL,
+  unit text NULL,
+  confidence double precision NULL,
+  quality_flags_json jsonb NOT NULL DEFAULT '[]'::jsonb,
+  fact_id text NOT NULL,
+  PRIMARY KEY (tenant_id, device_id, metric, observed_at_ts_ms)
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_scope_time
+  ON device_observation_index_v1 (tenant_id, project_id, group_id, field_id, metric, observed_at_ts_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_device_metric_time
+  ON device_observation_index_v1 (tenant_id, device_id, metric, observed_at_ts_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_device_observation_index_v1_tenant_field_time
+  ON device_observation_index_v1 (tenant_id, field_id, observed_at_ts_ms DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_device_observation_index_v1_fact_id
+  ON device_observation_index_v1 (fact_id);
+
 ALTER TABLE field_memory_v1
   ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT 'projectA',
   ADD COLUMN IF NOT EXISTS group_id TEXT NOT NULL DEFAULT 'groupA',
