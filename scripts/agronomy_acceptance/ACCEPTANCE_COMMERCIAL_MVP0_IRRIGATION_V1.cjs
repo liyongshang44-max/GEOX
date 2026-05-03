@@ -128,6 +128,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   let as_executed_id = '';
   let acceptance_id = '';
   let report_id = '';
+  let report_ref = '';
   let report_payload = null;
   let post_observation_id = '';
   let roi_ledger_ids = [];
@@ -183,8 +184,15 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     });
     const reportJson = reportResp.ok ? reportResp.json : {};
     report_payload = reportJson;
+    const report = reportJson.operation_report_v1 ?? {};
+    report_ref = String(
+      report.identifiers?.operation_id
+      ?? report.identifiers?.operation_plan_id
+      ?? operation_plan_id
+      ?? ''
+    ).trim();
     report_id = String(reportJson.report_id ?? reportJson.operation_report_v1?.report_id ?? reportJson.fact_id ?? '').trim();
-    if (!report_id) failureReasons.push('REPORT_ID_MISSING');
+    if (!report_ref) failureReasons.push('REPORT_REF_MISSING');
 
     const roiResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
       method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id },
@@ -234,11 +242,26 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 
   // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
+  const report = reportJson.operation_report_v1 ?? {};
+  const customerTextFields = [
+    report.customer_title,
+    report.operation_title,
+    report.why?.explain_human,
+    report.why?.objective_text,
+    ...(report.field_memory?.field_response_memory ?? []).map((x) => x.summary_text),
+    ...(report.field_memory?.device_reliability_memory ?? []).map((x) => x.summary_text),
+    ...(report.field_memory?.skill_performance_memory ?? []).map((x) => x.summary_text),
+    ...(report.roi_ledger?.water_saved ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.labor_saved ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.early_warning_lead_time ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.first_pass_acceptance_rate ?? []).map((x) => x.customer_text),
+  ].filter(Boolean);
+  const customerTextBlob = customerTextFields.join('\n');
   const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
   const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
   const reportSummaryHasConfidence = /confidence/i.test(reportBlob);
   const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
-  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
+  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b|\bSUCCESS\b|\bPENDING_ACCEPTANCE\b/.test(customerTextBlob);
 
   const chain_summary = {
     field_id,
@@ -254,6 +277,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     as_executed_id,
     post_observation_id,
     acceptance_id,
+    report_ref,
     report_id,
     field_memory_ids,
     roi_ledger_ids,

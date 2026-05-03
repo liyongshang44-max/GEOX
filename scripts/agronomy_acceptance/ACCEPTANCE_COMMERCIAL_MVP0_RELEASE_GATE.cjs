@@ -109,16 +109,6 @@ async function existsSkillRunId(pool, skillRunId) {
   );
   return (q.rows?.length ?? 0) > 0;
 }
-async function existsReportId(pool, reportId) {
-  const q = await pool.query(
-    `SELECT 1 FROM facts
-      WHERE (record_json::jsonb#>>'{payload,report_id}')=$1
-         OR (record_json::jsonb#>>'{payload,fact_id}')=$1
-      LIMIT 1`,
-    [reportId]
-  );
-  return (q.rows?.length ?? 0) > 0;
-}
 async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const q = await pool.query(
     `SELECT 1 FROM facts
@@ -151,7 +141,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const irrigationChecks = irrigation.checks || {};
 
   const coreIdsOk = [
-    'field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_id',
+    'field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_ref',
   ].every((k) => isFilled(chain[k]));
 
   const fieldMemoryIds = Array.isArray(chain.field_memory_ids) ? chain.field_memory_ids.filter(isFilled) : [];
@@ -198,7 +188,17 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     ? await existsSkillBindingFromTaskFact(pool, chain.task_id, chain.skill_binding_id)
     : false;
   const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
-  const reportExists = isFilled(chain.report_id) ? await existsReportId(pool, chain.report_id) : false;
+  const reportResp = isFilled(chain.report_ref)
+    ? await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3001'}/api/v1/reports/operation/${encodeURIComponent(chain.report_ref)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`, {
+      headers: process.env.AO_ACT_TOKEN ? { Authorization: `Bearer ${process.env.AO_ACT_TOKEN}` } : {},
+    }).then((r) => r.json().catch(() => ({})))
+    : {};
+  const reportPayload = reportResp?.operation_report_v1 ?? {};
+  const reportPayloadOk = isFilled(chain.report_ref)
+    && (
+      String(reportPayload?.identifiers?.operation_id ?? '').trim() === String(chain.report_ref).trim()
+      || String(reportPayload?.identifiers?.operation_plan_id ?? '').trim() === String(chain.report_ref).trim()
+    );
   const fieldMemoryExists = fieldMemoryIds.length > 0
     && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean);
   const scopeMemoryQ = await queryFieldMemoryByScope(pool, {
@@ -227,8 +227,8 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
     field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3 && (scopeMemoryQ.rows?.length ?? 0) >= 3 && (operationMemoryQ.rows?.length ?? 0) >= 1 && fieldMemoryExists),
     roi_ledger_commercial_v1: pass(roiCommercial?.ok === true && roiCompatibleOk && roiLedgerIds.length > 0),
-    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportExists && fieldMemoryExists && roiLedgerExists && dRoiStrong),
-    customer_report: pass(irrigation?.ok === true && isFilled(chain.report_id) && customerReportOk),
+    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportPayloadOk && fieldMemoryExists && roiLedgerExists && dRoiStrong),
+    customer_report: pass(irrigation?.ok === true && isFilled(chain.report_ref) && reportPayloadOk && customerReportOk),
     failure_paths: pass(failurePathsOk),
   };
 
@@ -255,6 +255,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
       as_executed_id: chain.as_executed_id || '',
       post_observation_id: chain.post_observation_id || '',
       acceptance_id: chain.acceptance_id || '',
+      report_ref: chain.report_ref || '',
       report_id: chain.report_id || '',
       field_memory_ids: fieldMemoryIds,
       roi_ledger_ids: roiLedgerIds,
