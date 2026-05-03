@@ -22,6 +22,22 @@ ALTER TABLE field_memory_v1
   ADD COLUMN IF NOT EXISTS summary_text TEXT,
   ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
+ALTER TABLE field_memory_v1
+  ALTER COLUMN created_at DROP DEFAULT;
+
+ALTER TABLE field_memory_v1
+  ALTER COLUMN created_at TYPE TIMESTAMPTZ
+  USING CASE
+    WHEN pg_typeof(created_at)::text = 'bigint' THEN to_timestamp(created_at / 1000.0)
+    ELSE created_at::timestamptz
+  END;
+
+ALTER TABLE field_memory_v1
+  ALTER COLUMN created_at SET DEFAULT now();
+
+ALTER TABLE field_memory_v1
+  ALTER COLUMN created_at SET NOT NULL;
+
 UPDATE field_memory_v1
 SET
   summary_text = COALESCE(summary_text, summary),

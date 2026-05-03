@@ -401,7 +401,7 @@ async function assertProjectionTablesReady(pool) {
   const openapi = openapiResp.json ?? {};
 
   const byScopeQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
-  const byOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id });
+  const byOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: actTaskId });
   const byScopeItems = byScopeQ.rows ?? [];
   const byOperationItems = byOperationQ.rows ?? [];
   const byScopeIds = byScopeItems.slice(0, 3).map((x) => String(x.memory_id ?? '')).filter(Boolean);
