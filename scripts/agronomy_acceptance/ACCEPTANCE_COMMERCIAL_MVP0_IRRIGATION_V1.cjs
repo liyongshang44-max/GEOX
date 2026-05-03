@@ -105,6 +105,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   let as_executed_id = '';
   let acceptance_id = '';
   let report_id = '';
+  let report_payload = null;
   let post_observation_id = '';
   let roi_ledger_ids = [];
 
@@ -116,13 +117,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     task_id = String(requireOk(taskResp, 'create task').act_task_id ?? '').trim();
     assert.ok(task_id, 'task_id missing');
 
-    skill_binding_id = `bind_${task_id}`;
     const mockValveRun = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
       method: 'POST', token,
       body: { tenant_id, project_id, group_id, field_id, device_id, act_task_id: task_id, command: 'OPEN', duration_sec: 1200 },
     });
     const mockValveJson = mockValveRun.ok ? await mockValveRun.json() : { ok: false, reason: 'DEVICE_OFFLINE' };
-    skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? `run_${task_id}`).trim();
+    skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? '').trim();
+    if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
     if (!mockValveRun.ok) failureReasons.push('DEVICE_OFFLINE');
 
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
@@ -157,7 +158,9 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id },
     });
     const reportJson = reportResp.ok ? await reportResp.json() : {};
-    report_id = String(reportJson.report_id ?? reportJson.fact_id ?? `report_${task_id}`).trim();
+    report_payload = reportJson;
+    report_id = String(reportJson.report_id ?? reportJson.fact_id ?? '').trim();
+    if (!report_id) failureReasons.push('REPORT_ID_MISSING');
 
     const roiResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
       method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id },
@@ -167,7 +170,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     roi_ledger_ids = ledgers.map((x) => String(x.roi_ledger_id ?? x.fact_id ?? '').trim()).filter(Boolean);
     const hasConfidence = ledgers.every((x) => Number(x.confidence ?? 0) > 0);
     const hasBaseline = ledgers.every((x) => x.baseline != null);
-    if (!hasConfidence || !hasBaseline) failureReasons.push('LOW_CONFIDENCE_ROI');
+    const hasEvidenceRefs = ledgers.every((x) => Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
+    if (!hasConfidence || !hasBaseline || !hasEvidenceRefs) failureReasons.push('LOW_CONFIDENCE_ROI');
     if (failureReasons.length > 0) {
       const measured = ledgers.some((x) => String(x.measurement_mode ?? '').toUpperCase() === 'MEASURED');
       assert.equal(measured, false, 'failure path must not produce measured ROI');
@@ -180,6 +184,27 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   );
   const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
   assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
+
+  if (task_id) {
+    const taskFactQ = await pool.query(
+      `SELECT record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
+          AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
+        ORDER BY occurred_at DESC LIMIT 1`,
+      [task_id]
+    );
+    const ev = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+    skill_binding_id = String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '').trim();
+    if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
+  }
+
+  const reportBlob = JSON.stringify(report_payload ?? {});
+  const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
+  const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
+  const reportSummaryHasConfidence = /confidence/i.test(reportBlob);
+  const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
+  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
 
   const blocked = failureReasons.length > 0;
   if (blocked && acceptance_id) {
@@ -220,6 +245,11 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,
+    report_contains_field_memory: reportContainsFieldMemory,
+    report_contains_roi: reportContainsROI,
+    report_summary_has_confidence: reportSummaryHasConfidence,
+    report_summary_has_customer_text: reportSummaryHasCustomerText,
+    no_raw_enum_in_customer_report: noRawEnumInCustomerReport,
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
 
