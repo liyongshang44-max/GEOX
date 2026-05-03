@@ -164,7 +164,20 @@ async function main() {
       }, null, 2)}\n`);
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
     }
-    const recommendation = gen.json?.recommendations?.[0] ?? {};
+    const recommendations = Array.isArray(gen.json?.recommendations) ? gen.json.recommendations : [];
+    const recommendation =
+      recommendations.find((x) =>
+        String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+        || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+        || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+      ) ?? null;
+
+    if (!recommendation) {
+      throw new Error(JSON.stringify({
+        recommendation_generate_response: gen.json ?? {},
+        reason: 'NO_IRRIGATION_RECOMMENDATION_RETURNED'
+      }));
+    }
     if (!recommendation?.skill_trace) {
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason: 'MISSING_SKILL_TRACE' }));
     }
@@ -261,6 +274,25 @@ async function main() {
         meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
+    process.stdout.write(JSON.stringify({
+      task_create_debug: {
+        status: taskResp.status,
+        ok: taskResp.ok,
+        json: taskResp.json,
+        operation_plan_id,
+        approval_id: ids.approval_id,
+        field_id,
+        device_id
+      }
+    }, null, 2) + "\n");
+
+    if (!taskResp.ok) {
+      throw new Error(JSON.stringify({
+        reason: 'TASK_CREATE_FAILED',
+        task_create_response: taskResp.json ?? {},
+        status: taskResp.status
+      }));
+    }
     ids.task_id = String(taskResp.json?.act_task_id ?? '');
 
     const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
