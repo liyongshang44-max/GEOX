@@ -212,7 +212,7 @@ services:
     working_dir: /app
     init: true
     restart: unless-stopped
-    command: ["node", "apps/executor/dist/runtime_loop.js"]
+    command: ["pnpm", "--filter", "@geox/executor", "exec", "tsx", "apps/executor/src/runtime_loop.ts"]
     environment:
       DB_DRIVER: postgres
       DATABASE_URL: postgres://landos:landos_pwd@postgres:5432/landos
