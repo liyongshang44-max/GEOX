@@ -367,6 +367,8 @@ export async function appendSkillRunFact(
   if (fieldId) {
     await recordMemoryV1(db, payload.tenant_id, {
       type: "skill_performance",
+      project_id: payload.project_id,
+      group_id: payload.group_id,
       operation_id: payload.operation_id ?? undefined,
       prescription_id: payload.prescription_id ?? undefined,
       recommendation_id: payload.recommendation_id ?? undefined,

@@ -59,7 +59,7 @@ function hasValidRoiConfidence(confidence) {
   const judgeResp = await fetchJson(`${base}/api/v1/judge/evidence`, {
     method: 'POST', token, body: { tenant_id, project_id, group_id, field_id, evidence: judgeEvidence },
   });
-  const judgeJson = judgeResp.ok ? await judgeResp.json() : { ok: false, reason: 'JUDGE_ENDPOINT_UNAVAILABLE' };
+  const judgeJson = judgeResp.ok ? judgeResp.json : { ok: false, reason: 'JUDGE_ENDPOINT_UNAVAILABLE' };
 
   const failureReasons = [];
   if (simulateStale) failureReasons.push('STALE_OBSERVATION');
@@ -130,7 +130,7 @@ function hasValidRoiConfidence(confidence) {
       method: 'POST', token,
       body: { tenant_id, project_id, group_id, field_id, device_id, act_task_id: task_id, command: 'OPEN', duration_sec: 1200 },
     });
-    const mockValveJson = mockValveRun.ok ? await mockValveRun.json() : { ok: false, reason: 'DEVICE_OFFLINE' };
+    const mockValveJson = mockValveRun.ok ? mockValveRun.json : { ok: false, reason: 'DEVICE_OFFLINE' };
     skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? '').trim();
     if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
     if (!mockValveRun.ok) failureReasons.push('DEVICE_OFFLINE');
@@ -166,7 +166,7 @@ function hasValidRoiConfidence(confidence) {
     const reportResp = await fetchJson(`${base}/api/v1/customer/report/from-task`, {
       method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id },
     });
-    const reportJson = reportResp.ok ? await reportResp.json() : {};
+    const reportJson = reportResp.ok ? reportResp.json : {};
     report_payload = reportJson;
     report_id = String(reportJson.report_id ?? reportJson.fact_id ?? '').trim();
     if (!report_id) failureReasons.push('REPORT_ID_MISSING');
@@ -218,6 +218,7 @@ function hasValidRoiConfidence(confidence) {
     if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
   }
 
+  // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
   const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
   const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
