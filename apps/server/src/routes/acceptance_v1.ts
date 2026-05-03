@@ -459,37 +459,42 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         const prescription_id = String((taskPayload as any)?.meta?.prescription_id ?? "").trim() || undefined;
         const opId = typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id;
         const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
-        await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "FIELD_RESPONSE_MEMORY", operation_id: opId, task_id: body.act_task_id, field_id,
-          project_id: tenant.project_id, group_id: tenant.group_id,
-          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-          metrics: {
-            before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
-            after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
-            soil_moisture_delta,
-            target_range: { min: 0.22, max: 0.28 },
-            success: true,
-            acceptance_passed: true,
-          },
-          evidence_refs: evidenceRefs, summary: `Acceptance passed for task ${body.act_task_id}`,
-        }).catch(() => undefined);
-        await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "DEVICE_RELIABILITY_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
-          project_id: tenant.project_id, group_id: tenant.group_id,
-          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-          skill_refs: [{ skill_id: "mock_valve_control_skill_v1", skill_run_id: trace_id }],
-          metrics: { success: true, confidence: 0.9 },
-          evidence_refs: evidenceRefs,
-          summary: `Valve response confirmed for task ${body.act_task_id}`,
-        }).catch(() => undefined);
-        await recordMemoryV1(pool, tenant.tenant_id, {
-          type: "SKILL_PERFORMANCE_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
-          project_id: tenant.project_id, group_id: tenant.group_id,
-          recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
-          skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
-          evidence_refs: evidenceRefs,
-          summary: "缺水诊断能力触发后形成灌溉处方，审批通过，执行后验收通过",
-        }).catch(() => undefined);
+        try {
+          await recordMemoryV1(pool, tenant.tenant_id, {
+            type: "FIELD_RESPONSE_MEMORY", operation_id: opId, task_id: body.act_task_id, field_id,
+            project_id: tenant.project_id, group_id: tenant.group_id,
+            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+            metrics: {
+              before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
+              after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
+              soil_moisture_delta,
+              target_range: { min: 0.22, max: 0.28 },
+              success: true,
+              acceptance_passed: true,
+            },
+            evidence_refs: evidenceRefs, summary: `Acceptance passed for task ${body.act_task_id}`,
+          });
+          await recordMemoryV1(pool, tenant.tenant_id, {
+            type: "DEVICE_RELIABILITY_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
+            project_id: tenant.project_id, group_id: tenant.group_id,
+            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+            skill_refs: [{ skill_id: "mock_valve_control_skill_v1", skill_run_id: trace_id }],
+            metrics: { success: true, confidence: 0.9 },
+            evidence_refs: evidenceRefs,
+            summary: `Valve response confirmed for task ${body.act_task_id}`,
+          });
+          await recordMemoryV1(pool, tenant.tenant_id, {
+            type: "SKILL_PERFORMANCE_MEMORY", field_id, operation_id: opId, task_id: body.act_task_id,
+            project_id: tenant.project_id, group_id: tenant.group_id,
+            recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+            skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
+            evidence_refs: evidenceRefs,
+            summary: "缺水诊断能力触发后形成灌溉处方，审批通过，执行后验收通过",
+          });
+        } catch (error) {
+          app.log.error({ error }, "recordMemoryV1 failed after acceptance");
+          throw error;
+        }
       }
       if (acceptanceRecord.payload.verdict === "FAIL" || acceptanceRecord.payload.verdict === "PARTIAL") {
         const trigger = acceptanceRecord.payload.verdict === "FAIL" ? "ACCEPTANCE_FAILED" : "ACCEPTANCE_INCONCLUSIVE";
