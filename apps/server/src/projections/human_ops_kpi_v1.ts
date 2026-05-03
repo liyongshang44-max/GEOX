@@ -79,7 +79,13 @@ export async function refreshHumanOpsKpiProjectionV1(db: DbConn): Promise<void> 
           COALESCE(h.team_id, 'UNASSIGNED_TEAM') AS team_id,
           a.executor_id,
           CASE WHEN a.status = 'SUBMITTED' THEN 1 ELSE 0 END AS submitted_count,
-          CASE WHEN a.status = 'SUBMITTED' AND a.arrive_deadline_ts IS NOT NULL AND a.arrive_deadline_ts >= a.assigned_at THEN 1 ELSE 0 END AS on_time_count,
+          CASE
+            WHEN a.status = 'SUBMITTED'
+              AND a.arrive_deadline_ts IS NOT NULL
+              AND a.arrive_deadline_ts >= (EXTRACT(EPOCH FROM a.assigned_at) * 1000)::bigint
+            THEN 1
+            ELSE 0
+          END AS on_time_count,
           CASE WHEN a.status = 'SUBMITTED' AND COALESCE(tac.assignment_count, 1) = 1 THEN 1 ELSE 0 END AS first_pass_count,
           CASE WHEN au.assigned_ms IS NOT NULL AND au.accepted_ms IS NOT NULL AND au.accepted_ms >= au.assigned_ms THEN (au.accepted_ms - au.assigned_ms)::bigint ELSE NULL END AS accept_duration_ms,
           CASE WHEN au.accepted_ms IS NOT NULL AND au.submitted_ms IS NOT NULL AND au.submitted_ms >= au.accepted_ms THEN (au.submitted_ms - au.accepted_ms)::bigint ELSE NULL END AS submit_duration_ms
