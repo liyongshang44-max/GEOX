@@ -100,7 +100,7 @@ async function assertProjectionTablesReady(pool) {
   const suffix = Date.now();
   const field_id = env('FIELD_ID', `field_memory_${suffix}`);
   const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
-  const device_id = env('DEVICE_ID', `device_field_memory_${suffix}`);
+  const device_id = env('DEVICE_ID', `device_memory_${suffix}`);
   const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
