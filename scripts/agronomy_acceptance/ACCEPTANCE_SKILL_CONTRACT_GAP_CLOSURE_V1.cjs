@@ -433,6 +433,8 @@ async function main() {
       }, null, 2)}
 `);
     }
+    // MVP-0 gate: validate effective skill binding + successful execute path + skill_run_id existence.
+    // Do NOT hard-require taskPayload.meta.skill_binding_evidence until /api/v1/actions/task contract is upgraded.
     checks.task_binds_device_skill = toPassFail(
       ids.task_id.length > 0
       && ids.skill_binding_id.length > 0
