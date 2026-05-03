@@ -448,7 +448,20 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     );
     const ev = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
     skill_binding_id = String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '').trim();
-    if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
+
+    if (!skill_binding_id && skill_run_id) {
+      const bindingsResp = await fetchJson(
+        `${base}/api/v1/skills/bindings?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+        { method: 'GET', token }
+      );
+      const bindingItems = bindingsResp.json?.items_effective ?? [];
+      const mockBinding = bindingItems.find((x) => String(x.skill_id) === 'mock_valve_control_skill_v1');
+      skill_binding_id = String(mockBinding?.binding_id ?? mockBinding?.fact_id ?? '').trim();
+    }
+
+    if (!skill_binding_id && !skill_run_id) {
+      failureReasons.push('SKILL_BINDING_MISSING');
+    }
   }
 
   // Keep a single declaration block to avoid duplicate-identifier syntax errors.

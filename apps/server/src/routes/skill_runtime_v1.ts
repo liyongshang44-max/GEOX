@@ -55,7 +55,11 @@ export function registerSkillRuntimeV1Routes(app: FastifyInstance, pool: Pool): 
         `SELECT record_json::jsonb AS record_json
            FROM facts
           WHERE (record_json::jsonb->>'type') IN ('approval_decision_v1','approval_decision_made_v1')
-            AND ((record_json::jsonb#>>'{payload,approval_request_id}') = $1 OR (record_json::jsonb#>>'{payload,approval_id}') = $1)
+            AND (
+              (record_json::jsonb#>>'{payload,approval_request_id}') = $1
+              OR (record_json::jsonb#>>'{payload,approval_id}') = $1
+              OR (record_json::jsonb#>>'{payload,request_id}') = $1
+            )
             AND (record_json::jsonb#>>'{payload,tenant_id}') = $2
             AND (record_json::jsonb#>>'{payload,project_id}') = $3
             AND (record_json::jsonb#>>'{payload,group_id}') = $4

@@ -16,6 +16,7 @@ function buildIrrigationReceiptBody({
   water_l = 20,
   amount = 20,
   coverage_percent = 90,
+  duration_min = 30,
 }) {
   return {
     tenant_id,
@@ -30,6 +31,7 @@ function buildIrrigationReceiptBody({
     observed_parameters: {
       amount,
       coverage_percent,
+      duration_min,
     },
     evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
     logs_refs: [
@@ -196,8 +198,8 @@ function buildIrrigationReceiptBody({
       action_type: 'IRRIGATE',
       target: { kind: 'field', ref: field_id },
       time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600_000 },
-      parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1 }] },
-      parameters: { amount: 20 },
+      parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1 }, { name: 'coverage_percent', type: 'number', min: 0, max: 100 }, { name: 'duration_min', type: 'number', min: 1 }] },
+      parameters: { amount: 20, coverage_percent: 88, duration_min: 30 },
       constraints: {},
       meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
     },
