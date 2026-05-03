@@ -304,18 +304,17 @@ async function main() {
     const runResp = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
       method: 'POST', token,
       body: {
-        tenant_id,
-        project_id,
-        group_id,
-        field_id,
-        device_id,
-        act_task_id: ids.task_id,
-        command: 'OPEN',
-        duration_sec: 1200,
+        tenant_id, project_id, group_id,
+        skill_id: 'mock_valve_control_skill_v1', version: 'v1', category: 'DEVICE', bind_target: 'mock_valve',
+        field_id, device_id, operation_id: operation_plan_id, operation_plan_id,
+        input: { task_id: ids.task_id, approval_id: ids.approval_id, command: 'OPEN', duration_sec: 1200, required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
-    const runJson = requireOk(runResp, 'mock valve skill run');
-    ids.skill_run_id = String(runJson.skill_run_id ?? runJson.run_id ?? '').trim();
+    const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
+    const skillRunsRead = await fetchJson(`${base}/api/v1/skill-runs?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&field_id=${encodeURIComponent(field_id)}&device_id=${encodeURIComponent(device_id)}&category=device&limit=20`, { token });
+    const skillRunsJson = requireOk(skillRunsRead, 'skill runs read');
+    const skillRunItem = (Array.isArray(skillRunsJson.items) ? skillRunsJson.items : []).find((x) => String(x?.skill_id ?? '') === 'mock_valve_control_skill_v1');
+    ids.skill_run_id = String(executeSkillJson.skill_run_id ?? executeSkillJson.run_id ?? skillRunItem?.skill_run_id ?? '').trim();
     checks.mock_valve_skill_run_created = toPassFail(ids.skill_run_id.length > 0);
 
     const taskFactQ = await pool.query(
