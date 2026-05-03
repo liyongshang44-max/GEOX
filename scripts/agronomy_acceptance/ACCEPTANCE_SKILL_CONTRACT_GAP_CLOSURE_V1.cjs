@@ -470,7 +470,12 @@ async function main() {
     });
     const roiRows = roi.json?.roi_ledgers ?? [];
     ids.roi_id = String(roiRows?.[0]?.roi_ledger_id ?? '');
-    const roiRefOk = roiRows.some((x) => (Array.isArray(x.skill_refs) && x.skill_refs.some((s) => String(s.skill_id).trim())) || String(x.skill_trace_id ?? '').trim());
+    const roiRefOk = roiRows.some((x) =>
+      String(x.source_skill_id ?? '').trim()
+      || String(x.skill_trace_ref ?? '').trim()
+      || (Array.isArray(x.skill_refs) && x.skill_refs.some((s) => String(s.skill_id).trim()))
+      || String(x.skill_trace_id ?? '').trim()
+    );
     checks.roi_refs_skill_trace_or_source_skill = toPassFail(roiRefOk);
 
     const allPass = Object.values(checks).every((x) => x === 'PASS') && Object.values(failure_paths).every((x) => x === 'PASS');
