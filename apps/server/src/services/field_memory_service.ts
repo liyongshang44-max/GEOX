@@ -47,11 +47,11 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const skill_id =
     String(input.skill_id ?? "").trim()
     || String(firstSkillRef?.skill_id ?? "").trim()
-    || null;
+    || undefined;
   const skill_trace_ref =
     String(input.skill_trace_ref ?? "").trim()
     || String(firstSkillRef?.trace_id ?? firstSkillRef?.skill_run_id ?? "").trim()
-    || null;
+    || undefined;
   const metric_key =
     memory_type === "FIELD_RESPONSE_MEMORY" ? "soil_moisture_response" :
     memory_type === "DEVICE_RELIABILITY_MEMORY" ? "valve_response_status" :
