@@ -2,12 +2,104 @@ const { randomUUID } = require('node:crypto');
 const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
+function buildIrrigationReceiptBody({
+  tenant_id,
+  project_id,
+  group_id,
+  operation_plan_id,
+  act_task_id,
+  field_id,
+  suffix,
+  recommendation_id,
+  prescription_id,
+  skill_trace_ref,
+  water_l = 20,
+  amount = 20,
+  coverage_percent = 90,
+  duration_min = 20,
+}) {
+  return {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id,
+    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    execution_coverage: { kind: 'field', ref: field_id },
+    resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
+    observed_parameters: { amount, coverage_percent, duration_min },
+    evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
+    logs_refs: [
+      { kind: 'dispatch_ack', ref: `ack_${suffix}` },
+      { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
+      { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+    ],
+    status: 'executed',
+    constraint_check: { violated: false, violations: [] },
+    meta: {
+      command_id: act_task_id,
+      idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      recommendation_id,
+      prescription_id,
+      skill_id: 'irrigation_deficit_skill_v1',
+      skill_trace_ref,
+    },
+  };
+}
+
 function hasValidRoiConfidence(confidence) {
   if (typeof confidence === 'number') return confidence > 0;
   if (!confidence || typeof confidence !== 'object') return false;
   return ['HIGH', 'MEDIUM', 'LOW'].includes(String(confidence.level || ''))
     && ['measured', 'estimated', 'assumed'].includes(String(confidence.basis || ''))
     && Array.isArray(confidence.reasons);
+}
+function pickIrrigationRecommendation(genJson) {
+  const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
+  return recommendations.find((x) =>
+    String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+    || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+  ) ?? null;
+}
+
+async function executeMockValveSkill({
+  base,
+  token,
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  device_id,
+  operation_plan_id,
+  task_id,
+  approval_id,
+}) {
+  return fetchJson(`${base}/api/v1/skill/execute`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
+      field_id,
+      device_id,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
+  });
 }
 
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
@@ -89,7 +181,8 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     },
   });
   const genJson = requireOk(gen, 'generate irrigation recommendation');
-  const recommendation = genJson.recommendations?.[0] ?? null;
+  const recommendation = pickIrrigationRecommendation(genJson);
+  assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   const skill_trace_id = String(recommendation?.skill_trace?.trace_id ?? '').trim();
   const recommendation_skill_id = String(recommendation?.skill_trace?.skill_id ?? '').trim();
@@ -223,18 +316,29 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     if (!taskSkillBinding) failureReasons.push('TASK_DEVICE_SKILL_BINDING_MISSING');
     assert.ok(task_id, 'task_id missing');
 
-    const mockValveRun = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
-      method: 'POST', token,
-      body: { tenant_id, project_id, group_id, field_id, device_id, act_task_id: task_id, command: 'OPEN', duration_sec: 1200 },
+    const executeSkill = await executeMockValveSkill({
+      base,
+      token,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      operation_plan_id,
+      task_id,
+      approval_id,
     });
-    const mockValveJson = mockValveRun.ok ? mockValveRun.json : { ok: false, reason: 'DEVICE_OFFLINE' };
-    skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? '').trim();
+    const executeSkillJson = executeSkill.ok ? executeSkill.json : { ok: false, reason: 'DEVICE_OFFLINE' };
+    skill_run_id = String(executeSkillJson.skill_run_id ?? executeSkillJson.run_id ?? '').trim();
     if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
-    if (!mockValveRun.ok) failureReasons.push('DEVICE_OFFLINE');
+    if (!executeSkill.ok) failureReasons.push('DEVICE_OFFLINE');
 
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
-      body: { tenant_id, project_id, group_id, operation_plan_id, act_task_id: task_id, executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' }, execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 }, execution_coverage: { kind: 'field', ref: field_id }, resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 }, logs_refs: [{ kind: 'log', ref: `log://${task_id}/mock-valve-open`, label: 'mock valve open command' }], constraint_check: { violated: false, violations: [] }, observed_parameters: { amount: 20, coverage_percent: 90, duration_min: 20 }, status: 'executed', meta: { command_id: task_id, idempotency_key: `acceptance_receipt_${suffix}` } },
+      body: buildIrrigationReceiptBody({
+        tenant_id, project_id, group_id, operation_plan_id, act_task_id: task_id, field_id, suffix,
+        recommendation_id, prescription_id, skill_trace_ref: prescription_skill_trace_id,
+      }),
     });
     receipt_id = String(requireOk(receiptResp, 'receipt').fact_id ?? '').trim();
 
@@ -259,6 +363,33 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     });
     const acceptanceJson = requireOk(acceptanceResp, 'acceptance');
     acceptance_id = String(acceptanceJson.fact_id ?? '').trim();
+    process.stdout.write(JSON.stringify({
+      roi_precheck_debug: {
+        task_id,
+        receipt_id,
+        as_executed_id,
+        acceptance_id,
+        operation_plan_id,
+      }
+    }, null, 2) + '\n');
+    const acceptanceFactsQ = await pool.query(
+      `SELECT fact_id, record_json::jsonb AS record_json
+         FROM facts
+        WHERE (record_json::jsonb->>'type') IN ('acceptance_result_v1','acceptance_evaluation_v1')
+          AND (
+            (record_json::jsonb#>>'{payload,act_task_id}') = $1
+            OR (record_json::jsonb#>>'{payload,task_id}') = $1
+          )
+        ORDER BY occurred_at DESC
+        LIMIT 5`,
+      [task_id]
+    );
+    process.stdout.write(JSON.stringify({
+      roi_acceptance_lookup_debug: {
+        task_id,
+        acceptance_facts: acceptanceFactsQ.rows ?? [],
+      }
+    }, null, 2) + '\n');
 
     const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, {
       method: 'GET', token,
