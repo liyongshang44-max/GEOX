@@ -357,6 +357,8 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
        FROM field_memory_v1
        WHERE tenant_id = $1
+         AND project_id = $3
+         AND group_id = $4
          AND (
           operation_id = ANY($2::text[])
           OR task_id = ANY($2::text[])
@@ -365,7 +367,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
           OR acceptance_id = ANY($2::text[])
          )
        ORDER BY occurred_at DESC LIMIT 50`,
-      [tenant.tenant_id, candidateIds],
+      [tenant.tenant_id, candidateIds, tenant.project_id, tenant.group_id],
     );
     const enrichedReport = ensureReportV1ExtendedFields(operation_report_v1);
     enrichedReport.field_memory = {
