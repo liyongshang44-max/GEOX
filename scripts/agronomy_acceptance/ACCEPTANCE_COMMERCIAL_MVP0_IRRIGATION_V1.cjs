@@ -218,6 +218,7 @@ function hasValidRoiConfidence(confidence) {
     if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
   }
 
+  // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
   const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
   const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
