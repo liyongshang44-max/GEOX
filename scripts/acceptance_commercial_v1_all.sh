@@ -22,6 +22,25 @@ Write-Host "[commercial_v1] BaseUrl=$BaseUrl"
 Write-Host "[commercial_v1] MqttUrl=$MqttUrl"
 Write-Host "[commercial_v1] DATABASE_URL=$($env:DATABASE_URL)"
 
+$env:BASE_URL = $BaseUrl
+$ready = $false
+for ($i = 0; $i -lt 30; $i++) {
+  try {
+    $r = curl.exe -s "$env:BASE_URL/health"
+    if ($r -match '"ok":true') {
+      $ready = $true
+      break
+    }
+  } catch {}
+  Start-Sleep -Seconds 2
+}
+if (-not $ready) {
+  docker compose -f docker-compose.commercial_v1.yml ps -a
+  docker logs --tail 200 geox-v1-server
+  throw "server not healthy"
+}
+Write-Host "[commercial_v1] health wait passed: $env:BASE_URL/health"
+
 $steps = @(
   @{
     Name = "ACCEPTANCE_SPRINTA2_DEVICE_CREDENTIALS_SMOKE.ps1"
