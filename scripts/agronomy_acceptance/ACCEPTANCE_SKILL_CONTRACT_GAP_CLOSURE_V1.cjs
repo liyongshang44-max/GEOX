@@ -164,7 +164,20 @@ async function main() {
       }, null, 2)}\n`);
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
     }
-    const recommendation = gen.json?.recommendations?.[0] ?? {};
+    const recommendations = Array.isArray(gen.json?.recommendations) ? gen.json.recommendations : [];
+    const recommendation =
+      recommendations.find((x) =>
+        String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+        || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+        || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+      ) ?? null;
+
+    if (!recommendation) {
+      throw new Error(JSON.stringify({
+        recommendation_generate_response: gen.json ?? {},
+        reason: 'NO_IRRIGATION_RECOMMENDATION_RETURNED'
+      }));
+    }
     if (!recommendation?.skill_trace) {
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason: 'MISSING_SKILL_TRACE' }));
     }
