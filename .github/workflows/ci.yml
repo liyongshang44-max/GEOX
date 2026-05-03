@@ -155,6 +155,7 @@ jobs:
           set -a
           source .env.ci
           set +a
+          pnpm acceptance:commercial:mvp0:syntax
           pnpm acceptance:commercial:mvp0:release-gate
 
       - name: Stop acceptance runtime dependencies
@@ -186,14 +187,8 @@ jobs:
           name: acceptance-output
           path: acceptance-output
 
-      - name: Download acceptance artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: acceptance-output
-          path: acceptance-output
-
       - name: Generate release gate report
         run: node scripts/qa/generate_release_gate_report.cjs
 
       - name: Check release gates
-        run: pnpm acceptance:commercial:mvp0:release-gate
+        run: node scripts/qa/check_release_gates.cjs --report docs/qa/reports/release_gate_report.json
