@@ -196,4 +196,4 @@ jobs:
         run: node scripts/qa/generate_release_gate_report.cjs
 
       - name: Check release gates
-        run: node scripts/qa/check_release_gates.cjs
+        run: pnpm acceptance:commercial:mvp0:release-gate
