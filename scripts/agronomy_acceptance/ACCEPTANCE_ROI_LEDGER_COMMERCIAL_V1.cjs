@@ -15,6 +15,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription_id = `prc_roi_${suffix}`;
   const task_id = `task_roi_${suffix}`;
   const field_id = `field_${suffix}`;
+  const device_id = `device_${suffix}`;
   const operation_id = `op_${suffix}`;
 
   await pool.query(
@@ -47,10 +48,55 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const approval_id = String(submitApprovalJson?.approval_request_id ?? '').trim();
   assert.ok(approval_id, 'missing approval_request_id');
 
+  const deviceNow = Date.now();
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$5,95,-55,'roi-commercial-test',$5)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       group_id = EXCLUDED.group_id,
+       last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+       last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+       battery_percent = EXCLUDED.battery_percent,
+       rssi_dbm = EXCLUDED.rssi_dbm,
+       fw_ver = EXCLUDED.fw_ver,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, device_id, deviceNow]
+  );
+  await pool.query(
+    `INSERT INTO device_binding_index_v1
+      (tenant_id, device_id, field_id, bound_ts_ms)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE SET
+       field_id = EXCLUDED.field_id,
+       bound_ts_ms = EXCLUDED.bound_ts_ms`,
+    [tenant_id, device_id, field_id, deviceNow]
+  );
+  await pool.query(
+    `INSERT INTO device_capability
+      (tenant_id, device_id, capabilities, updated_ts_ms)
+     VALUES ($1,$2,$3::jsonb,$4)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       capabilities = EXCLUDED.capabilities,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, device_id, JSON.stringify(['device.irrigation.valve.open', 'irrigation.valve.open', 'IRRIGATION_CONTROLLER']), deviceNow]
+  );
+
   const decideApprovalResp = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
     method: 'POST',
     token,
-    body: { tenant_id, project_id, group_id, decision: 'APPROVE', reason: 'roi ledger commercial acceptance' },
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'roi ledger commercial acceptance',
+      device_id,
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
+    },
   });
   const decideApprovalJson = requireOk(decideApprovalResp, 'approve prescription request');
   const operation_plan_id = String(
@@ -93,7 +139,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       approval_request_id: approval_id,
       field_id,
       season_id: `season_${suffix}`,
-      device_id: `device_${suffix}`,
+      device_id,
       issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
       action_type: 'IRRIGATE',
       target: { kind: 'field', ref: field_id },
