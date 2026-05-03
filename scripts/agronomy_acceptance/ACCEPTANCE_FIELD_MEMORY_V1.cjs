@@ -19,6 +19,20 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   return q.rows.length === ids.length;
 }
 
+async function assertProjectionTablesReady(pool) {
+  const required = ['derived_sensing_state_index_v1', 'device_observation_index_v1', 'field_memory_v1'];
+  const missing = [];
+  for (const table of required) {
+    const q = await pool.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
+    if (!q.rows?.[0]?.reg) missing.push(table);
+  }
+  if (missing.length > 0) {
+    const err = new Error(`BOOTSTRAP_FAILURE_MISSING_PROJECTION_TABLES:${missing.join(',')}`);
+    err.code = 'BOOTSTRAP_FAILURE_MISSING_PROJECTION_TABLES';
+    throw err;
+  }
+}
+
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const adminToken = env('ADMIN_TOKEN', 'admin_token');
@@ -37,6 +51,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   const pre_soil_moisture = 0.18;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
+  await assertProjectionTablesReady(pool);
 
   const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
   const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
@@ -166,6 +181,41 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   );
 
   assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
+  const nowTs = Date.now();
+
+  await pool.query(
+    `INSERT INTO device_binding_index_v1
+      (tenant_id, device_id, field_id, bound_ts_ms)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE
+       SET bound_ts_ms = EXCLUDED.bound_ts_ms`,
+    [tenant_id, device_id, field_id, nowTs]
+  );
+
+  await pool.query(
+    `INSERT INTO device_capability
+      (tenant_id, device_id, capabilities, updated_ts_ms)
+     VALUES ($1,$2,$3::jsonb,$4)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE
+       SET capabilities = EXCLUDED.capabilities,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, device_id, JSON.stringify(['device.irrigation.valve.open']), nowTs]
+  );
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE
+       SET project_id = EXCLUDED.project_id,
+           group_id = EXCLUDED.group_id,
+           status = 'ONLINE',
+           last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+           last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, device_id, nowTs]
+  );
 
   const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
     method: 'POST',
@@ -197,19 +247,9 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   );
 
   await pool.query(
-    `DELETE FROM device_status_index_v1
-     WHERE tenant_id=$1
-       AND project_id=$2
-       AND group_id=$3
-       AND device_id=$4`,
-    [tenant_id, project_id, group_id, device_id]
-  );
-
-  await pool.query(
-    `INSERT INTO device_status_index_v1
-      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
-     VALUES
-      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    `UPDATE device_status_index_v1
+        SET status='ONLINE', updated_ts_ms=$5
+      WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND device_id=$4`,
     [tenant_id, project_id, group_id, device_id, Date.now()]
   );
 
