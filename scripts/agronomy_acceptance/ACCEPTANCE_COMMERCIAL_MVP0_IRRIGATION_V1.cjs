@@ -92,8 +92,10 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   const recommendation = genJson.recommendations?.[0] ?? null;
   const recommendation_id = String(recommendation?.recommendation_id ?? '').trim();
   const skill_trace_id = String(recommendation?.skill_trace?.trace_id ?? '').trim();
+  const recommendation_skill_id = String(recommendation?.skill_trace?.skill_id ?? '').trim();
   assert.ok(recommendation_id, 'recommendation_id missing');
   assert.ok(skill_trace_id, 'skill_trace_id missing');
+  assert.ok(recommendation_skill_id, 'recommendation.skill_trace.skill_id missing');
 
   const createPrescription = await fetchJson(`${base}/api/v1/prescriptions/from-recommendation`, {
     method: 'POST', token,
@@ -101,7 +103,18 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   });
   const prescription = requireOk(createPrescription, 'create prescription').prescription;
   const prescription_id = String(prescription?.prescription_id ?? '').trim();
+  const prescriptionSkillTrace = prescription?.operation_amount?.parameters?.metadata?.skill_trace
+    ?? prescription?.operation_amount?.parameters?.preserved_payload?.skill_trace
+    ?? prescription?.skill_trace
+    ?? null;
+  const prescription_skill_trace_id = String(
+    prescriptionSkillTrace?.trace_id
+    ?? prescription?.evidence_refs?.skill_trace_ref
+    ?? prescription?.operation_amount?.parameters?.metadata?.skill_trace_ref
+    ?? ''
+  ).trim();
   assert.ok(prescription_id, 'prescription_id missing');
+  assert.ok(prescription_skill_trace_id, 'prescription skill_trace missing');
 
   const submitApproval = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
     method: 'POST', token, body: { tenant_id, project_id, group_id },
@@ -139,7 +152,10 @@ async function assertFieldMemoryIdsExist(pool, ids) {
       method: 'POST', token,
       body: { tenant_id, project_id, group_id, operation_plan_id, approval_request_id: approval_id, field_id, season_id, device_id, issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, parameters: { amount: 20, coverage_percent: 90, duration_min: 20, prescription_id }, meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION', device_id, adapter_type: 'irrigation_simulator' } },
     });
-    task_id = String(requireOk(taskResp, 'create task').act_task_id ?? '').trim();
+    const taskJson = requireOk(taskResp, 'create task');
+    task_id = String(taskJson.act_task_id ?? '').trim();
+    const taskSkillBinding = String(taskJson.skill_binding_id ?? taskJson.meta?.skill_binding_id ?? '').trim();
+    if (!taskSkillBinding) failureReasons.push('TASK_DEVICE_SKILL_BINDING_MISSING');
     assert.ok(task_id, 'task_id missing');
 
     const mockValveRun = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
