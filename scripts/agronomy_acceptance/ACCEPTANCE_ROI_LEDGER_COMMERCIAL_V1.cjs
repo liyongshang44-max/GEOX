@@ -16,7 +16,6 @@ function buildIrrigationReceiptBody({
   water_l = 20,
   amount = 20,
   coverage_percent = 90,
-  duration_min = 20,
 }) {
   return {
     tenant_id,
@@ -28,7 +27,10 @@ function buildIrrigationReceiptBody({
     execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
     execution_coverage: { kind: 'field', ref: field_id },
     resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
-    observed_parameters: { amount, coverage_percent, duration_min },
+    observed_parameters: {
+      amount,
+      coverage_percent,
+    },
     evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
     logs_refs: [
       { kind: 'dispatch_ack', ref: `ack_${suffix}` },
