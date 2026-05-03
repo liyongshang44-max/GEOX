@@ -246,6 +246,20 @@ function traceIdFromAsExecuted(asExecuted: AsExecutedRow): string | null {
   return null;
 }
 
+
+function operationPlanIdFromAsExecuted(asExecuted: AsExecutedRow): string | null {
+  const candidates = [
+    asExecuted?.executed?.operation_plan_id,
+    asExecuted?.planned?.operation_plan_id,
+    asExecuted?.executed?.metadata?.operation_plan_id,
+    asExecuted?.planned?.metadata?.operation_plan_id,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
+
 function toWaterLiters(amount: number | null, unitRaw: unknown): number | null {
   if (amount == null) return null;
   const unit = String(unitRaw ?? "").trim().toLowerCase();
@@ -607,7 +621,7 @@ async function listAsAppliedByAsExecuted(pool: Pool, input: TenantTriple & { as_
 
 async function listAcceptanceEvidenceRefsByTaskId(
   pool: Pool,
-  input: TenantTriple & { task_id: string }
+  input: TenantTriple & { task_id: string; operation_plan_id?: string | null }
 ): Promise<any[]> {
   const q = await pool.query(
     `SELECT fact_id, record_json::jsonb AS record_json
@@ -617,12 +631,13 @@ async function listAcceptanceEvidenceRefsByTaskId(
         AND (record_json::jsonb#>>'{payload,project_id}') = $2
         AND (record_json::jsonb#>>'{payload,group_id}') = $3
         AND (
-          (record_json::jsonb#>>'{payload,task_id}') = $4
-          OR (record_json::jsonb#>>'{payload,act_task_id}') = $4
+          (record_json::jsonb#>>'{payload,act_task_id}') = $4
+          OR (record_json::jsonb#>>'{payload,task_id}') = $4
+          OR (NULLIF($5, '') IS NOT NULL AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5)
         )
       ORDER BY occurred_at DESC
       LIMIT 5`,
-    [input.tenant_id, input.project_id, input.group_id, input.task_id]
+    [input.tenant_id, input.project_id, input.group_id, input.task_id, input.operation_plan_id ?? null]
   );
   const out: any[] = [];
   for (const row of q.rows ?? []) {
@@ -795,6 +810,7 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
     project_id: input.project_id,
     group_id: input.group_id,
     task_id: asExecuted.task_id,
+    operation_plan_id: operationPlanIdFromAsExecuted(asExecuted),
   });
   if (acceptanceEvidenceRefs.length > 0) {
     asExecuted.evidence_refs = normalizeEvidenceRefs([...(asExecuted.evidence_refs ?? []), ...acceptanceEvidenceRefs]);
