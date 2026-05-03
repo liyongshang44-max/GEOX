@@ -102,44 +102,6 @@ async function executeMockValveSkill({
   });
 }
 
-async function executeMockValveSkill({
-  base,
-  token,
-  tenant_id,
-  project_id,
-  group_id,
-  field_id,
-  device_id,
-  operation_plan_id,
-  task_id,
-  approval_id,
-}) {
-  return fetchJson(`${base}/api/v1/skill/execute`, {
-    method: 'POST',
-    token,
-    body: {
-      tenant_id,
-      project_id,
-      group_id,
-      skill_id: 'mock_valve_control_skill_v1',
-      version: 'v1',
-      category: 'DEVICE',
-      bind_target: 'mock_valve',
-      field_id,
-      device_id,
-      operation_id: operation_plan_id,
-      operation_plan_id,
-      input: {
-        task_id,
-        approval_id,
-        command: 'OPEN',
-        duration_sec: 1200,
-        required_capabilities: ['device.irrigation.valve.open'],
-      },
-    },
-  });
-}
-
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;

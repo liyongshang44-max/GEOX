@@ -101,7 +101,7 @@ async function assertProjectionTablesReady(pool) {
   const field_id = env('FIELD_ID', `field_memory_${suffix}`);
   const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
   const device_id = env('DEVICE_ID', `device_field_memory_${suffix}`);
-  const pre_soil_moisture = 0.18;
+  const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
   await assertProjectionTablesReady(pool);
@@ -130,8 +130,7 @@ async function assertProjectionTablesReady(pool) {
     `INSERT INTO device_observation_index_v1
       (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
      VALUES
-      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$9),
-      ($1,$2,$3,$4,$5,'canopy_temp_c',to_timestamp($6 / 1000.0),$6,$8,0.88,$10)
+      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$8)
      ON CONFLICT DO NOTHING`,
     [
       tenant_id,
@@ -141,9 +140,7 @@ async function assertProjectionTablesReady(pool) {
       device_id,
       ts0,
       pre_soil_moisture,
-      31.2,
       `obs_soil_field_memory_${randomUUID()}`,
-      `obs_canopy_field_memory_${randomUUID()}`,
     ]
   );
 
@@ -165,6 +162,20 @@ async function assertProjectionTablesReady(pool) {
       image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 }
     }
   });
+  process.stdout.write(`${JSON.stringify({ recommendation_generate_response: recGen.json ?? {}, status: recGen.status }, null, 2)}\n`);
+  if (!recGen.ok || !Array.isArray(recGen.json?.recommendations) || recGen.json.recommendations.length === 0) {
+    process.stdout.write(`${JSON.stringify({
+      reason: 'NO_RECOMMENDATION_TRIGGERED',
+      stage1_seed_debug: {
+        derived_states_inserted: true,
+        soil_moisture: 0.16,
+        field_id,
+        device_id,
+      },
+      recommendation_generate_response: recGen.json ?? {},
+    }, null, 2)}\n`);
+    throw new Error('NO_RECOMMENDATION_TRIGGERED');
+  }
   const recJson = requireOk(recGen, 'generate recommendation');
   const recommendation = pickIrrigationRecommendation(recJson);
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
