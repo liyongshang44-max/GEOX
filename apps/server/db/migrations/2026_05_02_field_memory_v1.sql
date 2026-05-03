@@ -32,12 +32,29 @@ BEGIN
      AND table_name = 'field_memory_v1'
      AND column_name = 'created_at';
 
-  IF created_at_type = 'bigint' THEN
-    UPDATE field_memory_v1
-       SET occurred_at = COALESCE(occurred_at, to_timestamp(created_at / 1000.0));
+  IF created_at_type IN ('bigint', 'integer', 'numeric') THEN
+    EXECUTE $sql$
+      UPDATE field_memory_v1
+         SET occurred_at = COALESCE(
+           occurred_at,
+           to_timestamp((created_at::text)::double precision / 1000.0)
+         )
+    $sql$;
+  ELSIF created_at_type = 'timestamp with time zone' THEN
+    EXECUTE $sql$
+      UPDATE field_memory_v1
+         SET occurred_at = COALESCE(occurred_at, created_at)
+    $sql$;
+  ELSIF created_at_type = 'timestamp without time zone' THEN
+    EXECUTE $sql$
+      UPDATE field_memory_v1
+         SET occurred_at = COALESCE(occurred_at, created_at AT TIME ZONE 'UTC')
+    $sql$;
   ELSE
-    UPDATE field_memory_v1
-       SET occurred_at = COALESCE(occurred_at, created_at::timestamptz);
+    EXECUTE $sql$
+      UPDATE field_memory_v1
+         SET occurred_at = COALESCE(occurred_at, now())
+    $sql$;
   END IF;
 END $$;
 

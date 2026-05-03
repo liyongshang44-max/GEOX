@@ -10,7 +10,7 @@ BEGIN
     ALTER TABLE field_memory_v1 RENAME COLUMN created_at TO created_at_legacy_ms;
     ALTER TABLE field_memory_v1 ADD COLUMN created_at TIMESTAMPTZ;
     UPDATE field_memory_v1
-      SET created_at = COALESCE(to_timestamp(created_at_legacy_ms::double precision / 1000.0), now())
+      SET created_at = COALESCE(to_timestamp((created_at_legacy_ms::text)::double precision / 1000.0), now())
       WHERE created_at IS NULL;
     ALTER TABLE field_memory_v1 ALTER COLUMN created_at SET DEFAULT now();
     ALTER TABLE field_memory_v1 ALTER COLUMN created_at SET NOT NULL;
