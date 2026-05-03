@@ -22,21 +22,41 @@ ALTER TABLE field_memory_v1
   ADD COLUMN IF NOT EXISTS summary_text TEXT,
   ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
-ALTER TABLE field_memory_v1
-  ALTER COLUMN created_at DROP DEFAULT;
+DO $$
+DECLARE
+  created_at_type text;
+BEGIN
+  SELECT data_type
+    INTO created_at_type
+    FROM information_schema.columns
+   WHERE table_schema = 'public'
+     AND table_name = 'field_memory_v1'
+     AND column_name = 'created_at';
 
-ALTER TABLE field_memory_v1
-  ALTER COLUMN created_at TYPE TIMESTAMPTZ
-  USING CASE
-    WHEN pg_typeof(created_at)::text = 'bigint' THEN to_timestamp(created_at / 1000.0)
-    ELSE created_at::timestamptz
-  END;
+  IF created_at_type IN ('bigint', 'integer', 'numeric') THEN
+    ALTER TABLE field_memory_v1 RENAME COLUMN created_at TO created_at_legacy_ms;
+    ALTER TABLE field_memory_v1 ADD COLUMN created_at TIMESTAMPTZ;
+    UPDATE field_memory_v1
+       SET created_at = COALESCE(
+         to_timestamp((created_at_legacy_ms::text)::double precision / 1000.0),
+         now()
+       )
+     WHERE created_at IS NULL;
+  ELSIF created_at_type = 'timestamp with time zone' THEN
+    NULL;
+  ELSIF created_at_type = 'timestamp without time zone' THEN
+    ALTER TABLE field_memory_v1
+      ALTER COLUMN created_at TYPE TIMESTAMPTZ
+      USING created_at AT TIME ZONE 'UTC';
+  ELSE
+    ALTER TABLE field_memory_v1
+      ALTER COLUMN created_at TYPE TIMESTAMPTZ
+      USING now();
+  END IF;
 
-ALTER TABLE field_memory_v1
-  ALTER COLUMN created_at SET DEFAULT now();
-
-ALTER TABLE field_memory_v1
-  ALTER COLUMN created_at SET NOT NULL;
+  ALTER TABLE field_memory_v1 ALTER COLUMN created_at SET DEFAULT now();
+  ALTER TABLE field_memory_v1 ALTER COLUMN created_at SET NOT NULL;
+END $$;
 
 UPDATE field_memory_v1
 SET
