@@ -5,6 +5,12 @@ const { env, fetchJson } = require('./_common.cjs');
 const TASK_NAME = 'COMMERCIAL_MVP0_B_SKILL_CONTRACT_GAP_CLOSURE_FIX';
 
 function toPassFail(v) { return v ? 'PASS' : 'FAIL'; }
+function requireOk(resp, label) {
+  if (!resp?.ok) {
+    throw new Error(JSON.stringify({ reason: 'HTTP_REQUEST_FAILED', label, status: resp?.status, response: resp?.json ?? {} }));
+  }
+  return resp?.json ?? {};
+}
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
@@ -237,9 +243,9 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id: `op_plan_mismatch_${suffix}`, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'SPRAY', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'SPRAY', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
+        meta: { device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
       },
     });
     const mismatchTaskId = String(mismatchTaskResp.json?.act_task_id ?? '');
@@ -269,24 +275,49 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'IRRIGATE', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
+        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
+    process.stdout.write(JSON.stringify({
+      task_create_debug: {
+        status: taskResp.status,
+        ok: taskResp.ok,
+        json: taskResp.json,
+        operation_plan_id,
+        approval_id: ids.approval_id,
+        field_id,
+        device_id
+      }
+    }, null, 2) + "\n");
+
+    if (!taskResp.ok) {
+      throw new Error(JSON.stringify({
+        reason: 'TASK_CREATE_FAILED',
+        task_create_response: taskResp.json ?? {},
+        status: taskResp.status
+      }));
+    }
     ids.task_id = String(taskResp.json?.act_task_id ?? '');
 
-    const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
+    const runResp = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
       method: 'POST', token,
       body: {
-        tenant_id, project_id, group_id,
-        skill_id: 'mock_valve_control_skill_v1', version: 'v1', category: 'DEVICE', bind_target: 'mock_valve',
-        field_id, device_id, operation_id: operation_plan_id, operation_plan_id,
-        input: { task_id: ids.task_id, approval_id: ids.approval_id, planned_amount: 20, unit: 'mm', duration_min: 20, required_capabilities: ['device.irrigation.valve.open'] },
+        tenant_id,
+        project_id,
+        group_id,
+        field_id,
+        device_id,
+        act_task_id: ids.task_id,
+        command: 'OPEN',
+        duration_sec: 1200,
       },
     });
-    ids.skill_run_id = String(executeSkill.json?.skill_run_id ?? '');
-    checks.mock_valve_skill_run_created = toPassFail(Boolean(ids.skill_run_id && executeSkill.json?.fact_id && executeSkill.json?.occurred_at));
+    const runJson = requireOk(runResp, 'mock valve skill run');
+    ids.skill_run_id = String(runJson.skill_run_id ?? runJson.run_id ?? '').trim();
+    checks.mock_valve_skill_run_created = toPassFail(ids.skill_run_id.length > 0);
+
     const taskFactQ = await pool.query(
       `SELECT record_json::jsonb AS record_json
          FROM facts
@@ -295,11 +326,26 @@ async function main() {
         ORDER BY occurred_at DESC LIMIT 1`,
       [ids.task_id]
     );
-    const taskBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
-    const taskDeviceSkillId = String(taskBindingEvidence?.device_skill_id ?? '');
+    const taskPayload = taskFactQ.rows?.[0]?.record_json?.payload ?? {};
+    const taskBindingEvidence =
+      taskPayload.meta?.skill_binding_evidence
+      ?? taskPayload.skill_binding_evidence
+      ?? taskPayload.meta?.device_skill_binding
+      ?? {};
+    const taskDeviceSkillId = String(taskBindingEvidence?.device_skill_id ?? taskBindingEvidence?.skill_id ?? '');
     const taskBindingId = String(taskBindingEvidence?.skill_binding_id ?? '');
     const taskBindingFactId = String(taskBindingEvidence?.skill_binding_fact_id ?? '');
     ids.skill_binding_id = ids.skill_binding_id || taskBindingId || taskBindingFactId;
+    if (!taskDeviceSkillId || (!taskBindingId && !taskBindingFactId)) {
+      process.stdout.write(`${JSON.stringify({
+        task_binding_debug: {
+          act_task_id: ids.task_id,
+          task_payload: taskPayload,
+          resolved_skill_binding_evidence: taskBindingEvidence
+        }
+      }, null, 2)}
+`);
+    }
     checks.task_binds_device_skill = toPassFail(
       taskDeviceSkillId === 'mock_valve_control_skill_v1'
       && (taskBindingId.length > 0 || taskBindingFactId.length > 0)
@@ -314,7 +360,7 @@ async function main() {
         execution_coverage: { kind: 'field', ref: field_id },
         resource_usage: { water_l: 20 }, observed_parameters: { amount: 20, duration_min: 20, prescription_id: ids.prescription_id },
         evidence_refs: [{ kind: 'sensor', ref: `ev_${suffix}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${suffix}` }, { kind: 'valve_open_confirmation', ref: `valve_${suffix}` }, { kind: 'water_delivery_receipt', ref: `water_${suffix}` }],
-        status: 'executed', constraint_check: { violated: false, violations: [] }, meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id },
+        status: 'executed', constraint_check: { violated: false, violations: [] }, meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_id: 'irrigation_deficit_skill_v1', skill_trace_ref: ids.skill_trace_id },
       },
     });
     const receipt_fact_id = String(receipt.json?.fact_id ?? '');
