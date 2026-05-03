@@ -4,6 +4,8 @@ import {
   labelAcceptanceStatus,
   labelApprovalStatus,
   labelBooleanYesNo,
+  labelConfidenceHint,
+  labelEvidenceQuality,
   labelEmptyFallback,
   labelFinalStatus,
   labelRiskLevel,
@@ -50,6 +52,15 @@ export type OperationReportPageVm = {
     finalStatusText: string;
     resultText: string;
   };
+  fieldMemory: {
+    title: string;
+    items: string[];
+  };
+  roiLedger: {
+    title: string;
+    items: string[];
+    confidenceText: string;
+  };
   debug: {
     operationPlanId: string;
     operationId: string;
@@ -74,6 +85,35 @@ function kv(value: unknown, fallback = "--"): string {
   return labelEmptyFallback(value, fallback);
 }
 
+function toNum(v: unknown): number | null {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatMemoryLine(item: any): string {
+  const before = toNum(item?.before_value);
+  const after = toNum(item?.after_value);
+  const min = toNum(item?.target_range?.min);
+  const max = toNum(item?.target_range?.max);
+  const hasTargetRange = min != null || max != null;
+  let statusText = "湿度变化待确认";
+  if (hasTargetRange) {
+    const hitMin = min == null || (after != null && after >= min);
+    const hitMax = max == null || (after != null && after <= max);
+    statusText = hitMin && hitMax ? "达到目标区间" : "未达到目标区间";
+  } else if (before != null && after != null) {
+    statusText = after > before ? "湿度已回升" : "湿度未回升";
+  }
+  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
+}
+
+function formatRoiLine(item: any): string {
+  const baseline = toNum(item?.baseline_value);
+  const delta = toNum(item?.delta_value);
+  const unit = labelEmptyFallback(item?.unit, "--");
+  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
+}
+
 function joinReasonTexts(reasons: string[]): string {
   if (!Array.isArray(reasons) || reasons.length === 0) return "暂无明确风险原因";
   return reasons.map((item) => labelEmptyFallback(item)).join("、");
@@ -94,6 +134,8 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const reasonText = joinReasonTexts(report.risk.reasons);
   const reportWhy = (report as any).why ?? null;
   const reportApproval = (report as any).approval ?? null;
+  const memory = (report as any).field_memory ?? {};
+  const roi = (report as any).roi_ledger ?? {};
 
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
@@ -133,13 +175,37 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     acceptance: {
       statusText: acceptanceStatusText,
-      verdictText: kv(report.acceptance.verdict),
-      missingEvidenceText: labelBooleanYesNo(report.acceptance.missing_evidence),
+      verdictText: labelEvidenceQuality(report.acceptance.verdict),
+      missingEvidenceText: report.acceptance.missing_evidence ? "证据不足，建议人工复核" : labelBooleanYesNo(report.acceptance.missing_evidence),
       generatedAtText: kv(report.acceptance.generated_at),
     },
     conclusion: {
       finalStatusText,
       resultText: finalStatusText,
+    },
+    fieldMemory: {
+      title: "系统记住了什么",
+      items: (() => {
+        const items = [
+          ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
+          ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "设备可靠性记录")}（阀门响应、超时与回执完整性见证据）`)),
+          ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "Skill 表现记录")}（诊断采纳与验收结果见证据）`)),
+        ];
+        return items.length ? items : ["暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。"];
+      })(),
+    },
+    roiLedger: {
+      title: "本次价值账本",
+      items: (() => {
+        const items = [
+          ...((roi.water_saved ?? []).slice(0, 1).map(formatRoiLine)),
+          ...((roi.labor_saved ?? []).slice(0, 1).map((item: any) => `${formatRoiLine(item)}，计算方法：${labelEmptyFallback(item?.calculation_method, "后端口径")}`)),
+          ...((roi.early_warning_lead_time ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.customer_text, "异常提前发现：暂无可展示数据"))),
+          ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1).map((item: any) => `验收一次通过：${labelEmptyFallback(item?.customer_text, "待补充证据")}`)),
+        ];
+        return items.length ? items : ["暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。"];
+      })(),
+      confidenceText: labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score),
     },
     debug: {
       operationPlanId: kv(report.identifiers.operation_plan_id),

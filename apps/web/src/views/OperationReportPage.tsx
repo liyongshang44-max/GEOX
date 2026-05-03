@@ -97,19 +97,42 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
+
+      <SectionCard title={vm.fieldMemory.title}>
+        {vm.fieldMemory.items.length ? (
+          <ul>
+            {vm.fieldMemory.items.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="muted">暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。</div>
+        )}
+      </SectionCard>
+
+      <SectionCard title={vm.roiLedger.title}>
+        {vm.roiLedger.items.length ? (
+          <ul>
+            {vm.roiLedger.items.map((item, idx) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="muted">暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。</div>
+        )}
+        <div className="muted">{vm.roiLedger.confidenceText}</div>
+      </SectionCard>
+
       <SectionCard title="最终结论">
         <div><strong>{vm.conclusion.finalStatusText}</strong></div>
         <div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div>
       </SectionCard>
 
-      <div className="muted" style={{ marginTop: 8 }}>
-        内部编号：{vm.header.internalId}
-      </div>
-
       <details>
         <summary>内部调试信息（非客户展示）</summary>
         <SectionCard title="标识信息">
           <div className="kvGrid2">
+            <div><strong>内部编号：</strong>{vm.header.internalId}</div>
             <div><strong>operation_plan_id：</strong>{vm.debug.operationPlanId}</div>
             <div><strong>operation_id：</strong>{vm.debug.operationId}</div>
             <div><strong>act_task_id：</strong>{vm.debug.actTaskId}</div>
