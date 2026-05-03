@@ -179,7 +179,7 @@ async function assertProjectionTablesReady(pool) {
   const recJson = requireOk(recGen, 'generate recommendation');
   const recommendation = pickIrrigationRecommendation(recJson);
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
-  const recId = String(recommendation?.recommendation_id ?? '');
+  const recId = String(recommendation.recommendation_id ?? '');
   assert.ok(recId, 'recommendation_id missing');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
