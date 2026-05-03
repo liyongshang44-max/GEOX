@@ -1,4 +1,5 @@
 const { spawnSync } = require('node:child_process');
+const { Pool } = require('pg');
 
 function extractJsonBlock(text) {
   const marker = '::ACCEPTANCE_JSON::';
@@ -37,8 +38,8 @@ function extractJsonBlock(text) {
   throw new Error('no balanced JSON object found');
 }
 
-function runScript(script) {
-  const res = spawnSync(process.execPath, [script], { encoding: 'utf8', env: process.env });
+function runScript(script, envOverride = {}) {
+  const res = spawnSync(process.execPath, [script], { encoding: 'utf8', env: { ...process.env, ...envOverride } });
   const merged = `${res.stdout || ''}\n${res.stderr || ''}`.trim();
   try {
     return extractJsonBlock(merged);
@@ -51,11 +52,23 @@ const pass = (v) => (v ? 'PASS' : 'FAIL');
 const isFilled = (x) => String(x || '').trim().length > 0;
 const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
 
-(() => {
+async function existsFactById(pool, factId) {
+  if (!isFilled(factId)) return false;
+  const q = await pool.query('SELECT 1 FROM facts WHERE fact_id=$1 LIMIT 1', [factId]);
+  return (q.rows?.length ?? 0) > 0;
+}
+
+(async () => {
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgres://postgres:postgres@127.0.0.1:5432/geox' });
   const skillGap = runScript('scripts/agronomy_acceptance/ACCEPTANCE_SKILL_CONTRACT_GAP_CLOSURE_V1.cjs');
   const fieldMemory = runScript('scripts/agronomy_acceptance/ACCEPTANCE_FIELD_MEMORY_V1.cjs');
   const roiCommercial = runScript('scripts/agronomy_acceptance/ACCEPTANCE_ROI_LEDGER_COMMERCIAL_V1.cjs');
   const irrigation = runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs');
+  const dFailureRuns = [
+    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_STALE_OBSERVATION: '1' }),
+    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_INSUFFICIENT_EVIDENCE: '1' }),
+    runScript('scripts/agronomy_acceptance/ACCEPTANCE_COMMERCIAL_MVP0_IRRIGATION_V1.cjs', { SIMULATE_APPROVAL_REJECTED: '1' }),
+  ];
 
   const chain = irrigation.chain_summary || {};
   const roiChecks = roiCommercial.checks || {};
@@ -89,16 +102,24 @@ const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
   ].every((k) => irrigationChecks[k] === true || irrigationChecks[k] === 'PASS');
 
   const fp = irrigation.failure_audit_summary;
+  const syntheticFp = dFailureRuns.map((r, i) => ({ name: `d_failure_run_${i + 1}`, pass: r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0 }));
   const failurePathsPassCount = Array.isArray(fp)
     ? fp.filter((x) => x && (x.blocked === true || isPass(x.status))).length
     : 0;
-  const failurePathsOk = failurePathsPassCount >= 3 && (irrigationChecks.failure_path_not_fake_success === true || irrigationChecks.failure_path_not_fake_success === 'PASS');
+  const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 3;
+
+  const skillBindingExists = await existsFactById(pool, chain.skill_binding_id);
+  const skillRunExists = await existsFactById(pool, chain.skill_run_id);
+  const reportExists = await existsFactById(pool, chain.report_id);
+  const fieldMemoryExists = fieldMemoryIds.length > 0;
+  const roiLedgerExists = roiLedgerIds.length > 0;
+  const dRoiStrong = Array.isArray(irrigation?.roi_ledgers) && irrigation.roi_ledgers.every((x) => x.baseline != null && Number(x.confidence ?? 0) > 0 && Array.isArray(x.evidence_refs) && x.evidence_refs.length > 0);
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
     field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3),
     roi_ledger_commercial_v1: pass(roiCommercial?.ok === true && roiCompatibleOk && roiLedgerIds.length > 0),
-    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk),
+    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportExists && fieldMemoryExists && roiLedgerExists && dRoiStrong),
     customer_report: pass(irrigation?.ok === true && isFilled(chain.report_id) && customerReportOk),
     failure_paths: pass(failurePathsOk),
   };
@@ -108,9 +129,9 @@ const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
     status: Object.values(checks).every((x) => x === 'PASS') ? 'PASS' : 'FAIL',
     checks,
     failure_paths_summary: {
-      pass_count: failurePathsPassCount,
+      pass_count: syntheticFp.filter((x) => x.pass).length,
       min_required_pass: 3,
-      items: Array.isArray(fp) ? fp : [],
+      items: syntheticFp,
     },
     chain_summary: {
       field_id: chain.field_id || '',
@@ -133,5 +154,9 @@ const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
   };
 
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
+  await pool.end();
   if (output.status !== 'PASS') process.exit(1);
-})();
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

@@ -150,6 +150,13 @@ jobs:
             acceptance-output/*.log
           if-no-files-found: warn
 
+      - name: Run COMMERCIAL MVP0 release gate
+        run: |
+          set -a
+          source .env.ci
+          set +a
+          pnpm acceptance:commercial:mvp0:release-gate
+
       - name: Stop acceptance runtime dependencies
         if: always()
         run: |
