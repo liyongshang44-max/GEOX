@@ -650,10 +650,10 @@ async function listAcceptanceEvidenceRefsByTaskId(
         AND (
           (record_json::jsonb#>>'{payload,act_task_id}') = $4
           OR (record_json::jsonb#>>'{payload,task_id}') = $4
-          OR (NULLIF($5, '') IS NOT NULL AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5)
+          OR (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
         )
       ORDER BY occurred_at DESC
-      LIMIT 5`,
+      LIMIT 1`,
     [input.tenant_id, input.project_id, input.group_id, input.task_id, input.operation_plan_id ?? null]
   );
   const out: any[] = [];
@@ -849,6 +849,19 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
       : !hasExecutedWater
         ? "MISSING_EXECUTED_WATER"
         : "MISSING_ACCEPTANCE";
+    if (reason === "MISSING_ACCEPTANCE") {
+      throw new Error(JSON.stringify({
+        ok: false,
+        error: "ROI_LEDGER_NOT_CREATED",
+        reason,
+        debug: {
+          as_executed_id: asExecuted.as_executed_id,
+          task_id: asExecuted.task_id,
+          operation_plan_id: operationPlanIdFromAsExecuted(asExecuted),
+          acceptance_lookup_keys: ["act_task_id", "task_id", "operation_plan_id"],
+        },
+      }));
+    }
     throw new Error(`ROI_LEDGER_NOT_CREATED:${reason}`);
   }
   const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
