@@ -15,8 +15,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const prescription_id = `prc_roi_${suffix}`;
   const task_id = `task_roi_${suffix}`;
   const field_id = `field_${suffix}`;
-  const receipt_fact_id = `fact_roi_${suffix}`;
-  const operation_plan_id = `op_plan_${suffix}`;
+  const device_id = `device_${suffix}`;
   const operation_id = `op_${suffix}`;
 
   await pool.query(
@@ -40,52 +39,73 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     ],
   );
 
+  const submitApprovalResp = await fetchJson(`${base}/api/v1/prescriptions/${encodeURIComponent(prescription_id)}/submit-approval`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id },
+  });
+  const submitApprovalJson = requireOk(submitApprovalResp, 'submit prescription approval');
+  const approval_id = String(submitApprovalJson?.approval_request_id ?? '').trim();
+  assert.ok(approval_id, 'missing approval_request_id');
+
+  const deviceNow = Date.now();
   await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json) VALUES
-      ($1, NOW(), $2, $3::jsonb),
-      ($4, NOW(), $5, $6::jsonb),
-      ($7, NOW(), $8, $9::jsonb)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [
-      `fact_op_plan_${suffix}`,
-      'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'operation_plan_v1', payload: { tenant_id, project_id, group_id, field_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, action_type: 'IRRIGATION' } },
-      `fact_task_${suffix}`,
-      'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'ao_act_task_v0', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, recommendation_id, act_task_id: task_id, task_id, field_id, status: 'DISPATCHED' } },
-      `fact_acceptance_${suffix}`,
-      'scripts/agronomy_acceptance/roi_ledger_commercial_v1',
-      { type: 'acceptance_result_v1', payload: { tenant_id, project_id, group_id, operation_plan_id, operation_id, field_id, recommendation_id, act_task_id: task_id, task_id, verdict: 'PASS', generated_at: new Date().toISOString(), missing_evidence: false } },
-    ],
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$5,95,-55,'roi-commercial-test',$5)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       group_id = EXCLUDED.group_id,
+       last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+       last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+       battery_percent = EXCLUDED.battery_percent,
+       rssi_dbm = EXCLUDED.rssi_dbm,
+       fw_ver = EXCLUDED.fw_ver,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, device_id, deviceNow]
+  );
+  await pool.query(
+    `INSERT INTO device_binding_index_v1
+      (tenant_id, device_id, field_id, bound_ts_ms)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE SET
+       field_id = EXCLUDED.field_id,
+       bound_ts_ms = EXCLUDED.bound_ts_ms`,
+    [tenant_id, device_id, field_id, deviceNow]
+  );
+  await pool.query(
+    `INSERT INTO device_capability
+      (tenant_id, device_id, capabilities, updated_ts_ms)
+     VALUES ($1,$2,$3::jsonb,$4)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       capabilities = EXCLUDED.capabilities,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, device_id, JSON.stringify(['device.irrigation.valve.open', 'irrigation.valve.open', 'IRRIGATION_CONTROLLER']), deviceNow]
   );
 
-  await pool.query(
-    `INSERT INTO facts (fact_id, occurred_at, source, record_json)
-     VALUES ($1, NOW(), $2, $3::jsonb)
-     ON CONFLICT (fact_id) DO NOTHING`,
-    [
-      receipt_fact_id,
-      'scripts/agronomy_acceptance/roi_ledger_v1',
-      {
-        type: 'ao_act_receipt_v1',
-        payload: {
-          tenant_id,
-          project_id,
-          group_id,
-          act_task_id: task_id,
-          receipt_id: `receipt_roi_${suffix}`,
-          recommendation_id,
-          parameters: { prescription_id },
-          status: 'executed',
-          execution_coverage: { kind: 'field', ref: field_id },
-          resource_usage: { water_l: 20, electric_kwh: 1.5, chemical_ml: 25 },
-          observed_parameters: { amount: 20, coverage_percent: 88, prescription_id },
-          labor: { duration_minutes: 12, worker_count: 1 },
-          evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }],
-        },
-      },
-    ],
-  );
+  const decideApprovalResp = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      decision: 'APPROVE',
+      reason: 'roi ledger commercial acceptance',
+      device_id,
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
+    },
+  });
+  const decideApprovalJson = requireOk(decideApprovalResp, 'approve prescription request');
+  const operation_plan_id = String(
+    decideApprovalJson?.operation_plan_id
+      ?? decideApprovalJson?.operation_plan?.operation_plan_id
+      ?? decideApprovalJson?.plan?.operation_plan_id
+      ?? ''
+  ).trim();
+  assert.ok(operation_plan_id, 'missing operation_plan_id');
 
   const healthz = await fetchJson(`${base}/api/admin/healthz`, { method: 'GET', token });
   const healthz_ok = Boolean(healthz.ok && healthz.json?.ok === true);
@@ -108,14 +128,74 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     Boolean(operationReportSchema?.properties?.roi_ledger);
 
 
+  const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      approval_request_id: approval_id,
+      field_id,
+      season_id: `season_${suffix}`,
+      device_id,
+      issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
+      action_type: 'IRRIGATE',
+      target: { kind: 'field', ref: field_id },
+      time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600_000 },
+      parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1 }] },
+      parameters: { amount: 20 },
+      constraints: {},
+      meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION' },
+    },
+  });
+  const taskJson = requireOk(taskResp, 'create action task');
+  const act_task_id = String(taskJson?.act_task_id ?? '').trim();
+  assert.ok(act_task_id, 'missing act_task_id');
+
+  const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      act_task_id,
+      executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+      execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+      execution_coverage: { kind: 'field', ref: field_id },
+      resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 },
+      observed_parameters: { amount: 20, coverage_percent: 88, prescription_id },
+      evidence_refs: [{ kind: 'photo', ref: `ev_${suffix}` }],
+      logs_refs: [{ kind: 'log', ref: `log://${act_task_id}/roi-commercial`, label: 'roi commercial receipt' }],
+      status: 'executed',
+      constraint_check: { violated: false, violations: [] },
+      meta: { recommendation_id, prescription_id },
+    },
+  });
+  const receiptJson = requireOk(receiptResp, 'submit action receipt');
+  const receipt_fact_id = String(receiptJson?.fact_id ?? '').trim();
+  assert.ok(receipt_fact_id, 'missing receipt fact_id');
+
   const asExecutedResp = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, {
     method: 'POST',
     token,
-    body: { task_id, receipt_id: receipt_fact_id, tenant_id, project_id, group_id },
+    body: { task_id: act_task_id, receipt_id: receipt_fact_id, tenant_id, project_id, group_id },
   });
   const asExecutedJson = requireOk(asExecutedResp, 'create as-executed first');
   const as_executed_id = String(asExecutedJson?.as_executed?.as_executed_id ?? '').trim();
   assert.ok(as_executed_id, 'missing as_executed_id');
+
+  const acceptanceResp = await fetchJson(`${base}/api/v1/acceptance/evaluate`, {
+    method: 'POST',
+    token,
+    body: { tenant_id, project_id, group_id, act_task_id },
+  });
+  const acceptanceJson = requireOk(acceptanceResp, 'evaluate acceptance before roi ledger');
+  const acceptance_fact_id = String(acceptanceJson?.acceptance?.fact_id ?? '').trim();
+  assert.ok(acceptance_fact_id, 'missing acceptance fact_id');
 
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
@@ -129,7 +209,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       create_status: createResp.status,
       create_json: createResp.json,
       ledgers_count: Array.isArray(createResp.json?.roi_ledgers) ? createResp.json.roi_ledgers.length : -1,
-      task_id,
+      task_id: act_task_id,
       receipt_fact_id,
       prescription_id,
       operation_plan_id,
@@ -150,7 +230,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const readByAsExecutedJson = requireOk(readByAsExecutedResp, 'read roi ledger by as-executed');
 
   const readByTaskResp = await fetchJson(
-    `${base}/api/v1/roi-ledger/by-task/${encodeURIComponent(task_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
+    `${base}/api/v1/roi-ledger/by-task/${encodeURIComponent(act_task_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`,
     { method: 'GET', token },
   );
   const readByTaskJson = requireOk(readByTaskResp, 'read roi ledger by task');
@@ -231,7 +311,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const operationReportJson = requireOk(operationReportResp, 'read operation report with roi ledger');
   assert.equal(
     operationReportJson.operation_report_v1?.identifiers?.act_task_id,
-    task_id,
+    act_task_id,
     'operation report did not project expected act_task_id'
   );
   const roiLedgerBlock = operationReportJson?.operation_report_v1?.roi_ledger;
