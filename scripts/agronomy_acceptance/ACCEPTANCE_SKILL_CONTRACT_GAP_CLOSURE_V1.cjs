@@ -110,6 +110,29 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   return pool.query(sql, params);
 }
 
+async function queryFieldMemoryByOperationOrTask(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  operation_plan_id,
+  act_task_id,
+}) {
+  return pool.query(
+    `SELECT *
+       FROM field_memory_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND (
+          operation_id=$4
+          OR task_id=$5
+        )
+      ORDER BY occurred_at DESC
+      LIMIT 500`,
+    [tenant_id, project_id, group_id, operation_plan_id, act_task_id]
+  );
+}
+
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
@@ -454,7 +477,13 @@ async function main() {
     }
 
     const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
-    const memoryByOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id });
+    const memoryByOperationQ = await queryFieldMemoryByOperationOrTask(pool, {
+      tenant_id,
+      project_id,
+      group_id,
+      operation_plan_id,
+      act_task_id: ids.task_id,
+    });
     const memRows = memoryQ.rows ?? [];
     ids.field_memory_ids = memRows.map((x) => String(x.memory_id)).filter(Boolean);
     const memDevice = memRows.find((x) => String(x.memory_type) === 'DEVICE_RELIABILITY_MEMORY' && String(x.skill_id) === 'mock_valve_control_skill_v1');
