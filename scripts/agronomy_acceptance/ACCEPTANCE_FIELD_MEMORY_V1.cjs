@@ -66,6 +66,29 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   return pool.query(sql, params);
 }
 
+async function queryFieldMemoryByOperationOrTask(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  operation_plan_id,
+  act_task_id,
+}) {
+  return pool.query(
+    `SELECT *
+       FROM field_memory_v1
+      WHERE tenant_id=$1
+        AND project_id=$2
+        AND group_id=$3
+        AND (
+          operation_id=$4
+          OR task_id=$5
+        )
+      ORDER BY occurred_at DESC
+      LIMIT 500`,
+    [tenant_id, project_id, group_id, operation_plan_id, act_task_id]
+  );
+}
+
 async function assertFieldMemoryIdsExist(pool, ids) {
   if (!Array.isArray(ids) || ids.length === 0) return false;
   const q = await pool.query(`SELECT memory_id FROM field_memory_v1 WHERE memory_id = ANY($1::text[])`, [ids]);
@@ -489,7 +512,13 @@ async function assertProjectionTablesReady(pool) {
   const openapi = openapiResp.json ?? {};
 
   const byScopeQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
-  const byOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: actTaskId });
+  const byOperationQ = await queryFieldMemoryByOperationOrTask(pool, {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id: actTaskId,
+  });
   const byScopeItems = byScopeQ.rows ?? [];
   const byOperationItems = byOperationQ.rows ?? [];
   const byScopeIds = byScopeItems.slice(0, 3).map((x) => String(x.memory_id ?? '')).filter(Boolean);
