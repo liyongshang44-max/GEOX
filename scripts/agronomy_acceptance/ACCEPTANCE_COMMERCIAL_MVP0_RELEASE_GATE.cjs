@@ -59,12 +59,44 @@ const pass = (v) => (v ? 'PASS' : 'FAIL');
 const isFilled = (x) => String(x || '').trim().length > 0;
 const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
 
-async function existsFieldMemoryId(pool, memoryId) {
-  const q = await pool.query('SELECT 1 FROM field_memory_v1 WHERE memory_id=$1 LIMIT 1', [memoryId]);
+async function existsFieldMemoryId(pool, memoryId, scope) {
+  const q = await pool.query(
+    `SELECT 1 FROM field_memory_v1
+      WHERE memory_id=$1
+        AND tenant_id=$2
+        AND project_id=$3
+        AND group_id=$4
+      LIMIT 1`,
+    [memoryId, scope.tenant_id, scope.project_id, scope.group_id]
+  );
   return (q.rows?.length ?? 0) > 0;
 }
-async function existsRoiLedgerId(pool, roiLedgerId) {
-  const q = await pool.query('SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 LIMIT 1', [roiLedgerId]);
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
+async function existsRoiLedgerId(pool, roiLedgerId, scope, roiHasProjectGroup) {
+  const q = roiHasProjectGroup
+    ? await pool.query(
+      `SELECT 1 FROM roi_ledger_v1
+        WHERE roi_ledger_id=$1
+          AND tenant_id=$2
+          AND project_id=$3
+          AND group_id=$4
+        LIMIT 1`,
+      [roiLedgerId, scope.tenant_id, scope.project_id, scope.group_id]
+    )
+    : await pool.query(
+      `SELECT 1 FROM roi_ledger_v1
+        WHERE roi_ledger_id=$1
+          AND tenant_id=$2
+        LIMIT 1`,
+      [roiLedgerId, scope.tenant_id]
+    );
   return (q.rows?.length ?? 0) > 0;
 }
 async function existsSkillRunId(pool, skillRunId) {
@@ -74,16 +106,6 @@ async function existsSkillRunId(pool, skillRunId) {
         AND (record_json::jsonb#>>'{payload,skill_run_id}')=$1
       LIMIT 1`,
     [skillRunId]
-  );
-  return (q.rows?.length ?? 0) > 0;
-}
-async function existsReportId(pool, reportId) {
-  const q = await pool.query(
-    `SELECT 1 FROM facts
-      WHERE (record_json::jsonb#>>'{payload,report_id}')=$1
-         OR (record_json::jsonb#>>'{payload,fact_id}')=$1
-      LIMIT 1`,
-    [reportId]
   );
   return (q.rows?.length ?? 0) > 0;
 }
@@ -119,11 +141,21 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const irrigationChecks = irrigation.checks || {};
 
   const coreIdsOk = [
-    'field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_id',
+    'field_id','observation_id','recommendation_id','skill_trace_id','prescription_id','approval_id','task_id','skill_binding_id','skill_run_id','receipt_id','as_executed_id','post_observation_id','acceptance_id','report_ref',
   ].every((k) => isFilled(chain[k]));
 
   const fieldMemoryIds = Array.isArray(chain.field_memory_ids) ? chain.field_memory_ids.filter(isFilled) : [];
   const roiLedgerIds = Array.isArray(chain.roi_ledger_ids) ? chain.roi_ledger_ids.filter(isFilled) : [];
+  const scope = {
+    tenant_id: process.env.TENANT_ID || 'tenantA',
+    project_id: process.env.PROJECT_ID || 'projectA',
+    group_id: process.env.GROUP_ID || 'groupA',
+  };
+  const roiScopeColsQ = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+      WHERE table_name='roi_ledger_v1' AND column_name IN ('project_id','group_id')`
+  );
+  const roiHasProjectGroup = (roiScopeColsQ.rows?.length ?? 0) === 2;
 
   const roiCompatibleOk = [
     'ledger_has_baseline_actual_delta',
@@ -156,11 +188,33 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     ? await existsSkillBindingFromTaskFact(pool, chain.task_id, chain.skill_binding_id)
     : false;
   const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
-  const reportExists = isFilled(chain.report_id) ? await existsReportId(pool, chain.report_id) : false;
+  const reportResp = isFilled(chain.report_ref)
+    ? await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3001'}/api/v1/reports/operation/${encodeURIComponent(chain.report_ref)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`, {
+      headers: process.env.AO_ACT_TOKEN ? { Authorization: `Bearer ${process.env.AO_ACT_TOKEN}` } : {},
+    }).then((r) => r.json().catch(() => ({})))
+    : {};
+  const reportPayload = reportResp?.operation_report_v1 ?? {};
+  const reportPayloadOk = isFilled(chain.report_ref)
+    && (
+      String(reportPayload?.identifiers?.operation_id ?? '').trim() === String(chain.report_ref).trim()
+      || String(reportPayload?.identifiers?.operation_plan_id ?? '').trim() === String(chain.report_ref).trim()
+    );
   const fieldMemoryExists = fieldMemoryIds.length > 0
-    && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x)))).every(Boolean);
+    && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean);
+  const scopeMemoryQ = await queryFieldMemoryByScope(pool, {
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
+    field_id: chain.field_id || undefined,
+  });
+  const operationMemoryQ = await queryFieldMemoryByScope(pool, {
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
+    operation_id: chain.task_id || undefined,
+  });
   const roiLedgerExists = roiLedgerIds.length > 0
-    && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x)))).every(Boolean);
+    && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean);
   const dRoiStrong = Array.isArray(irrigation?.roi_ledgers)
     && irrigation.roi_ledgers.every((x) =>
       x.baseline != null
@@ -171,10 +225,10 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
-    field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3),
+    field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3 && (scopeMemoryQ.rows?.length ?? 0) >= 3 && (operationMemoryQ.rows?.length ?? 0) >= 1 && fieldMemoryExists),
     roi_ledger_commercial_v1: pass(roiCommercial?.ok === true && roiCompatibleOk && roiLedgerIds.length > 0),
-    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportExists && fieldMemoryExists && roiLedgerExists && dRoiStrong),
-    customer_report: pass(irrigation?.ok === true && isFilled(chain.report_id) && customerReportOk),
+    irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportPayloadOk && fieldMemoryExists && roiLedgerExists && dRoiStrong),
+    customer_report: pass(irrigation?.ok === true && isFilled(chain.report_ref) && reportPayloadOk && customerReportOk),
     failure_paths: pass(failurePathsOk),
   };
 
@@ -201,6 +255,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
       as_executed_id: chain.as_executed_id || '',
       post_observation_id: chain.post_observation_id || '',
       acceptance_id: chain.acceptance_id || '',
+      report_ref: chain.report_ref || '',
       report_id: chain.report_id || '',
       field_memory_ids: fieldMemoryIds,
       roi_ledger_ids: roiLedgerIds,

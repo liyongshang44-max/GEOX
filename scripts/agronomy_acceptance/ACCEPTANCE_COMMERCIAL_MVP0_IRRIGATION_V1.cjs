@@ -10,6 +10,21 @@ function hasValidRoiConfidence(confidence) {
     && Array.isArray(confidence.reasons);
 }
 
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
+
+async function assertFieldMemoryIdsExist(pool, ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return false;
+  const q = await pool.query(`SELECT memory_id FROM field_memory_v1 WHERE memory_id = ANY($1::text[])`, [ids]);
+  return q.rows.length === ids.length;
+}
+
 (async () => {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
   const token = env('AO_ACT_TOKEN', '');
@@ -59,7 +74,7 @@ function hasValidRoiConfidence(confidence) {
   const judgeResp = await fetchJson(`${base}/api/v1/judge/evidence`, {
     method: 'POST', token, body: { tenant_id, project_id, group_id, field_id, evidence: judgeEvidence },
   });
-  const judgeJson = judgeResp.ok ? await judgeResp.json() : { ok: false, reason: 'JUDGE_ENDPOINT_UNAVAILABLE' };
+  const judgeJson = judgeResp.ok ? judgeResp.json : { ok: false, reason: 'JUDGE_ENDPOINT_UNAVAILABLE' };
 
   const failureReasons = [];
   if (simulateStale) failureReasons.push('STALE_OBSERVATION');
@@ -113,6 +128,7 @@ function hasValidRoiConfidence(confidence) {
   let as_executed_id = '';
   let acceptance_id = '';
   let report_id = '';
+  let report_ref = '';
   let report_payload = null;
   let post_observation_id = '';
   let roi_ledger_ids = [];
@@ -130,7 +146,7 @@ function hasValidRoiConfidence(confidence) {
       method: 'POST', token,
       body: { tenant_id, project_id, group_id, field_id, device_id, act_task_id: task_id, command: 'OPEN', duration_sec: 1200 },
     });
-    const mockValveJson = mockValveRun.ok ? await mockValveRun.json() : { ok: false, reason: 'DEVICE_OFFLINE' };
+    const mockValveJson = mockValveRun.ok ? mockValveRun.json : { ok: false, reason: 'DEVICE_OFFLINE' };
     skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? '').trim();
     if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
     if (!mockValveRun.ok) failureReasons.push('DEVICE_OFFLINE');
@@ -163,13 +179,20 @@ function hasValidRoiConfidence(confidence) {
     const acceptanceJson = requireOk(acceptanceResp, 'acceptance');
     acceptance_id = String(acceptanceJson.fact_id ?? '').trim();
 
-    const reportResp = await fetchJson(`${base}/api/v1/customer/report/from-task`, {
-      method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id },
+    const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, {
+      method: 'GET', token,
     });
-    const reportJson = reportResp.ok ? await reportResp.json() : {};
+    const reportJson = reportResp.ok ? reportResp.json : {};
     report_payload = reportJson;
-    report_id = String(reportJson.report_id ?? reportJson.fact_id ?? '').trim();
-    if (!report_id) failureReasons.push('REPORT_ID_MISSING');
+    const report = reportJson.operation_report_v1 ?? {};
+    report_ref = String(
+      report.identifiers?.operation_id
+      ?? report.identifiers?.operation_plan_id
+      ?? operation_plan_id
+      ?? ''
+    ).trim();
+    report_id = String(reportJson.report_id ?? reportJson.operation_report_v1?.report_id ?? reportJson.fact_id ?? '').trim();
+    if (!report_ref) failureReasons.push('REPORT_REF_MISSING');
 
     const roiResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
       method: 'POST', token, body: { as_executed_id, tenant_id, project_id, group_id },
@@ -198,11 +221,10 @@ function hasValidRoiConfidence(confidence) {
     }
   }
 
-  const memoryQ = await pool.query(
-    `SELECT memory_id, memory_type FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4 ORDER BY occurred_at DESC LIMIT 500`,
-    [tenant_id, project_id, group_id, field_id]
-  );
+  const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
   const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
+  const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: task_id || undefined });
+  const memoryIdsExist = await assertFieldMemoryIdsExist(pool, field_memory_ids);
 
   if (task_id) {
     const taskFactQ = await pool.query(
@@ -218,6 +240,7 @@ function hasValidRoiConfidence(confidence) {
     if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
   }
 
+  // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
   const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
   const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
@@ -239,6 +262,7 @@ function hasValidRoiConfidence(confidence) {
     as_executed_id,
     post_observation_id,
     acceptance_id,
+    report_ref,
     report_id,
     field_memory_ids,
     roi_ledger_ids,
@@ -263,6 +287,8 @@ function hasValidRoiConfidence(confidence) {
     no_as_executed: blocked ? true : Boolean(as_executed_id),
     no_acceptance: blocked ? true : Boolean(acceptance_id),
     field_memory_at_least_three: blocked ? true : field_memory_ids.length >= 3,
+    field_memory_query_by_operation: blocked ? true : (memoryByOperation.rows?.length ?? 0) >= 1,
+    field_memory_ids_exist: blocked ? true : memoryIdsExist,
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,

@@ -5,6 +5,14 @@ const { env, fetchJson } = require('./_common.cjs');
 const TASK_NAME = 'COMMERCIAL_MVP0_B_SKILL_CONTRACT_GAP_CLOSURE_FIX';
 
 function toPassFail(v) { return v ? 'PASS' : 'FAIL'; }
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
 
 async function main() {
   const base = env('BASE_URL', 'http://127.0.0.1:3001');
@@ -234,18 +242,14 @@ async function main() {
       await fetchJson(`${base}/api/v1/acceptance/evaluate`, { method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: ids.task_id } });
     }
 
-    const memoryQ = await pool.query(
-      `SELECT memory_id,memory_type,skill_id,skill_trace_ref
-       FROM field_memory_v1
-       WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND field_id=$4
-       ORDER BY occurred_at DESC LIMIT 200`,
-      [tenant_id, project_id, group_id, field_id]
-    );
+    const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
+    const memoryByOperationQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: operation_plan_id });
     const memRows = memoryQ.rows ?? [];
     ids.field_memory_ids = memRows.map((x) => String(x.memory_id)).filter(Boolean);
     const memDevice = memRows.find((x) => String(x.memory_type) === 'DEVICE_RELIABILITY_MEMORY' && String(x.skill_id) === 'mock_valve_control_skill_v1');
     const memSkill = memRows.find((x) => String(x.memory_type) === 'SKILL_PERFORMANCE_MEMORY' && String(x.skill_id) === 'irrigation_deficit_skill_v1' && String(x.skill_trace_ref ?? '').trim());
     checks.field_memory_refs_skill_id = toPassFail(Boolean(memDevice && memSkill));
+    checks.memory_query_by_operation = toPassFail((memoryByOperationQ.rows ?? []).length > 0);
 
     const asExec = await fetchJson(`${base}/api/v1/as-executed/from-receipt`, { method: 'POST', token, body: { tenant_id, project_id, group_id, task_id: ids.task_id, receipt_id: receipt_fact_id } });
     const as_executed_id = String(asExec.json?.as_executed?.as_executed_id ?? '');

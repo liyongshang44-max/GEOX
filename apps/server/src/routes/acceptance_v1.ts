@@ -461,6 +461,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
         await recordMemoryV1(pool, tenant.tenant_id, {
           type: "operation_outcome", operation_id: opId, task_id: body.act_task_id, field_id,
+          project_id: tenant.project_id, group_id: tenant.group_id,
           recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
           metrics: {
             before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
@@ -474,6 +475,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         }).catch(() => undefined);
         await recordMemoryV1(pool, tenant.tenant_id, {
           type: "skill_performance", field_id, operation_id: opId, task_id: body.act_task_id,
+          project_id: tenant.project_id, group_id: tenant.group_id,
           recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
           skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
           evidence_refs: evidenceRefs,
