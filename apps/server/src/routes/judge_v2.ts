@@ -154,6 +154,8 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
       if (field_id) {
         await recordMemoryV1(pool, body.tenant_id, {
           type: "execution_reliability",
+          project_id: body.project_id,
+          group_id: body.group_id,
           operation_id: String(inserted.task_id ?? body.receipt?.task_id ?? "").trim() || undefined,
           prescription_id: String(inserted.prescription_id ?? body.prescription_id ?? "").trim() || undefined,
           field_id,
