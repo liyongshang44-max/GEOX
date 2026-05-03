@@ -17,6 +17,8 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const field_id = `field_${suffix}`;
   const device_id = `device_${suffix}`;
   const operation_id = `op_${suffix}`;
+  const skill_trace_ref = `trace_roi_${suffix}`;
+  const receipt_idempotency_key = `roi_receipt_${suffix}`;
 
   await pool.query(
     `INSERT INTO prescription_contract_v1
@@ -132,6 +134,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     method: 'POST',
     token,
     body: {
+      idempotency_key: receipt_idempotency_key,
       tenant_id,
       project_id,
       group_id,
@@ -172,7 +175,13 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
       logs_refs: [{ kind: 'log', ref: `log://${act_task_id}/roi-commercial`, label: 'roi commercial receipt' }],
       status: 'executed',
       constraint_check: { violated: false, violations: [] },
-      meta: { recommendation_id, prescription_id },
+      meta: {
+        idempotency_key: receipt_idempotency_key,
+        recommendation_id,
+        prescription_id,
+        skill_id: 'irrigation_deficit_skill_v1',
+        skill_trace_ref,
+      },
     },
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -200,7 +209,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: skill_trace_ref, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: skill_trace_ref }] },
   });
   const createJson = requireOk(createResp, 'create roi ledger from as-executed');
   process.stdout.write(JSON.stringify({
@@ -219,7 +228,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const createAgainResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
     token,
-    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
+    body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: skill_trace_ref, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: skill_trace_ref }] },
   });
   const createAgainJson = requireOk(createAgainResp, 'idempotent roi ledger generation');
 
