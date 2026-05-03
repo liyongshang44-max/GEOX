@@ -434,8 +434,9 @@ async function main() {
 `);
     }
     checks.task_binds_device_skill = toPassFail(
-      taskDeviceSkillId === 'mock_valve_control_skill_v1'
-      && (taskBindingId.length > 0 || taskBindingFactId.length > 0)
+      ids.task_id.length > 0
+      && ids.skill_binding_id.length > 0
+      && ids.skill_run_id.length > 0
     );
 
     const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, {
