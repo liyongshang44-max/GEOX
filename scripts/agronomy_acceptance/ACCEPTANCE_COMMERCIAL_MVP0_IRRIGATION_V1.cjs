@@ -196,7 +196,27 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   if (!failureReasons.includes('APPROVAL_REJECTED')) {
     const taskResp = await fetchJson(`${base}/api/v1/actions/task`, {
       method: 'POST', token,
-      body: { tenant_id, project_id, group_id, operation_plan_id, approval_request_id: approval_id, field_id, season_id, device_id, issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' }, action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, parameters: { amount: 20, coverage_percent: 90, duration_min: 20, prescription_id }, meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION', device_id, adapter_type: 'irrigation_simulator' } },
+      body: {
+        tenant_id, project_id, group_id, operation_plan_id, approval_request_id: approval_id, field_id, season_id, device_id,
+        issuer: { kind: 'human', id: 'acceptance', namespace: 'qa' },
+        action_type: 'IRRIGATE',
+        target: { kind: 'field', ref: field_id },
+        time_window: {
+          start_ts: Date.now(),
+          end_ts: Date.now() + 30 * 60 * 1000,
+        },
+        parameter_schema: {
+          keys: [
+            { name: "duration_min", type: "number", min: 1, max: 720 },
+            { name: "amount", type: "number", min: 1, max: 1000 },
+            { name: "coverage_percent", type: "number", min: 0, max: 100 },
+            { name: "prescription_id", type: "string" }
+          ]
+        },
+        constraints: {},
+        parameters: { amount: 20, coverage_percent: 90, duration_min: 20, prescription_id },
+        meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION', device_id, adapter_type: 'irrigation_simulator' }
+      },
     });
     const taskJson = requireOk(taskResp, 'create task');
     task_id = String(taskJson.act_task_id ?? '').trim();
