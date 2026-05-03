@@ -12,7 +12,8 @@ type RecordMemoryInput = {
   operation_id?: string;
   field_id: string;
   metrics?: Record<string, unknown>;
-  skill_refs?: Array<{ skill_id?: string; skill_run_id?: string; trace_id?: string }>;
+  skill_refs?: Array<{ skill_id?: string; skill_version?: string; skill_run_id?: string; trace_id?: string }>;
+  skill_id?: string;
   evidence_refs?: unknown[];
   prescription_id?: string;
   recommendation_id?: string;
@@ -41,8 +42,16 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const after_value = num((metrics as any).after_soil_moisture ?? (metrics as any).after_value);
   const delta_value = num((metrics as any).soil_moisture_delta ?? (after_value != null && before_value != null ? after_value - before_value : undefined));
   const confidence = num((metrics as any).confidence) ?? 0.8;
-  const skill_id = String(input.skill_refs?.[0]?.skill_id ?? "").trim() || undefined;
-  const skill_trace_ref = input.skill_trace_ref ?? (String(input.skill_refs?.[0]?.trace_id ?? input.skill_refs?.[0]?.skill_run_id ?? "").trim() || undefined);
+  const skill_refs = Array.isArray(input.skill_refs) ? input.skill_refs : [];
+  const firstSkillRef = skill_refs.find((x: any) => String(x?.skill_id ?? "").trim());
+  const skill_id =
+    String(input.skill_id ?? "").trim()
+    || String(firstSkillRef?.skill_id ?? "").trim()
+    || null;
+  const skill_trace_ref =
+    String(input.skill_trace_ref ?? "").trim()
+    || String(firstSkillRef?.trace_id ?? firstSkillRef?.skill_run_id ?? "").trim()
+    || null;
   const metric_key =
     memory_type === "FIELD_RESPONSE_MEMORY" ? "soil_moisture_response" :
     memory_type === "DEVICE_RELIABILITY_MEMORY" ? "valve_response_status" :
@@ -70,8 +79,8 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
       memory_type, metric_key, metric_value ?? null, null, before_value ?? null, after_value ?? null, null, delta_value ?? null,
       JSON.stringify((metrics as any).target_range ?? null), confidence, memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance",
       input.acceptance_id ?? input.operation_id ?? memory_id, input.operation_id ?? null, input.recommendation_id ?? null,
-      input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id ?? null,
-      skill_trace_ref ?? null, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
+      input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id,
+      skill_trace_ref, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
     ],
   );
 

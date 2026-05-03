@@ -551,6 +551,7 @@ function enrichCommercialFields(entry: RoiCandidate, context?: {
   const unit = String((entry.delta as any)?.unit ?? (entry.actual as any)?.unit ?? (entry.baseline as any)?.unit ?? "").trim() || null;
   const value_kind: RoiValueKindV1 = entry.confidence?.basis === "measured" ? "MEASURED" : entry.confidence?.basis === "estimated" ? "ESTIMATED" : "ASSUMPTION_BASED";
   const fallbackSkillId = String(context?.skill_refs?.[0]?.skill_id ?? "").trim() || null;
+  const fallbackTraceId = String(context?.skill_refs?.[0]?.trace_id ?? "").trim() || null;
   const asExecuted = context?.asExecuted;
   const fallbackFieldMemoryRefs = normalizeEvidenceRefs(asExecuted?.executed?.field_memory_refs);
   return {
@@ -563,8 +564,8 @@ function enrichCommercialFields(entry: RoiCandidate, context?: {
     unit: entry.unit ?? unit,
     estimated_money_value: entry.estimated_money_value ?? null,
     currency: entry.currency ?? null,
-    source_skill_id: entry.source_skill_id ?? (String((entry.assumptions as any)?.source_skill_id ?? "").trim() || fallbackSkillId),
-    skill_trace_ref: entry.skill_trace_ref ?? (String(context?.skill_trace_id ?? "").trim() || String((entry.assumptions as any)?.trace_id ?? "").trim() || null),
+    source_skill_id: entry.source_skill_id ?? fallbackSkillId ?? "irrigation_deficit_skill_v1",
+    skill_trace_ref: entry.skill_trace_ref ?? (String(context?.skill_trace_id ?? "").trim() || fallbackTraceId || (asExecuted ? traceIdFromAsExecuted(asExecuted) : null) || null),
     field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : fallbackFieldMemoryRefs),
     task_id: entry.task_id ?? asExecuted?.task_id ?? null,
     as_executed_id: entry.as_executed_id ?? asExecuted?.as_executed_id ?? null,
@@ -604,9 +605,9 @@ export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow,
     const hasConfidence = Boolean(entry.confidence?.level && entry.confidence?.basis && Array.isArray(entry.confidence?.reasons));
     const measuredNeedsEvidence = entry.value_kind !== "MEASURED" || hasEvidence;
     const defaultAssumptionNotMeasured = entry.baseline_type !== "DEFAULT_ASSUMPTION" || (entry.value_kind !== "MEASURED");
-    const traceabilityCount = [entry.skill_trace_ref, entry.source_skill_id, entry.field_memory_refs?.length ? "field_memory" : null, (entry as any).operation_id].filter(Boolean).length;
-    const hasTraceability = traceabilityCount >= 2;
-    return hasEvidence && hasBaseline && hasConfidence && measuredNeedsEvidence && defaultAssumptionNotMeasured && hasTraceability;
+    const hasSkillTraceability = Boolean(entry.skill_trace_ref || entry.source_skill_id);
+    const hasExecutionIdentity = Boolean(entry.task_id || entry.as_executed_id);
+    return hasEvidence && hasBaseline && hasConfidence && measuredNeedsEvidence && defaultAssumptionNotMeasured && hasSkillTraceability && hasExecutionIdentity;
   });
 }
 
@@ -650,10 +651,10 @@ async function listAcceptanceEvidenceRefsByTaskId(
         AND (
           (record_json::jsonb#>>'{payload,act_task_id}') = $4
           OR (record_json::jsonb#>>'{payload,task_id}') = $4
-          OR (NULLIF($5, '') IS NOT NULL AND (record_json::jsonb#>>'{payload,operation_plan_id}') = $5)
+          OR (record_json::jsonb#>>'{payload,operation_plan_id}') = $5
         )
       ORDER BY occurred_at DESC
-      LIMIT 5`,
+      LIMIT 1`,
     [input.tenant_id, input.project_id, input.group_id, input.task_id, input.operation_plan_id ?? null]
   );
   const out: any[] = [];
@@ -849,6 +850,19 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
       : !hasExecutedWater
         ? "MISSING_EXECUTED_WATER"
         : "MISSING_ACCEPTANCE";
+    if (reason === "MISSING_ACCEPTANCE") {
+      throw new Error(JSON.stringify({
+        ok: false,
+        error: "ROI_LEDGER_NOT_CREATED",
+        reason,
+        debug: {
+          as_executed_id: asExecuted.as_executed_id,
+          task_id: asExecuted.task_id,
+          operation_plan_id: operationPlanIdFromAsExecuted(asExecuted),
+          acceptance_lookup_keys: ["act_task_id", "task_id", "operation_plan_id"],
+        },
+      }));
+    }
     throw new Error(`ROI_LEDGER_NOT_CREATED:${reason}`);
   }
   const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
