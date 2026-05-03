@@ -122,6 +122,52 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   const approval_id = String(requireOk(submitApproval, 'submit approval').approval_request_id ?? '').trim();
   assert.ok(approval_id, 'approval_id missing');
 
+  const deviceNow = Date.now();
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+     VALUES ($1,$2,$3,$4,$5,$5,95,-55,'mvp0-test',$5)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       project_id = EXCLUDED.project_id,
+       group_id = EXCLUDED.group_id,
+       last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+       last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+       battery_percent = EXCLUDED.battery_percent,
+       rssi_dbm = EXCLUDED.rssi_dbm,
+       fw_ver = EXCLUDED.fw_ver,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, device_id, deviceNow]
+  );
+
+  await pool.query(
+    `INSERT INTO device_binding_index_v1
+      (tenant_id, device_id, field_id, bound_ts_ms)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE SET
+       field_id = EXCLUDED.field_id,
+       bound_ts_ms = EXCLUDED.bound_ts_ms`,
+    [tenant_id, device_id, field_id, deviceNow]
+  );
+
+  await pool.query(
+    `INSERT INTO device_capability
+      (tenant_id, device_id, capabilities, updated_ts_ms)
+     VALUES ($1,$2,$3::jsonb,$4)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+       capabilities = EXCLUDED.capabilities,
+       updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [
+      tenant_id,
+      device_id,
+      JSON.stringify([
+        'device.irrigation.valve.open',
+        'irrigation.valve.open',
+        'IRRIGATION_CONTROLLER',
+      ]),
+      deviceNow,
+    ]
+  );
+
   const approvalDecision = simulateApprovalRejected ? 'REJECT' : 'APPROVE';
   const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
     method: 'POST', token,

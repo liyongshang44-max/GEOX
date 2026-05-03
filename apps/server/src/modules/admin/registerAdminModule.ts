@@ -7,13 +7,19 @@ import { registerFailSafeV1Routes } from "../../routes/fail_safe_v1.js";
 import { getRuntimeSecurityStatusV1 } from "../../runtime/runtime_security_v1.js";
 
 const REQUIRED_SCHEMA = {
-  tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members", "prescription_contract_v1", "as_executed_record_v1", "as_applied_map_v1", "roi_ledger_v1", "judge_result_v2", "field_memory_v1"],
+  tables: ["facts", "raw_samples", "markers", "sensor_groups", "sensor_group_members", "prescription_contract_v1", "as_executed_record_v1", "as_applied_map_v1", "roi_ledger_v1", "judge_result_v2", "field_memory_v1", "device_observation_index_v1"],
   views: ["facts_replay_v1"],
 } as const;
 
 const REQUIRED_TABLE_COLUMNS: Record<string, string[]> = {
-  field_memory_v1: ["project_id", "group_id", "occurred_at", "metric_key", "source_type", "source_id"],
-  device_observation_index_v1: ["project_id", "group_id", "field_id", "metric", "observed_at_ts_ms", "fact_id"],
+  field_memory_v1: [
+    "project_id", "group_id", "metric_key", "confidence", "source_type", "source_id",
+    "task_id", "acceptance_id", "roi_id", "skill_id", "skill_trace_ref", "summary_text", "occurred_at",
+  ],
+  device_observation_index_v1: [
+    "tenant_id", "project_id", "group_id", "field_id", "device_id", "metric",
+    "observed_at_ts_ms", "value_num", "confidence", "fact_id",
+  ],
 };
 
 export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
