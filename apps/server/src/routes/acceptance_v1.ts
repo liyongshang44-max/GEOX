@@ -457,13 +457,16 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
         const soil_moisture_delta = Number.isFinite(soilMoistureDeltaRaw) ? soilMoistureDeltaRaw : undefined;
         const recommendation_id = String((taskPayload as any)?.meta?.recommendation_id ?? "").trim() || undefined;
         const prescription_id = String((taskPayload as any)?.meta?.prescription_id ?? "").trim() || undefined;
-        const opId = typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id;
+        const recommendationSkillTraceRef = String((taskPayload as any)?.meta?.skill_trace_ref ?? (receiptFact.record_json?.payload as any)?.meta?.skill_trace_ref ?? "").trim() || undefined;
+        const opId = typeof taskPayload.operation_plan_id === "string" ? taskPayload.operation_plan_id : (typeof taskPayload.operation_id === "string" ? taskPayload.operation_id : body.act_task_id);
         const evidenceRefs = [taskFact.fact_id, receiptFact.fact_id, ...judgeResultIds, acceptanceFactId];
         try {
           await recordMemoryV1(pool, tenant.tenant_id, {
             type: "FIELD_RESPONSE_MEMORY", operation_id: opId, task_id: body.act_task_id, field_id,
             project_id: tenant.project_id, group_id: tenant.group_id,
             recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
+            skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
+            skill_trace_ref: recommendationSkillTraceRef,
             metrics: {
               before_soil_moisture: Number.isFinite(pre_soil_moisture) ? pre_soil_moisture : 0.18,
               after_soil_moisture: Number.isFinite(post_soil_moisture) ? post_soil_moisture : 0.24,
@@ -479,6 +482,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
             project_id: tenant.project_id, group_id: tenant.group_id,
             recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
             skill_refs: [{ skill_id: "mock_valve_control_skill_v1", skill_run_id: trace_id }],
+            skill_trace_ref: recommendationSkillTraceRef,
             metrics: { success: true, confidence: 0.9 },
             evidence_refs: evidenceRefs,
             summary: `Valve response confirmed for task ${body.act_task_id}`,
@@ -488,6 +492,7 @@ export function registerAcceptanceV1Routes(app: FastifyInstance, pool: Pool): vo
             project_id: tenant.project_id, group_id: tenant.group_id,
             recommendation_id, prescription_id, acceptance_id: acceptanceFactId,
             skill_refs: [{ skill_id: "irrigation_deficit_skill_v1", skill_run_id: trace_id }],
+            skill_trace_ref: recommendationSkillTraceRef,
             evidence_refs: evidenceRefs,
             summary: "缺水诊断能力触发后形成灌溉处方，审批通过，执行后验收通过",
           });

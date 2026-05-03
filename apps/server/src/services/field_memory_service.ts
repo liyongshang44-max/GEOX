@@ -12,7 +12,7 @@ type RecordMemoryInput = {
   operation_id?: string;
   field_id: string;
   metrics?: Record<string, unknown>;
-  skill_refs?: Array<{ skill_id?: string; skill_run_id?: string }>;
+  skill_refs?: Array<{ skill_id?: string; skill_run_id?: string; trace_id?: string }>;
   evidence_refs?: unknown[];
   prescription_id?: string;
   recommendation_id?: string;
@@ -42,7 +42,7 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
   const delta_value = num((metrics as any).soil_moisture_delta ?? (after_value != null && before_value != null ? after_value - before_value : undefined));
   const confidence = num((metrics as any).confidence) ?? 0.8;
   const skill_id = String(input.skill_refs?.[0]?.skill_id ?? "").trim() || undefined;
-  const skill_trace_ref = input.skill_trace_ref ?? (String(input.skill_refs?.[0]?.skill_run_id ?? "").trim() || undefined);
+  const skill_trace_ref = input.skill_trace_ref ?? (String(input.skill_refs?.[0]?.trace_id ?? input.skill_refs?.[0]?.skill_run_id ?? "").trim() || undefined);
   const metric_key =
     memory_type === "FIELD_RESPONSE_MEMORY" ? "soil_moisture_response" :
     memory_type === "DEVICE_RELIABILITY_MEMORY" ? "valve_response_status" :
