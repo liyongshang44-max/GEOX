@@ -21,14 +21,33 @@ ALTER TABLE field_memory_v1
   ADD COLUMN IF NOT EXISTS occurred_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
 
+DO $$
+DECLARE
+  created_at_type text;
+BEGIN
+  SELECT data_type
+    INTO created_at_type
+    FROM information_schema.columns
+   WHERE table_schema = 'public'
+     AND table_name = 'field_memory_v1'
+     AND column_name = 'created_at';
+
+  IF created_at_type = 'bigint' THEN
+    UPDATE field_memory_v1
+       SET occurred_at = COALESCE(occurred_at, to_timestamp(created_at / 1000.0));
+  ELSE
+    UPDATE field_memory_v1
+       SET occurred_at = COALESCE(occurred_at, created_at::timestamptz);
+  END IF;
+END $$;
+
 UPDATE field_memory_v1
 SET metric_key = COALESCE(metric_key, 'legacy_metric'),
     confidence = COALESCE(confidence, 0.5),
     source_type = COALESCE(source_type, 'legacy'),
     source_id = COALESCE(source_id, memory_id),
     evidence_refs = COALESCE(evidence_refs, '[]'::jsonb),
-    summary_text = COALESCE(summary_text, summary),
-    occurred_at = COALESCE(occurred_at, to_timestamp(created_at::double precision / 1000.0));
+    summary_text = COALESCE(summary_text, summary);
 
 ALTER TABLE field_memory_v1 ALTER COLUMN metric_key SET NOT NULL;
 ALTER TABLE field_memory_v1 ALTER COLUMN confidence SET NOT NULL;

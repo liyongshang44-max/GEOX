@@ -41,11 +41,21 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
 
     try {
       const result = await createRoiLedgersFromAsExecuted(pool, { ...tenant, as_executed_id, skill_trace_id, skill_refs });
+      if (!Array.isArray(result.roi_ledgers) || result.roi_ledgers.length === 0) {
+        return reply.status(422).send({ ok: false, error: "ROI_LEDGER_NOT_CREATED", reason: "UNKNOWN_EMPTY_RESULT" });
+      }
       return reply.send({ ok: true, idempotent: result.idempotent, roi_ledgers: result.roi_ledgers });
     } catch (error) {
       const code = String((error as Error)?.message ?? "");
       if (code === "AS_EXECUTED_NOT_FOUND") {
         return reply.status(404).send({ ok: false, error: code });
+      }
+      if (code.startsWith("ROI_LEDGER_NOT_CREATED:")) {
+        return reply.status(422).send({
+          ok: false,
+          error: "ROI_LEDGER_NOT_CREATED",
+          reason: code.slice("ROI_LEDGER_NOT_CREATED:".length) || "UNKNOWN",
+        });
       }
       req.log.error({ err: error }, "create roi ledger from as-executed failed");
       return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
