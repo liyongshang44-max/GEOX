@@ -226,6 +226,7 @@ async function assertProjectionTablesReady(pool) {
       tenant_id,
       project_id,
       group_id,
+      device_id,
       decision: 'APPROVE',
       reason: 'field memory acceptance',
       device_id,
