@@ -178,12 +178,12 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     const acceptanceJson = requireOk(acceptanceResp, 'acceptance');
     acceptance_id = String(acceptanceJson.fact_id ?? '').trim();
 
-    const reportResp = await fetchJson(`${base}/api/v1/customer/report/from-task`, {
-      method: 'POST', token, body: { tenant_id, project_id, group_id, act_task_id: task_id },
+    const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(operation_plan_id)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, {
+      method: 'GET', token,
     });
     const reportJson = reportResp.ok ? reportResp.json : {};
     report_payload = reportJson;
-    report_id = String(reportJson.report_id ?? reportJson.fact_id ?? '').trim();
+    report_id = String(reportJson.report_id ?? reportJson.operation_report_v1?.report_id ?? reportJson.fact_id ?? '').trim();
     if (!report_id) failureReasons.push('REPORT_ID_MISSING');
 
     const roiResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
