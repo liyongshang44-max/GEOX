@@ -219,9 +219,18 @@ async function assertProjectionTablesReady(pool) {
 
   const approval_id = String(submitJson.approval_request_id ?? '').trim();
   assert.ok(approval_id, 'approval_request_id missing before decide');
+  const decideToken = env('AO_ACT_TOKEN', adminToken);
+  process.stdout.write(JSON.stringify({
+    approval_decide_debug: {
+      token_present: Boolean(decideToken),
+      approval_id,
+      device_id,
+      required_scope: 'approval.decide'
+    }
+  }, null, 2) + '\n');
   const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
     method: 'POST',
-    token: approverToken,
+    token: decideToken,
     body: {
       tenant_id,
       project_id,
