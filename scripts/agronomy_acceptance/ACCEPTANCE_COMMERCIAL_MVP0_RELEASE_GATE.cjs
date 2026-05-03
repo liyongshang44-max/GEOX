@@ -63,6 +63,14 @@ async function existsFieldMemoryId(pool, memoryId) {
   const q = await pool.query('SELECT 1 FROM field_memory_v1 WHERE memory_id=$1 LIMIT 1', [memoryId]);
   return (q.rows?.length ?? 0) > 0;
 }
+async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+  const params = [tenant_id, project_id, group_id];
+  let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
+  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
+  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  sql += ` ORDER BY occurred_at DESC LIMIT 500`;
+  return pool.query(sql, params);
+}
 async function existsRoiLedgerId(pool, roiLedgerId) {
   const q = await pool.query('SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 LIMIT 1', [roiLedgerId]);
   return (q.rows?.length ?? 0) > 0;
@@ -159,6 +167,18 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const reportExists = isFilled(chain.report_id) ? await existsReportId(pool, chain.report_id) : false;
   const fieldMemoryExists = fieldMemoryIds.length > 0
     && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x)))).every(Boolean);
+  const scopeMemoryQ = await queryFieldMemoryByScope(pool, {
+    tenant_id: process.env.TENANT_ID || 'tenantA',
+    project_id: process.env.PROJECT_ID || 'projectA',
+    group_id: process.env.GROUP_ID || 'groupA',
+    field_id: chain.field_id || undefined,
+  });
+  const operationMemoryQ = await queryFieldMemoryByScope(pool, {
+    tenant_id: process.env.TENANT_ID || 'tenantA',
+    project_id: process.env.PROJECT_ID || 'projectA',
+    group_id: process.env.GROUP_ID || 'groupA',
+    operation_id: chain.task_id || undefined,
+  });
   const roiLedgerExists = roiLedgerIds.length > 0
     && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x)))).every(Boolean);
   const dRoiStrong = Array.isArray(irrigation?.roi_ledgers)
@@ -171,7 +191,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
 
   const checks = {
     skill_contract_gap_closure: pass(skillGap?.ok === true),
-    field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3),
+    field_memory_v1: pass(fieldMemory?.ok === true && fieldMemoryIds.length >= 3 && (scopeMemoryQ.rows?.length ?? 0) >= 3 && (operationMemoryQ.rows?.length ?? 0) >= 1 && fieldMemoryExists),
     roi_ledger_commercial_v1: pass(roiCommercial?.ok === true && roiCompatibleOk && roiLedgerIds.length > 0),
     irrigation_mvp0_closed_loop: pass(irrigation?.ok === true && coreIdsOk && skillBindingExists && skillRunExists && reportExists && fieldMemoryExists && roiLedgerExists && dRoiStrong),
     customer_report: pass(irrigation?.ok === true && isFilled(chain.report_id) && customerReportOk),

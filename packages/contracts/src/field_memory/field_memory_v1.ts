@@ -12,6 +12,8 @@ export type FieldMemoryTypeV1 = typeof FieldMemoryTypeValuesV1[number];
 export type FieldMemoryV1 = {
   memory_id: string;
   tenant_id: string;
+  project_id: string;
+  group_id: string;
   field_id: string;
   season_id?: string;
   crop_id?: string;
