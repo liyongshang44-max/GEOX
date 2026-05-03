@@ -764,6 +764,19 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
 
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
   const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied);
+  if (!candidates.length) {
+    const plannedAmount = toNum(asExecuted?.planned?.amount);
+    const plannedUnit = String(asExecuted?.planned?.unit ?? "").trim();
+    const executedAmountDirect = toNum(asExecuted?.executed?.amount);
+    const executedAmountFromUsage = toNum(asExecuted?.executed?.resource_usage?.water_l);
+    const hasExecutedWater = executedAmountDirect != null || executedAmountFromUsage != null;
+    const reason = plannedAmount == null || !plannedUnit
+      ? "MISSING_PLANNED_AMOUNT"
+      : !hasExecutedWater
+        ? "MISSING_EXECUTED_WATER"
+        : "MISSING_ACCEPTANCE";
+    throw new Error(`ROI_LEDGER_NOT_CREATED:${reason}`);
+  }
   const executionTrace = parseJsonMaybe(asExecuted?.executed?.skill_trace);
   const executionTraceId = String(asExecuted?.executed?.skill_trace_id ?? executionTrace?.trace_id ?? "").trim() || null;
   const baseSkillRefs = normalizeSkillRefs(asExecuted?.executed?.skill_refs);
