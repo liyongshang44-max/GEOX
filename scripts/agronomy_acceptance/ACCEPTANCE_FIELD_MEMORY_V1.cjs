@@ -181,6 +181,41 @@ async function assertProjectionTablesReady(pool) {
   );
 
   assert.ok(patchedApproval.rows?.length > 0, 'approval skip_auto_task_issue append fact missing');
+  const nowTs = Date.now();
+
+  await pool.query(
+    `INSERT INTO device_binding_index_v1
+      (tenant_id, device_id, field_id, bound_ts_ms)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (tenant_id, device_id, field_id) DO UPDATE
+       SET bound_ts_ms = EXCLUDED.bound_ts_ms`,
+    [tenant_id, device_id, field_id, nowTs]
+  );
+
+  await pool.query(
+    `INSERT INTO device_capability
+      (tenant_id, device_id, capabilities, updated_ts_ms)
+     VALUES ($1,$2,$3::jsonb,$4)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE
+       SET capabilities = EXCLUDED.capabilities,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, device_id, JSON.stringify(['device.irrigation.valve.open']), nowTs]
+  );
+
+  await pool.query(
+    `INSERT INTO device_status_index_v1
+      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
+     VALUES
+      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)
+     ON CONFLICT (tenant_id, device_id) DO UPDATE
+       SET project_id = EXCLUDED.project_id,
+           group_id = EXCLUDED.group_id,
+           status = 'ONLINE',
+           last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+           last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+           updated_ts_ms = EXCLUDED.updated_ts_ms`,
+    [tenant_id, project_id, group_id, device_id, nowTs]
+  );
 
   const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
     method: 'POST',
@@ -212,19 +247,9 @@ async function assertProjectionTablesReady(pool) {
   );
 
   await pool.query(
-    `DELETE FROM device_status_index_v1
-     WHERE tenant_id=$1
-       AND project_id=$2
-       AND group_id=$3
-       AND device_id=$4`,
-    [tenant_id, project_id, group_id, device_id]
-  );
-
-  await pool.query(
-    `INSERT INTO device_status_index_v1
-      (tenant_id, project_id, group_id, device_id, status, last_heartbeat_ts_ms, last_telemetry_ts_ms, updated_ts_ms)
-     VALUES
-      ($1,$2,$3,$4,'ONLINE',$5,$5,$5)`,
+    `UPDATE device_status_index_v1
+        SET status='ONLINE', updated_ts_ms=$5
+      WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3 AND device_id=$4`,
     [tenant_id, project_id, group_id, device_id, Date.now()]
   );
 
