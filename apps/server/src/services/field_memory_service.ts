@@ -24,17 +24,17 @@ type RecordMemoryInput = {
   skill_trace_ref?: string;
 };
 
-function mapType(type: RecordMemoryInput["type"]): FieldMemoryTypeV1 {
+export function normalizeMemoryType(type: string): FieldMemoryTypeV1 {
   if (type === "operation_outcome") return "FIELD_RESPONSE_MEMORY";
   if (type === "execution_reliability") return "DEVICE_RELIABILITY_MEMORY";
   if (type === "skill_performance") return "SKILL_PERFORMANCE_MEMORY";
-  return type;
+  return type as FieldMemoryTypeV1;
 }
 
 function num(v: unknown): number | undefined { const n = Number(v); return Number.isFinite(n) ? n : undefined; }
 
 export async function recordMemoryV1(db: DbConn, tenant_id: string, input: RecordMemoryInput): Promise<FieldMemoryV1> {
-  const memory_type = mapType(input.type);
+  const memory_type = normalizeMemoryType(input.type);
   const memory_id = crypto.randomUUID();
   const metrics = input.metrics ?? {};
   const before_value = num((metrics as any).before_soil_moisture ?? (metrics as any).before_value);
