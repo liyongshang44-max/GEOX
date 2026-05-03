@@ -128,14 +128,11 @@ export default function OperationReportPage(): React.ReactElement {
         <div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div>
       </SectionCard>
 
-      <div className="muted" style={{ marginTop: 8 }}>
-        内部编号：{vm.header.internalId}
-      </div>
-
       <details>
         <summary>内部调试信息（非客户展示）</summary>
         <SectionCard title="标识信息">
           <div className="kvGrid2">
+            <div><strong>内部编号：</strong>{vm.header.internalId}</div>
             <div><strong>operation_plan_id：</strong>{vm.debug.operationPlanId}</div>
             <div><strong>operation_id：</strong>{vm.debug.operationId}</div>
             <div><strong>act_task_id：</strong>{vm.debug.actTaskId}</div>

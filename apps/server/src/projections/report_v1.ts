@@ -10,6 +10,7 @@ export type FieldMemorySummary = {
   before_value?: number | null;
   after_value?: number | null;
   delta_value?: number | null;
+  target_range?: { min?: number | null; max?: number | null } | null;
   confidence: number;
   summary_text: string;
   evidence_refs: unknown[];

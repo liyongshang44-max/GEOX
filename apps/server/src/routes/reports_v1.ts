@@ -354,7 +354,7 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       (state.acceptance as any)?.acceptance_id,
     ].map((x) => String(x ?? "").trim()).filter(Boolean)));
     const fm = await pool.query(
-      `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
+      `SELECT memory_id,memory_type,metric_key,before_value,after_value,delta_value,target_range,confidence,summary_text,evidence_refs,skill_id,skill_trace_ref,occurred_at
        FROM field_memory_v1
        WHERE tenant_id = $1
          AND (
