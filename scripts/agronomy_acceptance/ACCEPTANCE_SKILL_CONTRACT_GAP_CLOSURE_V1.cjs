@@ -311,10 +311,17 @@ async function main() {
       },
     });
     const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
-    const skillRunsRead = await fetchJson(`${base}/api/v1/skill-runs?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&field_id=${encodeURIComponent(field_id)}&device_id=${encodeURIComponent(device_id)}&category=device&limit=20`, { token });
-    const skillRunsJson = requireOk(skillRunsRead, 'skill runs read');
-    const skillRunItem = (Array.isArray(skillRunsJson.items) ? skillRunsJson.items : []).find((x) => String(x?.skill_id ?? '') === 'mock_valve_control_skill_v1');
-    ids.skill_run_id = String(executeSkillJson.skill_run_id ?? executeSkillJson.run_id ?? skillRunItem?.skill_run_id ?? '').trim();
+    ids.skill_run_id = String(
+      executeSkillJson.skill_run_id
+      ?? executeSkillJson.run_id
+      ?? ''
+    ).trim();
+    if (!ids.skill_run_id) {
+      const skillRunsRead = await fetchJson(`${base}/api/v1/skill-runs?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}&field_id=${encodeURIComponent(field_id)}&device_id=${encodeURIComponent(device_id)}&category=device&limit=20`, { token });
+      const skillRunsJson = requireOk(skillRunsRead, 'skill runs read');
+      const skillRunItem = (Array.isArray(skillRunsJson.items) ? skillRunsJson.items : []).find((x) => String(x?.skill_id ?? '') === 'mock_valve_control_skill_v1');
+      ids.skill_run_id = String(skillRunItem?.skill_run_id ?? '').trim();
+    }
     checks.mock_valve_skill_run_created = toPassFail(ids.skill_run_id.length > 0);
 
     const taskFactQ = await pool.query(
@@ -357,9 +364,9 @@ async function main() {
         executor_id: { kind: 'script', id: 'qa', namespace: 'qa' },
         execution_time: { start_ts: Date.now() - 10000, end_ts: Date.now() - 1000 },
         execution_coverage: { kind: 'field', ref: field_id },
-        resource_usage: { water_l: 20 }, observed_parameters: { amount: 20, duration_min: 20, prescription_id: ids.prescription_id },
+        resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 }, observed_parameters: { amount: 20, duration_min: 20 },
         evidence_refs: [{ kind: 'sensor', ref: `ev_${suffix}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${suffix}` }, { kind: 'valve_open_confirmation', ref: `valve_${suffix}` }, { kind: 'water_delivery_receipt', ref: `water_${suffix}` }],
-        status: 'executed', constraint_check: { violated: false, violations: [] }, meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_id: 'irrigation_deficit_skill_v1', skill_trace_ref: ids.skill_trace_id },
+        status: 'executed', constraint_check: { violated: false, violations: [] }, meta: { idempotency_key: `gap_receipt_${suffix}`, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_id: 'irrigation_deficit_skill_v1', skill_trace_ref: ids.skill_trace_id },
       },
     });
     const receipt_fact_id = String(receipt.json?.fact_id ?? '');
