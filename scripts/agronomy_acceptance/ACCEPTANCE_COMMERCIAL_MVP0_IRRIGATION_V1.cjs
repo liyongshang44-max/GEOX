@@ -242,11 +242,26 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 
   // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
+  const report = reportJson.operation_report_v1 ?? {};
+  const customerTextFields = [
+    report.customer_title,
+    report.operation_title,
+    report.why?.explain_human,
+    report.why?.objective_text,
+    ...(report.field_memory?.field_response_memory ?? []).map((x) => x.summary_text),
+    ...(report.field_memory?.device_reliability_memory ?? []).map((x) => x.summary_text),
+    ...(report.field_memory?.skill_performance_memory ?? []).map((x) => x.summary_text),
+    ...(report.roi_ledger?.water_saved ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.labor_saved ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.early_warning_lead_time ?? []).map((x) => x.customer_text),
+    ...(report.roi_ledger?.first_pass_acceptance_rate ?? []).map((x) => x.customer_text),
+  ].filter(Boolean);
+  const customerTextBlob = customerTextFields.join('\n');
   const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
   const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
   const reportSummaryHasConfidence = /confidence/i.test(reportBlob);
   const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
-  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
+  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b|\bSUCCESS\b|\bPENDING_ACCEPTANCE\b/.test(customerTextBlob);
 
   const chain_summary = {
     field_id,
