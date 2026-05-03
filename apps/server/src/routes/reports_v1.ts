@@ -145,6 +145,35 @@ function ensureReportV1ExtendedFields(report: OperationReportV1): OperationRepor
   };
 }
 
+function toFiniteNumberOrNull(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function buildFieldResponseSummaryText(row: any): string {
+  const before = toFiniteNumberOrNull(row?.before_value);
+  const after = toFiniteNumberOrNull(row?.after_value);
+  const delta = toFiniteNumberOrNull(row?.delta_value) ?? (before != null && after != null ? Number((after - before).toFixed(2)) : null);
+  if (before == null || after == null || delta == null) return String(row?.summary_text ?? "").trim() || "灌后响应已记录";
+  const deltaText = `${delta >= 0 ? "+" : ""}${Number(delta.toFixed(2)).toString()}`;
+  return `土壤湿度从 ${before}% 回升到 ${after}%，变化 ${deltaText} 个百分点`;
+}
+
+function normalizeFieldMemoryRow(row: any): any {
+  const before = toFiniteNumberOrNull(row?.before_value);
+  const after = toFiniteNumberOrNull(row?.after_value);
+  const delta = toFiniteNumberOrNull(row?.delta_value)
+    ?? (before != null && after != null ? Number((after - before).toFixed(2)) : null);
+  return {
+    ...row,
+    before_value: before,
+    after_value: after,
+    delta_value: delta,
+    summary_text: String(row?.summary_text ?? "").trim() || (row?.memory_type === "FIELD_RESPONSE_MEMORY" ? buildFieldResponseSummaryText(row) : "田间记忆已记录"),
+    customer_text: row?.memory_type === "FIELD_RESPONSE_MEMORY" ? buildFieldResponseSummaryText({ ...row, delta_value: delta }) : undefined,
+  };
+}
+
 function buildResponseTimeMs(state: OperationStateV1, executionStartedAt: string | null): number | null {
   const dispatchedTs = state.timeline.find((item) => item.type === "TASK_CREATED")?.ts ?? null;
   const executionStartedTs = executionStartedAt ? Date.parse(executionStartedAt) : NaN;
@@ -370,10 +399,11 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       [tenant.tenant_id, tenant.project_id, tenant.group_id, candidateIds],
     );
     const enrichedReport = ensureReportV1ExtendedFields(operation_report_v1);
+    const normalizedMemoryRows = (fm.rows ?? []).map((x: any) => normalizeFieldMemoryRow(x));
     enrichedReport.field_memory = {
-      field_response_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
-      device_reliability_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
-      skill_performance_memory: (fm.rows ?? []).filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
+      field_response_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="FIELD_RESPONSE_MEMORY"),
+      device_reliability_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="DEVICE_RELIABILITY_MEMORY"),
+      skill_performance_memory: normalizedMemoryRows.filter((x:any)=>x.memory_type==="SKILL_PERFORMANCE_MEMORY"),
     };
     const roiRows = Array.isArray(enrichedReport.roi_ledger?.water_saved)
       ? [
