@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS field_memory_v1 (
   metrics JSONB,
   skill_refs JSONB,
   evidence_refs JSONB,
-  created_at BIGINT NOT NULL
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS device_observation_index_v1 (
