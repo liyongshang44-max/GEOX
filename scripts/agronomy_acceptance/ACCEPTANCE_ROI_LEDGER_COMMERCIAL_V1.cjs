@@ -123,6 +123,18 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     body: { as_executed_id, tenant_id, project_id, group_id, skill_trace_id: `trace_roi_${suffix}`, skill_refs: [{ skill_id: 'irrigation_deficit_skill_v1', skill_version: 'v1', trace_id: `trace_roi_${suffix}` }] },
   });
   const createJson = requireOk(createResp, 'create roi ledger from as-executed');
+  process.stdout.write(JSON.stringify({
+    roi_debug: {
+      as_executed_id,
+      create_status: createResp.status,
+      create_json: createResp.json,
+      ledgers_count: Array.isArray(createResp.json?.roi_ledgers) ? createResp.json.roi_ledgers.length : -1,
+      task_id,
+      receipt_fact_id,
+      prescription_id,
+      operation_plan_id,
+    }
+  }, null, 2) + "\n");
 
   const createAgainResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
@@ -158,6 +170,15 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
   const ledgers = Array.isArray(createJson.roi_ledgers) ? createJson.roi_ledgers : [];
   assert.equal(createJson.ok, true, 'from-as-executed must return ok=true');
   const hasWaterSaved = ledgers.some((x) => x?.roi_type === 'WATER_SAVED');
+  const hasWaterSavedContract = ledgers.some((x) =>
+    x?.roi_type === 'WATER_SAVED'
+    && x?.baseline
+    && x?.actual
+    && x?.delta
+    && x?.confidence
+    && Array.isArray(x?.evidence_refs)
+    && (String(x?.source_skill_id ?? '').length > 0 || String(x?.skill_trace_ref ?? '').length > 0)
+  );
   const hasFirstPass = ledgers.some((x) => x?.roi_type === 'FIRST_PASS_ACCEPTANCE_RATE');
   const hasBaselineActualDelta = ledgers.some((x) => x?.baseline && x?.actual && x?.delta);
   const hasEvidenceRefs = ledgers.some((x) => Array.isArray(x?.evidence_refs) && x.evidence_refs.length > 0);
@@ -229,6 +250,7 @@ const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
     created_from_as_executed: Boolean(createJson.ok === true && ledgers.length > 0),
     idempotent: Boolean(createAgainJson.ok === true && createAgainJson.idempotent === true),
     water_saved_generated: Boolean(hasWaterSaved),
+    water_saved_contract_complete: Boolean(hasWaterSavedContract),
     first_pass_acceptance_rate_generated_optional: Boolean(!hasFirstPass || hasFirstPass),
     read_by_as_executed: Boolean(Array.isArray(readByAsExecutedJson.roi_ledgers) && readByAsExecutedJson.roi_ledgers.length > 0),
     read_by_task: Boolean(Array.isArray(readByTaskJson.roi_ledgers) && readByTaskJson.roi_ledgers.length > 0),
