@@ -3,6 +3,88 @@ const { Pool } = require('pg');
 const { env, fetchJson } = require('./_common.cjs');
 
 const TASK_NAME = 'COMMERCIAL_MVP0_B_SKILL_CONTRACT_GAP_CLOSURE_FIX';
+function buildIrrigationReceiptBody({
+  tenant_id,
+  project_id,
+  group_id,
+  operation_plan_id,
+  act_task_id,
+  field_id,
+  suffix,
+  recommendation_id,
+  prescription_id,
+  skill_trace_ref,
+  water_l = 20,
+  amount = 20,
+  coverage_percent = 90,
+  duration_min = 20,
+}) {
+  return {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id,
+    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    execution_coverage: { kind: 'field', ref: field_id },
+    resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
+    observed_parameters: { amount, coverage_percent, duration_min },
+    evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
+    logs_refs: [
+      { kind: 'dispatch_ack', ref: `ack_${suffix}` },
+      { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
+      { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+    ],
+    status: 'executed',
+    constraint_check: { violated: false, violations: [] },
+    meta: {
+      command_id: act_task_id,
+      idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      recommendation_id,
+      prescription_id,
+      skill_id: 'irrigation_deficit_skill_v1',
+      skill_trace_ref,
+    },
+  };
+}
+async function executeMockValveSkill({
+  base,
+  token,
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  device_id,
+  operation_plan_id,
+  task_id,
+  approval_id,
+}) {
+  return fetchJson(`${base}/api/v1/skill/execute`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
+      field_id,
+      device_id,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
+  });
+}
 
 function toPassFail(v) { return v ? 'PASS' : 'FAIL'; }
 function requireOk(resp, label) {
@@ -301,14 +383,17 @@ async function main() {
     }
     ids.task_id = String(taskResp.json?.act_task_id ?? '');
 
-    const runResp = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
-      method: 'POST', token,
-      body: {
-        tenant_id, project_id, group_id,
-        skill_id: 'mock_valve_control_skill_v1', version: 'v1', category: 'DEVICE', bind_target: 'mock_valve',
-        field_id, device_id, operation_id: operation_plan_id, operation_plan_id,
-        input: { task_id: ids.task_id, approval_id: ids.approval_id, command: 'OPEN', duration_sec: 1200, required_capabilities: ['device.irrigation.valve.open'] },
-      },
+    const executeSkill = await executeMockValveSkill({
+      base,
+      token,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      operation_plan_id,
+      task_id: ids.task_id,
+      approval_id: ids.approval_id,
     });
     const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
     ids.skill_run_id = String(
@@ -359,15 +444,10 @@ async function main() {
 
     const receipt = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
-      body: {
-        tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id,
-        executor_id: { kind: 'script', id: 'qa', namespace: 'qa' },
-        execution_time: { start_ts: Date.now() - 10000, end_ts: Date.now() - 1000 },
-        execution_coverage: { kind: 'field', ref: field_id },
-        resource_usage: { water_l: 20, fuel_l: 0, electric_kwh: 0, chemical_ml: 0 }, observed_parameters: { amount: 20, duration_min: 20 },
-        evidence_refs: [{ kind: 'sensor', ref: `ev_${suffix}` }], logs_refs: [{ kind: 'dispatch_ack', ref: `ack_${suffix}` }, { kind: 'valve_open_confirmation', ref: `valve_${suffix}` }, { kind: 'water_delivery_receipt', ref: `water_${suffix}` }],
-        status: 'executed', constraint_check: { violated: false, violations: [] }, meta: { idempotency_key: `gap_receipt_${suffix}`, recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_id: 'irrigation_deficit_skill_v1', skill_trace_ref: ids.skill_trace_id },
-      },
+      body: buildIrrigationReceiptBody({
+        tenant_id, project_id, group_id, operation_plan_id, act_task_id: ids.task_id, field_id, suffix,
+        recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id,
+      }),
     });
     const receipt_fact_id = String(receipt.json?.fact_id ?? '');
     if (receipt_fact_id) {
