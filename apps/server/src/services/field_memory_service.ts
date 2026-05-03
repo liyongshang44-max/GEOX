@@ -7,6 +7,8 @@ type DbConn = Pool | PoolClient;
 
 type RecordMemoryInput = {
   type: "operation_outcome" | "execution_reliability" | "skill_performance" | FieldMemoryTypeV1;
+  project_id?: string;
+  group_id?: string;
   operation_id?: string;
   field_id: string;
   metrics?: Record<string, unknown>;
@@ -53,28 +55,28 @@ export async function recordMemoryV1(db: DbConn, tenant_id: string, input: Recor
 
   await db.query(
     `INSERT INTO field_memory_v1 (
-      memory_id, tenant_id, field_id, season_id, crop_id, memory_type, metric_key, metric_value, metric_unit,
+      memory_id, tenant_id, project_id, group_id, field_id, season_id, crop_id, memory_type, metric_key, metric_value, metric_unit,
       before_value, after_value, baseline_value, delta_value, target_range, confidence, source_type, source_id,
       operation_id, recommendation_id, prescription_id, task_id, acceptance_id, roi_id, skill_id, skill_trace_ref,
       evidence_refs, summary_text, occurred_at
     ) VALUES (
-      $1,$2,$3,$4,$5,$6,$7,$8,$9,
-      $10,$11,$12,$13,$14::jsonb,$15,$16,$17,
-      $18,$19,$20,$21,$22,$23,$24,$25,
-      $26::jsonb,$27,$28
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,
+      $12,$13,$14,$15,$16::jsonb,$17,$18,$19,
+      $20,$21,$22,$23,$24,$25,$26,$27,
+      $28::jsonb,$29,$30
     )`,
     [
-      memory_id, tenant_id, input.field_id, input.season_id ?? null, null, memory_type, metric_key, metric_value ?? null, null,
-      before_value ?? null, after_value ?? null, null, delta_value ?? null, JSON.stringify((metrics as any).target_range ?? null), confidence,
-      memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance", input.acceptance_id ?? input.operation_id ?? memory_id,
-      input.operation_id ?? null, input.recommendation_id ?? null, input.prescription_id ?? null, input.task_id ?? null,
-      input.acceptance_id ?? null, input.roi_id ?? null, skill_id ?? null, skill_trace_ref ?? null,
-      JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
+      memory_id, tenant_id, input.project_id ?? "projectA", input.group_id ?? "groupA", input.field_id, input.season_id ?? null, null,
+      memory_type, metric_key, metric_value ?? null, null, before_value ?? null, after_value ?? null, null, delta_value ?? null,
+      JSON.stringify((metrics as any).target_range ?? null), confidence, memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance",
+      input.acceptance_id ?? input.operation_id ?? memory_id, input.operation_id ?? null, input.recommendation_id ?? null,
+      input.prescription_id ?? null, input.task_id ?? null, input.acceptance_id ?? null, input.roi_id ?? null, skill_id ?? null,
+      skill_trace_ref ?? null, JSON.stringify(input.evidence_refs ?? []), summary_text, occurred_at,
     ],
   );
 
   return {
-    memory_id, tenant_id, field_id: input.field_id, season_id: input.season_id, memory_type,
+    memory_id, tenant_id, project_id: input.project_id ?? "projectA", group_id: input.group_id ?? "groupA", field_id: input.field_id, season_id: input.season_id, memory_type,
     metric_key, metric_value, before_value, after_value, delta_value, confidence,
     source_type: memory_type === "DEVICE_RELIABILITY_MEMORY" ? "skill_run" : "acceptance",
     source_id: input.acceptance_id ?? input.operation_id ?? memory_id,
