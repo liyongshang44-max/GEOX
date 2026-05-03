@@ -12,6 +12,7 @@ function buildIrrigationReceiptBody({
   recommendation_id,
   prescription_id,
   skill_trace_ref,
+  idempotency_key,
   water_l = 20,
   amount = 20,
   coverage_percent = 90,
@@ -38,7 +39,7 @@ function buildIrrigationReceiptBody({
     constraint_check: { violated: false, violations: [] },
     meta: {
       command_id: act_task_id,
-      idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      idempotency_key: idempotency_key ?? `receipt_${act_task_id}_${suffix}`,
       recommendation_id,
       prescription_id,
       skill_id: 'irrigation_deficit_skill_v1',
@@ -208,7 +209,7 @@ function buildIrrigationReceiptBody({
     token,
     body: buildIrrigationReceiptBody({
       tenant_id, project_id, group_id, operation_plan_id, act_task_id, field_id, suffix,
-      recommendation_id, prescription_id, skill_trace_ref, coverage_percent: 88,
+      recommendation_id, prescription_id, skill_trace_ref, idempotency_key: receipt_idempotency_key, coverage_percent: 88,
     }),
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
