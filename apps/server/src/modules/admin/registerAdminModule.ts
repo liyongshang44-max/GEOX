@@ -21,6 +21,16 @@ const REQUIRED_TABLE_COLUMNS: Record<string, string[]> = {
     "observed_at_ts_ms", "value_num", "confidence", "fact_id",
   ],
 };
+const REQUIRED_COLUMN_TYPES: Record<string, Record<string, string>> = {
+  field_memory_v1: {
+    created_at: "timestamp with time zone",
+    occurred_at: "timestamp with time zone",
+    confidence: "numeric",
+  },
+  device_observation_index_v1: {
+    observed_at_ts_ms: "bigint",
+  },
+};
 
 export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
   app.get("/health", async () => ({ ok: true }));
@@ -30,6 +40,7 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
     const missing_tables: string[] = [];
     const missing_views: string[] = [];
     const missing_table_columns: Record<string, string[]> = {};
+    const invalid_column_types: Record<string, Record<string, { expected: string; actual: string }>> = {};
 
     try {
       await pool.query("select now() as now, version() as version");
@@ -67,12 +78,35 @@ export function registerAdminModule(app: FastifyInstance, pool: Pool): void {
       }
       if (missingColumns.length > 0) missing_table_columns[tableName] = missingColumns;
     }
+    for (const [tableName, typeMap] of Object.entries(REQUIRED_COLUMN_TYPES)) {
+      const tableExists = await pool.query("select to_regclass($1) as reg", [`public.${tableName}`]);
+      if (!tableExists.rows?.[0]?.reg) continue;
+      for (const [columnName, expectedType] of Object.entries(typeMap)) {
+        const colType = await pool.query(
+          `SELECT data_type
+             FROM information_schema.columns
+            WHERE table_schema='public' AND table_name=$1 AND column_name=$2
+            LIMIT 1`,
+          [tableName, columnName]
+        );
+        const actualType = String(colType.rows?.[0]?.data_type ?? "").trim().toLowerCase();
+        if (!actualType) continue;
+        if (actualType !== expectedType) {
+          if (!invalid_column_types[tableName]) invalid_column_types[tableName] = {};
+          invalid_column_types[tableName][columnName] = { expected: expectedType, actual: actualType };
+        }
+      }
+    }
 
     return reply.send({
-      ok: missing_tables.length === 0 && missing_views.length === 0 && Object.keys(missing_table_columns).length === 0,
+      ok: missing_tables.length === 0
+        && missing_views.length === 0
+        && Object.keys(missing_table_columns).length === 0
+        && Object.keys(invalid_column_types).length === 0,
       missing_tables,
       missing_views,
       missing_table_columns,
+      invalid_column_types,
       runtime_security: getRuntimeSecurityStatusV1(),
     });
   });
