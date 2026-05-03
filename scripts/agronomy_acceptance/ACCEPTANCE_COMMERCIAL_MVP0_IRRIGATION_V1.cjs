@@ -242,7 +242,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 
   // Keep a single declaration block to avoid duplicate-identifier syntax errors.
   const reportBlob = JSON.stringify(report_payload ?? {});
-  const report = reportJson.operation_report_v1 ?? {};
+  const report = report_payload?.operation_report_v1 ?? {};
   const customerTextFields = [
     report.customer_title,
     report.operation_title,
