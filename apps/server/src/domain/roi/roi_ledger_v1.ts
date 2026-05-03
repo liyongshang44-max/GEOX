@@ -87,6 +87,11 @@ type AsAppliedRow = {
 };
 
 type RoiCandidate = {
+  task_id?: string | null;
+  as_executed_id?: string | null;
+  prescription_id?: string | null;
+  field_id?: string | null;
+
   roi_type: string;
   baseline_type?: RoiBaselineTypeV1;
   baseline_value?: number | null;
@@ -286,6 +291,7 @@ export function computeWaterSavedEntry(asExecuted: AsExecutedRow): RoiCandidate 
   const delta = plannedAmount - executedAmount;
   return {
     roi_type: "WATER_SAVED",
+    source_skill_id: "irrigation_deficit_skill_v1",
     baseline: {
       source: "prescription_planned_amount",
       amount: plannedAmount,
@@ -389,7 +395,7 @@ export function computeExecutionReliabilityEntry(asExecuted: AsExecutedRow): Roi
 
   return {
     roi_type: "FIRST_PASS_ACCEPTANCE_RATE",
-    baseline: {},
+    baseline: { source: "first_pass_acceptance_target", rate: 1 },
     actual: { status, sentiment },
     delta: {},
     confidence: buildConfidence({
@@ -534,12 +540,19 @@ export function computeVariableExecutionReliabilityEntry(asExecuted: AsExecutedR
 }
 
 
-function enrichCommercialFields(entry: RoiCandidate): RoiCandidate {
+function enrichCommercialFields(entry: RoiCandidate, context?: {
+  skill_trace_id?: string | null;
+  skill_refs?: SkillRefV1[];
+  asExecuted?: AsExecutedRow;
+}): RoiCandidate {
   const baseline_value = toNum((entry.baseline as any)?.amount ?? (entry.baseline as any)?.total_planned_amount) ?? null;
   const actual_value = toNum((entry.actual as any)?.amount ?? (entry.actual as any)?.total_applied_amount) ?? null;
   const delta_value = toNum((entry.delta as any)?.amount) ?? (baseline_value != null && actual_value != null ? baseline_value - actual_value : null);
   const unit = String((entry.delta as any)?.unit ?? (entry.actual as any)?.unit ?? (entry.baseline as any)?.unit ?? "").trim() || null;
   const value_kind: RoiValueKindV1 = entry.confidence?.basis === "measured" ? "MEASURED" : entry.confidence?.basis === "estimated" ? "ESTIMATED" : "ASSUMPTION_BASED";
+  const fallbackSkillId = String(context?.skill_refs?.[0]?.skill_id ?? "").trim() || null;
+  const asExecuted = context?.asExecuted;
+  const fallbackFieldMemoryRefs = normalizeEvidenceRefs(asExecuted?.executed?.field_memory_refs);
   return {
     ...entry,
     baseline_type: entry.baseline_type ?? "SEASON_PLAN",
@@ -550,13 +563,17 @@ function enrichCommercialFields(entry: RoiCandidate): RoiCandidate {
     unit: entry.unit ?? unit,
     estimated_money_value: entry.estimated_money_value ?? null,
     currency: entry.currency ?? null,
-    source_skill_id: entry.source_skill_id ?? (String((entry.assumptions as any)?.source_skill_id ?? "").trim() || null),
-    skill_trace_ref: entry.skill_trace_ref ?? (String((entry.assumptions as any)?.trace_id ?? "").trim() || null),
-    field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : []),
+    source_skill_id: entry.source_skill_id ?? (String((entry.assumptions as any)?.source_skill_id ?? "").trim() || fallbackSkillId),
+    skill_trace_ref: entry.skill_trace_ref ?? (String(context?.skill_trace_id ?? "").trim() || String((entry.assumptions as any)?.trace_id ?? "").trim() || null),
+    field_memory_refs: Array.isArray(entry.field_memory_refs) ? entry.field_memory_refs : (Array.isArray((entry.actual as any)?.field_memory_refs) ? (entry.actual as any).field_memory_refs : fallbackFieldMemoryRefs),
+    task_id: entry.task_id ?? asExecuted?.task_id ?? null,
+    as_executed_id: entry.as_executed_id ?? asExecuted?.as_executed_id ?? null,
+    prescription_id: entry.prescription_id ?? asExecuted?.prescription_id ?? null,
+    field_id: entry.field_id ?? asExecuted?.field_id ?? null,
     value_kind: entry.value_kind ?? value_kind,
   };
 }
-export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow, asApplied?: AsAppliedRow | null): RoiCandidate[] {
+export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow, asApplied?: AsAppliedRow | null, context?: { skill_trace_id?: string | null; skill_refs?: SkillRefV1[] }): RoiCandidate[] {
   const entries: RoiCandidate[] = [];
   const variableWaterSaved = computeVariableWaterSavedEntry(asExecuted, asApplied ?? null);
   if (variableWaterSaved) entries.push(variableWaterSaved);
@@ -580,7 +597,7 @@ export function computeRoiLedgerEntriesFromAsExecuted(asExecuted: AsExecutedRow,
 
   const allowedMvp0 = new Set(["WATER_SAVED", "LABOR_SAVED", "EARLY_WARNING_LEAD_TIME", "FIRST_PASS_ACCEPTANCE_RATE"]);
   // 商业可信度门禁：MVP-0 只保留允许类型，且必须具备 baseline/confidence/evidence，并满足 value_kind 约束。
-  return entries.map(enrichCommercialFields).filter((entry) => {
+  return entries.map((entry) => enrichCommercialFields(entry, { ...context, asExecuted })).filter((entry) => {
     if (!allowedMvp0.has(entry.roi_type)) return false;
     const hasEvidence = Array.isArray(entry.evidence_refs) && entry.evidence_refs.length > 0;
     const hasBaseline = entry.baseline_value != null;
@@ -817,7 +834,10 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
   }
 
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
-  const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied);
+  const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied, {
+    skill_trace_id: input.skill_trace_id ?? null,
+    skill_refs: input.skill_refs ?? [],
+  });
   if (!candidates.length) {
     const plannedAmount = toNum(asExecuted?.planned?.amount);
     const plannedUnit = String(asExecuted?.planned?.unit ?? "").trim();
