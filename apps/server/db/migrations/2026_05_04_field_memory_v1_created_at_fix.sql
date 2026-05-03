@@ -20,3 +20,18 @@ BEGIN
     ALTER TABLE field_memory_v1 ALTER COLUMN created_at SET NOT NULL;
   END IF;
 END $$;
+
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'field_memory_v1'
+       AND column_name = 'created_at_legacy_ms'
+  ) THEN
+    ALTER TABLE field_memory_v1
+      ALTER COLUMN created_at_legacy_ms DROP NOT NULL;
+  END IF;
+END $$;
