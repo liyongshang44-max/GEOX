@@ -329,21 +329,31 @@ async function assertProjectionTablesReady(pool) {
   const taskSkillBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
   process.stdout.write(`${JSON.stringify({ task_skill_binding_evidence: taskSkillBindingEvidence }, null, 2)}\n`);
 
-  const mockValveRun = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
+  const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
     method: 'POST',
     token: adminToken,
     body: {
       tenant_id,
       project_id,
       group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
       field_id,
       device_id,
-      act_task_id: actTaskId,
-      command: 'OPEN',
-      duration_sec: 1200,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id: actTaskId,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      }
     }
   });
-  requireOk(mockValveRun, 'mock valve control run');
+  requireOk(executeSkill, 'mock valve skill execute');
 
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
