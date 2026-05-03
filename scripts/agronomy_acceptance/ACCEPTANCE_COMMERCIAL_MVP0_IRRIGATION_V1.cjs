@@ -225,39 +225,6 @@ function hasValidRoiConfidence(confidence) {
   const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
   const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
 
-  if (task_id) {
-    const taskFactQ = await pool.query(
-      `SELECT record_json::jsonb AS record_json
-         FROM facts
-        WHERE (record_json::jsonb->>'type')='ao_act_task_v0'
-          AND (record_json::jsonb#>>'{payload,act_task_id}')=$1
-        ORDER BY occurred_at DESC LIMIT 1`,
-      [task_id]
-    );
-    const ev = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
-    skill_binding_id = String(ev.skill_binding_id ?? ev.skill_binding_fact_id ?? '').trim();
-    if (!skill_binding_id) failureReasons.push('SKILL_BINDING_MISSING');
-  }
-
-  const reportBlob = JSON.stringify(report_payload ?? {});
-  const reportContainsFieldMemory = /field[_\s-]*memory/i.test(reportBlob);
-  const reportContainsROI = /roi|return[_\s-]*on[_\s-]*investment/i.test(reportBlob);
-  const reportSummaryHasConfidence = /confidence/i.test(reportBlob);
-  const reportSummaryHasCustomerText = /summary|narrative|customer|insight|recommend/i.test(reportBlob);
-  const noRawEnumInCustomerReport = !/\bPASS\b|\bFAIL\b|\bUNKNOWN\b/.test(reportBlob);
-
-  const blocked = failureReasons.length > 0;
-  if (!blocked) {
-    assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
-  }
-  if (blocked && acceptance_id) {
-    const q = await pool.query(`SELECT record_json::jsonb AS record_json FROM facts WHERE fact_id=$1 LIMIT 1`, [acceptance_id]);
-    const verdict = String(q.rows?.[0]?.record_json?.payload?.verdict ?? '').toUpperCase();
-    assert.notEqual(verdict, 'PASS', 'failure path must not produce PASS acceptance');
-  }
-
-  const failure_audit_summary = failureReasons.map((reason) => ({ reason, blocked: true, degraded: reason === 'LOW_CONFIDENCE_ROI' }));
-
   const chain_summary = {
     field_id,
     observation_id,
@@ -276,6 +243,17 @@ function hasValidRoiConfidence(confidence) {
     field_memory_ids,
     roi_ledger_ids,
   };
+
+  const blocked = failureReasons.length > 0;
+  if (!blocked) {
+    assert.ok(field_memory_ids.length >= 3, 'Field Memory less than 3');
+  }
+  if (blocked && acceptance_id) {
+    const q = await pool.query(`SELECT record_json::jsonb AS record_json FROM facts WHERE fact_id=$1 LIMIT 1`, [acceptance_id]);
+    const verdict = String(q.rows?.[0]?.record_json?.payload?.verdict ?? '').toUpperCase();
+    assert.notEqual(verdict, 'PASS', 'failure path must not produce PASS acceptance');
+  }
+  const failure_audit_summary = failureReasons.map((reason) => ({ reason, blocked: true, degraded: reason === 'LOW_CONFIDENCE_ROI' }));
 
   const checks = {
     no_skill_trace: Boolean(skill_trace_id),
