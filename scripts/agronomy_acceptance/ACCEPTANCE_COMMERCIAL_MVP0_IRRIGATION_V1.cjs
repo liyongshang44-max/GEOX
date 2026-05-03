@@ -328,10 +328,9 @@ async function assertFieldMemoryIdsExist(pool, ids) {
       task_id,
       approval_id,
     });
-    const executeSkillJson = executeSkill.ok ? executeSkill.json : { ok: false, reason: 'DEVICE_OFFLINE' };
+    const executeSkillJson = requireOk(executeSkill, 'mock valve skill execute');
     skill_run_id = String(executeSkillJson.skill_run_id ?? executeSkillJson.run_id ?? '').trim();
     if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
-    if (!executeSkill.ok) failureReasons.push('DEVICE_OFFLINE');
 
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
