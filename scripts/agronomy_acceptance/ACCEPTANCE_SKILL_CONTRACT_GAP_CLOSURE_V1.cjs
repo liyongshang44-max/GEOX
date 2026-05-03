@@ -35,6 +35,7 @@ async function main() {
     field_memory_refs_skill_id: 'FAIL',
     roi_refs_skill_trace_or_source_skill: 'FAIL',
     approval_required_before_device_skill: 'FAIL',
+    memory_query_by_operation: 'FAIL',
   };
   const failure_paths = {
     device_skill_blocked_without_approval: 'FAIL',
@@ -92,6 +93,31 @@ async function main() {
        ON CONFLICT DO NOTHING`,
       [tenant_id, project_id, group_id, field_id, device_id, Date.now(), 0.16, `obs_gap_${randomUUID()}`]
     );
+    const deviceNow = Date.now();
+    await pool.query(
+      `INSERT INTO device_status_index_v1
+        (tenant_id, project_id, group_id, device_id, last_telemetry_ts_ms, last_heartbeat_ts_ms, battery_percent, rssi_dbm, fw_ver, updated_ts_ms)
+       VALUES ($1,$2,$3,$4,$5,$5,95,-55,'mvp0-test',$5)
+       ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+         project_id = EXCLUDED.project_id,
+         group_id = EXCLUDED.group_id,
+         last_telemetry_ts_ms = EXCLUDED.last_telemetry_ts_ms,
+         last_heartbeat_ts_ms = EXCLUDED.last_heartbeat_ts_ms,
+         battery_percent = EXCLUDED.battery_percent,
+         rssi_dbm = EXCLUDED.rssi_dbm,
+         fw_ver = EXCLUDED.fw_ver,
+         updated_ts_ms = EXCLUDED.updated_ts_ms`,
+      [tenant_id, project_id, group_id, device_id, deviceNow]
+    );
+    await pool.query(
+      `INSERT INTO device_capability
+        (tenant_id, device_id, capabilities, updated_ts_ms)
+       VALUES ($1,$2,$3::jsonb,$4)
+       ON CONFLICT (tenant_id, device_id) DO UPDATE SET
+         capabilities = EXCLUDED.capabilities,
+         updated_ts_ms = EXCLUDED.updated_ts_ms`,
+      [tenant_id, device_id, JSON.stringify(['device.irrigation.valve.open', 'irrigation.valve.open', 'IRRIGATION_CONTROLLER']), deviceNow]
+    );
 
     const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
       method: 'POST', token,
@@ -101,7 +127,17 @@ async function main() {
         image_recognition: { stress_score: 0.7, disease_score: 0.1, pest_risk_score: 0.1, confidence: 0.9 },
       },
     });
+    process.stdout.write(`${JSON.stringify({ recommendation_generate_response: gen.json ?? {}, status: gen.status }, null, 2)}\n`);
+    if (!gen.ok || !Array.isArray(gen.json?.recommendations) || gen.json.recommendations.length === 0) {
+      const reason = !gen.ok
+        ? 'NO_RECOMMENDATION_RETURNED'
+        : String(gen.json?.reason ?? 'NO_RECOMMENDATION_RETURNED');
+      throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
+    }
     const recommendation = gen.json?.recommendations?.[0] ?? {};
+    if (!recommendation?.skill_trace) {
+      throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason: 'MISSING_SKILL_TRACE' }));
+    }
     ids.recommendation_id = String(recommendation.recommendation_id ?? '');
     ids.skill_trace_id = String(recommendation?.skill_trace?.trace_id ?? '');
     checks.recommendation_has_skill_trace = toPassFail(
@@ -220,6 +256,7 @@ async function main() {
     const taskDeviceSkillId = String(taskBindingEvidence?.device_skill_id ?? '');
     const taskBindingId = String(taskBindingEvidence?.skill_binding_id ?? '');
     const taskBindingFactId = String(taskBindingEvidence?.skill_binding_fact_id ?? '');
+    ids.skill_binding_id = ids.skill_binding_id || taskBindingId || taskBindingFactId;
     checks.task_binds_device_skill = toPassFail(
       taskDeviceSkillId === 'mock_valve_control_skill_v1'
       && (taskBindingId.length > 0 || taskBindingFactId.length > 0)
