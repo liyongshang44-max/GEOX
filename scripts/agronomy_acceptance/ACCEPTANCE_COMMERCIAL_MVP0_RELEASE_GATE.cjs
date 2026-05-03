@@ -59,8 +59,16 @@ const pass = (v) => (v ? 'PASS' : 'FAIL');
 const isFilled = (x) => String(x || '').trim().length > 0;
 const isPass = (v) => String(v || '').toUpperCase() === 'PASS';
 
-async function existsFieldMemoryId(pool, memoryId) {
-  const q = await pool.query('SELECT 1 FROM field_memory_v1 WHERE memory_id=$1 LIMIT 1', [memoryId]);
+async function existsFieldMemoryId(pool, memoryId, scope) {
+  const q = await pool.query(
+    `SELECT 1 FROM field_memory_v1
+      WHERE memory_id=$1
+        AND tenant_id=$2
+        AND project_id=$3
+        AND group_id=$4
+      LIMIT 1`,
+    [memoryId, scope.tenant_id, scope.project_id, scope.group_id]
+  );
   return (q.rows?.length ?? 0) > 0;
 }
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
@@ -71,8 +79,24 @@ async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, 
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
 }
-async function existsRoiLedgerId(pool, roiLedgerId) {
-  const q = await pool.query('SELECT 1 FROM roi_ledger_v1 WHERE roi_ledger_id=$1 LIMIT 1', [roiLedgerId]);
+async function existsRoiLedgerId(pool, roiLedgerId, scope, roiHasProjectGroup) {
+  const q = roiHasProjectGroup
+    ? await pool.query(
+      `SELECT 1 FROM roi_ledger_v1
+        WHERE roi_ledger_id=$1
+          AND tenant_id=$2
+          AND project_id=$3
+          AND group_id=$4
+        LIMIT 1`,
+      [roiLedgerId, scope.tenant_id, scope.project_id, scope.group_id]
+    )
+    : await pool.query(
+      `SELECT 1 FROM roi_ledger_v1
+        WHERE roi_ledger_id=$1
+          AND tenant_id=$2
+        LIMIT 1`,
+      [roiLedgerId, scope.tenant_id]
+    );
   return (q.rows?.length ?? 0) > 0;
 }
 async function existsSkillRunId(pool, skillRunId) {
@@ -132,6 +156,16 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
 
   const fieldMemoryIds = Array.isArray(chain.field_memory_ids) ? chain.field_memory_ids.filter(isFilled) : [];
   const roiLedgerIds = Array.isArray(chain.roi_ledger_ids) ? chain.roi_ledger_ids.filter(isFilled) : [];
+  const scope = {
+    tenant_id: process.env.TENANT_ID || 'tenantA',
+    project_id: process.env.PROJECT_ID || 'projectA',
+    group_id: process.env.GROUP_ID || 'groupA',
+  };
+  const roiScopeColsQ = await pool.query(
+    `SELECT column_name FROM information_schema.columns
+      WHERE table_name='roi_ledger_v1' AND column_name IN ('project_id','group_id')`
+  );
+  const roiHasProjectGroup = (roiScopeColsQ.rows?.length ?? 0) === 2;
 
   const roiCompatibleOk = [
     'ledger_has_baseline_actual_delta',
@@ -166,21 +200,21 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
   const reportExists = isFilled(chain.report_id) ? await existsReportId(pool, chain.report_id) : false;
   const fieldMemoryExists = fieldMemoryIds.length > 0
-    && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x)))).every(Boolean);
+    && (await Promise.all(fieldMemoryIds.map((x) => existsFieldMemoryId(pool, x, scope)))).every(Boolean);
   const scopeMemoryQ = await queryFieldMemoryByScope(pool, {
-    tenant_id: process.env.TENANT_ID || 'tenantA',
-    project_id: process.env.PROJECT_ID || 'projectA',
-    group_id: process.env.GROUP_ID || 'groupA',
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
     field_id: chain.field_id || undefined,
   });
   const operationMemoryQ = await queryFieldMemoryByScope(pool, {
-    tenant_id: process.env.TENANT_ID || 'tenantA',
-    project_id: process.env.PROJECT_ID || 'projectA',
-    group_id: process.env.GROUP_ID || 'groupA',
+    tenant_id: scope.tenant_id,
+    project_id: scope.project_id,
+    group_id: scope.group_id,
     operation_id: chain.task_id || undefined,
   });
   const roiLedgerExists = roiLedgerIds.length > 0
-    && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x)))).every(Boolean);
+    && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean);
   const dRoiStrong = Array.isArray(irrigation?.roi_ledgers)
     && irrigation.roi_ledgers.every((x) =>
       x.baseline != null
