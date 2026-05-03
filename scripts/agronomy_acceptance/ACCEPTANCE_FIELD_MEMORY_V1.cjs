@@ -19,6 +19,20 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   return q.rows.length === ids.length;
 }
 
+async function assertProjectionTablesReady(pool) {
+  const required = ['derived_sensing_state_index_v1', 'device_observation_index_v1', 'field_memory_v1'];
+  const missing = [];
+  for (const table of required) {
+    const q = await pool.query(`SELECT to_regclass($1) AS reg`, [`public.${table}`]);
+    if (!q.rows?.[0]?.reg) missing.push(table);
+  }
+  if (missing.length > 0) {
+    const err = new Error(`BOOTSTRAP_FAILURE_MISSING_PROJECTION_TABLES:${missing.join(',')}`);
+    err.code = 'BOOTSTRAP_FAILURE_MISSING_PROJECTION_TABLES';
+    throw err;
+  }
+}
+
 (async () => {
   const base = env('BASE_URL', process.env.GEOX_BASE_URL || 'http://127.0.0.1:3001');
   const adminToken = env('ADMIN_TOKEN', 'admin_token');
@@ -37,6 +51,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   const pre_soil_moisture = 0.18;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
+  await assertProjectionTablesReady(pool);
 
   const health = await fetchJson(`${base}/api/v1/field-memory/health`, { method: 'GET' });
   const healthz_ok = health.ok && health.json?.ok === true && health.json?.table_ready === true;
