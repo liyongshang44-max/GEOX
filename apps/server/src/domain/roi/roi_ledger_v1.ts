@@ -605,6 +605,35 @@ async function listAsAppliedByAsExecuted(pool: Pool, input: TenantTriple & { as_
   return (q.rows ?? []).map(mapAsAppliedRow);
 }
 
+async function listAcceptanceEvidenceRefsByTaskId(
+  pool: Pool,
+  input: TenantTriple & { task_id: string }
+): Promise<any[]> {
+  const q = await pool.query(
+    `SELECT fact_id, record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb->>'type') IN ('acceptance_result_v1','acceptance_evaluation_v1')
+        AND (record_json::jsonb#>>'{payload,tenant_id}') = $1
+        AND (record_json::jsonb#>>'{payload,project_id}') = $2
+        AND (record_json::jsonb#>>'{payload,group_id}') = $3
+        AND (
+          (record_json::jsonb#>>'{payload,task_id}') = $4
+          OR (record_json::jsonb#>>'{payload,act_task_id}') = $4
+        )
+      ORDER BY occurred_at DESC
+      LIMIT 5`,
+    [input.tenant_id, input.project_id, input.group_id, input.task_id]
+  );
+  const out: any[] = [];
+  for (const row of q.rows ?? []) {
+    const payload = parseJsonMaybe(row.record_json)?.payload ?? {};
+    const evidenceRefs = normalizeEvidenceRefs(payload?.evidence_refs);
+    if (evidenceRefs.length > 0) out.push(...evidenceRefs);
+    out.push({ kind: "acceptance_fact", ref: String(row.fact_id ?? "") });
+  }
+  return normalizeEvidenceRefs(out);
+}
+
 async function getPrescriptionSkillRef(pool: Pool, input: TenantTriple & { prescription_id: string }): Promise<SkillRefV1 | null> {
   const q = await pool.query(
     `SELECT skill_trace_id, skill_trace
@@ -761,6 +790,15 @@ export async function createRoiLedgersFromAsExecuted(pool: Pool, input: TenantTr
 }> {
   const asExecuted = await getAsExecutedById(pool, input);
   if (!asExecuted) throw new Error("AS_EXECUTED_NOT_FOUND");
+  const acceptanceEvidenceRefs = await listAcceptanceEvidenceRefsByTaskId(pool, {
+    tenant_id: input.tenant_id,
+    project_id: input.project_id,
+    group_id: input.group_id,
+    task_id: asExecuted.task_id,
+  });
+  if (acceptanceEvidenceRefs.length > 0) {
+    asExecuted.evidence_refs = normalizeEvidenceRefs([...(asExecuted.evidence_refs ?? []), ...acceptanceEvidenceRefs]);
+  }
 
   const asApplied = (await listAsAppliedByAsExecuted(pool, input))[0] ?? null;
   const candidates = computeRoiLedgerEntriesFromAsExecuted(asExecuted, asApplied);

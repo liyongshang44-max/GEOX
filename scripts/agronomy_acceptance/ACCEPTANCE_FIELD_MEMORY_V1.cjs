@@ -3,6 +3,59 @@ const { Pool } = require('pg');
 const { assert, env, fetchJson, requireOk } = require('./_common.cjs');
 
 let pool;
+function pickIrrigationRecommendation(genJson) {
+  const recommendations = Array.isArray(genJson?.recommendations) ? genJson.recommendations : [];
+  return recommendations.find((x) =>
+    String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+    || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+    || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+  ) ?? null;
+}
+function buildIrrigationReceiptBody({
+  tenant_id,
+  project_id,
+  group_id,
+  operation_plan_id,
+  act_task_id,
+  field_id,
+  suffix,
+  recommendation_id,
+  prescription_id,
+  skill_trace_ref,
+  water_l = 20,
+  amount = 20,
+  coverage_percent = 90,
+  duration_min = 20,
+}) {
+  return {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_plan_id,
+    act_task_id,
+    executor_id: { kind: 'script', id: 'acceptance_executor', namespace: 'qa' },
+    execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
+    execution_coverage: { kind: 'field', ref: field_id },
+    resource_usage: { fuel_l: 0, electric_kwh: 0, water_l, chemical_ml: 0 },
+    observed_parameters: { amount, coverage_percent, duration_min },
+    evidence_refs: [{ kind: 'sensor', ref: `sensor_${suffix}` }],
+    logs_refs: [
+      { kind: 'dispatch_ack', ref: `ack_${suffix}` },
+      { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
+      { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
+    ],
+    status: 'executed',
+    constraint_check: { violated: false, violations: [] },
+    meta: {
+      command_id: act_task_id,
+      idempotency_key: `receipt_${act_task_id}_${suffix}`,
+      recommendation_id,
+      prescription_id,
+      skill_id: 'irrigation_deficit_skill_v1',
+      skill_trace_ref,
+    },
+  };
+}
 
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
   const params = [tenant_id, project_id, group_id];
@@ -48,7 +101,7 @@ async function assertProjectionTablesReady(pool) {
   const field_id = env('FIELD_ID', `field_memory_${suffix}`);
   const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
   const device_id = env('DEVICE_ID', `device_field_memory_${suffix}`);
-  const pre_soil_moisture = 0.18;
+  const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
   await assertProjectionTablesReady(pool);
@@ -77,8 +130,7 @@ async function assertProjectionTablesReady(pool) {
     `INSERT INTO device_observation_index_v1
       (tenant_id, project_id, group_id, field_id, device_id, metric, observed_at, observed_at_ts_ms, value_num, confidence, fact_id)
      VALUES
-      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$9),
-      ($1,$2,$3,$4,$5,'canopy_temp_c',to_timestamp($6 / 1000.0),$6,$8,0.88,$10)
+      ($1,$2,$3,$4,$5,'soil_moisture',to_timestamp($6 / 1000.0),$6,$7,0.92,$8)
      ON CONFLICT DO NOTHING`,
     [
       tenant_id,
@@ -88,9 +140,7 @@ async function assertProjectionTablesReady(pool) {
       device_id,
       ts0,
       pre_soil_moisture,
-      31.2,
       `obs_soil_field_memory_${randomUUID()}`,
-      `obs_canopy_field_memory_${randomUUID()}`,
     ]
   );
 
@@ -112,8 +162,24 @@ async function assertProjectionTablesReady(pool) {
       image_recognition: { stress_score: 0.55, disease_score: 0.2, pest_risk_score: 0.2, confidence: 0.9 }
     }
   });
+  process.stdout.write(`${JSON.stringify({ recommendation_generate_response: recGen.json ?? {}, status: recGen.status }, null, 2)}\n`);
+  if (!recGen.ok || !Array.isArray(recGen.json?.recommendations) || recGen.json.recommendations.length === 0) {
+    process.stdout.write(`${JSON.stringify({
+      reason: 'NO_RECOMMENDATION_TRIGGERED',
+      stage1_seed_debug: {
+        derived_states_inserted: true,
+        soil_moisture: 0.16,
+        field_id,
+        device_id,
+      },
+      recommendation_generate_response: recGen.json ?? {},
+    }, null, 2)}\n`);
+    throw new Error('NO_RECOMMENDATION_TRIGGERED');
+  }
   const recJson = requireOk(recGen, 'generate recommendation');
-  const recId = String(recJson.recommendations?.[0]?.recommendation_id ?? '');
+  const recommendation = pickIrrigationRecommendation(recJson);
+  assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
+  const recId = String(recommendation?.recommendation_id ?? '');
   assert.ok(recId, 'recommendation_id missing');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
@@ -358,45 +424,10 @@ async function assertProjectionTablesReady(pool) {
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',
     token: executorToken,
-    body: {
-      tenant_id,
-      project_id,
-      group_id,
-      operation_plan_id,
-      act_task_id: actTaskId,
-      executor_id: { kind: 'script', id: 'field_memory_acceptance_executor', namespace: 'qa' },
-      execution_time: { start_ts: Date.now() - 20_000, end_ts: Date.now() - 5_000 },
-      execution_coverage: { kind: 'field', ref: field_id },
-      resource_usage: {
-        fuel_l: null,
-        electric_kwh: null,
-        water_l: 20,
-        chemical_ml: null,
-      },
-      observed_parameters: {
-        duration_sec: 1200,
-        duration_min: 20,
-        amount: 20,
-        coverage_percent: 95,
-      },
-      evidence_refs: [
-        { kind: 'sensor', ref: `sensor_${suffix}` },
-        { kind: 'photo', ref: `photo_${suffix}` },
-      ],
-      logs_refs: [
-        { kind: 'water_delivery_receipt', ref: `water_${suffix}` },
-        { kind: 'dispatch_ack', ref: `dispatch_${suffix}` },
-        { kind: 'valve_open_confirmation', ref: `valve_${suffix}` },
-      ],
-      status: 'executed',
-      constraint_check: { violated: false, violations: [] },
-      meta: {
-        command_id: actTaskId,
-        idempotency_key: `field-memory-receipt-${actTaskId}`,
-        recommendation_id: recId,
-        soil_moisture_delta: Number((post_soil_moisture - pre_soil_moisture).toFixed(2))
-      }
-    }
+    body: buildIrrigationReceiptBody({
+      tenant_id, project_id, group_id, operation_plan_id, act_task_id: actTaskId, field_id, suffix,
+      recommendation_id: recId, coverage_percent: 95,
+    })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
   const receipt_fact_id = String(receiptJson.fact_id ?? '').trim();
