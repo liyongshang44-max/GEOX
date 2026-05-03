@@ -217,19 +217,36 @@ async function assertProjectionTablesReady(pool) {
     [tenant_id, project_id, group_id, device_id, nowTs]
   );
 
-  const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
+  const approval_id = String(submitJson.approval_request_id ?? '').trim();
+  assert.ok(approval_id, 'approval_request_id missing before decide');
+  const decideToken = env('AO_ACT_TOKEN', adminToken);
+  process.stdout.write(JSON.stringify({
+    approval_decide_debug: {
+      token_present: Boolean(decideToken),
+      approval_id,
+      device_id,
+      required_scope: 'approval.decide'
+    }
+  }, null, 2) + '\n');
+  const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
     method: 'POST',
-    token: approverToken,
+    token: decideToken,
     body: {
-      request_id: String(submitJson.approval_request_id),
       tenant_id,
       project_id,
       group_id,
+      device_id,
       decision: 'APPROVE',
-      reason: 'field memory acceptance'
+      reason: 'field memory acceptance',
+      device_id,
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
     }
   });
-  requireOk(decide, 'approval decide');
+  process.stdout.write(`${JSON.stringify({ approval_decide_http: { status: decideApproval.status, json: decideApproval.json } }, null, 2)}\n`);
+  const decideJson = requireOk(decideApproval, 'decide approval before action task');
+  process.stdout.write(`${JSON.stringify({ approval_decide_response: decideJson }, null, 2)}\n`);
 
   await pool.query(
     `UPDATE fail_safe_event_v1
@@ -261,7 +278,7 @@ async function assertProjectionTablesReady(pool) {
       project_id,
       group_id,
       operation_plan_id,
-      approval_request_id: String(submitJson.approval_request_id),
+      approval_request_id: approval_id,
       field_id,
       season_id,
       device_id,
@@ -297,6 +314,46 @@ async function assertProjectionTablesReady(pool) {
   const taskJson = requireOk(taskResp, 'create action task');
   const actTaskId = String(taskJson.act_task_id ?? '').trim();
   assert.ok(actTaskId, 'act_task_id missing');
+  const taskFactQ = await pool.query(
+    `SELECT record_json::jsonb AS record_json
+       FROM facts
+      WHERE (record_json::jsonb ->> 'type') = 'ao_act_task_v1'
+        AND (
+          (record_json::jsonb #>> '{payload,act_task_id}') = $1
+          OR (record_json::jsonb #>> '{payload,task_id}') = $1
+        )
+      ORDER BY occurred_at DESC, fact_id DESC
+      LIMIT 1`,
+    [actTaskId]
+  );
+  const taskSkillBindingEvidence = taskFactQ.rows?.[0]?.record_json?.payload?.meta?.skill_binding_evidence ?? {};
+  process.stdout.write(`${JSON.stringify({ task_skill_binding_evidence: taskSkillBindingEvidence }, null, 2)}\n`);
+
+  const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
+    method: 'POST',
+    token: adminToken,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
+      field_id,
+      device_id,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id: actTaskId,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      }
+    }
+  });
+  requireOk(executeSkill, 'mock valve skill execute');
 
   const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
     method: 'POST',

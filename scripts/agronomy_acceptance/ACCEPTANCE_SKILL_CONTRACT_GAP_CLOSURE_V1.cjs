@@ -301,7 +301,7 @@ async function main() {
     }
     ids.task_id = String(taskResp.json?.act_task_id ?? '');
 
-    const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
+    const runResp = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
       method: 'POST', token,
       body: {
         tenant_id, project_id, group_id,
