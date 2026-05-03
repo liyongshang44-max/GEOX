@@ -235,8 +235,17 @@ function buildIrrigationReceiptBody({
     body: { tenant_id, project_id, group_id, act_task_id },
   });
   const acceptanceJson = requireOk(acceptanceResp, 'evaluate acceptance before roi ledger');
-  const acceptance_fact_id = String(acceptanceJson?.acceptance?.fact_id ?? '').trim();
-  assert.ok(acceptance_fact_id, 'missing acceptance fact_id');
+  const acceptance_fact_id = String(
+    acceptanceJson?.acceptance?.fact_id
+    ?? acceptanceJson?.fact_id
+    ?? acceptanceJson?.acceptance?.acceptance_id
+    ?? acceptanceJson?.acceptance_id
+    ?? ''
+  ).trim();
+  assert.ok(acceptance_fact_id, JSON.stringify({
+    reason: 'MISSING_ACCEPTANCE_FACT_ID',
+    acceptance_response: acceptanceJson,
+  }));
 
   const createResp = await fetchJson(`${base}/api/v1/roi-ledger/from-as-executed`, {
     method: 'POST',
