@@ -237,9 +237,9 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id: `op_plan_mismatch_${suffix}`, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'SPRAY', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'SPRAY', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
+        meta: { device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
       },
     });
     const mismatchTaskId = String(mismatchTaskResp.json?.act_task_id ?? '');
@@ -269,9 +269,9 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'IRRIGATE', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
+        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
     process.stdout.write(JSON.stringify({
