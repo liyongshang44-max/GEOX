@@ -217,20 +217,26 @@ async function assertProjectionTablesReady(pool) {
     [tenant_id, project_id, group_id, device_id, nowTs]
   );
 
-  const decide = await fetchJson(`${base}/api/v1/approvals/approve`, {
+  const approval_id = String(submitJson.approval_request_id ?? '').trim();
+  assert.ok(approval_id, 'approval_request_id missing before decide');
+  const decideApproval = await fetchJson(`${base}/api/v1/approvals/${encodeURIComponent(approval_id)}/decide`, {
     method: 'POST',
     token: approverToken,
     body: {
-      request_id: String(submitJson.approval_request_id),
       tenant_id,
       project_id,
       group_id,
       device_id,
       decision: 'APPROVE',
-      reason: 'field memory acceptance'
+      reason: 'field memory acceptance',
+      device_id,
+      adapter_type: 'irrigation_simulator',
+      device_type: 'IRRIGATION_CONTROLLER',
+      required_capabilities: ['device.irrigation.valve.open'],
     }
   });
-  const decideJson = requireOk(decide, 'approval decide');
+  process.stdout.write(`${JSON.stringify({ approval_decide_http: { status: decideApproval.status, json: decideApproval.json } }, null, 2)}\n`);
+  const decideJson = requireOk(decideApproval, 'decide approval before action task');
   process.stdout.write(`${JSON.stringify({ approval_decide_response: decideJson }, null, 2)}\n`);
 
   await pool.query(
@@ -263,7 +269,7 @@ async function assertProjectionTablesReady(pool) {
       project_id,
       group_id,
       operation_plan_id,
-      approval_request_id: String(submitJson.approval_request_id),
+      approval_request_id: approval_id,
       field_id,
       season_id,
       device_id,
