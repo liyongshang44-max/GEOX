@@ -56,6 +56,44 @@ function hasValidRoiConfidence(confidence) {
     && Array.isArray(confidence.reasons);
 }
 
+async function executeMockValveSkill({
+  base,
+  token,
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  device_id,
+  operation_plan_id,
+  task_id,
+  approval_id,
+}) {
+  return fetchJson(`${base}/api/v1/skill/execute`, {
+    method: 'POST',
+    token,
+    body: {
+      tenant_id,
+      project_id,
+      group_id,
+      skill_id: 'mock_valve_control_skill_v1',
+      version: 'v1',
+      category: 'DEVICE',
+      bind_target: 'mock_valve',
+      field_id,
+      device_id,
+      operation_id: operation_plan_id,
+      operation_plan_id,
+      input: {
+        task_id,
+        approval_id,
+        command: 'OPEN',
+        duration_sec: 1200,
+        required_capabilities: ['device.irrigation.valve.open'],
+      },
+    },
+  });
+}
+
 async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
@@ -269,14 +307,22 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     if (!taskSkillBinding) failureReasons.push('TASK_DEVICE_SKILL_BINDING_MISSING');
     assert.ok(task_id, 'task_id missing');
 
-    const mockValveRun = await fetchJson(`${base}/api/v1/skills/mock-valve-control/run`, {
-      method: 'POST', token,
-      body: { tenant_id, project_id, group_id, field_id, device_id, act_task_id: task_id, command: 'OPEN', duration_sec: 1200 },
+    const executeSkill = await executeMockValveSkill({
+      base,
+      token,
+      tenant_id,
+      project_id,
+      group_id,
+      field_id,
+      device_id,
+      operation_plan_id,
+      task_id,
+      approval_id,
     });
-    const mockValveJson = mockValveRun.ok ? mockValveRun.json : { ok: false, reason: 'DEVICE_OFFLINE' };
-    skill_run_id = String(mockValveJson.skill_run_id ?? mockValveJson.run_id ?? '').trim();
+    const executeSkillJson = executeSkill.ok ? executeSkill.json : { ok: false, reason: 'DEVICE_OFFLINE' };
+    skill_run_id = String(executeSkillJson.skill_run_id ?? executeSkillJson.run_id ?? '').trim();
     if (!skill_run_id) failureReasons.push('SKILL_RUN_MISSING');
-    if (!mockValveRun.ok) failureReasons.push('DEVICE_OFFLINE');
+    if (!executeSkill.ok) failureReasons.push('DEVICE_OFFLINE');
 
     const receiptResp = await fetchJson(`${base}/api/v1/actions/receipt`, {
       method: 'POST', token,
