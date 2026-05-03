@@ -160,11 +160,14 @@ function buildFieldResponseSummaryText(row: any): string {
 }
 
 function normalizeFieldMemoryRow(row: any): any {
-  const delta = toFiniteNumberOrNull(row?.delta_value);
+  const before = toFiniteNumberOrNull(row?.before_value);
+  const after = toFiniteNumberOrNull(row?.after_value);
+  const delta = toFiniteNumberOrNull(row?.delta_value)
+    ?? (before != null && after != null ? Number((after - before).toFixed(2)) : null);
   return {
     ...row,
-    before_value: toFiniteNumberOrNull(row?.before_value),
-    after_value: toFiniteNumberOrNull(row?.after_value),
+    before_value: before,
+    after_value: after,
     delta_value: delta,
     summary_text: String(row?.summary_text ?? "").trim() || (row?.memory_type === "FIELD_RESPONSE_MEMORY" ? buildFieldResponseSummaryText(row) : "田间记忆已记录"),
     customer_text: row?.memory_type === "FIELD_RESPONSE_MEMORY" ? buildFieldResponseSummaryText({ ...row, delta_value: delta }) : undefined,
