@@ -164,7 +164,20 @@ async function main() {
       }, null, 2)}\n`);
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason }));
     }
-    const recommendation = gen.json?.recommendations?.[0] ?? {};
+    const recommendations = Array.isArray(gen.json?.recommendations) ? gen.json.recommendations : [];
+    const recommendation =
+      recommendations.find((x) =>
+        String(x?.recommendation_type ?? '') === 'irrigation_recommendation_v1'
+        || String(x?.action_type ?? '').toUpperCase() === 'IRRIGATE'
+        || String(x?.skill_trace?.skill_id ?? '') === 'irrigation_deficit_skill_v1'
+      ) ?? null;
+
+    if (!recommendation) {
+      throw new Error(JSON.stringify({
+        recommendation_generate_response: gen.json ?? {},
+        reason: 'NO_IRRIGATION_RECOMMENDATION_RETURNED'
+      }));
+    }
     if (!recommendation?.skill_trace) {
       throw new Error(JSON.stringify({ recommendation_generate_response: gen.json ?? {}, reason: 'MISSING_SKILL_TRACE' }));
     }
@@ -224,9 +237,9 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id: `op_plan_mismatch_${suffix}`, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'SPRAY', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'SPRAY', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
+        meta: { device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
       },
     });
     const mismatchTaskId = String(mismatchTaskResp.json?.act_task_id ?? '');
@@ -256,11 +269,30 @@ async function main() {
       body: {
         tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
-        action_type: 'IRRIGATE', target: { kind: 'device', ref: device_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
+        action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
         parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
+        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
+    process.stdout.write(JSON.stringify({
+      task_create_debug: {
+        status: taskResp.status,
+        ok: taskResp.ok,
+        json: taskResp.json,
+        operation_plan_id,
+        approval_id: ids.approval_id,
+        field_id,
+        device_id
+      }
+    }, null, 2) + "\n");
+
+    if (!taskResp.ok) {
+      throw new Error(JSON.stringify({
+        reason: 'TASK_CREATE_FAILED',
+        task_create_response: taskResp.json ?? {},
+        status: taskResp.status
+      }));
+    }
     ids.task_id = String(taskResp.json?.act_task_id ?? '');
 
     const executeSkill = await fetchJson(`${base}/api/v1/skill/execute`, {
