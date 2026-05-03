@@ -213,7 +213,7 @@ async function assertFieldMemoryIdsExist(pool, ids) {
           ]
         },
         constraints: {},
-        parameters: { amount: 20, coverage_percent: 90, duration_min: 20, prescription_id },
+        parameters: { amount: 20, coverage_percent: 90, duration_min: 20 },
         meta: { recommendation_id, prescription_id, task_type: 'IRRIGATION', device_id, adapter_type: 'irrigation_simulator' }
       },
     });
