@@ -54,6 +54,12 @@ export type CustomerDashboardAggregateV1 = {
     total_devices: number;
     offline_devices: number;
   };
+  roi_summary: {
+    total_items: number;
+    measured_items: number;
+    insufficient_items: number;
+    customer_value_text: string;
+  };
 };
 
 export type FieldPortfolioSummaryV1 = Omit<CustomerDashboardAggregateV1, "top_risk_fields"> & {
@@ -110,6 +116,12 @@ export type FieldReportDetailV1 = {
     action_type: string | null;
     priority: string | null;
   } | null;
+  value_summary: {
+    total_roi_items: number;
+    measured_items: number;
+    insufficient_items: number;
+    customer_value_text: string;
+  };
 };
 
 const RISK_RANK: Record<OperationReportRiskLevel, number> = {
@@ -170,6 +182,31 @@ function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel
   return "LOW";
 }
 
+function buildFieldValueSummary(reports: OperationReportV1[]): FieldReportDetailV1["value_summary"] {
+  const items = reports.flatMap((r) => r.roi_ledger?.items ?? []);
+
+  return {
+    total_roi_items: items.length,
+    measured_items: items.filter((x) => x.value_kind === "MEASURED").length,
+    insufficient_items: items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
+    customer_value_text:
+      items.length
+        ? `本地块已有 ${items.length} 条价值记录`
+        : "暂无价值记录",
+  };
+}
+
+function buildDashboardRoiSummary(reports: OperationReportV1[]): CustomerDashboardAggregateV1["roi_summary"] {
+  const items = reports.flatMap((r) => r.roi_ledger?.items ?? []);
+
+  return {
+    total_items: items.length,
+    measured_items: items.filter((x) => x.value_kind === "MEASURED").length,
+    insufficient_items: items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
+    customer_value_text: items.length ? `当前共有 ${items.length} 条价值记录` : "暂无价值记录",
+  };
+}
+
 function deriveStateRiskReasons(state: OperationStateV1): string[] {
   const reasons = new Set<string>();
   for (const code of state.reason_codes ?? []) {
@@ -224,6 +261,7 @@ export function projectFieldReportDetailV1(params: {
     top_reasons: topReasons,
   });
   const nextActionSource = reportsSorted.find((report) => Boolean(report.why?.explain_human) || Boolean(report.identifiers.recommendation_id)) ?? null;
+  const valueSummary = buildFieldValueSummary(params.reports);
 
   return {
     type: "field_report_v1",
@@ -268,6 +306,7 @@ export function projectFieldReportDetailV1(params: {
       action_type: inferActionType(nextActionSource),
       priority: null,
     } : null,
+    value_summary: valueSummary,
   };
 }
 
@@ -291,6 +330,7 @@ export function projectCustomerDashboardAggregateV1(params: {
   };
 }): CustomerDashboardAggregateV1 {
   const reports = params.reports;
+  const roiSummary = buildDashboardRoiSummary(reports);
   const sortedReports = [...reports].sort((a, b) => {
     const bMs = resolveOperationTimeMs(b);
     const aMs = resolveOperationTimeMs(a);
@@ -440,6 +480,7 @@ export function projectCustomerDashboardAggregateV1(params: {
       total_devices: Number(params.device_summary?.total_devices ?? 0),
       offline_devices: Number(params.device_summary?.offline_devices ?? 0),
     },
+    roi_summary: roiSummary,
   };
 }
 
@@ -579,6 +620,12 @@ export function projectCustomerDashboardAggregateFromStatesV1(params: {
       offline_fields: Number(params.device_summary?.offline_fields ?? 0),
       total_devices: Number(params.device_summary?.total_devices ?? 0),
       offline_devices: Number(params.device_summary?.offline_devices ?? 0),
+    },
+    roi_summary: {
+      total_items: 0,
+      measured_items: 0,
+      insufficient_items: 0,
+      customer_value_text: "暂无价值记录",
     },
   };
 }

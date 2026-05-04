@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { Pool } from "pg";
 import { requireAoActScopeV0 } from "../auth/ao_act_authz_v0.js";
 import { enforceRouteRoleAuth } from "../auth/route_role_authz.js";
-import { projectCustomerDashboardAggregateFromStatesV1, projectFieldPortfolioSummaryV1 } from "../projections/report_dashboard_v1.js";
+import { projectCustomerDashboardAggregateFromStatesV1, projectCustomerDashboardAggregateV1, projectFieldPortfolioSummaryV1 } from "../projections/report_dashboard_v1.js";
 import { projectOperationStateV1 } from "../projections/operation_state_v1.js";
 import { projectReportV1 } from "./reports_v1.js";
 
@@ -343,14 +343,29 @@ export function registerReportsDashboardV1Routes(app: FastifyInstance, pool: Poo
       queryDeviceSummary(pool, tenant, aggregateFieldIds),
     ]);
 
-    const aggregate = projectCustomerDashboardAggregateFromStatesV1({
-      states: scopedStates,
-      field_ids: aggregateFieldIds,
-      field_name_by_id: fieldNameById,
-      open_alerts_by_field: openAlertsByField,
-      pending_actions_summary: pendingActionsSummary,
-      device_summary: deviceSummary,
-    });
+    const reports = (await mapWithConcurrencyLimit(
+      scopedStates,
+      DASHBOARD_REPORT_CONCURRENCY_LIMIT,
+      async (state) => projectReportV1({ pool, tenant, operationState: state }),
+    )).filter((report): report is NonNullable<typeof report> => Boolean(report));
+
+    const aggregate = reports.length > 0
+      ? projectCustomerDashboardAggregateV1({
+        reports,
+        field_name_by_id: fieldNameById,
+        open_alerts_by_field: openAlertsByField,
+        pending_acceptance_by_field: undefined,
+        pending_actions_summary: pendingActionsSummary,
+        device_summary: deviceSummary,
+      })
+      : projectCustomerDashboardAggregateFromStatesV1({
+        states: scopedStates,
+        field_ids: aggregateFieldIds,
+        field_name_by_id: fieldNameById,
+        open_alerts_by_field: openAlertsByField,
+        pending_actions_summary: pendingActionsSummary,
+        device_summary: deviceSummary,
+      });
 
     return reply.send({
       ok: true,
