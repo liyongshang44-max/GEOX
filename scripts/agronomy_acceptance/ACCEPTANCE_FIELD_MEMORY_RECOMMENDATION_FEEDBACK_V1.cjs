@@ -75,6 +75,33 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
   }
   const B = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
+  console.log(JSON.stringify({
+    A: {
+      recommendation_id: A.recommendation_id,
+      recommendation_type: A.recommendation_type,
+      field_id: A.field_id,
+      season_id: A.season_id,
+      confidence: A.confidence,
+      requires_manual_review: A.requires_manual_review,
+      memory_refs: A.memory_refs,
+      risk: A.risk,
+      field_memory_context: A.field_memory_context,
+      suggested_action: A.suggested_action,
+    },
+    B: {
+      recommendation_id: B.recommendation_id,
+      recommendation_type: B.recommendation_type,
+      field_id: B.field_id,
+      season_id: B.season_id,
+      confidence: B.confidence,
+      requires_manual_review: B.requires_manual_review,
+      memory_refs: B.memory_refs,
+      risk: B.risk,
+      field_memory_context: B.field_memory_context,
+      suggested_action: B.suggested_action,
+    }
+  }, null, 2));
+
   assert.ok(
     Number(B.confidence ?? 0) < Number(A.confidence ?? 0) ||
     B.requires_manual_review === true ||
