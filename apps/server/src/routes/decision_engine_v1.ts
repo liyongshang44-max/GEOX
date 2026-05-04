@@ -25,6 +25,7 @@ import {
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1.js";
 import { loadFieldMemoryContextForRecommendation } from "../services/field_memory_context_service.js";
+import { buildRecommendationMemoryAdjustmentV1 } from "../services/recommendation_memory_adjustment_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import {
   IRRIGATION_CONTROL_PLANE_ACTION,
@@ -1386,14 +1387,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         season_id: recommendation.season_id,
       });
 
-      if (memory.recommended_confidence_adjustment === "LOWER_ONE_LEVEL") {
+      const memoryAdjustment = buildRecommendationMemoryAdjustmentV1(memory);
+      if (memoryAdjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
         recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
       }
 
-      recommendation.memory_refs = memory.memory_refs;
-      recommendation.requires_manual_review = Boolean(recommendation.requires_manual_review) || memory.requires_manual_review;
+      recommendation.memory_refs = memoryAdjustment.memory_refs;
+      recommendation.requires_manual_review = Boolean(recommendation.requires_manual_review) || memoryAdjustment.requires_manual_review;
       recommendation.risk = recommendation.risk ?? { reasons: [] };
-      recommendation.risk.reasons = mergeTextList(recommendation.risk.reasons, memory.risk_reasons);
+      recommendation.risk.reasons = mergeTextList(recommendation.risk.reasons, memoryAdjustment.risk_reasons);
       recommendation.field_memory_context = memory;
     }
 
@@ -1416,10 +1418,18 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation: rec,
         stage1Summary,
       });
-      if (Array.isArray(rec.field_memory_context?.explain_notes) && rec.field_memory_context.explain_notes.length > 0) {
+      const memoryAdjustment = buildRecommendationMemoryAdjustmentV1((rec.field_memory_context ?? {
+        weak_response_count: 0,
+        execution_deviation_count: 0,
+        low_reliability_count: 0,
+        skill_failure_count: 0,
+        memory_refs: [],
+        reasons: [],
+      }) as any);
+      if (memoryAdjustment.explain_append) {
         const explainAny = (rec.explain ?? {}) as any;
         const baseHuman = String(explainAny.human ?? explainAny.action_summary ?? "").trim();
-        explainAny.human = `${baseHuman}${baseHuman ? " " : ""}历史表现显示该地块响应偏弱，建议人工复核。`;
+        explainAny.human = `${baseHuman}${baseHuman ? " " : ""}${memoryAdjustment.explain_append}，建议人工复核。`;
         rec.explain = explainAny;
       }
       rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({

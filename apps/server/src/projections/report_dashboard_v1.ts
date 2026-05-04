@@ -55,9 +55,17 @@ export type CustomerDashboardAggregateV1 = {
     offline_devices: number;
   };
   roi_summary: {
-    total_items: number;
+    total_roi_items: number;
     measured_items: number;
+    estimated_items: number;
+    assumption_based_items: number;
     insufficient_items: number;
+    low_confidence_items: number;
+    water_saved_items: number;
+    labor_saved_items: number;
+    early_warning_items: number;
+    first_pass_acceptance_items: number;
+    has_customer_visible_value: boolean;
     customer_value_text: string;
   };
 };
@@ -119,7 +127,15 @@ export type FieldReportDetailV1 = {
   value_summary: {
     total_roi_items: number;
     measured_items: number;
+    estimated_items: number;
+    assumption_based_items: number;
     insufficient_items: number;
+    low_confidence_items: number;
+    water_saved_items: number;
+    labor_saved_items: number;
+    early_warning_items: number;
+    first_pass_acceptance_items: number;
+    has_customer_visible_value: boolean;
     customer_value_text: string;
   };
 };
@@ -184,26 +200,39 @@ function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel
 
 function buildFieldValueSummary(reports: OperationReportV1[]): FieldReportDetailV1["value_summary"] {
   const items = reports.flatMap((r) => r.roi_ledger?.items ?? []);
+  const total = items.length;
+  const measured = items.filter((x) => x.value_kind === "MEASURED").length;
+  const estimated = items.filter((x) => x.value_kind === "ESTIMATED").length;
+  const assumptionBased = items.filter((x) => x.value_kind === "ASSUMPTION_BASED").length;
+  const insufficient = items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length;
+  const lowConfidence = items.filter((x) => String(x?.confidence?.level ?? "").toUpperCase() === "LOW").length;
+  const waterSaved = items.filter((x) => x.roi_type === "WATER_SAVED").length;
+  const laborSaved = items.filter((x) => x.roi_type === "LABOR_SAVED").length;
+  const earlyWarning = items.filter((x) => x.roi_type === "EARLY_WARNING_LEAD_TIME").length;
+  const firstPassAcceptance = items.filter((x) => x.roi_type === "FIRST_PASS_ACCEPTANCE_RATE").length;
+  const hasValue = items.some((x) => x.estimated_money_value != null || String(x.customer_text ?? "").trim().length > 0);
 
   return {
-    total_roi_items: items.length,
-    measured_items: items.filter((x) => x.value_kind === "MEASURED").length,
-    insufficient_items: items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
-    customer_value_text:
-      items.length
-        ? `本地块已有 ${items.length} 条价值记录`
-        : "暂无价值记录",
+    total_roi_items: total,
+    measured_items: measured,
+    estimated_items: estimated,
+    assumption_based_items: assumptionBased,
+    insufficient_items: insufficient,
+    low_confidence_items: lowConfidence,
+    water_saved_items: waterSaved,
+    labor_saved_items: laborSaved,
+    early_warning_items: earlyWarning,
+    first_pass_acceptance_items: firstPassAcceptance,
+    has_customer_visible_value: hasValue,
+    customer_value_text: total ? `本地块已有 ${total} 条价值记录` : "暂无价值记录",
   };
 }
 
 function buildDashboardRoiSummary(reports: OperationReportV1[]): CustomerDashboardAggregateV1["roi_summary"] {
-  const items = reports.flatMap((r) => r.roi_ledger?.items ?? []);
-
+  const summary = buildFieldValueSummary(reports);
   return {
-    total_items: items.length,
-    measured_items: items.filter((x) => x.value_kind === "MEASURED").length,
-    insufficient_items: items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
-    customer_value_text: items.length ? `当前共有 ${items.length} 条价值记录` : "暂无价值记录",
+    ...summary,
+    customer_value_text: summary.total_roi_items ? `当前共有 ${summary.total_roi_items} 条价值记录` : "暂无价值记录",
   };
 }
 
@@ -622,9 +651,17 @@ export function projectCustomerDashboardAggregateFromStatesV1(params: {
       offline_devices: Number(params.device_summary?.offline_devices ?? 0),
     },
     roi_summary: {
-      total_items: 0,
+      total_roi_items: 0,
       measured_items: 0,
+      estimated_items: 0,
+      assumption_based_items: 0,
       insufficient_items: 0,
+      low_confidence_items: 0,
+      water_saved_items: 0,
+      labor_saved_items: 0,
+      early_warning_items: 0,
+      first_pass_acceptance_items: 0,
+      has_customer_visible_value: false,
       customer_value_text: "暂无价值记录",
     },
   };
