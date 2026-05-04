@@ -1912,12 +1912,17 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
       continue;
     }
 
+    const normalizedSeasonId =
+      String(recommendation.season_id ?? "").trim()
+      || String(params.season_id ?? "").trim()
+      || undefined;
+
     const memory = await loadFieldMemoryContextForRecommendation(pool, {
       tenant_id: params.tenant_id,
       project_id: params.project_id,
       group_id: params.group_id,
       field_id,
-      season_id: recommendation.season_id || params.season_id || undefined,
+      season_id: normalizedSeasonId,
       lookback_limit: 50,
     });
 
