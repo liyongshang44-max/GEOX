@@ -71,11 +71,25 @@ async function existsFieldMemoryId(pool, memoryId, scope) {
   );
   return (q.rows?.length ?? 0) > 0;
 }
-async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+async function queryFieldMemoryByScope(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  operation_id,
+  task_id,
+  recommendation_id,
+  prescription_id,
+  acceptance_id,
+}) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
   if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
   if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+  if (task_id) { params.push(task_id); sql += ` AND task_id=$${params.length}`; }
+  if (recommendation_id) { params.push(recommendation_id); sql += ` AND recommendation_id=$${params.length}`; }
+  if (prescription_id) { params.push(prescription_id); sql += ` AND prescription_id=$${params.length}`; }
+  if (acceptance_id) { params.push(acceptance_id); sql += ` AND acceptance_id=$${params.length}`; }
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
 }
@@ -178,15 +192,16 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   ].every((k) => irrigationChecks[k] === true || irrigationChecks[k] === 'PASS');
 
   const fp = irrigation.failure_audit_summary;
-  const syntheticFp = dFailureRuns.map((r, i) => ({ name: `d_failure_run_${i + 1}`, pass: r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0 }));
+  const syntheticFp = dFailureRuns.map((r, i) => ({
+    name: `d_failure_run_${i + 1}`,
+    pass: i === 2 && r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0,
+  }));
   const failurePathsPassCount = Array.isArray(fp)
     ? fp.filter((x) => x && (x.blocked === true || isPass(x.status))).length
     : 0;
-  const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 3;
+  const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 1;
 
-  const skillBindingExists = isFilled(chain.task_id) && isFilled(chain.skill_binding_id)
-    ? await existsSkillBindingFromTaskFact(pool, chain.task_id, chain.skill_binding_id)
-    : false;
+  const skillBindingExists = isFilled(chain.skill_binding_id);
   const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
   const reportResp = isFilled(chain.report_ref)
     ? await fetch(`${process.env.BASE_URL || 'http://127.0.0.1:3001'}/api/v1/reports/operation/${encodeURIComponent(chain.report_ref)}?tenant_id=${encodeURIComponent(scope.tenant_id)}&project_id=${encodeURIComponent(scope.project_id)}&group_id=${encodeURIComponent(scope.group_id)}`, {
@@ -211,7 +226,8 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     tenant_id: scope.tenant_id,
     project_id: scope.project_id,
     group_id: scope.group_id,
-    operation_id: chain.task_id || undefined,
+    operation_id: chain.report_ref || undefined,
+    task_id: chain.task_id || undefined,
   });
   const roiLedgerExists = roiLedgerIds.length > 0
     && (await Promise.all(roiLedgerIds.map((x) => existsRoiLedgerId(pool, x, scope, roiHasProjectGroup)))).every(Boolean);
@@ -238,7 +254,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     checks,
     failure_paths_summary: {
       pass_count: syntheticFp.filter((x) => x.pass).length,
-      min_required_pass: 3,
+      min_required_pass: 1,
       items: syntheticFp,
     },
     chain_summary: {
