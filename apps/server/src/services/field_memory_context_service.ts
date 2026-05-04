@@ -33,9 +33,9 @@ function asNum(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function asIso(value: unknown): string {
-  if (typeof value === "string" && value.trim()) return value;
-  return new Date(0).toISOString();
+function includesAny(text: string, needles: string[]): boolean {
+  const haystack = text.toLowerCase();
+  return needles.some((needle) => haystack.includes(needle.toLowerCase()));
 }
 
 export async function loadFieldMemoryContextForRecommendation(
@@ -45,7 +45,7 @@ export async function loadFieldMemoryContextForRecommendation(
   const limit = Math.max(10, Math.min(200, Math.floor(input.lookback_limit ?? 50)));
 
   const rows = (await pool.query(
-    `SELECT memory_id, memory_type, delta_value, metric_value, confidence, summary_text, occurred_at
+    `SELECT memory_id, memory_type, before_value, after_value, delta_value, confidence, summary_text, occurred_at
        FROM field_memory_v1
       WHERE tenant_id = $1
         AND field_id = $2
@@ -64,61 +64,55 @@ export async function loadFieldMemoryContextForRecommendation(
     ],
   )) as QueryResult<any>;
 
-  const recent = [...rows.rows].sort((a, b) => asIso(b.occurred_at).localeCompare(asIso(a.occurred_at)));
+  const recent = rows.rows;
   const memory_refs = recent.map((row) => String(row.memory_id ?? "")).filter(Boolean);
 
   let weak_response_count = 0;
-  let deviceFailureCount = 0;
-  let skillLowConfidenceCount = 0;
+  let device_risk_count = 0;
+  let skill_risk_count = 0;
 
   for (const row of recent) {
-    const type = String(row.memory_type ?? "");
     const delta = asNum(row.delta_value);
-    const metric = asNum(row.metric_value);
+    const beforeValue = asNum(row.before_value);
+    const afterValue = asNum(row.after_value);
     const confidence = asNum(row.confidence);
+    const summary = String(row.summary_text ?? "");
 
-    if (type === "FIELD_RESPONSE_MEMORY") {
-      if (delta == null || delta <= 0) weak_response_count += 1;
-    }
+    const weakResponseHit =
+      (delta != null && delta < 0.03)
+      || (afterValue != null && beforeValue != null && afterValue <= beforeValue)
+      || includesAny(summary, ["未回升"]);
+    if (weakResponseHit) weak_response_count += 1;
 
-    if (type === "DEVICE_RELIABILITY_MEMORY") {
-      if (metric != null && metric <= 0) deviceFailureCount += 1;
-    }
+    const deviceRiskHit = includesAny(summary, ["失败", "超时", "offline"]);
+    if (deviceRiskHit) device_risk_count += 1;
 
-    if (type === "SKILL_PERFORMANCE_MEMORY") {
-      if (confidence != null && confidence < 0.6) skillLowConfidenceCount += 1;
-    }
+    const skillRiskHit = (confidence != null && confidence < 0.6) || includesAny(summary, ["失败"]);
+    if (skillRiskHit) skill_risk_count += 1;
   }
 
-  const weak_response_detected = weak_response_count > 0;
-  const device_reliability_risk = deviceFailureCount > 0;
-  const skill_performance_risk = skillLowConfidenceCount > 0;
+  const weak_response_detected = weak_response_count >= 2;
+  const device_reliability_risk = device_risk_count >= 2;
+  const skill_performance_risk = skill_risk_count > 0;
+
+  const anyRisk = weak_response_detected || device_reliability_risk || skill_performance_risk;
+  const recommended_confidence_adjustment: "NONE" | "LOWER_ONE_LEVEL" = anyRisk ? "LOWER_ONE_LEVEL" : "NONE";
+  const requires_manual_review = anyRisk;
 
   const risk_reasons: string[] = [];
   const explain_notes: string[] = [];
 
   if (weak_response_detected) {
     risk_reasons.push("WEAK_FIELD_RESPONSE_HISTORY");
-    explain_notes.push(`Detected ${weak_response_count} weak or non-positive field response memories in recent history.`);
+    explain_notes.push(`Weak irrigation response detected in ${weak_response_count} memory records (threshold: >=2).`);
   }
   if (device_reliability_risk) {
     risk_reasons.push("DEVICE_RELIABILITY_RISK");
-    explain_notes.push(`Detected ${deviceFailureCount} recent device reliability failure memories.`);
+    explain_notes.push(`Device risk keywords found in ${device_risk_count} memory records (threshold: >=2).`);
   }
   if (skill_performance_risk) {
     risk_reasons.push("SKILL_PERFORMANCE_RISK");
-    explain_notes.push(`Detected ${skillLowConfidenceCount} recent low-confidence skill performance memories.`);
-  }
-
-  const recommended_confidence_adjustment = (weak_response_detected || device_reliability_risk || skill_performance_risk)
-    ? "LOWER_ONE_LEVEL"
-    : "NONE";
-
-  const requires_manual_review = deviceFailureCount >= 2 || (weak_response_count >= 3 && skillLowConfidenceCount >= 1);
-
-  if (requires_manual_review) {
-    risk_reasons.push("MANUAL_REVIEW_REQUIRED");
-    explain_notes.push("Escalated to manual review due to repeated reliability/response risk patterns.");
+    explain_notes.push(`Skill risk detected in ${skill_risk_count} memory records (confidence < 0.6 or summary includes 失败).`);
   }
 
   return {
