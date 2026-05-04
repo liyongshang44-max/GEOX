@@ -61,6 +61,8 @@ function toSkillTrace(trace: JudgeSkillTraceV1, output: { verdict: string; reaso
     skill_id: trace.skill_id,
     trace_id: trace.trace_id,
     run_id: trace.run_id,
+    skill_version: trace.skill_version,
+    skill_category: trace.skill_category,
     verdict: output.verdict,
     reasons: output.reasons,
   };
