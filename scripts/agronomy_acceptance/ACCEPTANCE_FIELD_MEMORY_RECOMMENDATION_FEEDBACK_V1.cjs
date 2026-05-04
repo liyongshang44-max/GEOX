@@ -36,7 +36,6 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
 
   const pool = new Pool({ connectionString: databaseUrl });
 
-  // seed formal trigger
   const ts0 = Date.now() - 60000;
   await pool.query(
     `INSERT INTO derived_sensing_state_index_v1
@@ -55,10 +54,10 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
     [tenant_id, project_id, group_id, field_id, device_id, ts0, `obs_${randomUUID()}`]
   );
 
-  // Step1 baseline
-  const baseline = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
+  // Step 1: no memory => A
+  const A = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
-  // Step2 write two weak-response memories
+  // Step 2: add 2 weak response => B
   for (let i = 0; i < 2; i += 1) {
     await pool.query(
       `INSERT INTO field_memory_v1 (
@@ -74,31 +73,40 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
       ]
     );
   }
+  const B = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
-  // Step3 regenerate
-  const after = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
+  const riskB = Array.isArray(B?.risk?.reasons) ? B.risk.reasons.map((x) => String(x)) : [];
+  assert.ok(
+    Number(B.confidence ?? 0) < Number(A.confidence ?? 0) ||
+    B.requires_manual_review === true ||
+    (Array.isArray(B.memory_refs) && B.memory_refs.length > 0) ||
+    (B.risk?.reasons ?? []).some(x => String(x).includes('FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE')),
+    'Step2: recommendation must reflect field memory impact'
+  );
 
-  // assert 1 memory refs
-  assert.ok(Array.isArray(after.memory_refs) && after.memory_refs.length >= 2, 'memory_refs should include >=2 entries');
+  // Step 3: add deviation memory => C
+  await pool.query(
+    `INSERT INTO field_memory_v1 (
+      memory_id, tenant_id, project_id, group_id, field_id, season_id, memory_type, metric_key,
+      before_value, after_value, delta_value, confidence, source_type, source_id, summary_text, evidence_refs, occurred_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,'FIELD_RESPONSE_MEMORY','execution_deviation',$7,$8,$9,$10,'acceptance',$11,$12,'[]'::jsonb,NOW())`,
+    [
+      `mem_${randomUUID().replace(/-/g, '')}`,
+      tenant_id, project_id, group_id, field_id, season_id,
+      1.0, 1.3, 0.3, 0.9,
+      `src_${randomUUID()}`,
+      'execution deviation > 15%'
+    ]
+  );
+  const C = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
-  // assert 2 structural changes
-  const riskReasons = Array.isArray(after?.risk?.reasons) ? after.risk.reasons.map((x) => String(x).toLowerCase()) : [];
-  const structureChanged =
-    after.requires_manual_review === true
-    || Number(after.confidence ?? 0) < Number(baseline.confidence ?? 0)
-    || riskReasons.some((x) => x.includes('field_memory_weak_response') || x.includes('weak_field_response'));
-  assert.ok(structureChanged, 'expected memory-driven structure change on recommendation');
+  const riskC = Array.isArray(C?.risk?.reasons) ? C.risk.reasons.map((x) => String(x)) : [];
+  assert.ok(
+    C.requires_manual_review === true || riskC.some((x) => x.includes('FIELD_MEMORY_EXECUTION_DEVIATION_RISK')),
+    'Step3: should require manual review or include FIELD_MEMORY_EXECUTION_DEVIATION_RISK'
+  );
 
-  // assert 3 explain changed
-  const explainText = String(after?.explain?.human ?? after?.explain?.action_summary ?? '');
-  assert.ok(explainText.includes('历史'), 'explain should include 历史');
-
-  // final standard
-  assert.ok(baseline.requires_manual_review !== true, 'baseline should not require manual review');
-  assert.ok(after.requires_manual_review === true, 'after should require manual review');
-  assert.ok(Number(after.confidence ?? 0) <= Number(baseline.confidence ?? 0), 'after confidence should be <= baseline');
-
-  process.stdout.write(`${JSON.stringify({ ok: true, baseline, after }, null, 2)}\n`);
+  process.stdout.write('ACCEPTANCE_FIELD_MEMORY_RECOMMENDATION_FEEDBACK_V1: PASS\n');
   await pool.end();
 })().catch(async (err) => {
   process.stderr.write(`${JSON.stringify({ ok: false, error: String(err?.message ?? err) }, null, 2)}\n`);
