@@ -49,6 +49,8 @@ function toSourceRef(trace: JudgeSkillTraceV1) {
     trace_id: trace.trace_id,
     run_id: trace.run_id,
     input_digest: trace.input_digest,
+    inputs: trace.inputs,
+    outputs: trace.outputs,
     confidence: trace.confidence,
     evidence_refs: trace.evidence_refs,
   };

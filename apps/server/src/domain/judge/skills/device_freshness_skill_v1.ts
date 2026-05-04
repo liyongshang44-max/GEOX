@@ -26,7 +26,7 @@ export function runDeviceFreshnessSkillV1(input: DeviceFreshnessSkillV1Input) {
   const trace = buildJudgeSkillTraceV1({
     skill_id: "device_freshness_skill_v1",
     skill_version: "v1",
-    skill_category: "SENSING",
+    skill_category: "sensing",
     inputs: {
       observation_age_minutes: input.observation_age_minutes,
       heartbeat_age_minutes: input.heartbeat_age_minutes,

@@ -27,7 +27,7 @@ export function runIrrigationEffectAcceptanceSkillV1(input: IrrigationEffectAcce
   const trace = buildJudgeSkillTraceV1({
     skill_id: "irrigation_effect_acceptance_skill_v1",
     skill_version: "v1",
-    skill_category: "ACCEPTANCE",
+    skill_category: "acceptance",
     inputs: { delta },
     outputs: output,
     confidence: {

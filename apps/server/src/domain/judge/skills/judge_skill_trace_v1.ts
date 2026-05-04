@@ -3,7 +3,7 @@ import { randomUUID, createHash } from "node:crypto";
 export type JudgeSkillTraceV1 = {
   skill_id: string;
   skill_version: string;
-  skill_category: "SENSING" | "EVIDENCE" | "EXECUTION" | "ACCEPTANCE";
+  skill_category: "sensing" | "agronomy" | "device" | "acceptance";
   trace_id: string;
   run_id: string;
   input_digest: string;

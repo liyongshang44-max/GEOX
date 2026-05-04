@@ -34,7 +34,7 @@ export function runReceiptCompletenessSkillV1(input: ReceiptCompletenessSkillV1I
   const trace = buildJudgeSkillTraceV1({
     skill_id: "receipt_completeness_skill_v1",
     skill_version: "v1",
-    skill_category: "EXECUTION",
+    skill_category: "acceptance",
     inputs: { receipt },
     outputs: output,
     confidence: {

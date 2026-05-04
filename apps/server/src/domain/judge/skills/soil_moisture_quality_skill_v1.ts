@@ -27,7 +27,7 @@ export function runSoilMoistureQualitySkillV1(input: SoilMoistureQualitySkillV1I
   const trace = buildJudgeSkillTraceV1({
     skill_id: "soil_moisture_quality_skill_v1",
     skill_version: "v1",
-    skill_category: "EVIDENCE",
+    skill_category: "sensing",
     inputs: { soil_moisture: value },
     outputs: output,
     confidence: {
