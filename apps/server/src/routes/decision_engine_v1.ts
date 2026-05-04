@@ -24,6 +24,7 @@ import {
   ensureDerivedSensingStateProjectionV1,
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1.js";
+import { loadFieldMemoryContextForRecommendation } from "../services/field_memory_context_service.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import {
   IRRIGATION_CONTROL_PLANE_ACTION,
@@ -120,7 +121,32 @@ type RecommendationV1 = {
     confidence?: { level: "HIGH" | "MEDIUM" | "LOW"; basis: "measured" | "estimated" | "assumed"; reasons?: string[] };
     evidence_refs?: string[];
   };
+  memory_refs?: string[];
+  requires_manual_review?: boolean;
+  risk?: { reasons?: string[] };
+  field_memory_context?: any;
 };
+
+function lowerConfidenceOneLevel(confidence: number): number {
+  if (!Number.isFinite(confidence)) return 0;
+  if (confidence >= 0.85) return 0.7;
+  if (confidence >= 0.7) return 0.55;
+  return 0.4;
+}
+
+function mergeTextList(...lists: Array<string[] | undefined>): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const list of lists) {
+    for (const item of (list ?? [])) {
+      const v = String(item ?? "").trim();
+      if (!v || seen.has(v)) continue;
+      seen.add(v);
+      out.push(v);
+    }
+  }
+  return out;
+}
 
 type HardRuleConstraintInputV1 = {
   moisture_constraint?: string | null;
@@ -1351,6 +1377,26 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
+    for (const recommendation of recommendations) {
+      const memory = await loadFieldMemoryContextForRecommendation(pool, {
+        tenant_id: tenant.tenant_id,
+        project_id: tenant.project_id,
+        group_id: tenant.group_id,
+        field_id: recommendation.field_id,
+        season_id: recommendation.season_id,
+      });
+
+      if (memory.recommended_confidence_adjustment === "LOWER_ONE_LEVEL") {
+        recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
+      }
+
+      recommendation.memory_refs = memory.memory_refs;
+      recommendation.requires_manual_review = Boolean(recommendation.requires_manual_review) || memory.requires_manual_review;
+      recommendation.risk = recommendation.risk ?? { reasons: [] };
+      recommendation.risk.reasons = mergeTextList(recommendation.risk.reasons, memory.risk_reasons);
+      recommendation.field_memory_context = memory;
+    }
+
     const cropCode = String(body.crop_code ?? "").trim();
     const matchedRuleIds = Array.from(new Set(
       recommendations.flatMap((x) => (Array.isArray(x.rule_hit) ? x.rule_hit : []))
@@ -1370,6 +1416,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation: rec,
         stage1Summary,
       });
+      if (Array.isArray(rec.field_memory_context?.explain_notes) && rec.field_memory_context.explain_notes.length > 0) {
+        const explainAny = (rec.explain ?? {}) as any;
+        const baseHuman = String(explainAny.human ?? explainAny.action_summary ?? "").trim();
+        explainAny.human = `${baseHuman}${baseHuman ? " " : ""}历史表现显示该地块响应偏弱，建议人工复核。`;
+        rec.explain = explainAny;
+      }
       rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({
         recommendation: rec,
         sensingOverview,
