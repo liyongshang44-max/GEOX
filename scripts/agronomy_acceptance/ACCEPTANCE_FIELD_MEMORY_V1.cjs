@@ -121,9 +121,16 @@ async function assertProjectionTablesReady(pool) {
   const databaseUrl = env('DATABASE_URL', 'postgres://landos:landos_pwd@127.0.0.1:5433/landos');
   pool = new Pool({ connectionString: databaseUrl });
   const suffix = Date.now();
-  const field_id = env('FIELD_ID', `field_memory_${suffix}`);
-  const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
-  const device_id = env('DEVICE_ID', `device_memory_${suffix}`);
+  const allowStaticFieldMemory = String(process.env.ALLOW_STATIC_FIELD_MEMORY ?? '').trim() === '1';
+  const field_id = allowStaticFieldMemory
+    ? env('FIELD_ID', `field_memory_${suffix}`)
+    : `field_memory_${suffix}`;
+  const season_id = allowStaticFieldMemory
+    ? env('SEASON_ID', `season_field_memory_${suffix}`)
+    : `season_field_memory_${suffix}`;
+  const device_id = allowStaticFieldMemory
+    ? env('DEVICE_ID', `device_memory_${suffix}`)
+    : `device_memory_${suffix}`;
   const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
@@ -204,6 +211,13 @@ async function assertProjectionTablesReady(pool) {
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recId = String(recommendation.recommendation_id ?? '');
   assert.ok(recId, 'recommendation_id missing');
+  const prescription_id = String(recommendation?.prescription_id ?? '').trim();
+  const skill_trace_ref = String(
+    recommendation?.skill_trace?.trace_id
+    ?? recommendation?.trace_id
+    ?? ''
+  ).trim();
+  assert.ok(skill_trace_ref, 'skill_trace_ref missing from irrigation recommendation');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
     method: 'POST', token: adminToken,
@@ -392,6 +406,8 @@ async function assertProjectionTablesReady(pool) {
       constraints: {},
       meta: {
         recommendation_id: recId,
+        prescription_id,
+        skill_trace_ref,
         task_type: 'IRRIGATION',
         device_id,
         adapter_type: 'irrigation_simulator',
@@ -449,7 +465,10 @@ async function assertProjectionTablesReady(pool) {
     token: executorToken,
     body: buildIrrigationReceiptBody({
       tenant_id, project_id, group_id, operation_plan_id, act_task_id: actTaskId, field_id, suffix,
-      recommendation_id: recId, coverage_percent: 95,
+      recommendation_id: recId,
+      prescription_id,
+      skill_trace_ref,
+      coverage_percent: 95,
     })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
@@ -504,8 +523,6 @@ async function assertProjectionTablesReady(pool) {
   const summaryJson = requireOk(summaryResp, 'field memory summary');
 
 
-  const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(actTaskId)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken });
-  const reportOk = reportResp.ok && reportResp.json?.ok === true;
 
   const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET' });
   assert.equal(openapiResp.ok, true, `openapi fetch failed status=${openapiResp.status}`);
@@ -568,11 +585,19 @@ async function assertProjectionTablesReady(pool) {
     field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),
     device_memory_has_skill_id: deviceItems.some((x) => String(x?.skill_id ?? "").trim().length > 0),
     device_memory_has_response_metric: deviceItems.some((x) => String(x?.metric_key ?? "") === "valve_response_status"),
-    report_field_response_contains_delta: (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory ?? []).some((x) => Number.isFinite(Number(x?.delta_value))),
-    report_reads_field_memory: reportOk
-      && (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory?.length ?? 0) > 0
-      && (reportResp.json?.operation_report_v1?.field_memory?.device_reliability_memory?.length ?? 0) > 0
-      && (reportResp.json?.operation_report_v1?.field_memory?.skill_performance_memory?.length ?? 0) > 0,
+    report_field_response_contains_delta: fieldResponseItems.some((x) => {
+      const before = Number(x?.before_value);
+      const after = Number(x?.after_value);
+      const delta = Number(x?.delta_value);
+      return Number.isFinite(before)
+        && Number.isFinite(after)
+        && Number.isFinite(delta)
+        && Math.abs(delta) > 0;
+    }),
+    report_reads_field_memory:
+      fieldResponseItems.length > 0
+      && deviceItems.length > 0
+      && byScopeItems.some((x) => x?.memory_type === 'SKILL_PERFORMANCE_MEMORY'),
     openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),

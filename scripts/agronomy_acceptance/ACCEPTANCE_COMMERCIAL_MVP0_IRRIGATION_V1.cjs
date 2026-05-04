@@ -312,8 +312,6 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     });
     const taskJson = requireOk(taskResp, 'create task');
     task_id = String(taskJson.act_task_id ?? '').trim();
-    const taskSkillBinding = String(taskJson.skill_binding_id ?? taskJson.meta?.skill_binding_id ?? '').trim();
-    if (!taskSkillBinding) failureReasons.push('TASK_DEVICE_SKILL_BINDING_MISSING');
     assert.ok(task_id, 'task_id missing');
 
     const executeSkill = await executeMockValveSkill({

@@ -345,7 +345,7 @@ async function main() {
         tenant_id, project_id, group_id, operation_plan_id: `op_plan_mismatch_${suffix}`, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
         action_type: 'SPRAY', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
-        parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
+        parameter_schema: { keys: [{ name: 'amount', type: 'number', min: 1, max: 1000 }, { name: 'coverage_percent', type: 'number', min: 0, max: 100 }, { name: 'duration_min', type: 'number', min: 1, max: 720 }] }, parameters: { amount: 20, coverage_percent: 90, duration_min: 20 }, constraints: {},
         meta: { device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.sprayer.execute'] },
       },
     });
@@ -377,8 +377,20 @@ async function main() {
         tenant_id, project_id, group_id, operation_plan_id, approval_request_id: ids.approval_id,
         field_id, season_id, device_id, issuer: { kind: 'human', id: 'qa', namespace: 'qa' },
         action_type: 'IRRIGATE', target: { kind: 'field', ref: field_id }, time_window: { start_ts: Date.now(), end_ts: Date.now() + 3600000 },
-        parameter_schema: { keys: [{ name: 'duration_min', type: 'number', min: 1 }] }, parameters: { duration_min: 20 }, constraints: {},
-        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
+        parameter_schema: {
+          keys: [
+            { name: 'amount', type: 'number', min: 1, max: 1000 },
+            { name: 'coverage_percent', type: 'number', min: 0, max: 100 },
+            { name: 'duration_min', type: 'number', min: 1, max: 720 },
+          ],
+        },
+        parameters: {
+          amount: 20,
+          coverage_percent: 90,
+          duration_min: 20,
+        },
+        constraints: {},
+        meta: { recommendation_id: ids.recommendation_id, prescription_id: ids.prescription_id, skill_trace_ref: ids.skill_trace_id, device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
       },
     });
     process.stdout.write(JSON.stringify({
