@@ -117,7 +117,11 @@ async function existsSkillRunId(pool, skillRunId) {
   const q = await pool.query(
     `SELECT 1 FROM facts
       WHERE (record_json::jsonb->>'type') IN ('skill_run_v1','skill_execution_v1')
-        AND (record_json::jsonb#>>'{payload,skill_run_id}')=$1
+        AND (
+          (record_json::jsonb#>>'{payload,run_id}')=$1
+          OR (record_json::jsonb#>>'{payload,skill_run_id}')=$1
+          OR fact_id=$1
+        )
       LIMIT 1`,
     [skillRunId]
   );
