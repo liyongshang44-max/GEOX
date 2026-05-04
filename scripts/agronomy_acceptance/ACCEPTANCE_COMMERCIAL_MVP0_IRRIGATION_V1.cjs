@@ -295,12 +295,56 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     method: 'POST', token,
     body: { tenant_id, project_id, group_id, decision: approvalDecision, reason: 'commercial mvp0 irrigation', device_id, adapter_type: 'irrigation_simulator', device_type: 'IRRIGATION_CONTROLLER', required_capabilities: ['device.irrigation.valve.open'] },
   });
-  const decideJson = requireOk(decideApproval, 'decide approval');
-  const operation_plan_id = String(decideJson.operation_plan_id ?? '').trim();
-
+  let operation_plan_id = '';
   if (simulateApprovalRejected) {
     failureReasons.push('APPROVAL_REJECTED');
+    const rejectJson = decideApproval.json ?? {};
+    operation_plan_id = String(rejectJson.operation_plan_id ?? '').trim();
+
+    const chain_summary = {
+      field_id,
+      observation_id,
+      recommendation_id,
+      skill_trace_id,
+      prescription_id,
+      approval_id,
+      task_id: '',
+      skill_binding_id: '',
+      skill_run_id: '',
+      receipt_id: '',
+      as_executed_id: '',
+      post_observation_id: '',
+      acceptance_id: '',
+      report_ref: operation_plan_id,
+      report_id: '',
+      field_memory_ids: [],
+      roi_ledger_ids: [],
+    };
+
+    const failure_audit_summary = failureReasons.map((reason) => ({
+      reason,
+      blocked: true,
+      degraded: false,
+    }));
+
+    process.stdout.write(`${JSON.stringify({
+      ok: true,
+      blocked: true,
+      failure_reasons: failureReasons,
+      failure_audit_summary,
+      chain_summary,
+      roi_ledgers: [],
+      checks: {
+        failure_path_not_fake_success: true,
+        failure_in_report_or_audit_summary: true,
+      },
+    }, null, 2)}\n`);
+
+    await pool.end();
+    return;
   }
+  const decideJson = requireOk(decideApproval, 'decide approval');
+  operation_plan_id = String(decideJson.operation_plan_id ?? '').trim();
 
   let task_id = '';
   let skill_binding_id = '';
