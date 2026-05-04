@@ -1584,15 +1584,24 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
 
+    const tenant_id = tenant.tenant_id;
+    const project_id = tenant.project_id;
+    const group_id = tenant.group_id;
+    const season_id = body.season_id;
+
     const finalRecommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      season_id: body.season_id,
+      tenant_id,
+      project_id,
+      group_id,
+      season_id,
       recommendations: resolvedRecommendations,
     });
 
-    return reply.send({ ok: true, recommendations: finalRecommendations, fact_ids });
+    return reply.send({
+      ok: true,
+      recommendations: finalRecommendations,
+      fact_ids,
+    });
   });
 
   app.post("/api/v1/recommendations/:recommendation_id/submit-approval", async (req, reply) => {
