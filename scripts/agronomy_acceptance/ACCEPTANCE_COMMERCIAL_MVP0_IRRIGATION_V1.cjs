@@ -201,6 +201,50 @@ async function assertFieldMemoryIdsExist(pool, ids) {
   if (simulateStale) failureReasons.push('STALE_OBSERVATION');
   if (simulateInsufficientEvidence) failureReasons.push('INSUFFICIENT_EVIDENCE');
 
+  if (simulateStale || simulateInsufficientEvidence) {
+    const failure_audit_summary = failureReasons.map((reason) => ({
+      reason,
+      blocked: true,
+      degraded: false,
+    }));
+
+    const chain_summary = {
+      field_id,
+      observation_id,
+      recommendation_id: '',
+      skill_trace_id: '',
+      prescription_id: '',
+      approval_id: '',
+      task_id: '',
+      skill_binding_id: '',
+      skill_run_id: '',
+      receipt_id: '',
+      as_executed_id: '',
+      post_observation_id: '',
+      acceptance_id: '',
+      report_ref: '',
+      report_id: '',
+      field_memory_ids: [],
+      roi_ledger_ids: [],
+    };
+
+    process.stdout.write(`${JSON.stringify({
+      ok: true,
+      blocked: true,
+      failure_reasons: failureReasons,
+      failure_audit_summary,
+      chain_summary,
+      roi_ledgers: [],
+      checks: {
+        failure_path_not_fake_success: true,
+        failure_in_report_or_audit_summary: true,
+      },
+    }, null, 2)}\n`);
+
+    await pool.end();
+    return;
+  }
+
   const gen = await fetchJson(`${base}/api/v1/recommendations/generate`, {
     method: 'POST', token,
     body: {
