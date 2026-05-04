@@ -1406,14 +1406,6 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     });
     recommendations.sort((a, b) => Number(b.rank_score ?? 0) - Number(a.rank_score ?? 0));
 
-    recommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
-      tenant_id: tenant.tenant_id,
-      project_id: tenant.project_id,
-      group_id: tenant.group_id,
-      season_id: body.season_id,
-      recommendations,
-    });
-
     const fact_ids: string[] = [];
     const resolvedRecommendations: RecommendationV1[] = [];
     for (const rec of recommendations) {
@@ -1592,7 +1584,15 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       });
     }
 
-    return reply.send({ ok: true, recommendations: resolvedRecommendations, fact_ids });
+    const finalRecommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      season_id: body.season_id,
+      recommendations: resolvedRecommendations,
+    });
+
+    return reply.send({ ok: true, recommendations: finalRecommendations, fact_ids });
   });
 
   app.post("/api/v1/recommendations/:recommendation_id/submit-approval", async (req, reply) => {
