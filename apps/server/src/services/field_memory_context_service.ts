@@ -50,8 +50,12 @@ export async function loadFieldMemoryContextForRecommendation(
         AND field_id = $2
         AND ($3::text IS NULL OR project_id = $3)
         AND ($4::text IS NULL OR group_id = $4)
-        AND ($5::text IS NULL OR season_id = $5)
-      ORDER BY occurred_at DESC
+      ORDER BY
+        CASE
+          WHEN $5::text IS NOT NULL AND season_id = $5 THEN 0
+          ELSE 1
+        END ASC,
+        occurred_at DESC
       LIMIT $6`,
     [
       input.tenant_id,
