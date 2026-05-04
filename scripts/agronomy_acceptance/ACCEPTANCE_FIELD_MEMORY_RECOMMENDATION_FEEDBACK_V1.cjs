@@ -80,7 +80,7 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
     Number(B.confidence ?? 0) < Number(A.confidence ?? 0) ||
     B.requires_manual_review === true ||
     (Array.isArray(B.memory_refs) && B.memory_refs.length > 0) ||
-    (B.risk?.reasons ?? []).some(x => String(x).includes('FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE')),
+    (B.risk?.reasons ?? []).some(x => x.includes('FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE')),
     'Step2: recommendation must reflect field memory impact'
   );
 
