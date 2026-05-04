@@ -12,20 +12,13 @@ type LoadFieldMemoryContextInput = {
   lookback_limit?: number;
 };
 
-export type FieldMemoryContextForRecommendation = {
-  memory_refs: string[];
-
-  weak_response_detected: boolean;
+export type FieldMemoryContextV1 = {
   weak_response_count: number;
-
-  device_reliability_risk: boolean;
-  skill_performance_risk: boolean;
-
-  recommended_confidence_adjustment: "NONE" | "LOWER_ONE_LEVEL";
-  requires_manual_review: boolean;
-
-  risk_reasons: string[];
-  explain_notes: string[];
+  execution_deviation_count: number;
+  low_reliability_count: number;
+  skill_failure_count: number;
+  memory_refs: string[];
+  reasons: string[];
 };
 
 function asNum(value: unknown): number | null {
@@ -33,15 +26,18 @@ function asNum(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function includesAny(text: string, needles: string[]): boolean {
-  const haystack = text.toLowerCase();
-  return needles.some((needle) => haystack.includes(needle.toLowerCase()));
+function asText(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function hasAny(text: string, tokens: string[]): boolean {
+  return tokens.some((x) => text.includes(x.toLowerCase()));
 }
 
 export async function loadFieldMemoryContextForRecommendation(
   pool: DbConn,
   input: LoadFieldMemoryContextInput,
-): Promise<FieldMemoryContextForRecommendation> {
+): Promise<FieldMemoryContextV1> {
   const limit = Math.max(10, Math.min(200, Math.floor(input.lookback_limit ?? 50)));
 
   const rows = (await pool.query(
@@ -68,66 +64,46 @@ export async function loadFieldMemoryContextForRecommendation(
   const memory_refs = recent.map((row) => String(row.memory_id ?? "")).filter(Boolean);
 
   let weak_response_count = 0;
-  let device_risk_count = 0;
-  let skill_risk_count = 0;
+  let execution_deviation_count = 0;
+  let low_reliability_count = 0;
+  let skill_failure_count = 0;
 
   for (const row of recent) {
+    const summary = asText(row.summary_text);
     const delta = asNum(row.delta_value);
-    const beforeValue = asNum(row.before_value);
-    const afterValue = asNum(row.after_value);
+    const before = asNum(row.before_value);
+    const after = asNum(row.after_value);
     const confidence = asNum(row.confidence);
-    const summary = String(row.summary_text ?? "");
 
-    const weakResponseHit =
-      (delta != null && delta < 0.03)
-      || (afterValue != null && beforeValue != null && afterValue <= beforeValue)
-      || includesAny(summary, ["未回升"]);
-    if (weakResponseHit) weak_response_count += 1;
+    if (delta != null && delta < 0.03) weak_response_count += 1;
 
-    const deviceRiskHit = includesAny(summary, ["失败", "超时", "offline"]);
-    if (deviceRiskHit) device_risk_count += 1;
+    const deviationRatio =
+      before != null && before !== 0 && after != null
+        ? Math.abs(after - before) / Math.abs(before)
+        : null;
+    if (deviationRatio != null && deviationRatio > 0.15) execution_deviation_count += 1;
 
-    const skillRiskHit = (confidence != null && confidence < 0.6) || includesAny(summary, ["失败"]);
-    if (skillRiskHit) skill_risk_count += 1;
+    if ((confidence != null && confidence < 0.6) || hasAny(summary, ["success=false", "执行失败", "offline", "timeout"])) {
+      low_reliability_count += 1;
+    }
+
+    if (hasAny(summary, ["skill fail", "skill_failed", "技能失败"])) {
+      skill_failure_count += 1;
+    }
   }
 
-  const weak_response_detected = weak_response_count >= 2;
-  const device_reliability_risk = device_risk_count >= 2;
-  const skill_performance_risk = skill_risk_count > 0;
-
-  const anyRisk = weak_response_detected || device_reliability_risk || skill_performance_risk;
-  const recommended_confidence_adjustment: "NONE" | "LOWER_ONE_LEVEL" = anyRisk ? "LOWER_ONE_LEVEL" : "NONE";
-  const requires_manual_review = anyRisk;
-
-  const risk_reasons: string[] = [];
-  const explain_notes: string[] = [];
-
-  if (weak_response_detected) {
-    risk_reasons.push("WEAK_FIELD_RESPONSE_HISTORY");
-    explain_notes.push(`Weak irrigation response detected in ${weak_response_count} memory records (threshold: >=2).`);
-  }
-  if (device_reliability_risk) {
-    risk_reasons.push("DEVICE_RELIABILITY_RISK");
-    explain_notes.push(`Device risk keywords found in ${device_risk_count} memory records (threshold: >=2).`);
-  }
-  if (skill_performance_risk) {
-    risk_reasons.push("SKILL_PERFORMANCE_RISK");
-    explain_notes.push(`Skill risk detected in ${skill_risk_count} memory records (confidence < 0.6 or summary includes 失败).`);
-  }
+  const reasons: string[] = [];
+  if (weak_response_count > 0) reasons.push("FIELD_MEMORY_WEAK_RESPONSE");
+  if (execution_deviation_count > 0) reasons.push("FIELD_MEMORY_EXECUTION_DEVIATION");
+  if (low_reliability_count > 0) reasons.push("FIELD_MEMORY_LOW_RELIABILITY");
+  if (skill_failure_count > 0) reasons.push("FIELD_MEMORY_SKILL_FAILURE");
 
   return {
-    memory_refs,
-
-    weak_response_detected,
     weak_response_count,
-
-    device_reliability_risk,
-    skill_performance_risk,
-
-    recommended_confidence_adjustment,
-    requires_manual_review,
-
-    risk_reasons,
-    explain_notes,
+    execution_deviation_count,
+    low_reliability_count,
+    skill_failure_count,
+    memory_refs,
+    reasons,
   };
 }
