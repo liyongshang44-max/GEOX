@@ -110,6 +110,12 @@ export type FieldReportDetailV1 = {
     action_type: string | null;
     priority: string | null;
   } | null;
+  value_summary: {
+    total_roi_items: number;
+    measured_items: number;
+    insufficient_items: number;
+    customer_value_text: string;
+  };
 };
 
 const RISK_RANK: Record<OperationReportRiskLevel, number> = {
@@ -170,6 +176,20 @@ function deriveStateRiskLevel(state: OperationStateV1): OperationReportRiskLevel
   return "LOW";
 }
 
+function buildFieldValueSummary(reports: OperationReportV1[]): FieldReportDetailV1["value_summary"] {
+  const items = reports.flatMap((r) => r.roi_ledger?.items ?? []);
+
+  return {
+    total_roi_items: items.length,
+    measured_items: items.filter((x) => x.value_kind === "MEASURED").length,
+    insufficient_items: items.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
+    customer_value_text:
+      items.length
+        ? `本地块已有 ${items.length} 条价值记录`
+        : "暂无价值记录",
+  };
+}
+
 function deriveStateRiskReasons(state: OperationStateV1): string[] {
   const reasons = new Set<string>();
   for (const code of state.reason_codes ?? []) {
@@ -224,6 +244,7 @@ export function projectFieldReportDetailV1(params: {
     top_reasons: topReasons,
   });
   const nextActionSource = reportsSorted.find((report) => Boolean(report.why?.explain_human) || Boolean(report.identifiers.recommendation_id)) ?? null;
+  const valueSummary = buildFieldValueSummary(params.reports);
 
   return {
     type: "field_report_v1",
@@ -268,6 +289,7 @@ export function projectFieldReportDetailV1(params: {
       action_type: inferActionType(nextActionSource),
       priority: null,
     } : null,
+    value_summary: valueSummary,
   };
 }
 
