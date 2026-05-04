@@ -1926,6 +1926,8 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
       lookback_limit: 50,
     });
 
+    // 必须无条件挂载，方便验收和诊断
+    recommendation.field_memory_context = memory;
     const memoryAdjustment = buildRecommendationMemoryAdjustmentV1(memory);
     recommendation.field_memory_context = memory;
 
@@ -1978,4 +1980,3 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
 
   return adjusted;
 }
-
