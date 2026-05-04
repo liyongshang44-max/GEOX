@@ -1927,6 +1927,7 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
     });
 
     const memoryAdjustment = buildRecommendationMemoryAdjustmentV1(memory);
+    recommendation.field_memory_context = memory;
 
     if (memoryAdjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
       recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
@@ -1947,8 +1948,6 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
         memoryAdjustment.risk_reasons,
       ),
     };
-
-    recommendation.field_memory_context = memory;
 
     if (memoryAdjustment.explain_append) {
       recommendation.suggested_action = {
@@ -1979,5 +1978,4 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
 
   return adjusted;
 }
-
 
