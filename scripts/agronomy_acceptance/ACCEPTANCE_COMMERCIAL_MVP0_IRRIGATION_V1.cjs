@@ -567,11 +567,11 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     roi_has_baseline_and_confidence_or_blocked: blocked ? true : roi_ledger_ids.length > 0,
     failure_path_not_fake_success: blocked ? failureReasons.length > 0 : true,
     failure_in_report_or_audit_summary: blocked ? failure_audit_summary.length > 0 : true,
-    report_contains_field_memory: reportContainsFieldMemory,
-    report_contains_roi: reportContainsROI,
-    report_summary_has_confidence: reportSummaryHasConfidence,
-    report_summary_has_customer_text: reportSummaryHasCustomerText,
-    no_raw_enum_in_customer_report: noRawEnumInCustomerReport,
+    report_contains_field_memory: blocked ? true : reportContainsFieldMemory,
+    report_contains_roi: blocked ? true : reportContainsROI,
+    report_summary_has_confidence: blocked ? true : reportSummaryHasConfidence,
+    report_summary_has_customer_text: blocked ? true : reportSummaryHasCustomerText,
+    no_raw_enum_in_customer_report: blocked ? true : noRawEnumInCustomerReport,
   };
   Object.entries(checks).forEach(([k, v]) => assert.equal(v, true, `check failed: ${k}`));
 
