@@ -198,12 +198,12 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
   const fp = irrigation.failure_audit_summary;
   const syntheticFp = dFailureRuns.map((r, i) => ({
     name: `d_failure_run_${i + 1}`,
-    pass: i === 2 && r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0,
+    pass: r?.blocked === true && Array.isArray(r?.failure_reasons) && r.failure_reasons.length > 0,
   }));
   const failurePathsPassCount = Array.isArray(fp)
     ? fp.filter((x) => x && (x.blocked === true || isPass(x.status))).length
     : 0;
-  const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 1;
+  const failurePathsOk = syntheticFp.filter((x) => x.pass).length >= 3;
 
   const skillBindingExists = isFilled(chain.skill_binding_id);
   const skillRunExists = isFilled(chain.skill_run_id) ? await existsSkillRunId(pool, chain.skill_run_id) : false;
@@ -258,7 +258,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     checks,
     failure_paths_summary: {
       pass_count: syntheticFp.filter((x) => x.pass).length,
-      min_required_pass: 1,
+      min_required_pass: 3,
       items: syntheticFp,
     },
     chain_summary: {
