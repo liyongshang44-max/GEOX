@@ -58,7 +58,13 @@ export function registerRoiLedgerV1Routes(app: FastifyInstance, pool: Pool): voi
         });
       }
       req.log.error({ err: error }, "create roi ledger from as-executed failed");
-      return reply.status(500).send({ ok: false, error: "INTERNAL_ERROR" });
+      return reply.status(500).send({
+        ok: false,
+        error: "INTERNAL_ERROR",
+        message: String((error as any)?.message ?? error),
+        code: String((error as any)?.code ?? ""),
+        detail: String((error as any)?.detail ?? ""),
+      });
     }
   });
 
