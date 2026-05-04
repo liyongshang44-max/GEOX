@@ -1,6 +1,7 @@
 import { runIrrigationEffectAcceptanceSkillV1 } from "./skills/irrigation_effect_acceptance_skill_v1.js";
 import { runReceiptCompletenessSkillV1 } from "./skills/receipt_completeness_skill_v1.js";
 import type { JudgeResultV2CreateInput } from "./judge_result_v2.js";
+import type { JudgeSkillTraceV1 } from "./skills/judge_skill_trace_v1.js";
 
 type ExecutionReceiptInput = {
   receipt_id?: string | null;
@@ -39,6 +40,30 @@ function toNumber(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+
+
+function toSourceRef(trace: JudgeSkillTraceV1) {
+  return {
+    skill_id: trace.skill_id,
+    skill_version: trace.skill_version,
+    trace_id: trace.trace_id,
+    run_id: trace.run_id,
+    input_digest: trace.input_digest,
+    confidence: trace.confidence,
+    evidence_refs: trace.evidence_refs,
+  };
+}
+
+function toSkillTrace(trace: JudgeSkillTraceV1, output: { verdict: string; reasons: string[] }) {
+  return {
+    skill_id: trace.skill_id,
+    trace_id: trace.trace_id,
+    run_id: trace.run_id,
+    verdict: output.verdict,
+    reasons: output.reasons,
+  };
+}
+
 function withBase(input: ExecutionJudgeEvaluateInput) {
   return {
     judge_kind: "EXECUTION" as const,
@@ -72,10 +97,10 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       as_executed_id: String(asExecuted?.as_executed_id ?? "").trim() || null,
       as_applied_id: String(asApplied?.as_applied_id ?? "").trim() || null,
       inputs: { receipt, as_executed: asExecuted, as_applied: asApplied, pre_soil_moisture: pre, post_soil_moisture: post },
-      outputs: { soil_moisture_delta: delta },
+      outputs: { soil_moisture_delta: delta, skill_traces: [toSkillTrace(receiptSkill.trace, receiptSkill.output)] },
       confidence: receiptSkill.trace.confidence,
       evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
-      source_refs: [receiptSkill.trace],
+      source_refs: [toSourceRef(receiptSkill.trace)],
     };
   }
 
@@ -88,10 +113,10 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       task_id: String(receipt?.task_id ?? "").trim() || null,
       receipt_id: String(receipt?.receipt_id ?? "").trim() || null,
       inputs: { receipt, as_executed: null, as_applied: asApplied, pre_soil_moisture: pre, post_soil_moisture: post },
-      outputs: { soil_moisture_delta: delta },
+      outputs: { soil_moisture_delta: delta, skill_traces: [toSkillTrace(receiptSkill.trace, receiptSkill.output)] },
       confidence: { level: "LOW", basis: "assumed", reasons: ["as_executed_required"] },
       evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
-      source_refs: [receiptSkill.trace],
+      source_refs: [toSourceRef(receiptSkill.trace)],
     };
   }
 
@@ -105,10 +130,10 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
       receipt_id: String(receipt?.receipt_id ?? "").trim() || null,
       as_executed_id: String(asExecuted.as_executed_id ?? "").trim() || null,
       inputs: { receipt, as_executed: asExecuted, as_applied: null, pre_soil_moisture: pre, post_soil_moisture: post },
-      outputs: { soil_moisture_delta: delta },
+      outputs: { soil_moisture_delta: delta, skill_traces: [toSkillTrace(receiptSkill.trace, receiptSkill.output)] },
       confidence: { level: "MEDIUM", basis: "estimated", reasons: ["as_applied_optional_warning"] },
       evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
-      source_refs: [receiptSkill.trace],
+      source_refs: [toSourceRef(receiptSkill.trace)],
     };
   }
 
@@ -124,9 +149,12 @@ export function evaluateExecutionJudgeV2(input: ExecutionJudgeEvaluateInput): Ju
     as_executed_id: String(asExecuted.as_executed_id ?? "").trim() || null,
     as_applied_id: String(asApplied.as_applied_id ?? "").trim() || null,
     inputs: { receipt, as_executed: asExecuted, as_applied: asApplied, pre_soil_moisture: pre, post_soil_moisture: post },
-    outputs: { soil_moisture_delta: delta },
+    outputs: {
+      soil_moisture_delta: delta,
+      skill_traces: [toSkillTrace(receiptSkill.trace, receiptSkill.output), toSkillTrace(effectSkill.trace, effectSkill.output)],
+    },
     confidence: effectSkill.trace.confidence,
     evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
-    source_refs: [receiptSkill.trace, effectSkill.trace],
+    source_refs: [toSourceRef(receiptSkill.trace), toSourceRef(effectSkill.trace)],
   };
 }

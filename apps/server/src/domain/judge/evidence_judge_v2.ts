@@ -89,6 +89,25 @@ export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): Judg
       reasons: ["soil_moisture_and_freshness_checks_passed"],
     },
     evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
-    source_refs: [soil.trace, freshness.trace],
+    source_refs: [
+      {
+        skill_id: soil.trace.skill_id,
+        skill_version: soil.trace.skill_version,
+        trace_id: soil.trace.trace_id,
+        run_id: soil.trace.run_id,
+        input_digest: soil.trace.input_digest,
+        confidence: soil.trace.confidence,
+        evidence_refs: soil.trace.evidence_refs,
+      },
+      {
+        skill_id: freshness.trace.skill_id,
+        skill_version: freshness.trace.skill_version,
+        trace_id: freshness.trace.trace_id,
+        run_id: freshness.trace.run_id,
+        input_digest: freshness.trace.input_digest,
+        confidence: freshness.trace.confidence,
+        evidence_refs: freshness.trace.evidence_refs,
+      },
+    ],
   };
 }
