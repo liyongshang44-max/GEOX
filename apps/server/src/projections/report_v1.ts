@@ -23,18 +23,32 @@ export type FieldMemorySummary = {
 export type RoiLedgerSummary = {
   roi_ledger_id: string;
   roi_type: string;
+
   baseline_type: string;
   baseline_value: number | null;
+  planned_value: number | null;
   actual_value: number | null;
   delta_value: number | null;
+
   unit: string | null;
-  value_kind: string;
-  confidence: Record<string, unknown>;
-  calculation_method: string;
+
+  value_kind: "MEASURED" | "ESTIMATED" | "ASSUMPTION_BASED" | "INSUFFICIENT_EVIDENCE";
+
+  confidence: {
+    level: string;
+    basis: string;
+    reasons: string[];
+  };
+
   evidence_refs: unknown[];
+
+  calculation_method: string;
+  assumptions: Record<string, unknown>;
+  uncertainty_notes: string | null;
+
   source_skill_id: string | null;
   skill_trace_ref: string | null;
-  field_memory_refs: unknown[];
+
   customer_text: string;
 };
 
@@ -130,6 +144,13 @@ export type OperationReportV1 = {
     skill_performance_memory: FieldMemorySummary[];
   };
   roi_ledger: {
+    summary: {
+      total_items: number;
+      measured_items: number;
+      estimated_items: number;
+      insufficient_items: number;
+    };
+    items: RoiLedgerSummary[];
     water_saved: RoiLedgerSummary[];
     labor_saved: RoiLedgerSummary[];
     early_warning_lead_time: RoiLedgerSummary[];
@@ -397,23 +418,72 @@ export function projectOperationReportV1(input: {
 
   const missingEvidence = acceptanceMissingFlag;
   const roiRows = Array.isArray(input.roi_ledger) ? input.roi_ledger : [];
-  const valueKindText = (vk: string, low: boolean) => vk === "MEASURED" ? "实测值" : vk === "ESTIMATED" ? "估算值" : vk === "ASSUMPTION_BASED" ? "基于默认假设的估算" : "证据不足，仅供参考";
+  const toNum = (v: unknown): number | null => {
+    const n = typeof v === "number" ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  function buildCustomerText(x: any): string {
+    const type = x?.roi_type === "WATER_SAVED" ? "节水" : "价值";
+    const delta = x?.delta_value ?? "--";
+    const unit = x?.unit ?? "";
+    const confidence = x?.confidence?.level ?? "LOW";
+    const evidenceCount = Array.isArray(x?.evidence_refs) ? x.evidence_refs.length : 0;
+
+    return `${type}：${delta}${unit}（可信度 ${confidence}，证据 ${evidenceCount} 项）`;
+  }
   const toSummary = (x: any): RoiLedgerSummary => {
-    const confidenceLevel = String(x?.confidence?.level ?? "").toUpperCase();
-    const low = confidenceLevel === "LOW";
-    const vk = String(x?.value_kind ?? "INSUFFICIENT_EVIDENCE");
+    const evidence = Array.isArray(x?.evidence_refs) ? x.evidence_refs : [];
+    const confidence = x?.confidence ?? {};
+    const valueKind = String(x?.value_kind ?? "INSUFFICIENT_EVIDENCE").toUpperCase();
+
+    const normalizedKind =
+      valueKind === "MEASURED" && evidence.length === 0
+        ? "INSUFFICIENT_EVIDENCE"
+        : valueKind;
+
     return {
-      roi_ledger_id: String(x?.roi_ledger_id ?? ""), roi_type: String(x?.roi_type ?? ""), baseline_type: String(x?.baseline_type ?? "DEFAULT_ASSUMPTION"),
-      baseline_value: typeof x?.baseline_value === "number" ? x.baseline_value : Number(x?.baseline_value ?? NaN) || null,
-      actual_value: typeof x?.actual_value === "number" ? x.actual_value : Number(x?.actual_value ?? NaN) || null,
-      delta_value: typeof x?.delta_value === "number" ? x.delta_value : Number(x?.delta_value ?? NaN) || null,
-      unit: x?.unit == null ? null : String(x.unit), value_kind: vk, confidence: x?.confidence ?? {}, calculation_method: String(x?.calculation_method ?? ""),
-      evidence_refs: Array.isArray(x?.evidence_refs) ? x.evidence_refs : [], source_skill_id: x?.source_skill_id == null ? null : String(x.source_skill_id),
-      skill_trace_ref: x?.skill_trace_ref == null ? null : String(x.skill_trace_ref), field_memory_refs: Array.isArray(x?.field_memory_refs) ? x.field_memory_refs : [],
-      customer_text: `${valueKindText(vk, low)}${low ? '；可信度有限。' : ''}`,
+      roi_ledger_id: String(x?.roi_ledger_id ?? ""),
+      roi_type: String(x?.roi_type ?? ""),
+
+      baseline_type: String(x?.baseline_type ?? "DEFAULT"),
+      baseline_value: toNum(x?.baseline_value),
+      planned_value: toNum(x?.planned_value),
+      actual_value: toNum(x?.actual_value),
+      delta_value: toNum(x?.delta_value),
+
+      unit: x?.unit ?? null,
+
+      value_kind: (normalizedKind === "MEASURED" || normalizedKind === "ESTIMATED" || normalizedKind === "ASSUMPTION_BASED" || normalizedKind === "INSUFFICIENT_EVIDENCE"
+        ? normalizedKind
+        : "INSUFFICIENT_EVIDENCE"),
+
+      confidence: {
+        level: String(confidence.level ?? "LOW"),
+        basis: String(confidence.basis ?? "unknown"),
+        reasons: Array.isArray(confidence.reasons) ? confidence.reasons : [],
+      },
+
+      evidence_refs: evidence,
+
+      calculation_method: String(x?.calculation_method ?? "manual"),
+
+      assumptions: x?.assumptions ?? {},
+
+      uncertainty_notes: x?.uncertainty_notes ?? null,
+
+      source_skill_id: x?.source_skill_id ?? null,
+      skill_trace_ref: x?.skill_trace_ref ?? null,
+
+      customer_text: buildCustomerText(x),
     };
   };
   const roiSummaries = roiRows.map(toSummary);
+  const roiSummary = {
+    total_items: roiSummaries.length,
+    measured_items: roiSummaries.filter((x) => x.value_kind === "MEASURED").length,
+    estimated_items: roiSummaries.filter((x) => x.value_kind === "ESTIMATED").length,
+    insufficient_items: roiSummaries.filter((x) => x.value_kind === "INSUFFICIENT_EVIDENCE").length,
+  };
   const computedRisk = evaluateRisk({
     final_status: finalStatus,
     missing_evidence: missingEvidence,
@@ -534,6 +604,8 @@ export function projectOperationReportV1(input: {
     },
   
     roi_ledger: {
+      summary: roiSummary,
+      items: roiSummaries,
       water_saved: roiSummaries.filter((x) => x.roi_type === "WATER_SAVED"),
       labor_saved: roiSummaries.filter((x) => x.roi_type === "LABOR_SAVED"),
       early_warning_lead_time: roiSummaries.filter((x) => x.roi_type === "EARLY_WARNING_LEAD_TIME"),
