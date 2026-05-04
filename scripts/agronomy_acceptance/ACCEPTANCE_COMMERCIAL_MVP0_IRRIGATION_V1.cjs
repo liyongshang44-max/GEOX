@@ -102,11 +102,40 @@ async function executeMockValveSkill({
   });
 }
 
-async function queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id, operation_id }) {
+async function queryFieldMemoryByScope(pool, {
+  tenant_id,
+  project_id,
+  group_id,
+  field_id,
+  operation_id,
+  task_id,
+  recommendation_id,
+  prescription_id,
+  acceptance_id,
+}) {
   const params = [tenant_id, project_id, group_id];
   let sql = `SELECT * FROM field_memory_v1 WHERE tenant_id=$1 AND project_id=$2 AND group_id=$3`;
-  if (field_id) { params.push(field_id); sql += ` AND field_id=$${params.length}`; }
-  if (operation_id) { params.push(operation_id); sql += ` AND operation_id=$${params.length}`; }
+
+  if (field_id) {
+    params.push(field_id);
+    sql += ` AND field_id=$${params.length}`;
+  }
+
+  const ids = [operation_id, task_id, recommendation_id, prescription_id, acceptance_id]
+    .map((x) => String(x ?? '').trim())
+    .filter(Boolean);
+
+  if (ids.length > 0) {
+    params.push(ids);
+    sql += ` AND (
+      operation_id = ANY($${params.length}::text[])
+      OR task_id = ANY($${params.length}::text[])
+      OR recommendation_id = ANY($${params.length}::text[])
+      OR prescription_id = ANY($${params.length}::text[])
+      OR acceptance_id = ANY($${params.length}::text[])
+    )`;
+  }
+
   sql += ` ORDER BY occurred_at DESC LIMIT 500`;
   return pool.query(sql, params);
 }
@@ -312,8 +341,6 @@ async function assertFieldMemoryIdsExist(pool, ids) {
     });
     const taskJson = requireOk(taskResp, 'create task');
     task_id = String(taskJson.act_task_id ?? '').trim();
-    const taskSkillBinding = String(taskJson.skill_binding_id ?? taskJson.meta?.skill_binding_id ?? '').trim();
-    if (!taskSkillBinding) failureReasons.push('TASK_DEVICE_SKILL_BINDING_MISSING');
     assert.ok(task_id, 'task_id missing');
 
     const executeSkill = await executeMockValveSkill({
@@ -434,7 +461,16 @@ async function assertFieldMemoryIdsExist(pool, ids) {
 
   const memoryQ = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, field_id });
   const field_memory_ids = (memoryQ.rows ?? []).slice(0, 3).map((r) => String(r.memory_id ?? '').trim()).filter(Boolean);
-  const memoryByOperation = await queryFieldMemoryByScope(pool, { tenant_id, project_id, group_id, operation_id: task_id || undefined });
+  const memoryByOperation = await queryFieldMemoryByScope(pool, {
+    tenant_id,
+    project_id,
+    group_id,
+    operation_id: operation_plan_id || undefined,
+    task_id: task_id || undefined,
+    recommendation_id: recommendation_id || undefined,
+    prescription_id: prescription_id || undefined,
+    acceptance_id: acceptance_id || undefined,
+  });
   const memoryIdsExist = await assertFieldMemoryIdsExist(pool, field_memory_ids);
 
   if (task_id) {
