@@ -450,50 +450,18 @@ export function registerReportsV1Routes(app: FastifyInstance, pool: Pool): void 
       .sort((a, b) => Number(b.last_event_ts ?? 0) - Number(a.last_event_ts ?? 0))
       .slice(0, FIELD_REPORT_OPERATION_LIMIT);
 
-    const items = fieldStates.slice(0, FIELD_REPORT_OPERATION_LIMIT).map((state) => ensureReportV1ExtendedFields(projectOperationReportV1({
-      tenant,
-      operation_plan_id: state.operation_plan_id || state.operation_id,
-      operation_state: state,
-      evidence_bundle: {
-        artifacts: [],
-        logs: [],
-        media: [],
-        metrics: [],
-      },
-      acceptance: state.acceptance ? {
-        status: state.acceptance.status,
-        verdict: null,
-        missing_evidence: false,
-        generated_at: null,
-      } : null,
-      receipt: null,
-      cost: {
-        estimated_total: 0,
-        estimated_water_cost: 0,
-        estimated_electric_cost: 0,
-        estimated_chemical_cost: 0,
-      },
-      sla: {
-        execution_success: ["SUCCESS", "SUCCEEDED"].includes(String(state.final_status ?? "").toUpperCase()),
-        acceptance_pass: String(state.acceptance?.status ?? "").toUpperCase() === "PASS",
-        response_time_ms: null,
-      },
-      operation_workflow: null,
-      approval: {
-        status: null,
-        actor_id: null,
-        actor_name: null,
-        generated_at: null,
-        approved_at: null,
-        note: null,
-      },
-      why: {
-        explain_human: null,
-        objective_text: null,
-      },
-      operation_title: deriveOperationTitle(state.action_type),
-      customer_title: deriveOperationTitle(state.action_type),
-    })));
+    const items = await Promise.all(
+      fieldStates
+        .slice(0, FIELD_REPORT_OPERATION_LIMIT)
+        .map(async (state) => {
+          const projected = await projectReportV1({
+            pool,
+            tenant,
+            operationState: state,
+          });
+          return ensureReportV1ExtendedFields(projected);
+        }),
+    );
     const fieldNameQ = await pool.query(
       `SELECT name
          FROM field_index_v1
