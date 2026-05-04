@@ -1,14 +1,14 @@
 import { buildJudgeSkillTraceV1 } from "./judge_skill_trace_v1";
 
-type SoilMoistureQualityCode = "PASS" | "INSUFFICIENT_EVIDENCE" | "SENSOR_DRIFT";
+type SoilMoistureQualityVerdict = "PASS" | "INSUFFICIENT_EVIDENCE" | "SENSOR_DRIFT";
 
 export type SoilMoistureQualitySkillV1Input = {
   soil_moisture: number | null | undefined;
 };
 
 export type SoilMoistureQualitySkillV1Output = {
-  code: SoilMoistureQualityCode;
-  reason: string;
+  verdict: SoilMoistureQualityVerdict;
+  reasons: string[];
 };
 
 export function runSoilMoistureQualitySkillV1(input: SoilMoistureQualitySkillV1Input) {
@@ -17,20 +17,11 @@ export function runSoilMoistureQualitySkillV1(input: SoilMoistureQualitySkillV1I
   let output: SoilMoistureQualitySkillV1Output;
 
   if (value == null) {
-    output = {
-      code: "INSUFFICIENT_EVIDENCE",
-      reason: "soil_moisture is missing",
-    };
+    output = { verdict: "INSUFFICIENT_EVIDENCE", reasons: ["soil_moisture_missing"] };
   } else if (value < 0 || value > 1.2) {
-    output = {
-      code: "SENSOR_DRIFT",
-      reason: "soil_moisture is out of expected range [0, 1.2]",
-    };
+    output = { verdict: "SENSOR_DRIFT", reasons: ["soil_moisture_out_of_range"] };
   } else {
-    output = {
-      code: "PASS",
-      reason: "soil_moisture is within expected range",
-    };
+    output = { verdict: "PASS", reasons: ["soil_moisture_in_expected_range"] };
   }
 
   const trace = buildJudgeSkillTraceV1({

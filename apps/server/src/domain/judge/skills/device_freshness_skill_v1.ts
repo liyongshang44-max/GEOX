@@ -1,6 +1,6 @@
 import { buildJudgeSkillTraceV1 } from "./judge_skill_trace_v1";
 
-type DeviceFreshnessCode = "PASS" | "STALE_DATA" | "DEVICE_OFFLINE";
+type DeviceFreshnessVerdict = "PASS" | "STALE_DATA" | "DEVICE_OFFLINE";
 
 export type DeviceFreshnessSkillV1Input = {
   observation_age_minutes: number;
@@ -8,28 +8,19 @@ export type DeviceFreshnessSkillV1Input = {
 };
 
 export type DeviceFreshnessSkillV1Output = {
-  code: DeviceFreshnessCode;
-  reason: string;
+  verdict: DeviceFreshnessVerdict;
+  reasons: string[];
 };
 
 export function runDeviceFreshnessSkillV1(input: DeviceFreshnessSkillV1Input) {
   let output: DeviceFreshnessSkillV1Output;
 
   if (input.observation_age_minutes > 10) {
-    output = {
-      code: "STALE_DATA",
-      reason: "Observation age exceeds 10 minutes",
-    };
+    output = { verdict: "STALE_DATA", reasons: ["observation_too_old"] };
   } else if (input.heartbeat_age_minutes > 5) {
-    output = {
-      code: "DEVICE_OFFLINE",
-      reason: "Heartbeat age exceeds 5 minutes",
-    };
+    output = { verdict: "DEVICE_OFFLINE", reasons: ["heartbeat_timeout"] };
   } else {
-    output = {
-      code: "PASS",
-      reason: "Observation and heartbeat are fresh",
-    };
+    output = { verdict: "PASS", reasons: ["telemetry_freshness_pass"] };
   }
 
   const trace = buildJudgeSkillTraceV1({
