@@ -1416,6 +1416,12 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation: rec,
         stage1Summary,
       });
+      if (Array.isArray(rec.field_memory_context?.explain_notes) && rec.field_memory_context.explain_notes.length > 0) {
+        const explainAny = (rec.explain ?? {}) as any;
+        const baseHuman = String(explainAny.human ?? explainAny.action_summary ?? "").trim();
+        explainAny.human = `${baseHuman}${baseHuman ? " " : ""}历史表现显示该地块响应偏弱，建议人工复核。`;
+        rec.explain = explainAny;
+      }
       rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({
         recommendation: rec,
         sensingOverview,

@@ -354,10 +354,17 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     reasons.push("MISSING_EVIDENCE_REFS");
     riskLevel = escalateRisk(riskLevel, "HIGH");
   }
+  const recommendationRequiresManualReview = Boolean(recPayload?.requires_manual_review);
+  const recommendationRiskReasons = Array.isArray(recPayload?.risk?.reasons)
+    ? recPayload.risk.reasons.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+  const hasFieldMemoryRiskReason = recommendationRiskReasons.some((reason) => reason.toLowerCase().includes("field_memory_"));
+  const forceApprovalByMemoryRisk = recommendationRequiresManualReview || hasFieldMemoryRiskReason;
 
   const status = deriveStatus(operation_type, missingAmount);
   const now = new Date().toISOString();
   const prescription_id = `prc_${randomUUID().replace(/-/g, "")}`;
+  const baseApprovalRequirement = deriveApprovalRequirement(operation_type);
 
   const prescription: PrescriptionContractV1 = {
     prescription_id,
@@ -401,7 +408,11 @@ export async function createPrescriptionFromRecommendation(pool: Pool, input: Fr
     evidence_refs,
     skill_trace_id: skill_trace_id ?? undefined,
     skill_trace: recommendationSkillTrace ?? undefined,
-    approval_requirement: deriveApprovalRequirement(operation_type),
+    approval_requirement: {
+      ...baseApprovalRequirement,
+      required: forceApprovalByMemoryRisk ? true : baseApprovalRequirement.required,
+      auto_execute_allowed: forceApprovalByMemoryRisk ? false : baseApprovalRequirement.auto_execute_allowed,
+    },
     acceptance_conditions: deriveAcceptanceConditions(operation_type),
     status,
     created_at: now,
