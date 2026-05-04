@@ -121,9 +121,16 @@ async function assertProjectionTablesReady(pool) {
   const databaseUrl = env('DATABASE_URL', 'postgres://landos:landos_pwd@127.0.0.1:5433/landos');
   pool = new Pool({ connectionString: databaseUrl });
   const suffix = Date.now();
-  const field_id = env('FIELD_ID', `field_memory_${suffix}`);
-  const season_id = env('SEASON_ID', `season_field_memory_${suffix}`);
-  const device_id = env('DEVICE_ID', `device_memory_${suffix}`);
+  const allowStaticFieldMemory = String(process.env.ALLOW_STATIC_FIELD_MEMORY ?? '').trim() === '1';
+  const field_id = allowStaticFieldMemory
+    ? env('FIELD_ID', `field_memory_${suffix}`)
+    : `field_memory_${suffix}`;
+  const season_id = allowStaticFieldMemory
+    ? env('SEASON_ID', `season_field_memory_${suffix}`)
+    : `season_field_memory_${suffix}`;
+  const device_id = allowStaticFieldMemory
+    ? env('DEVICE_ID', `device_memory_${suffix}`)
+    : `device_memory_${suffix}`;
   const pre_soil_moisture = 0.16;
   const post_soil_moisture = 0.24;
   const ts0 = Date.now() - 60_000;
