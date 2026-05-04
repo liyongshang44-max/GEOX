@@ -1892,15 +1892,14 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
     group_id: string;
     season_id?: string | null;
     recommendations: RecommendationV1[];
-  }
+  },
 ): Promise<RecommendationV1[]> {
-  const out: RecommendationV1[] = [];
+  const adjusted: RecommendationV1[] = [];
 
   for (const recommendation of params.recommendations) {
     const field_id = String(recommendation.field_id ?? "").trim();
-
     if (!field_id) {
-      out.push(recommendation);
+      adjusted.push(recommendation);
       continue;
     }
 
@@ -1913,58 +1912,58 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
       lookback_limit: 50,
     });
 
-    const adjustment = buildRecommendationMemoryAdjustmentV1(memory);
+    const memoryAdjustment = buildRecommendationMemoryAdjustmentV1(memory);
 
-    const shouldApply =
-      adjustment.confidence_adjustment === "LOWER_ONE_LEVEL" ||
-      adjustment.requires_manual_review ||
-      adjustment.risk_reasons.length > 0 ||
-      adjustment.memory_refs.length > 0;
-
-    if (!shouldApply) {
-      out.push(recommendation);
-      continue;
-    }
-
-    if (adjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
+    if (memoryAdjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
       recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
     }
 
     recommendation.requires_manual_review =
-      Boolean(recommendation.requires_manual_review) ||
-      adjustment.requires_manual_review;
+      Boolean(recommendation.requires_manual_review) || memoryAdjustment.requires_manual_review;
 
     recommendation.memory_refs = mergeTextList(
       recommendation.memory_refs,
-      adjustment.memory_refs
+      memoryAdjustment.memory_refs,
     );
 
     recommendation.risk = {
       ...(recommendation.risk ?? {}),
       reasons: mergeTextList(
         recommendation.risk?.reasons,
-        adjustment.risk_reasons
+        memoryAdjustment.risk_reasons,
       ),
     };
 
     recommendation.field_memory_context = memory;
 
-    if (adjustment.explain_append) {
+    if (memoryAdjustment.explain_append) {
       recommendation.suggested_action = {
         ...recommendation.suggested_action,
         summary: [
           recommendation.suggested_action?.summary ?? "",
-          adjustment.explain_append,
-        ]
-          .filter(Boolean)
-          .join("；"),
+          memoryAdjustment.explain_append,
+        ].filter(Boolean).join("；"),
+      };
+
+      recommendation.explain = {
+        ...(recommendation.explain ?? {
+          trigger_source_fields: [],
+          action_summary: "",
+          rule_hit_summary: [],
+        }),
+        trigger_source_fields: recommendation.explain?.trigger_source_fields ?? [],
+        rule_hit_summary: recommendation.explain?.rule_hit_summary ?? [],
+        action_summary: [
+          recommendation.explain?.action_summary ?? "",
+          memoryAdjustment.explain_append,
+        ].filter(Boolean).join("；"),
       };
     }
 
-    out.push(recommendation);
+    adjusted.push(recommendation);
   }
 
-  return out;
+  return adjusted;
 }
 
 
