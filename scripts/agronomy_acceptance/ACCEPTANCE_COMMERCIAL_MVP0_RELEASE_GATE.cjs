@@ -258,7 +258,7 @@ async function existsSkillBindingFromTaskFact(pool, taskId, skillBindingId) {
     checks,
     failure_paths_summary: {
       pass_count: syntheticFp.filter((x) => x.pass).length,
-      min_required_pass: 1,
+      min_required_pass: 3,
       items: syntheticFp,
     },
     chain_summary: {
