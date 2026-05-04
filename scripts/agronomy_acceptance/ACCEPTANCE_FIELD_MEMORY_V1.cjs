@@ -204,6 +204,13 @@ async function assertProjectionTablesReady(pool) {
   assert.ok(recommendation, 'NO_IRRIGATION_RECOMMENDATION_RETURNED');
   const recId = String(recommendation.recommendation_id ?? '');
   assert.ok(recId, 'recommendation_id missing');
+  const prescription_id = String(recommendation?.prescription_id ?? '').trim();
+  const skill_trace_ref = String(
+    recommendation?.skill_trace?.trace_id
+    ?? recommendation?.trace_id
+    ?? ''
+  ).trim();
+  assert.ok(skill_trace_ref, 'skill_trace_ref missing from irrigation recommendation');
 
   const submit = await fetchJson(`${base}/api/v1/recommendations/${encodeURIComponent(recId)}/submit-approval`, {
     method: 'POST', token: adminToken,
@@ -392,6 +399,8 @@ async function assertProjectionTablesReady(pool) {
       constraints: {},
       meta: {
         recommendation_id: recId,
+        prescription_id,
+        skill_trace_ref,
         task_type: 'IRRIGATION',
         device_id,
         adapter_type: 'irrigation_simulator',
@@ -449,7 +458,10 @@ async function assertProjectionTablesReady(pool) {
     token: executorToken,
     body: buildIrrigationReceiptBody({
       tenant_id, project_id, group_id, operation_plan_id, act_task_id: actTaskId, field_id, suffix,
-      recommendation_id: recId, coverage_percent: 95,
+      recommendation_id: recId,
+      prescription_id,
+      skill_trace_ref,
+      coverage_percent: 95,
     })
   });
   const receiptJson = requireOk(receiptResp, 'submit action receipt');
