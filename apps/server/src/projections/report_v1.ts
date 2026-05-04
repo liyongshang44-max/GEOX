@@ -423,7 +423,11 @@ export function projectOperationReportV1(input: {
     return Number.isFinite(n) ? n : null;
   };
   function buildCustomerText(x: any): string {
-    const type = x?.roi_type === "WATER_SAVED" ? "节水" : "价值";
+    const isWaterSaved = x?.roi_type === "WATER_SAVED";
+    const hasBaseline = x?.baseline_value != null;
+    const type = isWaterSaved
+      ? (hasBaseline ? "节水" : "水资源影响")
+      : "价值记录";
     const delta = x?.delta_value ?? "--";
     const unit = x?.unit ?? "";
     const confidence = x?.confidence?.level ?? "LOW";
