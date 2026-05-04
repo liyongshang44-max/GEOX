@@ -8,6 +8,9 @@ export type RecommendationMemoryAdjustmentV1 = {
   memory_refs: string[];
 };
 
+const WEAK_RESPONSE_EXPLAIN = "该地块历史灌后水分回升偏弱，本次建议需人工复核。";
+const EXECUTION_DEVIATION_EXPLAIN = "该地块历史执行偏差较大，本次建议需人工复核。";
+
 export function buildRecommendationMemoryAdjustmentV1(memory: FieldMemoryContextV1): RecommendationMemoryAdjustmentV1 {
   const risk_reasons: string[] = [];
   const explain: string[] = [];
@@ -18,13 +21,13 @@ export function buildRecommendationMemoryAdjustmentV1(memory: FieldMemoryContext
     confidence_adjustment = "LOWER_ONE_LEVEL";
     requires_manual_review = true;
     risk_reasons.push("FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE");
-    explain.push("该地块历史灌后水分回升偏弱，本次建议需人工复核。");
+    explain.push(WEAK_RESPONSE_EXPLAIN);
   }
 
   if (memory.execution_deviation_count >= 2) {
     requires_manual_review = true;
     risk_reasons.push("FIELD_MEMORY_EXECUTION_DEVIATION_RISK");
-    explain.push("该地块历史执行偏差较大，本次建议需人工复核。");
+    explain.push(EXECUTION_DEVIATION_EXPLAIN);
   }
 
   if (memory.skill_failure_count >= 1) {
