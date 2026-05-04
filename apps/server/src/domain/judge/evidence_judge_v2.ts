@@ -1,3 +1,5 @@
+import { runDeviceFreshnessSkillV1 } from "./skills/device_freshness_skill_v1.js";
+import { runSoilMoistureQualitySkillV1 } from "./skills/soil_moisture_quality_skill_v1.js";
 import type { JudgeResultV2CreateInput } from "./judge_result_v2.js";
 
 export type EvidenceJudgeEvaluateInput = {
@@ -14,106 +16,35 @@ export type EvidenceJudgeEvaluateInput = {
   evidence_refs?: unknown[];
 };
 
+function mapSeverity(verdict: string): JudgeResultV2CreateInput["severity"] {
+  if (verdict === "DEVICE_OFFLINE") return "CRITICAL";
+  if (verdict === "SENSOR_DRIFT" || verdict === "STALE_DATA") return "HIGH";
+  if (verdict === "INSUFFICIENT_EVIDENCE") return "MEDIUM";
+  return "LOW";
+}
+
 export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): JudgeResultV2CreateInput {
-  const nowTs = Number(input.now_ts_ms ?? Date.now());
-  const observedAt = Number(input.observed_at_ts_ms);
-  const soilMoisture = Number(input.soil_moisture);
+  const nowTs = Number.isFinite(Number(input.now_ts_ms)) ? Number(input.now_ts_ms) : Date.now();
+  const observedAtTs = Number(input.observed_at_ts_ms);
   const heartbeatTs = Number(input.last_heartbeat_ts_ms);
-  const telemetryTs = Number(input.last_telemetry_ts_ms);
-  const evidenceRefs = Array.isArray(input.evidence_refs) ? input.evidence_refs : [];
 
-  if (!Number.isFinite(soilMoisture)) {
-    return {
-      judge_kind: "EVIDENCE",
-      tenant_id: input.tenant_id,
-      project_id: input.project_id,
-      group_id: input.group_id,
-      field_id: input.field_id ?? null,
-      device_id: input.device_id ?? null,
-      verdict: "INSUFFICIENT_EVIDENCE",
-      severity: "MEDIUM",
-      reasons: ["soil_moisture_missing"],
-      inputs: {
-        soil_moisture: null,
-        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
-        now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
-      },
-      outputs: { stale_data: false, device_offline: false, sensor_drift: false },
-      confidence: { level: "LOW", basis: "assumed", reasons: ["soil_moisture_required"] },
-      evidence_refs: evidenceRefs,
-      source_refs: [],
-    };
-  }
+  const observationAgeMinutes = Number.isFinite(observedAtTs) ? (nowTs - observedAtTs) / 60000 : Number.POSITIVE_INFINITY;
+  const heartbeatAgeMinutes = Number.isFinite(heartbeatTs) ? (nowTs - heartbeatTs) / 60000 : Number.POSITIVE_INFINITY;
 
-  if (soilMoisture < 0 || soilMoisture > 1.2) {
-    return {
-      judge_kind: "EVIDENCE",
-      tenant_id: input.tenant_id,
-      project_id: input.project_id,
-      group_id: input.group_id,
-      field_id: input.field_id ?? null,
-      device_id: input.device_id ?? null,
-      verdict: "SENSOR_DRIFT",
-      severity: "HIGH",
-      reasons: ["soil_moisture_out_of_range"],
-      inputs: {
-        soil_moisture: soilMoisture,
-        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
-        now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
-      },
-      outputs: { stale_data: false, device_offline: false, sensor_drift: true },
-      confidence: { level: "MEDIUM", basis: "measured", reasons: ["value_range_rule"] },
-      evidence_refs: evidenceRefs,
-      source_refs: [],
-    };
-  }
+  const soil = runSoilMoistureQualitySkillV1({
+    soil_moisture: input.soil_moisture,
+  });
 
-  if (Number.isFinite(observedAt) && Number.isFinite(nowTs) && nowTs - observedAt > 10 * 60 * 1000) {
-    return {
-      judge_kind: "EVIDENCE",
-      tenant_id: input.tenant_id,
-      project_id: input.project_id,
-      group_id: input.group_id,
-      field_id: input.field_id ?? null,
-      device_id: input.device_id ?? null,
-      verdict: "STALE_DATA",
-      severity: "HIGH",
-      reasons: ["observation_too_old"],
-      inputs: {
-        soil_moisture: soilMoisture,
-        observed_at_ts_ms: observedAt,
-        now_ts_ms: nowTs,
-      },
-      outputs: { stale_data: true, device_offline: false, sensor_drift: false },
-      confidence: { level: "HIGH", basis: "measured", reasons: ["timestamp_freshness_rule"] },
-      evidence_refs: evidenceRefs,
-      source_refs: [],
-    };
-  }
+  const freshness = runDeviceFreshnessSkillV1({
+    observation_age_minutes: observationAgeMinutes,
+    heartbeat_age_minutes: heartbeatAgeMinutes,
+  });
 
-  if (Number.isFinite(heartbeatTs) && Number.isFinite(nowTs) && nowTs - heartbeatTs > 5 * 60 * 1000) {
-    return {
-      judge_kind: "EVIDENCE",
-      tenant_id: input.tenant_id,
-      project_id: input.project_id,
-      group_id: input.group_id,
-      field_id: input.field_id ?? null,
-      device_id: input.device_id ?? null,
-      verdict: "DEVICE_OFFLINE",
-      severity: "CRITICAL",
-      reasons: ["heartbeat_timeout"],
-      inputs: {
-        soil_moisture: soilMoisture,
-        observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
-        now_ts_ms: nowTs,
-        last_heartbeat_ts_ms: heartbeatTs,
-      },
-      outputs: { stale_data: false, device_offline: true, sensor_drift: false },
-      confidence: { level: "HIGH", basis: "measured", reasons: ["heartbeat_freshness_rule"] },
-      evidence_refs: evidenceRefs,
-      source_refs: [],
-    };
-  }
+  const selected =
+    soil.output.verdict !== "PASS" ? soil : freshness.output.verdict !== "PASS" ? freshness : null;
+
+  const verdict = selected?.output.verdict ?? "PASS";
+  const reasons = selected?.output.reasons ?? ["evidence_guard_pass"];
 
   return {
     judge_kind: "EVIDENCE",
@@ -122,27 +53,69 @@ export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): Judg
     group_id: input.group_id,
     field_id: input.field_id ?? null,
     device_id: input.device_id ?? null,
-    verdict: "PASS",
-    severity: "LOW",
-    reasons: ["evidence_guard_pass"],
+    verdict,
+    severity: mapSeverity(verdict),
+    reasons,
     inputs: {
-      soil_moisture: soilMoisture,
-      observed_at_ts_ms: Number.isFinite(observedAt) ? observedAt : null,
-      now_ts_ms: Number.isFinite(nowTs) ? nowTs : Date.now(),
+      soil_moisture: input.soil_moisture ?? null,
+      observed_at_ts_ms: Number.isFinite(observedAtTs) ? observedAtTs : null,
+      now_ts_ms: nowTs,
       last_heartbeat_ts_ms: Number.isFinite(heartbeatTs) ? heartbeatTs : null,
-      last_telemetry_ts_ms: Number.isFinite(telemetryTs) ? telemetryTs : null,
+      last_telemetry_ts_ms: Number.isFinite(Number(input.last_telemetry_ts_ms))
+        ? Number(input.last_telemetry_ts_ms)
+        : null,
     },
     outputs: {
-      stale_data: false,
-      device_offline: false,
-      sensor_drift: false,
+      skill_traces: [
+        {
+          skill_id: soil.trace.skill_id,
+          trace_id: soil.trace.trace_id,
+          run_id: soil.trace.run_id,
+          skill_version: soil.trace.skill_version,
+          skill_category: soil.trace.skill_category,
+          verdict: soil.output.verdict,
+          reasons: soil.output.reasons,
+        },
+        {
+          skill_id: freshness.trace.skill_id,
+          trace_id: freshness.trace.trace_id,
+          run_id: freshness.trace.run_id,
+          skill_version: freshness.trace.skill_version,
+          skill_category: freshness.trace.skill_category,
+          verdict: freshness.output.verdict,
+          reasons: freshness.output.reasons,
+        },
+      ],
     },
-    confidence: {
+    confidence: selected?.trace.confidence ?? {
       level: "HIGH",
       basis: "measured",
       reasons: ["soil_moisture_and_freshness_checks_passed"],
     },
-    evidence_refs: evidenceRefs,
-    source_refs: [],
+    evidence_refs: Array.isArray(input.evidence_refs) ? input.evidence_refs : [],
+    source_refs: [
+      {
+        skill_id: soil.trace.skill_id,
+        skill_version: soil.trace.skill_version,
+        trace_id: soil.trace.trace_id,
+        run_id: soil.trace.run_id,
+        input_digest: soil.trace.input_digest,
+        inputs: soil.trace.inputs,
+        outputs: soil.trace.outputs,
+        confidence: soil.trace.confidence,
+        evidence_refs: soil.trace.evidence_refs,
+      },
+      {
+        skill_id: freshness.trace.skill_id,
+        skill_version: freshness.trace.skill_version,
+        trace_id: freshness.trace.trace_id,
+        run_id: freshness.trace.run_id,
+        input_digest: freshness.trace.input_digest,
+        inputs: freshness.trace.inputs,
+        outputs: freshness.trace.outputs,
+        confidence: freshness.trace.confidence,
+        evidence_refs: freshness.trace.evidence_refs,
+      },
+    ],
   };
 }
