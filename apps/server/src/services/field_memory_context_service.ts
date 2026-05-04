@@ -39,6 +39,9 @@ export async function loadFieldMemoryContextForRecommendation(
   input: LoadFieldMemoryContextInput,
 ): Promise<FieldMemoryContextV1> {
   const limit = Math.max(10, Math.min(200, Math.floor(input.lookback_limit ?? 50)));
+  const projectId = String(input.project_id ?? "").trim() || null;
+  const groupId = String(input.group_id ?? "").trim() || null;
+  const seasonId = String(input.season_id ?? "").trim() || null;
 
   const rows = (await pool.query(
     `SELECT memory_id, memory_type, before_value, after_value, delta_value, confidence, summary_text, occurred_at
@@ -53,9 +56,9 @@ export async function loadFieldMemoryContextForRecommendation(
     [
       input.tenant_id,
       input.field_id,
-      input.project_id ?? null,
-      input.group_id ?? null,
-      input.season_id ?? null,
+      projectId,
+      groupId,
+      seasonId,
       limit,
     ],
   )) as QueryResult<any>;
