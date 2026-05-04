@@ -69,7 +69,10 @@ function hasOwn(obj, key) {
     { method: 'GET', token },
   );
   const dashboardJson = requireOk(dashboardResp, 'read customer dashboard aggregate');
-  const roiSummary = dashboardJson.customer_dashboard_aggregate_v1?.roi_summary ?? dashboardJson.roi_summary ?? {};
+  const roiSummary = dashboardJson.customer_dashboard_aggregate_v1?.roi_summary
+    ?? dashboardJson.aggregate?.roi_summary
+    ?? dashboardJson.roi_summary
+    ?? {};
   assert.ok(Number(roiSummary.total_items ?? 0) > 0, 'roi_summary.total_items must be > 0');
 
   const checks = {
