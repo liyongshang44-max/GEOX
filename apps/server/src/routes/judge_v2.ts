@@ -166,10 +166,17 @@ export function registerJudgeV2Routes(app: FastifyInstance, pool: Pool): void {
             receipt_complete: true,
             timeout: false,
           },
-          skill_refs: [{
-            skill_id: "mock_valve_control_skill_v1",
-            skill_run_id: String((inserted as any).judge_id ?? (inserted as any).task_id ?? "execution_judge").trim(),
-          }],
+          skill_refs: (() => {
+            const ref = (inserted as any).source_refs?.[0];
+            return ref
+              ? [{
+                  skill_id: ref.skill_id,
+                  skill_version: ref.skill_version,
+                  trace_id: ref.trace_id,
+                  run_id: ref.run_id,
+                }]
+              : [];
+          })(),
           evidence_refs: Array.isArray(inserted.evidence_refs)
             ? inserted.evidence_refs.map((v) => String(v)).filter((v) => v.length > 0)
             : [],
