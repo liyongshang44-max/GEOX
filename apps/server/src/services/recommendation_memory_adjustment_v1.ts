@@ -18,13 +18,13 @@ export function buildRecommendationMemoryAdjustmentV1(memory: FieldMemoryContext
     confidence_adjustment = "LOWER_ONE_LEVEL";
     requires_manual_review = true;
     risk_reasons.push("FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE");
-    explain.push(`历史弱响应 ${memory.weak_response_count} 次`);
+    explain.push("该地块历史灌后水分回升偏弱，本次建议需人工复核。");
   }
 
   if (memory.execution_deviation_count >= 2) {
     requires_manual_review = true;
     risk_reasons.push("FIELD_MEMORY_EXECUTION_DEVIATION_RISK");
-    explain.push(`历史执行偏差 ${memory.execution_deviation_count} 次`);
+    explain.push("该地块历史执行偏差较大，本次建议需人工复核。");
   }
 
   if (memory.skill_failure_count >= 1) {

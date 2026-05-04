@@ -76,14 +76,13 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
   const B = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
   const riskB = Array.isArray(B?.risk?.reasons) ? B.risk.reasons.map((x) => String(x)) : [];
-  const explainB = String(B?.explain?.human ?? B?.explain?.action_summary ?? '');
-  const changedFromA =
-    Number(B.confidence ?? 0) < Number(A.confidence ?? 0)
-    || B.requires_manual_review === true
-    || riskB.length > (Array.isArray(A?.risk?.reasons) ? A.risk.reasons.length : 0)
-    || explainB !== String(A?.explain?.human ?? A?.explain?.action_summary ?? '')
-    || (Array.isArray(B.memory_refs) && B.memory_refs.length > 0);
-  assert.ok(changedFromA, 'Step2: recommendation should change after weak-response memory');
+  assert.ok(
+    Number(B.confidence ?? 0) < Number(A.confidence ?? 0) ||
+    B.requires_manual_review === true ||
+    (Array.isArray(B.memory_refs) && B.memory_refs.length > 0) ||
+    (B.risk?.reasons ?? []).some(x => String(x).includes('FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE')),
+    'Step2: recommendation must reflect field memory impact'
+  );
 
   // Step 3: add deviation memory => C
   await pool.query(
