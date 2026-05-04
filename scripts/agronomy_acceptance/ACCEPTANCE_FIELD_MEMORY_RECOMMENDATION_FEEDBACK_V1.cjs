@@ -75,7 +75,6 @@ async function generateRecommendation({ base, token, tenant_id, project_id, grou
   }
   const B = await generateRecommendation({ base, token: adminToken, tenant_id, project_id, group_id, field_id, season_id, device_id });
 
-  const riskB = Array.isArray(B?.risk?.reasons) ? B.risk.reasons.map((x) => String(x)) : [];
   assert.ok(
     Number(B.confidence ?? 0) < Number(A.confidence ?? 0) ||
     B.requires_manual_review === true ||
