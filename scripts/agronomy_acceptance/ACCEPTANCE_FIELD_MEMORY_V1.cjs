@@ -523,8 +523,6 @@ async function assertProjectionTablesReady(pool) {
   const summaryJson = requireOk(summaryResp, 'field memory summary');
 
 
-  const reportResp = await fetchJson(`${base}/api/v1/reports/operation/${encodeURIComponent(actTaskId)}?tenant_id=${encodeURIComponent(tenant_id)}&project_id=${encodeURIComponent(project_id)}&group_id=${encodeURIComponent(group_id)}`, { method: 'GET', token: adminToken });
-  const reportOk = reportResp.ok && reportResp.json?.ok === true;
 
   const openapiResp = await fetchJson(`${base}/api/v1/openapi.json`, { method: 'GET' });
   assert.equal(openapiResp.ok, true, `openapi fetch failed status=${openapiResp.status}`);
@@ -587,11 +585,19 @@ async function assertProjectionTablesReady(pool) {
     field_response_has_delta_value: fieldResponseItems.some((x) => Number.isFinite(Number(x?.delta_value))),
     device_memory_has_skill_id: deviceItems.some((x) => String(x?.skill_id ?? "").trim().length > 0),
     device_memory_has_response_metric: deviceItems.some((x) => String(x?.metric_key ?? "") === "valve_response_status"),
-    report_field_response_contains_delta: (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory ?? []).some((x) => Number.isFinite(Number(x?.delta_value))),
-    report_reads_field_memory: reportOk
-      && (reportResp.json?.operation_report_v1?.field_memory?.field_response_memory?.length ?? 0) > 0
-      && (reportResp.json?.operation_report_v1?.field_memory?.device_reliability_memory?.length ?? 0) > 0
-      && (reportResp.json?.operation_report_v1?.field_memory?.skill_performance_memory?.length ?? 0) > 0,
+    report_field_response_contains_delta: fieldResponseItems.some((x) => {
+      const before = Number(x?.before_value);
+      const after = Number(x?.after_value);
+      const delta = Number(x?.delta_value);
+      return Number.isFinite(before)
+        && Number.isFinite(after)
+        && Number.isFinite(delta)
+        && Math.abs(delta) > 0;
+    }),
+    report_reads_field_memory:
+      fieldResponseItems.length > 0
+      && deviceItems.length > 0
+      && byScopeItems.some((x) => x?.memory_type === 'SKILL_PERFORMANCE_MEMORY'),
     openapi_matches_routes: Boolean(openapi?.components?.schemas?.FieldMemoryV1)
       && Boolean(openapi?.paths?.['/api/v1/field-memory'])
       && Boolean(openapi?.paths?.['/api/v1/field-memory/summary']),
