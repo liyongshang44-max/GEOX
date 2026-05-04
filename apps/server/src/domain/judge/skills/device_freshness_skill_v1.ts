@@ -1,4 +1,4 @@
-import { buildJudgeSkillTraceV1 } from "./judge_skill_trace_v1";
+import { buildJudgeSkillTraceV1 } from "./judge_skill_trace_v1.js";
 
 type DeviceFreshnessVerdict = "PASS" | "STALE_DATA" | "DEVICE_OFFLINE";
 
