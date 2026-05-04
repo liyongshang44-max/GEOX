@@ -25,6 +25,7 @@ import {
   getLatestDerivedSensingStatesByFieldV1
 } from "../services/derived_sensing_state_v1.js";
 import { loadFieldMemoryContextForRecommendation } from "../services/field_memory_context_service.js";
+import { buildRecommendationMemoryAdjustmentV1 } from "../services/recommendation_memory_adjustment_v1.js";
 import { appendSkillRunFact, appendSkillTraceFact, digestJson } from "../domain/skill_registry/facts.js";
 import {
   IRRIGATION_CONTROL_PLANE_ACTION,
@@ -1367,7 +1368,7 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
           salinity_risk: null,
           source: "field_fertility_state_v1"
         };
-    const recommendations = buildRecommendationsFromStage1Summary(
+    let recommendations = buildRecommendationsFromStage1Summary(
       body,
       stage1Summary,
       snapshot_id,
@@ -1377,26 +1378,6 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     if (recommendations.length === 0) {
       return badRequest(reply, "NO_RECOMMENDATION_TRIGGERED");
     }
-    for (const recommendation of recommendations) {
-      const memory = await loadFieldMemoryContextForRecommendation(pool, {
-        tenant_id: tenant.tenant_id,
-        project_id: tenant.project_id,
-        group_id: tenant.group_id,
-        field_id: recommendation.field_id,
-        season_id: recommendation.season_id,
-      });
-
-      if (memory.recommended_confidence_adjustment === "LOWER_ONE_LEVEL") {
-        recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
-      }
-
-      recommendation.memory_refs = memory.memory_refs;
-      recommendation.requires_manual_review = Boolean(recommendation.requires_manual_review) || memory.requires_manual_review;
-      recommendation.risk = recommendation.risk ?? { reasons: [] };
-      recommendation.risk.reasons = mergeTextList(recommendation.risk.reasons, memory.risk_reasons);
-      recommendation.field_memory_context = memory;
-    }
-
     const cropCode = String(body.crop_code ?? "").trim();
     const matchedRuleIds = Array.from(new Set(
       recommendations.flatMap((x) => (Array.isArray(x.rule_hit) ? x.rule_hit : []))
@@ -1416,12 +1397,6 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
         recommendation: rec,
         stage1Summary,
       });
-      if (Array.isArray(rec.field_memory_context?.explain_notes) && rec.field_memory_context.explain_notes.length > 0) {
-        const explainAny = (rec.explain ?? {}) as any;
-        const baseHuman = String(explainAny.human ?? explainAny.action_summary ?? "").trim();
-        explainAny.human = `${baseHuman}${baseHuman ? " " : ""}历史表现显示该地块响应偏弱，建议人工复核。`;
-        rec.explain = explainAny;
-      }
       rec.internal_debug_explain = buildRecommendationInternalDebugExplainV1({
         recommendation: rec,
         sensingOverview,
@@ -1430,6 +1405,14 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
       });
     });
     recommendations.sort((a, b) => Number(b.rank_score ?? 0) - Number(a.rank_score ?? 0));
+
+    recommendations = await applyFieldMemoryAdjustmentsToRecommendations(pool, {
+      tenant_id: tenant.tenant_id,
+      project_id: tenant.project_id,
+      group_id: tenant.group_id,
+      season_id: body.season_id,
+      recommendations,
+    });
 
     const fact_ids: string[] = [];
     const resolvedRecommendations: RecommendationV1[] = [];
@@ -1901,3 +1884,87 @@ export function registerDecisionEngineV1Routes(app: FastifyInstance, pool: Pool)
     });
   });
 }
+async function applyFieldMemoryAdjustmentsToRecommendations(
+  pool: Pool,
+  params: {
+    tenant_id: string;
+    project_id: string;
+    group_id: string;
+    season_id?: string | null;
+    recommendations: RecommendationV1[];
+  }
+): Promise<RecommendationV1[]> {
+  const out: RecommendationV1[] = [];
+
+  for (const recommendation of params.recommendations) {
+    const field_id = String(recommendation.field_id ?? "").trim();
+
+    if (!field_id) {
+      out.push(recommendation);
+      continue;
+    }
+
+    const memory = await loadFieldMemoryContextForRecommendation(pool, {
+      tenant_id: params.tenant_id,
+      project_id: params.project_id,
+      group_id: params.group_id,
+      field_id,
+      season_id: recommendation.season_id || params.season_id || undefined,
+      lookback_limit: 50,
+    });
+
+    const adjustment = buildRecommendationMemoryAdjustmentV1(memory);
+
+    const shouldApply =
+      adjustment.confidence_adjustment === "LOWER_ONE_LEVEL" ||
+      adjustment.requires_manual_review ||
+      adjustment.risk_reasons.length > 0 ||
+      adjustment.memory_refs.length > 0;
+
+    if (!shouldApply) {
+      out.push(recommendation);
+      continue;
+    }
+
+    if (adjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
+      recommendation.confidence = lowerConfidenceOneLevel(Number(recommendation.confidence ?? 0));
+    }
+
+    recommendation.requires_manual_review =
+      Boolean(recommendation.requires_manual_review) ||
+      adjustment.requires_manual_review;
+
+    recommendation.memory_refs = mergeTextList(
+      recommendation.memory_refs,
+      adjustment.memory_refs
+    );
+
+    recommendation.risk = {
+      ...(recommendation.risk ?? {}),
+      reasons: mergeTextList(
+        recommendation.risk?.reasons,
+        adjustment.risk_reasons
+      ),
+    };
+
+    recommendation.field_memory_context = memory;
+
+    if (adjustment.explain_append) {
+      recommendation.suggested_action = {
+        ...recommendation.suggested_action,
+        summary: [
+          recommendation.suggested_action?.summary ?? "",
+          adjustment.explain_append,
+        ]
+          .filter(Boolean)
+          .join("；"),
+      };
+    }
+
+    out.push(recommendation);
+  }
+
+  return out;
+}
+
+
