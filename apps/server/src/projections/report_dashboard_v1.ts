@@ -651,9 +651,17 @@ export function projectCustomerDashboardAggregateFromStatesV1(params: {
       offline_devices: Number(params.device_summary?.offline_devices ?? 0),
     },
     roi_summary: {
-      total_items: 0,
+      total_roi_items: 0,
       measured_items: 0,
+      estimated_items: 0,
+      assumption_based_items: 0,
       insufficient_items: 0,
+      low_confidence_items: 0,
+      water_saved_items: 0,
+      labor_saved_items: 0,
+      early_warning_items: 0,
+      first_pass_acceptance_items: 0,
+      has_customer_visible_value: false,
       customer_value_text: "暂无价值记录",
     },
   };
