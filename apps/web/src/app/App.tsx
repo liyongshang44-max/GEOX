@@ -233,8 +233,9 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
           <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
-          <Route path="/fields" element={<Navigate to="/customer/fields" replace />} />
-          <Route path="/fields/portfolio" element={<Navigate to="/customer/fields/portfolio" replace />} />
+          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/fields/:fieldId" element={<LegacyParamRedirect to="/admin/fields/:fieldId" />} />
           <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
           <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
           <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
