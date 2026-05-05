@@ -1,9 +1,10 @@
 import React from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, generatePath, useLocation, useParams } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
+import AdminLayout from "../layouts/AdminLayout";
 import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
@@ -28,6 +29,11 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
+
+function LegacyParamRedirect({ to }: { to: string }): React.ReactElement {
+  const params = useParams();
+  return <Navigate to={generatePath(to, params)} replace />;
+}
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
@@ -192,6 +198,23 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
+
+          <Route path="/" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />
+          <Route path="/fields/:fieldId/report" element={<LegacyParamRedirect to="/customer/fields/:fieldId" />} />
+          <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
+          <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
+          <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
+          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
+          <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
+          <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
+          <Route path="/alerts" element={<Navigate to="/admin/alerts" replace />} />
+          <Route path="/audit-export" element={<Navigate to="/admin/evidence" replace />} />
+          <Route path="/skills/registry" element={<Navigate to="/admin/skills" replace />} />
           {renderDashboardRoutes(expert)}
           {renderEvidenceRoutes()}
           {renderFieldsRoutes()}
@@ -217,12 +240,37 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/admin/healthz" element={<Navigate to="/legacy/admin/healthz" replace />} />
           <Route path="/admin/import" element={<Navigate to="/legacy/admin/import" replace />} />
           <Route path="/admin/acceptance" element={<Navigate to="/legacy/admin/acceptance" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/admin/operations/:operationId/debug" element={<Navigate to="/legacy/dev" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/control/approvals" element={<Navigate to="/legacy/control/approvals" replace />} />
           <Route path="/settings" element={<Navigate to="/legacy/settings" replace />} />
           <Route path="/dev" element={<Navigate to="/legacy/dev" replace />} />
         </Routes>
       </React.Suspense>
     </AppShell>
+  );
+}
+
+
+function AdminShell(): React.ReactElement {
+  return (
+    <AdminLayout
+      topBar={{
+        breadcrumbs: [{ label: "平台控制台", to: "/dashboard" }, { label: "后台管理" }],
+        title: "后台管理",
+        lead: "后台管理入口，面向 /admin/* 维护导入、验收与健康检查。",
+        primaryAction: { label: "返回总览", to: "/dashboard" },
+      }}
+    >
+      <React.Suspense fallback={RouteFallback}>
+        <Routes>
+          <Route path="/admin/healthz" element={<AdminHealthPage />} />
+          <Route path="/admin/import" element={<AdminImportPage />} />
+          <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
+        </Routes>
+      </React.Suspense>
+    </AdminLayout>
   );
 }
 
@@ -236,6 +284,7 @@ export default function App(): React.ReactElement {
         <React.Suspense fallback={RouteFallback}>
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/admin/*" element={<RequireSession><AdminShell /></RequireSession>} />
             <Route
               path="*"
               element={(
