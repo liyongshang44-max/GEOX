@@ -37,6 +37,12 @@ const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsP
 const EvidenceCenterPage = React.lazy(() => import("../features/evidence/pages/EvidenceCenterPage"));
 const SkillRegistryPage = React.lazy(() => import("../features/skills/pages/SkillRegistryPage"));
 const AdminOperationDebugPage = React.lazy(() => import("../views/AdminOperationDebugPage"));
+const CustomerDashboardPage = React.lazy(() => import("../views/CustomerDashboardPage"));
+const CustomerDashboardExportPage = React.lazy(() => import("../views/CustomerDashboardExportPage"));
+const FieldReportPage = React.lazy(() => import("../views/FieldReportPage"));
+const FieldReportExportPage = React.lazy(() => import("../views/FieldReportExportPage"));
+const OperationReportPage = React.lazy(() => import("../views/OperationReportPage"));
+const CustomerReportExportPage = React.lazy(() => import("../views/CustomerReportExportPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
@@ -215,7 +221,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
       }}
     >
       <React.Suspense fallback={RouteFallback}>
-        <AppRoutes expert={expert} />
+        <CustomerRoutes />
       </React.Suspense>
     </AppShell>
   );
@@ -277,11 +283,26 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
   );
 }
 
-function CustomerShell({ expert }: { expert: boolean }): React.ReactElement {
+function CustomerRoutes(): React.ReactElement {
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="dashboard" replace />} />
+      <Route path="dashboard" element={<CustomerDashboardPage />} />
+      <Route path="export" element={<CustomerDashboardExportPage />} />
+      <Route path="fields/:fieldId" element={<FieldReportPage />} />
+      <Route path="fields/:fieldId/export" element={<FieldReportExportPage />} />
+      <Route path="operations/:operationId" element={<OperationReportPage />} />
+      <Route path="operations/:operationId/export" element={<CustomerReportExportPage />} />
+      <Route path="*" element={<Navigate to="dashboard" replace />} />
+    </Routes>
+  );
+}
+
+function CustomerShell(): React.ReactElement {
   return (
     <CustomerLayout>
       <React.Suspense fallback={RouteFallback}>
-        <AppRoutes expert={expert} />
+        <CustomerRoutes />
       </React.Suspense>
     </CustomerLayout>
   );
@@ -300,19 +321,19 @@ function AdminShell(): React.ReactElement {
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/admin/dashboard" element={<CommercialDashboardPage expert={false} />} />
-          {renderAdminFieldsRoutes()}
-          <Route path="/admin/operations" element={<OperationsPage />} />
-          <Route path="/admin/devices" element={<DevicesPage />} />
-          <Route path="/admin/alerts" element={<AlertsPage />} />
-          <Route path="/admin/evidence" element={<EvidenceCenterPage />} />
-          <Route path="/admin/skills" element={<SkillRegistryPage />} />
-          <Route path="/admin/operations/:operationId/debug" element={<AdminOperationDebugPage />} />
-          <Route path="/admin/healthz" element={<AdminHealthPage />} />
-          <Route path="/admin/import" element={<AdminImportPage />} />
-          <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
-          <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<CommercialDashboardPage expert={false} />} />
+          <Route path="fields" element={<FieldsPage />} />
+          <Route path="operations" element={<OperationsPage />} />
+          <Route path="devices" element={<DevicesPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
+          <Route path="evidence" element={<EvidenceCenterPage />} />
+          <Route path="skills" element={<SkillRegistryPage />} />
+          <Route path="operations/:operationId/debug" element={<AdminOperationDebugPage />} />
+          <Route path="healthz" element={<AdminHealthPage />} />
+          <Route path="import" element={<AdminImportPage />} />
+          <Route path="acceptance" element={<AdminAcceptancePage />} />
+          <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Routes>
       </React.Suspense>
     </AdminLayout>
@@ -335,7 +356,7 @@ export default function App(): React.ReactElement {
               path="/customer/*"
               element={(
                 <RequireSession>
-                  <CustomerShell expert={expert} />
+                  <CustomerShell />
                 </RequireSession>
               )}
             />
@@ -344,7 +365,7 @@ export default function App(): React.ReactElement {
               path="*"
               element={(
                 <RequireSession>
-                  {isCustomerRoute(pathname) ? <CustomerShell expert={expert} /> : (isAdminRoute(pathname) ? <AdminShell /> : <Shell expert={expert} />)}
+                  {isCustomerRoute(pathname) ? <CustomerShell /> : (isAdminRoute(pathname) ? <AdminShell /> : <Shell expert={expert} />)}
                 </RequireSession>
               )}
             />
