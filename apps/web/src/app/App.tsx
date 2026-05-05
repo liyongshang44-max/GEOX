@@ -1,5 +1,5 @@
 import React from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, generatePath, useLocation, useParams } from "react-router-dom";
 import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
@@ -28,6 +28,11 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
+
+function LegacyParamRedirect({ to }: { to: string }): React.ReactElement {
+  const params = useParams();
+  return <Navigate to={generatePath(to, params)} replace />;
+}
 
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
@@ -192,6 +197,23 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
+
+          <Route path="/" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />
+          <Route path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />
+          <Route path="/fields/:fieldId/report" element={<LegacyParamRedirect to="/customer/fields/:fieldId" />} />
+          <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
+          <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
+          <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
+          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
+          <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
+          <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
+          <Route path="/alerts" element={<Navigate to="/admin/alerts" replace />} />
+          <Route path="/audit-export" element={<Navigate to="/admin/evidence" replace />} />
+          <Route path="/skills/registry" element={<Navigate to="/admin/skills" replace />} />
           {renderDashboardRoutes(expert)}
           {renderEvidenceRoutes()}
           {renderFieldsRoutes()}
