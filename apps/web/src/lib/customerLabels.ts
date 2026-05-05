@@ -19,8 +19,32 @@ export const CUSTOMER_LABELS = {
   offlineDevices: "离线",
 } as const;
 
+const RAW_CODE_LABELS: Record<string, string> = {
+  FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE: "灌溉响应弱，建议复核",
+  FIELD_MEMORY_EXECUTION_DEVIATION_RISK: "执行偏差风险，建议复核",
+  INSUFFICIENT_EVIDENCE: "证据不足，建议人工复核",
+  PENDING_ACCEPTANCE: "待验收",
+  INVALID_EXECUTION: "作业未达到预期效果",
+  MEASURED: "实测值",
+  ESTIMATED: "估算值",
+  ASSUMPTION_BASED: "基于假设",
+  HIGH: "高",
+  MEDIUM: "中",
+  LOW: "低",
+  PASS: "通过",
+  FAIL: "未通过",
+  SUCCESS: "成功",
+  FAILED: "失败",
+};
+
 function normalizeKey(raw: unknown): string {
   return String(raw ?? "").trim().toUpperCase();
+}
+
+export function labelRawCode(raw: unknown, fallback = "--"): string {
+  const key = normalizeKey(raw);
+  if (!key) return fallback;
+  return RAW_CODE_LABELS[key] ?? String(raw).trim() || fallback;
 }
 
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
@@ -54,6 +78,8 @@ export function labelFinalStatus(raw: unknown): string {
 export function labelEvidenceQuality(raw: unknown): string {
   const key = normalizeKey(raw);
   if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，建议人工复核";
+  if (["FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE", "WEAK_IRRIGATION_RESPONSE"].includes(key)) return "灌溉响应弱，建议复核";
+  if (["FIELD_MEMORY_EXECUTION_DEVIATION_RISK", "EXECUTION_DEVIATION_RISK"].includes(key)) return "执行偏差风险，建议复核";
   if (["DEVICE_NOT_RESPONDING", "NO_DEVICE_ACK", "TIMEOUT"].includes(key)) return "设备未响应，已阻断自动执行";
   return labelEmptyFallback(raw, "证据充分");
 }
