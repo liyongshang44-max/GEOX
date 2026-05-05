@@ -4,6 +4,7 @@ import {
   labelAcceptanceStatus,
   labelEmptyFallback,
   labelRiskLevel,
+  sanitizeCustomerText,
 } from "../lib/customerLabels";
 
 const numberFmt = new Intl.NumberFormat("zh-CN");
@@ -68,7 +69,7 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     ],
     topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => ({
       id: String(item.field_id ?? ""),
-      rowText: `${String(item.field_name ?? item.field_id ?? "未知地块")} · ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => labelEmptyFallback(reason)).join("、") || "-")}`,
+      rowText: `${String(item.field_name ?? "C8-03 地块")} · ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).join("、") || "-")}`,
       href: `/customer/fields/${encodeURIComponent(String(item.field_id ?? ""))}`,
     })),
     pendingItems: [
@@ -95,7 +96,7 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     ],
     recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => ({
       operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
-      rowText: `${String(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? item.field_id ?? "未知地块")} · ${toDateTimeText(item.executed_at)} · ${labelAcceptanceStatus(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "" ? item.final_status : item.acceptance_status)}`,
+      rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${labelAcceptanceStatus(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "" ? item.final_status : item.acceptance_status)}`,
       href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
     })),
     nextActions: [
