@@ -19,6 +19,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
+  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim()).filter(Boolean);
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
       <header className="customerHero">
@@ -38,9 +40,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">经营总览</h3>
-        <div className="kvGrid2">
-          {(vm?.kpis ?? []).map((kpi) => (
-            <div key={kpi.key}><strong>{kpi.label}：</strong>{kpi.valueText} <span className="muted">{kpi.detailText}</span></div>
+        <div className="customerMetrics">
+          {(vm?.kpis ?? []).slice(0, 6).map((kpi) => (
+            <article key={kpi.key} className="customerMetricCard">
+              <div className="customerMetricLabel">{kpi.label}</div>
+              <div className="customerMetricValue">{kpi.valueText}</div>
+              <div className="muted">{kpi.detailText}</div>
+            </article>
           ))}
         </div>
       </section>
@@ -52,8 +58,16 @@ export default function CustomerDashboardPage(): React.ReactElement {
             {(vm?.topRiskFields ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
                 <div className="customerItemMain">
-                  <Link to={item.href}>{item.rowText}</Link>
-                  <span className="customerPill customerPillHigh">风险关注</span>
+                  {(() => {
+                    const [fieldName = "地块", riskTag = "风险关注", reason = "待复核"] = parseRow(item.rowText);
+                    return (
+                      <>
+                        <Link to={item.href}>{fieldName}</Link>
+                        <span className="customerPill customerPillHigh">{riskTag}</span>
+                        <div className="customerItemReason">{reason}</div>
+                      </>
+                    );
+                  })()}
                 </div>
               </li>
             ))}
@@ -85,7 +99,16 @@ export default function CustomerDashboardPage(): React.ReactElement {
           <ul className="customerList">
             {(vm?.recentOperations ?? []).map((item) => (
               <li key={item.operationId} className="customerListItem">
-                <Link className="customerItemTitle" to={item.href}>{item.rowText}</Link>
+                {(() => {
+                  const [operationType = "作业", fieldName = "地块", timeText = "时间未知", statusText = "待确认"] = parseRow(item.rowText);
+                  return (
+                    <>
+                      <Link className="customerItemTitle" to={item.href}>{operationType}</Link>
+                      <div className="customerItemReason">{fieldName} · {timeText}</div>
+                      <span className="customerPill">{statusText}</span>
+                    </>
+                  );
+                })()}
               </li>
             ))}
             {!(vm?.recentOperations.length) ? (
@@ -97,12 +120,13 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议</h3>
-        <div className="list">
+        <div className="customerGrid3">
           {(vm?.nextActions ?? []).map((item) => (
-            <li key={item.id} className="customerListItem">
-              <div><Link to={item.href}>{item.title}</Link></div>
-              <div className="muted">{item.summary}</div>
-            </li>
+            <article key={item.id} className="customerCard" style={{ border: "1px solid var(--line, #e5e7eb)", padding: 12 }}>
+              <div className="customerItemTitle">{item.title}</div>
+              <div className="customerItemReason" style={{ marginTop: 6 }}>{item.summary}</div>
+              <Link className="customerButton customerSpacingTopSm" to={item.href}>立即处理</Link>
+            </article>
           ))}
         </div>
       </section>
