@@ -6,6 +6,7 @@ const CommercialDashboardPage = React.lazy(() => import("../../features/dashboar
 const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../features/dashboard/pages/ManualExecutionQualityAnalysisPage"));
 const CustomerDashboardPage = React.lazy(() => import("../../views/CustomerDashboardPage"));
 const CustomerDashboardExportPage = React.lazy(() => import("../../views/CustomerDashboardExportPage"));
+const CustomerReportExportPage = React.lazy(() => import("../../views/CustomerReportExportPage"));
 
 export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
   return [

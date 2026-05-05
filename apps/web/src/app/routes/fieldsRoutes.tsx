@@ -19,5 +19,6 @@ export function renderFieldsRoutes(): React.ReactElement[] {
     <Route key="fields-detail-customer-alias" path="/customer/fields/:fieldId" element={<RouteErrorBoundary><FieldDetailPage /></RouteErrorBoundary>} />,
     <Route key="fields-report" path="/fields/:fieldId/report" element={<RouteErrorBoundary><FieldReportPage /></RouteErrorBoundary>} />,
     <Route key="fields-report-export" path="/fields/:fieldId/report/export" element={<RouteErrorBoundary><FieldReportExportPage /></RouteErrorBoundary>} />,
+    <Route key="customer-fields-export" path="/customer/fields/:fieldId/export" element={<RouteErrorBoundary><FieldReportExportPage /></RouteErrorBoundary>} />,
   ];
 }

@@ -1,0 +1,94 @@
+.customerReportPage {
+  display: grid;
+  gap: 16px;
+}
+
+.customerReportGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.customerCard {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.customerKpi {
+  display: grid;
+  gap: 8px;
+}
+
+.customerKpiValue {
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #111827;
+}
+
+.customerKpiLabel {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.riskState {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.riskState--low { background: #ecfdf3; color: #067647; }
+.riskState--medium { background: #fffaeb; color: #b54708; }
+.riskState--high { background: #fef3f2; color: #b42318; }
+
+.evidenceMatrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.evidenceMatrix th,
+.evidenceMatrix td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.evidenceMatrix th {
+  background: #f9fafb;
+  color: #374151;
+  font-weight: 600;
+}
+
+@media print {
+  .customerReportPage {
+    gap: 10px;
+  }
+
+  .customerCard {
+    border-color: #d1d5db;
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .customerLayout,
+  .customerLayoutMain {
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .riskState {
+    border: 1px solid currentColor;
+    background: transparent !important;
+  }
+}
