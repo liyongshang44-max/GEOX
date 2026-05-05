@@ -1,21 +1,14 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
+require('tsx/cjs');
 const assert = require('node:assert/strict');
 
 async function loadModules() {
-  try {
-    const pg = await import('pg');
-    const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.ts');
-    const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.ts');
-    const result = await import('../../apps/server/src/domain/judge/judge_result_v2.ts');
-    return { Pool: pg.Pool, ...evidence, ...execution, ...result };
-  } catch (_err) {
-    const pg = await import('pg');
-    const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.js');
-    const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.js');
-    const result = await import('../../apps/server/src/domain/judge/judge_result_v2.js');
-    return { Pool: pg.Pool, ...evidence, ...execution, ...result };
-  }
+  const pg = await import('pg');
+  const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.ts');
+  const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.ts');
+  const result = await import('../../apps/server/src/domain/judge/judge_result_v2.ts');
+  return { Pool: pg.Pool, ...evidence, ...execution, ...result };
 }
 
 function assertTraceFields(item) {
