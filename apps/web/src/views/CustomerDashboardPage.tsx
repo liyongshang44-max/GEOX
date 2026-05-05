@@ -20,20 +20,24 @@ export default function CustomerDashboardPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="customerPage customerPageGapMd">
-      <section className="customerReportHeader">
-        <div className="customerEyebrow">GEOX / 客户看板</div>
-        <h1 className="customerTitle">{vm?.header.title ?? "客户看板"}</h1>
-        <p className="customerSubtitle">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
-        <div className="customerActionRow">
-          <Link className="customerButton customerButtonPrimary" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>{vm?.header.primaryAction.label ?? "立即审批"}</Link>
-          <Link className="customerButton" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>{vm?.header.secondaryAction.label ?? "检查设备"}</Link>
+    <div style={{ display: "grid", gap: 16 }}>
+      <header className="customerHero">
+        <div className="customerHeroTop">
+          <div>
+            <div className="customerLabel">GEOX / 客户看板</div>
+            <h1 className="customerTitle">{vm?.header.title ?? "客户看板"}</h1>
+            <p className="customerSub">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
+          </div>
+          <div className="customerActions">
+            <Link className="btn" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>{vm?.header.primaryAction.label ?? "立即审批"}</Link>
+            <Link className="btn" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>{vm?.header.secondaryAction.label ?? "检查设备"}</Link>
+          </div>
         </div>
-      </section>
+      </header>
 
       <section className="customerCard">
         <h3 className="customerCardTitle">经营总览</h3>
-        <div className="customerGrid2">
+        <div className="kvGrid2">
           {(vm?.kpis ?? []).map((kpi) => (
             <article key={kpi.key} className="customerMetricCard">
               <div className="customerMetricValue">{kpi.valueText}</div>
@@ -45,7 +49,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">风险与待办</h3>
-        <div className="customerGridAuto">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
           <div>
             <div className="muted">高风险地块</div>
             {(vm?.topRiskFields ?? []).map((item) => (
@@ -91,7 +95,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议与价值</h3>
-        <div className="customerList">
+        <div className="list">
           {(vm?.nextActions ?? []).map((item) => (
             <li key={item.id} className="customerListItem">
               <div><Link to={item.href}>{item.title}</Link></div>

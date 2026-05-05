@@ -49,26 +49,30 @@ export default function OperationReportPage(): React.ReactElement {
   ];
 
   return (
-    <div className="customerPage customerPageGapMd">
-      <section className="customerReportHeader">
-        <div className="customerEyebrow">GEOX / 作业闭环</div>
-        <h1 className="customerTitle">{vm.header.title}</h1>
-        <p className="customerSubtitle">{vm.header.subtitle}</p>
-        <div className="customerActionRow">
-          <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
-          <Link className="customerButton customerButtonPrimary" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
+    <div style={{ display: "grid", gap: 16 }}>
+      <header className="customerHero">
+        <div className="customerHeroTop">
+          <div>
+            <div className="customerLabel">GEOX / 作业闭环</div>
+            <h1 className="customerTitle">{vm.header.title}</h1>
+            <p className="customerSub">{vm.header.subtitle}</p>
+          </div>
+          <div className="customerActions">
+            <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
+            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
+          </div>
         </div>
-      </section>
+      </header>
 
-      <div className="customerStepList">
+      <div className="customerFlow">
         {steps.map((step) => (
-          <div key={step.n} className="customerStepRow">
-            <div className="customerStepIndex">{step.n}</div>
-            <section className="customerCard">
+          <section key={step.n} className="customerFlowStep">
+            <div className="customerFlowIndex">{step.n}</div>
+            <div className="customerCard">
               <h3 className="customerCardTitle">{step.title}</h3>
               {step.body}
-            </section>
-          </div>
+            </div>
+          </section>
         ))}
       </div>
     </div>
