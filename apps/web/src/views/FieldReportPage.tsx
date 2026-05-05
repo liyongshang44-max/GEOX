@@ -42,10 +42,10 @@ export default function FieldReportPage(): React.ReactElement {
   return (
     <div className="demoDashboardPage">
       <PageHeader
-        eyebrow="GEOX / 地块报告"
-        title={vm.hero.title}
+        eyebrow="GEOX"
+        title="C8-03 地块报告"
         description={vm.hero.subtitle}
-        actions={(<><Link className="btn" to="/customer/dashboard">返回客户总览</Link><Link className="btn" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>导出报告</Link></>)}
+        actions={(<><Link className="btn" to="/customer/dashboard">返回客户总览</Link><Link className="btn" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>打印导出</Link></>)}
       />
 
       <SectionCard title="地块概况">
@@ -74,9 +74,9 @@ export default function FieldReportPage(): React.ReactElement {
         </ul>
       </SectionCard>
 
-      <SectionCard title="近期作业">
+      <SectionCard title="近期作业 Top 5">
         <div className="list">
-          {vm.recentOperations.map((item) => (
+          {vm.recentOperationsTop5.map((item) => (
             <article key={item.id} className="item">
               <div><Link to={item.href}>{item.title}</Link></div>
               <div className="muted">状态：{item.statusText}</div>
@@ -84,14 +84,14 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="muted">生成时间：{item.generatedAtText}</div>
             </article>
           ))}
-          {!vm.recentOperations.length ? <div className="muted">暂无作业报告</div> : null}
+          {!vm.recentOperationsTop5.length ? <div className="muted">暂无作业报告</div> : null}
         </div>
       </SectionCard>
 
       <SectionCard title="处方与下一步建议">
         <div className="list">
           {vm.prescriptionCards.map((item) => (
-            <article key={item.title} className="item">
+            <article key={item.title} className="item" style={item.title === "审批要求" ? { background: "#fff3e8", border: "1px solid #ffd8b2" } : undefined}>
               <div><strong>{item.title}</strong>：{item.value}</div>
               <div className="muted">{item.detail}</div>
             </article>
@@ -105,20 +105,6 @@ export default function FieldReportPage(): React.ReactElement {
             <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
           ))}
         </div>
-      </SectionCard>
-
-      <SectionCard title="ROI/价值摘要">
-        <div>{vm.roiSummary.text}</div>
-        <div className="kvGrid2" style={{ marginTop: 8 }}>
-          {vm.roiSummary.stats.map((item) => (
-            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="证据可信度">
-        <div><strong>等级：</strong>{vm.evidenceConfidence.level}</div>
-        <div className="muted">{vm.evidenceConfidence.detail}</div>
       </SectionCard>
     </div>
   );
