@@ -18,8 +18,8 @@ const AdminOperationDebugPage = React.lazy(() => import("../../views/AdminOperat
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [
     <Route key="operations" path="/operations" element={<OperationsPage />} />,
-    <Route key="operations-detail" path="/operations/:operationPlanId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
-    <Route key="operations-report" path="/operations/:operationPlanId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
+    <Route key="operations-detail" path="/operations/:operationId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
+    <Route key="operations-report" path="/operations/:operationId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
     <Route key="operations-report-export" path="/operations/:operationId/report/export" element={<RouteErrorBoundary><OperationReportExportPage /></RouteErrorBoundary>} />,
     <Route key="admin-operation-debug" path="/admin/operations/:operationId/debug" element={<RouteErrorBoundary><AdminOperationDebugPage /></RouteErrorBoundary>} />,
     <Route key="operations-workboard" path="/operations/workboard" element={<OperationsWorkboardPage />} />,

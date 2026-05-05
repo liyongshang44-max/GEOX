@@ -1,4 +1,4 @@
-import type { CustomerDashboardAggregateV1 } from "../api/reports";
+import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 
 const STATUS_COPY: Record<string, string> = {
   SUCCESS: "已完成并通过验收",
