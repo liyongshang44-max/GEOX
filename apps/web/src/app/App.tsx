@@ -30,6 +30,15 @@ const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
+const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
+const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
+const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
+const OperationsPage = React.lazy(() => import("../features/operations/pages/OperationsPage"));
+const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsPage"));
+const EvidenceCenterPage = React.lazy(() => import("../features/evidence/pages/EvidenceCenterPage"));
+const SkillRegistryPage = React.lazy(() => import("../features/skills/pages/SkillRegistryPage"));
+const AdminOperationDebugPage = React.lazy(() => import("../views/AdminOperationDebugPage"));
+
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 
 function isCustomerRoute(pathname: string): boolean {
@@ -291,10 +300,19 @@ function AdminShell(): React.ReactElement {
     >
       <React.Suspense fallback={RouteFallback}>
         <Routes>
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/dashboard" element={<CommercialDashboardPage expert={false} />} />
+          <Route path="/admin/fields" element={<FieldsPage />} />
+          <Route path="/admin/operations" element={<OperationsPage />} />
+          <Route path="/admin/devices" element={<DevicesPage />} />
+          <Route path="/admin/alerts" element={<AlertsPage />} />
+          <Route path="/admin/evidence" element={<EvidenceCenterPage />} />
+          <Route path="/admin/skills" element={<SkillRegistryPage />} />
+          <Route path="/admin/operations/:operationId/debug" element={<AdminOperationDebugPage />} />
           <Route path="/admin/healthz" element={<AdminHealthPage />} />
           <Route path="/admin/import" element={<AdminImportPage />} />
           <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
-          {renderAdminFieldsRoutes()}
+          <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
         </Routes>
       </React.Suspense>
     </AdminLayout>
