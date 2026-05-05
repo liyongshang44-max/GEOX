@@ -2,7 +2,7 @@ import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 import {
   CUSTOMER_LABELS,
   labelAcceptanceStatus,
-  labelEmptyFallback,
+  labelFinalStatus,
   labelRiskLevel,
   sanitizeCustomerText,
 } from "../lib/customerLabels";
@@ -42,10 +42,24 @@ export type CustomerDashboardPageVm = {
     href: string;
   }>;
   nextActions: Array<{ id: string; title: string; summary: string; href: string }>;
+  roiSummary: {
+    totalRoiItems: number;
+    waterSavedItems: number;
+    customerValueText: string;
+  };
 };
 
-export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1): CustomerDashboardPageVm {
-  const highRisk = (aggregate.top_risk_fields || []).filter((x) => String(x.risk_level ?? "").toUpperCase() === "HIGH").length;
+export function normalizeDashboardAggregate(input: any): CustomerDashboardAggregateV1 {
+  if (!input || typeof input !== "object") return (input ?? {}) as CustomerDashboardAggregateV1;
+  if ("aggregate" in input) return normalizeDashboardAggregate(input.aggregate);
+  if ("customer_dashboard_aggregate_v1" in input) return normalizeDashboardAggregate(input.customer_dashboard_aggregate_v1);
+  if ("data" in input) return normalizeDashboardAggregate(input.data);
+  return input as CustomerDashboardAggregateV1;
+}
+
+export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | { aggregate?: CustomerDashboardAggregateV1; customer_dashboard_aggregate_v1?: CustomerDashboardAggregateV1; data?: CustomerDashboardAggregateV1 }): CustomerDashboardPageVm {
+  const aggregate = normalizeDashboardAggregate(input);
+  const highRisk = Number(aggregate.fields?.at_risk ?? 0);
   const earlyWarnings = Number(aggregate.roi_summary?.early_warning_items ?? 0);
   const pendingAcceptance = Number(aggregate.pending_actions_summary?.pending_acceptance ?? 0);
   const pendingApproval = Number(aggregate.pending_actions_summary?.total_open_alerts ?? 0);
@@ -96,7 +110,7 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     ],
     recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => ({
       operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
-      rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${labelAcceptanceStatus(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "" ? item.final_status : item.acceptance_status)}`,
+      rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "") ? labelFinalStatus(item.final_status) : labelAcceptanceStatus(item.acceptance_status)}`,
       href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
     })),
     nextActions: [
@@ -105,5 +119,10 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
       { id: "accept", title: "完成待验收作业并回写结果", summary: "确保作业闭环，提升验收及时率。", href: "/customer/acceptance" },
       { id: "device", title: "排查离线设备并恢复数据", summary: "优先恢复离线地块数据采集能力。", href: "/customer/devices" },
     ],
+    roiSummary: {
+      totalRoiItems: Number(aggregate.roi_summary?.total_roi_items ?? 0),
+      waterSavedItems: Number(aggregate.roi_summary?.water_saved_items ?? 0),
+      customerValueText: sanitizeCustomerText(aggregate.roi_summary?.customer_value_text ?? "暂无收益摘要"),
+    },
   };
 }
