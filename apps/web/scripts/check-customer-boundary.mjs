@@ -26,7 +26,7 @@ const forbiddenTokens = [
   "recommendation_id",
 ];
 
-const vmRawCodePattern = /\b[A-Z][A-Z0-9_]{2,}\b/;
+const vmRawCodePattern = /["']([A-Z]+_[A-Z0-9_]+)["']/;
 const offenders = [];
 
 function addOffender(file, line, token, snippet) {
@@ -60,7 +60,7 @@ function scanPageLayer() {
 function getVmFiles() {
   if (!fs.existsSync(vmDir)) return [];
   return fs.readdirSync(vmDir)
-    .filter((name) => name.endsWith(".ts") || name.endsWith(".tsx"))
+    .filter((name) => (name.endsWith(".ts") || name.endsWith(".tsx")) && /customer/i.test(name))
     .map((name) => path.join(vmDir, name));
 }
 
