@@ -4,7 +4,6 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
@@ -39,35 +38,36 @@ export default function OperationReportPage(): React.ReactElement {
 
   const vm = buildOperationReportVm(report);
   const steps = [
-    { n: 1, title: "为什么做", body: <><div><strong>当前风险：</strong>{vm.why.riskLabel}</div><div><strong>主要原因：</strong>{vm.why.reasonText}</div><div style={{ marginTop: 8 }}>{vm.why.summary}</div></> },
-    { n: 2, title: "谁批准", body: <div className="kvGrid2"><div><strong>审批状态：</strong>{vm.approval.statusText}</div><div><strong>审批人：</strong>{vm.approval.actorText}</div><div><strong>审批时间：</strong>{vm.approval.timeText}</div><div><strong>审批备注：</strong>{vm.approval.noteText}</div></div> },
-    { n: 3, title: "怎么执行", body: <div className="kvGrid2"><div><strong>执行负责人：</strong>{vm.execution.ownerText}</div><div><strong>执行状态：</strong>{vm.execution.statusText}</div><div><strong>开始时间：</strong>{vm.execution.startedAtText}</div><div><strong>结束时间：</strong>{vm.execution.finishedAtText}</div><div><strong>执行异常：</strong>{vm.execution.invalidExecutionText}</div></div> },
-    { n: 4, title: "有什么证据", body: <div className="kvGrid2"><div><strong>执行回执：</strong>{vm.evidence.executionReceipt}</div><div><strong>实际执行记录：</strong>{vm.evidence.executionRecord}</div><div><strong>灌后监测：</strong>{vm.evidence.postIrrigationMonitoring}</div><div><strong>现场图片：</strong>{vm.evidence.onSitePhotos}</div><div><strong>验收项：</strong>{vm.evidence.acceptanceItems}</div></div> },
-    { n: 5, title: "验收结果", body: <div className="kvGrid2"><div><strong>验收状态：</strong>{vm.acceptance.statusText}</div><div><strong>验收结论：</strong>{vm.acceptance.verdictText}</div><div><strong>缺失证据：</strong>{vm.acceptance.missingEvidenceText}</div><div><strong>验收时间：</strong>{vm.acceptance.generatedAtText}</div></div> },
-    { n: 6, title: "本次价值", body: vm.value.useFallback ? <div>{vm.value.fallbackText}</div> : <div className="kvGrid2"><div><strong>价值数值：</strong>{vm.value.valueText}</div><div><strong>口径：</strong>{vm.value.methodText}</div><div><strong>证据：</strong>{vm.value.evidenceText}</div><div><strong>可信度：</strong>{vm.value.confidenceText}</div></div> },
+    { n: 1, title: "为什么做", body: <><div><strong>当前风险：</strong>{vm.why.riskLabel}</div><div><strong>主要原因：</strong>{vm.why.reasonText}</div><div className="customerSpacingTopXs">{vm.why.summary}</div></> },
+    { n: 2, title: "谁批准", body: <div className="customerGrid2"><div><strong>审批状态：</strong>{vm.approval.statusText}</div><div><strong>审批人：</strong>{vm.approval.actorText}</div><div><strong>审批时间：</strong>{vm.approval.timeText}</div><div><strong>审批备注：</strong>{vm.approval.noteText}</div></div> },
+    { n: 3, title: "怎么执行", body: <div className="customerGrid2"><div><strong>执行负责人：</strong>{vm.execution.ownerText}</div><div><strong>执行状态：</strong>{vm.execution.statusText}</div><div><strong>开始时间：</strong>{vm.execution.startedAtText}</div><div><strong>结束时间：</strong>{vm.execution.finishedAtText}</div><div><strong>执行异常：</strong>{vm.execution.invalidExecutionText}</div></div> },
+    { n: 4, title: "有什么证据", body: <div className="customerGrid2"><div><strong>执行回执：</strong>{vm.evidence.executionReceipt}</div><div><strong>实际执行记录：</strong>{vm.evidence.executionRecord}</div><div><strong>灌后监测：</strong>{vm.evidence.postIrrigationMonitoring}</div><div><strong>现场图片：</strong>{vm.evidence.onSitePhotos}</div><div><strong>验收项：</strong>{vm.evidence.acceptanceItems}</div></div> },
+    { n: 5, title: "验收结果", body: <div className="customerGrid2"><div><strong>验收状态：</strong>{vm.acceptance.statusText}</div><div><strong>验收结论：</strong>{vm.acceptance.verdictText}</div><div><strong>缺失证据：</strong>{vm.acceptance.missingEvidenceText}</div><div><strong>验收时间：</strong>{vm.acceptance.generatedAtText}</div></div> },
+    { n: 6, title: "本次价值", body: vm.value.useFallback ? <div>{vm.value.fallbackText}</div> : <div className="customerGrid2"><div><strong>价值数值：</strong>{vm.value.valueText}</div><div><strong>口径：</strong>{vm.value.methodText}</div><div><strong>证据：</strong>{vm.value.evidenceText}</div><div><strong>可信度：</strong>{vm.value.confidenceText}</div></div> },
     { n: 7, title: "系统记忆", body: <ul>{vm.fieldMemory.items.map((item, idx) => <li key={idx}>{item}</li>)}</ul> },
-    { n: 8, title: "最终结论", body: <><div><strong>{vm.conclusion.finalStatusText}</strong></div><div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div></> },
+    { n: 8, title: "最终结论", body: <><div><strong>{vm.conclusion.finalStatusText}</strong></div><div className="muted customerSpacingTopXs">{vm.conclusion.resultText}</div></> },
   ];
 
   return (
-    <div className="demoDashboardPage">
-      <PageHeader
-        eyebrow="GEOX / 作业闭环"
-        title={vm.header.title}
-        description={vm.header.subtitle}
-        actions={(
-          <>
-            <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
-            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
-          </>
-        )}
-      />
+    <div className="customerPage customerPageGapMd">
+      <section className="customerReportHeader">
+        <div className="customerEyebrow">GEOX / 作业闭环</div>
+        <h1 className="customerTitle">{vm.header.title}</h1>
+        <p className="customerSubtitle">{vm.header.subtitle}</p>
+        <div className="customerActionRow">
+          <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
+          <Link className="customerButton customerButtonPrimary" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
+        </div>
+      </section>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="customerStepList">
         {steps.map((step) => (
-          <div key={step.n} style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: 12, alignItems: "start" }}>
-            <div style={{ width: 32, height: 32, borderRadius: 999, background: "#16a34a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{step.n}</div>
-            <SectionCard title={step.title}>{step.body}</SectionCard>
+          <div key={step.n} className="customerStepRow">
+            <div className="customerStepIndex">{step.n}</div>
+            <section className="customerCard">
+              <h3 className="customerCardTitle">{step.title}</h3>
+              {step.body}
+            </section>
           </div>
         ))}
       </div>
