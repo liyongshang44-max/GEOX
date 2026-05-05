@@ -51,8 +51,8 @@ function toDateTimeLabel(ts?: number | null): string {
 }
 
 export default function OperationDetailPage(): React.ReactElement {
-  const { operationPlanId = "" } = useParams();
-  const { loading, error, detail, reload } = useOperationDetail(operationPlanId);
+  const { operationId = "" } = useParams();
+  const { loading, error, detail, reload } = useOperationDetail(operationId);
   const model = React.useMemo(() => {
     const viewDetail = detail ?? {};
     try {
@@ -75,7 +75,7 @@ export default function OperationDetailPage(): React.ReactElement {
       return;
     }
     let alive = true;
-    void fetchOperationHandoff(String(model.operationPlanId || operationPlanId))
+    void fetchOperationHandoff(String(model.operationPlanId || operationId))
       .then((rows) => {
         if (!alive) return;
         setManualHandoffItems(rows);
@@ -87,7 +87,7 @@ export default function OperationDetailPage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, [loading, permissionDenied, error, detail, model.operationPlanId, operationPlanId]);
+  }, [loading, permissionDenied, error, detail, model.operationPlanId, operationId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (permissionDenied) {
@@ -134,7 +134,7 @@ export default function OperationDetailPage(): React.ReactElement {
         tenant_id: String(executionContext?.tenant_id ?? ""),
         project_id: String(executionContext?.project_id ?? ""),
         group_id: String(executionContext?.group_id ?? ""),
-        operation_id: String(model.operationPlanId || operationPlanId),
+        operation_id: String(model.operationPlanId || operationId),
         execution_plan: executionPlan,
       });
       setExecutionFeedback(res?.ok ? `已触发执行任务 ${res.act_task_id ?? "-"}` : `执行失败：${res?.error ?? "UNKNOWN_ERROR"}`);
@@ -252,7 +252,7 @@ export default function OperationDetailPage(): React.ReactElement {
                 <div className="operationWarningBlock warning">
                   <div>⚠️ 证据链不完整，暂不能完成闭环验收。</div>
                   <div className="operationWarningActions">
-                    <Link className="btn warning" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>去补证据</Link>
+                    <Link className="btn warning" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationId))}`}>去补证据</Link>
                     <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function OperationDetailPage(): React.ReactElement {
                   <div>⚠️ 已进入验收前状态，请尽快完成验收结论。</div>
                   <div className="operationWarningActions">
                     <Link className="btn pending" to="/operations?status=done_unaccepted">去验收</Link>
-                    <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>查看证据</Link>
+                    <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationId))}`}>查看证据</Link>
                   </div>
                 </div>
               ) : null}
@@ -356,7 +356,7 @@ export default function OperationDetailPage(): React.ReactElement {
               {isExecuting ? "执行中..." : "一键执行"}
             </button>
             <button className="btn" type="button" onClick={() => void reload()}>刷新状态</button>
-            <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>证据中心</Link>
+            <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationId))}`}>证据中心</Link>
           </div>
         </DetailAside>
       </section>
@@ -381,7 +381,7 @@ export default function OperationDetailPage(): React.ReactElement {
             <div className="detailSectionLead" style={{ marginTop: 8 }}>当前缺少完整证据，请先补齐回执后再验收。</div>
             <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn" onClick={() => void reload()}>刷新状态</button>
-              <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationPlanId))}`}>去证据中心</Link>
+              <Link className="btn" to={`/evidence?operation_plan_id=${encodeURIComponent(String(model.operationPlanId || operationId))}`}>去证据中心</Link>
             </div>
           </>
         )}

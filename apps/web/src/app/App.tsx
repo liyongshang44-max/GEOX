@@ -217,6 +217,9 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/admin/healthz" element={<Navigate to="/legacy/admin/healthz" replace />} />
           <Route path="/admin/import" element={<Navigate to="/legacy/admin/import" replace />} />
           <Route path="/admin/acceptance" element={<Navigate to="/legacy/admin/acceptance" replace />} />
+          <Route path="/admin/dashboard" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/admin/operations/:operationId/debug" element={<Navigate to="/legacy/dev" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/control/approvals" element={<Navigate to="/legacy/control/approvals" replace />} />
           <Route path="/settings" element={<Navigate to="/legacy/settings" replace />} />
           <Route path="/dev" element={<Navigate to="/legacy/dev" replace />} />
