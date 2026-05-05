@@ -47,48 +47,56 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="customerCard">
-        <h3 className="customerCardTitle">风险与待办</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
-          <div>
-            <div className="muted">高风险地块</div>
+      <section className="customerGrid3">
+        <article className="customerCard">
+          <h3 className="customerCardTitle">高风险地块 Top 5</h3>
+          <ul className="customerList">
             {(vm?.topRiskFields ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
-                <div className="customerHeroTop">
+                <div className="customerItemMain">
                   <Link to={item.href}>{item.title}</Link>
-                  <span className="customerPill">风险关注</span>
+                  <span className="customerPill customerPillHigh">风险关注</span>
                 </div>
-                <div className="muted">{item.summary}</div>
-                <div className="muted">{item.meta}</div>
+                <div className="customerItemReason">{item.summary}</div>
+                <div className="customerItemReason">{item.meta}</div>
               </li>
             ))}
-            {!(vm?.topRiskFields.length) ? <li className="customerListItem muted">暂无风险地块数据</li> : null}
+            {!(vm?.topRiskFields.length) ? (
+              <li className="customerListItem customerItemReason">暂无风险地块数据</li>
+            ) : null}
           </ul>
         </article>
 
         <article className="customerCard">
-          <h3 className="customerCardTitle">待处理事项</h3>
+          <h3 className="customerCardTitle">待处理事项 Top 5</h3>
           <ul className="customerList">
             {(vm?.pendingItems ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
-                <div>{item.title}</div>
-                <div className="muted">{item.summary}</div>
-                <Link to={item.href}>{item.actionLabel}</Link>
+                <div className="customerItemTitle">{item.title}</div>
+                <div className="customerItemReason">{item.summary}</div>
+                <Link className="customerButton customerSpacingTopSm" to={item.href}>
+                  {item.actionLabel}
+                </Link>
               </li>
             ))}
+            {!(vm?.pendingItems.length) ? (
+              <li className="customerListItem customerItemReason">暂无待处理事项</li>
+            ) : null}
           </ul>
         </article>
 
         <article className="customerCard">
-          <h3 className="customerCardTitle">近期作业</h3>
+          <h3 className="customerCardTitle">近期作业 Top 5</h3>
           <ul className="customerList">
             {(vm?.recentOperations ?? []).map((item) => (
               <li key={item.operationId} className="customerListItem">
-                <Link to={item.href}>{item.title}</Link>
-                <div className="muted">{item.summary}</div>
+                <Link className="customerItemTitle" to={item.href}>{item.title}</Link>
+                <div className="customerItemReason">{item.summary}</div>
               </li>
             ))}
-            {!(vm?.recentOperations.length) ? <li className="customerListItem muted">暂无近期作业</li> : null}
+            {!(vm?.recentOperations.length) ? (
+              <li className="customerListItem customerItemReason">暂无近期作业</li>
+            ) : null}
           </ul>
         </article>
       </section>
