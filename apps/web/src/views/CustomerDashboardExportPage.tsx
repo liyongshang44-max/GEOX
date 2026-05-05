@@ -43,15 +43,15 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
       </SectionCard>
 
       <SectionCard title="Top 风险地块">
-        <div className="list">{vm.topRiskFields.map((item) => <div key={item.id} className="item">{item.title} · {item.summary} · {item.meta}</div>)}</div>
+        <div className="list">{vm.topRiskFields.map((item) => <div key={item.id} className="item">{item.rowText}</div>)}</div>
       </SectionCard>
 
       <SectionCard title="待处理事项">
-        <div className="list">{vm.pendingItems.map((item) => <div key={item.id} className="item">{item.title} · {item.summary} · {item.actionLabel}</div>)}</div>
+        <div className="list">{vm.pendingItems.map((item) => <div key={item.id} className="item">{item.sentence}</div>)}</div>
       </SectionCard>
 
       <SectionCard title="近期作业">
-        <div className="list">{vm.recentOperations.map((item) => <div key={item.operationId} className="item">{item.title} · {item.summary}</div>)}</div>
+        <div className="list">{vm.recentOperations.map((item) => <div key={item.operationId} className="item">{item.rowText}</div>)}</div>
       </SectionCard>
 
       <SectionCard title="价值摘要">

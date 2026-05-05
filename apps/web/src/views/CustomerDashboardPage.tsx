@@ -44,11 +44,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <article id="top-risk-fields" className="card">
           <h3 style={{ marginTop: 0 }}>高风险地块</h3>
           {(vm?.topRiskFields ?? []).map((item) => (
-            <div key={item.id} className="item">
-              <Link to={item.href}>{item.title}</Link>
-              <div className="muted">{item.summary}</div>
-              <div className="muted">{item.meta}</div>
-            </div>
+            <div key={item.id} className="item"><Link to={item.href}>{item.rowText}</Link></div>
           ))}
           {!(vm?.topRiskFields.length) ? <div className="muted">暂无风险地块数据</div> : null}
         </article>
@@ -56,21 +52,14 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <article className="card">
           <h3 style={{ marginTop: 0 }}>待处理事项</h3>
           {(vm?.pendingItems ?? []).map((item) => (
-            <div key={item.id} className="item">
-              <div>{item.title}</div>
-              <div className="muted">{item.summary}</div>
-              <Link to={item.href}>{item.actionLabel}</Link>
-            </div>
+            <div key={item.id} className="item"><Link to={item.href}>{item.sentence}</Link></div>
           ))}
         </article>
 
         <article className="card">
           <h3 style={{ marginTop: 0 }}>近期作业 Top 5</h3>
           {(vm?.recentOperations ?? []).map((item) => (
-            <div key={item.operationId} className="item">
-              <Link to={item.href}>{item.title}</Link>
-              <div className="muted">{item.summary}</div>
-            </div>
+            <div key={item.operationId} className="item"><Link to={item.href}>{item.rowText}</Link></div>
           ))}
           {!(vm?.recentOperations.length) ? <div className="muted">暂无近期作业</div> : null}
         </article>
