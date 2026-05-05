@@ -14,8 +14,8 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
     <Route key="dashboard-redirect" path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="dashboard-admin" path="/admin/dashboard" element={<CommercialDashboardPage expert={expert} />} />,
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
-    <Route key="dashboard-customer" path="/dashboard/customer" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
-    <Route key="dashboard-customer-alias" path="/customer/dashboard" element={<Navigate to="/dashboard/customer" replace />} />,
+    <Route key="dashboard-customer-legacy" path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="dashboard-customer" path="/customer/dashboard" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
     <Route
       key="dashboard-export"
       path="/dashboard/export"
