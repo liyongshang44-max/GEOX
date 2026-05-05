@@ -1,5 +1,8 @@
+#!/usr/bin/env node
+const { ensureTsxRuntime } = require('./_tsx_bootstrap.cjs');
+ensureTsxRuntime();
+
 const { assert } = require('./_common.cjs');
-require('tsx/cjs');
 
 (async function main() {
   const { projectOperationReportV1 } = await import('../../apps/server/src/projections/report_v1.ts');
