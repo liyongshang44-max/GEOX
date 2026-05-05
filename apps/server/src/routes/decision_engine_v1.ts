@@ -1926,6 +1926,8 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
       lookback_limit: 50,
     });
 
+    // 必须无条件挂载，方便验收和诊断
+    recommendation.field_memory_context = memory;
     const memoryAdjustment = buildRecommendationMemoryAdjustmentV1(memory);
 
     if (memoryAdjustment.confidence_adjustment === "LOWER_ONE_LEVEL") {
@@ -1947,8 +1949,6 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
         memoryAdjustment.risk_reasons,
       ),
     };
-
-    recommendation.field_memory_context = memory;
 
     if (memoryAdjustment.explain_append) {
       recommendation.suggested_action = {
@@ -1979,5 +1979,3 @@ async function applyFieldMemoryAdjustmentsToRecommendations(
 
   return adjusted;
 }
-
-

@@ -44,7 +44,7 @@ export async function loadFieldMemoryContextForRecommendation(
   const seasonId = String(input.season_id ?? "").trim() || null;
 
   const rows = (await pool.query(
-    `SELECT memory_id, memory_type, before_value, after_value, delta_value, confidence, summary_text, occurred_at
+    `SELECT memory_id, memory_type, metric_key, before_value, after_value, delta_value, confidence, summary_text, occurred_at, season_id
        FROM field_memory_v1
       WHERE tenant_id = $1
         AND field_id = $2
@@ -76,13 +76,25 @@ export async function loadFieldMemoryContextForRecommendation(
   let skill_failure_count = 0;
 
   for (const row of recent) {
+    const memoryType = asText(row.memory_type);
+    const metricKey = asText(row.metric_key);
     const summary = asText(row.summary_text);
     const delta = asNum(row.delta_value);
     const before = asNum(row.before_value);
     const after = asNum(row.after_value);
     const confidence = asNum(row.confidence);
 
-    if (delta != null && delta < 0.03) weak_response_count += 1;
+    const isFieldResponse =
+      memoryType.includes("field_response") ||
+      memoryType.includes("operation_outcome");
+    const isSoilMoistureResponse =
+      metricKey.includes("soil_moisture_response") ||
+      metricKey.includes("soil_moisture_delta") ||
+      summary.includes("soil_moisture_delta_not_reached");
+
+    if (isFieldResponse && isSoilMoistureResponse && delta != null && delta < 0.03) {
+      weak_response_count += 1;
+    }
 
     const deviationRatio =
       before != null && before !== 0 && after != null
