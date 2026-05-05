@@ -11,6 +11,7 @@ import { renderDashboardRoutes } from "./routes/dashboardRoutes";
 import { renderFieldsRoutes } from "./routes/fieldsRoutes";
 import { renderDevicesRoutes } from "./routes/devicesRoutes";
 import { renderOperationsRoutes } from "./routes/operationsRoutes";
+import { renderCustomerOperationsRoutes } from "./routes/customerOperationsRoutes";
 import { renderProgramsRoutes } from "./routes/programsRoutes";
 import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
@@ -220,6 +221,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           {renderFieldsRoutes()}
           {renderDevicesRoutes()}
           {renderOperationsRoutes()}
+          {renderCustomerOperationsRoutes()}
           {renderProgramsRoutes()}
           {renderSkillsRoutes()}
 
