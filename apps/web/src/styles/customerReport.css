@@ -1,6 +1,22 @@
 .customerReportPage {
   display: grid;
-  gap: 16px;
+  gap: 10px;
+}
+
+.printPage {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.printPage .card,
+.printPage .sectionCard,
+.printPage .customerCard {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+.noPrint {
+  display: inline-flex;
 }
 
 .customerReportGrid {
@@ -69,8 +85,26 @@
 }
 
 @media print {
+  .noPrint,
+  nav,
+  .topBar,
+  .search,
+  .alert,
+  [data-role="admin"],
+  [data-role="tenant"],
+  [data-role="project"],
+  [data-role="group"] {
+    display: none !important;
+  }
+
+  .printPage {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
   .customerReportPage {
-    gap: 10px;
+    gap: 6px;
   }
 
   .customerCard {
