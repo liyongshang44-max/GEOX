@@ -97,6 +97,7 @@ export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): Judg
       {
         skill_id: soil.trace.skill_id,
         skill_version: soil.trace.skill_version,
+        skill_category: soil.trace.skill_category,
         trace_id: soil.trace.trace_id,
         run_id: soil.trace.run_id,
         input_digest: soil.trace.input_digest,
@@ -108,6 +109,7 @@ export function evaluateEvidenceJudgeV2(input: EvidenceJudgeEvaluateInput): Judg
       {
         skill_id: freshness.trace.skill_id,
         skill_version: freshness.trace.skill_version,
+        skill_category: freshness.trace.skill_category,
         trace_id: freshness.trace.trace_id,
         run_id: freshness.trace.run_id,
         input_digest: freshness.trace.input_digest,

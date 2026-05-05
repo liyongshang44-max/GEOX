@@ -46,6 +46,7 @@ function toSourceRef(trace: JudgeSkillTraceV1) {
   return {
     skill_id: trace.skill_id,
     skill_version: trace.skill_version,
+    skill_category: trace.skill_category,
     trace_id: trace.trace_id,
     run_id: trace.run_id,
     input_digest: trace.input_digest,
