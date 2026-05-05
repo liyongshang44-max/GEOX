@@ -4,7 +4,6 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
@@ -50,25 +49,30 @@ export default function OperationReportPage(): React.ReactElement {
   ];
 
   return (
-    <div className="demoDashboardPage">
-      <PageHeader
-        eyebrow="GEOX / 作业闭环"
-        title={vm.header.title}
-        description={vm.header.subtitle}
-        actions={(
-          <>
+    <div style={{ display: "grid", gap: 16 }}>
+      <header className="customerHero">
+        <div className="customerHeroTop">
+          <div>
+            <div className="customerLabel">GEOX / 作业闭环</div>
+            <h1 className="customerTitle">{vm.header.title}</h1>
+            <p className="customerSub">{vm.header.subtitle}</p>
+          </div>
+          <div className="customerActions">
             <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
             <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
-          </>
-        )}
-      />
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {steps.map((step) => (
-          <div key={step.n} style={{ display: "grid", gridTemplateColumns: "44px 1fr", gap: 12, alignItems: "start" }}>
-            <div style={{ width: 32, height: 32, borderRadius: 999, background: "#16a34a", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{step.n}</div>
-            <SectionCard title={step.title}>{step.body}</SectionCard>
           </div>
+        </div>
+      </header>
+
+      <div className="customerFlow">
+        {steps.map((step) => (
+          <section key={step.n} className="customerFlowStep">
+            <div className="customerFlowIndex">{step.n}</div>
+            <div className="customerCard">
+              <h3 className="customerCardTitle">{step.title}</h3>
+              {step.body}
+            </div>
+          </section>
         ))}
       </div>
     </div>
