@@ -222,7 +222,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
       }}
     >
       <React.Suspense fallback={RouteFallback}>
-        <CustomerRoutes />
+        <AppRoutes expert={expert} />
       </React.Suspense>
     </AppShell>
   );
