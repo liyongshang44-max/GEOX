@@ -11,6 +11,8 @@ import {
   labelRiskLevel,
 } from "../lib/customerLabels";
 
+const REVIEW_NEEDED_TEXT = "证据不足，需复核";
+
 export type OperationReportPageVm = {
   header: {
     title: string;
@@ -37,6 +39,12 @@ export type OperationReportPageVm = {
     statusText: string;
   };
   evidence: {
+    executionReceipt: string;
+    executionRecord: string;
+    postIrrigationMonitoring: string;
+    onSitePhotos: string;
+    acceptanceItems: string;
+    hasAnyMissing: boolean;
     artifactsText: string;
     logsText: string;
     mediaText: string;
@@ -47,6 +55,14 @@ export type OperationReportPageVm = {
     verdictText: string;
     missingEvidenceText: string;
     generatedAtText: string;
+  };
+  value: {
+    valueText: string;
+    methodText: string;
+    evidenceText: string;
+    confidenceText: string;
+    fallbackText: string;
+    useFallback: boolean;
   };
   conclusion: {
     finalStatusText: string;
@@ -62,62 +78,33 @@ export type OperationReportPageVm = {
     confidenceText: string;
   };
   debug: {
-    operationPlanId: string;
-    operationId: string;
-    actTaskId: string;
-    receiptId: string;
-    recommendationId: string;
-    workflowOwnerId: string;
-    workflowOwnerName: string;
-    workflowUpdatedAt: string;
-    workflowLastNote: string;
-    sla: {
-      responseTimeMs: string;
-      dispatchLatency: string;
-      executionDuration: string;
-      acceptanceLatency: string;
-      invalidReasons: string;
-    };
+    operationPlanId: string; operationId: string; actTaskId: string; receiptId: string; recommendationId: string; workflowOwnerId: string; workflowOwnerName: string; workflowUpdatedAt: string; workflowLastNote: string;
+    sla: { responseTimeMs: string; dispatchLatency: string; executionDuration: string; acceptanceLatency: string; invalidReasons: string; };
   };
 };
 
 function kv(value: unknown, fallback = "--"): string {
   return labelEmptyFallback(value, fallback);
 }
-
 function toNum(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
-
-function formatMemoryLine(item: any): string {
-  const before = toNum(item?.before_value);
-  const after = toNum(item?.after_value);
-  const min = toNum(item?.target_range?.min);
-  const max = toNum(item?.target_range?.max);
-  const hasTargetRange = min != null || max != null;
-  let statusText = "湿度变化待确认";
-  if (hasTargetRange) {
-    const hitMin = min == null || (after != null && after >= min);
-    const hitMax = max == null || (after != null && after <= max);
-    statusText = hitMin && hitMax ? "达到目标区间" : "未达到目标区间";
-  } else if (before != null && after != null) {
-    statusText = after > before ? "湿度已回升" : "湿度未回升";
-  }
-  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
-}
-
-function formatRoiLine(item: any): string {
-  const baseline = toNum(item?.baseline_value);
-  const delta = toNum(item?.delta_value);
-  const unit = labelEmptyFallback(item?.unit, "--");
-  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
-}
-
 function joinReasonTexts(reasons: string[]): string {
   if (!Array.isArray(reasons) || reasons.length === 0) return "暂无明确风险原因";
   return reasons.map((item) => labelEmptyFallback(item)).join("、");
 }
+function formatMemoryLine(item: any): string {
+  const before = toNum(item?.before_value);
+  const after = toNum(item?.after_value);
+  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}）`;
+}
+function asEvidenceStatus(countLike: unknown): string {
+  const n = toNum(countLike);
+  if (n == null || n <= 0) return REVIEW_NEEDED_TEXT;
+  return `已提供（${n}）`;
+}
+
 
 function mapSlaQuality(value: unknown, rawMs: unknown): string {
   const quality = String(value ?? "").trim().toUpperCase();
@@ -139,6 +126,22 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
 
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
+  const valueItems = [
+    ...((roi.water_saved ?? []).slice(0, 1)),
+    ...((roi.labor_saved ?? []).slice(0, 1)),
+    ...((roi.early_warning_lead_time ?? []).slice(0, 1)),
+    ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1)),
+  ];
+  const valueItem = valueItems[0] ?? null;
+  const valueNumber = toNum(valueItem?.delta_value);
+  const valueUnit = labelEmptyFallback(valueItem?.unit, "");
+  const valueText = valueNumber == null ? REVIEW_NEEDED_TEXT : `${valueNumber}${valueUnit}`;
+  const methodText = kv(valueItem?.calculation_method, REVIEW_NEEDED_TEXT);
+  const valueEvidence = labelEmptyFallback(valueItem?.customer_text, "");
+  const evidenceText = valueEvidence || REVIEW_NEEDED_TEXT;
+  const confidenceText = labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score);
+  const useFallback = valueNumber == null || /估算值|可信度有限/.test(confidenceText);
+
   return {
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
@@ -146,10 +149,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       internalId,
     },
     why: {
-      summary: kv(
-        reportWhy?.explain_human,
-        `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`
-      ),
+      summary: kv(reportWhy?.explain_human, `当前作业用于处理本次地块作业需求，目标是降低${riskLabel}相关问题并完成闭环处置。`),
       riskLabel,
       reasonText: kv(reportWhy?.objective_text, reasonText),
     },
@@ -168,65 +168,50 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       statusText: finalStatusText,
     },
     evidence: {
-      artifactsText: kv(report.evidence.artifacts_count, "0"),
-      logsText: kv(report.evidence.logs_count, "0"),
-      mediaText: kv(report.evidence.media_count, "0"),
-      metricsText: kv(report.evidence.metrics_count, "0"),
+      executionReceipt: asEvidenceStatus(report.evidence.artifacts_count),
+      executionRecord: asEvidenceStatus(report.evidence.logs_count),
+      postIrrigationMonitoring: asEvidenceStatus(report.evidence.metrics_count),
+      onSitePhotos: asEvidenceStatus(report.evidence.media_count),
+      acceptanceItems: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "已齐备",
+      hasAnyMissing: Boolean(report.acceptance.missing_evidence),
+      artifactsText: asEvidenceStatus(report.evidence.artifacts_count),
+      logsText: asEvidenceStatus(report.evidence.logs_count),
+      mediaText: asEvidenceStatus(report.evidence.media_count),
+      metricsText: asEvidenceStatus(report.evidence.metrics_count),
     },
     acceptance: {
       statusText: acceptanceStatusText,
       verdictText: labelEvidenceQuality(report.acceptance.verdict),
-      missingEvidenceText: report.acceptance.missing_evidence ? "证据不足，建议人工复核" : labelBooleanYesNo(report.acceptance.missing_evidence),
+      missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无",
       generatedAtText: kv(report.acceptance.generated_at),
+    },
+    value: {
+      valueText,
+      methodText,
+      evidenceText,
+      confidenceText,
+      fallbackText: "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。",
+      useFallback,
     },
     conclusion: {
       finalStatusText,
       resultText: finalStatusText,
     },
     fieldMemory: {
-      title: "系统记住了什么",
+      title: "系统记忆",
       items: (() => {
         const items = [
           ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
-          ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "设备可靠性记录")}（阀门响应、超时与回执完整性见证据）`)),
-          ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => `${labelEmptyFallback(item?.summary_text, "Skill 表现记录")}（诊断采纳与验收结果见证据）`)),
+          ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "设备可靠性记录"))),
+          ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "技能表现记录"))),
         ];
-        return items.length ? items : ["暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。"];
+        return items.length ? items : ["暂无可展示的系统记忆。"];
       })(),
     },
-    roiLedger: {
-      title: "本次价值账本",
-      items: (() => {
-        const items = [
-          ...((roi.water_saved ?? []).slice(0, 1).map(formatRoiLine)),
-          ...((roi.labor_saved ?? []).slice(0, 1).map((item: any) => `${formatRoiLine(item)}，计算方法：${labelEmptyFallback(item?.calculation_method, "后端口径")}`)),
-          ...((roi.early_warning_lead_time ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.customer_text, "异常提前发现：暂无可展示数据"))),
-          ...((roi.first_pass_acceptance_rate ?? []).slice(0, 1).map((item: any) => `验收一次通过：${labelEmptyFallback(item?.customer_text, "待补充证据")}`)),
-        ];
-        return items.length ? items : ["暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。"];
-      })(),
-      confidenceText: labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score),
-    },
+    roiLedger: { title: "", items: [], confidenceText },
     debug: {
-      operationPlanId: kv(report.identifiers.operation_plan_id),
-      operationId: kv(report.identifiers.operation_id),
-      actTaskId: kv(report.identifiers.act_task_id),
-      receiptId: kv(report.identifiers.receipt_id),
-      recommendationId: kv(report.identifiers.recommendation_id),
-      workflowOwnerId: kv(report.workflow.owner_actor_id),
-      workflowOwnerName: kv(report.workflow.owner_name),
-      workflowUpdatedAt: kv(report.workflow.updated_at),
-      workflowLastNote: kv(report.workflow.last_note),
-      sla: {
-        responseTimeMs: kv(report.sla.response_time_ms),
-        dispatchLatency: mapSlaQuality(report.sla.dispatch_latency_quality, report.sla.dispatch_latency_ms),
-        executionDuration: mapSlaQuality(report.sla.execution_duration_quality, report.sla.execution_duration_ms),
-        acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms),
-        invalidReasons:
-          Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length
-            ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ")
-            : "--",
-      },
+      operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
+      sla: { responseTimeMs: kv(report.sla.response_time_ms), dispatchLatency: mapSlaQuality(report.sla.dispatch_latency_quality, report.sla.dispatch_latency_ms), executionDuration: mapSlaQuality(report.sla.execution_duration_quality, report.sla.execution_duration_ms), acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms), invalidReasons: Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ") : "--" },
     },
   };
 }
