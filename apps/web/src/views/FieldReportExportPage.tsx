@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../api/reports";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import { PageHeader, SectionCard } from "../shared/ui";

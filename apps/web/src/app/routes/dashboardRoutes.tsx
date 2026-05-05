@@ -25,5 +25,14 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
         </RouteErrorBoundary>
       }
     />,
+    <Route
+      key="customer-export"
+      path="/customer/export"
+      element={(
+        <RouteErrorBoundary>
+          <CustomerDashboardExportPage />
+        </RouteErrorBoundary>
+      )}
+    />,
   ];
 }
