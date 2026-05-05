@@ -8,7 +8,9 @@ import {
   labelEvidenceQuality,
   labelEmptyFallback,
   labelFinalStatus,
+  labelMemoryCode,
   labelRiskLevel,
+  labelValueType,
 } from "../lib/customerLabels";
 
 const REVIEW_NEEDED_TEXT = "证据不足，需复核";
@@ -97,12 +99,25 @@ function joinReasonTexts(reasons: string[]): string {
 function formatMemoryLine(item: any): string {
   const before = toNum(item?.before_value);
   const after = toNum(item?.after_value);
-  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}）`;
+  const min = toNum(item?.target_range?.min);
+  const max = toNum(item?.target_range?.max);
+  const hasTargetRange = min != null || max != null;
+  let statusText = "湿度变化待确认";
+  if (hasTargetRange) {
+    const hitMin = min == null || (after != null && after >= min);
+    const hitMax = max == null || (after != null && after <= max);
+    statusText = hitMin && hitMax ? "达到目标区间" : "未达到目标区间";
+  } else if (before != null && after != null) {
+    statusText = after > before ? "湿度已回升" : "湿度未回升";
+  }
+  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
 }
-function asEvidenceStatus(countLike: unknown): string {
-  const n = toNum(countLike);
-  if (n == null || n <= 0) return REVIEW_NEEDED_TEXT;
-  return `已提供（${n}）`;
+
+function formatRoiLine(item: any): string {
+  const baseline = toNum(item?.baseline_value);
+  const delta = toNum(item?.delta_value);
+  const unit = labelEmptyFallback(item?.unit, "--");
+  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（${labelValueType(item?.value_type)}，数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
 }
 
 
