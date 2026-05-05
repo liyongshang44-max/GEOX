@@ -29,8 +29,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
             <p className="customerSub">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
           </div>
           <div className="customerActions">
-            <Link className="btn" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>{vm?.header.primaryAction.label ?? "立即审批"}</Link>
-            <Link className="btn" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>{vm?.header.secondaryAction.label ?? "检查设备"}</Link>
+            <Link className="customerButton customerButtonPrimary noPrint" to={vm?.header.exportAction.href ?? "/customer/export"}>
+              {vm?.header.exportAction.label ?? "打印导出"}
+            </Link>
           </div>
         </div>
       </header>
@@ -39,10 +40,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <h3 className="customerCardTitle">经营总览</h3>
         <div className="kvGrid2">
           {(vm?.kpis ?? []).map((kpi) => (
-            <article key={kpi.key} className="customerMetricCard">
-              <div className="customerMetricValue">{kpi.valueText}</div>
-              <div className="customerMetricLabel">{kpi.label}</div>
-            </article>
+            <div key={kpi.key}><strong>{kpi.label}：</strong>{kpi.valueText} <span className="muted">{kpi.detailText}</span></div>
           ))}
         </div>
       </section>
@@ -54,11 +52,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
             {(vm?.topRiskFields ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
                 <div className="customerItemMain">
-                  <Link to={item.href}>{item.title}</Link>
+                  <Link to={item.href}>{item.rowText}</Link>
                   <span className="customerPill customerPillHigh">风险关注</span>
                 </div>
-                <div className="customerItemReason">{item.summary}</div>
-                <div className="customerItemReason">{item.meta}</div>
               </li>
             ))}
             {!(vm?.topRiskFields.length) ? (
@@ -72,10 +68,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
           <ul className="customerList">
             {(vm?.pendingItems ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
-                <div className="customerItemTitle">{item.title}</div>
-                <div className="customerItemReason">{item.summary}</div>
+                <div className="customerItemReason">{item.sentence}</div>
                 <Link className="customerButton customerSpacingTopSm" to={item.href}>
-                  {item.actionLabel}
+                  处理
                 </Link>
               </li>
             ))}
@@ -90,8 +85,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
           <ul className="customerList">
             {(vm?.recentOperations ?? []).map((item) => (
               <li key={item.operationId} className="customerListItem">
-                <Link className="customerItemTitle" to={item.href}>{item.title}</Link>
-                <div className="customerItemReason">{item.summary}</div>
+                <Link className="customerItemTitle" to={item.href}>{item.rowText}</Link>
               </li>
             ))}
             {!(vm?.recentOperations.length) ? (
