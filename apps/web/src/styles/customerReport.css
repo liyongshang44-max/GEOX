@@ -32,6 +32,9 @@
   display: grid;
   gap: 10px;
 }
+.customerPageGapMd {
+  gap: 16px;
+}
 
 .printPage {
   max-width: 920px;
@@ -232,6 +235,54 @@
   color: #fff;
   font-weight: 700;
   font-size: 13px;
+}
+
+.customerGridAuto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.customerSpacingTopXs {
+  margin-top: 8px;
+}
+
+.customerSpacingTopSm {
+  margin-top: 10px;
+}
+
+.customerSpacingTopMd {
+  margin-top: 12px;
+}
+
+.customerListItemWarn {
+  background: #fff3e8;
+  border: 1px solid #ffd8b2;
+}
+
+.customerStepList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.customerStepRow {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.customerStepIndex {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
 }
 
 .noPrint {
