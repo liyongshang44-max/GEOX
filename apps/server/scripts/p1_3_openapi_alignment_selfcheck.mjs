@@ -58,6 +58,9 @@ const excludedPathPatterns = [
   /^\/api\/v1\/devices\/.+\/bind-field$/,
   /^\/api\/v1\/evidence-reports(?:\/|$)/,
   /^\/api\/v1\/fields(?:\/|$)/,
+  /^\/api\/v1\/operations\/[^/]+\/field-memory$/,
+  /^\/api\/v1\/skill\/runs\/[^/]+$/,
+  /^\/api\/v1\/skill\/cancel\/[^/]+$/,
 ];
 const forbiddenOpenApiPaths = [
   '/api/v1/operations/console',
