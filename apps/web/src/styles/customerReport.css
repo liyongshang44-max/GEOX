@@ -1,94 +1,300 @@
-.customerReportPage {
-  display: grid;
-  gap: 16px;
+:root {
+  --customer-bg: #f4f5f7;
+  --customer-surface: #ffffff;
+  --customer-surface-muted: #f9fafb;
+  --customer-border: #e5e7eb;
+  --customer-border-strong: #d1d5db;
+  --customer-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
+  --customer-title: #111827;
+  --customer-text: #1f2937;
+  --customer-muted: #6b7280;
+  --customer-black: #111111;
+
+  --customer-high-bg: #fef2f2;
+  --customer-high-text: #b42318;
+  --customer-medium-bg: #fff7ed;
+  --customer-medium-text: #c2410c;
+  --customer-low-bg: #ecfdf3;
+  --customer-low-text: #067647;
 }
 
-.customerReportGrid {
+.customerShell {
+  min-height: 100%;
+  background: var(--customer-bg);
+  padding: 24px;
+}
+
+.customerPage,
+.customerExportPage,
+.printPage {
+  width: min(1200px, 100%);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.printPage {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.printPage .card,
+.printPage .sectionCard,
+.printPage .customerCard {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+.noPrint {
+  display: inline-flex;
+}
+
+.customerReportHeader,
+.customerHero,
+.customerCard,
+.customerMetricCard,
+.customerRecommendationCard,
+.customerFlowStep {
+  background: var(--customer-surface);
+  border: 1px solid var(--customer-border);
+  border-radius: 20px;
+  box-shadow: var(--customer-shadow);
+}
+
+.customerReportHeader,
+.customerHero,
+.customerCard,
+.customerRecommendationCard,
+.customerFlowStep {
+  padding: 20px;
+}
+
+.customerHeroTop,
+.customerActionRow,
+.customerItemMain {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customerEyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--customer-muted);
+}
+
+.customerTitle {
+  margin: 4px 0 0;
+  font-size: clamp(28px, 4vw, 36px);
+  line-height: 1.15;
+  font-weight: 800;
+  color: var(--customer-title);
+}
+
+.customerSubtitle {
+  margin: 8px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--customer-muted);
+}
+
+.customerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--customer-border-strong);
+  background: var(--customer-surface);
+  color: var(--customer-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customerButtonPrimary {
+  background: var(--customer-black);
+  color: #fff;
+  border-color: var(--customer-black);
+}
+
+.customerMetrics,
+.customerGrid3,
+.customerGrid2,
+.customerRecommendationGrid,
+.customerFlow {
+  display: grid;
   gap: 12px;
 }
 
-.customerCard {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 14px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+.customerMetrics,
+.customerGrid3,
+.customerRecommendationGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.customerKpi {
-  display: grid;
-  gap: 8px;
+.customerGrid2,
+.customerFlow {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.customerKpiValue {
-  font-size: 28px;
+.customerMetricCard {
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.customerMetricValue {
+  font-size: clamp(28px, 3vw, 34px);
   line-height: 1.1;
-  font-weight: 700;
-  color: #111827;
+  font-weight: 800;
+  color: var(--customer-title);
 }
 
-.customerKpiLabel {
+.customerMetricLabel,
+.customerItemReason {
+  margin-top: 6px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--customer-muted);
 }
 
-.riskState {
+.customerCardTitle,
+.customerItemTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--customer-title);
+}
+
+.customerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.customerListItem {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--customer-border);
+  background: var(--customer-surface-muted);
+}
+
+.customerPill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
+  justify-content: center;
   border-radius: 999px;
+  padding: 3px 10px;
+  border: 1px solid transparent;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
-.riskState--low { background: #ecfdf3; color: #067647; }
-.riskState--medium { background: #fffaeb; color: #b54708; }
-.riskState--high { background: #fef3f2; color: #b42318; }
+.customerPillHigh {
+  background: var(--customer-high-bg);
+  color: var(--customer-high-text);
+  border-color: #fecaca;
+}
 
-.evidenceMatrix {
-  width: 100%;
-  border-collapse: collapse;
+.customerPillMedium {
+  background: var(--customer-medium-bg);
+  color: var(--customer-medium-text);
+  border-color: #fed7aa;
+}
+
+.customerPillLow {
+  background: var(--customer-low-bg);
+  color: var(--customer-low-text);
+  border-color: #a7f3d0;
+}
+
+.customerFlowStep {
+  border-radius: 22px;
+}
+
+.customerFlowIndex {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-weight: 700;
   font-size: 13px;
 }
 
-.evidenceMatrix th,
-.evidenceMatrix td {
-  border: 1px solid #e5e7eb;
-  padding: 8px 10px;
-  text-align: left;
-  vertical-align: top;
+.noPrint {
+  display: initial;
 }
 
-.evidenceMatrix th {
-  background: #f9fafb;
-  color: #374151;
-  font-weight: 600;
+/* 停用旧视觉依赖 */
+.demoDashboardPage,
+.SectionCard,
+.SectionCard h1,
+.SectionCard h2,
+.SectionCard h3,
+.devPlaceholder,
+.dev-placeholder {
+  all: unset;
+}
+
+@media (max-width: 980px) {
+  .customerMetrics,
+  .customerGrid3,
+  .customerGrid2,
+  .customerRecommendationGrid,
+  .customerFlow {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {
-  .customerReportPage {
-    gap: 10px;
+  .noPrint,
+  nav,
+  .topBar,
+  .search,
+  .alert,
+  [data-role="admin"],
+  [data-role="tenant"],
+  [data-role="project"],
+  [data-role="group"] {
+    display: none !important;
   }
 
-  .customerCard {
-    border-color: #d1d5db;
+  .printPage {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .customerReportPage {
+    gap: 6px;
+  }
+
+  .customerReportHeader,
+  .customerHero,
+  .customerCard,
+  .customerMetricCard,
+  .customerRecommendationCard,
+  .customerFlowStep {
     box-shadow: none;
+    border-color: var(--customer-border-strong);
     break-inside: avoid;
     page-break-inside: avoid;
   }
 
-  .customerLayout,
-  .customerLayoutMain {
-    background: #fff !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .riskState {
-    border: 1px solid currentColor;
-    background: transparent !important;
+  .noPrint {
+    display: none !important;
   }
 }

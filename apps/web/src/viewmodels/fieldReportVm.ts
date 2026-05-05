@@ -12,7 +12,7 @@ export type FieldReportPageVm = {
     summary: string;
     reasons: string[];
   };
-  recentOperations: Array<{
+  recentOperationsTop5: Array<{
     id: string;
     title: string;
     statusText: string;
@@ -22,18 +22,10 @@ export type FieldReportPageVm = {
   }>;
   prescriptionCards: Array<{ title: string; value: string; detail: string }>;
   deviceMonitoring: Array<{ label: string; value: string }>;
-  roiSummary: {
-    text: string;
-    stats: Array<{ label: string; value: string }>;
-  };
-  evidenceConfidence: {
-    level: string;
-    detail: string;
-  };
   header: { title: string; subtitle: string; fieldId: string };
   overview: { riskText: string; openAlertsText: string; pendingAcceptanceText: string; totalOperationsText: string; latestOperationText: string; estimatedCostText: string; actualCostText: string };
   explain: { human: string; topReasonsText: string[] };
-  deviceSummary: { totalText: string; onlineText: string; offlineText: string; lastTelemetryText: string };
+  deviceSummary: { totalText: string; onlineText: string; offlineText: string; lastUpdateText: string };
   nextAction: { title: string; explainText: string; objectiveText: string; priorityText: string } | null;
 };
 
@@ -59,8 +51,6 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   const fieldName = String(report.field.field_name ?? "").trim();
   const title = fieldName || `地块 ${fieldId}`;
 
-  const valueSummaryText = String(report.value_summary.customer_value_text || "").trim();
-  const hasValueText = report.value_summary.has_customer_visible_value && valueSummaryText.length > 0;
 
   const overview = {
     riskText: labelRiskLevel(report.overview.current_risk_level),
@@ -81,7 +71,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     totalText: formatCount(report.device_summary.total_devices),
     onlineText: formatCount(report.device_summary.online_devices),
     offlineText: formatCount(report.device_summary.offline_devices),
-    lastTelemetryText: formatDateTime(report.device_summary.last_telemetry_at),
+    lastUpdateText: formatDateTime(report.device_summary.last_telemetry_at),
   };
 
   const nextAction = report.next_action ? {
@@ -94,7 +84,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   return {
     hero: {
       title,
-      subtitle: "地块经营与执行报告",
+      subtitle: "聚焦当前诊断、作业与下一步执行建议",
     },
     landOverview: [
       { label: "风险等级", value: overview.riskText },
@@ -116,7 +106,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       summary: explain.human,
       reasons: explain.topReasonsText,
     },
-    recentOperations: report.recent_operations.map((item) => {
+    recentOperationsTop5: report.recent_operations.slice(0, 5).map((item) => {
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "--",
@@ -128,30 +118,18 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       };
     }),
     prescriptionCards: [
-      { title: "动作", value: String(report.next_action?.action_type || "建议巡检"), detail: "建议优先执行关键风险处置动作" },
-      { title: "剂量", value: "按当前处方执行", detail: "如有投入品请遵循作业报告中的剂量配置" },
+      { title: "建议动作", value: String(report.next_action?.action_type || "建议巡检"), detail: "建议优先执行关键风险处置动作" },
+      { title: "建议剂量", value: "按当前处方执行", detail: "如有投入品请遵循作业报告中的剂量配置" },
       { title: "时间窗口", value: "24-72小时内", detail: "建议在下一个可作业窗口完成" },
-      { title: "审批要求", value: report.overview.pending_acceptance_count > 0 ? "需人工确认" : "常规审批", detail: `待验收作业 ${formatCount(report.overview.pending_acceptance_count)} 项` },
-      { title: "验收条件", value: "完成并回传证据", detail: "需提交执行记录、结果照片或传感数据" },
+      { title: "审批要求", value: report.overview.pending_acceptance_count > 0 ? "需负责人确认" : "常规审批", detail: report.overview.pending_acceptance_count > 0 ? `需负责人确认 + 原因：当前待验收作业 ${formatCount(report.overview.pending_acceptance_count)} 项` : "按常规审批流程执行" },
+      { title: "验收条件", value: "完成并回传证据", detail: "需提交执行记录、结果照片或监测数据" },
     ],
     deviceMonitoring: [
       { label: "设备总数", value: formatCount(report.device_summary.total_devices) },
       { label: "在线设备", value: formatCount(report.device_summary.online_devices) },
       { label: "离线设备", value: formatCount(report.device_summary.offline_devices) },
-      { label: "最近遥测", value: formatDateTime(report.device_summary.last_telemetry_at) },
+      { label: "最近更新", value: formatDateTime(report.device_summary.last_telemetry_at) },
     ],
-    roiSummary: {
-      text: hasValueText ? valueSummaryText : "本地块暂无可展示的价值账本摘要，请查看具体作业报告。",
-      stats: [
-        { label: "价值记录", value: formatCount(report.value_summary.total_roi_items) },
-        { label: "实测项", value: formatCount(report.value_summary.measured_items) },
-        { label: "估算项", value: formatCount(report.value_summary.estimated_items) },
-      ],
-    },
-    evidenceConfidence: {
-      level: report.value_summary.low_confidence_items > 0 ? "中" : "高",
-      detail: `低置信条目 ${formatCount(report.value_summary.low_confidence_items)} / 总条目 ${formatCount(report.value_summary.total_roi_items)}`,
-    },
     header: { title, subtitle: `地块ID：${fieldId}`, fieldId },
     overview,
     explain,
