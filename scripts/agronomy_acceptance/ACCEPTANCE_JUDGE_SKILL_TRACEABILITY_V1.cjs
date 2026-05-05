@@ -1,23 +1,15 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
+require('tsx/cjs');
 const assert = require('node:assert/strict');
 
 async function loadEvaluators() {
-  try {
-    const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.ts');
-    const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.ts');
-    return {
-      evaluateEvidenceJudgeV2: evidence.evaluateEvidenceJudgeV2,
-      evaluateExecutionJudgeV2: execution.evaluateExecutionJudgeV2,
-    };
-  } catch (_err) {
-    const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.js');
-    const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.js');
-    return {
-      evaluateEvidenceJudgeV2: evidence.evaluateEvidenceJudgeV2,
-      evaluateExecutionJudgeV2: execution.evaluateExecutionJudgeV2,
-    };
-  }
+  const evidence = await import('../../apps/server/src/domain/judge/evidence_judge_v2.ts');
+  const execution = await import('../../apps/server/src/domain/judge/execution_judge_v2.ts');
+  return {
+    evaluateEvidenceJudgeV2: evidence.evaluateEvidenceJudgeV2,
+    evaluateExecutionJudgeV2: execution.evaluateExecutionJudgeV2,
+  };
 }
 
 function assertTraceability(judge) {
