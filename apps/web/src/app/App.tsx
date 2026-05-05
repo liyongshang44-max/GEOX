@@ -8,7 +8,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
-import { renderFieldsRoutes } from "./routes/fieldsRoutes";
+import { renderAdminFieldsRoutes, renderCustomerFieldsRoutes } from "./routes/fieldsRoutes";
 import { renderDevicesRoutes } from "./routes/devicesRoutes";
 import { renderOperationsRoutes } from "./routes/operationsRoutes";
 import { renderProgramsRoutes } from "./routes/programsRoutes";
@@ -207,8 +207,8 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
           <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
-          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
-          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/fields" element={<Navigate to="/customer/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/customer/fields/portfolio" replace />} />
           <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
           <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
           <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
@@ -217,7 +217,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/skills/registry" element={<Navigate to="/admin/skills" replace />} />
           {renderDashboardRoutes(expert)}
           {renderEvidenceRoutes()}
-          {renderFieldsRoutes()}
+          {renderCustomerFieldsRoutes()}
           {renderDevicesRoutes()}
           {renderOperationsRoutes()}
           {renderProgramsRoutes()}
@@ -268,6 +268,7 @@ function AdminShell(): React.ReactElement {
           <Route path="/admin/healthz" element={<AdminHealthPage />} />
           <Route path="/admin/import" element={<AdminImportPage />} />
           <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
+          {renderAdminFieldsRoutes()}
         </Routes>
       </React.Suspense>
     </AdminLayout>
