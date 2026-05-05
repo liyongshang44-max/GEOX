@@ -1,38 +1,13 @@
 import React from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
+import { Link, useParams } from "react-router-dom";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/reports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import { PageHeader, SectionCard } from "../shared/ui";
-import FieldTagEditor from "../components/fields/FieldTagEditor";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
-
-function resolveOverviewPath(locationSearch: string): string {
-  const params = new URLSearchParams(locationSearch);
-  const preferredReturn = String(params.get("return_to") || "").trim();
-  if (preferredReturn.startsWith("/")) return preferredReturn;
-
-  const fallbackReturn = String(params.get("back_to") || "").trim();
-  if (fallbackReturn.startsWith("/")) return fallbackReturn;
-
-  const context = new URLSearchParams();
-  ["query", "risk", "has_open_alerts", "has_pending_acceptance", "sort", "page", "page_size"].forEach((key) => {
-    const value = params.get(key);
-    if (value) context.set(key, value);
-  });
-
-  const tags = params.getAll("tags").map((tag) => String(tag || "").trim()).filter(Boolean);
-  if (tags.length) context.set("tags", tags.join(","));
-
-  const query = context.toString();
-  return query ? `/fields/portfolio?${query}` : "/fields/portfolio";
-}
 
 export default function FieldReportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
-  const location = useLocation();
-  const detailHref = React.useMemo(() => (`/fields/${encodeURIComponent(fieldId)}${location.search || ""}`), [fieldId, location.search]);
-  const overviewHref = React.useMemo(() => resolveOverviewPath(location.search), [location.search]);
   const [loading, setLoading] = React.useState(true);
   const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [error, setError] = React.useState("");
@@ -68,29 +43,34 @@ export default function FieldReportPage(): React.ReactElement {
     <div className="demoDashboardPage">
       <PageHeader
         eyebrow="GEOX / 地块报告"
-        title={vm.header.title}
-        description={vm.header.subtitle}
-        actions={(<><Link className="btn" to={detailHref}>返回地块详情</Link><Link className="btn" to={overviewHref}>返回多地块总览</Link></>)}
+        title={vm.hero.title}
+        description={vm.hero.subtitle}
+        actions={(<><Link className="btn" to="/customer/dashboard">返回客户总览</Link><Link className="btn" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>导出报告</Link></>)}
       />
 
-      <FieldTagEditor fieldId={fieldId} />
-
-      <SectionCard title="地块总览">
+      <SectionCard title="地块概况">
         <div className="kvGrid2">
-          <div><strong>当前风险：</strong>{vm.overview.riskText}</div>
-          <div><strong>未关闭告警数：</strong>{vm.overview.openAlertsText}</div>
-          <div><strong>待验收作业数：</strong>{vm.overview.pendingAcceptanceText}</div>
-          <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
-          <div><strong>最近作业时间：</strong>{vm.overview.latestOperationText}</div>
-          <div><strong>预计总成本：</strong>{vm.overview.estimatedCostText}</div>
-          <div><strong>实际总成本：</strong>{vm.overview.actualCostText}</div>
+          {vm.landOverview.map((item) => (
+            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
+          ))}
         </div>
       </SectionCard>
 
-      <SectionCard title="状态解释">
-        <div>{vm.explain.human}</div>
+      <SectionCard title="诊断依据">
+        <div className="list">
+          {vm.diagnosticCards.map((item) => (
+            <article key={item.title} className="item">
+              <div><strong>{item.title}</strong>：{item.value}</div>
+              <div className="muted">{item.detail}</div>
+            </article>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="当前状态说明">
+        <div>{vm.currentStatus.summary}</div>
         <ul style={{ marginTop: 8 }}>
-          {vm.explain.topReasonsText.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
+          {vm.currentStatus.reasons.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
         </ul>
       </SectionCard>
 
@@ -108,26 +88,37 @@ export default function FieldReportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-      <SectionCard title="感知/设备概况">
-        <div className="kvGrid2">
-          <div><strong>设备总数：</strong>{vm.deviceSummary.totalText}</div>
-          <div><strong>在线：</strong>{vm.deviceSummary.onlineText}</div>
-          <div><strong>离线：</strong>{vm.deviceSummary.offlineText}</div>
-          <div><strong>最近遥测时间：</strong>{vm.deviceSummary.lastTelemetryText}</div>
+      <SectionCard title="处方与下一步建议">
+        <div className="list">
+          {vm.prescriptionCards.map((item) => (
+            <article key={item.title} className="item">
+              <div><strong>{item.title}</strong>：{item.value}</div>
+              <div className="muted">{item.detail}</div>
+            </article>
+          ))}
         </div>
       </SectionCard>
 
-      <SectionCard title="下一步建议">
-        {vm.nextAction ? (
-          <div className="kvGrid2">
-            <div><strong>建议标题：</strong>{vm.nextAction.title}</div>
-            <div><strong>建议说明：</strong>{vm.nextAction.explainText}</div>
-            <div><strong>建议目标：</strong>{vm.nextAction.objectiveText}</div>
-            <div><strong>优先级：</strong>{vm.nextAction.priorityText}</div>
-          </div>
-        ) : (
-          <div className="muted">暂无下一步建议</div>
-        )}
+      <SectionCard title="设备与监测">
+        <div className="kvGrid2">
+          {vm.deviceMonitoring.map((item) => (
+            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="ROI/价值摘要">
+        <div>{vm.roiSummary.text}</div>
+        <div className="kvGrid2" style={{ marginTop: 8 }}>
+          {vm.roiSummary.stats.map((item) => (
+            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="证据可信度">
+        <div><strong>等级：</strong>{vm.evidenceConfidence.level}</div>
+        <div className="muted">{vm.evidenceConfidence.detail}</div>
       </SectionCard>
     </div>
   );
