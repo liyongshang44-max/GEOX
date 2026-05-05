@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
-import { PageHeader, SectionCard } from "../shared/ui";
+import { PageHeader } from "../shared/ui";
 
 export default function CustomerDashboardPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
@@ -21,7 +21,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="demoDashboardPage">
+    <div className="demoDashboardPage" style={{ display: "grid", gap: 16 }}>
       <PageHeader
         eyebrow="GEOX / 客户看板"
         title={vm?.header.title ?? "客户看板"}
@@ -34,53 +34,51 @@ export default function CustomerDashboardPage(): React.ReactElement {
         )}
       />
 
-      <SectionCard title="KPI Grid">
-        <div className="list">
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ margin: 0, marginBottom: 12 }}>经营总览</h3>
+        <div className="kvGrid2">
           {(vm?.kpis ?? []).map((kpi) => (
-            <div key={kpi.key} className="item">{kpi.label}：{kpi.valueText}</div>
+            <div key={kpi.key}><strong>{kpi.label}：</strong>{kpi.valueText}</div>
           ))}
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="三列列表">
-        <div id="top-risk-fields" className="list">
-          <div className="muted">Top 风险</div>
-          {(vm?.topRiskFields ?? []).map((item) => (
-            <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary} · {item.meta}</div>
-          ))}
-          {!(vm?.topRiskFields.length) ? <div className="muted">暂无风险地块数据</div> : null}
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ margin: 0, marginBottom: 12 }}>风险与待办</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+          <div>
+            <div className="muted">高风险地块</div>
+            {(vm?.topRiskFields ?? []).map((item) => (
+              <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary} · {item.meta}</div>
+            ))}
+            {!(vm?.topRiskFields.length) ? <div className="muted">暂无风险地块数据</div> : null}
+          </div>
+          <div>
+            <div className="muted">待处理事项</div>
+            {(vm?.pendingItems ?? []).map((item) => (
+              <div key={item.id} className="item">{item.title} · {item.summary} · <Link to={item.href}>{item.actionLabel}</Link></div>
+            ))}
+          </div>
+          <div>
+            <div className="muted">近期作业</div>
+            {(vm?.recentOperations ?? []).map((item) => (
+              <div key={item.operationId} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary}</div>
+            ))}
+            {!(vm?.recentOperations.length) ? <div className="muted">暂无近期作业</div> : null}
+          </div>
         </div>
-        <div className="list" style={{ marginTop: 12 }}>
-          <div className="muted">待处理</div>
-          {(vm?.pendingItems ?? []).map((item) => (
-            <div key={item.id} className="item">{item.title} · {item.summary} · <Link to={item.href}>{item.actionLabel}</Link></div>
-          ))}
-        </div>
-        <div className="list" style={{ marginTop: 12 }}>
-          <div className="muted">近期作业</div>
-          {(vm?.recentOperations ?? []).map((item) => (
-            <div key={item.operationId} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary}</div>
-          ))}
-          {!(vm?.recentOperations.length) ? <div className="muted">暂无近期作业</div> : null}
-        </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="下一步建议">
+      <section className="card" style={{ padding: 16 }}>
+        <h3 style={{ margin: 0, marginBottom: 12 }}>下一步建议与价值</h3>
         <div className="list">
           {(vm?.nextActions ?? []).map((item) => (
             <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link></div>
           ))}
         </div>
-      </SectionCard>
-
-      <SectionCard title="价值摘要">
-        <div>{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
+        <div style={{ marginTop: 10 }}>{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
         <div className="muted">{vm?.roiSummary.confidenceText ?? "价值记录 0 条。"}</div>
-      </SectionCard>
-
-      <SectionCard title="数据说明">
-        <div className="muted">数据来自客户经营看板聚合接口，包含风险、作业、验收、设备与价值记录。</div>
-      </SectionCard>
+      </section>
 
       {error ? <div className="muted" style={{ marginTop: 12 }}>{error}</div> : null}
     </div>
