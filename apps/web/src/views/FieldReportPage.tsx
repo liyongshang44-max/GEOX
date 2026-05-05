@@ -39,28 +39,20 @@ export default function FieldReportPage(): React.ReactElement {
   const vm = buildFieldReportVm(report);
 
   return (
-    <div className="customerPage">
-      <header className="customerHero">
-        <div className="customerHeroTop">
-          <div>
-            <p className="customerEyebrow">GEOX</p>
-            <h1 className="customerTitle">C8-03 地块报告</h1>
-          </div>
-          <div className="customerActionRow">
-            <Link className="customerButton" to="/customer/dashboard">
-              返回客户总览
-            </Link>
-            <Link className="customerButton customerButtonPrimary" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>
-              打印导出
-            </Link>
-          </div>
-        </div>
+    <div className="customerPage customerPageGapMd">
+      <section className="customerReportHeader">
+        <div className="customerEyebrow">GEOX</div>
+        <h1 className="customerTitle">C8-03 地块报告</h1>
         <p className="customerSubtitle">{vm.hero.subtitle}</p>
-      </header>
+        <div className="customerActionRow">
+          <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
+          <Link className="customerButton customerButtonPrimary" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>打印导出</Link>
+        </div>
+      </section>
 
       <section className="customerCard">
-        <h2 className="customerCardTitle">地块概况</h2>
-        <div className="customerGrid2" style={{ marginTop: 12 }}>
+        <h3 className="customerCardTitle">地块概况</h3>
+        <div className="customerGrid2">
           {vm.landOverview.map((item) => (
             <div key={item.label}>
               <strong>{item.label}：</strong>
@@ -71,8 +63,8 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h2 className="customerCardTitle">诊断依据</h2>
-        <ul className="customerList" style={{ marginTop: 12 }}>
+        <h3 className="customerCardTitle">诊断依据</h3>
+        <div className="customerList">
           {vm.diagnosticCards.map((item) => (
             <li key={item.title} className="customerListItem">
               <div>
@@ -81,22 +73,20 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="customerItemReason">{item.detail}</div>
             </li>
           ))}
+        </div>
+      </section>
+
+      <section className="customerCard">
+        <h3 className="customerCardTitle">当前状态说明</h3>
+        <div>{vm.currentStatus.summary}</div>
+        <ul className="customerSpacingTopXs">
+          {vm.currentStatus.reasons.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
         </ul>
       </section>
 
       <section className="customerCard">
-        <h2 className="customerCardTitle">当前状态说明</h2>
-        <p style={{ marginTop: 12 }}>{vm.currentStatus.summary}</p>
-        <ul style={{ marginTop: 8 }}>
-          {vm.currentStatus.reasons.map((item, idx) => (
-            <li key={`${item}-${idx}`}>{item}</li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="customerCard">
-        <h2 className="customerCardTitle">近期作业 Top 5</h2>
-        <ul className="customerList" style={{ marginTop: 12 }}>
+        <h3 className="customerCardTitle">近期作业 Top 5</h3>
+        <div className="customerList">
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">
               <div className="customerItemMain">
@@ -107,27 +97,25 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="customerItemReason">验收：{item.acceptanceText}</div>
             </li>
           ))}
-          {!vm.recentOperationsTop5.length ? <li className="customerListItem customerItemReason">暂无作业报告</li> : null}
-        </ul>
-      </section>
-
-      <section className="customerRecommendationCard">
-        <h2 className="customerCardTitle">处方与下一步建议</h2>
-        <ul className="customerList" style={{ marginTop: 12 }}>
-          {vm.prescriptionCards.map((item) => (
-            <li key={item.title} className="customerListItem">
-              <div>
-                <strong>{item.title}</strong>：{item.value}
-              </div>
-              <div className="customerItemReason">{item.detail}</div>
-            </li>
-          ))}
-        </ul>
+          {!vm.recentOperationsTop5.length ? <div className="muted">暂无作业报告</div> : null}
+        </div>
       </section>
 
       <section className="customerCard">
-        <h2 className="customerCardTitle">设备与监测</h2>
-        <div className="customerGrid2" style={{ marginTop: 12 }}>
+        <h3 className="customerCardTitle">处方与下一步建议</h3>
+        <div className="customerList">
+          {vm.prescriptionCards.map((item) => (
+            <article key={item.title} className={item.title === "审批要求" ? "item customerListItemWarn" : "item"}>
+              <div><strong>{item.title}</strong>：{item.value}</div>
+              <div className="muted">{item.detail}</div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="customerCard">
+        <h3 className="customerCardTitle">设备与监测</h3>
+        <div className="customerGrid2">
           {vm.deviceMonitoring.map((item) => (
             <div key={item.label}>
               <strong>{item.label}：</strong>

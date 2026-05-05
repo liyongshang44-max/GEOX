@@ -20,25 +20,20 @@ export default function CustomerDashboardPage(): React.ReactElement {
   }, []);
 
   return (
-    <div className="customerPage">
-      <section className="customerHero">
-        <div className="customerHeroTop">
-          <div>
-            <div className="customerEyebrow">GEOX / 客户看板</div>
-            <h1 className="customerTitle">{vm?.header.title ?? "客户看板"}</h1>
-            <p className="customerSubtitle">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
-          </div>
-          <div className="customerActionRow">
-            <Link className="customerButton customerButtonPrimary" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>
-              {vm?.header.primaryAction.label ?? "立即审批"}
-            </Link>
-            <Link className="customerButton" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>
-              {vm?.header.secondaryAction.label ?? "检查设备"}
-            </Link>
-          </div>
+    <div className="customerPage customerPageGapMd">
+      <section className="customerReportHeader">
+        <div className="customerEyebrow">GEOX / 客户看板</div>
+        <h1 className="customerTitle">{vm?.header.title ?? "客户看板"}</h1>
+        <p className="customerSubtitle">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
+        <div className="customerActionRow">
+          <Link className="customerButton customerButtonPrimary" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>{vm?.header.primaryAction.label ?? "立即审批"}</Link>
+          <Link className="customerButton" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>{vm?.header.secondaryAction.label ?? "检查设备"}</Link>
         </div>
+      </section>
 
-        <div className="customerMetrics">
+      <section className="customerCard">
+        <h3 className="customerCardTitle">经营总览</h3>
+        <div className="customerGrid2">
           {(vm?.kpis ?? []).map((kpi) => (
             <article key={kpi.key} className="customerMetricCard">
               <div className="customerMetricValue">{kpi.valueText}</div>
@@ -48,10 +43,11 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="customerGrid3">
-        <article className="customerCard">
-          <h3 className="customerCardTitle">高风险地块</h3>
-          <ul className="customerList">
+      <section className="customerCard">
+        <h3 className="customerCardTitle">风险与待办</h3>
+        <div className="customerGridAuto">
+          <div>
+            <div className="muted">高风险地块</div>
             {(vm?.topRiskFields ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
                 <div className="customerHeroTop">
@@ -95,19 +91,19 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议与价值</h3>
-        <ul className="customerList">
+        <div className="customerList">
           {(vm?.nextActions ?? []).map((item) => (
             <li key={item.id} className="customerListItem">
               <div><Link to={item.href}>{item.title}</Link></div>
               <div className="muted">{item.summary}</div>
             </li>
           ))}
-        </ul>
-        <div>{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
+        </div>
+        <div className="customerSpacingTopSm">{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
         <div className="muted">{vm?.roiSummary.confidenceText ?? "价值记录 0 条。"}</div>
       </section>
 
-      {error ? <div className="muted">{error}</div> : null}
+      {error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
     </div>
   );
 }
