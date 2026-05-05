@@ -7,7 +7,7 @@ import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function OperationReportPage(): React.ReactElement {
-  const { operationPlanId = "" } = useParams();
+  const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
@@ -16,7 +16,7 @@ export default function OperationReportPage(): React.ReactElement {
     let alive = true;
     setLoading(true);
     setError("");
-    void fetchOperationReport(operationPlanId)
+    void fetchOperationReport(operationId)
       .then((res) => {
         if (!alive) return;
         setReport(res);
@@ -32,7 +32,7 @@ export default function OperationReportPage(): React.ReactElement {
     return () => {
       alive = false;
     };
-  }, [operationPlanId]);
+  }, [operationId]);
 
   if (loading) return <SectionSkeleton kind="detail" />;
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
@@ -46,7 +46,7 @@ export default function OperationReportPage(): React.ReactElement {
         title={vm.header.title}
         description={vm.header.subtitle}
         actions={(
-          <Link className="btn" to={`/operations/${encodeURIComponent(operationPlanId)}`}>
+          <Link className="btn" to={`/operations/${encodeURIComponent(operationId)}`}>
             返回作业详情
           </Link>
         )}

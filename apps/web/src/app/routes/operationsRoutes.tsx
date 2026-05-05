@@ -17,9 +17,11 @@ const OperationsWorkboardPage = React.lazy(() => import("../../views/OperationsW
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [
     <Route key="operations" path="/operations" element={<OperationsPage />} />,
-    <Route key="operations-detail" path="/operations/:operationPlanId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
-    <Route key="operations-report" path="/operations/:operationPlanId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
+    <Route key="operations-detail" path="/operations/:operationId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
+    <Route key="operations-report" path="/operations/:operationId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
     <Route key="operations-report-export" path="/operations/:operationId/report/export" element={<RouteErrorBoundary><OperationReportExportPage /></RouteErrorBoundary>} />,
+    <Route key="customer-operations-detail" path="/customer/operations/:operationId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
+    <Route key="customer-operations-export" path="/customer/operations/:operationId/export" element={<RouteErrorBoundary><OperationReportExportPage /></RouteErrorBoundary>} />,
     <Route key="operations-workboard" path="/operations/workboard" element={<OperationsWorkboardPage />} />,
     <Route key="human-assignments" path="/human-assignments" element={<HumanAssignmentsPage />} />,
     <Route key="human-assignments-detail" path="/human-assignments/:assignmentId" element={<RouteErrorBoundary><HumanAssignmentDetailPage /></RouteErrorBoundary>} />,
