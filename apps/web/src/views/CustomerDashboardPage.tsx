@@ -131,7 +131,25 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </section>
 
-      {error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
+      <section className="customerCard">
+        <h3 className="customerCardTitle">收益摘要</h3>
+        <div className="customerMetrics">
+          <article className="customerMetricCard">
+            <div className="customerMetricLabel">ROI 条目</div>
+            <div className="customerMetricValue">{vm?.roiSummary.totalRoiItems ?? 0}</div>
+          </article>
+          <article className="customerMetricCard">
+            <div className="customerMetricLabel">节水条目</div>
+            <div className="customerMetricValue">{vm?.roiSummary.waterSavedItems ?? 0}</div>
+          </article>
+          <article className="customerMetricCard">
+            <div className="customerMetricLabel">客户价值</div>
+            <div className="muted">{vm?.roiSummary.customerValueText ?? "--"}</div>
+          </article>
+        </div>
+      </section>
+
+      {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
     </div>
   );
 }
