@@ -22,9 +22,9 @@ export const CUSTOMER_LABELS = {
 const RAW_CODE_LABELS: Record<string, string> = {
   FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE: "灌溉响应弱，建议复核",
   FIELD_MEMORY_EXECUTION_DEVIATION_RISK: "执行偏差风险，建议复核",
-  INSUFFICIENT_EVIDENCE: "证据不足，建议人工复核",
+  INSUFFICIENT_EVIDENCE: "证据不足，需复核",
   PENDING_ACCEPTANCE: "待验收",
-  INVALID_EXECUTION: "作业未达到预期效果",
+  INVALID_EXECUTION: "执行异常，建议复核作业证据",
   MEASURED: "实测值",
   ESTIMATED: "估算值",
   ASSUMPTION_BASED: "基于假设",
@@ -47,6 +47,21 @@ export function labelRawCode(raw: unknown, fallback = "--"): string {
   return RAW_CODE_LABELS[key] ?? (String(raw).trim() || fallback);
 }
 
+export function labelMemoryCode(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (!key) return "地块记忆待补充";
+  if (key.startsWith("FIELD_MEMORY_")) return labelEvidenceQuality(key);
+  return labelRawCode(raw, labelEmptyFallback(raw, "地块记忆待补充"));
+}
+
+export function labelValueType(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (["MEASURED", "ACTUAL", "OBSERVED"].includes(key)) return "实测值";
+  if (["ESTIMATED", "PREDICTED", "MODELLED"].includes(key)) return "估算值";
+  if (["ASSUMPTION_BASED", "ASSUMPTION", "HEURISTIC"].includes(key)) return "基于假设";
+  return labelRawCode(raw, "估算值");
+}
+
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
   if (raw === null || raw === undefined) return fallback;
   const text = String(raw).trim();
@@ -67,17 +82,17 @@ export function labelRiskLevel(raw: unknown): string {
 
 export function labelFinalStatus(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "CLOSED"].includes(key)) return "作业已完成并通过验收";
-  if (["PENDING_ACCEPTANCE", "WAIT_ACCEPTANCE", "TO_ACCEPT"].includes(key)) return "待验收";
+  if (["SUCCESS", "SUCCEEDED", "DONE", "COMPLETED", "CLOSED"].includes(key)) return "已完成";
+  if (["PENDING_ACCEPTANCE", "WAIT_ACCEPTANCE", "TO_ACCEPT"].includes(key)) return "等待验收";
   if (["RUNNING", "IN_PROGRESS", "PROCESSING"].includes(key)) return "执行中";
-  if (["INVALID_EXECUTION", "ERROR", "FAILED", "FAIL", "REJECTED", "ABNORMAL"].includes(key)) return "作业未达到预期效果";
+  if (["INVALID_EXECUTION", "ERROR", "FAILED", "FAIL", "REJECTED", "ABNORMAL"].includes(key)) return "执行异常";
   if (["PENDING", "TODO", "NEW", "QUEUED", "UNKNOWN", ""].includes(key)) return "待确认";
   return "待确认";
 }
 
 export function labelEvidenceQuality(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，建议人工复核";
+  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，需复核";
   if (["FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE", "WEAK_IRRIGATION_RESPONSE"].includes(key)) return "灌溉响应弱，建议复核";
   if (["FIELD_MEMORY_EXECUTION_DEVIATION_RISK", "EXECUTION_DEVIATION_RISK"].includes(key)) return "执行偏差风险，建议复核";
   if (["DEVICE_NOT_RESPONDING", "NO_DEVICE_ACK", "TIMEOUT"].includes(key)) return "设备未响应，已阻断自动执行";
@@ -95,8 +110,8 @@ export function labelAcceptanceStatus(raw: unknown): string {
   const key = normalizeKey(raw);
   if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(key)) return "验收通过";
   if (["FAIL", "FAILED", "REJECTED"].includes(key)) return "验收未通过";
-  if (["PENDING_ACCEPTANCE", "PENDING", "WAITING", "TODO", "UNKNOWN", ""].includes(key)) return "待验收";
-  return "待验收";
+  if (["PENDING_ACCEPTANCE", "PENDING", "WAITING", "TODO", "UNKNOWN", ""].includes(key)) return "等待验收";
+  return "等待验收";
 }
 
 export function labelApprovalStatus(raw: unknown): string {

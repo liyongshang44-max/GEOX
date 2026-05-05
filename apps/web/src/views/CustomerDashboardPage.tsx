@@ -73,7 +73,10 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <h3 style={{ margin: 0, marginBottom: 12 }}>下一步建议与价值</h3>
         <div className="list">
           {(vm?.nextActions ?? []).map((item) => (
-            <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link></div>
+            <article key={item.id} className="item">
+              <div><Link to={item.href}>{item.title}</Link></div>
+              <div className="muted">{item.summary}</div>
+            </article>
           ))}
         </div>
         <div style={{ marginTop: 10 }}>{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>

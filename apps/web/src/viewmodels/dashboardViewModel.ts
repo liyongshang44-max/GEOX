@@ -1,4 +1,5 @@
 import type { DashboardAcceptanceRiskItem, DashboardEvidenceItem, DashboardPendingActionItem } from "../api/dashboard";
+import { labelAcceptanceStatus, labelFinalStatus } from "../lib/customerLabels";
 
 export type DashboardVM = {
   controlPlane?: any | null;
@@ -169,7 +170,7 @@ export function buildDashboardViewModel(params: {
 
   const recentPackages = (Array.isArray(params.evidenceItems) ? params.evidenceItems : []).slice(0, 6).map((e) => ({
     id: String((e as any).receipt_fact_id ?? (e as any).operation_plan_id ?? "-"),
-    status: String((e as any).status ?? "UNKNOWN"),
+    status: labelFinalStatus((e as any).status),
     updatedAt: formatTs((e as any).finished_at ?? (e as any).created_at),
   }));
 
@@ -178,7 +179,7 @@ export function buildDashboardViewModel(params: {
     .slice(0, 4)
     .map((p) => ({
       programName: String(p?.program_id ?? "Program"),
-      operation: String(p?.latest_acceptance_result?.summary ?? "最近作业验收通过"),
+      operation: String(p?.latest_acceptance_result?.summary ?? `最近作业${labelAcceptanceStatus("PASS")}`),
       when: formatTs(p?.latest_acceptance_result?.occurred_at ?? p?.updated_at),
     }));
 
@@ -187,7 +188,7 @@ export function buildDashboardViewModel(params: {
     .slice(0, 4)
     .map((p) => ({
       programName: String(p?.program_id ?? "Program"),
-      operation: String(p?.latest_acceptance_result?.summary ?? "最近作业验收失败"),
+      operation: String(p?.latest_acceptance_result?.summary ?? `最近作业${labelAcceptanceStatus("FAIL")}`),
       when: formatTs(p?.latest_acceptance_result?.occurred_at ?? p?.updated_at),
     }));
 
