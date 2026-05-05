@@ -1,5 +1,5 @@
 import type { FieldReportDetailV1 } from "../api/reports";
-import { labelAcceptanceStatus, labelFinalStatus, labelRiskLevel } from "../lib/customerLabels";
+import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 
 export type FieldReportPageVm = {
   hero: {
@@ -62,9 +62,13 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     actualCostText: formatCurrency(report.overview.actual_total_cost),
   };
 
+  const explainSummaryRaw = String(report.explain.human || "");
+  const hasInvalidExecution = explainSummaryRaw.toUpperCase().includes("INVALID_EXECUTION") || (report.explain.top_reasons ?? []).some((x) => String(x ?? "").toUpperCase().includes("INVALID_EXECUTION"));
   const explain = {
-    human: String(report.explain.human || "暂无状态解释"),
-    topReasonsText: report.explain.top_reasons.length ? report.explain.top_reasons : ["暂无主要依据"],
+    human: hasInvalidExecution ? "该地块存在执行异常，建议复核作业证据。" : sanitizeCustomerText(report.explain.human || "暂无状态解释"),
+    topReasonsText: hasInvalidExecution
+      ? ["执行异常，建议复核作业证据"]
+      : ((report.explain.top_reasons ?? []).length ? (report.explain.top_reasons ?? []).map((item) => sanitizeCustomerText(item)) : ["暂无主要依据"]),
   };
 
   const deviceSummary = {
@@ -110,7 +114,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "--",
-        title: String(item.customer_title || item.title || operationId || "未命名作业"),
+        title: sanitizeCustomerText(item.customer_title || item.title || operationId || "未命名作业"),
         statusText: labelFinalStatus(item.final_status),
         acceptanceText: labelAcceptanceStatus(item.acceptance_status),
         generatedAtText: formatDateTime(item.generated_at),
@@ -118,9 +122,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       };
     }),
     prescriptionCards: [
-      { title: "建议动作", value: String(report.next_action?.action_type || "建议巡检"), detail: "建议优先执行关键风险处置动作" },
+      { title: "建议动作", value: labelOperationType(report.next_action?.action_type || "IRRIGATE"), detail: "建议优先执行关键风险处置动作" },
       { title: "建议剂量", value: "按当前处方执行", detail: "如有投入品请遵循作业报告中的剂量配置" },
-      { title: "时间窗口", value: "24-72小时内", detail: "建议在下一个可作业窗口完成" },
+      { title: "时间窗口", value: "24–72 小时内", detail: "建议在下一个可作业窗口完成" },
       { title: "审批要求", value: report.overview.pending_acceptance_count > 0 ? "需负责人确认" : "常规审批", detail: report.overview.pending_acceptance_count > 0 ? `需负责人确认 + 原因：当前待验收作业 ${formatCount(report.overview.pending_acceptance_count)} 项` : "按常规审批流程执行" },
       { title: "验收条件", value: "完成并回传证据", detail: "需提交执行记录、结果照片或监测数据" },
     ],
