@@ -4,6 +4,7 @@ import { useSession } from "../auth/useSession";
 import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
+import AdminLayout from "../layouts/AdminLayout";
 import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
@@ -251,6 +252,28 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
   );
 }
 
+
+function AdminShell(): React.ReactElement {
+  return (
+    <AdminLayout
+      topBar={{
+        breadcrumbs: [{ label: "平台控制台", to: "/dashboard" }, { label: "后台管理" }],
+        title: "后台管理",
+        lead: "后台管理入口，面向 /admin/* 维护导入、验收与健康检查。",
+        primaryAction: { label: "返回总览", to: "/dashboard" },
+      }}
+    >
+      <React.Suspense fallback={RouteFallback}>
+        <Routes>
+          <Route path="/admin/healthz" element={<AdminHealthPage />} />
+          <Route path="/admin/import" element={<AdminImportPage />} />
+          <Route path="/admin/acceptance" element={<AdminAcceptancePage />} />
+        </Routes>
+      </React.Suspense>
+    </AdminLayout>
+  );
+}
+
 export default function App(): React.ReactElement {
   const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
   const { isLoggedIn } = useSession();
@@ -261,6 +284,7 @@ export default function App(): React.ReactElement {
         <React.Suspense fallback={RouteFallback}>
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/admin/*" element={<RequireSession><AdminShell /></RequireSession>} />
             <Route
               path="*"
               element={(
