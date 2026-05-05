@@ -16,15 +16,15 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
     <Route key="dashboard-customer-legacy" path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="dashboard-customer" path="/customer/dashboard" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
+    <Route key="dashboard-export-legacy" path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />,
     <Route
       key="dashboard-export"
-      path="/dashboard/export"
+      path="/customer/export"
       element={
         <RouteErrorBoundary>
           <CustomerDashboardExportPage />
         </RouteErrorBoundary>
       }
     />,
-    <Route key="dashboard-export-alias" path="/customer/export" element={<Navigate to="/dashboard/export" replace />} />,
   ];
 }

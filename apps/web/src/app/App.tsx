@@ -31,7 +31,6 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
-const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
 const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
 const OperationsPage = React.lazy(() => import("../features/operations/pages/OperationsPage"));
 const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsPage"));
@@ -57,7 +56,7 @@ function LegacyParamRedirect({ to }: { to: string }): React.ReactElement {
 function titleForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "平台控制台";
   if (pathname === "/dashboard/customer") return "客户看板";
-  if (pathname === "/dashboard/export") return "客户看板导出";
+  if (pathname === "/dashboard/export" || pathname === "/customer/export") return "客户看板导出";
   if (pathname.startsWith("/delivery/export-jobs")) return "导出报告";
   if (pathname === "/fields") return "田块";
   if (pathname === "/fields/new") return "新建田块";
@@ -95,7 +94,7 @@ function titleForPath(pathname: string): string {
 function leadForPath(pathname: string): string {
   if (pathname === "/" || pathname === "/dashboard") return "以平台控制台为主入口，统一监控田块、设备、作业、技能与证据状态。";
   if (pathname === "/dashboard/customer") return "面向客户的简化看板，仅展示4个关键区块。";
-  if (pathname === "/dashboard/export") return "客户看板导出版，保留地块状态、经营汇总、待处理事项、Top 风险地块与近期动作。";
+  if (pathname === "/dashboard/export" || pathname === "/customer/export") return "客户看板导出版，保留地块状态、经营汇总、待处理事项、Top 风险地块与近期动作。";
   if (pathname.startsWith("/delivery/export-jobs")) return "作为证据中心下的二级模块，集中查看导出批次与回执状态。";
   if (pathname === "/fields") return "围绕田块、边界、季节与设备绑定进行管理。";
   if (pathname === "/fields/new") return "创建田块并开始开局链路。";
@@ -134,7 +133,7 @@ type BreadcrumbItem = AppBreadcrumbItem;
 function breadcrumbsForPath(pathname: string): BreadcrumbItem[] {
   if (pathname === "/" || pathname === "/dashboard") return [{ label: "平台控制台" }];
   if (pathname === "/dashboard/customer") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板" }];
-  if (pathname === "/dashboard/export") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板导出" }];
+  if (pathname === "/dashboard/export" || pathname === "/customer/export") return [{ label: "平台控制台", to: "/dashboard" }, { label: "客户看板导出" }];
   if (pathname.startsWith("/delivery/export-jobs")) return [{ label: "平台控制台", to: "/dashboard" }, { label: "证据中心", to: "/audit-export" }, { label: "导出报告" }];
   if (pathname === "/fields") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块" }];
   if (pathname === "/fields/new") return [{ label: "平台控制台", to: "/dashboard" }, { label: "田块", to: "/fields" }, { label: "新建田块" }];
@@ -187,7 +186,7 @@ function primaryActionForPath(pathname: string): { label: string; to: string } {
   if (pathname.startsWith("/dispatch-workbench")) return { label: "返回人工执行列表", to: "/human-assignments" };
   if (pathname.startsWith("/human-execution-analysis")) return { label: "返回人工执行列表", to: "/human-assignments" };
   if (pathname.startsWith("/human-ops-analytics")) return { label: "返回人工执行列表", to: "/human-assignments" };
-  if (pathname === "/dashboard/export") return { label: "返回客户看板", to: "/dashboard/customer" };
+  if (pathname === "/dashboard/export" || pathname === "/customer/export") return { label: "返回客户看板", to: "/customer/dashboard" };
   if (pathname.startsWith("/agronomy/recommendations")) return { label: "返回经营方案列表", to: "/programs" };
   if (pathname === "/programs/create" || pathname === "/programs/new" || pathname.startsWith("/programs/")) return { label: "返回经营方案列表", to: "/programs" };
   if (pathname.startsWith("/programs")) return { label: "初始化经营", to: "/programs/create" };
@@ -233,8 +232,9 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
           <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
-          <Route path="/fields" element={<Navigate to="/customer/fields" replace />} />
-          <Route path="/fields/portfolio" element={<Navigate to="/customer/fields/portfolio" replace />} />
+          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/fields/:fieldId" element={<LegacyParamRedirect to="/admin/fields/:fieldId" />} />
           <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
           <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
           <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
@@ -302,7 +302,7 @@ function AdminShell(): React.ReactElement {
         <Routes>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<CommercialDashboardPage expert={false} />} />
-          <Route path="/admin/fields" element={<FieldsPage />} />
+          {renderAdminFieldsRoutes()}
           <Route path="/admin/operations" element={<OperationsPage />} />
           <Route path="/admin/devices" element={<DevicesPage />} />
           <Route path="/admin/alerts" element={<AlertsPage />} />
