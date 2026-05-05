@@ -28,61 +28,58 @@ export default function CustomerDashboardPage(): React.ReactElement {
         description={vm?.header.subtitle ?? "经营结果、风险与行动摘要"}
         actions={(
           <>
-            <Link className="btn" to="/fields/portfolio">查看全部地块</Link>
-            <Link className="btn" to="/dashboard/export">导出当前看板</Link>
+            <Link className="btn" to={vm?.header.primaryAction.href ?? "/customer/approvals"}>{vm?.header.primaryAction.label ?? "立即审批"}</Link>
+            <Link className="btn" to={vm?.header.secondaryAction.href ?? "/customer/devices"}>{vm?.header.secondaryAction.label ?? "检查设备"}</Link>
           </>
         )}
       />
 
-      <SectionCard title="地块状态">
-        <div>
-          共 {vm?.fieldStatus.totalFieldsText ?? "0"} 个地块，风险 {vm?.fieldStatus.atRiskText ?? "0"} 个，
-          高风险地块数 {vm?.fieldStatus.highRiskText ?? "0"} 个
-        </div>
-        <div className="muted">离线地块：{vm?.fieldStatus.offlineFieldsText ?? "0"}。</div>
-      </SectionCard>
-
-      <SectionCard title="经营汇总">
-        <div>未关闭告警：{vm?.businessSummary.openAlertsText ?? "0"}</div>
-        <div>待验收：{vm?.businessSummary.pendingAcceptanceText ?? "0"}</div>
-        <div>预计成本：{vm?.businessSummary.estimatedCostText ?? "¥0.00"} · 实际成本：{vm?.businessSummary.actualCostText ?? "¥0.00"}</div>
-      </SectionCard>
-
-      <SectionCard title="待处理事项">
-        <div>总告警：{vm?.pendingActions.totalAlertsText ?? "0"}</div>
-        <div className="muted">
-          未分配：{vm?.pendingActions.unassignedText ?? "0"} ·
-          处理中：{vm?.pendingActions.inProgressText ?? "0"} ·
-          已超时：{vm?.pendingActions.slaBreachedText ?? "0"} ·
-          今日关闭：{vm?.pendingActions.closedTodayText ?? "0"}
-        </div>
-      </SectionCard>
-
-      <SectionCard title="Top 风险地块">
+      <SectionCard title="KPI Grid">
         <div className="list">
+          {(vm?.kpis ?? []).map((kpi) => (
+            <div key={kpi.key} className="item">{kpi.label}：{kpi.valueText}</div>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="三列列表">
+        <div id="top-risk-fields" className="list">
+          <div className="muted">Top 风险</div>
           {(vm?.topRiskFields ?? []).map((item) => (
-            <div key={item.fieldId} className="item">
-              <Link to={item.href}>{item.title}</Link> · 风险 {item.riskText} · 主要原因 {item.reasonText} · 未关闭告警 {item.openAlertsText} ·
-              待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
-            </div>
+            <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary} · {item.meta}</div>
           ))}
-          {!(vm?.topRiskFields.length) ? (
-            <div className="muted">暂无风险地块数据</div>
-          ) : null}
+          {!(vm?.topRiskFields.length) ? <div className="muted">暂无风险地块数据</div> : null}
+        </div>
+        <div className="list" style={{ marginTop: 12 }}>
+          <div className="muted">待处理</div>
+          {(vm?.pendingItems ?? []).map((item) => (
+            <div key={item.id} className="item">{item.title} · {item.summary} · <Link to={item.href}>{item.actionLabel}</Link></div>
+          ))}
+        </div>
+        <div className="list" style={{ marginTop: 12 }}>
+          <div className="muted">近期作业</div>
+          {(vm?.recentOperations ?? []).map((item) => (
+            <div key={item.operationId} className="item"><Link to={item.href}>{item.title}</Link> · {item.summary}</div>
+          ))}
+          {!(vm?.recentOperations.length) ? <div className="muted">暂无近期作业</div> : null}
         </div>
       </SectionCard>
 
-      <SectionCard title="近期作业">
+      <SectionCard title="下一步建议">
         <div className="list">
-          {(vm?.recentOperations ?? []).map((item) => (
-            <div key={item.operationId} className="item">
-              <Link to={item.href}>{item.title}</Link> · 所属地块 {item.fieldTitle} · 最终状态 {item.statusText} · 验收状态 {item.acceptanceText} · 执行时间 {item.executedAtText}
-            </div>
+          {(vm?.nextActions ?? []).map((item) => (
+            <div key={item.id} className="item"><Link to={item.href}>{item.title}</Link></div>
           ))}
-          {!(vm?.recentOperations.length) ? (
-            <div className="muted">暂无近期作业</div>
-          ) : null}
         </div>
+      </SectionCard>
+
+      <SectionCard title="价值摘要">
+        <div>{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
+        <div className="muted">{vm?.roiSummary.confidenceText ?? "价值记录 0 条。"}</div>
+      </SectionCard>
+
+      <SectionCard title="数据说明">
+        <div className="muted">数据来自客户经营看板聚合接口，包含风险、作业、验收、设备与价值记录。</div>
       </SectionCard>
 
       {error ? <div className="muted" style={{ marginTop: 12 }}>{error}</div> : null}
