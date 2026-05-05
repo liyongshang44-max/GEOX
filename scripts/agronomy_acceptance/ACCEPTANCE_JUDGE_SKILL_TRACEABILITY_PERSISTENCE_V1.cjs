@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-require('tsx/cjs');
+const { ensureTsxRuntime } = require('./_tsx_bootstrap.cjs');
+ensureTsxRuntime();
 const assert = require('node:assert/strict');
 
 async function loadModules() {
