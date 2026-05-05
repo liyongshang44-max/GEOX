@@ -8,7 +8,9 @@ import {
   labelEvidenceQuality,
   labelEmptyFallback,
   labelFinalStatus,
+  labelMemoryCode,
   labelRiskLevel,
+  labelValueType,
 } from "../lib/customerLabels";
 
 export type OperationReportPageVm = {
@@ -104,14 +106,14 @@ function formatMemoryLine(item: any): string {
   } else if (before != null && after != null) {
     statusText = after > before ? "湿度已回升" : "湿度未回升";
   }
-  return `${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
+  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
 }
 
 function formatRoiLine(item: any): string {
   const baseline = toNum(item?.baseline_value);
   const delta = toNum(item?.delta_value);
   const unit = labelEmptyFallback(item?.unit, "--");
-  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
+  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（${labelValueType(item?.value_type)}，数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
 }
 
 function joinReasonTexts(reasons: string[]): string {

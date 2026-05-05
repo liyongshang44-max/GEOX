@@ -47,6 +47,21 @@ export function labelRawCode(raw: unknown, fallback = "--"): string {
   return RAW_CODE_LABELS[key] ?? (String(raw).trim() || fallback);
 }
 
+export function labelMemoryCode(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (!key) return "地块记忆待补充";
+  if (key.startsWith("FIELD_MEMORY_")) return labelEvidenceQuality(key);
+  return labelRawCode(raw, labelEmptyFallback(raw, "地块记忆待补充"));
+}
+
+export function labelValueType(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (["MEASURED", "ACTUAL", "OBSERVED"].includes(key)) return "实测值";
+  if (["ESTIMATED", "PREDICTED", "MODELLED"].includes(key)) return "估算值";
+  if (["ASSUMPTION_BASED", "ASSUMPTION", "HEURISTIC"].includes(key)) return "基于假设";
+  return labelRawCode(raw, "估算值");
+}
+
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
   if (raw === null || raw === undefined) return fallback;
   const text = String(raw).trim();

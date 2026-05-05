@@ -12,6 +12,7 @@ import {
   shouldShowMetricOnFieldDetail,
   shouldShowMetricOnFieldSummary,
 } from "../lib/metricDisplayPolicy";
+import { labelFinalStatus } from "../lib/customerLabels";
 
 export type FieldConsoleStatus = "ok" | "risk" | "error";
 
@@ -279,7 +280,7 @@ export function buildFieldViewModel(params: {
     ? {
       action: mapOperationTypeToLabel(currentOperation.action_type, lang),
       deviceId: String(currentOperation.device_id || "dev_onboard_accept_001"),
-      status: String(currentOperation.final_status || "执行中"),
+      status: labelFinalStatus(currentOperation.final_status ?? "RUNNING"),
       progress: taskProgress(String(currentOperation.final_status || "")),
       startedAt: Number(currentOperation.last_event_ts ?? 0) || null,
       operationPlanId: resolveOperationPlanId(currentOperation),
