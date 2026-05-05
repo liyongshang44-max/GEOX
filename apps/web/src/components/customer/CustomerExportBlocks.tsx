@@ -5,11 +5,26 @@ import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
 import { SectionCard } from "../../shared/ui";
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
+  const managedFields = vm.kpis.find((item) => item.key === "managedFields")?.valueText ?? "-";
+  const highRiskFields = vm.kpis.find((item) => item.key === "highRiskFields")?.valueText ?? "-";
+  const pendingApproval = vm.kpis.find((item) => item.key === "pendingApproval")?.valueText ?? "-";
+  const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
+  const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
+  const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
+
   return (
     <>
-      <SectionCard title="地块状态"><div>共 {vm.fieldStatus.totalFieldsText} 个地块，风险 {vm.fieldStatus.atRiskText} 个，高风险地块数 {vm.fieldStatus.highRiskText} 个</div></SectionCard>
-      <SectionCard title="经营汇总"><div>未关闭告警：{vm.businessSummary.openAlertsText}</div><div>待验收：{vm.businessSummary.pendingAcceptanceText}</div></SectionCard>
-      <SectionCard title="待处理事项"><div>总告警：{vm.pendingActions.totalAlertsText}</div><div className="muted">未分配：{vm.pendingActions.unassignedText} · 处理中：{vm.pendingActions.inProgressText} · 已超时：{vm.pendingActions.slaBreachedText}</div></SectionCard>
+      <SectionCard title="地块状态">
+        <div>管理地块 {managedFields} 个，高风险地块 {highRiskFields} 个，提前发现异常 {earlyWarnings} 项</div>
+      </SectionCard>
+      <SectionCard title="经营汇总">
+        <div>待审批处方：{pendingApproval}</div>
+        <div>待验收作业：{pendingAcceptance}</div>
+      </SectionCard>
+      <SectionCard title="待处理事项">
+        <div>{nextActionTitles}</div>
+        <div className="muted">{vm.roiSummary.confidenceText}</div>
+      </SectionCard>
     </>
   );
 }
