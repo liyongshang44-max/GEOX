@@ -11,10 +11,10 @@ const FieldPortfolioPage = React.lazy(() => import("../../views/FieldPortfolioPa
 
 export function renderCustomerFieldsRoutes(): React.ReactElement[] {
   return [
-    <Route key="fields-redirect" path="/fields" element={<Navigate to="/customer/fields" replace />} />,
-    <Route key="customer-fields" path="/customer/fields" element={<FieldsPage />} />,
-    <Route key="customer-fields-new" path="/customer/fields/new" element={<FieldCreatePage />} />,
-    <Route key="customer-fields-portfolio" path="/customer/fields/portfolio" element={<FieldPortfolioPage />} />,
+    <Route key="fields-redirect" path="/fields" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="customer-fields" path="/customer/fields" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="customer-fields-new" path="/customer/fields/new" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="customer-fields-portfolio" path="/customer/fields/portfolio" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="customer-fields-detail" path="/customer/fields/:fieldId" element={<RouteErrorBoundary><FieldReportPage /></RouteErrorBoundary>} />,
     <Route key="customer-fields-export" path="/customer/fields/:fieldId/export" element={<RouteErrorBoundary><FieldReportExportPage /></RouteErrorBoundary>} />,
   ];
