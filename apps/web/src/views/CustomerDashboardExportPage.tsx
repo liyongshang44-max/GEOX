@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchCustomerDashboardAggregate } from "../api/reports";
+import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 

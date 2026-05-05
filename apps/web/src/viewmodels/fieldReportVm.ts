@@ -1,4 +1,4 @@
-import type { FieldReportDetailV1 } from "../api/reports";
+import type { FieldReportDetailV1 } from "../api/customerReports";
 import { CUSTOMER_LABELS, labelAcceptanceStatus, labelFinalStatus, labelRiskLevel } from "../lib/customerLabels";
 
 export type FieldReportPageVm = {

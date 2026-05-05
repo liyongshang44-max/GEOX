@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchCustomerDashboardAggregate } from "../api/reports";
+import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { PageHeader, SectionCard } from "../shared/ui";
 

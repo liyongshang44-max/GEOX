@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchOperationReport, type OperationReportV1 } from "../api/reports";
+import { fetchOperationReport, type OperationReportV1 } from "../api/customerReports";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";

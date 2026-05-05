@@ -1,4 +1,4 @@
-import type { OperationReportV1 } from "../api/reports";
+import type { OperationReportV1 } from "../api/customerReports";
 import {
   CUSTOMER_LABELS,
   labelAcceptanceStatus,
