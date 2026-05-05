@@ -96,7 +96,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">下一步建议与价值</h3>
+        <h3 className="customerCardTitle">下一步建议</h3>
         <div className="list">
           {(vm?.nextActions ?? []).map((item) => (
             <li key={item.id} className="customerListItem">
@@ -105,8 +105,6 @@ export default function CustomerDashboardPage(): React.ReactElement {
             </li>
           ))}
         </div>
-        <div className="customerSpacingTopSm">{vm?.roiSummary.valueText ?? "暂无价值记录"}</div>
-        <div className="muted">{vm?.roiSummary.confidenceText ?? "价值记录 0 条。"}</div>
       </section>
 
       {error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
