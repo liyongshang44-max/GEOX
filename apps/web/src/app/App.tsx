@@ -12,6 +12,7 @@ import { renderDashboardRoutes } from "./routes/dashboardRoutes";
 import { renderAdminFieldsRoutes, renderCustomerFieldsRoutes } from "./routes/fieldsRoutes";
 import { renderDevicesRoutes } from "./routes/devicesRoutes";
 import { renderOperationsRoutes } from "./routes/operationsRoutes";
+import { renderCustomerOperationsRoutes } from "./routes/customerOperationsRoutes";
 import { renderProgramsRoutes } from "./routes/programsRoutes";
 import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
@@ -236,6 +237,7 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           {renderCustomerFieldsRoutes()}
           {renderDevicesRoutes()}
           {renderOperationsRoutes()}
+          {renderCustomerOperationsRoutes()}
           {renderProgramsRoutes()}
           {renderSkillsRoutes()}
 
