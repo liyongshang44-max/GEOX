@@ -5,12 +5,14 @@ import { readExpertModeFromStorage } from "../lib/uiPrefs";
 import { LocaleProvider } from "../lib/locale";
 import AppShell from "./AppShell";
 import AdminLayout from "../layouts/AdminLayout";
+import CustomerLayout from "../layouts/CustomerLayout";
 import RequireSession from "./RequireSession";
 import { type AppBreadcrumbItem } from "../components/layout/AppBreadcrumb";
 import { renderDashboardRoutes } from "./routes/dashboardRoutes";
-import { renderFieldsRoutes } from "./routes/fieldsRoutes";
+import { renderAdminFieldsRoutes, renderCustomerFieldsRoutes } from "./routes/fieldsRoutes";
 import { renderDevicesRoutes } from "./routes/devicesRoutes";
 import { renderOperationsRoutes } from "./routes/operationsRoutes";
+import { renderCustomerOperationsRoutes } from "./routes/customerOperationsRoutes";
 import { renderProgramsRoutes } from "./routes/programsRoutes";
 import { renderEvidenceRoutes } from "./routes/evidenceRoutes";
 import { renderSkillsRoutes } from "./routes/skillsRoutes";
@@ -38,6 +40,14 @@ const SkillRegistryPage = React.lazy(() => import("../features/skills/pages/Skil
 const AdminOperationDebugPage = React.lazy(() => import("../views/AdminOperationDebugPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
+
+function isCustomerRoute(pathname: string): boolean {
+  return pathname.startsWith("/customer/");
+}
+
+function isAdminRoute(pathname: string): boolean {
+  return pathname.startsWith("/admin");
+}
 
 function LegacyParamRedirect({ to }: { to: string }): React.ReactElement {
   const params = useParams();
@@ -206,8 +216,15 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
       }}
     >
       <React.Suspense fallback={RouteFallback}>
-        <Routes>
+        <AppRoutes expert={expert} />
+      </React.Suspense>
+    </AppShell>
+  );
+}
 
+function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
+  return (
+    <Routes>
           <Route path="/" element={<Navigate to="/customer/dashboard" replace />} />
           <Route path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />
           <Route path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />
@@ -216,8 +233,8 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
           <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
-          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
-          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/fields" element={<Navigate to="/customer/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/customer/fields/portfolio" replace />} />
           <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
           <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
           <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
@@ -226,9 +243,10 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/skills/registry" element={<Navigate to="/admin/skills" replace />} />
           {renderDashboardRoutes(expert)}
           {renderEvidenceRoutes()}
-          {renderFieldsRoutes()}
+          {renderCustomerFieldsRoutes()}
           {renderDevicesRoutes()}
           {renderOperationsRoutes()}
+          {renderCustomerOperationsRoutes()}
           {renderProgramsRoutes()}
           {renderSkillsRoutes()}
 
@@ -256,8 +274,16 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/settings" element={<Navigate to="/legacy/settings" replace />} />
           <Route path="/dev" element={<Navigate to="/legacy/dev" replace />} />
         </Routes>
+  );
+}
+
+function CustomerShell({ expert }: { expert: boolean }): React.ReactElement {
+  return (
+    <CustomerLayout>
+      <React.Suspense fallback={RouteFallback}>
+        <AppRoutes expert={expert} />
       </React.Suspense>
-    </AppShell>
+    </CustomerLayout>
   );
 }
 
@@ -296,6 +322,8 @@ function AdminShell(): React.ReactElement {
 export default function App(): React.ReactElement {
   const [expert] = React.useState<boolean>(() => readExpertModeFromStorage());
   const { isLoggedIn } = useSession();
+  const location = useLocation();
+  const pathname = location.pathname;
 
   return (
     <LocaleProvider>
@@ -303,12 +331,20 @@ export default function App(): React.ReactElement {
         <React.Suspense fallback={RouteFallback}>
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route
+              path="/customer/*"
+              element={(
+                <RequireSession>
+                  <CustomerShell expert={expert} />
+                </RequireSession>
+              )}
+            />
             <Route path="/admin/*" element={<RequireSession><AdminShell /></RequireSession>} />
             <Route
               path="*"
               element={(
                 <RequireSession>
-                  <Shell expert={expert} />
+                  {isCustomerRoute(pathname) ? <CustomerShell expert={expert} /> : (isAdminRoute(pathname) ? <AdminShell /> : <Shell expert={expert} />)}
                 </RequireSession>
               )}
             />

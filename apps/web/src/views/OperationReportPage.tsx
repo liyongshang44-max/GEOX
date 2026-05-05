@@ -48,7 +48,7 @@ export default function OperationReportPage(): React.ReactElement {
         actions={(
           <>
             <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
-            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationPlanId)}/export`}>导出报告</Link>
+            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
           </>
         )}
       />

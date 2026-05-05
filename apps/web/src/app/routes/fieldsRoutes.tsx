@@ -9,16 +9,22 @@ const FieldReportPage = React.lazy(() => import("../../views/FieldReportPage"));
 const FieldReportExportPage = React.lazy(() => import("../../views/FieldReportExportPage"));
 const FieldPortfolioPage = React.lazy(() => import("../../views/FieldPortfolioPage"));
 
-export function renderFieldsRoutes(): React.ReactElement[] {
+export function renderCustomerFieldsRoutes(): React.ReactElement[] {
   return [
-    <Route key="fields-redirect" path="/fields" element={<Navigate to="/admin/fields" replace />} />,
-    <Route key="fields" path="/admin/fields" element={<FieldsPage />} />,
-    <Route key="fields-new" path="/fields/new" element={<FieldCreatePage />} />,
-    <Route key="fields-portfolio" path="/fields/portfolio" element={<FieldPortfolioPage />} />,
-    <Route key="fields-detail" path="/fields/:fieldId" element={<RouteErrorBoundary><FieldDetailPage /></RouteErrorBoundary>} />,
-    <Route key="fields-detail-customer-alias" path="/customer/fields/:fieldId" element={<RouteErrorBoundary><FieldDetailPage /></RouteErrorBoundary>} />,
-    <Route key="fields-report" path="/fields/:fieldId/report" element={<RouteErrorBoundary><FieldReportPage /></RouteErrorBoundary>} />,
-    <Route key="fields-report-export" path="/fields/:fieldId/report/export" element={<RouteErrorBoundary><FieldReportExportPage /></RouteErrorBoundary>} />,
+    <Route key="fields-redirect" path="/fields" element={<Navigate to="/customer/fields" replace />} />,
+    <Route key="customer-fields" path="/customer/fields" element={<FieldsPage />} />,
+    <Route key="customer-fields-new" path="/customer/fields/new" element={<FieldCreatePage />} />,
+    <Route key="customer-fields-portfolio" path="/customer/fields/portfolio" element={<FieldPortfolioPage />} />,
+    <Route key="customer-fields-detail" path="/customer/fields/:fieldId" element={<RouteErrorBoundary><FieldReportPage /></RouteErrorBoundary>} />,
     <Route key="customer-fields-export" path="/customer/fields/:fieldId/export" element={<RouteErrorBoundary><FieldReportExportPage /></RouteErrorBoundary>} />,
+  ];
+}
+
+export function renderAdminFieldsRoutes(): React.ReactElement[] {
+  return [
+    <Route key="admin-fields" path="/admin/fields" element={<FieldsPage />} />,
+    <Route key="admin-fields-new" path="/admin/fields/new" element={<FieldCreatePage />} />,
+    <Route key="admin-fields-portfolio" path="/admin/fields/portfolio" element={<FieldPortfolioPage />} />,
+    <Route key="admin-fields-detail" path="/admin/fields/:fieldId" element={<RouteErrorBoundary><FieldDetailPage /></RouteErrorBoundary>} />,
   ];
 }
