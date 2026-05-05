@@ -12,7 +12,7 @@
     "lint:operation-status-convergence": "node ./scripts/check-operation-status-convergence.mjs",
     "lint:operation-detail-hooks": "pnpm exec eslint --max-warnings 0 --rule \"@typescript-eslint/no-explicit-any: off\" --rule \"@typescript-eslint/no-unused-vars: off\" src/features/operations/pages/OperationDetailPage.tsx",
     "lint:customer-facing-boundary": "node ./scripts/check-customer-facing-boundary.mjs",
-    "check:customer-boundary": "node ./scripts/check-customer-boundary.mjs"
+    "check:customer-boundary": "pnpm run lint:customer-facing-boundary"
   },
   "dependencies": {
     "react": "^18.3.1",

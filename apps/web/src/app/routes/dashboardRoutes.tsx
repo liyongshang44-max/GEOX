@@ -1,5 +1,5 @@
 import React from "react";
-import { Route } from "react-router-dom";
+import { Navigate, Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
 const CommercialDashboardPage = React.lazy(() => import("../../features/dashboard/pages/CommercialDashboardPage"));
@@ -10,12 +10,12 @@ const CustomerReportExportPage = React.lazy(() => import("../../views/CustomerRe
 
 export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
   return [
-    <Route key="dashboard-root" path="/" element={<CommercialDashboardPage expert={expert} />} />,
-    <Route key="dashboard" path="/dashboard" element={<CommercialDashboardPage expert={expert} />} />,
+    <Route key="dashboard-root" path="/" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="dashboard-redirect" path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="dashboard-admin" path="/admin/dashboard" element={<CommercialDashboardPage expert={expert} />} />,
     <Route key="dashboard-manual-quality" path="/dashboard/manual-quality-analysis" element={<ManualExecutionQualityAnalysisPage />} />,
     <Route key="dashboard-customer" path="/dashboard/customer" element={<RouteErrorBoundary><CustomerDashboardPage /></RouteErrorBoundary>} />,
-    <Route key="customer-field-export" path="/customer/fields/:fieldId/export" element={<RouteErrorBoundary><CustomerReportExportPage /></RouteErrorBoundary>} />,
-    <Route key="customer-operation-export" path="/customer/operations/:operationId/export" element={<RouteErrorBoundary><CustomerReportExportPage /></RouteErrorBoundary>} />,
+    <Route key="dashboard-customer-alias" path="/customer/dashboard" element={<Navigate to="/dashboard/customer" replace />} />,
     <Route
       key="dashboard-export"
       path="/dashboard/export"
@@ -25,14 +25,6 @@ export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
         </RouteErrorBoundary>
       }
     />,
-    <Route
-      key="customer-export"
-      path="/customer/export"
-      element={(
-        <RouteErrorBoundary>
-          <CustomerDashboardExportPage />
-        </RouteErrorBoundary>
-      )}
-    />,
+    <Route key="dashboard-export-alias" path="/customer/export" element={<Navigate to="/dashboard/export" replace />} />,
   ];
 }
