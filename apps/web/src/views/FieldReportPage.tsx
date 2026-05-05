@@ -1,6 +1,6 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../api/reports";
+import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
@@ -54,7 +54,10 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">地块概况</h3>
         <div className="customerGrid2">
           {vm.landOverview.map((item) => (
-            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
+            <div key={item.label}>
+              <strong>{item.label}：</strong>
+              {item.value}
+            </div>
           ))}
         </div>
       </section>
@@ -63,10 +66,12 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">诊断依据</h3>
         <div className="customerList">
           {vm.diagnosticCards.map((item) => (
-            <article key={item.title} className="item">
-              <div><strong>{item.title}</strong>：{item.value}</div>
-              <div className="muted">{item.detail}</div>
-            </article>
+            <li key={item.title} className="customerListItem">
+              <div>
+                <strong>{item.title}</strong>：{item.value}
+              </div>
+              <div className="customerItemReason">{item.detail}</div>
+            </li>
           ))}
         </div>
       </section>
@@ -83,12 +88,14 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">近期作业 Top 5</h3>
         <div className="customerList">
           {vm.recentOperationsTop5.map((item) => (
-            <article key={item.id} className="item">
-              <div><Link to={item.href}>{item.title}</Link></div>
-              <div className="muted">状态：{item.statusText}</div>
-              <div className="muted">验收：{item.acceptanceText}</div>
-              <div className="muted">生成时间：{item.generatedAtText}</div>
-            </article>
+            <li key={item.id} className="customerListItem">
+              <div className="customerItemMain">
+                <Link to={item.href}>{item.title}</Link>
+                <span className="customerItemReason">{item.generatedAtText}</span>
+              </div>
+              <div className="customerItemReason">状态：{item.statusText}</div>
+              <div className="customerItemReason">验收：{item.acceptanceText}</div>
+            </li>
           ))}
           {!vm.recentOperationsTop5.length ? <div className="muted">暂无作业报告</div> : null}
         </div>
@@ -110,7 +117,10 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">设备与监测</h3>
         <div className="customerGrid2">
           {vm.deviceMonitoring.map((item) => (
-            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
+            <div key={item.label}>
+              <strong>{item.label}：</strong>
+              {item.value}
+            </div>
           ))}
         </div>
       </section>
