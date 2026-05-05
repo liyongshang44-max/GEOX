@@ -44,7 +44,7 @@ function normalizeKey(raw: unknown): string {
 export function labelRawCode(raw: unknown, fallback = "--"): string {
   const key = normalizeKey(raw);
   if (!key) return fallback;
-  return RAW_CODE_LABELS[key] ?? String(raw).trim() || fallback;
+  return RAW_CODE_LABELS[key] ?? (String(raw).trim() || fallback);
 }
 
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
