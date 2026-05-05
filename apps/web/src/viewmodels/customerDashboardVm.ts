@@ -50,12 +50,11 @@ export type CustomerDashboardPageVm = {
 };
 
 export function normalizeDashboardAggregate(input: any): CustomerDashboardAggregateV1 {
-  if (input && typeof input === "object") {
-    if ("aggregate" in input) return input.aggregate as CustomerDashboardAggregateV1;
-    if ("customer_dashboard_aggregate_v1" in input) return input.customer_dashboard_aggregate_v1 as CustomerDashboardAggregateV1;
-    if ("data" in input) return input.data as CustomerDashboardAggregateV1;
-  }
-  return (input ?? {}) as CustomerDashboardAggregateV1;
+  if (!input || typeof input !== "object") return (input ?? {}) as CustomerDashboardAggregateV1;
+  if ("aggregate" in input) return normalizeDashboardAggregate(input.aggregate);
+  if ("customer_dashboard_aggregate_v1" in input) return normalizeDashboardAggregate(input.customer_dashboard_aggregate_v1);
+  if ("data" in input) return normalizeDashboardAggregate(input.data);
+  return input as CustomerDashboardAggregateV1;
 }
 
 export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | { aggregate?: CustomerDashboardAggregateV1; customer_dashboard_aggregate_v1?: CustomerDashboardAggregateV1; data?: CustomerDashboardAggregateV1 }): CustomerDashboardPageVm {
