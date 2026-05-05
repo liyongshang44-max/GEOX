@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useParams } from "react-router-dom";
-import { fetchCustomerDashboardAggregate, fetchFieldReport, fetchOperationReport } from "../api/reports";
+import { fetchCustomerDashboardAggregate, fetchFieldReport, fetchOperationReport } from "../api/customerReports";
 import { PageHeader } from "../shared/ui";
 import { buildCustomerDashboardVm } from "../viewmodels/customerDashboardVm";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";

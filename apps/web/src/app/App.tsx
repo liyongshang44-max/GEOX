@@ -31,6 +31,7 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
+const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
 const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
 const OperationsPage = React.lazy(() => import("../features/operations/pages/OperationsPage"));
 const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsPage"));
@@ -221,7 +222,7 @@ function Shell({ expert }: { expert: boolean }): React.ReactElement {
       }}
     >
       <React.Suspense fallback={RouteFallback}>
-        <CustomerRoutes />
+        <AppRoutes expert={expert} />
       </React.Suspense>
     </AppShell>
   );
