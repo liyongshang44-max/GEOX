@@ -46,9 +46,10 @@ export default function OperationReportPage(): React.ReactElement {
         title={vm.header.title}
         description={vm.header.subtitle}
         actions={(
-          <Link className="btn" to={`/operations/${encodeURIComponent(operationId)}`}>
-            返回作业详情
-          </Link>
+          <>
+            <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
+            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationPlanId)}/export`}>导出报告</Link>
+          </>
         )}
       />
 
@@ -97,30 +98,20 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
       </SectionCard>
 
-
-      <SectionCard title={vm.fieldMemory.title}>
-        {vm.fieldMemory.items.length ? (
-          <ul>
-            {vm.fieldMemory.items.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        ) : (
-          <div className="muted">暂无可展示的 Field Memory。本次闭环尚未形成可用于客户报告的地块记忆。</div>
-        )}
+      <SectionCard title="本次价值">
+        <ul>
+          {vm.roiLedger.items.map((item, idx) => (
+            <li key={idx}>{item}</li>
+          ))}
+        </ul>
       </SectionCard>
 
-      <SectionCard title={vm.roiLedger.title}>
-        {vm.roiLedger.items.length ? (
-          <ul>
-            {vm.roiLedger.items.map((item, idx) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        ) : (
-          <div className="muted">暂无可展示的 ROI Ledger。本次闭环尚未形成带基准线和可信度的价值记录。</div>
-        )}
-        <div className="muted">{vm.roiLedger.confidenceText}</div>
+      <SectionCard title="系统记忆 / 下次影响">
+        <ul>
+          {vm.fieldMemory.items.map((item, idx) => (
+            <li key={idx}>{item}</li>
+          ))}
+        </ul>
       </SectionCard>
 
       <SectionCard title="最终结论">
@@ -128,36 +119,9 @@ export default function OperationReportPage(): React.ReactElement {
         <div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div>
       </SectionCard>
 
-      <details>
-        <summary>内部调试信息（非客户展示）</summary>
-        <SectionCard title="标识信息">
-          <div className="kvGrid2">
-            <div><strong>内部编号：</strong>{vm.header.internalId}</div>
-            <div><strong>operation_plan_id：</strong>{vm.debug.operationPlanId}</div>
-            <div><strong>operation_id：</strong>{vm.debug.operationId}</div>
-            <div><strong>act_task_id：</strong>{vm.debug.actTaskId}</div>
-            <div><strong>receipt_id：</strong>{vm.debug.receiptId}</div>
-            <div><strong>recommendation_id：</strong>{vm.debug.recommendationId}</div>
-          </div>
-        </SectionCard>
-        <SectionCard title="流程调试">
-          <div className="kvGrid2">
-            <div><strong>workflow.owner_actor_id：</strong>{vm.debug.workflowOwnerId}</div>
-            <div><strong>workflow.owner_name：</strong>{vm.debug.workflowOwnerName}</div>
-            <div><strong>workflow.updated_at：</strong>{vm.debug.workflowUpdatedAt}</div>
-            <div><strong>workflow.last_note：</strong>{vm.debug.workflowLastNote}</div>
-          </div>
-        </SectionCard>
-        <SectionCard title="SLA 调试">
-          <div className="kvGrid2">
-            <div><strong>响应耗时（ms）：</strong>{vm.debug.sla.responseTimeMs}</div>
-            <div><strong>派发耗时（ms）：</strong>{vm.debug.sla.dispatchLatency}</div>
-            <div><strong>执行耗时（ms）：</strong>{vm.debug.sla.executionDuration}</div>
-            <div><strong>验收耗时（ms）：</strong>{vm.debug.sla.acceptanceLatency}</div>
-            <div><strong>SLA 异常码：</strong>{vm.debug.sla.invalidReasons}</div>
-          </div>
-        </SectionCard>
-      </details>
+      <SectionCard title="可信度">
+        <div className="muted">{vm.roiLedger.confidenceText}</div>
+      </SectionCard>
     </div>
   );
 }
