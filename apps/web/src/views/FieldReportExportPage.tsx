@@ -63,13 +63,13 @@ export default function FieldReportExportPage(): React.ReactElement {
       <SectionCard title="状态解释">
         <div>{vm.explain.human}</div>
         <ul style={{ marginTop: 8 }}>
-          {vm.explain.topReasonsText.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
+          {(vm.explain.topReasonsText ?? []).map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
         </ul>
       </SectionCard>
 
       <SectionCard title="近期作业">
         <div className="list">
-          {vm.recentOperations.map((item) => (
+          {(vm.recentOperations ?? []).map((item) => (
             <article key={item.id} className="item">
               <div>{item.title}</div>
               <div className="muted">状态：{item.statusText}</div>
@@ -77,7 +77,7 @@ export default function FieldReportExportPage(): React.ReactElement {
               <div className="muted">生成时间：{item.generatedAtText}</div>
             </article>
           ))}
-          {!vm.recentOperations.length ? <div className="muted">暂无作业报告</div> : null}
+          {!(vm.recentOperations ?? []).length ? <div className="muted">暂无作业报告</div> : null}
         </div>
       </SectionCard>
 

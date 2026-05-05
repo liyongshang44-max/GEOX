@@ -37,6 +37,40 @@ const RAW_CODE_LABELS: Record<string, string> = {
   FAILED: "失败",
 };
 
+
+const OPERATION_TYPE_LABELS: Record<string, string> = {
+  IRRIGATE: "灌溉",
+  FERTILIZE: "施肥",
+  PEST_CONTROL: "病虫害处理",
+  HARVEST: "采收",
+};
+
+const FORBIDDEN_CUSTOMER_CODES = new Set([
+  "INVALID_EXECUTION", "PENDING_ACCEPTANCE", "SUCCESS", "FAILED", "PASS", "FAIL", "HIGH", "LOW", "MEDIUM", "IRRIGATE",
+]);
+
+export function labelOperationType(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (!key) return "作业";
+  return OPERATION_TYPE_LABELS[key] ?? labelRawCode(raw, "作业");
+}
+
+export function sanitizeCustomerText(raw: unknown, fallback = "--"): string {
+  const text = labelEmptyFallback(raw, fallback);
+  const key = normalizeKey(text);
+  if (FORBIDDEN_CUSTOMER_CODES.has(key)) {
+    if (key === "INVALID_EXECUTION") return "执行异常，建议复核作业证据";
+    if (["PASS", "SUCCESS"].includes(key)) return "验收通过";
+    if (["FAIL", "FAILED"].includes(key)) return "验收未通过";
+    if (key === "PENDING_ACCEPTANCE") return "等待验收";
+    if (key === "HIGH") return "高风险";
+    if (key === "MEDIUM") return "中风险";
+    if (key === "LOW") return "低风险";
+    if (key === "IRRIGATE") return "灌溉";
+  }
+  return text.replace(/\bIRRIGATE\b/gi, "灌溉");
+}
+
 function normalizeKey(raw: unknown): string {
   return String(raw ?? "").trim().toUpperCase();
 }
@@ -65,7 +99,7 @@ export function labelValueType(raw: unknown): string {
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
   if (raw === null || raw === undefined) return fallback;
   const text = String(raw).trim();
-  return text ? text : fallback;
+  return text ? sanitizeCustomerText(text, fallback) : fallback;
 }
 
 export function labelBooleanYesNo(raw: unknown): string {
