@@ -1,7 +1,8 @@
 import React from "react";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
-import { PageHeader, SectionCard } from "../shared/ui";
+import { PageHeader } from "../shared/ui";
+import { DashboardExportBlocks } from "../components/customer/CustomerExportBlocks";
 
 export default function CustomerDashboardExportPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
@@ -35,29 +36,14 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
   if (error || !vm) return <div className="card" style={{ padding: 16 }}>客户看板导出加载失败：{error || "暂无数据"}</div>;
 
   return (
-    <div className="demoDashboardPage reportPrintPage">
-      <PageHeader eyebrow="GEOX / 客户看板" title={vm.header.title} description={vm.header.subtitle} actions={[{ label: "打印导出", onClick: () => window.print() }]} />
-
-      <SectionCard title="KPI Grid">
-        <div className="list">{vm.kpis.map((kpi) => <div key={kpi.key} className="item">{kpi.label}：{kpi.valueText}</div>)}</div>
-      </SectionCard>
-
-      <SectionCard title="Top 风险地块">
-        <div className="list">{vm.topRiskFields.map((item) => <div key={item.id} className="item">{item.rowText}</div>)}</div>
-      </SectionCard>
-
-      <SectionCard title="待处理事项">
-        <div className="list">{vm.pendingItems.map((item) => <div key={item.id} className="item">{item.sentence}</div>)}</div>
-      </SectionCard>
-
-      <SectionCard title="近期作业">
-        <div className="list">{vm.recentOperations.map((item) => <div key={item.operationId} className="item">{item.rowText}</div>)}</div>
-      </SectionCard>
-
-      <SectionCard title="价值摘要">
-        <div>{vm.roiSummary.valueText}</div>
-        <div className="muted">{vm.roiSummary.confidenceText}</div>
-      </SectionCard>
+    <div className="demoDashboardPage reportPrintPage printPage">
+      <PageHeader
+        eyebrow="GEOX"
+        title={vm.header.title}
+        description={`生成时间：${new Date().toLocaleString()}`}
+        actions={<button type="button" className="btn noPrint" onClick={() => window.print()}>打印导出</button>}
+      />
+      <DashboardExportBlocks vm={vm} />
     </div>
   );
 }

@@ -30,7 +30,23 @@
   width: min(1200px, 100%);
   margin: 0 auto;
   display: grid;
-  gap: 16px;
+  gap: 10px;
+}
+
+.printPage {
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.printPage .card,
+.printPage .sectionCard,
+.printPage .customerCard {
+  margin-bottom: 8px;
+  padding: 10px;
+}
+
+.noPrint {
+  display: inline-flex;
 }
 
 .customerReportHeader,
@@ -244,16 +260,26 @@
 }
 
 @media print {
-  .customerShell {
-    background: #fff;
+  .noPrint,
+  nav,
+  .topBar,
+  .search,
+  .alert,
+  [data-role="admin"],
+  [data-role="tenant"],
+  [data-role="project"],
+  [data-role="group"] {
+    display: none !important;
+  }
+
+  .printPage {
+    max-width: 100%;
+    margin: 0;
     padding: 0;
   }
 
-  .customerPage,
-  .customerExportPage,
-  .printPage {
-    width: 100%;
-    gap: 10px;
+  .customerReportPage {
+    gap: 6px;
   }
 
   .customerReportHeader,

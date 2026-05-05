@@ -63,9 +63,9 @@ export default function CustomerReportExportPage(): React.ReactElement {
   return (
     <div className="demoDashboardPage reportPrintPage printPage">
       <PageHeader
-        eyebrow="GEOX / 客户报告导出"
+        eyebrow="GEOX"
         title={title}
-        description="导出打印视图"
+        description={`生成时间：${new Date().toLocaleString()}`}
         actions={<button type="button" className="btn noPrint" onClick={() => window.print()}>打印导出</button>}
       />
       {content}
