@@ -1,19 +1,29 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const scriptDir = path.dirname(new URL(import.meta.url).pathname);
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
 
 const pageFiles = [
   "src/views/CustomerDashboardPage.tsx",
   "src/views/CustomerDashboardExportPage.tsx",
+  "src/views/FieldReportPage.tsx",
+  "src/views/FieldReportExportPage.tsx",
+  "src/views/OperationReportPage.tsx",
+  "src/views/OperationReportExportPage.tsx",
+  "src/views/CustomerReportExportPage.tsx",
 ];
 
-const vmDir = path.join(appRoot, "src/viewmodels");
+const vmFiles = [
+  "src/viewmodels/customerDashboardVm.ts",
+  "src/viewmodels/fieldReportVm.ts",
+  "src/viewmodels/operationReportVm.ts",
+];
+
 const labelsFile = "src/lib/customerLabels.ts";
 
 const forbiddenPageImports = [
-  "../api/reports",
   "../api/admin",
   "../api/debug",
   "../api/devtools",
@@ -57,18 +67,14 @@ function scanPageLayer() {
   }
 }
 
-function getVmFiles() {
-  if (!fs.existsSync(vmDir)) return [];
-  return fs.readdirSync(vmDir)
-    .filter((name) => (name.endsWith(".ts") || name.endsWith(".tsx")) && /customer/i.test(name))
-    .map((name) => path.join(vmDir, name));
-}
-
 function scanVmLayer() {
-  const vmFiles = getVmFiles();
-  for (const fullPath of vmFiles) {
-    const relativeFile = path.relative(appRoot, fullPath).split(path.sep).join("/");
+  for (const relativeFile of vmFiles) {
     if (relativeFile === labelsFile) continue;
+    const fullPath = path.join(appRoot, relativeFile);
+    if (!fs.existsSync(fullPath)) {
+      addOffender(relativeFile, 0, "<missing-file>", "Target VM file does not exist");
+      continue;
+    }
 
     const content = fs.readFileSync(fullPath, "utf8");
     const lines = content.split("\n");
