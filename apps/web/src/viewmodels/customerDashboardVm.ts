@@ -3,7 +3,6 @@ import {
   CUSTOMER_LABELS,
   labelAcceptanceStatus,
   labelEmptyFallback,
-  labelFinalStatus,
   labelRiskLevel,
 } from "../lib/customerLabels";
 
@@ -28,22 +27,17 @@ export type CustomerDashboardPageVm = {
   }>;
   topRiskFields: Array<{
     id: string;
-    title: string;
-    summary: string;
-    meta: string;
+    rowText: string;
     href: string;
   }>;
   pendingItems: Array<{
     id: string;
-    title: string;
-    summary: string;
-    actionLabel: "立即审批" | "查看风险" | "开始验收" | "检查设备";
+    sentence: string;
     href: string;
   }>;
   recentOperations: Array<{
     operationId: string;
-    title: string;
-    summary: string;
+    rowText: string;
     href: string;
   }>;
   nextActions: Array<{ id: string; title: string; href: string }>;
@@ -76,45 +70,34 @@ export function buildCustomerDashboardVm(aggregate: CustomerDashboardAggregateV1
     ],
     topRiskFields: (aggregate.top_risk_fields ?? []).map((item) => ({
       id: String(item.field_id ?? ""),
-      title: String(item.field_name ?? item.field_id ?? "未知地块"),
-      summary: `风险 ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => labelEmptyFallback(reason)).join("、") || "-")}`,
-      meta: `告警 ${numberFmt.format(Number(item.open_alerts_count ?? 0))} · 待验收 ${numberFmt.format(Number(item.pending_acceptance_count ?? 0))} · 最近作业 ${toDateTimeText(item.last_operation_at)}`,
+      rowText: `${String(item.field_name ?? item.field_id ?? "未知地块")} · ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => labelEmptyFallback(reason)).join("、") || "-")}`,
       href: `/customer/fields/${encodeURIComponent(String(item.field_id ?? ""))}`,
     })),
     pendingItems: [
       {
         id: "alerts",
-        title: "待审批处方",
-        summary: `当前有 ${numberFmt.format(pendingApproval)} 条待处理告警。`,
-        actionLabel: "立即审批",
+        sentence: `审批 ${numberFmt.format(pendingApproval)} 条灌溉处方`,
         href: "/customer/approvals",
       },
       {
         id: "risks",
-        title: "高风险地块",
-        summary: `共 ${numberFmt.format(highRisk)} 个高风险地块需要跟进。`,
-        actionLabel: "查看风险",
+        sentence: `查看 ${numberFmt.format(highRisk)} 个高风险地块`,
         href: "#top-risk-fields",
       },
       {
         id: "acceptance",
-        title: "待验收作业",
-        summary: `待验收作业 ${numberFmt.format(pendingAcceptance)} 条。`,
-        actionLabel: "开始验收",
+        sentence: `验收 ${numberFmt.format(pendingAcceptance)} 个已完成作业`,
         href: "/customer/acceptance",
       },
       {
         id: "devices",
-        title: "设备离线巡检",
-        summary: `离线地块 ${numberFmt.format(Number(aggregate.device_summary?.offline_fields ?? 0))} 个。`,
-        actionLabel: "检查设备",
+        sentence: `复核 ${numberFmt.format(Number(aggregate.device_summary?.offline_devices ?? 0))} 台离线设备`,
         href: "/customer/devices",
       },
     ],
     recentOperations: (aggregate.recent_operations ?? []).map((item) => ({
       operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
-      title: String(item.customer_title ?? item.title ?? item.operation_id ?? "作业"),
-      summary: `地块 ${String(item.field_name ?? item.field_id ?? "未知地块")} · ${labelFinalStatus(item.final_status)} · ${labelAcceptanceStatus(item.acceptance_status)} · ${toDateTimeText(item.executed_at)}`,
+      rowText: `${String(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? item.field_id ?? "未知地块")} · ${toDateTimeText(item.executed_at)} · ${labelAcceptanceStatus(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "" ? item.final_status : item.acceptance_status)}`,
       href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
     })),
     nextActions: [
