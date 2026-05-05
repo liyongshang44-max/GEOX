@@ -36,62 +36,27 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
 
   return (
     <div className="demoDashboardPage reportPrintPage">
-      <PageHeader
-        eyebrow="GEOX / 客户看板"
-        title={vm.header.title}
-        description={vm.header.subtitle}
-        actions={[{ label: "打印导出", onClick: () => window.print() }]}
-      />
+      <PageHeader eyebrow="GEOX / 客户看板" title={vm.header.title} description={vm.header.subtitle} actions={[{ label: "打印导出", onClick: () => window.print() }]} />
 
-      <SectionCard title="地块状态">
-        <div>
-          共 {vm.fieldStatus.totalFieldsText} 个地块，风险 {vm.fieldStatus.atRiskText} 个，
-          高风险地块数 {vm.fieldStatus.highRiskText} 个
-        </div>
-        <div className="muted">离线地块：{vm.fieldStatus.offlineFieldsText}。</div>
-      </SectionCard>
-
-      <SectionCard title="经营汇总">
-        <div>未关闭告警：{vm.businessSummary.openAlertsText}</div>
-        <div>待验收：{vm.businessSummary.pendingAcceptanceText}</div>
-        <div>预计成本：{vm.businessSummary.estimatedCostText} · 实际成本：{vm.businessSummary.actualCostText}</div>
-      </SectionCard>
-
-      <SectionCard title="待处理事项">
-        <div>总告警：{vm.pendingActions.totalAlertsText}</div>
-        <div className="muted">
-          未分配：{vm.pendingActions.unassignedText} ·
-          处理中：{vm.pendingActions.inProgressText} ·
-          已超时：{vm.pendingActions.slaBreachedText} ·
-          今日关闭：{vm.pendingActions.closedTodayText}
-        </div>
+      <SectionCard title="KPI Grid">
+        <div className="list">{vm.kpis.map((kpi) => <div key={kpi.key} className="item">{kpi.label}：{kpi.valueText}</div>)}</div>
       </SectionCard>
 
       <SectionCard title="Top 风险地块">
-        <div className="list">
-          {vm.topRiskFields.map((item) => (
-            <div key={item.fieldId} className="item">
-              {item.title} · 风险 {item.riskText} · 主要原因 {item.reasonText} · 未关闭告警 {item.openAlertsText} ·
-              待验收 {item.pendingAcceptanceText} · 最近作业 {item.lastOperationText}
-            </div>
-          ))}
-          {!vm.topRiskFields.length ? (
-            <div className="muted">暂无风险地块数据</div>
-          ) : null}
-        </div>
+        <div className="list">{vm.topRiskFields.map((item) => <div key={item.id} className="item">{item.title} · {item.summary} · {item.meta}</div>)}</div>
+      </SectionCard>
+
+      <SectionCard title="待处理事项">
+        <div className="list">{vm.pendingItems.map((item) => <div key={item.id} className="item">{item.title} · {item.summary} · {item.actionLabel}</div>)}</div>
       </SectionCard>
 
       <SectionCard title="近期作业">
-        <div className="list">
-          {vm.recentOperations.map((item) => (
-            <div key={item.operationId} className="item">
-              {item.title} · 所属地块 {item.fieldTitle} · 最终状态 {item.statusText} · 验收状态 {item.acceptanceText} · 执行时间 {item.executedAtText}
-            </div>
-          ))}
-          {!vm.recentOperations.length ? (
-            <div className="muted">暂无近期作业</div>
-          ) : null}
-        </div>
+        <div className="list">{vm.recentOperations.map((item) => <div key={item.operationId} className="item">{item.title} · {item.summary}</div>)}</div>
+      </SectionCard>
+
+      <SectionCard title="价值摘要">
+        <div>{vm.roiSummary.valueText}</div>
+        <div className="muted">{vm.roiSummary.confidenceText}</div>
       </SectionCard>
     </div>
   );
