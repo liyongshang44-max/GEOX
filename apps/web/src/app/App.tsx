@@ -31,7 +31,6 @@ const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
 const LoginPage = React.lazy(() => import("../views/LoginPage"));
 
 const CommercialDashboardPage = React.lazy(() => import("../features/dashboard/pages/CommercialDashboardPage"));
-const FieldsPage = React.lazy(() => import("../features/fields/pages/FieldsPage"));
 const DevicesPage = React.lazy(() => import("../features/devices/pages/DevicesPage"));
 const OperationsPage = React.lazy(() => import("../features/operations/pages/OperationsPage"));
 const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsPage"));
@@ -233,8 +232,10 @@ function AppRoutes({ expert }: { expert: boolean }): React.ReactElement {
           <Route path="/fields/:fieldId/report/export" element={<LegacyParamRedirect to="/customer/fields/:fieldId/export" />} />
           <Route path="/operations/:operationId/report" element={<LegacyParamRedirect to="/customer/operations/:operationId" />} />
           <Route path="/operations/:operationId/report/export" element={<LegacyParamRedirect to="/customer/operations/:operationId/export" />} />
-          <Route path="/fields" element={<Navigate to="/customer/fields" replace />} />
-          <Route path="/fields/portfolio" element={<Navigate to="/customer/fields/portfolio" replace />} />
+          <Route path="/fields" element={<Navigate to="/admin/fields" replace />} />
+          <Route path="/fields/portfolio" element={<Navigate to="/admin/fields/portfolio" replace />} />
+          <Route path="/fields/new" element={<Navigate to="/admin/fields/new" replace />} />
+          <Route path="/fields/:fieldId" element={<LegacyParamRedirect to="/admin/fields/:fieldId" />} />
           <Route path="/devices" element={<Navigate to="/admin/devices" replace />} />
           <Route path="/operations" element={<Navigate to="/admin/operations" replace />} />
           <Route path="/operations/workboard" element={<Navigate to="/admin/operations/workboard" replace />} />
@@ -302,7 +303,7 @@ function AdminShell(): React.ReactElement {
         <Routes>
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<CommercialDashboardPage expert={false} />} />
-          <Route path="/admin/fields" element={<FieldsPage />} />
+          {renderAdminFieldsRoutes()}
           <Route path="/admin/operations" element={<OperationsPage />} />
           <Route path="/admin/devices" element={<DevicesPage />} />
           <Route path="/admin/alerts" element={<AlertsPage />} />
