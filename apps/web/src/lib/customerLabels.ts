@@ -20,7 +20,9 @@ export const CUSTOMER_LABELS = {
 } as const;
 
 const RAW_CODE_LABELS: Record<string, string> = {
-  INSUFFICIENT_EVIDENCE: "证据不足，建议人工复核",
+  FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE: "灌溉响应弱，建议复核",
+  FIELD_MEMORY_EXECUTION_DEVIATION_RISK: "执行偏差风险，建议复核",
+  INSUFFICIENT_EVIDENCE: "证据不足，需复核",
   PENDING_ACCEPTANCE: "待验收",
   INVALID_EXECUTION: "执行异常，建议复核作业证据",
   MEASURED: "实测值",
@@ -75,9 +77,9 @@ export function labelFinalStatus(raw: unknown): string {
 
 export function labelEvidenceQuality(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，建议人工复核";
-  if (["WEAK_IRRIGATION_RESPONSE"].includes(key)) return "灌溉响应弱，建议复核";
-  if (["EXECUTION_DEVIATION_RISK"].includes(key)) return "执行偏差风险，建议复核";
+  if (key === "INSUFFICIENT_EVIDENCE") return "证据不足，需复核";
+  if (["FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE", "WEAK_IRRIGATION_RESPONSE"].includes(key)) return "灌溉响应弱，建议复核";
+  if (["FIELD_MEMORY_EXECUTION_DEVIATION_RISK", "EXECUTION_DEVIATION_RISK"].includes(key)) return "执行偏差风险，建议复核";
   if (["DEVICE_NOT_RESPONDING", "NO_DEVICE_ACK", "TIMEOUT"].includes(key)) return "设备未响应，已阻断自动执行";
   return labelEmptyFallback(raw, "证据充分");
 }
