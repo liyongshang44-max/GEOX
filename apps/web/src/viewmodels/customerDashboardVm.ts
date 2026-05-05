@@ -1,4 +1,4 @@
-import type { CustomerDashboardAggregateV1 } from "../api/reports";
+import type { CustomerDashboardAggregateV1 } from "../api/customerReports";
 import {
   CUSTOMER_LABELS,
   labelAcceptanceStatus,
