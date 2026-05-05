@@ -131,7 +131,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </section>
 
-      {error ? <div className="muted" style={{ marginTop: 12 }}>{error}</div> : null}
+      {error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
     </div>
   );
 }

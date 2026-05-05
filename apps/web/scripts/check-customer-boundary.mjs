@@ -27,7 +27,10 @@ const forbiddenPageImports = [
   "../api/admin",
   "../api/debug",
   "../api/devtools",
+  "../api/reports",
 ];
+
+const allowedReportApiImport = "../api/customerReports";
 
 const forbiddenTokens = [
   "trace_id",
@@ -57,6 +60,14 @@ function scanPageLayer() {
         if (lineText.includes("import") && lineText.includes(token)) {
           addOffender(relativeFile, index + 1, token, lineText);
         }
+      }
+      if (
+        lineText.includes("import")
+        && lineText.includes("../api/")
+        && lineText.includes("report")
+        && !lineText.includes(allowedReportApiImport)
+      ) {
+        addOffender(relativeFile, index + 1, allowedReportApiImport, `Report API import must come from ${allowedReportApiImport}: ${lineText.trim()}`);
       }
       for (const token of forbiddenTokens) {
         if (lineText.includes(token)) {
@@ -94,6 +105,22 @@ function scanVmLayer() {
 
 scanPageLayer();
 scanVmLayer();
+
+const requiredScopeMarkers = [
+  "CustomerDashboardPage",
+  "CustomerDashboardExportPage",
+  "FieldReportPage",
+  "FieldReportExportPage",
+  "OperationReportPage",
+  "OperationReportExportPage",
+];
+
+for (const marker of requiredScopeMarkers) {
+  const inScope = pageFiles.some((file) => file.includes(marker));
+  if (!inScope) {
+    addOffender("check-customer-boundary.mjs", 1, "<scope-missing>", `Missing ${marker} in pageFiles scan scope`);
+  }
+}
 
 if (offenders.length > 0) {
   console.error("CUSTOMER_BOUNDARY_CHECK FAIL");
