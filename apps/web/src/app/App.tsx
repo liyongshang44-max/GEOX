@@ -353,6 +353,10 @@ export default function App(): React.ReactElement {
         <React.Suspense fallback={RouteFallback}>
           <Routes>
             <Route path="/login" element={isLoggedIn ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+            <Route path="/" element={<Navigate to="/customer/dashboard" replace />} />
+            <Route path="/dashboard" element={<Navigate to="/customer/dashboard" replace />} />
+            <Route path="/dashboard/customer" element={<Navigate to="/customer/dashboard" replace />} />
+            <Route path="/dashboard/export" element={<Navigate to="/customer/export" replace />} />
             <Route
               path="/customer/*"
               element={(

@@ -114,7 +114,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "--",
-        title: String(item.customer_title || item.title || operationId || "未命名作业"),
+        title: sanitizeCustomerText(item.customer_title || item.title || operationId || "未命名作业"),
         statusText: labelFinalStatus(item.final_status),
         acceptanceText: labelAcceptanceStatus(item.acceptance_status),
         generatedAtText: formatDateTime(item.generated_at),

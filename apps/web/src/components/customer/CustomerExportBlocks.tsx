@@ -11,7 +11,9 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
   const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
-  const recentOperations = vm.recentOperations.map((item) => `${item.title}（${item.summary}）`).join("；") || "暂无近期作业";
+  const recentOperations = vm.recentOperations.map((item) => item.rowText).join("；") || "暂无近期作业";
+  const valueText = "价值摘要将在后续作业账本中持续积累";
+  const confidenceText = "可信度基于当前客户报告数据生成";
 
   return (
     <>
@@ -27,8 +29,8 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
       <SectionCard title="下一步建议">
         <div>{nextActionTitles}</div>
       </SectionCard>
-      <SectionCard title="本次价值"><div>{vm.roiSummary.valueText}</div></SectionCard>
-      <SectionCard title="证据可信度"><div>{vm.roiSummary.confidenceText}</div></SectionCard>
+      <SectionCard title="本次价值"><div>{valueText}</div></SectionCard>
+      <SectionCard title="证据可信度"><div>{confidenceText}</div></SectionCard>
       <SectionCard title="系统记忆"><div className="muted">系统持续记录历史作业与风险变化，用于支撑本次判断。</div></SectionCard>
       <SectionCard title="最终结论"><div>当前建议按“下一步建议”优先执行，并在后续作业完成后复核风险变化。</div></SectionCard>
     </>
