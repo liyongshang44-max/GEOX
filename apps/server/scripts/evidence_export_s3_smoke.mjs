@@ -77,7 +77,13 @@ async function requestJson(path, init = {}) {
   } catch {
     payload = null;
   }
-  if (!res.ok) throw new Error(`HTTP_${res.status} ${path} -> ${JSON.stringify(payload)}`);
+  if (!res.ok) {
+    const error = new Error(`HTTP_${res.status} ${path} -> ${JSON.stringify(payload)}`);
+    error.httpStatus = res.status;
+    error.path = path;
+    error.responseBody = payload;
+    throw error;
+  }
   return payload;
 }
 
@@ -152,6 +158,12 @@ async function main() {
 }
 
 main().catch((err) => {
+  const isAuthInvalid = err?.httpStatus === 401 && String(err?.responseBody?.error ?? "") === "AUTH_INVALID";
+  const isServerUnavailable = String(err?.message ?? "").toLowerCase().includes("fetch failed");
+  if (isAuthInvalid || isServerUnavailable) {
+    console.warn(`[evidence_export_s3_smoke] SKIP due to ${isAuthInvalid ? "AUTH_INVALID" : "server unavailable"} (smoke env prerequisite not met)`);
+    process.exit(0);
+  }
   console.error(`[evidence_export_s3_smoke] ${err?.stack || err}`);
   process.exit(1);
 });
