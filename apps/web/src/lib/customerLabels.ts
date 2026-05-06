@@ -55,8 +55,14 @@ export function labelOperationType(raw: unknown): string {
   return OPERATION_TYPE_LABELS[key] ?? labelRawCode(raw, "作业");
 }
 
+function textOrFallback(raw: unknown, fallback = "--"): string {
+  if (raw === null || raw === undefined) return fallback;
+  const text = String(raw).trim();
+  return text || fallback;
+}
+
 export function sanitizeCustomerText(raw: unknown, fallback = "--"): string {
-  const text = labelEmptyFallback(raw, fallback);
+  const text = textOrFallback(raw, fallback);
   const key = normalizeKey(text);
   if (FORBIDDEN_CUSTOMER_CODES.has(key)) {
     if (key === "INVALID_EXECUTION") return "执行异常，建议复核作业证据";
@@ -97,9 +103,7 @@ export function labelValueType(raw: unknown): string {
 }
 
 export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
-  if (raw === null || raw === undefined) return fallback;
-  const text = String(raw).trim();
-  return text ? sanitizeCustomerText(text, fallback) : fallback;
+  return textOrFallback(raw, fallback);
 }
 
 export function labelBooleanYesNo(raw: unknown): string {
@@ -130,7 +134,7 @@ export function labelEvidenceQuality(raw: unknown): string {
   if (["FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE", "WEAK_IRRIGATION_RESPONSE"].includes(key)) return "灌溉响应弱，建议复核";
   if (["FIELD_MEMORY_EXECUTION_DEVIATION_RISK", "EXECUTION_DEVIATION_RISK"].includes(key)) return "执行偏差风险，建议复核";
   if (["DEVICE_NOT_RESPONDING", "NO_DEVICE_ACK", "TIMEOUT"].includes(key)) return "设备未响应，已阻断自动执行";
-  return labelEmptyFallback(raw, "证据充分");
+  return textOrFallback(raw, "证据充分");
 }
 
 export function labelConfidenceHint(raw: unknown): string {

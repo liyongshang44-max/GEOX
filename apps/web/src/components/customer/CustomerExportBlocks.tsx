@@ -4,6 +4,11 @@ import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
 import { SectionCard } from "../../shared/ui";
 
+function splitRecentOperationRow(rowText: string): { operationType: string; fieldName: string; timeText: string; acceptanceText: string } {
+  const [operationType = "作业", fieldName = "地块未知", timeText = "时间未知", acceptanceText = "状态待确认"] = rowText.split(" · ");
+  return { operationType, fieldName, timeText, acceptanceText };
+}
+
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const managedFields = vm.kpis.find((item) => item.key === "managedFields")?.valueText ?? "-";
   const highRiskFields = vm.kpis.find((item) => item.key === "highRiskFields")?.valueText ?? "-";
@@ -11,7 +16,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
   const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
-  const recentOperations = vm.recentOperations.map((item) => item.rowText).join("；") || "暂无近期作业";
+  const recentOperations = vm.recentOperations ?? [];
   const valueText = "价值摘要将在后续作业账本中持续积累";
   const confidenceText = "可信度基于当前客户报告数据生成";
 
@@ -24,7 +29,19 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <div>待审批处方：{pendingApproval}；待验收作业：{pendingAcceptance}</div>
       </SectionCard>
       <SectionCard title="近期作业">
-        <div>{recentOperations}</div>
+        <div className="list">
+          {recentOperations.length ? recentOperations.map((item) => {
+            const parsed = splitRecentOperationRow(item.rowText);
+            return (
+              <article key={item.operationId || item.href} className="item">
+                <div><strong>作业类型：</strong>{parsed.operationType}</div>
+                <div><strong>地块名称：</strong>{parsed.fieldName}</div>
+                <div><strong>时间：</strong>{parsed.timeText}</div>
+                <div><strong>验收状态：</strong>{parsed.acceptanceText}</div>
+              </article>
+            );
+          }) : <div className="muted">暂无近期作业</div>}
+        </div>
       </SectionCard>
       <SectionCard title="下一步建议">
         <div>{nextActionTitles}</div>
