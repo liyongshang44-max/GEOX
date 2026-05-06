@@ -65,15 +65,17 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">地块概况</h3>
-        <div className="customerGrid3">
-          <div><strong>当前地块风险：</strong>{sanitizeUiText(vm.overview.riskText)}</div>
-          <div><strong>待关注事项：</strong>{sanitizeUiText(vm.overview.openAlertsText)}</div>
-          <div><strong>待验收作业：</strong>{sanitizeUiText(vm.overview.pendingAcceptanceText)}</div>
-          <div><strong>最近一次作业：</strong>{sanitizeUiText(vm.overview.latestOperationText)}</div>
-          <div><strong>预计投入：</strong>{sanitizeUiText(vm.overview.estimatedCostText)}</div>
-          <div><strong>实际投入：</strong>{sanitizeUiText(vm.overview.actualCostText)}</div>
-        </div>
+        <h3 className="customerCardTitle">诊断依据</h3>
+        <ul className="customerList">
+          {vm.diagnosticCards.map((item) => (
+            <li key={item.title} className="customerListItem">
+              <div>
+                <strong>{item.title}</strong>：{item.value}
+              </div>
+              <div className="customerItemReason">{item.detail}</div>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {showStatusAlert ? <section className="customerCard" style={{ background: "#fef2f2", borderColor: "#fecaca" }}>
@@ -85,8 +87,8 @@ export default function FieldReportPage(): React.ReactElement {
       </section> : null}
 
       <section className="customerCard">
-        <h3 className="customerReportSectionTitle">近期作业 Top 5</h3>
-        <div className="customerList">
+        <h3 className="customerCardTitle">近期作业 Top 5</h3>
+        <ul className="customerList">
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">
               <div className="customerItemMain">
@@ -97,8 +99,8 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="customerItemReason">验收：{sanitizeUiText(item.acceptanceText)}</div>
             </li>
           ))}
-          {!vm.recentOperationsTop5.length ? <div className="muted">暂无作业报告</div> : null}
-        </div>
+          {!vm.recentOperationsTop5.length ? <li className="muted">暂无作业报告</li> : null}
+        </ul>
       </section>
 
       <section className="customerCard">
