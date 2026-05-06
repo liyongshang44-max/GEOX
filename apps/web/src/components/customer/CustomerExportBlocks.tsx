@@ -15,7 +15,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
   const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
-  const recentOperations = vm.recentOperations ?? [];
+  const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
 
   return (
     <>
@@ -34,19 +34,16 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
             const parsed = splitRecentOperationRow(item.rowText);
             return (
               <article key={item.operationId || item.href} className="customerListItem">
-                <div><strong>作业类型：</strong>{parsed.operationType}</div>
-                <div className="customerMetricLabel"><strong>地块名称：</strong>{parsed.fieldName}</div>
-                <div className="customerMetricLabel"><strong>时间：</strong>{parsed.timeText}</div>
-                <div className="customerMetricLabel"><strong>验收状态：</strong>{parsed.acceptanceText}</div>
+                <div><strong>{parsed.operationType}</strong>｜{parsed.fieldName}｜{parsed.timeText}｜{parsed.acceptanceText}</div>
               </article>
             );
           }) : <div className="customerMetricLabel">暂无近期作业</div>}
         </div>
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{nextActionTitles}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">价值摘要将在后续作业账本中持续积累</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">可信度基于当前客户报告数据生成</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">系统持续记录历史作业与风险变化，用于支撑本次判断。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">当前建议按“下一步建议”优先执行，并在后续作业完成后复核风险变化。</p></section>
     </>
   );
@@ -65,9 +62,9 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
       <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.overview.riskText}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">近期作业</h2><p className="customerSpacingTopSm">待验收作业：{vm.overview.pendingAcceptanceText}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">优先处理未关闭异常并完成待验收作业（{vm.overview.openAlertsText}）。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">通过聚焦关键风险，减少重复巡检与处置延迟。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">基于地块状态、异常记录与作业进展综合评估。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">系统已关联该地块历史变化，用于跟踪趋势。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
     </>
   );
@@ -88,9 +85,9 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
       <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.why.riskLabel}；{vm.why.reasonText}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">近期作业</h2><p className="customerSpacingTopSm">{vm.execution.statusText}，验收状态：{vm.acceptance.statusText}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">继续推进执行闭环，并按验收结果调整后续安排。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">明确责任与进度，提升作业闭环效率。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">基于执行记录、负责人信息与验收结果综合判断。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">系统保存该作业全流程节点，便于后续复盘。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">当前作业处于可追踪状态，建议按建议步骤完成闭环。</p></section>
     </>
   );
