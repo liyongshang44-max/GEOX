@@ -190,6 +190,33 @@
   background: var(--customer-surface-muted);
 }
 
+.customerCompactReport {
+  display: grid;
+  gap: 10px;
+}
+
+.customerEvidenceGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.customerEvidenceItem {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--customer-border);
+  background: var(--customer-surface-muted);
+}
+
+.customerFlow6 {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .customerPill {
   display: inline-flex;
   align-items: center;
@@ -308,6 +335,11 @@
   .customerFlow {
     grid-template-columns: 1fr;
   }
+  .customerEvidenceGrid,
+  .customerEvidenceItem,
+  .customerFlow6 {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media print {
@@ -341,6 +373,11 @@
   .customerFlowStep {
     box-shadow: none;
     border-color: var(--customer-border-strong);
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .customerCompactReport > * {
     break-inside: avoid;
     page-break-inside: avoid;
   }
