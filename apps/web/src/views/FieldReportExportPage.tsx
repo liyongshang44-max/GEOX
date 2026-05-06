@@ -6,6 +6,19 @@ import SectionSkeleton from "../components/common/SectionSkeleton";
 import "../styles/customerReport.css";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 
+function hasForbiddenFieldToken(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return normalized.includes("field_id") || normalized.includes("field_c8_demo") || normalized.includes("地块id") || normalized.includes("field_");
+}
+
+function resolveReportTitle(vmTitle: string, fieldName: unknown): string {
+  const cleanVmTitle = String(vmTitle ?? "").trim();
+  if (cleanVmTitle && !hasForbiddenFieldToken(cleanVmTitle)) return cleanVmTitle;
+  const cleanFieldName = String(fieldName ?? "").trim();
+  if (cleanFieldName) return `${cleanFieldName} 地块报告`;
+  return "地块报告";
+}
+
 export default function FieldReportExportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -38,7 +51,7 @@ export default function FieldReportExportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
-  const reportTitle = String(report.field_name ?? "").trim() ? `${String(report.field_name).trim()} 地块报告` : "地块报告";
+  const reportTitle = resolveReportTitle(vm.header.title, report.field_name);
 
   return (
     <div className="customerShell">
@@ -48,7 +61,7 @@ export default function FieldReportExportPage(): React.ReactElement {
             <div>
               <div className="customerEyebrow">GEOX / 地块报告</div>
               <h1 className="customerTitle">{reportTitle}</h1>
-              <p className="customerSubtitle">{vm.header.subtitle}</p>
+              <p className="customerSubtitle">当前地块状态、风险与近期作业摘要</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
           </div>
