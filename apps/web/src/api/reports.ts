@@ -63,22 +63,15 @@ type CustomerDashboardAggregateEnvelope =
   | { data: CustomerDashboardAggregateEnvelope }
   | CustomerDashboardAggregateV1;
 
-function unwrapCustomerDashboardAggregate(payload: any): CustomerDashboardAggregateV1 {
+function unwrapCustomerDashboardAggregate(payload: unknown): CustomerDashboardAggregateV1 {
   if (!payload || typeof payload !== "object") return {} as CustomerDashboardAggregateV1;
 
-  if ("aggregate" in payload && payload.aggregate) {
-    return unwrapCustomerDashboardAggregate(payload.aggregate);
-  }
+  const candidate = payload as Record<string, unknown>;
+  if (candidate.aggregate) return unwrapCustomerDashboardAggregate(candidate.aggregate);
+  if (candidate.customer_dashboard_aggregate_v1) return unwrapCustomerDashboardAggregate(candidate.customer_dashboard_aggregate_v1);
+  if (candidate.data) return unwrapCustomerDashboardAggregate(candidate.data);
 
-  if ("customer_dashboard_aggregate_v1" in payload && payload.customer_dashboard_aggregate_v1) {
-    return unwrapCustomerDashboardAggregate(payload.customer_dashboard_aggregate_v1);
-  }
-
-  if ("data" in payload && payload.data) {
-    return unwrapCustomerDashboardAggregate(payload.data);
-  }
-
-  return payload as CustomerDashboardAggregateV1;
+  return candidate as CustomerDashboardAggregateV1;
 }
 
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
