@@ -19,6 +19,31 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
+
+  const generatedAt = React.useMemo(() => {
+    const now = new Date();
+    const pad = (value: number): string => String(value).padStart(2, "0");
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }, []);
+
+  const fixedKpiOrder = ["pendingApproval", "highRiskFields", "earlyWarnings", "pendingAcceptance", "weeklyWaterSaved", "managedFields"] as const;
+
+  const fixedKpis = fixedKpiOrder.map((key) => {
+    const found = vm?.kpis.find((kpi) => kpi.key === key);
+    if (found) return found;
+    const fallbackLabel: Record<(typeof fixedKpiOrder)[number], string> = {
+      pendingApproval: "待审批处方",
+      highRiskFields: "高风险地块",
+      earlyWarnings: "异常发现",
+      pendingAcceptance: "待验收作业",
+      weeklyWaterSaved: "本周节水",
+      managedFields: "管理地块",
+    };
+    return { key, label: fallbackLabel[key], valueText: "--", detailText: "数据更新中" };
+  });
+
+  const cleanText = (text: string): string => String(text ?? "").trim();
+
   const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim());
 
   return (
