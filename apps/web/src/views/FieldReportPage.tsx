@@ -37,13 +37,12 @@ export default function FieldReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
-  const sanitizeUiText = (value: unknown): string => String(value ?? "").trim();
   const isHighRisk = /高风险|严重|high/i.test(vm.overview.riskText ?? "");
   const hasAbnormalReason = vm.currentStatus.reasons.some((item) => item && !/暂无|正常|无异常/.test(item));
   const showStatusAlert = isHighRisk || hasAbnormalReason;
   const nextSteps = [
-    vm.nextAction?.title ? `优先执行：${sanitizeUiText(vm.nextAction.title)}` : "优先完成待验收作业，缩短处置闭环时间。",
-    vm.nextAction?.objectiveText ? `执行目标：${sanitizeUiText(vm.nextAction.objectiveText)}` : "安排下一次现场巡检，并复核关键传感器数据。",
+    vm.nextAction?.title ? `优先执行：${String(vm.nextAction.title ?? "").trim()}` : "优先完成待验收作业，缩短处置闭环时间。",
+    vm.nextAction?.objectiveText ? `执行目标：${String(vm.nextAction.objectiveText ?? "").trim()}` : "安排下一次现场巡检，并复核关键传感器数据。",
   ];
 
   return (
@@ -56,7 +55,6 @@ export default function FieldReportPage(): React.ReactElement {
         <div className="customerActionRow">
           <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
           <Link className="customerButton customerButtonPrimary" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>打印导出</Link>
-        </div>
         </div>
       </section>
 
@@ -76,9 +74,9 @@ export default function FieldReportPage(): React.ReactElement {
 
       {showStatusAlert ? <section className="customerCard customerCardAlert">
         <h3 className="customerCardTitle">当前状态说明</h3>
-        <div>{sanitizeUiText(vm.currentStatus.summary)}</div>
+        <div>{String(vm.currentStatus.summary ?? "").trim()}</div>
         <ul className="customerSpacingTopXs">
-          {vm.currentStatus.reasons.map((item, idx) => (<li key={`${item}-${idx}`}>{sanitizeUiText(item)}</li>))}
+          {vm.currentStatus.reasons.map((item, idx) => (<li key={`${item}-${idx}`}>{String(item ?? "").trim()}</li>))}
         </ul>
       </section> : null}
 
@@ -88,11 +86,11 @@ export default function FieldReportPage(): React.ReactElement {
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">
               <div className="customerItemMain">
-                <Link to={item.href}>{sanitizeUiText(item.title)}</Link>
-                <span className="customerItemReason">{sanitizeUiText(item.generatedAtText)}</span>
+                <Link to={item.href}>{String(item.title ?? "").trim()}</Link>
+                <span className="customerItemReason">{String(item.generatedAtText ?? "").trim()}</span>
               </div>
-              <div className="customerItemReason">状态：{sanitizeUiText(item.statusText)}</div>
-              <div className="customerItemReason">验收：{sanitizeUiText(item.acceptanceText)}</div>
+              <div className="customerItemReason">状态：{String(item.statusText ?? "").trim()}</div>
+              <div className="customerItemReason">验收：{String(item.acceptanceText ?? "").trim()}</div>
             </li>
           ))}
           {!vm.recentOperationsTop5.length ? <li className="muted">暂无作业报告</li> : null}
@@ -116,8 +114,8 @@ export default function FieldReportPage(): React.ReactElement {
         <div className="customerGrid2">
           {vm.deviceMonitoring.map((item) => (
             <div key={item.label}>
-              <strong>{sanitizeUiText(item.label)}：</strong>
-              {sanitizeUiText(item.value)}
+              <strong>{String(item.label ?? "").trim()}：</strong>
+              {String(item.value ?? "").trim()}
             </div>
           ))}
         </div>
@@ -129,6 +127,7 @@ export default function FieldReportPage(): React.ReactElement {
           {nextSteps.map((item, idx) => <li key={`${item}-${idx}`}>{item}</li>)}
         </ul>
       </section>
+      </div>
     </div>
   );
 }
