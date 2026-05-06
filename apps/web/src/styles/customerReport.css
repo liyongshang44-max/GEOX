@@ -80,6 +80,19 @@
   padding: 24px;
 }
 
+.customerReportCanvas {
+  min-height: 100%;
+  background: var(--customer-bg);
+  padding: 24px;
+}
+
+.customerReportSheet {
+  width: min(920px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 10px;
+}
+
 .customerPage,
 .customerExportPage,
 .printPage {
