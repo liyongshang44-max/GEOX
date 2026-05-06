@@ -82,13 +82,13 @@ export default function OperationReportExportPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="customerCard">
-        <h2 className="customerReportSectionTitle">有什么证据</h2>
-        <div className="customerGrid2">
-          <div><strong>附加工件：</strong>{vm.evidence.artifactsText}</div>
-          <div><strong>执行记录：</strong>{vm.evidence.logsText}</div>
-          <div><strong>现场媒体：</strong>{vm.evidence.mediaText}</div>
-          <div><strong>指标记录：</strong>{vm.evidence.metricsText}</div>
+      <SectionCard title="有什么证据">
+        <div className="kvGrid2">
+          <div><strong>执行回执：</strong>{vm.evidence.executionReceipt}</div>
+          <div><strong>实际执行记录：</strong>{vm.evidence.executionRecord}</div>
+          <div><strong>灌后监测：</strong>{vm.evidence.postIrrigationMonitoring}</div>
+          <div><strong>图片：</strong>{vm.evidence.onSitePhotos}</div>
+          <div><strong>验收项：</strong>{vm.evidence.acceptanceItems}</div>
         </div>
       </section>
 
