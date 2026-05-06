@@ -57,8 +57,8 @@ export default function FieldReportExportPage(): React.ReactElement {
   const reportTitle = resolveReportTitle(vm.header.title, (report as any).field_name);
 
   return (
-    <div className="customerShell">
-      <div className="customerExportPage printPage">
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet customerExportPage printPage">
         <header className="customerReportHeader">
           <div className="customerHeroTop">
             <div>
@@ -92,7 +92,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </section>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">近期作业</h2>
+          <h2 className="customerReportSectionTitle">近期作业</h2>
           <div className="customerList customerSpacingTopSm">
             {(vm.recentOperationsTop5 ?? []).map((item) => (
               <article key={item.id} className="customerEvidenceItem">
@@ -107,7 +107,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </section>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">下一步建议</h2>
+          <h2 className="customerReportSectionTitle">下一步建议</h2>
           {vm.nextAction ? (
             <div className="customerGrid2 customerSpacingTopSm">
               <div><strong>建议标题：</strong>{vm.nextAction.title}</div>
