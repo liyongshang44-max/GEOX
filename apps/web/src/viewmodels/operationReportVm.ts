@@ -92,6 +92,12 @@ function toNum(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
+function asEvidenceStatus(value: unknown): string {
+  const count = toNum(value);
+  if (count == null || count <= 0) return REVIEW_NEEDED_TEXT;
+  return `已齐备（${count}）`;
+}
+
 function joinReasonTexts(reasons: string[]): string {
   if (!Array.isArray(reasons) || reasons.length === 0) return "暂无明确风险原因";
   return reasons.map((item) => labelEmptyFallback(item)).join("、");

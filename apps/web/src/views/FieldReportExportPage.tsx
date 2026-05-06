@@ -69,7 +69,7 @@ export default function FieldReportExportPage(): React.ReactElement {
 
       <SectionCard title="近期作业">
         <div className="list">
-          {(vm.recentOperations ?? []).map((item) => (
+          {(vm.recentOperationsTop5 ?? []).map((item) => (
             <article key={item.id} className="item">
               <div>{item.title}</div>
               <div className="muted">状态：{item.statusText}</div>
@@ -77,7 +77,7 @@ export default function FieldReportExportPage(): React.ReactElement {
               <div className="muted">生成时间：{item.generatedAtText}</div>
             </article>
           ))}
-          {!(vm.recentOperations ?? []).length ? <div className="muted">暂无作业报告</div> : null}
+          {!(vm.recentOperationsTop5 ?? []).length ? <div className="muted">暂无作业报告</div> : null}
         </div>
       </SectionCard>
 
@@ -86,7 +86,7 @@ export default function FieldReportExportPage(): React.ReactElement {
           <div><strong>设备总数：</strong>{vm.deviceSummary.totalText}</div>
           <div><strong>在线：</strong>{vm.deviceSummary.onlineText}</div>
           <div><strong>离线：</strong>{vm.deviceSummary.offlineText}</div>
-          <div><strong>最近遥测时间：</strong>{vm.deviceSummary.lastTelemetryText}</div>
+          <div><strong>最近遥测时间：</strong>{vm.deviceSummary.lastUpdateText}</div>
         </div>
       </SectionCard>
 
