@@ -19,7 +19,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
-  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim()).filter(Boolean);
+  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim());
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
