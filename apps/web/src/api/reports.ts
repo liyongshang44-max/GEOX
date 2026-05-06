@@ -59,12 +59,19 @@ function unwrapFieldReportDetail(payload: FieldReportDetailEnvelope | FieldRepor
 type CustomerDashboardAggregateEnvelope =
   | { ok: true; aggregate: CustomerDashboardAggregateV1 }
   | { ok: true; customer_dashboard_aggregate_v1: CustomerDashboardAggregateV1 }
+  | { ok: true; data: CustomerDashboardAggregateEnvelope }
+  | { data: CustomerDashboardAggregateEnvelope }
   | CustomerDashboardAggregateV1;
 
-function unwrapCustomerDashboardAggregate(payload: CustomerDashboardAggregateEnvelope): CustomerDashboardAggregateV1 {
-  if ("aggregate" in payload) return payload.aggregate;
-  if ("customer_dashboard_aggregate_v1" in payload) return payload.customer_dashboard_aggregate_v1;
-  return payload;
+function unwrapCustomerDashboardAggregate(payload: unknown): CustomerDashboardAggregateV1 {
+  if (!payload || typeof payload !== "object") return {} as CustomerDashboardAggregateV1;
+
+  const candidate = payload as Record<string, unknown>;
+  if (candidate.aggregate) return unwrapCustomerDashboardAggregate(candidate.aggregate);
+  if (candidate.customer_dashboard_aggregate_v1) return unwrapCustomerDashboardAggregate(candidate.customer_dashboard_aggregate_v1);
+  if (candidate.data) return unwrapCustomerDashboardAggregate(candidate.data);
+
+  return candidate as CustomerDashboardAggregateV1;
 }
 
 export async function fetchOperationReport(operationId: string): Promise<OperationReportV1> {
