@@ -62,14 +62,20 @@ export default function CustomerReportExportPage(): React.ReactElement {
   if (error || !content) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载失败：{error || "暂无数据"}</div></div>;
 
   return (
-    <div className="demoDashboardPage reportPrintPage printPage">
-      <PageHeader
-        eyebrow="GEOX"
-        title={reportTitle || "客户报告"}
-        description={`生成时间：${new Date().toLocaleString()}`}
-        actions={<button type="button" className="btn noPrint" onClick={() => window.print()}>打印导出</button>}
-      />
-      {content}
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet printPage">
+        <header className="customerReportHeader">
+          <div className="customerHeroTop">
+            <div>
+              <div className="customerEyebrow">GEOX</div>
+              <h1 className="customerTitle">{reportTitle || "客户报告"}</h1>
+              <p className="customerSubtitle">生成时间：{new Date().toLocaleString()}</p>
+            </div>
+            <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
+          </div>
+        </header>
+        {content}
+      </div>
     </div>
   );
 }
