@@ -22,15 +22,16 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim()).filter(Boolean);
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
-            <div className="customerLabel">GEOX / 客户看板</div>
+            <div className="customerReportLogo">GEOX / 客户看板</div>
             <h1 className="customerTitle">{vm?.header.title ?? "客户看板"}</h1>
-            <p className="customerSub">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
+            <p className="customerSubtitle">{vm?.header.subtitle ?? "经营结果、风险与行动摘要"}</p>
           </div>
-          <div className="customerActions">
+          <div className="customerActionRow">
             <Link className="customerButton customerButtonPrimary noPrint" to={vm?.header.exportAction.href ?? "/customer/export"}>
               {vm?.header.exportAction.label ?? "打印导出"}
             </Link>
@@ -39,7 +40,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </header>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">经营总览</h3>
+        <h3 className="customerReportSectionTitle">经营总览</h3>
         <div className="customerMetrics">
           {(vm?.kpis ?? []).slice(0, 6).map((kpi) => (
             <article key={kpi.key} className="customerMetricCard">
@@ -53,7 +54,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerGrid3">
         <article className="customerCard">
-          <h3 className="customerCardTitle">高风险地块 Top 5</h3>
+          <h3 className="customerReportSectionTitle">高风险地块 Top 5</h3>
           <ul className="customerList">
             {(vm?.topRiskFields ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
@@ -78,7 +79,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </article>
 
         <article className="customerCard">
-          <h3 className="customerCardTitle">待处理事项 Top 5</h3>
+          <h3 className="customerReportSectionTitle">待处理事项 Top 5</h3>
           <ul className="customerList">
             {(vm?.pendingItems ?? []).map((item) => (
               <li key={item.id} className="customerListItem">
@@ -95,7 +96,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </article>
 
         <article className="customerCard">
-          <h3 className="customerCardTitle">近期作业 Top 5</h3>
+          <h3 className="customerReportSectionTitle">近期作业 Top 5</h3>
           <ul className="customerList">
             {(vm?.recentOperations ?? []).map((item) => (
               <li key={item.operationId} className="customerListItem">
@@ -119,7 +120,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">下一步建议</h3>
+        <h3 className="customerReportSectionTitle">下一步建议</h3>
         <div className="customerGrid3">
           {(vm?.nextActions ?? []).map((item) => (
             <article key={item.id} className="customerCard" style={{ border: "1px solid var(--line, #e5e7eb)", padding: 12 }}>
@@ -132,7 +133,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">收益摘要</h3>
+        <h3 className="customerReportSectionTitle">收益摘要</h3>
         <div className="customerMetrics">
           <article className="customerMetricCard">
             <div className="customerMetricLabel">ROI 条目</div>
@@ -150,6 +151,9 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
+
+      <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
+      </div>
     </div>
   );
 }

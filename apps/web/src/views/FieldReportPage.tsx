@@ -39,19 +39,24 @@ export default function FieldReportPage(): React.ReactElement {
   const vm = buildFieldReportVm(report);
 
   return (
-    <div className="customerPage customerPageGapMd">
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet customerPageGapMd">
       <section className="customerReportHeader">
-        <div className="customerEyebrow">GEOX</div>
+        <div className="customerReportHeaderBar">
+          <div>
+            <div className="customerReportLogo">GEOX</div>
         <h1 className="customerTitle">C8-03 地块报告</h1>
         <p className="customerSubtitle">{vm.hero.subtitle}</p>
-        <div className="customerActionRow">
+        </div>
+          <div className="customerActionRow">
           <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
           <Link className="customerButton customerButtonPrimary" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>打印导出</Link>
+        </div>
         </div>
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">地块概况</h3>
+        <h3 className="customerReportSectionTitle">地块概况</h3>
         <div className="customerGrid2">
           {vm.landOverview.map((item) => (
             <div key={item.label}>
@@ -63,7 +68,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">诊断依据</h3>
+        <h3 className="customerReportSectionTitle">诊断依据</h3>
         <div className="customerList">
           {vm.diagnosticCards.map((item) => (
             <li key={item.title} className="customerListItem">
@@ -77,7 +82,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">当前状态说明</h3>
+        <h3 className="customerReportSectionTitle">当前状态说明</h3>
         <div>{vm.currentStatus.summary}</div>
         <ul className="customerSpacingTopXs">
           {vm.currentStatus.reasons.map((item, idx) => (<li key={`${item}-${idx}`}>{item}</li>))}
@@ -85,7 +90,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">近期作业 Top 5</h3>
+        <h3 className="customerReportSectionTitle">近期作业 Top 5</h3>
         <div className="customerList">
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">
@@ -102,7 +107,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">处方与下一步建议</h3>
+        <h3 className="customerReportSectionTitle">处方与下一步建议</h3>
         <div className="customerList">
           {vm.prescriptionCards.map((item) => (
             <article key={item.title} className={item.title === "审批要求" ? "item customerListItemWarn" : "item"}>
@@ -114,7 +119,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">设备与监测</h3>
+        <h3 className="customerReportSectionTitle">设备与监测</h3>
         <div className="customerGrid2">
           {vm.deviceMonitoring.map((item) => (
             <div key={item.label}>
@@ -124,6 +129,8 @@ export default function FieldReportPage(): React.ReactElement {
           ))}
         </div>
       </section>
+      <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
+      </div>
     </div>
   );
 }
