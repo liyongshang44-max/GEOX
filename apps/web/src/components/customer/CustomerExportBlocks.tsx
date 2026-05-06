@@ -8,11 +8,6 @@ function splitRecentOperationRow(rowText: string): { operationType: string; fiel
   return { operationType, fieldName, timeText, acceptanceText };
 }
 
-function splitRecentOperationRow(rowText: string): { operationType: string; fieldName: string; timeText: string; acceptanceText: string } {
-  const [operationType = "作业", fieldName = "地块未知", timeText = "时间未知", acceptanceText = "状态待确认"] = rowText.split(" · ");
-  return { operationType, fieldName, timeText, acceptanceText };
-}
-
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
   const managedFields = vm.kpis.find((item) => item.key === "managedFields")?.valueText ?? "-";
   const highRiskFields = vm.kpis.find((item) => item.key === "highRiskFields")?.valueText ?? "-";
