@@ -355,6 +355,11 @@
   gap: 12px;
 }
 
+.customerActionCards {
+  display: grid;
+  gap: 12px;
+}
+
 .customerSpacingTopXs {
   margin-top: 8px;
 }

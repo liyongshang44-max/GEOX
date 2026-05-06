@@ -22,8 +22,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim());
 
   return (
-    <div className="customerReportCanvas">
-      <div className="customerReportSheet">
+    <div className="customerPage customerPageGapMd">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
@@ -132,18 +131,12 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议</h3>
-        <div className="customerGrid2">
-          {[
-            { id: "approve", icon: "🧾", title: "审批待处理处方", summary: "优先处理已触发的处方审批请求，避免影响今日执行。", action: "立即审批", href: "/customer/export" },
-            { id: "risk", icon: "⚠️", title: "查看高风险地块", summary: "查看风险排名前列地块并确认处置动作与负责人。", action: "查看风险", href: "/customer/dashboard" },
-            { id: "accept", icon: "✅", title: "验收已完成作业", summary: "核验已回传作业结果，确保状态及时闭环。", action: "开始验收", href: "/customer/dashboard" },
-            { id: "device", icon: "📡", title: "检查离线设备", summary: "排查离线设备连接状态，降低数据缺失风险。", action: "检查设备", href: "/customer/dashboard" },
-          ].map((item) => (
-            <article key={item.id} className="customerCard" style={{ border: "1px solid var(--line, #e5e7eb)", padding: 12 }}>
-              <div>{item.icon}</div>
+        <div className="customerActionCards customerRecommendationGrid">
+          {(vm?.nextActions ?? []).map((item) => (
+            <article key={item.id} className="customerRecommendationCard">
               <div className="customerItemTitle">{item.title}</div>
-              <div className="customerItemReason" style={{ marginTop: 6 }}>{item.summary}</div>
-              <Link className="customerButton customerSpacingTopSm" to={item.href}>{item.action}</Link>
+              <div className="customerItemReason customerSpacingTopXs">{item.summary}</div>
+              <Link className="customerButton customerSpacingTopSm" to={item.href}>立即处理</Link>
             </article>
           ))}
         </div>
