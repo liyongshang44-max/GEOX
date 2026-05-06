@@ -4,7 +4,6 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { PageHeader, SectionCard } from "../shared/ui";
 
 export default function OperationReportExportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
@@ -40,63 +39,76 @@ export default function OperationReportExportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
 
   return (
-    <div className="demoDashboardPage reportPrintPage">
-      <PageHeader
-        eyebrow="GEOX / 作业闭环"
-        title={vm.header.title}
-        description={vm.header.subtitle}
-        actions={[{ label: "打印导出", onClick: () => window.print() }]}
-      />
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet printPage">
+      <header className="customerReportHeader">
+        <div className="customerReportHeaderBar">
+          <div>
+            <div className="customerReportLogo">GEOX / 作业闭环</div>
+            <h1 className="customerTitle">{vm.header.title}</h1>
+            <p className="customerReportMeta">{vm.header.subtitle}</p>
+          </div>
+          <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
+        </div>
+      </header>
 
-      <SectionCard title="为什么做">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">为什么做</h2>
+        <div className="customerGrid2">
           <div><strong>当前风险：</strong>{vm.why.riskLabel}</div>
           <div><strong>主要原因：</strong>{vm.why.reasonText}</div>
         </div>
-        <div style={{ marginTop: 8 }}>{vm.why.summary}</div>
-      </SectionCard>
+        <div className="customerSpacingTopXs">{vm.why.summary}</div>
+      </section>
 
-      <SectionCard title="谁批准">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">谁批准</h2>
+        <div className="customerGrid2">
           <div><strong>审批状态：</strong>{vm.approval.statusText}</div>
           <div><strong>审批人：</strong>{vm.approval.actorText}</div>
           <div><strong>审批时间：</strong>{vm.approval.timeText}</div>
           <div><strong>审批备注：</strong>{vm.approval.noteText}</div>
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="怎么执行">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">怎么执行</h2>
+        <div className="customerGrid2">
           <div><strong>执行负责人：</strong>{vm.execution.ownerText}</div>
           <div><strong>执行状态：</strong>{vm.execution.statusText}</div>
           <div><strong>开始时间：</strong>{vm.execution.startedAtText}</div>
           <div><strong>结束时间：</strong>{vm.execution.finishedAtText}</div>
           <div><strong>执行异常：</strong>{vm.execution.invalidExecutionText}</div>
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="有什么证据">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">有什么证据</h2>
+        <div className="customerGrid2">
           <div><strong>附加工件：</strong>{vm.evidence.artifactsText}</div>
           <div><strong>执行记录：</strong>{vm.evidence.logsText}</div>
           <div><strong>现场媒体：</strong>{vm.evidence.mediaText}</div>
           <div><strong>指标记录：</strong>{vm.evidence.metricsText}</div>
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="验收结果">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">验收结果</h2>
+        <div className="customerGrid2">
           <div><strong>验收状态：</strong>{vm.acceptance.statusText}</div>
           <div><strong>验收结论：</strong>{vm.acceptance.verdictText}</div>
           <div><strong>缺失证据：</strong>{vm.acceptance.missingEvidenceText}</div>
           <div><strong>验收时间：</strong>{vm.acceptance.generatedAtText}</div>
         </div>
-      </SectionCard>
+      </section>
 
-      <SectionCard title="最终结论">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">最终结论</h2>
         <div><strong>{vm.conclusion.finalStatusText}</strong></div>
-        <div className="muted" style={{ marginTop: 8 }}>{vm.conclusion.resultText}</div>
-      </SectionCard>
+        <div className="muted customerSpacingTopXs">{vm.conclusion.resultText}</div>
+      </section>
+        <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
+      </div>
     </div>
   );
 }
