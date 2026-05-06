@@ -1,7 +1,6 @@
 import React from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { fetchCustomerDashboardAggregate, fetchFieldReport, fetchOperationReport } from "../api/customerReports";
-import { PageHeader } from "../shared/ui";
 import { buildCustomerDashboardVm } from "../viewmodels/customerDashboardVm";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
@@ -59,8 +58,8 @@ export default function CustomerReportExportPage(): React.ReactElement {
     return () => { alive = false; };
   }, [fieldId, operationId, mode]);
 
-  if (loading) return <div className="card printPage" style={{ padding: 16 }}>导出页加载中...</div>;
-  if (error || !content) return <div className="card printPage" style={{ padding: 16 }}>导出页加载失败：{error || "暂无数据"}</div>;
+  if (loading) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载中...</div></div>;
+  if (error || !content) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载失败：{error || "暂无数据"}</div></div>;
 
   return (
     <div className="demoDashboardPage reportPrintPage printPage">
