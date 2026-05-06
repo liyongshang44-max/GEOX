@@ -82,8 +82,9 @@ export default function OperationReportExportPage(): React.ReactElement {
         </div>
       </section>
 
-      <SectionCard title="有什么证据">
-        <div className="kvGrid2">
+      <section className="customerCard">
+        <h2 className="customerReportSectionTitle">有什么证据</h2>
+        <div className="customerGrid2">
           <div><strong>执行回执：</strong>{vm.evidence.executionReceipt}</div>
           <div><strong>实际执行记录：</strong>{vm.evidence.executionRecord}</div>
           <div><strong>灌后监测：</strong>{vm.evidence.postIrrigationMonitoring}</div>
