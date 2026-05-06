@@ -16,36 +16,46 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
   const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
+  const topRisks = (vm.topRiskFields ?? []).slice(0, 5);
 
   return (
-    <>
+    <div className="customerCompactReport">
       <section className="customerCard">
-        <h2 className="customerCardTitle">摘要</h2>
+        <h2 className="customerCardTitle">概览</h2>
         <p className="customerSpacingTopSm">管理地块 {managedFields} 个，高风险地块 {highRiskFields} 个，提前发现异常 {earlyWarnings} 项</p>
+        <p className="customerMetricLabel">待审批处方：{pendingApproval}；待验收作业：{pendingAcceptance}</p>
       </section>
       <section className="customerCard">
-        <h2 className="customerCardTitle">风险/诊断</h2>
-        <p className="customerSpacingTopSm">待审批处方：{pendingApproval}；待验收作业：{pendingAcceptance}</p>
+        <h2 className="customerCardTitle">高风险地块 Top 5</h2>
+        <div className="customerEvidenceGrid customerSpacingTopSm">
+          {topRisks.length ? topRisks.map((item) => (
+            <article key={item.id || item.href} className="customerEvidenceItem">
+              <strong>{item.rowText.split(" · ")[0] || "未命名地块"}</strong>
+              <div className="customerMetricLabel">{item.rowText.split(" · ")[1] || "风险待确认"}</div>
+              <div className="customerMetricLabel">{item.rowText.split(" · ").slice(2).join(" · ") || "暂无风险原因"}</div>
+            </article>
+          )) : <div className="customerMetricLabel">暂无高风险地块</div>}
+        </div>
       </section>
       <section className="customerCard">
-        <h2 className="customerCardTitle">近期作业</h2>
+        <h2 className="customerCardTitle">近期作业 Top 5</h2>
         <div className="customerList customerSpacingTopSm">
           {recentOperations.length ? recentOperations.map((item) => {
             const parsed = splitRecentOperationRow(item.rowText);
             return (
-              <article key={item.operationId || item.href} className="customerListItem">
-                <div><strong>{parsed.operationType}</strong>｜{parsed.fieldName}｜{parsed.timeText}｜{parsed.acceptanceText}</div>
+              <article key={item.operationId || item.href} className="customerEvidenceItem">
+                <strong>{parsed.operationType}</strong>
+                <span className="customerMetricLabel">{parsed.fieldName}</span>
+                <span className="customerMetricLabel">{parsed.timeText}</span>
+                <span className="customerMetricLabel">{parsed.acceptanceText}</span>
               </article>
             );
           }) : <div className="customerMetricLabel">暂无近期作业</div>}
         </div>
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{nextActionTitles}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">当前建议按“下一步建议”优先执行，并在后续作业完成后复核风险变化。</p></section>
-    </>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户经营复盘与执行跟进使用。</p></footer>
+    </div>
   );
 }
 
@@ -71,24 +81,29 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
 }
 
 export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): React.ReactElement {
+  const sections = [
+    { title: "为什么做", body: `${vm.why.riskLabel}；${vm.why.reasonText}` },
+    { title: "谁批准", body: `${vm.approval.actorText}｜${vm.approval.statusText}` },
+    { title: "怎么执行", body: `${vm.execution.ownerText}｜${vm.execution.statusText}` },
+    { title: "有什么证据", body: `附加工件 ${vm.evidence.artifactsText}；执行记录 ${vm.evidence.logsText}；现场媒体 ${vm.evidence.mediaText}；指标记录 ${vm.evidence.metricsText}` },
+    { title: "验收结果", body: `${vm.acceptance.statusText}；缺失证据：${vm.acceptance.missingEvidenceText}` },
+    { title: "最终结论", body: vm.conclusion.resultText },
+  ];
   return (
-    <>
+    <div className="customerCompactReport">
       <section className="customerCard">
-        <h2 className="customerCardTitle">摘要</h2>
-        <div className="customerGrid2 customerSpacingTopSm">
-          <div><strong>作业标题：</strong>{vm.header.title}</div>
-          <div><strong>执行负责人：</strong>{vm.execution.ownerText}</div>
-          <div><strong>执行状态：</strong>{vm.execution.statusText}</div>
-          <div><strong>验收状态：</strong>{vm.acceptance.statusText}</div>
-        </div>
+        <h2 className="customerCardTitle">作业报告头</h2>
+        <p className="customerSpacingTopSm"><strong>{vm.header.title}</strong></p>
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.why.riskLabel}；{vm.why.reasonText}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">近期作业</h2><p className="customerSpacingTopSm">{vm.execution.statusText}，验收状态：{vm.acceptance.statusText}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">继续推进执行闭环，并按验收结果调整后续安排。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">当前作业处于可追踪状态，建议按建议步骤完成闭环。</p></section>
-    </>
+      <section className="customerFlow customerFlow6">
+        {sections.map((item) => (
+          <article key={item.title} className="customerFlowStep">
+            <h2 className="customerCardTitle">{item.title}</h2>
+            <p className="customerSpacingTopSm">{item.body}</p>
+          </article>
+        ))}
+      </section>
+      <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer>
+    </div>
   );
 }
