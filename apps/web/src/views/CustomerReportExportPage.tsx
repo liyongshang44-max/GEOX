@@ -15,7 +15,6 @@ export default function CustomerReportExportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const [content, setContent] = React.useState<React.ReactElement | null>(null);
-  const [title, setTitle] = React.useState("客户报告导出");
 
   React.useEffect(() => {
     let alive = true;
@@ -26,7 +25,6 @@ export default function CustomerReportExportPage(): React.ReactElement {
         const report = await fetchFieldReport(fieldId);
         const vm = buildFieldReportVm(report);
         if (!alive) return;
-        setTitle(vm.header.title);
         setContent(<FieldExportBlocks vm={vm} />);
         return;
       }
@@ -34,14 +32,12 @@ export default function CustomerReportExportPage(): React.ReactElement {
         const report = await fetchOperationReport(operationId);
         const vm = buildOperationReportVm(report);
         if (!alive) return;
-        setTitle(vm.header.title);
         setContent(<OperationExportBlocks vm={vm} />);
         return;
       }
       const aggregate = await fetchCustomerDashboardAggregate();
       const vm = buildCustomerDashboardVm(aggregate);
       if (!alive) return;
-      setTitle(vm.header.title);
       setContent(<DashboardExportBlocks vm={vm} />);
     };
 
@@ -64,7 +60,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
     <div className="demoDashboardPage reportPrintPage printPage">
       <PageHeader
         eyebrow="GEOX"
-        title={title}
+        title="客户看板报告"
         description={`生成时间：${new Date().toLocaleString()}`}
         actions={<button type="button" className="btn noPrint" onClick={() => window.print()}>打印导出</button>}
       />
