@@ -54,21 +54,21 @@ export default function FieldReportExportPage(): React.ReactElement {
   const reportTitle = resolveReportTitle(vm.header.title, report.field_name);
 
   return (
-    <div className="customerShell">
-      <div className="customerExportPage printPage">
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet customerExportPage printPage">
         <header className="customerReportHeader">
           <div className="customerHeroTop">
             <div>
-              <div className="customerEyebrow">GEOX / 地块报告</div>
+              <div className="customerReportLogo">GEOX / 地块报告</div>
               <h1 className="customerTitle">{reportTitle}</h1>
-              <p className="customerSubtitle">当前地块状态、风险与近期作业摘要</p>
+              <p className="customerReportMeta">当前地块状态、风险与近期作业摘要</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
           </div>
         </header>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">摘要</h2>
+          <h2 className="customerReportSectionTitle">摘要</h2>
           <div className="customerGrid2 customerSpacingTopSm">
             <div><strong>当前风险：</strong>{vm.overview.riskText}</div>
             <div><strong>未关闭告警数：</strong>{vm.overview.openAlertsText}</div>
@@ -81,7 +81,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </section>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">状态解释</h2>
+          <h2 className="customerReportSectionTitle">状态解释</h2>
           <p className="customerSpacingTopSm">{vm.explain.human}</p>
           <ul className="customerList customerSpacingTopSm">
             {(vm.explain.topReasonsText ?? []).map((item, idx) => (<li key={`${item}-${idx}`} className="customerListItem">{item}</li>))}
@@ -89,7 +89,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </section>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">近期作业</h2>
+          <h2 className="customerReportSectionTitle">近期作业</h2>
           <div className="customerList customerSpacingTopSm">
             {(vm.recentOperationsTop5 ?? []).map((item) => (
               <article key={item.id} className="customerListItem">
@@ -104,7 +104,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </section>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">下一步建议</h2>
+          <h2 className="customerReportSectionTitle">下一步建议</h2>
           {vm.nextAction ? (
             <div className="customerGrid2 customerSpacingTopSm">
               <div><strong>建议标题：</strong>{vm.nextAction.title}</div>
@@ -117,10 +117,11 @@ export default function FieldReportExportPage(): React.ReactElement {
           )}
         </section>
 
-        <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">通过聚焦关键风险，减少重复巡检与处置延迟。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">基于地块状态、异常记录与作业进展综合评估。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerSpacingTopSm">系统已关联该地块历史变化，用于跟踪趋势。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
+        <section className="customerCard"><h2 className="customerReportSectionTitle">本次价值</h2><p className="customerSpacingTopSm">通过聚焦关键风险，减少重复巡检与处置延迟。</p></section>
+        <section className="customerCard"><h2 className="customerReportSectionTitle">证据可信度</h2><p className="customerSpacingTopSm">基于地块状态、异常记录与作业进展综合评估。</p></section>
+        <section className="customerCard"><h2 className="customerReportSectionTitle">系统记忆</h2><p className="customerSpacingTopSm">系统已关联该地块历史变化，用于跟踪趋势。</p></section>
+        <section className="customerCard"><h2 className="customerReportSectionTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
+      <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
       </div>
     </div>
   );

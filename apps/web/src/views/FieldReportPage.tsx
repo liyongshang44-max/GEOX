@@ -51,7 +51,8 @@ export default function FieldReportPage(): React.ReactElement {
   ];
 
   return (
-    <div className="customerPage customerPageGapMd">
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet customerPageGapMd">
       <section className="customerReportHeader">
         <div className="customerEyebrow">GEOX / C8-03 地块报告</div>
         <h1 className="customerTitle">当前状态与近期作业执行情况</h1>
@@ -59,6 +60,7 @@ export default function FieldReportPage(): React.ReactElement {
         <div className="customerActionRow">
           <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
           <Link className="customerButton customerButtonPrimary" to={`/customer/fields/${encodeURIComponent(fieldId)}/export`}>打印导出</Link>
+        </div>
         </div>
       </section>
 
@@ -83,7 +85,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section> : null}
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">近期作业 Top 5</h3>
+        <h3 className="customerReportSectionTitle">近期作业 Top 5</h3>
         <div className="customerList">
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">

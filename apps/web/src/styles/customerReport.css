@@ -18,6 +18,62 @@
   --customer-low-text: #067647;
 }
 
+
+
+.customerReportCanvas {
+  min-height: 100%;
+  background: var(--customer-bg);
+  padding: 24px;
+}
+
+.customerReportSheet {
+  width: min(1200px, 100%);
+  margin: 0 auto;
+  background: var(--customer-surface);
+  border: 1px solid var(--customer-border);
+  border-radius: 24px;
+  box-shadow: var(--customer-shadow);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.customerReportLogo {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--customer-muted);
+}
+
+.customerReportHeaderBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.customerReportMeta {
+  font-size: 13px;
+  color: var(--customer-muted);
+}
+
+.customerReportSectionTitle {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+  font-weight: 700;
+  color: var(--customer-title);
+}
+
+.customerFooterNote {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--customer-muted);
+  text-align: center;
+}
 .customerShell {
   min-height: 100%;
   background: var(--customer-bg);

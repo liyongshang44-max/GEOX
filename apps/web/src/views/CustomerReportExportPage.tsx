@@ -1,7 +1,6 @@
 import React from "react";
 import { useLocation, useParams } from "react-router-dom";
 import { fetchCustomerDashboardAggregate, fetchFieldReport, fetchOperationReport } from "../api/customerReports";
-import { PageHeader } from "../shared/ui";
 import { buildCustomerDashboardVm } from "../viewmodels/customerDashboardVm";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
@@ -53,18 +52,25 @@ export default function CustomerReportExportPage(): React.ReactElement {
     return () => { alive = false; };
   }, [fieldId, operationId, mode]);
 
-  if (loading) return <div className="card printPage" style={{ padding: 16 }}>导出页加载中...</div>;
-  if (error || !content) return <div className="card printPage" style={{ padding: 16 }}>导出页加载失败：{error || "暂无数据"}</div>;
+  if (loading) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载中...</div></div>;
+  if (error || !content) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载失败：{error || "暂无数据"}</div></div>;
 
   return (
-    <div className="demoDashboardPage reportPrintPage printPage">
-      <PageHeader
-        eyebrow="GEOX"
-        title="客户看板报告"
-        description={`生成时间：${new Date().toLocaleString()}`}
-        actions={<button type="button" className="btn noPrint" onClick={() => window.print()}>打印导出</button>}
-      />
-      {content}
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet printPage">
+        <header className="customerReportHeader">
+          <div className="customerReportHeaderBar">
+            <div>
+              <div className="customerReportLogo">GEOX</div>
+              <h1 className="customerTitle">客户看板报告</h1>
+              <p className="customerReportMeta">生成时间：{new Date().toLocaleString()}</p>
+            </div>
+            <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
+          </div>
+        </header>
+        {content}
+        <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
+      </div>
     </div>
   );
 }
