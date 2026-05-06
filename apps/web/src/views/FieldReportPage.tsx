@@ -107,7 +107,7 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">处方与下一步建议</h3>
         <div className="customerList">
           {vm.prescriptionCards.map((item) => (
-            <article key={item.title} className={item.title === "审批要求" ? "item customerListItemWarn" : "item"}>
+            <article key={item.title} className={item.title === "审批要求" ? "customerListItem customerListItemWarn" : "customerListItem customerListItemOk"}>
               <div><strong>{item.title}</strong>：{item.value}</div>
               <div className="muted">{item.detail}</div>
             </article>

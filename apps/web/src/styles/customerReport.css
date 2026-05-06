@@ -390,6 +390,11 @@
   border: 1px solid #ffd8b2;
 }
 
+.customerListItemOk {
+  background: #ecfdf3;
+  border: 1px solid #a7f3d0;
+}
+
 .customerStepList {
   display: flex;
   flex-direction: column;
