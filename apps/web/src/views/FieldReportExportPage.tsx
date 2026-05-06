@@ -18,6 +18,9 @@ function resolveReportTitle(vmTitle: string, fieldName: unknown): string {
   if (cleanFieldName) return `${cleanFieldName} 地块报告`;
   return "地块报告";
 }
+function sanitizeText(input: string): string {
+  return String(input ?? "").replace(/field_c8_demo/gi, "").replace(/地块ID/gi, "").replace(/field_/gi, "").replace(/\s{2,}/g, " ").trim();
+}
 
 export default function FieldReportExportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
@@ -60,7 +63,7 @@ export default function FieldReportExportPage(): React.ReactElement {
           <div className="customerHeroTop">
             <div>
               <div className="customerEyebrow">GEOX / 地块报告</div>
-              <h1 className="customerTitle">{reportTitle}</h1>
+              <h1 className="customerTitle">{sanitizeText(reportTitle)}</h1>
               <p className="customerSubtitle">当前地块状态、风险与近期作业摘要</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
@@ -68,7 +71,7 @@ export default function FieldReportExportPage(): React.ReactElement {
         </header>
 
         <section className="customerCard">
-          <h2 className="customerCardTitle">摘要</h2>
+          <h2 className="customerCardTitle">地块概况</h2>
           <div className="customerGrid2 customerSpacingTopSm">
             <div><strong>当前风险：</strong>{vm.overview.riskText}</div>
             <div><strong>未关闭告警数：</strong>{vm.overview.openAlertsText}</div>
@@ -82,7 +85,7 @@ export default function FieldReportExportPage(): React.ReactElement {
 
         <section className="customerCard">
           <h2 className="customerCardTitle">状态解释</h2>
-          <p className="customerSpacingTopSm">{vm.explain.human}</p>
+          <p className="customerSpacingTopSm">{sanitizeText(vm.explain.human)}</p>
           <ul className="customerList customerSpacingTopSm">
             {(vm.explain.topReasonsText ?? []).map((item, idx) => (<li key={`${item}-${idx}`} className="customerListItem">{item}</li>))}
           </ul>
@@ -92,11 +95,11 @@ export default function FieldReportExportPage(): React.ReactElement {
           <h2 className="customerCardTitle">近期作业</h2>
           <div className="customerList customerSpacingTopSm">
             {(vm.recentOperationsTop5 ?? []).map((item) => (
-              <article key={item.id} className="customerListItem">
-                <div><strong>{item.title}</strong></div>
-                <div className="customerMetricLabel">状态：{item.statusText}</div>
-                <div className="customerMetricLabel">验收：{item.acceptanceText}</div>
-                <div className="customerMetricLabel">生成时间：{item.generatedAtText}</div>
+              <article key={item.id} className="customerEvidenceItem">
+                <strong>{sanitizeText(item.title)}</strong>
+                <span className="customerMetricLabel">状态：{sanitizeText(item.statusText)}</span>
+                <span className="customerMetricLabel">验收：{sanitizeText(item.acceptanceText)}</span>
+                <span className="customerMetricLabel">生成时间：{sanitizeText(item.generatedAtText)}</span>
               </article>
             ))}
             {!(vm.recentOperationsTop5 ?? []).length ? <div className="customerMetricLabel">暂无作业报告</div> : null}
@@ -117,10 +120,7 @@ export default function FieldReportExportPage(): React.ReactElement {
           )}
         </section>
 
-        <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">通过聚焦关键风险，减少重复巡检与处置延迟。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">基于地块状态、异常记录与作业进展综合评估。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerSpacingTopSm">系统已关联该地块历史变化，用于跟踪趋势。</p></section>
-        <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
+        <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户地块经营复盘使用。</p></footer>
       </div>
     </div>
   );
