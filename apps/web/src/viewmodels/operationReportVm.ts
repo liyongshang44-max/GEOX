@@ -13,7 +13,7 @@ import {
   labelValueType,
 } from "../lib/customerLabels";
 
-const REVIEW_NEEDED_TEXT = "证据不足，需复核";
+const REVIEW_NEEDED_TEXT = "需复核";
 
 export type OperationReportPageVm = {
   header: {
@@ -92,10 +92,20 @@ function toNum(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : null;
 }
-function asEvidenceStatus(value: unknown): string {
+function mapEvidenceStatusLabel(value: unknown): string {
   const count = toNum(value);
-  if (count == null || count <= 0) return REVIEW_NEEDED_TEXT;
-  return `已齐备（${count}）`;
+  if (count == null) return "需复核";
+  if (count <= 0) return "缺失";
+  return "已采集";
+}
+
+export function mapOperationStatusToCustomerLabel(value: unknown): string {
+  const status = String(value ?? "").trim().toUpperCase();
+  if (!status) return "待确认";
+  if (["SUCCESS", "DONE", "COMPLETED", "APPROVED", "PASS", "VALID"].includes(status)) return "已完成";
+  if (["FAILED", "REJECTED", "ERROR", "INVALID"].includes(status)) return "异常";
+  if (["PENDING", "WAITING", "QUEUED", "RUNNING", "IN_PROGRESS"].includes(status)) return "进行中";
+  return "待确认";
 }
 
 function joinReasonTexts(reasons: string[]): string {
@@ -186,19 +196,19 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       startedAtText: kv(report.execution.execution_started_at),
       finishedAtText: kv(report.execution.execution_finished_at),
       invalidExecutionText: labelBooleanYesNo(report.execution.invalid_execution),
-      statusText: finalStatusText,
+      statusText: mapOperationStatusToCustomerLabel(report.execution.final_status),
     },
     evidence: {
-      executionReceipt: asEvidenceStatus(report.evidence.artifacts_count),
-      executionRecord: asEvidenceStatus(report.evidence.logs_count),
-      postIrrigationMonitoring: asEvidenceStatus(report.evidence.metrics_count),
-      onSitePhotos: asEvidenceStatus(report.evidence.media_count),
-      acceptanceItems: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "已齐备",
+      executionReceipt: mapEvidenceStatusLabel(report.evidence.artifacts_count),
+      executionRecord: mapEvidenceStatusLabel(report.evidence.logs_count),
+      postIrrigationMonitoring: mapEvidenceStatusLabel(report.evidence.metrics_count),
+      onSitePhotos: mapEvidenceStatusLabel(report.evidence.media_count),
+      acceptanceItems: report.acceptance.missing_evidence ? "需复核" : "无缺失",
       hasAnyMissing: Boolean(report.acceptance.missing_evidence),
-      artifactsText: asEvidenceStatus(report.evidence.artifacts_count),
-      logsText: asEvidenceStatus(report.evidence.logs_count),
-      mediaText: asEvidenceStatus(report.evidence.media_count),
-      metricsText: asEvidenceStatus(report.evidence.metrics_count),
+      artifactsText: mapEvidenceStatusLabel(report.evidence.artifacts_count),
+      logsText: mapEvidenceStatusLabel(report.evidence.logs_count),
+      mediaText: mapEvidenceStatusLabel(report.evidence.media_count),
+      metricsText: mapEvidenceStatusLabel(report.evidence.metrics_count),
     },
     acceptance: {
       statusText: acceptanceStatusText,
