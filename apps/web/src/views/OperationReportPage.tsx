@@ -49,23 +49,25 @@ export default function OperationReportPage(): React.ReactElement {
   ];
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div className="customerReportCanvas">
+      <div className="customerReportSheet">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
-            <div className="customerLabel">GEOX / 作业闭环</div>
+            <div className="customerReportLogo">GEOX / 作业闭环</div>
             <h1 className="customerTitle">{vm.header.title}</h1>
-            <p className="customerSub">{vm.header.subtitle}</p>
+            <p className="customerSubtitle">{vm.header.subtitle}</p>
           </div>
           <div className="customerActions">
-            <Link className="btn" to="/customer/dashboard">返回客户看板</Link>
-            <Link className="btn" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
+            <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
+            <Link className="customerButton" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
           </div>
         </div>
       </header>
 
       <div className="customerFlow">
-        {steps.map((step) => (
+        <h2 className="customerReportSectionTitle">作业闭环路径</h2>
+      {steps.map((step) => (
           <section key={step.n} className="customerFlowStep">
             <div className="customerFlowIndex">{step.n}</div>
             <div className="customerCard">
@@ -74,6 +76,8 @@ export default function OperationReportPage(): React.ReactElement {
             </div>
           </section>
         ))}
+      </div>
+      <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
       </div>
     </div>
   );
