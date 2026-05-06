@@ -64,7 +64,7 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">诊断依据</h3>
-        <div className="customerList">
+        <ul className="customerList">
           {vm.diagnosticCards.map((item) => (
             <li key={item.title} className="customerListItem">
               <div>
@@ -73,7 +73,7 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="customerItemReason">{item.detail}</div>
             </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       <section className="customerCard">
@@ -86,7 +86,7 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">近期作业 Top 5</h3>
-        <div className="customerList">
+        <ul className="customerList">
           {vm.recentOperationsTop5.map((item) => (
             <li key={item.id} className="customerListItem">
               <div className="customerItemMain">
@@ -97,8 +97,8 @@ export default function FieldReportPage(): React.ReactElement {
               <div className="customerItemReason">验收：{item.acceptanceText}</div>
             </li>
           ))}
-          {!vm.recentOperationsTop5.length ? <div className="muted">暂无作业报告</div> : null}
-        </div>
+          {!vm.recentOperationsTop5.length ? <li className="muted">暂无作业报告</li> : null}
+        </ul>
       </section>
 
       <section className="customerCard">
