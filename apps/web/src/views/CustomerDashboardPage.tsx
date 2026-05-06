@@ -19,10 +19,10 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
-  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim()).filter(Boolean);
+  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim());
 
   return (
-    <div style={{ display: "grid", gap: 16 }}>
+    <div className="customerPage customerPageGapMd">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
@@ -120,11 +120,11 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议</h3>
-        <div className="customerGrid3">
+        <div className="customerActionCards customerRecommendationGrid">
           {(vm?.nextActions ?? []).map((item) => (
-            <article key={item.id} className="customerCard" style={{ border: "1px solid var(--line, #e5e7eb)", padding: 12 }}>
+            <article key={item.id} className="customerRecommendationCard">
               <div className="customerItemTitle">{item.title}</div>
-              <div className="customerItemReason" style={{ marginTop: 6 }}>{item.summary}</div>
+              <div className="customerItemReason customerSpacingTopXs">{item.summary}</div>
               <Link className="customerButton customerSpacingTopSm" to={item.href}>立即处理</Link>
             </article>
           ))}
