@@ -37,11 +37,7 @@ export default function FieldReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
-  const sanitizeUiText = (value: unknown): string => String(value ?? "")
-    .replace(/field_c8_demo/gi, "")
-    .replace(/地块id/gi, "")
-    .replace(/field_/gi, "")
-    .trim();
+  const sanitizeUiText = (value: unknown): string => String(value ?? "").trim();
   const isHighRisk = /高风险|严重|high/i.test(vm.overview.riskText ?? "");
   const hasAbnormalReason = vm.currentStatus.reasons.some((item) => item && !/暂无|正常|无异常/.test(item));
   const showStatusAlert = isHighRisk || hasAbnormalReason;
