@@ -147,6 +147,35 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.customerTimeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.customerTimelineStep {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.customerTimelineDot {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #16a34a;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 4px #dcfce7;
+  margin-top: 2px;
+}
+
 .customerMetricCard {
   padding: 18px;
   border-radius: 16px;
