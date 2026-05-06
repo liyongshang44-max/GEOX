@@ -141,6 +141,16 @@
   padding: 20px;
 }
 
+.customerCardAlert {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.customerCardSuccess {
+  background: #ecfdf3;
+  border-color: #a7f3d0;
+}
+
 .customerHeroTop,
 .customerActionRow,
 .customerItemMain {

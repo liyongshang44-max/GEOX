@@ -74,7 +74,7 @@ export default function FieldReportPage(): React.ReactElement {
         </ul>
       </section>
 
-      {showStatusAlert ? <section className="customerCard" style={{ background: "#fef2f2", borderColor: "#fecaca" }}>
+      {showStatusAlert ? <section className="customerCard customerCardAlert">
         <h3 className="customerCardTitle">当前状态说明</h3>
         <div>{sanitizeUiText(vm.currentStatus.summary)}</div>
         <ul className="customerSpacingTopXs">
@@ -123,7 +123,7 @@ export default function FieldReportPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="customerCard" style={{ background: "#ecfdf3", borderColor: "#a7f3d0" }}>
+      <section className="customerCard customerCardSuccess">
         <h3 className="customerCardTitle">下一步建议</h3>
         <ul className="customerSpacingTopXs">
           {nextSteps.map((item, idx) => <li key={`${item}-${idx}`}>{item}</li>)}
