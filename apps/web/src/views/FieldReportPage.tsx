@@ -104,6 +104,18 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
+        <h3 className="customerCardTitle">处方与下一步建议</h3>
+        <div className="customerList">
+          {vm.prescriptionCards.map((item) => (
+            <article key={item.title} className={item.title === "审批要求" ? "item customerListItemWarn" : "item"}>
+              <div><strong>{item.title}</strong>：{item.value}</div>
+              <div className="muted">{item.detail}</div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="customerCard">
         <h3 className="customerCardTitle">设备与监测</h3>
         <div className="customerGrid2">
           {vm.deviceMonitoring.map((item) => (
