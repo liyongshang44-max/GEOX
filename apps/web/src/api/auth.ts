@@ -1,4 +1,4 @@
-import { apiRequest, ApiError } from "./client";
+import { apiRequest, apiRequestWithPolicy, ApiError } from "./client";
 
 export type AuthMe = {
   ok: boolean;
@@ -87,7 +87,10 @@ export async function loginWithToken(token: string): Promise<AuthMe> {
 }
 
 export async function fetchAuthMe(): Promise<AuthMe> {
-  const me = await apiRequest<AuthMe>("/api/v1/auth/me");
-  ensureTenantContext(me);
-  return me;
+  const res = await apiRequestWithPolicy<AuthMe>("/api/v1/auth/me", undefined, { dedupe: true, timeoutMs: 8000 });
+  if (!res.ok) {
+    throw new ApiError(res.status, res.bodyText, res.url);
+  }
+  ensureTenantContext(res.data);
+  return res.data;
 }
