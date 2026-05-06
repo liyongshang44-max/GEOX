@@ -54,7 +54,7 @@ export default function FieldReportExportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
-  const reportTitle = resolveReportTitle(vm.header.title, fieldId);
+  const reportTitle = resolveReportTitle(vm.header.title, (report as any).field_name);
 
   return (
     <div className="customerReportCanvas">
