@@ -115,3 +115,55 @@
     grid-template-columns: 1fr;
   }
 }
+
+.operationClosedLoopGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.operationClosedLoopCard {
+  cursor: pointer;
+}
+.operationClosedLoopHead {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+}
+.operationStepNo {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--customer-surface-muted);
+  border: 1px solid var(--customer-border);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.operationStatusBadge {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--customer-surface-muted);
+  border: 1px solid var(--customer-border);
+}
+.operationOneLiner {
+  margin-top: 8px;
+}
+.customerLinkButton {
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  padding: 0;
+  cursor: pointer;
+}
+.operationClosedLoopCard.isExpanded {
+  border-color: var(--customer-border-strong);
+}
+@media (max-width: 1100px) {
+  .operationClosedLoopGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .operationClosedLoopGrid { grid-template-columns: 1fr; }
+}
