@@ -171,6 +171,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const reportApproval = (report as any).approval ?? null;
   const memory = (report as any).field_memory ?? {};
   const roi = (report as any).roi_ledger ?? {};
+  const recommendationData = (report as any).recommendation ?? null;
+  const recommendationReason = kv(recommendationData?.reason ?? reportWhy?.objective_text, "--");
+  const explainText = kv(recommendationData?.explain ?? reportWhy?.explain_human, "--");
+  const sourceFactRefs = Array.isArray(recommendationData?.source_fact_refs)
+    ? recommendationData.source_fact_refs.map((item: unknown) => labelEmptyFallback(item)).filter(Boolean).join("、")
+    : "--";
+  const recommendationSummary = kv(recommendationData?.data_summary ?? recommendationData?.summary ?? reportWhy?.objective_text, "--");
+  const hasRecommendationData = [recommendationReason, explainText, riskLabel, recommendationSummary].some((value) => value !== "--");
 
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
@@ -197,7 +205,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
     .every((value) => (toNum(value) ?? 0) <= 0);
   const sections: CustomerReportSectionVm[] = [
-    { key: "RECOMMENDATION", status: "AVAILABLE", title: "建议", summary: kv(reportWhy?.objective_text, reasonText), items: [{ label: "当前风险", value: riskLabel }, { label: "主要原因", value: reasonText }] },
+    { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
     { key: "PRESCRIPTION", status: "MISSING", title: "处方合同", summary: "未形成正式处方", items: [], emptyState: { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
     { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
@@ -221,7 +229,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     sections,
     timeline,
     exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`,
-    technicalFoldout: { rows: [{ label: "operation_id", value: kv(report.identifiers.operation_id) }, { label: "operation_plan_id", value: kv(report.identifiers.operation_plan_id) }] },
+    technicalFoldout: { rows: [
+      { label: "operation_id", value: kv(report.identifiers.operation_id) },
+      { label: "operation_plan_id", value: kv(report.identifiers.operation_plan_id) },
+      { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) },
+      { label: "rule_id", value: kv(recommendationData?.rule_id ?? recommendationData?.ruleId) },
+      { label: "source fact refs", value: sourceFactRefs },
+      { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? (report as any).field_memory?.skill_trace_ref) },
+    ] },
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
       subtitle: finalStatusText,
