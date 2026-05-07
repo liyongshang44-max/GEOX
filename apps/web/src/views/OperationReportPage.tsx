@@ -60,17 +60,20 @@ export default function OperationReportPage(): React.ReactElement {
         <div className="customerHeroTop">
           <div>
             <div className="customerReportLogo">GEOX / 作业闭环</div>
-            <h1 className="customerTitle">{vm.header.title}</h1>
-            <p className="customerSubtitle">{vm.header.subtitle}</p>
+            <h1 className="customerTitle">{vm.operation.title}</h1>
+            <p className="customerSubtitle">{vm.operation.finalStatusLabel} · 更新时间 {vm.operation.updatedAtText}</p>
           </div>
           <div className="customerActions">
             <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
-            <Link className="customerButton" to={`/customer/operations/${encodeURIComponent(operationId)}/export`}>导出报告</Link>
+            <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
           </div>
         </div>
       </header>
 
       <div className="customerTimeline">
+        <div className="customerCard customerSpacingBottomSm">
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}:{item.status}</span>)}
+        </div>
         {steps.map((step) => (
           <section key={step.n} className="customerTimelineStep">
             <div className="customerTimelineDot">{step.n}</div>
