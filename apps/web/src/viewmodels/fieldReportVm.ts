@@ -4,9 +4,9 @@ import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskL
 export type FieldReportPageVm = {
   field: { fieldId: string; fieldName: string; cropText: string; stageText: string; updatedAtText: string };
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
-  diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string };
+  diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
-  recentOperations: Array<{ operationId: string; rowText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
   roiSummary: { title: string; lines: string[] } | { title: string; description: string };
   fieldMemory: { title: string; lines: string[] } | { title: string; description: string };
   exportHref: string;
@@ -80,7 +80,6 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   };
   const riskTone: "neutral" | "warning" | "danger" = overview.riskText.includes("高") ? "danger" : (overview.riskText.includes("中") ? "warning" : "neutral");
   const roiItems = Number(report.value_summary.total_roi_items ?? 0);
-  const fieldMemoryItems = Number(report.value_summary.low_confidence_items ?? 0);
 
   const deviceSummary = {
     totalText: formatCount(report.device_summary.total_devices),
@@ -100,8 +99,8 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     field: {
       fieldId,
       fieldName: fieldName || "未命名地块",
-      cropText: sanitizeCustomerText(report.next_action?.objective_text ?? "作物信息待补充"),
-      stageText: sanitizeCustomerText(report.next_action?.priority ?? "阶段待确认"),
+      cropText: "暂无作物信息",
+      stageText: "暂无阶段信息",
       updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
     },
     risk: { levelLabel: overview.riskText, tone: riskTone, reasons: explain.topReasonsText },
@@ -109,16 +108,47 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       headline: explain.human,
       evidenceLines: explain.topReasonsText,
       dataQualityText: report.value_summary.low_confidence_items > 0 ? "数据质量需复核" : "数据质量可用",
+      latestObservationText: report.overview.latest_operation_at
+        ? `最近一次作业观测时间：${formatDateTime(report.overview.latest_operation_at)}`
+        : `最近遥测更新时间：${formatDateTime(report.device_summary.last_telemetry_at)}`,
     },
-    recommendations: [
-      { title: nextAction?.title ?? "优先完成待验收作业", summary: nextAction?.explainText ?? "优先关闭当前风险相关任务。", href: nextAction ? `/customer/fields/${encodeURIComponent(fieldId)}` : undefined },
-    ],
+    recommendations: nextAction
+      ? [{ title: nextAction.title, summary: nextAction.explainText, href: `/customer/fields/${encodeURIComponent(fieldId)}` }]
+      : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
-      return { operationId, rowText: `${sanitizeCustomerText(item.customer_title || item.title || "作业")} · ${formatDateTime(item.generated_at)} · ${labelAcceptanceStatus(item.acceptance_status)}`, href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard" };
+      const finalStatusRaw = String(item.final_status || "").toUpperCase();
+      const evidenceText = ["EVIDENCE_MISSING", "NOT_AVAILABLE"].includes(finalStatusRaw) ? "证据缺失" : "证据已回传";
+      return {
+        operationId,
+        title: sanitizeCustomerText(item.customer_title || item.title || "作业"),
+        statusText: labelFinalStatus(item.final_status),
+        acceptanceText: labelAcceptanceStatus(item.acceptance_status),
+        evidenceText,
+        updatedAtText: formatDateTime(item.generated_at),
+        href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
+      };
     }),
-    roiSummary: roiItems > 0 ? { title: "价值摘要", lines: [`ROI 条目 ${formatCount(report.value_summary.total_roi_items)}`, `节水条目 ${formatCount(report.value_summary.water_saved_items)}`] } : { title: "暂无可量化价值记录", description: "本周期暂无可展示 ROI。" },
-    fieldMemory: fieldMemoryItems > 0 ? { title: "地块记忆摘要", lines: [`低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条，建议复核`] } : { title: "暂无可展示的地块记忆", description: "当前无可复用地块记忆。" },
+    roiSummary: roiItems > 0
+      ? {
+        title: "价值记录摘要",
+        lines: [
+          String(report.value_summary.customer_value_text || `本地块已有 ${formatCount(report.value_summary.total_roi_items)} 条价值记录`),
+          `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
+          `Confidence / Assumption：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
+        ],
+      }
+      : { title: "暂无可量化价值记录", description: "暂无可量化价值记录" },
+    fieldMemory: (report.overview.total_operations_count > 0 || report.device_summary.total_devices > 0 || report.value_summary.total_roi_items > 0)
+      ? {
+        title: "地块记忆摘要",
+        lines: [
+          `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
+          `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
+          `技能表现摘要：首验通过价值项 ${formatCount(report.value_summary.first_pass_acceptance_items)} 条，低置信 ${formatCount(report.value_summary.low_confidence_items)} 条`,
+        ],
+      }
+      : { title: "暂无可展示的地块记忆", description: "暂无可展示的地块记忆" },
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {
       title,
