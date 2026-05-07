@@ -9,11 +9,10 @@ function splitRecentOperationRow(rowText: string): { operationType: string; fiel
 }
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
-  const managedFields = vm.kpis.find((item) => item.key === "managedFields")?.valueText ?? "-";
-  const highRiskFields = vm.kpis.find((item) => item.key === "highRiskFields")?.valueText ?? "-";
-  const pendingApproval = vm.kpis.find((item) => item.key === "pendingApproval")?.valueText ?? "-";
+  const riskFields = vm.kpis.find((item) => item.key === "riskFields")?.valueText ?? "-";
+  const pendingActions = vm.kpis.find((item) => item.key === "pendingActions")?.valueText ?? "-";
   const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
-  const earlyWarnings = vm.kpis.find((item) => item.key === "earlyWarnings")?.valueText ?? "-";
+  const offlineDevices = vm.kpis.find((item) => item.key === "offlineDevices")?.valueText ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
   const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
   const topRisks = (vm.topRiskFields ?? []).slice(0, 5);
@@ -22,8 +21,8 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
     <div className="customerCompactReport">
       <section className="customerCard">
         <h2 className="customerCardTitle">概览</h2>
-        <p className="customerSpacingTopSm">管理地块 {managedFields} 个，高风险地块 {highRiskFields} 个，提前发现异常 {earlyWarnings} 项</p>
-        <p className="customerMetricLabel">待审批处方：{pendingApproval}；待验收作业：{pendingAcceptance}</p>
+        <p className="customerSpacingTopSm">风险地块 {riskFields} 个，离线设备 {offlineDevices} 台</p>
+        <p className="customerMetricLabel">待处理事项：{pendingActions}；待验收作业：{pendingAcceptance}</p>
       </section>
       <section className="customerCard">
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
@@ -81,14 +80,7 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
 }
 
 export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): React.ReactElement {
-  const sections = [
-    { title: "为什么做", body: `${vm.why.riskLabel}；${vm.why.reasonText}` },
-    { title: "谁批准", body: `${vm.approval.actorText}｜${vm.approval.statusText}` },
-    { title: "怎么执行", body: `${vm.execution.ownerText}｜${vm.execution.statusText}` },
-    { title: "有什么证据", body: `附加工件 ${vm.evidence.artifactsText}；执行记录 ${vm.evidence.logsText}；现场媒体 ${vm.evidence.mediaText}；指标记录 ${vm.evidence.metricsText}` },
-    { title: "验收结果", body: `${vm.acceptance.statusText}；缺失证据：${vm.acceptance.missingEvidenceText}` },
-    { title: "最终结论", body: vm.conclusion.resultText },
-  ];
+  const sections = vm.sections;
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
@@ -97,9 +89,11 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
       </section>
       <section className="customerFlow customerFlow6">
         {sections.map((item) => (
-          <article key={item.title} className="customerFlowStep">
+          <article key={item.key} className="customerFlowStep">
             <h2 className="customerCardTitle">{item.title}</h2>
-            <p className="customerSpacingTopSm">{item.body}</p>
+            <p className="customerSpacingTopSm">{item.summary}</p>
+            {item.items.length ? <p className="customerMetricLabel">{item.items.map((row) => `${row.label}：${row.value}`).join("；")}</p> : null}
+            {item.emptyState ? <p className="customerMetricLabel">{item.emptyState.title}：{item.emptyState.description}</p> : null}
           </article>
         ))}
       </section>

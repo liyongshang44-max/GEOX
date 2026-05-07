@@ -19,6 +19,29 @@ export const CUSTOMER_LABELS = {
   offlineDevices: "离线",
 } as const;
 
+const CUSTOMER_STATUS_LABELS: Record<string, string> = {
+  PENDING_ACCEPTANCE: "作业已完成，等待验收",
+  SUCCESS: "验收通过",
+  SUCCEEDED: "验收通过",
+  PASS: "验收通过",
+  FAILED: "未达到预期效果",
+  FAIL: "未达到预期效果",
+  INVALID_EXECUTION: "执行无效，需要复核",
+  EVIDENCE_MISSING: "证据不足，暂不能验收",
+  DEVICE_OFFLINE: "设备离线，暂无法确认执行效果",
+  NO_DATA: "暂无可用数据",
+};
+
+const CUSTOMER_EMPTY_STATE_LABELS: Record<string, string> = {
+  ROI_UNAVAILABLE: "暂无可量化价值记录",
+  FIELD_MEMORY_UNAVAILABLE: "暂无可展示的地块记忆",
+  PRESCRIPTION_MISSING: "暂无处方记录",
+  AS_EXECUTED_MISSING: "暂无执行记录",
+  AS_APPLIED_MISSING: "暂无施用记录",
+  ACCEPTANCE_PENDING: "作业已完成，等待验收",
+  WEATHER_UNAVAILABLE: "天气数据暂不可用",
+};
+
 const RAW_CODE_LABELS: Record<string, string> = {
   FIELD_MEMORY_WEAK_IRRIGATION_RESPONSE: "灌溉响应弱，建议复核",
   FIELD_MEMORY_EXECUTION_DEVIATION_RISK: "执行偏差风险，建议复核",
@@ -53,6 +76,57 @@ export function labelOperationType(raw: unknown): string {
   const key = normalizeKey(raw);
   if (!key) return "作业";
   return OPERATION_TYPE_LABELS[key] ?? labelRawCode(raw, "作业");
+}
+
+export function customerStatusLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (!key) return "待确认";
+  return CUSTOMER_STATUS_LABELS[key] ?? labelFinalStatus(raw);
+}
+
+export function customerRiskLabel(raw: unknown): string {
+  return labelRiskLevel(raw);
+}
+
+export function customerAcceptanceLabel(raw: unknown): string {
+  return labelAcceptanceStatus(raw);
+}
+
+export function customerEvidenceLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "EVIDENCE_MISSING") return "证据不足，暂不能验收";
+  return labelEvidenceQuality(raw);
+}
+
+export function customerRoiLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "ROI_UNAVAILABLE") return CUSTOMER_EMPTY_STATE_LABELS.ROI_UNAVAILABLE;
+  return sanitizeCustomerText(raw, "暂无可量化价值记录");
+}
+
+export function customerFieldMemoryLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "FIELD_MEMORY_UNAVAILABLE") return CUSTOMER_EMPTY_STATE_LABELS.FIELD_MEMORY_UNAVAILABLE;
+  return labelMemoryCode(raw);
+}
+
+export function customerPrescriptionLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "PRESCRIPTION_MISSING") return CUSTOMER_EMPTY_STATE_LABELS.PRESCRIPTION_MISSING;
+  return sanitizeCustomerText(raw, "暂无处方记录");
+}
+
+export function customerExecutionLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (key === "AS_EXECUTED_MISSING") return CUSTOMER_EMPTY_STATE_LABELS.AS_EXECUTED_MISSING;
+  if (key === "AS_APPLIED_MISSING") return CUSTOMER_EMPTY_STATE_LABELS.AS_APPLIED_MISSING;
+  return customerStatusLabel(raw);
+}
+
+export function customerSectionStatusLabel(raw: unknown): string {
+  const key = normalizeKey(raw);
+  if (CUSTOMER_EMPTY_STATE_LABELS[key]) return CUSTOMER_EMPTY_STATE_LABELS[key];
+  return customerStatusLabel(raw);
 }
 
 function textOrFallback(raw: unknown, fallback = "--"): string {

@@ -26,18 +26,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   }, []);
 
-  const fixedKpiOrder = ["pendingApproval", "highRiskFields", "earlyWarnings", "pendingAcceptance", "weeklyWaterSaved", "managedFields"] as const;
+  const fixedKpiOrder = ["pendingActions", "riskFields", "pendingAcceptance", "offlineDevices", "recentOperations", "valueRecords"] as const;
 
   const fixedKpis = fixedKpiOrder.map((key) => {
     const found = vm?.kpis.find((kpi) => kpi.key === key);
     if (found) return found;
     const fallbackLabel: Record<(typeof fixedKpiOrder)[number], string> = {
-      pendingApproval: "待审批处方",
-      highRiskFields: "高风险地块",
-      earlyWarnings: "异常发现",
+      pendingActions: "待处理事项",
+      riskFields: "风险地块",
       pendingAcceptance: "待验收作业",
-      weeklyWaterSaved: "本周节水",
-      managedFields: "管理地块",
+      offlineDevices: "离线设备",
+      recentOperations: "近期作业",
+      valueRecords: "价值记录",
     };
     return { key, label: fallbackLabel[key], valueText: "--", detailText: "数据更新中" };
   });
