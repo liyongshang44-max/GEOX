@@ -5,7 +5,7 @@ import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
 import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
 import CockpitActionList from "../components/cockpit/CockpitActionList";
 import DeviceHealthCard from "../components/cockpit/DeviceHealthCard";
-import { ValueResultPanel } from "../components/cockpit/CockpitPanels";
+import ValueResultPanel from "../components/cockpit/ValueResultPanel";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -45,7 +45,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <CockpitActionList items={vm?.actionItems ?? []} />
         <div className="customerPageGapMd">
           <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} />
-          <ValueResultPanel valueText={vm?.roiSummary.customerValueText ?? "暂无收益摘要"} roiItems={vm?.roiSummary.totalRoiItems ?? 0} />
+          <ValueResultPanel roi={vm?.roiSummary ?? { totalRoiItems: 0, waterSavedItems: 0, customerValueText: "" }} />
         </div>
       </section>
 

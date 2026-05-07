@@ -61,6 +61,8 @@ export type CustomerDashboardVm = {
     totalRoiItems: number;
     waterSavedItems: number;
     customerValueText: string;
+    confidenceText?: string;
+    assumptionText?: string;
   };
   emptyStates: Record<string, { title: string; description: string; severity: "neutral" | "info" | "warning" }>;
 };
@@ -178,6 +180,8 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       totalRoiItems: Number(aggregate.roi_summary?.total_roi_items ?? 0),
       waterSavedItems: Number(aggregate.roi_summary?.water_saved_items ?? 0),
       customerValueText: sanitizeCustomerText(aggregate.roi_summary?.customer_value_text ?? "暂无收益摘要"),
+      confidenceText: sanitizeCustomerText((aggregate.roi_summary as any)?.confidence_text ?? ""),
+      assumptionText: sanitizeCustomerText((aggregate.roi_summary as any)?.assumption_text ?? ""),
     },
     emptyStates: {
       NO_ROI: getCustomerEmptyState("NO_ROI"),
