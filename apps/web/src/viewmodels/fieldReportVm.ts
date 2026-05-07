@@ -130,7 +130,16 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
         href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
       };
     }),
-    roiSummary: roiItems > 0 ? { title: "价值摘要", lines: [`ROI 条目 ${formatCount(report.value_summary.total_roi_items)}`, `节水条目 ${formatCount(report.value_summary.water_saved_items)}`] } : { title: "暂无可量化价值记录", description: "本周期暂无可展示 ROI。" },
+    roiSummary: roiItems > 0
+      ? {
+        title: "价值记录摘要",
+        lines: [
+          String(report.value_summary.customer_value_text || `本地块已有 ${formatCount(report.value_summary.total_roi_items)} 条价值记录`),
+          `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
+          `Confidence / Assumption：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
+        ],
+      }
+      : { title: "暂无可量化价值记录", description: "暂无可量化价值记录" },
     fieldMemory: fieldMemoryItems > 0 ? { title: "地块记忆摘要", lines: [`低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条，建议复核`] } : { title: "暂无可展示的地块记忆", description: "当前无可复用地块记忆。" },
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {

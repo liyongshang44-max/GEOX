@@ -146,7 +146,7 @@ export default function FieldReportPage(): React.ReactElement {
       </section>
 
       <section className="customerCard">
-        <h3 className="customerCardTitle">ROI 摘要</h3>
+        <h3 className="customerCardTitle">价值记录摘要</h3>
         <div>{'lines' in vm.roiSummary ? vm.roiSummary.lines.join("；") : `${vm.roiSummary.title}：${vm.roiSummary.description}`}</div>
       </section>
 
