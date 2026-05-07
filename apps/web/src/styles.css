@@ -1,6 +1,7 @@
 @import "./shared/styles/tokens.css";
 @import "./styles/base.css";
 @import "./styles/layout.css";
+@import "./styles/customerShell.css";
 @import "./shared/styles/shell.css";
 @import "./styles/cards.css";
 @import "./styles/badges.css";
