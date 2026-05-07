@@ -1,0 +1,41 @@
+.customerDashboardPage {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.customerDashboardKpiRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customerDashboardMainGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customerDashboardBottomGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.customerDashboardRiskPanel,
+.customerDashboardActionPanel,
+.customerDashboardRightRail {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .customerDashboardKpiRow,
+  .customerDashboardBottomGrid { grid-template-columns: 1fr 1fr; }
+
+  .customerDashboardMainGrid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .customerDashboardKpiRow,
+  .customerDashboardBottomGrid { grid-template-columns: 1fr; }
+}

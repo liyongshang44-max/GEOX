@@ -40,7 +40,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
   const kpis = vm?.kpis ?? [];
 
   return (
-    <div className="customerPage customerPageGapMd">
+    <div className="customerDashboardPage">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
@@ -51,12 +51,12 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </header>
 
-      <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
+      <div className="customerDashboardKpiRow"><CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} /></div>
 
-      <section className="customerGrid3">
-        <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" />
-        <CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} />
-        <div className="customerPageGapMd">
+      <section className="customerDashboardMainGrid">
+        <div className="customerDashboardRiskPanel"><CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" /></div>
+        <div className="customerDashboardActionPanel"><CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} /></div>
+        <div className="customerDashboardRightRail">
           <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} emptyState={emptyStates.NO_DEVICE_HEALTH} />
           {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
         </div>
