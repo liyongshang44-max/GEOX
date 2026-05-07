@@ -5,9 +5,9 @@ import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 const FieldsPage = React.lazy(() => import("../../features/fields/pages/FieldsPage"));
 const FieldCreatePage = React.lazy(() => import("../../features/fields/pages/FieldCreatePage"));
 const FieldDetailPage = React.lazy(() => import("../../features/fields/pages/FieldDetailPage"));
-const FieldReportPage = React.lazy(() => import("../../views/FieldReportPage"));
-const FieldReportExportPage = React.lazy(() => import("../../views/FieldReportExportPage"));
-const FieldPortfolioPage = React.lazy(() => import("../../views/FieldPortfolioPage"));
+const FieldReportPage = React.lazy(() => import("../../features/fields/pages/FieldReportPage"));
+const FieldReportExportPage = React.lazy(() => import("../../features/fields/pages/FieldReportExportPage"));
+const FieldPortfolioPage = React.lazy(() => import("../../features/fields/pages/FieldPortfolioPage"));
 
 export function renderCustomerFieldsRoutes(): React.ReactElement[] {
   return [

@@ -10,10 +10,10 @@ const DispatchWorkbenchPage = React.lazy(() => import("../../features/operations
 const AlertsPage = React.lazy(() => import("../../features/operations/pages/AlertsPage"));
 const ManualExecutionAnalysisPage = React.lazy(() => import("../../features/operations/pages/ManualExecutionAnalysisPage"));
 const HumanOpsAnalyticsPage = React.lazy(() => import("../../features/operations/pages/HumanOpsAnalyticsPage"));
-const OperationReportPage = React.lazy(() => import("../../views/OperationReportPage"));
-const OperationReportExportPage = React.lazy(() => import("../../views/OperationReportExportPage"));
-const OperationsWorkboardPage = React.lazy(() => import("../../views/OperationsWorkboardPage"));
-const AdminOperationDebugPage = React.lazy(() => import("../../views/AdminOperationDebugPage"));
+const OperationReportPage = React.lazy(() => import("../../features/operations/pages/OperationReportPage"));
+const OperationReportExportPage = React.lazy(() => import("../../features/operations/pages/OperationReportExportPage"));
+const OperationsWorkboardPage = React.lazy(() => import("../../features/operations/pages/OperationsWorkboardPage"));
+const AdminOperationDebugPage = React.lazy(() => import("../../features/dashboard/pages/AdminOperationDebugPage"));
 
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [

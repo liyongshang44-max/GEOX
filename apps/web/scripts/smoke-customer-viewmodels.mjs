@@ -6,6 +6,8 @@ const tests = [
   "src/viewmodels/operationReportVm.test.ts",
 ];
 
+execSync("node apps/web/scripts/smoke-customer-routes.mjs", { stdio: "inherit" });
+
 for (const file of tests) {
   execSync(`pnpm -w exec tsx apps/web/${file}`, { stdio: "inherit" });
 }

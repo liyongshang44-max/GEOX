@@ -16,8 +16,13 @@ const byKey = (key: string) => vm.sections.find((s) => s.key === key);
 assert.equal(byKey("PRESCRIPTION")?.status, "MISSING");
 assert.equal(["MISSING", "PENDING"].includes(byKey("APPROVAL")?.status ?? ""), true);
 assert.equal(byKey("EXECUTION")?.status, "MISSING");
+assert.equal(byKey("EVIDENCE")?.status, "MISSING");
+assert.equal(byKey("ACCEPTANCE")?.status, "PENDING");
 assert.equal(byKey("ROI")?.status, "MISSING");
 assert.equal(byKey("MEMORY")?.status, "MISSING");
 assert.equal(vm.sections.length, 8);
+
+const visibleText = JSON.stringify(vm).toLowerCase();
+assert.equal(/undefined|nan/.test(visibleText), false);
 
 console.log("operationReportVm smoke passed");
