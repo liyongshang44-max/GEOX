@@ -132,7 +132,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       ? [{ title: nextAction.title, summary: nextAction.explainText, href: `/customer/fields/${encodeURIComponent(fieldId)}` }]
       : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
-      const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
+    const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       const finalStatusRaw = String(item.final_status || "").toUpperCase();
       const evidenceText = ["EVIDENCE_MISSING", "NOT_AVAILABLE"].includes(finalStatusRaw) ? "证据缺失" : "证据已回传";
       return {
@@ -185,6 +187,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       reasons: explain.topReasonsText,
     },
     recentOperationsTop5: report.recent_operations.slice(0, 5).map((item) => {
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "--",

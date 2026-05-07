@@ -2,25 +2,44 @@ import assert from "node:assert/strict";
 import { buildCustomerDashboardVm } from "./customerDashboardVm";
 
 const vm = buildCustomerDashboardVm({
-  pending_actions_summary: { total_open_alerts: 3, pending_acceptance: 1 },
-  fields: { total: "N/A", at_risk: 2 },
-  roi_summary: undefined,
+  pending_actions_summary: {
+    total_open_alerts: 3,
+    pending_acceptance: 1,
+    unassigned_alerts: 0,
+    in_progress_alerts: 0,
+    sla_breached_alerts: 0,
+    closed_today_alerts: 0,
+  },
+  fields: { total: 0, healthy: 0, at_risk: 2 },
   recent_operations: [],
-});
+} as any);
 
 const vmNoRiskNoOps = buildCustomerDashboardVm({
-  pending_actions_summary: { total_open_alerts: 0, pending_acceptance: 0 },
-  fields: { at_risk: 0 },
+  pending_actions_summary: {
+    total_open_alerts: 0,
+    pending_acceptance: 0,
+    unassigned_alerts: 0,
+    in_progress_alerts: 0,
+    sla_breached_alerts: 0,
+    closed_today_alerts: 0,
+  },
+  fields: { total: 0, healthy: 0, at_risk: 0 },
   top_risk_fields: [],
   recent_operations: [],
-});
+} as any);
 
 const vmNoFields = buildCustomerDashboardVm({
-  pending_actions_summary: { total_open_alerts: 0, pending_acceptance: 0 },
-  fields: undefined,
+  pending_actions_summary: {
+    total_open_alerts: 0,
+    pending_acceptance: 0,
+    unassigned_alerts: 0,
+    in_progress_alerts: 0,
+    sla_breached_alerts: 0,
+    closed_today_alerts: 0,
+  },
   top_risk_fields: [],
   recent_operations: [],
-});
+} as any);
 
 assert.equal(vm.kpis.find((k) => k.key === "OPEN_ACTIONS")?.label, "待处理事项");
 assert.equal(vm.kpis.some((k) => k.label === "总地块数"), false);
