@@ -6,7 +6,7 @@ export type FieldReportPageVm = {
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
   diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
-  recentOperations: Array<{ operationId: string; rowText: string; href: string }>;
+  recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
   roiSummary: { title: string; lines: string[] } | { title: string; description: string };
   fieldMemory: { title: string; lines: string[] } | { title: string; description: string };
   exportHref: string;
@@ -118,7 +118,17 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
-      return { operationId, rowText: `${sanitizeCustomerText(item.customer_title || item.title || "作业")} · ${formatDateTime(item.generated_at)} · ${labelAcceptanceStatus(item.acceptance_status)}`, href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard" };
+      const finalStatusRaw = String(item.final_status || "").toUpperCase();
+      const evidenceText = ["EVIDENCE_MISSING", "NOT_AVAILABLE"].includes(finalStatusRaw) ? "证据缺失" : "证据已回传";
+      return {
+        operationId,
+        title: sanitizeCustomerText(item.customer_title || item.title || "作业"),
+        statusText: labelFinalStatus(item.final_status),
+        acceptanceText: labelAcceptanceStatus(item.acceptance_status),
+        evidenceText,
+        updatedAtText: formatDateTime(item.generated_at),
+        href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
+      };
     }),
     roiSummary: roiItems > 0 ? { title: "价值摘要", lines: [`ROI 条目 ${formatCount(report.value_summary.total_roi_items)}`, `节水条目 ${formatCount(report.value_summary.water_saved_items)}`] } : { title: "暂无可量化价值记录", description: "本周期暂无可展示 ROI。" },
     fieldMemory: fieldMemoryItems > 0 ? { title: "地块记忆摘要", lines: [`低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条，建议复核`] } : { title: "暂无可展示的地块记忆", description: "当前无可复用地块记忆。" },

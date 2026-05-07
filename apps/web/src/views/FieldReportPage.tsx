@@ -118,14 +118,16 @@ export default function FieldReportPage(): React.ReactElement {
         <h3 className="customerCardTitle">近期作业 Top 5</h3>
         <ul className="customerList">
           {vm.recentOperations.map((item) => (
-            <li key={item.operationId || item.rowText} className="customerListItem">
-              <div className="customerItemMain">
-                <Link to={item.href}>{item.rowText.split(" · ")[0]}</Link>
-              </div>
-              <div className="customerItemReason">{item.rowText.split(" · ").slice(1).join(" · ")}</div>
+            <li key={item.operationId || item.title} className="customerListItem">
+              <div><strong>作业名称：</strong>{item.title}</div>
+              <div><strong>状态：</strong>{item.statusText}</div>
+              <div><strong>验收结果：</strong>{item.acceptanceText}</div>
+              <div><strong>证据状态：</strong>{item.evidenceText}</div>
+              <div><strong>更新时间：</strong>{item.updatedAtText}</div>
+              <div><strong>查看作业：</strong><Link to={item.href}>查看作业</Link></div>
             </li>
           ))}
-          {!vm.recentOperations.length ? <li className="muted">暂无作业报告</li> : null}
+          {!vm.recentOperations.length ? <li className="muted">暂无近期作业记录</li> : null}
         </ul>
       </section>
 
