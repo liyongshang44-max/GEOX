@@ -15,18 +15,21 @@ export default function CustomerReportExportPage(): React.ReactElement {
   const [error, setError] = React.useState("");
   const [content, setContent] = React.useState<React.ReactElement | null>(null);
   const [reportTitle, setReportTitle] = React.useState("客户报告");
+  const [generatedAtText, setGeneratedAtText] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
     setError("");
     setReportTitle("客户报告");
+    setGeneratedAtText("");
     const load = async (): Promise<void> => {
       if (mode === "field") {
         const report = await fetchFieldReport(fieldId);
         const vm = buildFieldReportVm(report);
         if (!alive) return;
         setReportTitle(vm.field.fieldName || "客户报告");
+        setGeneratedAtText(vm.generatedAtText);
         setContent(<FieldExportBlocks vm={vm} />);
         return;
       }
@@ -36,6 +39,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
         if (!alive) return;
         const title = String(vm.operation.title || "").trim();
         setReportTitle(title ? (title.endsWith("报告") ? title : `${title}报告`) : "客户报告");
+        setGeneratedAtText(vm.generatedAtText);
         setContent(<OperationExportBlocks vm={vm} />);
         return;
       }
@@ -43,6 +47,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
       const vm = buildCustomerDashboardVm(aggregate);
       if (!alive) return;
       setReportTitle("客户看板报告");
+      setGeneratedAtText(vm.generatedAtText);
       setContent(<DashboardExportBlocks vm={vm} />);
     };
 
@@ -69,7 +74,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
             <div>
               <div className="customerEyebrow">GEOX</div>
               <h1 className="customerTitle">{reportTitle || "客户报告"}</h1>
-              <p className="customerSubtitle">生成时间：{new Date().toLocaleString()}</p>
+              <p className="customerSubtitle">生成时间：{generatedAtText || "--"}</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
           </div>

@@ -2,6 +2,7 @@ import React from "react";
 import type { CustomerDashboardPageVm } from "../../viewmodels/customerDashboardVm";
 import type { FieldReportPageVm } from "../../viewmodels/fieldReportVm";
 import type { OperationReportPageVm } from "../../viewmodels/operationReportVm";
+import CockpitKpiCard from "../cockpit/CockpitKpiCard";
 
 function splitRecentOperationRow(rowText: string): { operationType: string; fieldName: string; timeText: string; acceptanceText: string } {
   const [operationType = "作业", fieldName = "地块未知", timeText = "时间未知", acceptanceText = "状态待确认"] = rowText.split(" · ");
@@ -9,20 +10,19 @@ function splitRecentOperationRow(rowText: string): { operationType: string; fiel
 }
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
-  const riskFields = vm.kpis.find((item) => item.key === "RISK_FIELDS")?.value ?? "-";
-  const pendingActions = vm.kpis.find((item) => item.key === "OPEN_ACTIONS")?.value ?? "-";
-  const pendingAcceptance = vm.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "-";
-  const offlineDevices = vm.kpis.find((item) => item.key === "OFFLINE_DEVICES")?.value ?? "-";
+  const dashboardKpis = vm.kpis.slice(0, 5);
   const nextActionTitles = vm.actionItems.map((item) => item.title).join(" · ") || "暂无待处理事项";
-  const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
-  const topRisks = (vm.topRiskFields ?? []).slice(0, 5);
+  const recentOperations = vm.recentOperations.slice(0, 5);
+  const topRisks = vm.topRiskFields.slice(0, 5);
+  const roi = vm.roiSummary;
 
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
         <h2 className="customerCardTitle">概览</h2>
-        <p className="customerSpacingTopSm">风险地块 {riskFields} 个，离线设备 {offlineDevices} 台</p>
-        <p className="customerMetricLabel">待处理事项：{pendingActions}；待验收作业：{pendingAcceptance}</p>
+        <div className="customerMetrics customerSpacingTopSm">
+          {dashboardKpis.map((item) => <CockpitKpiCard key={item.key} item={item} />)}
+        </div>
       </section>
       <section className="customerCard">
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
@@ -30,10 +30,10 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
           {topRisks.length ? topRisks.map((item) => (
             <article key={item.fieldId || item.href} className="customerEvidenceItem">
               <strong>{item.fieldName || "未命名地块"}</strong>
-              <div className="customerMetricLabel">{item.riskLabel || "风险待确认"}</div>
+              <div className="customerMetricLabel">{item.riskLabel}</div>
               <div className="customerMetricLabel">{item.reasons.join("；") || "暂无风险原因"}</div>
             </article>
-          )) : <div className="customerMetricLabel">暂无高风险地块</div>}
+          )) : <div className="customerMetricLabel">{vm.emptyStates.NO_RISK_FIELDS?.title ?? "暂无高风险地块"}</div>}
         </div>
       </section>
       <section className="customerCard">
@@ -46,8 +46,21 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
                 <span className="customerMetricLabel">{item.updatedAtText}</span>
                 <span className="customerMetricLabel">{item.acceptanceText}</span>
               </article>
-            )) : <div className="customerMetricLabel">暂无近期作业</div>}
+            )) : <div className="customerMetricLabel">{vm.emptyStates.NO_RECENT_OPERATIONS?.title ?? "暂无近期作业"}</div>}
         </div>
+      </section>
+      <section className="customerCard">
+        <h2 className="customerCardTitle">价值摘要</h2>
+        {!roi.totalRoiItems ? (
+          <p className="customerSpacingTopSm">{roi.emptyState?.title ?? vm.emptyStates.NO_ROI?.title ?? "暂无可量化价值记录"}</p>
+        ) : (
+          <div className="customerSpacingTopSm">
+            <p className="customerMetricLabel">价值记录数量：{roi.totalRoiItems}</p>
+            <p className="customerMetricLabel">可量化价值摘要：{roi.customerValueText || "暂无收益摘要"}</p>
+            {roi.confidenceText ? <p className="customerMetricLabel">置信度提示：{roi.confidenceText}</p> : null}
+            {roi.assumptionText ? <p className="customerMetricLabel">假设条件：{roi.assumptionText}</p> : null}
+          </div>
+        )}
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{nextActionTitles}</p></section>
       <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户经营复盘与执行跟进使用。</p></footer>
@@ -65,13 +78,13 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
           <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
         </div>
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.overview.riskText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.risk.levelLabel}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">近期作业</h2><p className="customerSpacingTopSm">待验收作业：{vm.overview.pendingAcceptanceText}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">优先处理未关闭异常并完成待验收作业（{vm.overview.openAlertsText}）。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{vm.nextAction?.objectiveText ?? "暂无新的处理建议"}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">{vm.roiSummary.displayText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">{vm.diagnosis.dataQualityText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">{vm.fieldMemory.displayText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{vm.currentStatus.summary}</p></section>
     </>
   );
 }
@@ -88,12 +101,22 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
         {sections.map((item) => (
           <article key={item.key} className="customerFlowStep">
             <h2 className="customerCardTitle">{item.title}</h2>
+            <div className="customerMetricLabel">状态：{item.statusText ?? item.status}</div>
             <p className="customerSpacingTopSm">{item.summary}</p>
             {item.items.length ? <p className="customerMetricLabel">{item.items.map((row) => `${row.label}：${row.value}`).join("；")}</p> : null}
             {item.emptyState ? <p className="customerMetricLabel">{item.emptyState.title}：{item.emptyState.description}</p> : null}
           </article>
         ))}
       </section>
+      {vm.technicalFoldout?.rows?.length ? (
+        <details className="customerCard">
+          <summary className="customerCardTitle">技术附录</summary>
+          <p className="customerMetricLabel customerSpacingTopSm">默认客户版不突出内部技术字段，仅排障时查看。</p>
+          <div className="customerGrid2 customerSpacingTopSm">
+            {vm.technicalFoldout.rows.map((row) => <div key={row.label} className="customerMetricLabel"><strong>{row.label}：</strong>{row.value}</div>)}
+          </div>
+        </details>
+      ) : null}
       <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer>
     </div>
   );

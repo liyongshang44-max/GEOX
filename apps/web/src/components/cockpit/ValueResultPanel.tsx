@@ -7,7 +7,7 @@ type Props = {
 
 export default function ValueResultPanel({ roi }: Props): React.ReactElement {
   if (!roi.totalRoiItems) {
-    return <article className="customerCard"><h3 className="customerCardTitle">价值摘要</h3><div className="muted">暂无可量化价值记录</div></article>;
+    return <article className="customerCard"><h3 className="customerCardTitle">价值摘要</h3><div className="muted">{roi.emptyState?.title ?? "暂无可量化价值记录"}</div></article>;
   }
 
   return (
