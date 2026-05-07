@@ -244,12 +244,18 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const valueItem = valueItems[0] ?? null;
   const valueNumber = toNum(valueItem?.delta_value);
   const valueUnit = labelEmptyFallback(valueItem?.unit, "");
+  const baselineValue = toNum(valueItem?.baseline_value);
+  const evidenceNote = kv(valueItem?.customer_text, "--");
+  const hasEvidenceNote = evidenceNote !== "--";
+  const roiValueType = labelValueType(valueItem?.value_type);
+  const confidenceText = labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score ?? valueItem?.confidence?.score);
+  const isAssumption = /假设|assumption/i.test(String(valueItem?.value_type ?? "")) || /假设|可信度有限/.test(confidenceText);
+  const isMeasured = baselineValue != null && hasEvidenceNote && !isAssumption;
+  const roiNatureText = isMeasured ? "实测" : (isAssumption ? "假设" : "估算");
   const valueText = valueNumber == null ? REVIEW_NEEDED_TEXT : `${valueNumber}${valueUnit}`;
   const methodText = kv(valueItem?.calculation_method, REVIEW_NEEDED_TEXT);
-  const valueEvidence = labelEmptyFallback(valueItem?.customer_text, "");
-  const evidenceText = valueEvidence || REVIEW_NEEDED_TEXT;
-  const confidenceText = labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score);
-  const useFallback = valueNumber == null || /估算值|可信度有限/.test(confidenceText);
+  const useFallback = valueNumber == null || !hasEvidenceNote || baselineValue == null;
+
   const memoryItems = [
     ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
     ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "设备可靠性记录"))),
@@ -264,7 +270,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "As-executed 摘要", value: asExecutedSummary }, { label: "As-applied 空态或摘要", value: asAppliedSummary }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: hasEvidencePackSummary ? "AVAILABLE" : "MISSING", title: "证据", summary: hasEvidencePackSummary ? evidenceStatus : "暂无证据包摘要", items: hasEvidencePackSummary ? [{ label: "照片/日志/指标/轨迹摘要", value: evidenceMediaSummary }, { label: "证据状态", value: evidenceStatus }, { label: "证据不足原因", value: evidenceInsufficientReason }] : [], emptyState: hasEvidencePackSummary ? undefined : { title: "暂无证据包摘要", description: "当前没有 evidence-pack-summary。" } },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: report.acceptance.generated_at ? [{ label: "验收结论", value: acceptanceStatusText }, { label: "验收依据", value: kv(report.acceptance.verdict, "--") }, { label: "未通过原因", value: report.acceptance.status === "FAIL" ? kv(report.execution.invalid_reason, "--") : "--" }, { label: "证据不足原因", value: Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、") : "--" }, { label: "复核提示", value: report.acceptance.missing_evidence ? "证据不足，建议补齐后复核" : "--" }] : [], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
-    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
+    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "confidence", value: confidenceText }, { label: "evidence note", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
     { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "田块记忆 / Skill trace", summary: memoryItems[0] ?? "暂无可展示的地块记忆", items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
@@ -335,7 +341,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     value: {
       valueText,
       methodText,
-      evidenceText,
+      evidenceText: evidenceNote,
       confidenceText,
       fallbackText: "本次作业的量化价值仍在积累中，当前可确认价值为：作业完成并完成验收。",
       useFallback,
