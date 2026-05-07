@@ -133,11 +133,15 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">设备与监测</h3>
-        <div className="customerGrid customerGridCols2">
-          {vm.deviceMonitoring.map((item) => (
-            <div key={item.label}><strong>{item.label}：</strong>{item.value}</div>
-          ))}
-        </div>
+        {Number(vm.deviceSummary.totalText) > 0 ? (
+          <>
+            <div><strong>设备状态摘要：</strong>{`在线 ${vm.deviceSummary.onlineText}/${vm.deviceSummary.totalText}，离线 ${vm.deviceSummary.offlineText}`}</div>
+            <div className="customerSpacingTopXs"><strong>最近监测摘要：</strong>{`最近监测更新时间 ${vm.deviceSummary.lastUpdateText}`}</div>
+            <div className="customerSpacingTopXs"><strong>异常提示：</strong>{Number(vm.deviceSummary.offlineText) > 0 ? `存在 ${vm.deviceSummary.offlineText} 台离线设备，建议尽快排查。` : "暂无设备异常"}</div>
+          </>
+        ) : (
+          <div className="muted">暂无设备状态摘要</div>
+        )}
         {!hasGeometry ? <div className="muted customerSpacingTopXs">暂无地块边界数据</div> : null}
       </section>
 
