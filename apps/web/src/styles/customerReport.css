@@ -171,6 +171,118 @@
 .customerSpacingTopMd { margin-top: 16px; }
 .customerPageGapMd { display: grid; gap: 16px; }
 
+.customerIndexPage {
+  width: min(1220px, 100%);
+  margin: 0 auto;
+}
+
+.customerIndexHero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+}
+
+.customerIndexGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.customerIndexTile {
+  min-height: 150px;
+  border: 1px solid var(--customer-border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 16px;
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  color: var(--customer-text);
+  text-decoration: none;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, .045);
+}
+
+.customerIndexTile > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.customerIndexTile strong {
+  font-size: 20px;
+  color: var(--customer-title);
+}
+
+.customerIndexTile span {
+  font-weight: 800;
+}
+
+.customerIndexTile p {
+  margin: 0;
+  color: var(--customer-muted);
+  line-height: 1.55;
+}
+
+.customerIndexTile em,
+.customerIndexRow em {
+  font-style: normal;
+  color: #047857;
+  font-weight: 800;
+}
+
+.customerIndexTile.danger {
+  background: var(--customer-high-bg);
+  border-color: rgba(220, 38, 38, .28);
+}
+
+.customerIndexTile.warning {
+  background: var(--customer-medium-bg);
+  border-color: rgba(217, 119, 6, .32);
+}
+
+.customerIndexTile.neutral {
+  background: var(--customer-low-bg);
+  border-color: rgba(5, 150, 105, .28);
+}
+
+.customerIndexList {
+  display: grid;
+  gap: 10px;
+}
+
+.customerIndexRow {
+  display: grid;
+  grid-template-columns: minmax(210px, 1.3fr) minmax(120px, .65fr) minmax(140px, .75fr) minmax(160px, .85fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--customer-border);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--customer-text);
+  text-decoration: none;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .04);
+}
+
+.customerIndexRow div {
+  display: grid;
+  gap: 3px;
+}
+
+.customerIndexRow strong {
+  color: var(--customer-title);
+  font-size: 17px;
+}
+
+.customerIndexRow small {
+  color: var(--customer-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .customerReportCanvas {
   min-height: 100%;
   background: var(--customer-bg);
@@ -232,13 +344,25 @@
 
 .operationClosedLoopGrid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 14px;
 }
 .operationClosedLoopCard { cursor: pointer; min-height: 170px; }
-.operationClosedLoopHead { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; }
-.operationStepNo { width: 26px; height: 26px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; }
-.operationStatusBadge { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--customer-surface-muted); border: 1px solid var(--customer-border); font-weight: 800; }
+.operationClosedLoopHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.operationClosedLoopHead .customerCardTitle {
+  flex: 1 1 120px;
+  min-width: 0;
+  font-size: 18px;
+  line-height: 1.22;
+  overflow-wrap: normal;
+}
+.operationStepNo { width: 26px; height: 26px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.operationStatusBadge { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: var(--customer-surface-muted); border: 1px solid var(--customer-border); font-weight: 800; white-space: nowrap; flex: 0 0 auto; }
 .operationOneLiner { margin-top: 10px; color: var(--customer-text); }
 .customerLinkButton { border: none; background: transparent; color: #047857; padding: 0; cursor: pointer; font-weight: 800; }
 .operationClosedLoopCard.isExpanded { border-color: var(--customer-border-strong); }
@@ -258,7 +382,7 @@
 .printTable td { border-bottom: 1px solid var(--customer-border); padding: 9px 8px; text-align: left; vertical-align: top; }
 .printTable th { color: var(--customer-muted); font-weight: 800; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
   .operationClosedLoopGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -269,7 +393,9 @@
   .customerGridCols2,
   .customerEvidenceGrid,
   .customerGrid3,
-  .customerFlow6 { grid-template-columns: 1fr; }
+  .customerFlow6,
+  .customerIndexGrid { grid-template-columns: 1fr; }
+  .customerIndexRow { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 700px) {
