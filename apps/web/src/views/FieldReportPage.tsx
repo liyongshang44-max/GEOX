@@ -39,6 +39,8 @@ export default function FieldReportPage(): React.ReactElement {
   const vm = buildFieldReportVm(report);
   const canExport = Boolean(fieldId.trim());
   const hasGeometry = Boolean((report as { field?: { geometry?: unknown } }).field?.geometry);
+  const hasHighPriorityRisk = vm.risk.tone !== "neutral";
+  const suggestedAction = vm.recommendations[0];
 
   return (
     <div className="customerReportCanvas">
@@ -66,10 +68,22 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">当前风险</h3>
-        <div><strong>风险等级：</strong>{vm.risk.levelLabel}</div>
-        <ul className="customerList customerSpacingTopXs">
-          {vm.risk.reasons.map((item, idx) => <li key={`${item}-${idx}`} className="customerListItem">{item}</li>)}
-        </ul>
+        <div><strong>当前风险等级：</strong>{vm.risk.levelLabel}</div>
+        {hasHighPriorityRisk ? (
+          <>
+            <div className="customerSpacingTopXs"><strong>风险原因：</strong></div>
+            <ul className="customerList">
+              {vm.risk.reasons.map((item, idx) => <li key={`${item}-${idx}`} className="customerListItem">{item}</li>)}
+            </ul>
+          </>
+        ) : (
+          <div className="muted customerSpacingTopXs">暂无高优先级风险</div>
+        )}
+        <div className="customerSpacingTopXs"><strong>影响说明：</strong>{vm.diagnosis.headline}</div>
+        <div className="customerSpacingTopXs">
+          <strong>建议查看动作：</strong>
+          {suggestedAction?.href ? <Link to={suggestedAction.href}>{suggestedAction.title}</Link> : <span className="muted"> 暂无建议动作</span>}
+        </div>
       </section>
 
       <section className="customerCard">
