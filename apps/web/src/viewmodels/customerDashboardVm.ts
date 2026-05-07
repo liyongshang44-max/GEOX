@@ -15,6 +15,7 @@ export type CustomerKpiVm = {
   unit?: string;
   tone: "neutral" | "good" | "warning" | "danger";
   sourceNote: string;
+  customerHint?: string;
   href?: string;
   disabledReason?: string;
 };
@@ -124,12 +125,12 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),
   };
   const kpis: CustomerKpiVm[] = [
-    { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.total_open_alerts" },
-    { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "fields.at_risk" },
-    { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.pending_acceptance" },
-    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "device_summary.offline_devices" },
-    { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "roi_summary.total_roi_items" },
-    { key: "RECENT_OPERATIONS", label: "近期作业", value: numberFmt.format(recentOpsCount), unit: "条", tone: "neutral", sourceNote: "recent_operations.length", disabledReason: "顶部 KPI 仅展示 5 项，近期作业在列表区展示。" },
+    { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.total_open_alerts", customerHint: "建议优先处理高风险相关待办" },
+    { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "fields.at_risk", customerHint: "点击中部风险面板可查看地块详情" },
+    { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.pending_acceptance", customerHint: "请及时完成验收并回写结果" },
+    { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "device_summary.offline_devices", customerHint: "P0 阶段仅展示状态，不开放设备中心" },
+    { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "roi_summary.total_roi_items", customerHint: "用于经营复盘，不代表最终结算" },
+    { key: "RECENT_OPERATIONS", label: "近期作业", value: numberFmt.format(recentOpsCount), unit: "条", tone: "neutral", sourceNote: "recent_operations.length", customerHint: "详细记录见下方近期作业", disabledReason: "顶部 KPI 仅展示 5 项，近期作业在列表区展示。" },
   ];
   const topRiskFields: CustomerRiskFieldVm[] = (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => {
     const fieldId = String(item.field_id ?? "");
