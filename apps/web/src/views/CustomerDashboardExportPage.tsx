@@ -2,6 +2,7 @@ import React from "react";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 import { DashboardExportBlocks } from "../components/customer/CustomerExportBlocks";
+import PrintReportScaffold from "../components/customer/PrintReportScaffold";
 
 export default function CustomerDashboardExportPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
@@ -35,20 +36,13 @@ export default function CustomerDashboardExportPage(): React.ReactElement {
   if (error || !vm) return <div className="customerCard" style={{ padding: 16 }}>客户看板导出加载失败：{error || "暂无数据"}</div>;
 
   return (
-    <div className="customerReportCanvas">
-      <div className="customerReportSheet printPage">
-        <header className="customerReportHeader">
-          <div className="customerHeroTop">
-            <div>
-              <div className="customerEyebrow">GEOX</div>
-              <h1 className="customerTitle">客户看板报告</h1>
-              <p className="customerSubtitle">生成时间：{vm.generatedAtText}</p>
-            </div>
-            <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
-          </div>
-        </header>
-        <DashboardExportBlocks vm={vm} />
-      </div>
-    </div>
+    <PrintReportScaffold
+      title="客户看板报告"
+      subtitle="客户经营总览打印版"
+      generatedAt={vm.generatedAtText}
+      backTo="/customer/dashboard"
+    >
+      <DashboardExportBlocks vm={vm} />
+    </PrintReportScaffold>
   );
 }

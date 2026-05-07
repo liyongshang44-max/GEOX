@@ -6,10 +6,33 @@ import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 
+const MAIN_VIEW_BLOCK_PATTERNS = [
+  /skill\s*run/i,
+  /skill_run/i,
+  /skill_trace/i,
+  /irrigation_soil_moisture_threshold/i,
+  /\bSUCCESS\b/i,
+  /\bFAILED\b/i,
+  /\bPASS\b/i,
+  /\bDONE\b/i,
+  /\bMISSING\b/i,
+  /\bAVAILABLE\b/i,
+  /\bPENDING\b/i,
+];
+
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
   return text;
+}
+
+function shouldHideMainViewText(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  return text.length > 0 && MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
+  return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -17,6 +40,7 @@ export default function OperationReportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string>("");
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
+  const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let alive = true;
@@ -46,26 +70,11 @@ export default function OperationReportPage(): React.ReactElement {
   const vm = buildOperationReportVm(report);
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
-  const steps = vm.sections.map((section, index) => ({
-    n: index + 1,
-    title: section.title,
-    body: (
-      <>
-        <div className="customerMetricLabel">{section.summary}</div>
-        {section.items.filter((item) => !/skill|run|success/i.test(`${item.label} ${item.value}`)).length > 0 ? (
-          <div className="customerGrid2 customerSpacingTopXs">
-            {section.items.filter((item) => !/skill|run|success/i.test(`${item.label} ${item.value}`)).map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{item.value}</div>)}
-          </div>
-        ) : null}
-        {section.emptyState ? <div className="customerSpacingTopXs muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
-      </>
-    ),
-  }));
 
   return (
     <div className="customerReportCanvas">
       <div className="customerReportSheet">
-        <header className="customerHero">{/* OperationHeader */}
+        <header className="customerHero">
           <div className="customerHeroTop">
             <div>
               <div className="customerReportLogo">GEOX / 作业闭环</div>
@@ -75,49 +84,73 @@ export default function OperationReportPage(): React.ReactElement {
             </div>
             <div className="customerActions">
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
-              {canBackToField ? (
-                <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link>
-              ) : (
-                <span className="muted">返回地块不可用：缺少地块标识</span>
-              )}
-              {canExport ? (
-                <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
-              ) : (
-                <span className="muted">导出不可用：缺少作业标识</span>
-              )}
+              {canBackToField ? <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link> : <span className="muted">返回地块不可用：缺少地块标识</span>}
+              {canExport ? <Link className="customerButton" to={vm.exportHref}>导出报告</Link> : <span className="muted">导出不可用：缺少作业标识</span>}
             </div>
           </div>
         </header>
 
-        <section className="customerCard customerSpacingBottomSm">{/* OperationStatusSummary */}
+        <section className="customerCard customerSpacingBottomSm">
           {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}：{customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
-        <div className="customerTimeline">{/* ClosedLoopSectionList */}
-          {steps.map((step) => (
-            <section key={step.n} className="customerTimelineStep">
-              <div className="customerTimelineDot">{step.n}</div>
-              <div className="customerCard">
-                <h3 className="customerCardTitle">{step.title}</h3>
-                {step.body}
-              </div>
-            </section>
-          ))}
-        </div>
+        <section className="operationClosedLoopGrid">
+          {vm.sections.map((section, index) => {
+            const isExpanded = expandedKey === section.key;
+            const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
+            return (
+              <article
+                key={section.key}
+                className={`customerCard operationClosedLoopCard ${isExpanded ? "isExpanded" : ""}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => setExpandedKey((prev) => prev === section.key ? null : section.key)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setExpandedKey((prev) => prev === section.key ? null : section.key);
+                  }
+                }}
+              >
+                <div className="operationClosedLoopHead">
+                  <span className="operationStepNo">{index + 1}</span>
+                  <h3 className="customerCardTitle">{section.title}</h3>
+                  <span className="operationStatusBadge">{section.statusText || customerTimelineStatusLabel(section.status)}</span>
+                </div>
+                <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
+                <div className="operationOneLiner muted">{safeMainViewText(section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要"))}</div>
+                <button
+                  type="button"
+                  className="customerLinkButton customerSpacingTopXs"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setExpandedKey((prev) => prev === section.key ? null : section.key);
+                  }}
+                >
+                  {isExpanded ? "收起详情" : "查看详情"}
+                </button>
+                {isExpanded ? (
+                  <div className="customerGrid2 customerSpacingTopXs">
+                    {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
+                    {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </section>
 
-        <details className="customerCard customerSpacingTopSm">{/* TechnicalFoldout */}
-          <summary className="customerCardTitle">技术详情（可选）</summary>
-          <div className="customerSpacingTopXs muted">内部 ID 默认隐藏，如需排障可在此查看。</div>
-          <div className="customerGrid2 customerSpacingTopXs">
-            {(vm.technicalFoldout?.rows ?? []).map((row) => (
-              <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
-            ))}
-          </div>
-        </details>
-
-        <footer className="customerFooterNote">{/* ExportCTA */}
-          <div className="customerSpacingTopXs">报告由 GEOX 生成，用于客户经营复盘与沟通。</div>
-        </footer>
+        <section className="operationTechDetailsMuted">
+          <details>
+            <summary className="operationTechDetailsSummary">展开技术详情</summary>
+            <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
+            <div className="operationTechDetailsGrid">
+              {(vm.technicalFoldout?.rows ?? []).map((row) => (
+                <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
+              ))}
+            </div>
+          </details>
+        </section>
       </div>
     </div>
   );
