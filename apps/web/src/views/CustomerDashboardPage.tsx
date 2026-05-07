@@ -6,6 +6,7 @@ import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
 import CockpitActionList from "../components/cockpit/CockpitActionList";
 import DeviceHealthCard from "../components/cockpit/DeviceHealthCard";
 import ValueResultPanel from "../components/cockpit/ValueResultPanel";
+import RecentOperationsSection from "../components/cockpit/RecentOperationsSection";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -49,13 +50,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </section>
 
-      <section className="customerCard">
-        <h3 className="customerCardTitle">RecentOperationsSection</h3>
-        <ul className="customerList">
-          {(vm?.recentOperations ?? []).map((item) => <li key={item.operationId} className="customerListItem"><Link to={item.href}>{item.rowText}</Link></li>)}
-          {!(vm?.recentOperations.length) ? <li className="muted">暂无近期作业</li> : null}
-        </ul>
-      </section>
+      <RecentOperationsSection items={vm?.recentOperations ?? []} />
 
       <section className="customerCard noPrint">
         <h3 className="customerCardTitle">ReportExportCTA</h3>

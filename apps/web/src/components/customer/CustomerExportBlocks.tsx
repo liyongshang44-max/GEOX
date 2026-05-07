@@ -39,17 +39,14 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
       <section className="customerCard">
         <h2 className="customerCardTitle">近期作业 Top 5</h2>
         <div className="customerList customerSpacingTopSm">
-          {recentOperations.length ? recentOperations.map((item) => {
-            const parsed = splitRecentOperationRow(item.rowText);
-            return (
+          {recentOperations.length ? recentOperations.map((item) => (
               <article key={item.operationId || item.href} className="customerEvidenceItem">
-                <strong>{parsed.operationType}</strong>
-                <span className="customerMetricLabel">{parsed.fieldName}</span>
-                <span className="customerMetricLabel">{parsed.timeText}</span>
-                <span className="customerMetricLabel">{parsed.acceptanceText}</span>
+                <strong>{item.operationName}</strong>
+                <span className="customerMetricLabel">{item.fieldName}</span>
+                <span className="customerMetricLabel">{item.updatedAtText}</span>
+                <span className="customerMetricLabel">{item.acceptanceText}</span>
               </article>
-            );
-          }) : <div className="customerMetricLabel">暂无近期作业</div>}
+            )) : <div className="customerMetricLabel">暂无近期作业</div>}
         </div>
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{nextActionTitles}</p></section>

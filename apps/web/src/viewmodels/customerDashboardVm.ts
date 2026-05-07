@@ -46,7 +46,12 @@ export type CustomerDashboardVm = {
   }>;
   recentOperations: Array<{
     operationId: string;
-    rowText: string;
+    operationName: string;
+    fieldName: string;
+    stateText: string;
+    acceptanceText: string;
+    evidenceText: string;
+    updatedAtText: string;
     href: string;
   }>;
   actionItems: CustomerActionItemVm[];
@@ -158,11 +163,19 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
         href: "/customer/devices",
       },
     ],
-    recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => ({
-      operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
-      rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "") ? labelFinalStatus(item.final_status) : labelAcceptanceStatus(item.acceptance_status)}`,
-      href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
-    })),
+    recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
+      const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
+      return {
+        operationId,
+        operationName: sanitizeCustomerText(item.customer_title ?? item.title ?? "作业"),
+        fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+        stateText: sanitizeCustomerText((item as any).operation_state ?? labelFinalStatus(item.final_status)),
+        acceptanceText: labelAcceptanceStatus(item.acceptance_status),
+        evidenceText: sanitizeCustomerText((item as any).evidence_status ?? "证据待补充"),
+        updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
+        href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
+      };
+    }),
     actionItems: [
       { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? ""), primaryAction: { label: "查看地块", href: (aggregate.top_risk_fields ?? [])[0]?.field_id ? `/customer/fields/${encodeURIComponent(String((aggregate.top_risk_fields ?? [])[0]?.field_id) )}` : undefined, disabledReason: (aggregate.top_risk_fields ?? [])[0]?.field_id ? undefined : "暂无可跳转地块" }, summary: "按风险等级推进复核，避免问题扩大。" },
       { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : undefined, disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? undefined : "暂无可跳转作业" }, summary: "确保作业闭环，提升验收及时率。" },
