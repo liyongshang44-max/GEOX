@@ -20,11 +20,11 @@ const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
 ];
 
 function resolvePageTitle(pathname: string): string {
-  if (pathname === "/customer/dashboard") return "客户总览";
-  if (pathname === "/customer/export") return "客户报告导出";
-  if (pathname.includes("/customer/fields/")) return "地块详情";
-  if (pathname.includes("/customer/operations/")) return "作业详情";
-  return "客户总览";
+  if (pathname === "/customer/dashboard") return "经营驾驶舱";
+  if (pathname === "/customer/export") return "经营驾驶舱导出";
+  if (pathname.includes("/customer/fields/")) return "地块报告";
+  if (pathname.includes("/customer/operations/")) return "作业报告";
+  return "经营驾驶舱";
 }
 
 function resolveBreadcrumb(pathname: string): Array<{ label: string; to?: string }> {
@@ -43,10 +43,10 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
   return (
     <div className="customerShell" data-layout="customer-shell">
       <aside className="customerShellSidebar" aria-label="客户导航">
-        <div className="customerShellBrand">GEOX / Customer</div>
+        <div className="customerShellBrand">GEOX 远程土地经营</div>
         <div className="customerShellIdentity">
-          <div className="customerShellIdentityLabel">客户身份</div>
-          <div className="customerShellIdentityValue">客户管理员 / 当前角色：运营观察者</div>
+          <div className="customerShellIdentityLabel">当前视图：客户视图</div>
+          <div className="customerShellIdentityValue">范围：授权地块</div>
         </div>
         <nav className="customerShellNav">
           {CUSTOMER_NAV_ITEMS.map((item) => {
@@ -64,7 +64,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
       <div className="customerShellMainWrap">
         <header className="customerShellTopbar">
           <div>
-            <div className="customerShellContext">客户上下文 / 企业农业经营空间</div>
+            <div className="customerShellContext">当前角色：客户视图（保守模式） · 当前范围：授权地块 · 当前页面：{title}</div>
             <h1 className="customerShellTitle">{title}</h1>
             <div className="customerShellBreadcrumb">
               {breadcrumb.map((item, idx) => (
