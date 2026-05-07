@@ -6,10 +6,33 @@ import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 
+const MAIN_VIEW_BLOCK_PATTERNS = [
+  /skill\s*run/i,
+  /skill_run/i,
+  /skill_trace/i,
+  /irrigation_soil_moisture_threshold/i,
+  /\bSUCCESS\b/i,
+  /\bFAILED\b/i,
+  /\bPASS\b/i,
+  /\bDONE\b/i,
+  /\bMISSING\b/i,
+  /\bAVAILABLE\b/i,
+  /\bPENDING\b/i,
+];
+
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
   return text;
+}
+
+function shouldHideMainViewText(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  return text.length > 0 && MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
+  return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -74,7 +97,7 @@ export default function OperationReportPage(): React.ReactElement {
         <section className="operationClosedLoopGrid">
           {vm.sections.map((section, index) => {
             const isExpanded = expandedKey === section.key;
-            const displayItems = section.items.filter((item) => !/skill|run|success/i.test(`${item.label} ${item.value}`));
+            const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             return (
               <article
                 key={section.key}
@@ -94,8 +117,8 @@ export default function OperationReportPage(): React.ReactElement {
                   <h3 className="customerCardTitle">{section.title}</h3>
                   <span className="operationStatusBadge">{section.statusText || customerTimelineStatusLabel(section.status)}</span>
                 </div>
-                <div className="operationOneLiner">{section.summary}</div>
-                <div className="operationOneLiner muted">{section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要")}</div>
+                <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
+                <div className="operationOneLiner muted">{safeMainViewText(section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要"))}</div>
                 <button
                   type="button"
                   className="customerLinkButton customerSpacingTopXs"
@@ -108,7 +131,7 @@ export default function OperationReportPage(): React.ReactElement {
                 </button>
                 {isExpanded ? (
                   <div className="customerGrid2 customerSpacingTopXs">
-                    {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{item.value}</div>)}
+                    {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
                     {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
                   </div>
                 ) : null}

@@ -17,6 +17,26 @@ import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
 const REVIEW_NEEDED_TEXT = "需复核";
 
+const MAIN_VIEW_BLOCK_PATTERNS = [
+  /skill\s*run/i,
+  /skill_run/i,
+  /skill_trace/i,
+  /irrigation_soil_moisture_threshold/i,
+  /\bSUCCESS\b/i,
+  /\bFAILED\b/i,
+  /\bPASS\b/i,
+  /\bDONE\b/i,
+  /\bMISSING\b/i,
+  /\bAVAILABLE\b/i,
+  /\bPENDING\b/i,
+];
+
+function isEngineeringOnlyText(value: unknown): boolean {
+  const text = String(value ?? "").trim();
+  if (!text) return false;
+  return MAIN_VIEW_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 export type OperationReportPageVm = {
   generatedAtText: string;
   operation: { operationId: string; title: string; fieldName: string; fieldId: string; finalStatusLabel: string; finalStatusTone: string; updatedAtText: string };
@@ -269,13 +289,16 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const fieldResponseSummary = (memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)[0] ?? "--";
   const deviceReliabilitySummary = (memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => kv(item?.summary_text, "--"))[0] ?? "--";
   const skillPerformanceSummary = (memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => kv(item?.summary_text, "--"))[0] ?? "--";
-  const hasMemoryData = [fieldResponseSummary, deviceReliabilitySummary, skillPerformanceSummary].some((item) => item !== "--");
+  const sanitizedSkillPerformanceSummary = skillPerformanceSummary !== "--" && isEngineeringOnlyText(skillPerformanceSummary)
+    ? "暂无可展示的技能表现摘要"
+    : skillPerformanceSummary;
+  const hasMemoryData = [fieldResponseSummary, deviceReliabilitySummary, sanitizedSkillPerformanceSummary].some((item) => item !== "--");
   const memoryItems = hasMemoryData
     ? [
       { label: "本次结果是否进入田块记忆", value: kv(memory?.ingested ?? memory?.recorded ?? memory?.entered, "--") },
       { label: "历史响应摘要", value: fieldResponseSummary },
       { label: "设备可靠性摘要", value: deviceReliabilitySummary },
-      { label: "技能表现摘要", value: skillPerformanceSummary },
+      { label: "技能表现摘要", value: sanitizedSkillPerformanceSummary },
     ]
     : [];
   const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
@@ -318,6 +341,9 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       { label: "roi_id", value: kv((report as any).roi_ledger?.roi_id ?? valueItem?.roi_id) },
       { label: "memory_id", value: kv((report as any).field_memory?.memory_id) },
       { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) }, // customer-boundary-allow: trace_id 仅用于技术折叠追溯
+      { label: "skill_run_id", value: kv(recommendationData?.skill_run_id ?? recommendationData?.skillRunId ?? (report as any).skill_run_id) },
+      { label: "skill_output", value: kv(recommendationData?.skill_output ?? (report as any).skill_output) },
+      { label: "raw_enum", value: kv((report as any).raw_enum ?? (report as any).status_enum ?? report.execution.final_status) },
     ] },
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
