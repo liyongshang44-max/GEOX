@@ -1,6 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
+import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
+import { CockpitActionList, CockpitFieldRiskPanel, DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -19,179 +21,46 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
-
-  const generatedAt = React.useMemo(() => {
-    const now = new Date();
-    const pad = (value: number): string => String(value).padStart(2, "0");
-    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
-  }, []);
-
-  const fixedKpiOrder = ["OPEN_ACTIONS", "RISK_FIELDS", "PENDING_ACCEPTANCE", "OFFLINE_DEVICES", "VALUE_RECORDS"] as const;
-
-  const fixedKpis = fixedKpiOrder.map((key) => {
-    const found = vm?.kpis.find((kpi) => kpi.key === key);
-    if (found) return found;
-    const fallbackLabel: Record<(typeof fixedKpiOrder)[number], string> = {
-      OPEN_ACTIONS: "待处理事项",
-      RISK_FIELDS: "风险地块",
-      PENDING_ACCEPTANCE: "待验收作业",
-      OFFLINE_DEVICES: "离线设备",
-      VALUE_RECORDS: "价值记录",
-    };
-    return { key, label: fallbackLabel[key], value: "--", unit: undefined, tone: "neutral" as const, sourceNote: "fallback", disabledReason: "数据更新中" };
-  });
-
-  const cleanText = (text: string): string => String(text ?? "").trim();
-
-  const parseRow = (text: string): string[] => text.split(" · ").map((x) => x.trim());
+  const kpis = vm?.kpis ?? [];
+  const offlineDevices = vm?.kpis.find((kpi) => kpi.key === "OFFLINE_DEVICES")?.value ?? "0";
 
   return (
     <div className="customerPage customerPageGapMd">
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
-            <div className="customerLabel">GEOX / 客户看板 / 经营结果、风险与行动摘要</div>
-            <h1 className="customerTitle">经营结果、风险与行动摘要</h1>
+            <div className="customerLabel">PageHeader</div>
+            <h1 className="customerTitle">经营驾驶舱（cockpit-lite）</h1>
           </div>
-          <div className="customerActions">
-            <div className="muted">生成时间：{generatedAt}</div>
-            <Link className="customerButton customerButtonPrimary noPrint" to={vm?.header.exportAction.href ?? "/customer/export"}>
-              打印导出
-            </Link>
-          </div>
+          <Link className="customerButton customerButtonPrimary" to="/customer/export">总览导出</Link>
         </div>
       </header>
 
-      <section className="customerCard">
-        <h3 className="customerReportSectionTitle">经营总览</h3>
-        <div className="customerMetrics">
-          {fixedKpis.map((kpi) => (
-            <article key={kpi.key} className="customerMetricCard">
-              <div className="customerMetricLabel">{kpi.label}</div>
-              <div className="customerMetricValue">{kpi.value}{kpi.unit ?? ""}</div>
-              <div className="muted">{kpi.disabledReason ?? kpi.sourceNote}</div>
-            </article>
-          ))}
-        </div>
-      </section>
+      <CockpitKpiStrip items={kpis} />
 
       <section className="customerGrid3">
-        <article className="customerCard">
-          <h3 className="customerReportSectionTitle">高风险地块 Top 5</h3>
-          <ul className="customerList">
-            {(vm?.topRiskFields ?? []).map((item) => (
-              <li key={item.id} className="customerListItem">
-                <div className="customerItemMain">
-                  {(() => {
-                    const [fieldName = "地块", riskTag = "风险关注", reason = "待复核"] = parseRow(cleanText(item.rowText));
-                    return (
-                      <>
-                        <Link to={item.href}>{fieldName || "地块"}</Link>
-                        <span className="customerPill customerPillHigh">{riskTag}</span>
-                        <div className="customerItemReason">{reason || "原因待确认"}</div>
-                      </>
-                    );
-                  })()}
-                </div>
-              </li>
-            ))}
-            {!(vm?.topRiskFields.length) ? (
-              <li className="customerListItem customerItemReason">暂无风险地块数据</li>
-            ) : null}
-          </ul>
-        </article>
-
-        <article className="customerCard">
-          <h3 className="customerReportSectionTitle">待处理事项 Top 5</h3>
-          <ul className="customerList">
-            {(vm?.pendingItems ?? []).map((item) => (
-              <li key={item.id} className="customerListItem">
-                {(() => {
-                  const [name = "事项", status = "待处理", desc = "说明待确认"] = parseRow(cleanText(item.sentence));
-                  return (
-                    <>
-                      <div className="customerItemMain">
-                        <Link className="customerItemTitle" to={item.href}>{name}</Link>
-                        <span className="customerPill customerPillMedium">{status}</span>
-                      </div>
-                      <div className="customerItemReason">{desc}</div>
-                    </>
-                  );
-                })()}
-              </li>
-            ))}
-            {!(vm?.pendingItems.length) ? (
-              <li className="customerListItem customerItemReason">暂无待处理事项</li>
-            ) : null}
-          </ul>
-        </article>
-
-        <article className="customerCard">
-          <h3 className="customerReportSectionTitle">近期作业 Top 5</h3>
-          <ul className="customerList">
-            {(vm?.recentOperations ?? []).map((item) => (
-              <li key={item.operationId} className="customerListItem">
-                {(() => {
-                  const [operationType = "作业", fieldName = "地块", timeTextRaw = "", statusText = "待确认"] = parseRow(cleanText(item.rowText));
-                  const timeText = timeTextRaw || "时间待确认";
-                  return (
-                    <>
-                      <div className="customerItemMain">
-                        <Link className="customerItemTitle" to={item.href}>{operationType}</Link>
-                        <span className="customerPill">{statusText}</span>
-                      </div>
-                      <div className="customerItemReason">{fieldName} · {timeText === "时间未知" ? "时间待确认" : timeText}</div>
-                    </>
-                  );
-                })()}
-              </li>
-            ))}
-            {!(vm?.recentOperations.length) ? (
-              <li className="customerListItem customerItemReason">暂无近期作业</li>
-            ) : null}
-          </ul>
-        </article>
-      </section>
-
-      <section className="customerCard">
-        <h3 className="customerCardTitle">下一步建议</h3>
-        <div className="customerActionCards customerRecommendationGrid">
-          {(vm?.actionItems ?? []).map((item) => (
-            <article key={item.id} className="customerRecommendationCard">
-              <div className="customerItemTitle">{item.title}</div>
-              <div className="customerPill customerSpacingTopXs">{item.riskLabel}</div>
-              <div className="customerItemReason customerSpacingTopXs">{item.summary}</div>
-              {item.primaryAction.href ? (
-                <Link className="customerButton customerSpacingTopSm" to={item.primaryAction.href}>{item.primaryAction.label}</Link>
-              ) : <div className="muted customerSpacingTopSm">{item.primaryAction.disabledReason ?? "暂无可执行动作"}</div>}
-            </article>
-          ))}
+        <CockpitFieldRiskPanel items={vm?.topRiskFields ?? []} />
+        <CockpitActionList items={vm?.actionItems ?? []} />
+        <div className="customerPageGapMd">
+          <DeviceHealthCard offlineDevices={offlineDevices} />
+          <ValueResultPanel valueText={vm?.roiSummary.customerValueText ?? "暂无收益摘要"} roiItems={vm?.roiSummary.totalRoiItems ?? 0} />
         </div>
       </section>
 
       <section className="customerCard">
-        <h3 className="customerReportSectionTitle">收益摘要</h3>
-        <div className="customerMetrics">
-          <article className="customerMetricCard">
-            <div className="customerMetricLabel">ROI 条目</div>
-            <div className="customerMetricValue">{vm?.roiSummary.totalRoiItems ?? 0}</div>
-          </article>
-          <article className="customerMetricCard">
-            <div className="customerMetricLabel">节水条目</div>
-            <div className="customerMetricValue">{vm?.roiSummary.waterSavedItems ?? 0}</div>
-          </article>
-          <article className="customerMetricCard">
-            <div className="customerMetricLabel">客户价值</div>
-            <div className="muted">{vm?.roiSummary.customerValueText ?? "--"}</div>
-          </article>
-        </div>
+        <h3 className="customerCardTitle">RecentOperationsSection</h3>
+        <ul className="customerList">
+          {(vm?.recentOperations ?? []).map((item) => <li key={item.operationId} className="customerListItem"><Link to={item.href}>{item.rowText}</Link></li>)}
+          {!(vm?.recentOperations.length) ? <li className="muted">暂无近期作业</li> : null}
+        </ul>
+      </section>
+
+      <section className="customerCard noPrint">
+        <h3 className="customerCardTitle">ReportExportCTA</h3>
+        <Link className="customerButton" to="/customer/export">进入总览导出页</Link>
       </section>
 
       {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
-
-      <footer className="customerCard muted">
-        说明：本页用于呈现客户经营结果、风险与行动建议，数据可能受采集与回传时效影响，请以最新审核结论为准。
-      </footer>
     </div>
   );
 }
