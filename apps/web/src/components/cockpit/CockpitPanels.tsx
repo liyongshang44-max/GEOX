@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { CustomerActionItemVm, CustomerDashboardVm } from "../../viewmodels/customerDashboardVm";
 
 export function CockpitFieldRiskPanel({ items }: { items: CustomerDashboardVm["topRiskFields"] }): React.ReactElement {
-  return <article className="customerCard"><h3 className="customerCardTitle">地块风险</h3><ul className="customerList">{items.map((item) => <li key={item.id} className="customerListItem"><Link to={item.href}>{item.rowText}</Link></li>)}{!items.length ? <li className="muted">暂无高风险地块</li> : null}</ul></article>;
+  return <article className="customerCard"><h3 className="customerCardTitle">地块风险</h3><ul className="customerList">{items.map((item) => <li key={item.fieldId || item.href} className="customerListItem"><Link to={item.href}>{item.fieldName} · {item.riskLabel}</Link></li>)}{!items.length ? <li className="muted">暂无高风险地块</li> : null}</ul></article>;
 }
 
 export function CockpitActionList({ items }: { items: CustomerActionItemVm[] }): React.ReactElement {
