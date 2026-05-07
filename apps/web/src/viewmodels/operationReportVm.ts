@@ -180,6 +180,21 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const recommendationSummary = kv(recommendationData?.data_summary ?? recommendationData?.summary ?? reportWhy?.objective_text, "--");
   const hasRecommendationData = [recommendationReason, explainText, riskLabel, recommendationSummary].some((value) => value !== "--");
 
+  const prescriptionData = (report as any).prescription ?? null;
+  const prescriptionItems: Array<{ label: string; value: string }> = [];
+  const pushPrescription = (label: string, value: unknown) => {
+    const text = kv(value, "--");
+    if (text !== "--") prescriptionItems.push({ label, value: text });
+  };
+  pushPrescription("做什么", prescriptionData?.action ?? prescriptionData?.operation_type);
+  pushPrescription("在哪里做", prescriptionData?.location ?? prescriptionData?.spatial_scope);
+  pushPrescription("做多少", prescriptionData?.amount ?? prescriptionData?.operation_amount);
+  pushPrescription("何时做", prescriptionData?.timing ?? prescriptionData?.timing_window);
+  pushPrescription("设备要求", prescriptionData?.device_requirements);
+  pushPrescription("风险等级", prescriptionData?.risk_level ?? prescriptionData?.risk);
+  pushPrescription("验收条件", prescriptionData?.acceptance_conditions);
+  const hasPrescriptionData = prescriptionItems.length > 0;
+
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
   const valueItems = [
@@ -206,7 +221,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     .every((value) => (toNum(value) ?? 0) <= 0);
   const sections: CustomerReportSectionVm[] = [
     { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
-    { key: "PRESCRIPTION", status: "MISSING", title: "处方合同", summary: "未形成正式处方", items: [], emptyState: { title: "未形成正式处方", description: "当前没有处方记录。" } },
+    { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方合同", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
     { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? "暂无证据摘要" : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? { title: "暂无证据摘要", description: "当前没有可展示的证据汇总。" } : undefined },
