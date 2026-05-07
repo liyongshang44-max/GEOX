@@ -16,7 +16,7 @@ const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
   { key: "dashboard", label: "总览", to: "/customer/dashboard" },
   { key: "fields", label: "地块", disabled: true },
   { key: "operations", label: "作业", disabled: true },
-  { key: "reports", label: "报告", to: "/customer/export" },
+  { key: "reports", label: "总览导出", to: "/customer/export" },
 ];
 
 function resolvePageTitle(pathname: string): string {
@@ -77,7 +77,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
           </div>
           <div className="customerShellActions">
             <Link className="customerButton customerButtonPrimary" to="/customer/dashboard">主行动入口</Link>
-            <Link className="customerButton" to="/customer/export">导出入口</Link>
+            <Link className="customerButton" to="/customer/export">总览导出</Link>
           </div>
         </header>
         <main className="customerLayoutMain">{children}</main>

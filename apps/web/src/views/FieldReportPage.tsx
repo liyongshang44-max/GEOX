@@ -37,6 +37,7 @@ export default function FieldReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildFieldReportVm(report);
+  const canExport = Boolean(fieldId.trim());
 
   return (
     <div className="customerReportCanvas">
@@ -47,7 +48,11 @@ export default function FieldReportPage(): React.ReactElement {
         <p className="customerSubtitle">地块ID：{vm.field.fieldId}</p>
         <div className="customerActionRow">
           <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
-          <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>打印导出</Link>
+          {canExport ? (
+            <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>打印导出</Link>
+          ) : (
+            <span className="muted">导出不可用：缺少地块标识</span>
+          )}
         </div>
       </section>
 

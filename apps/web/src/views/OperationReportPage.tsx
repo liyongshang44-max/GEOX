@@ -37,6 +37,7 @@ export default function OperationReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
+  const canExport = Boolean(operationId.trim());
   const steps = vm.sections.map((section, index) => ({
     n: index + 1,
     title: section.title,
@@ -65,7 +66,11 @@ export default function OperationReportPage(): React.ReactElement {
           </div>
           <div className="customerActions">
             <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
+            {canExport ? (
             <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
+          ) : (
+            <span className="muted">导出不可用：缺少作业标识</span>
+          )}
           </div>
         </div>
       </header>
