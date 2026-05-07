@@ -113,9 +113,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
         ? `最近一次作业观测时间：${formatDateTime(report.overview.latest_operation_at)}`
         : `最近遥测更新时间：${formatDateTime(report.device_summary.last_telemetry_at)}`,
     },
-    recommendations: [
-      { title: nextAction?.title ?? "优先完成待验收作业", summary: nextAction?.explainText ?? "优先关闭当前风险相关任务。", href: nextAction ? `/customer/fields/${encodeURIComponent(fieldId)}` : undefined },
-    ],
+    recommendations: nextAction
+      ? [{ title: nextAction.title, summary: nextAction.explainText, href: `/customer/fields/${encodeURIComponent(fieldId)}` }]
+      : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return { operationId, rowText: `${sanitizeCustomerText(item.customer_title || item.title || "作业")} · ${formatDateTime(item.generated_at)} · ${labelAcceptanceStatus(item.acceptance_status)}`, href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard" };

@@ -101,15 +101,17 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">当前建议</h3>
-        <div className="customerList">
-          {vm.recommendations.map((item) => (
-            <article key={item.title} className="customerListItem customerListItemOk">
-              <div><strong>{item.title}</strong></div>
-              <div className="muted">{item.summary}</div>
-              {item.href ? <Link className="customerButton customerSpacingTopXs" to={item.href}>查看详情</Link> : null}
-            </article>
-          ))}
-        </div>
+        {vm.nextAction ? (
+          <article className="customerListItem customerListItemOk">
+            <div><strong>当前建议：</strong>{vm.nextAction.title}</div>
+            <div className="customerSpacingTopXs"><strong>处方摘要：</strong>{vm.nextAction.explainText}</div>
+            <div className="customerSpacingTopXs"><strong>下一步建议：</strong>{vm.nextAction.objectiveText}</div>
+            <div className="customerSpacingTopXs">
+              <strong>查看相关作业：</strong>
+              {vm.recommendations[0]?.href ? <Link to={vm.recommendations[0].href}>查看相关作业</Link> : <span className="muted"> 暂无可查看作业</span>}
+            </div>
+          </article>
+        ) : <div className="muted">暂无新的处理建议</div>}
       </section>
 
       <section className="customerCard">
