@@ -13,7 +13,7 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
   const pendingActions = vm.kpis.find((item) => item.key === "OPEN_ACTIONS")?.value ?? "-";
   const pendingAcceptance = vm.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "-";
   const offlineDevices = vm.kpis.find((item) => item.key === "OFFLINE_DEVICES")?.value ?? "-";
-  const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
+  const nextActionTitles = vm.actionItems.map((item) => item.title).join(" · ") || "暂无待处理事项";
   const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
   const topRisks = (vm.topRiskFields ?? []).slice(0, 5);
 

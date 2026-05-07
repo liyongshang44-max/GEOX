@@ -44,13 +44,25 @@ export type CustomerDashboardVm = {
     rowText: string;
     href: string;
   }>;
-  nextActions: Array<{ id: string; title: string; summary: string; href: string }>;
+  actionItems: CustomerActionItemVm[];
   roiSummary: {
     totalRoiItems: number;
     waterSavedItems: number;
     customerValueText: string;
   };
   emptyStates: Record<string, { title: string; description: string; severity: "neutral" | "info" | "warning" }>;
+};
+export type CustomerActionItemVm = {
+  id: string;
+  source: "RECOMMENDATION" | "APPROVAL_REQUIRED" | "PENDING_ACCEPTANCE" | "DEVICE_OFFLINE" | "EVIDENCE_MISSING" | "INVALID_EXECUTION" | "GENERAL";
+  title: string;
+  fieldName?: string;
+  fieldId?: string;
+  operationId?: string;
+  riskLabel: string;
+  riskTone: "neutral" | "warning" | "danger";
+  primaryAction: { label: string; href?: string; disabledReason?: string };
+  summary: string;
 };
 export type CustomerDashboardPageVm = CustomerDashboardVm;
 
@@ -130,11 +142,11 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "") ? labelFinalStatus(item.final_status) : labelAcceptanceStatus(item.acceptance_status)}`,
       href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
     })),
-    nextActions: [
-      { id: "approve", title: "优先处理待办事项", summary: "优先关闭待处理事项，保障关键风险先处置。", href: "/customer/dashboard" },
-      { id: "risk", title: "集中处理高风险地块", summary: "按风险等级推进复核，避免问题扩大。", href: "#top-risk-fields" },
-      { id: "accept", title: "完成待验收作业并回写结果", summary: "确保作业闭环，提升验收及时率。", href: "/customer/acceptance" },
-      { id: "device", title: "排查离线设备并恢复数据", summary: "优先恢复离线地块数据采集能力。", href: "/customer/devices" },
+    actionItems: [
+      { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? ""), primaryAction: { label: "查看地块", href: (aggregate.top_risk_fields ?? [])[0]?.field_id ? `/customer/fields/${encodeURIComponent(String((aggregate.top_risk_fields ?? [])[0]?.field_id) )}` : undefined, disabledReason: (aggregate.top_risk_fields ?? [])[0]?.field_id ? undefined : "暂无可跳转地块" }, summary: "按风险等级推进复核，避免问题扩大。" },
+      { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : undefined, disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? undefined : "暂无可跳转作业" }, summary: "确保作业闭环，提升验收及时率。" },
+      { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "暂不支持跳转", disabledReason: "P0 不开放设备列表路由" }, summary: "优先恢复离线地块数据采集能力。" },
+      { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "返回看板", href: "/customer/dashboard" }, summary: "优先关闭待处理事项，保障关键风险先处置。" },
     ],
     roiSummary: {
       totalRoiItems: Number(aggregate.roi_summary?.total_roi_items ?? 0),

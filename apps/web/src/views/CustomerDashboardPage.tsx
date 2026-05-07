@@ -156,11 +156,14 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议</h3>
         <div className="customerActionCards customerRecommendationGrid">
-          {(vm?.nextActions ?? []).map((item) => (
+          {(vm?.actionItems ?? []).map((item) => (
             <article key={item.id} className="customerRecommendationCard">
               <div className="customerItemTitle">{item.title}</div>
+              <div className="customerPill customerSpacingTopXs">{item.riskLabel}</div>
               <div className="customerItemReason customerSpacingTopXs">{item.summary}</div>
-              <Link className="customerButton customerSpacingTopSm" to={item.href}>立即处理</Link>
+              {item.primaryAction.href ? (
+                <Link className="customerButton customerSpacingTopSm" to={item.primaryAction.href}>{item.primaryAction.label}</Link>
+              ) : <div className="muted customerSpacingTopSm">{item.primaryAction.disabledReason ?? "暂无可执行动作"}</div>}
             </article>
           ))}
         </div>
