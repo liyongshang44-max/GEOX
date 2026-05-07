@@ -13,18 +13,18 @@ function text(value: unknown): string {
 export default function CockpitKpiCard({ item }: Props): React.ReactElement {
   const label = text(item.label);
   const value = `${text(item.value)}${text(item.unit) === "--" ? "" : text(item.unit)}`;
-  const reason = item.disabledReason ? text(item.disabledReason) : "";
+  const hint = text(item.customerHint ?? "") === "--" ? "" : text(item.customerHint ?? "");
 
   const content = (
     <>
       <div className="customerMetricLabel">{label}</div>
       <div className="customerMetricValue">{value}</div>
-      {reason ? <div className="muted" title={reason}>说明：{reason}</div> : null}
+      {hint ? <div className="muted">{hint}</div> : null}
     </>
   );
 
   if (item.href && !item.disabledReason) {
-    return <Link className="customerMetricCard" to={item.href}>{content}</Link>;
+    return <Link className="customerMetricCard" to={item.href} title={item.sourceNote} data-source-note={item.sourceNote}>{content}</Link>;
   }
-  return <article className="customerMetricCard">{content}</article>;
+  return <article className="customerMetricCard" title={item.sourceNote} data-source-note={item.sourceNote}>{content}</article>;
 }

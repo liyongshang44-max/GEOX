@@ -39,11 +39,13 @@ export type FieldReportPageVm = {
   nextAction: { title: string; explainText: string; objectiveText: string; priorityText: string } | null;
 };
 
-function formatDateTime(value: string | null | undefined, fallback = "--"): string {
+function formatDateTime(value: string | null | undefined, fallback = "暂无更新时间"): string {
   if (!value) return fallback;
   const ms = Date.parse(value);
-  if (!Number.isFinite(ms)) return fallback;
-  return new Date(ms).toLocaleString("zh-CN", { hour12: false });
+  if (!Number.isFinite(ms) || ms <= 0) return fallback;
+  const d = new Date(ms);
+  if (d.getUTCFullYear() <= 1970) return fallback;
+  return d.toLocaleString("zh-CN", { hour12: false });
 }
 
 function formatCurrency(value: number | null | undefined): string {
@@ -111,10 +113,13 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     ].filter((line) => line.length > 0)
     : [];
 
+  const totalDevices = Number(report.device_summary.total_devices ?? 0);
+  const onlineDevices = Number(report.device_summary.online_devices ?? 0);
+  const offlineDevices = Number(report.device_summary.offline_devices ?? 0);
   const deviceSummary = {
-    totalText: formatCount(report.device_summary.total_devices),
-    onlineText: formatCount(report.device_summary.online_devices),
-    offlineText: formatCount(report.device_summary.offline_devices),
+    totalText: totalDevices > 0 ? formatCount(totalDevices) : "暂无设备状态摘要",
+    onlineText: totalDevices > 0 ? formatCount(onlineDevices) : "暂无设备状态摘要",
+    offlineText: totalDevices > 0 ? formatCount(offlineDevices) : "暂无设备状态摘要",
     lastUpdateText: formatDateTime(report.device_summary.last_telemetry_at),
   };
 
@@ -129,7 +134,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     generatedAtText: formatDateTime(report.generated_at),
     field: {
       fieldId,
-      fieldName: fieldName || "未命名地块",
+      fieldName: fieldName || "地块名称待补充",
       cropText: "暂无作物信息",
       stageText: "暂无阶段信息",
       updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
@@ -205,7 +210,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
-        id: operationId || "--",
+        id: operationId || "待生成",
         title: sanitizeCustomerText(item.customer_title || item.title || operationId || "未命名作业"),
         statusText: labelFinalStatus(item.final_status),
         acceptanceText: labelAcceptanceStatus(item.acceptance_status),

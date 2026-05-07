@@ -106,8 +106,13 @@ export type CustomerReportSectionVm = {
   technical?: { title: string; rows: Array<{ label: string; value: string }> };
 };
 
-function kv(value: unknown, fallback = "--"): string {
-  return labelEmptyFallback(value, fallback);
+function kv(value: unknown, fallback = "暂无记录"): string {
+  const text = labelEmptyFallback(value, fallback);
+  if (["--", "NaN", "undefined", "null"].includes(text)) return fallback;
+  const ms = Date.parse(text);
+  if (Number.isFinite(ms) && ms <= 0) return "暂无更新时间";
+  if (Number.isFinite(ms) && new Date(ms).getUTCFullYear() <= 1970) return "暂无更新时间";
+  return text;
 }
 function toNum(v: unknown): number | null {
   const n = typeof v === "number" ? v : Number(v);
@@ -147,14 +152,14 @@ function formatMemoryLine(item: any): string {
   } else if (before != null && after != null) {
     statusText = after > before ? "湿度已回升" : "湿度未回升";
   }
-  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "--"} → 灌后${after ?? "--"}，${statusText}）`;
+  return `${labelMemoryCode(item?.memory_code ?? item?.code ?? item?.memory_type)}：${labelEmptyFallback(item?.summary_text, "地块响应记录")}（灌前${before ?? "待生成"} → 灌后${after ?? "待生成"}，${statusText}）`;
 }
 
 function formatRoiLine(item: any): string {
   const baseline = toNum(item?.baseline_value);
   const delta = toNum(item?.delta_value);
-  const unit = labelEmptyFallback(item?.unit, "--");
-  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（${labelValueType(item?.value_type)}，数值${delta ?? "--"}${unit}，baseline ${baseline ?? "--"}）`;
+  const unit = labelEmptyFallback(item?.unit, "不适用");
+  return `${labelEmptyFallback(item?.customer_text, "价值记录")}（${labelValueType(item?.value_type)}，数值${delta ?? "待生成"}${unit}，baseline ${baseline ?? "待生成"}）`;
 }
 
 
@@ -169,7 +174,7 @@ function mapAcceptanceCopy(value: unknown): string {
 function mapApprovalStatusForCustomer(value: unknown): string {
   const raw = String(value ?? "").trim();
   const normalized = raw.toUpperCase();
-  if (!raw) return "--";
+  if (!raw) return "暂无记录";
   if (normalized.includes("AUTO")) return "系统自动状态";
   return labelApprovalStatus(raw);
 }
@@ -179,7 +184,7 @@ function mapSlaQuality(value: unknown, rawMs: unknown): string {
   if (quality === "VALID") return kv(rawMs);
   if (quality === "MISSING_DATA") return "缺失";
   if (quality === "INVALID_ORDER") return "执行异常";
-  return "--";
+  return "暂无记录";
 }
 
 export function buildOperationReportVm(report: OperationReportV1): OperationReportPageVm {
