@@ -114,9 +114,11 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
   const recentOpsCount = Number((aggregate.recent_operations ?? []).length);
   const generatedAtText = toDateTimeText((aggregate as any).generated_at ?? new Date().toISOString());
   const emptyStates = {
+    NO_KPI_SUMMARY: getCustomerEmptyState("NO_KPI_SUMMARY"),
     NO_ROI: getCustomerEmptyState("NO_ROI"),
     NO_RISK_FIELDS: getCustomerEmptyState("NO_RISK_FIELDS"),
     NO_PENDING_ACTIONS: getCustomerEmptyState("NO_PENDING_ACTIONS"),
+    NO_DEVICE_HEALTH: getCustomerEmptyState("NO_DEVICE_HEALTH"),
     NO_RECENT_OPERATIONS: getCustomerEmptyState("NO_RECENT_OPERATIONS"),
     MAP_UNAVAILABLE: getCustomerEmptyState("MAP_UNAVAILABLE"),
     WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),

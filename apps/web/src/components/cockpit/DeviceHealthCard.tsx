@@ -1,14 +1,22 @@
 import React from "react";
 import type { CustomerDashboardVm } from "../../viewmodels/customerDashboardVm";
+import { CustomerEmptyState, type CustomerEmptyStateVm } from "../customer";
 
 type Props = {
   summary: CustomerDashboardVm["deviceHealth"];
+  emptyState: CustomerEmptyStateVm;
 };
 
-export default function DeviceHealthCard({ summary }: Props): React.ReactElement {
+export default function DeviceHealthCard({ summary, emptyState }: Props): React.ReactElement {
   if (summary.empty) {
-    return <article className="customerCard"><h3 className="customerCardTitle">设备健康</h3><div className="muted">暂无设备状态摘要</div></article>;
+    return (
+      <article className="customerCard">
+        <h3 className="customerCardTitle">设备健康</h3>
+        <CustomerEmptyState vm={emptyState} />
+      </article>
+    );
   }
+
   return (
     <article className="customerCard">
       <h3 className="customerCardTitle">设备健康</h3>
