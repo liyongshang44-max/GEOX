@@ -101,12 +101,22 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
         {sections.map((item) => (
           <article key={item.key} className="customerFlowStep">
             <h2 className="customerCardTitle">{item.title}</h2>
+            <div className="customerMetricLabel">状态：{item.statusText ?? item.status}</div>
             <p className="customerSpacingTopSm">{item.summary}</p>
             {item.items.length ? <p className="customerMetricLabel">{item.items.map((row) => `${row.label}：${row.value}`).join("；")}</p> : null}
             {item.emptyState ? <p className="customerMetricLabel">{item.emptyState.title}：{item.emptyState.description}</p> : null}
           </article>
         ))}
       </section>
+      {vm.technicalFoldout?.rows?.length ? (
+        <details className="customerCard">
+          <summary className="customerCardTitle">技术附录</summary>
+          <p className="customerMetricLabel customerSpacingTopSm">默认客户版不突出内部技术字段，仅排障时查看。</p>
+          <div className="customerGrid2 customerSpacingTopSm">
+            {vm.technicalFoldout.rows.map((row) => <div key={row.label} className="customerMetricLabel"><strong>{row.label}：</strong>{row.value}</div>)}
+          </div>
+        </details>
+      ) : null}
       <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，供作业执行留痕与验收复盘使用。</p></footer>
     </div>
   );

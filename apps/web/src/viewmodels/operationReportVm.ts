@@ -11,12 +11,14 @@ import {
   labelMemoryCode,
   labelRiskLevel,
   labelValueType,
+  customerTimelineStatusLabel,
 } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
 const REVIEW_NEEDED_TEXT = "需复核";
 
 export type OperationReportPageVm = {
+  generatedAtText: string;
   operation: { operationId: string; title: string; fieldName: string; fieldId: string; finalStatusLabel: string; finalStatusTone: string; updatedAtText: string };
   sections: CustomerReportSectionVm[];
   timeline: Array<{ key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
@@ -99,6 +101,7 @@ export type CustomerReportSectionVm = {
   summary: string;
   items: Array<{ label: string; value: string; tone?: string }>;
   emptyState?: { title: string; description: string };
+  statusText?: string;
   technical?: { title: string; rows: Array<{ label: string; value: string }> };
 };
 
@@ -270,7 +273,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     : [];
   const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
     .every((value) => (toNum(value) ?? 0) <= 0);
-  const sections: CustomerReportSectionVm[] = [
+  const rawSections: CustomerReportSectionVm[] = [
     { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
     { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方合同", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人客户化名称", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }, { label: "权限提示", value: kv(reportApproval?.permission_hint || reportApproval?.permission_note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
@@ -280,9 +283,11 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "confidence", value: confidenceText }, { label: "evidence note", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
     { key: "MEMORY", status: hasMemoryData ? "AVAILABLE" : "MISSING", title: "田块记忆", summary: hasMemoryData ? "已生成记忆摘要" : "暂无可展示的地块记忆", items: memoryItems, emptyState: hasMemoryData ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
+  const sections = rawSections.map((section) => ({ ...section, statusText: customerTimelineStatusLabel(section.status) }));
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
 
   return {
+    generatedAtText: kv(report.generated_at),
     operation: {
       operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
