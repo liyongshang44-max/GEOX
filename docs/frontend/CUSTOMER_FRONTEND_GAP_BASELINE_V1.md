@@ -22,3 +22,11 @@
 - `docs/frontend/CUSTOMER_FRONTEND_GAP_BASELINE_V1.md` 存在并含 Gap Baseline 表格。
 - 文档不得把 `/customer/fields`、`/customer/operations`、`/customer/reports` 写成 P0。
 - 文档不得把 `/api/v1/customer/cockpit/overview` 写成当前可用接口。
+
+## Boundary Exemptions (customer-boundary-allow)
+
+> 所有豁免必须采用 `// customer-boundary-allow: <reason>` 格式，缺少 reason 视为失败。
+
+当前基线豁免项（由 boundary 脚本输出同步）：
+
+- 暂无。
