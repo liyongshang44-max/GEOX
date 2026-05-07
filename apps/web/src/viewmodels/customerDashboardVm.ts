@@ -152,16 +152,6 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
         sentence: `查看 ${numberFmt.format(highRisk)} 个高风险地块`,
         href: "#top-risk-fields",
       },
-      {
-        id: "acceptance",
-        sentence: `验收 ${numberFmt.format(pendingAcceptance)} 个已完成作业`,
-        href: "/customer/acceptance",
-      },
-      {
-        id: "devices",
-        sentence: `复核 ${numberFmt.format(offlineDevices)} 台离线设备`,
-        href: "/customer/devices",
-      },
     ],
     recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
       const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
