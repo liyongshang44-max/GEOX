@@ -26,20 +26,19 @@ export default function CustomerDashboardPage(): React.ReactElement {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   }, []);
 
-  const fixedKpiOrder = ["pendingApproval", "highRiskFields", "earlyWarnings", "pendingAcceptance", "weeklyWaterSaved", "managedFields"] as const;
+  const fixedKpiOrder = ["OPEN_ACTIONS", "RISK_FIELDS", "PENDING_ACCEPTANCE", "OFFLINE_DEVICES", "VALUE_RECORDS"] as const;
 
   const fixedKpis = fixedKpiOrder.map((key) => {
     const found = vm?.kpis.find((kpi) => kpi.key === key);
     if (found) return found;
     const fallbackLabel: Record<(typeof fixedKpiOrder)[number], string> = {
-      pendingApproval: "待审批处方",
-      highRiskFields: "高风险地块",
-      earlyWarnings: "异常发现",
-      pendingAcceptance: "待验收作业",
-      weeklyWaterSaved: "本周节水",
-      managedFields: "管理地块",
+      OPEN_ACTIONS: "待处理事项",
+      RISK_FIELDS: "风险地块",
+      PENDING_ACCEPTANCE: "待验收作业",
+      OFFLINE_DEVICES: "离线设备",
+      VALUE_RECORDS: "价值记录",
     };
-    return { key, label: fallbackLabel[key], valueText: "--", detailText: "数据更新中" };
+    return { key, label: fallbackLabel[key], value: "--", unit: undefined, tone: "neutral" as const, sourceNote: "fallback", disabledReason: "数据更新中" };
   });
 
   const cleanText = (text: string): string => String(text ?? "").trim();
@@ -69,8 +68,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
           {fixedKpis.map((kpi) => (
             <article key={kpi.key} className="customerMetricCard">
               <div className="customerMetricLabel">{kpi.label}</div>
-              <div className="customerMetricValue">{kpi.valueText}</div>
-              <div className="muted">{kpi.detailText}</div>
+              <div className="customerMetricValue">{kpi.value}{kpi.unit ?? ""}</div>
+              <div className="muted">{kpi.disabledReason ?? kpi.sourceNote}</div>
             </article>
           ))}
         </div>
@@ -157,11 +156,14 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <section className="customerCard">
         <h3 className="customerCardTitle">下一步建议</h3>
         <div className="customerActionCards customerRecommendationGrid">
-          {(vm?.nextActions ?? []).map((item) => (
+          {(vm?.actionItems ?? []).map((item) => (
             <article key={item.id} className="customerRecommendationCard">
               <div className="customerItemTitle">{item.title}</div>
+              <div className="customerPill customerSpacingTopXs">{item.riskLabel}</div>
               <div className="customerItemReason customerSpacingTopXs">{item.summary}</div>
-              <Link className="customerButton customerSpacingTopSm" to={item.href}>立即处理</Link>
+              {item.primaryAction.href ? (
+                <Link className="customerButton customerSpacingTopSm" to={item.primaryAction.href}>{item.primaryAction.label}</Link>
+              ) : <div className="muted customerSpacingTopSm">{item.primaryAction.disabledReason ?? "暂无可执行动作"}</div>}
             </article>
           ))}
         </div>
