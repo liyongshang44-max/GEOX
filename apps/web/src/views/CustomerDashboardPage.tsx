@@ -6,6 +6,7 @@ import {
   CockpitFieldRiskPanel,
   CockpitKpiStrip,
   DeviceHealthCard,
+  ExecutionAcceptanceSummary,
   RecentOperationsSection,
   ValueResultPanel,
 } from "../components/cockpit";
@@ -38,6 +39,15 @@ export default function CustomerDashboardPage(): React.ReactElement {
     WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),
   };
   const kpis = vm?.kpis ?? [];
+  const acceptanceSummaryVm = {
+    title: "作业验收摘要",
+    subtitle: "待验收与闭环状态",
+    metrics: [
+      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0") },
+      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0") },
+    ],
+    emptyState: emptyStates.NO_PENDING_ACTIONS,
+  };
 
   return (
     <div className="customerDashboardPage">
@@ -51,18 +61,21 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </header>
 
-      <div className="customerDashboardKpiRow"><CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} /></div>
+      <section className="customerDashboardKpiRow"><CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} /></section>
 
       <section className="customerDashboardMainGrid">
         <div className="customerDashboardRiskPanel"><CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" /></div>
         <div className="customerDashboardActionPanel"><CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} /></div>
-        <div className="customerDashboardRightRail">
+        <aside className="customerDashboardRightRail">
+          <ExecutionAcceptanceSummary vm={acceptanceSummaryVm} />
           <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} emptyState={emptyStates.NO_DEVICE_HEALTH} />
-          {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
-        </div>
+        </aside>
       </section>
 
-      <RecentOperationsSection items={vm?.recentOperations ?? []} emptyState={emptyStates.NO_RECENT_OPERATIONS} />
+      <section className="customerDashboardBottomGrid">
+        {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
+        <RecentOperationsSection items={vm?.recentOperations ?? []} emptyState={emptyStates.NO_RECENT_OPERATIONS} />
+      </section>
 
       <section className="customerCard noPrint">
         <h3 className="customerCardTitle">导出经营报告</h3>
