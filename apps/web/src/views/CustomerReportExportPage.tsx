@@ -5,6 +5,7 @@ import { buildCustomerDashboardVm } from "../viewmodels/customerDashboardVm";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { DashboardExportBlocks, FieldExportBlocks, OperationExportBlocks } from "../components/customer/CustomerExportBlocks";
+import PrintReportScaffold from "../components/customer/PrintReportScaffold";
 
 export default function CustomerReportExportPage(): React.ReactElement {
   const { fieldId = "", operationId = "" } = useParams();
@@ -16,6 +17,8 @@ export default function CustomerReportExportPage(): React.ReactElement {
   const [content, setContent] = React.useState<React.ReactElement | null>(null);
   const [reportTitle, setReportTitle] = React.useState("客户报告");
   const [generatedAtText, setGeneratedAtText] = React.useState("");
+  const [backTo, setBackTo] = React.useState("/customer/dashboard");
+  const [subtitle, setSubtitle] = React.useState("客户报告打印版");
 
   React.useEffect(() => {
     let alive = true;
@@ -23,6 +26,9 @@ export default function CustomerReportExportPage(): React.ReactElement {
     setError("");
     setReportTitle("客户报告");
     setGeneratedAtText("");
+    setBackTo("/customer/dashboard");
+    setSubtitle("客户报告打印版");
+
     const load = async (): Promise<void> => {
       if (mode === "field") {
         const report = await fetchFieldReport(fieldId);
@@ -30,6 +36,8 @@ export default function CustomerReportExportPage(): React.ReactElement {
         if (!alive) return;
         setReportTitle(vm.field.fieldName || "客户报告");
         setGeneratedAtText(vm.generatedAtText);
+        setBackTo(`/customer/fields/${encodeURIComponent(fieldId)}`);
+        setSubtitle("地块病历打印版");
         setContent(<FieldExportBlocks vm={vm} />);
         return;
       }
@@ -40,6 +48,8 @@ export default function CustomerReportExportPage(): React.ReactElement {
         const title = String(vm.operation.title || "").trim();
         setReportTitle(title ? (title.endsWith("报告") ? title : `${title}报告`) : "客户报告");
         setGeneratedAtText(vm.generatedAtText);
+        setBackTo(`/customer/operations/${encodeURIComponent(operationId)}`);
+        setSubtitle("作业闭环打印版");
         setContent(<OperationExportBlocks vm={vm} />);
         return;
       }
@@ -48,6 +58,8 @@ export default function CustomerReportExportPage(): React.ReactElement {
       if (!alive) return;
       setReportTitle("客户看板报告");
       setGeneratedAtText(vm.generatedAtText);
+      setBackTo("/customer/dashboard");
+      setSubtitle("客户经营总览打印版");
       setContent(<DashboardExportBlocks vm={vm} />);
     };
 
@@ -67,20 +79,13 @@ export default function CustomerReportExportPage(): React.ReactElement {
   if (error || !content) return <div className="customerReportCanvas"><div className="customerReportSheet">导出页加载失败：{error || "暂无数据"}</div></div>;
 
   return (
-    <div className="customerReportCanvas">
-      <div className="customerReportSheet printPage">
-        <header className="customerReportHeader">
-          <div className="customerHeroTop">
-            <div>
-              <div className="customerEyebrow">GEOX</div>
-              <h1 className="customerTitle">{reportTitle || "客户报告"}</h1>
-              <p className="customerSubtitle">生成时间：{generatedAtText || "--"}</p>
-            </div>
-            <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
-          </div>
-        </header>
-        {content}
-      </div>
-    </div>
+    <PrintReportScaffold
+      title={reportTitle || "客户报告"}
+      subtitle={subtitle}
+      generatedAt={generatedAtText || "--"}
+      backTo={backTo}
+    >
+      {content}
+    </PrintReportScaffold>
   );
 }

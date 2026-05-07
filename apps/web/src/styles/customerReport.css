@@ -196,3 +196,37 @@
 @media (max-width: 700px) {
   .operationTechDetailsGrid { grid-template-columns: 1fr; }
 }
+
+.unifiedPrintReport {
+  gap: 12px;
+}
+.printReportHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+.printReportActions {
+  display: flex;
+  gap: 8px;
+}
+.printSectionCards {
+  display: grid;
+  gap: 10px;
+}
+@media print {
+  .customerShellSidebar,
+  .customerShellTopbar,
+  .noPrint {
+    display: none !important;
+  }
+  .customerLayoutPrintOnly,
+  .customerReportCanvas,
+  .customerReportSheet {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+}

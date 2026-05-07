@@ -33,6 +33,12 @@ function resolvePageTitle(pathname: string): string {
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
   const location = useLocation();
   const title = resolvePageTitle(location.pathname);
+  const isExportRoute = location.pathname === "/customer/export" || location.pathname.endsWith("/export");
+
+
+  if (isExportRoute) {
+    return <main className="customerLayoutMain customerLayoutPrintOnly">{children}</main>;
+  }
 
   return (
     <div className="customerShell" data-layout="customer-shell">
