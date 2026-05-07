@@ -203,6 +203,20 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   pushPrescription("验收条件", prescriptionData?.acceptance_conditions);
   const hasPrescriptionData = prescriptionItems.length > 0;
 
+  const executionData = (report as any).execution ?? {};
+  const asExecutedData = (report as any).as_executed ?? null;
+  const asAppliedData = (report as any).as_applied ?? null;
+  const operationType = String((report as any).operation_type ?? prescriptionData?.operation_type ?? "").trim().toUpperCase();
+  const isVariableOperation = operationType.includes("VARIABLE");
+  const executionTarget = kv(asExecutedData?.target ?? asExecutedData?.execution_target ?? executionData?.target, "--");
+  const executorText = kv(asExecutedData?.executor ?? asExecutedData?.actor ?? report.workflow.owner_name, "--");
+  const executionParamsText = kv(asExecutedData?.params_summary ?? asExecutedData?.parameters ?? executionData?.parameters, "--");
+  const asExecutedSummary = kv(asExecutedData?.summary ?? asExecutedData?.result_summary, "--");
+  const asAppliedSummary = !isVariableOperation
+    ? "该作业不适用覆盖记录"
+    : kv(asAppliedData?.summary ?? asAppliedData?.coverage_summary, "暂无覆盖记录");
+  const hasAsExecuted = Boolean(report.execution.execution_started_at || asExecutedData);
+
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
   const valueItems = [
@@ -231,7 +245,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
     { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方合同", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人客户化名称", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }, { label: "权限提示", value: kv(reportApproval?.permission_hint || reportApproval?.permission_note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
-    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
+    { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "As-executed 摘要", value: asExecutedSummary }, { label: "As-applied 空态或摘要", value: asAppliedSummary }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? "暂无证据摘要" : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? { title: "暂无证据摘要", description: "当前没有可展示的证据汇总。" } : undefined },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
     { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
