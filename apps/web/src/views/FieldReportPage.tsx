@@ -88,12 +88,15 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">诊断结论</h3>
-        <div>{vm.diagnosis.headline}</div>
+        <div><strong>主问题一句话：</strong>{vm.diagnosis.headline}</div>
+        <div className="customerSpacingTopXs"><strong>诊断依据：</strong></div>
         <ul className="customerList">
           {vm.diagnosis.evidenceLines.map((item, idx) => (
             <li key={`${item}-${idx}`} className="customerListItem">{item}</li>
           ))}
         </ul>
+        <div className="customerSpacingTopXs"><strong>数据质量：</strong>{vm.diagnosis.dataQualityText}</div>
+        <div className="customerSpacingTopXs"><strong>最新观测摘要：</strong>{vm.diagnosis.latestObservationText}</div>
       </section>
 
       <section className="customerCard">

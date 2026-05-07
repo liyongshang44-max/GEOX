@@ -4,7 +4,7 @@ import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskL
 export type FieldReportPageVm = {
   field: { fieldId: string; fieldName: string; cropText: string; stageText: string; updatedAtText: string };
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
-  diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string };
+  diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
   recentOperations: Array<{ operationId: string; rowText: string; href: string }>;
   roiSummary: { title: string; lines: string[] } | { title: string; description: string };
@@ -109,6 +109,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       headline: explain.human,
       evidenceLines: explain.topReasonsText,
       dataQualityText: report.value_summary.low_confidence_items > 0 ? "数据质量需复核" : "数据质量可用",
+      latestObservationText: report.overview.latest_operation_at
+        ? `最近一次作业观测时间：${formatDateTime(report.overview.latest_operation_at)}`
+        : `最近遥测更新时间：${formatDateTime(report.device_summary.last_telemetry_at)}`,
     },
     recommendations: [
       { title: nextAction?.title ?? "优先完成待验收作业", summary: nextAction?.explainText ?? "优先关闭当前风险相关任务。", href: nextAction ? `/customer/fields/${encodeURIComponent(fieldId)}` : undefined },
