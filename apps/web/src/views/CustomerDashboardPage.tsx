@@ -43,8 +43,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
     title: "执行与验收摘要",
     subtitle: "P0 只展示 report / operation_state 已有节点",
     metrics: [
-      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0"), hint: "未报告状态" },
-      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0"), hint: "来自报告" },
+      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0"), helperText: "未报告状态" },
+      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0"), helperText: "来自报告" },
     ],
     emptyState: emptyStates.NO_PENDING_ACTIONS,
   };
