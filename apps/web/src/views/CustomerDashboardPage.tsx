@@ -1,12 +1,15 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
-import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
-import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
-import CockpitActionList from "../components/cockpit/CockpitActionList";
-import DeviceHealthCard from "../components/cockpit/DeviceHealthCard";
-import ValueResultPanel from "../components/cockpit/ValueResultPanel";
-import RecentOperationsSection from "../components/cockpit/RecentOperationsSection";
+import {
+  CockpitActionList,
+  CockpitFieldRiskPanel,
+  CockpitKpiStrip,
+  DeviceHealthCard,
+  RecentOperationsSection,
+  ValueResultPanel,
+} from "../components/cockpit";
+import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -25,6 +28,15 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
+  const emptyStates = vm?.emptyStates ?? {
+    NO_KPI_SUMMARY: getCustomerEmptyState("NO_KPI_SUMMARY"),
+    NO_PENDING_ACTIONS: getCustomerEmptyState("NO_PENDING_ACTIONS"),
+    NO_RISK_FIELDS: getCustomerEmptyState("NO_RISK_FIELDS"),
+    NO_RECENT_OPERATIONS: getCustomerEmptyState("NO_RECENT_OPERATIONS"),
+    NO_DEVICE_HEALTH: getCustomerEmptyState("NO_DEVICE_HEALTH"),
+    NO_ROI: getCustomerEmptyState("NO_ROI"),
+    WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),
+  };
   const kpis = vm?.kpis ?? [];
 
   return (
@@ -39,18 +51,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </header>
 
-      <CockpitKpiStrip items={kpis} />
+      <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
 
       <section className="customerGrid3">
-        <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} mode="MATRIX" />
-        <CockpitActionList items={vm?.actionItems ?? []} />
+        <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" />
+        <CockpitActionList items={vm?.actionItems ?? []} emptyState={emptyStates.NO_PENDING_ACTIONS} />
         <div className="customerPageGapMd">
-          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} />
-          <ValueResultPanel roi={vm?.roiSummary ?? { totalRoiItems: 0, waterSavedItems: 0, customerValueText: "" }} />
+          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} emptyState={emptyStates.NO_DEVICE_HEALTH} />
+          {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
         </div>
       </section>
 
-      <RecentOperationsSection items={vm?.recentOperations ?? []} />
+      <RecentOperationsSection items={vm?.recentOperations ?? []} emptyState={emptyStates.NO_RECENT_OPERATIONS} />
 
       <section className="customerCard noPrint">
         <h3 className="customerCardTitle">导出经营报告</h3>
