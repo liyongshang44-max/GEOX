@@ -28,10 +28,10 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
         <div className="customerEvidenceGrid customerSpacingTopSm">
           {topRisks.length ? topRisks.map((item) => (
-            <article key={item.id || item.href} className="customerEvidenceItem">
-              <strong>{item.rowText.split(" · ")[0] || "未命名地块"}</strong>
-              <div className="customerMetricLabel">{item.rowText.split(" · ")[1] || "风险待确认"}</div>
-              <div className="customerMetricLabel">{item.rowText.split(" · ").slice(2).join(" · ") || "暂无风险原因"}</div>
+            <article key={item.fieldId || item.href} className="customerEvidenceItem">
+              <strong>{item.fieldName || "未命名地块"}</strong>
+              <div className="customerMetricLabel">{item.riskLabel || "风险待确认"}</div>
+              <div className="customerMetricLabel">{item.reasons.join("；") || "暂无风险原因"}</div>
             </article>
           )) : <div className="customerMetricLabel">暂无高风险地块</div>}
         </div>
@@ -39,17 +39,14 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
       <section className="customerCard">
         <h2 className="customerCardTitle">近期作业 Top 5</h2>
         <div className="customerList customerSpacingTopSm">
-          {recentOperations.length ? recentOperations.map((item) => {
-            const parsed = splitRecentOperationRow(item.rowText);
-            return (
+          {recentOperations.length ? recentOperations.map((item) => (
               <article key={item.operationId || item.href} className="customerEvidenceItem">
-                <strong>{parsed.operationType}</strong>
-                <span className="customerMetricLabel">{parsed.fieldName}</span>
-                <span className="customerMetricLabel">{parsed.timeText}</span>
-                <span className="customerMetricLabel">{parsed.acceptanceText}</span>
+                <strong>{item.operationName}</strong>
+                <span className="customerMetricLabel">{item.fieldName}</span>
+                <span className="customerMetricLabel">{item.updatedAtText}</span>
+                <span className="customerMetricLabel">{item.acceptanceText}</span>
               </article>
-            );
-          }) : <div className="customerMetricLabel">暂无近期作业</div>}
+            )) : <div className="customerMetricLabel">暂无近期作业</div>}
         </div>
       </section>
       <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{nextActionTitles}</p></section>

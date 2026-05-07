@@ -1,7 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
-import { CockpitActionList, CockpitFieldRiskPanel, DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
+import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
+import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
+import CockpitActionList from "../components/cockpit/CockpitActionList";
+import DeviceHealthCard from "../components/cockpit/DeviceHealthCard";
+import ValueResultPanel from "../components/cockpit/ValueResultPanel";
+import RecentOperationsSection from "../components/cockpit/RecentOperationsSection";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -20,8 +25,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       });
   }, []);
 
-  const kpis = (vm?.kpis ?? []).slice(0, 5);
-  const offlineDevices = vm?.kpis.find((kpi) => kpi.key === "OFFLINE_DEVICES")?.value ?? "0";
+  const kpis = vm?.kpis ?? [];
 
   return (
     <div className="customerPage customerPageGapMd">
@@ -35,34 +39,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
         </div>
       </header>
 
-      <section className="customerCard">
-        <h3 className="customerReportSectionTitle">KpiStrip</h3>
-        <div className="customerMetrics">
-          {kpis.map((kpi) => (
-            <article key={kpi.key} className="customerMetricCard">
-              <div className="customerMetricLabel">{kpi.label}</div>
-              <div className="customerMetricValue">{kpi.value}{kpi.unit ?? ""}</div>
-            </article>
-          ))}
-        </div>
-      </section>
+      <CockpitKpiStrip items={kpis} />
 
       <section className="customerGrid3">
-        <CockpitFieldRiskPanel items={vm?.topRiskFields ?? []} />
+        <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} mode="MATRIX" />
         <CockpitActionList items={vm?.actionItems ?? []} />
         <div className="customerPageGapMd">
-          <DeviceHealthCard offlineDevices={offlineDevices} />
-          <ValueResultPanel valueText={vm?.roiSummary.customerValueText ?? "暂无收益摘要"} roiItems={vm?.roiSummary.totalRoiItems ?? 0} />
+          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} />
+          <ValueResultPanel roi={vm?.roiSummary ?? { totalRoiItems: 0, waterSavedItems: 0, customerValueText: "" }} />
         </div>
       </section>
 
-      <section className="customerCard">
-        <h3 className="customerCardTitle">RecentOperationsSection</h3>
-        <ul className="customerList">
-          {(vm?.recentOperations ?? []).map((item) => <li key={item.operationId} className="customerListItem"><Link to={item.href}>{item.rowText}</Link></li>)}
-          {!(vm?.recentOperations.length) ? <li className="muted">暂无近期作业</li> : null}
-        </ul>
-      </section>
+      <RecentOperationsSection items={vm?.recentOperations ?? []} />
 
       <section className="customerCard noPrint">
         <h3 className="customerCardTitle">ReportExportCTA</h3>

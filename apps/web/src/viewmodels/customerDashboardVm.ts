@@ -19,6 +19,15 @@ export type CustomerKpiVm = {
   disabledReason?: string;
 };
 
+export type CustomerRiskFieldVm = {
+  fieldId: string;
+  fieldName: string;
+  riskLabel: string;
+  riskTone: "neutral" | "warning" | "danger";
+  reasons: string[];
+  href: string;
+};
+
 export type CustomerDashboardVm = {
   generatedAtText: string;
   context: { title: string; subtitle: string; actorRoleText: string; scopeText: string };
@@ -29,11 +38,7 @@ export type CustomerDashboardVm = {
     exportAction: { label: string; href: string };
   };
   kpis: CustomerKpiVm[];
-  topRiskFields: Array<{
-    id: string;
-    rowText: string;
-    href: string;
-  }>;
+  topRiskFields: CustomerRiskFieldVm[];
   pendingItems: Array<{
     id: string;
     sentence: string;
@@ -41,14 +46,28 @@ export type CustomerDashboardVm = {
   }>;
   recentOperations: Array<{
     operationId: string;
-    rowText: string;
+    operationName: string;
+    fieldName: string;
+    stateText: string;
+    acceptanceText: string;
+    evidenceText: string;
+    updatedAtText: string;
     href: string;
   }>;
   actionItems: CustomerActionItemVm[];
+  deviceHealth: {
+    onlineDevices?: number;
+    offlineDevices?: number;
+    alertDevices?: number;
+    updatedAtText?: string;
+    empty: boolean;
+  };
   roiSummary: {
     totalRoiItems: number;
     waterSavedItems: number;
     customerValueText: string;
+    confidenceText?: string;
+    assumptionText?: string;
   };
   emptyStates: Record<string, { title: string; description: string; severity: "neutral" | "info" | "warning" }>;
 };
@@ -110,11 +129,18 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "roi_summary.total_roi_items" },
       { key: "RECENT_OPERATIONS", label: "近期作业", value: numberFmt.format(recentOpsCount), unit: "条", tone: "neutral", sourceNote: "recent_operations.length", disabledReason: "顶部 KPI 仅展示 5 项，近期作业在列表区展示。" },
     ],
-    topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => ({
-      id: String(item.field_id ?? ""),
-      rowText: `${String(item.field_name ?? "C8-03 地块")} · ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).join("、") || "-")}`,
-      href: `/customer/fields/${encodeURIComponent(String(item.field_id ?? ""))}`,
-    })),
+    topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => {
+      const fieldId = String(item.field_id ?? "");
+      const riskTone = item.risk_level === "HIGH" ? "danger" : item.risk_level === "MEDIUM" ? "warning" : "neutral";
+      return {
+        fieldId,
+        fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+        riskLabel: labelRiskLevel(item.risk_level),
+        riskTone,
+        reasons: (item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).filter(Boolean),
+        href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/dashboard",
+      };
+    }),
     pendingItems: [
       {
         id: "alerts",
@@ -137,21 +163,38 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
         href: "/customer/devices",
       },
     ],
-    recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => ({
-      operationId: String(item.operation_id ?? item.operation_plan_id ?? ""),
-      rowText: `${sanitizeCustomerText(item.customer_title ?? item.title ?? "作业")} · ${String(item.field_name ?? "C8-03 地块")} · ${toDateTimeText(item.executed_at)} · ${(item.acceptance_status === null || item.acceptance_status === undefined || item.acceptance_status === "") ? labelFinalStatus(item.final_status) : labelAcceptanceStatus(item.acceptance_status)}`,
-      href: `/customer/operations/${encodeURIComponent(String(item.operation_plan_id ?? item.operation_id ?? ""))}`,
-    })),
+    recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {
+      const operationId = String(item.operation_id ?? item.operation_plan_id ?? "");
+      return {
+        operationId,
+        operationName: sanitizeCustomerText(item.customer_title ?? item.title ?? "作业"),
+        fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+        stateText: sanitizeCustomerText((item as any).operation_state ?? labelFinalStatus(item.final_status)),
+        acceptanceText: labelAcceptanceStatus(item.acceptance_status),
+        evidenceText: sanitizeCustomerText((item as any).evidence_status ?? "证据待补充"),
+        updatedAtText: toDateTimeText((item as any).updated_at ?? item.executed_at),
+        href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard",
+      };
+    }),
     actionItems: [
       { id: "risk", source: "RECOMMENDATION", title: "集中处理高风险地块", riskLabel: "高风险", riskTone: "danger", fieldId: String((aggregate.top_risk_fields ?? [])[0]?.field_id ?? ""), primaryAction: { label: "查看地块", href: (aggregate.top_risk_fields ?? [])[0]?.field_id ? `/customer/fields/${encodeURIComponent(String((aggregate.top_risk_fields ?? [])[0]?.field_id) )}` : undefined, disabledReason: (aggregate.top_risk_fields ?? [])[0]?.field_id ? undefined : "暂无可跳转地块" }, summary: "按风险等级推进复核，避免问题扩大。" },
       { id: "accept", source: "PENDING_ACCEPTANCE", title: "完成待验收作业并回写结果", riskLabel: pendingAcceptance > 0 ? "待验收" : "已完成", riskTone: pendingAcceptance > 0 ? "warning" : "neutral", operationId: String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id ?? ""), primaryAction: { label: "查看作业", href: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? `/customer/operations/${encodeURIComponent(String((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id))}` : undefined, disabledReason: ((aggregate.recent_operations ?? [])[0]?.operation_id ?? (aggregate.recent_operations ?? [])[0]?.operation_plan_id) ? undefined : "暂无可跳转作业" }, summary: "确保作业闭环，提升验收及时率。" },
       { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "暂不支持跳转", disabledReason: "P0 不开放设备列表路由" }, summary: "优先恢复离线地块数据采集能力。" },
       { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "返回看板", href: "/customer/dashboard" }, summary: "优先关闭待处理事项，保障关键风险先处置。" },
     ],
+    deviceHealth: {
+      onlineDevices: typeof (aggregate.device_summary as any)?.online_devices === "number" ? Number((aggregate.device_summary as any).online_devices) : undefined,
+      offlineDevices: typeof aggregate.device_summary?.offline_devices === "number" ? Number(aggregate.device_summary?.offline_devices) : undefined,
+      alertDevices: typeof (aggregate.device_summary as any)?.alert_devices === "number" ? Number((aggregate.device_summary as any).alert_devices) : undefined,
+      updatedAtText: (aggregate.device_summary as any)?.updated_at ? toDateTimeText((aggregate.device_summary as any).updated_at) : undefined,
+      empty: !aggregate.device_summary,
+    },
     roiSummary: {
       totalRoiItems: Number(aggregate.roi_summary?.total_roi_items ?? 0),
       waterSavedItems: Number(aggregate.roi_summary?.water_saved_items ?? 0),
       customerValueText: sanitizeCustomerText(aggregate.roi_summary?.customer_value_text ?? "暂无收益摘要"),
+      confidenceText: sanitizeCustomerText((aggregate.roi_summary as any)?.confidence_text ?? ""),
+      assumptionText: sanitizeCustomerText((aggregate.roi_summary as any)?.assumption_text ?? ""),
     },
     emptyStates: {
       NO_ROI: getCustomerEmptyState("NO_ROI"),
