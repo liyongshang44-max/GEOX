@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const scriptDir = path.dirname(new URL(import.meta.url).pathname);
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const routeDir = path.join(repoRoot, "src/app/routes");
-const routeFiles = fs.readdirSync(routeDir).filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"));
+const routeFiles = fs.existsSync(routeDir)
+  ? fs.readdirSync(routeDir).filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
+  : [];
 const offenders = [];
 
 for (const file of routeFiles) {

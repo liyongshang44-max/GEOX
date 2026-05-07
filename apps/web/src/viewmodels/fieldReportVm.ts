@@ -99,11 +99,17 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       || fieldMemorySummary.available === true
     )
   );
-  const fieldMemoryLines = [
-    `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
-    `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
-    `技能表现摘要：首验通过价值项 ${formatCount(report.value_summary.first_pass_acceptance_items)} 条，低置信 ${formatCount(report.value_summary.low_confidence_items)} 条`,
-  ];
+  const fieldMemoryLines = fieldMemoryAvailable
+    ? [
+      ...(Array.isArray(fieldMemorySummary?.entries)
+        ? fieldMemorySummary.entries.map((item: any) => sanitizeCustomerText(item?.summary_text ?? item?.text ?? item?.title ?? item?.label ?? ""))
+        : []),
+      ...(Array.isArray(fieldMemorySummary?.items)
+        ? fieldMemorySummary.items.map((item: any) => sanitizeCustomerText(item?.summary_text ?? item?.text ?? item?.title ?? item?.label ?? ""))
+        : []),
+      ...(typeof fieldMemorySummary?.summary_text === "string" ? [sanitizeCustomerText(fieldMemorySummary.summary_text)] : []),
+    ].filter((line) => line.length > 0)
+    : [];
 
   const deviceSummary = {
     totalText: formatCount(report.device_summary.total_devices),
@@ -163,7 +169,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
         displayText: roiLines.join("；"),
       }
       : { title: customerRoiLabel("ROI_UNAVAILABLE"), description: roiEmptyState.description, displayText: `${customerRoiLabel("ROI_UNAVAILABLE")}：${roiEmptyState.description}` },
-    fieldMemory: fieldMemoryAvailable
+    fieldMemory: fieldMemoryAvailable && fieldMemoryLines.length > 0
       ? {
         title: "地块记忆摘要",
         lines: fieldMemoryLines,
