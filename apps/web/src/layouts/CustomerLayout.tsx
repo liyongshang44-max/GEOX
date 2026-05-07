@@ -76,8 +76,8 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
             </div>
           </div>
           <div className="customerShellActions">
-            <Link className="customerButton customerButtonPrimary" to="/customer/dashboard">主行动入口</Link>
-            <Link className="customerButton" to="/customer/export">总览导出</Link>
+            {location.pathname === "/customer/dashboard" ? <Link className="customerButton" to="/customer/export">总览导出</Link> : null}
+            {location.pathname !== "/customer/dashboard" ? <Link className="customerButton" to="/customer/dashboard">返回总览</Link> : null}
           </div>
         </header>
         <main className="customerLayoutMain">{children}</main>

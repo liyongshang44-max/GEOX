@@ -2,8 +2,8 @@ import React from "react";
 import { Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
-const OperationReportPage = React.lazy(() => import("../../views/OperationReportPage"));
-const CustomerReportExportPage = React.lazy(() => import("../../views/CustomerReportExportPage"));
+const OperationReportPage = React.lazy(() => import("../../features/operations/pages/OperationReportPage"));
+const CustomerReportExportPage = React.lazy(() => import("../../features/customer/pages/CustomerReportExportPage"));
 
 export function renderCustomerOperationsRoutes(): React.ReactElement[] {
   return [

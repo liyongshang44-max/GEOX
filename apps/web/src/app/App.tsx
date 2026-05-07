@@ -22,9 +22,9 @@ const JudgeRunPage = React.lazy(() => import("../views/JudgeRunPage"));
 const JudgeRecordsPage = React.lazy(() => import("../views/JudgeRecordsPage"));
 const JudgeConfigPage = React.lazy(() => import("../views/JudgeConfigPage"));
 const SimConfigPage = React.lazy(() => import("../views/SimConfigPage"));
-const AdminHealthPage = React.lazy(() => import("../views/AdminHealthPage"));
-const AdminImportPage = React.lazy(() => import("../views/AdminImportPage"));
-const AdminAcceptancePage = React.lazy(() => import("../views/AdminAcceptancePage"));
+const AdminHealthPage = React.lazy(() => import("../features/admin/pages/AdminHealthPage"));
+const AdminImportPage = React.lazy(() => import("../features/admin/pages/AdminImportPage"));
+const AdminAcceptancePage = React.lazy(() => import("../features/admin/pages/AdminAcceptancePage"));
 const ApprovalRequestsPage = React.lazy(() => import("../views/ApprovalRequestsPage"));
 const DevToolsPage = React.lazy(() => import("../views/DevToolsPage"));
 const SettingsPage = React.lazy(() => import("../views/SettingsPage"));
@@ -37,13 +37,13 @@ const OperationsPage = React.lazy(() => import("../features/operations/pages/Ope
 const AlertsPage = React.lazy(() => import("../features/operations/pages/AlertsPage"));
 const EvidenceCenterPage = React.lazy(() => import("../features/evidence/pages/EvidenceCenterPage"));
 const SkillRegistryPage = React.lazy(() => import("../features/skills/pages/SkillRegistryPage"));
-const AdminOperationDebugPage = React.lazy(() => import("../views/AdminOperationDebugPage"));
-const CustomerDashboardPage = React.lazy(() => import("../views/CustomerDashboardPage"));
-const CustomerDashboardExportPage = React.lazy(() => import("../views/CustomerDashboardExportPage"));
-const FieldReportPage = React.lazy(() => import("../views/FieldReportPage"));
-const FieldReportExportPage = React.lazy(() => import("../views/FieldReportExportPage"));
-const OperationReportPage = React.lazy(() => import("../views/OperationReportPage"));
-const CustomerReportExportPage = React.lazy(() => import("../views/CustomerReportExportPage"));
+const AdminOperationDebugPage = React.lazy(() => import("../features/dashboard/pages/AdminOperationDebugPage"));
+const CustomerDashboardPage = React.lazy(() => import("../features/customer/pages/CustomerDashboardPage"));
+const CustomerDashboardExportPage = React.lazy(() => import("../features/customer/pages/CustomerDashboardExportPage"));
+const FieldReportPage = React.lazy(() => import("../features/fields/pages/FieldReportPage"));
+const FieldReportExportPage = React.lazy(() => import("../features/fields/pages/FieldReportExportPage"));
+const OperationReportPage = React.lazy(() => import("../features/operations/pages/OperationReportPage"));
+const CustomerReportExportPage = React.lazy(() => import("../features/customer/pages/CustomerReportExportPage"));
 
 const RouteFallback = <div className="card" style={{ padding: 16 }}>页面加载中...</div>;
 

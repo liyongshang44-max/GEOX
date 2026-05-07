@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const scriptDir = path.dirname(new URL(import.meta.url).pathname);
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
 
 const requiredImports = [
@@ -9,6 +10,8 @@ const requiredImports = [
   { file: "src/views/FieldReportExportPage.tsx", symbol: "buildFieldReportVm" },
   { file: "src/views/CustomerReportExportPage.tsx", symbol: "buildOperationReportVm" },
 ];
+
+const optionalCompatOperationExport = "src/views/OperationReportExportPage.tsx";
 
 const forbiddenMapSymbols = ["STATUS_MAP", "RISK_MAP", "ACCEPTANCE_MAP"];
 const forbiddenApiTokens = ["../api/reports", "../api/admin", "../api/debug", "../api/devtools", "raw_telemetry", "legacy/control"];
@@ -40,6 +43,17 @@ for (const item of requiredImports) {
       if (lineText.includes("import") && lineText.includes(token)) addOffender(item.file, index + 1, "forbidden-api-import", lineText);
     }
   });
+}
+
+const compatFullPath = path.join(appRoot, optionalCompatOperationExport);
+if (fs.existsSync(compatFullPath)) {
+  const compatText = fs.readFileSync(compatFullPath, "utf8");
+  const isPureReExport = /^\s*export\s+\{\s*default\s*\}\s+from\s+["']\.\/CustomerReportExportPage["'];?\s*$/m.test(compatText)
+    && !compatText.includes("function ")
+    && !compatText.includes("buildOperationReportVm");
+  if (!isPureReExport) {
+    addOffender(optionalCompatOperationExport, 1, "operation-export-must-reexport", "OperationReportExportPage must be a pure re-export to ./CustomerReportExportPage");
+  }
 }
 
 if (offenders.length > 0) {
