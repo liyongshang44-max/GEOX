@@ -12,10 +12,12 @@ import {
   labelRiskLevel,
   labelValueType,
 } from "../lib/customerLabels";
+import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
 const REVIEW_NEEDED_TEXT = "需复核";
 
 export type OperationReportPageVm = {
+  sections: CustomerReportSectionVm[];
   header: {
     title: string;
     subtitle: string;
@@ -83,6 +85,17 @@ export type OperationReportPageVm = {
     operationPlanId: string; operationId: string; actTaskId: string; receiptId: string; recommendationId: string; workflowOwnerId: string; workflowOwnerName: string; workflowUpdatedAt: string; workflowLastNote: string;
     sla: { responseTimeMs: string; dispatchLatency: string; executionDuration: string; acceptanceLatency: string; invalidReasons: string; };
   };
+};
+
+export type CustomerReportSectionStatus = "AVAILABLE" | "MISSING" | "PENDING" | "NOT_APPLICABLE";
+export type CustomerReportSectionVm = {
+  key: "RECOMMENDATION" | "PRESCRIPTION" | "APPROVAL" | "EXECUTION" | "EVIDENCE" | "ACCEPTANCE" | "ROI" | "MEMORY";
+  status: CustomerReportSectionStatus;
+  title: string;
+  summary: string;
+  items: Array<{ label: string; value: string; tone?: string }>;
+  emptyState?: { title: string; description: string };
+  technical?: { title: string; rows: Array<{ label: string; value: string }> };
 };
 
 function kv(value: unknown, fallback = "--"): string {
@@ -172,8 +185,26 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const evidenceText = valueEvidence || REVIEW_NEEDED_TEXT;
   const confidenceText = labelConfidenceHint((roi.low_confidence_items ?? [])[0]?.confidence?.score);
   const useFallback = valueNumber == null || /估算值|可信度有限/.test(confidenceText);
+  const memoryItems = [
+    ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
+    ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "设备可靠性记录"))),
+    ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "技能表现记录"))),
+  ];
+  const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
+    .every((value) => (toNum(value) ?? 0) <= 0);
+  const sections: CustomerReportSectionVm[] = [
+    { key: "RECOMMENDATION", status: "AVAILABLE", title: "为什么做", summary: kv(reportWhy?.objective_text, reasonText), items: [{ label: "当前风险", value: riskLabel }, { label: "主要原因", value: reasonText }] },
+    { key: "PRESCRIPTION", status: "MISSING", title: "处方", summary: getCustomerEmptyState("NO_PRESCRIPTION").title, items: [], emptyState: getCustomerEmptyState("NO_PRESCRIPTION") },
+    { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
+    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : getCustomerEmptyState("NO_AS_EXECUTED") },
+    { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? getCustomerEmptyState("NO_EVIDENCE").title : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? getCustomerEmptyState("NO_EVIDENCE") : undefined },
+    { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : getCustomerEmptyState("NO_ACCEPTANCE") },
+    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值", summary: valueNumber == null ? getCustomerEmptyState("NO_ROI").title : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? getCustomerEmptyState("NO_ROI") : undefined },
+    { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "系统记忆", summary: memoryItems[0] ?? getCustomerEmptyState("NO_FIELD_MEMORY").title, items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : getCustomerEmptyState("NO_FIELD_MEMORY") },
+  ];
 
   return {
+    sections,
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
       subtitle: finalStatusText,
@@ -230,14 +261,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     fieldMemory: {
       title: "系统记忆",
-      items: (() => {
-        const items = [
-          ...((memory.field_response_memory ?? []).slice(0, 1).map(formatMemoryLine)),
-          ...((memory.device_reliability_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "设备可靠性记录"))),
-          ...((memory.skill_performance_memory ?? []).slice(0, 1).map((item: any) => labelEmptyFallback(item?.summary_text, "技能表现记录"))),
-        ];
-        return items.length ? items : ["暂无可展示的系统记忆。"];
-      })(),
+      items: memoryItems.length ? memoryItems : [getCustomerEmptyState("NO_FIELD_MEMORY").title],
     },
     roiLedger: { title: "", items: [], confidenceText },
     debug: {
