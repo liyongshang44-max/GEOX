@@ -4,7 +4,8 @@ import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
 import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
 import CockpitActionList from "../components/cockpit/CockpitActionList";
-import { DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
+import DeviceHealthCard from "../components/cockpit/DeviceHealthCard";
+import { ValueResultPanel } from "../components/cockpit/CockpitPanels";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -24,7 +25,6 @@ export default function CustomerDashboardPage(): React.ReactElement {
   }, []);
 
   const kpis = vm?.kpis ?? [];
-  const offlineDevices = vm?.kpis.find((kpi) => kpi.key === "OFFLINE_DEVICES")?.value ?? "0";
 
   return (
     <div className="customerPage customerPageGapMd">
@@ -44,7 +44,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
         <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} mode="MATRIX" />
         <CockpitActionList items={vm?.actionItems ?? []} />
         <div className="customerPageGapMd">
-          <DeviceHealthCard offlineDevices={offlineDevices} />
+          <DeviceHealthCard summary={vm?.deviceHealth ?? { empty: true }} />
           <ValueResultPanel valueText={vm?.roiSummary.customerValueText ?? "暂无收益摘要"} roiItems={vm?.roiSummary.totalRoiItems ?? 0} />
         </div>
       </section>

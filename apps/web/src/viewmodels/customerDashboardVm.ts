@@ -50,6 +50,13 @@ export type CustomerDashboardVm = {
     href: string;
   }>;
   actionItems: CustomerActionItemVm[];
+  deviceHealth: {
+    onlineDevices?: number;
+    offlineDevices?: number;
+    alertDevices?: number;
+    updatedAtText?: string;
+    empty: boolean;
+  };
   roiSummary: {
     totalRoiItems: number;
     waterSavedItems: number;
@@ -160,6 +167,13 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       { id: "device", source: "DEVICE_OFFLINE", title: "排查离线设备并恢复数据", riskLabel: offlineDevices > 0 ? "需复核" : "稳定", riskTone: offlineDevices > 0 ? "warning" : "neutral", primaryAction: { label: "暂不支持跳转", disabledReason: "P0 不开放设备列表路由" }, summary: "优先恢复离线地块数据采集能力。" },
       { id: "general", source: "GENERAL", title: "处理待办事项", riskLabel: pendingActions > 0 ? "待处理" : "已清空", riskTone: pendingActions > 0 ? "warning" : "neutral", primaryAction: { label: "返回看板", href: "/customer/dashboard" }, summary: "优先关闭待处理事项，保障关键风险先处置。" },
     ],
+    deviceHealth: {
+      onlineDevices: typeof (aggregate.device_summary as any)?.online_devices === "number" ? Number((aggregate.device_summary as any).online_devices) : undefined,
+      offlineDevices: typeof aggregate.device_summary?.offline_devices === "number" ? Number(aggregate.device_summary?.offline_devices) : undefined,
+      alertDevices: typeof (aggregate.device_summary as any)?.alert_devices === "number" ? Number((aggregate.device_summary as any).alert_devices) : undefined,
+      updatedAtText: (aggregate.device_summary as any)?.updated_at ? toDateTimeText((aggregate.device_summary as any).updated_at) : undefined,
+      empty: !aggregate.device_summary,
+    },
     roiSummary: {
       totalRoiItems: Number(aggregate.roi_summary?.total_roi_items ?? 0),
       waterSavedItems: Number(aggregate.roi_summary?.water_saved_items ?? 0),
