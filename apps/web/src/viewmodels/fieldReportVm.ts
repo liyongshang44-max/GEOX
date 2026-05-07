@@ -89,7 +89,16 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
     `可信度/假设：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
   ];
-  const fieldMemoryAvailable = report.overview.total_operations_count > 0 || report.device_summary.total_devices > 0 || report.value_summary.total_roi_items > 0;
+  const fieldMemorySummary = (report as any).field_memory_summary;
+  const fieldMemoryAvailable = Boolean(
+    fieldMemorySummary
+    && (
+      (Array.isArray(fieldMemorySummary.entries) && fieldMemorySummary.entries.length > 0)
+      || (Array.isArray(fieldMemorySummary.items) && fieldMemorySummary.items.length > 0)
+      || (typeof fieldMemorySummary.summary_text === "string" && fieldMemorySummary.summary_text.trim().length > 0)
+      || fieldMemorySummary.available === true
+    )
+  );
   const fieldMemoryLines = [
     `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
     `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
@@ -132,7 +141,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       ? [{ title: nextAction.title, summary: nextAction.explainText, href: `/customer/fields/${encodeURIComponent(fieldId)}` }]
       : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
-      const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
+    const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       const finalStatusRaw = String(item.final_status || "").toUpperCase();
       const evidenceText = ["EVIDENCE_MISSING", "NOT_AVAILABLE"].includes(finalStatusRaw) ? "证据缺失" : "证据已回传";
       return {
@@ -185,6 +196,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       reasons: explain.topReasonsText,
     },
     recentOperationsTop5: report.recent_operations.slice(0, 5).map((item) => {
+      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "--",

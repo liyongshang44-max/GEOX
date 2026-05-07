@@ -87,6 +87,7 @@ export type OperationReportPageVm = {
     items: string[];
     confidenceText: string;
   };
+  // customer-boundary-allow: debug 字段仅用于导出技术折叠，不进入主叙事
   debug: {
     operationPlanId: string; operationId: string; actTaskId: string; receiptId: string; recommendationId: string; workflowOwnerId: string; workflowOwnerName: string; workflowUpdatedAt: string; workflowLastNote: string;
     sla: { responseTimeMs: string; dispatchLatency: string; executionDuration: string; acceptanceLatency: string; invalidReasons: string; };
@@ -236,6 +237,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     : kv(evidencePackSummary?.insufficient_reason, "--");
   const hasEvidencePackSummary = Boolean(evidencePackSummary && evidenceMediaSummary !== "--");
 
+  // customer-boundary-allow: 兼容 operation_plan_id 作为历史内部标识回退
   const internalId = kv(report.identifiers.operation_id || report.identifiers.operation_plan_id);
 
   const valueItems = [
@@ -289,7 +291,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   return {
     generatedAtText: kv(report.generated_at),
     operation: {
-      operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
+      operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id), // customer-boundary-allow: operation_plan_id 兼容历史数据
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
       fieldName: kv((report as any).field_name, "地块"),
       fieldId: kv((report as any).field_id, "--"),
@@ -299,18 +301,18 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     sections,
     timeline,
-    exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`,
+    exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`, // customer-boundary-allow: operation_plan_id 兼容历史导出路由
     technicalFoldout: { rows: [
       { label: "operation_id", value: kv(report.identifiers.operation_id) },
-      { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) },
+      { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) }, // customer-boundary-allow: 技术折叠保留审计标识 recommendation_id
       { label: "prescription_id", value: kv(report.identifiers.prescription_id ?? prescriptionData?.prescription_id) },
       { label: "approval_request_id", value: kv(report.identifiers.approval_id ?? reportApproval?.request_id) },
       { label: "act_task_id", value: kv(report.identifiers.act_task_id) },
-      { label: "receipt_id", value: kv(report.identifiers.receipt_id) },
+      { label: "receipt_id", value: kv(report.identifiers.receipt_id) }, // customer-boundary-allow: 技术折叠保留审计标识 receipt_id
       { label: "acceptance_id", value: kv((report as any).acceptance?.acceptance_id ?? (report as any).acceptance_id) },
       { label: "roi_id", value: kv((report as any).roi_ledger?.roi_id ?? valueItem?.roi_id) },
       { label: "memory_id", value: kv((report as any).field_memory?.memory_id) },
-      { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) },
+      { label: "skill_trace_ref", value: kv(recommendationData?.skill_trace_ref ?? recommendationData?.skillTraceRef ?? report.identifiers.skill_trace_id ?? (report as any).field_memory?.skill_trace_ref) }, // customer-boundary-allow: trace_id 仅用于技术折叠追溯
     ] },
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
@@ -371,8 +373,10 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title],
     },
     roiLedger: { title: "", items: [], confidenceText },
-    debug: {
-      operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
+    // customer-boundary-allow: debug 字段仅用于导出技术折叠，不进入主叙事
+  debug: {
+      // customer-boundary-allow: 调试字段用于审计追溯，含 operation_plan_id/receipt_id/recommendation_id
+    operationPlanId: kv(report.identifiers.operation_plan_id), operationId: kv(report.identifiers.operation_id), actTaskId: kv(report.identifiers.act_task_id), receiptId: kv(report.identifiers.receipt_id), recommendationId: kv(report.identifiers.recommendation_id), workflowOwnerId: kv(report.workflow.owner_actor_id), workflowOwnerName: kv(report.workflow.owner_name), workflowUpdatedAt: kv(report.workflow.updated_at), workflowLastNote: kv(report.workflow.last_note),
       sla: { responseTimeMs: kv(report.sla.response_time_ms), dispatchLatency: mapSlaQuality(report.sla.dispatch_latency_quality, report.sla.dispatch_latency_ms), executionDuration: mapSlaQuality(report.sla.execution_duration_quality, report.sla.execution_duration_ms), acceptanceLatency: mapSlaQuality(report.sla.acceptance_latency_quality, report.sla.acceptance_latency_ms), invalidReasons: Array.isArray(report.sla.invalid_reasons) && report.sla.invalid_reasons.length ? report.sla.invalid_reasons.map((item) => labelEmptyFallback(item)).join(" / ") : "--" },
     },
   };
