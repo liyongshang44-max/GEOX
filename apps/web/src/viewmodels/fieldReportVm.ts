@@ -80,7 +80,6 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   };
   const riskTone: "neutral" | "warning" | "danger" = overview.riskText.includes("高") ? "danger" : (overview.riskText.includes("中") ? "warning" : "neutral");
   const roiItems = Number(report.value_summary.total_roi_items ?? 0);
-  const fieldMemoryItems = Number(report.value_summary.low_confidence_items ?? 0);
 
   const deviceSummary = {
     totalText: formatCount(report.device_summary.total_devices),
@@ -140,7 +139,16 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
         ],
       }
       : { title: "暂无可量化价值记录", description: "暂无可量化价值记录" },
-    fieldMemory: fieldMemoryItems > 0 ? { title: "地块记忆摘要", lines: [`低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条，建议复核`] } : { title: "暂无可展示的地块记忆", description: "当前无可复用地块记忆。" },
+    fieldMemory: (report.overview.total_operations_count > 0 || report.device_summary.total_devices > 0 || report.value_summary.total_roi_items > 0)
+      ? {
+        title: "地块记忆摘要",
+        lines: [
+          `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
+          `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
+          `技能表现摘要：首验通过价值项 ${formatCount(report.value_summary.first_pass_acceptance_items)} 条，低置信 ${formatCount(report.value_summary.low_confidence_items)} 条`,
+        ],
+      }
+      : { title: "暂无可展示的地块记忆", description: "暂无可展示的地块记忆" },
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {
       title,
