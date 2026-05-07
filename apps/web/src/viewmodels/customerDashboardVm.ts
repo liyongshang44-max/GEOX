@@ -119,7 +119,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       eyebrow: "GEOX / 客户看板",
       title: CUSTOMER_LABELS.dashboardTitle,
       subtitle: "经营结果、风险与行动摘要",
-      exportAction: { label: "打印导出", href: "/customer/reports" },
+      exportAction: { label: "总览导出", href: "/customer/export" },
     },
     kpis: [
       { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.total_open_alerts", href: "/customer/dashboard" },
@@ -151,16 +151,6 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
         id: "risks",
         sentence: `查看 ${numberFmt.format(highRisk)} 个高风险地块`,
         href: "#top-risk-fields",
-      },
-      {
-        id: "acceptance",
-        sentence: `验收 ${numberFmt.format(pendingAcceptance)} 个已完成作业`,
-        href: "/customer/acceptance",
-      },
-      {
-        id: "devices",
-        sentence: `复核 ${numberFmt.format(offlineDevices)} 台离线设备`,
-        href: "/customer/devices",
       },
     ],
     recentOperations: (aggregate.recent_operations ?? []).slice(0, 5).map((item) => {

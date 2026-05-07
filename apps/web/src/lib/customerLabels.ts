@@ -35,9 +35,9 @@ const CUSTOMER_STATUS_LABELS: Record<string, string> = {
 const CUSTOMER_EMPTY_STATE_LABELS: Record<string, string> = {
   ROI_UNAVAILABLE: "暂无可量化价值记录",
   FIELD_MEMORY_UNAVAILABLE: "暂无可展示的地块记忆",
-  PRESCRIPTION_MISSING: "暂无处方记录",
-  AS_EXECUTED_MISSING: "暂无执行记录",
-  AS_APPLIED_MISSING: "暂无施用记录",
+  PRESCRIPTION_MISSING: "未形成正式处方",
+  AS_EXECUTED_MISSING: "暂无实际执行记录",
+  AS_APPLIED_MISSING: "暂无覆盖记录",
   ACCEPTANCE_PENDING: "作业已完成，等待验收",
   WEATHER_UNAVAILABLE: "天气数据暂不可用",
 };
@@ -113,7 +113,7 @@ export function customerFieldMemoryLabel(raw: unknown): string {
 export function customerPrescriptionLabel(raw: unknown): string {
   const key = normalizeKey(raw);
   if (key === "PRESCRIPTION_MISSING") return CUSTOMER_EMPTY_STATE_LABELS.PRESCRIPTION_MISSING;
-  return sanitizeCustomerText(raw, "暂无处方记录");
+  return sanitizeCustomerText(raw, "未形成正式处方");
 }
 
 export function customerExecutionLabel(raw: unknown): string {
