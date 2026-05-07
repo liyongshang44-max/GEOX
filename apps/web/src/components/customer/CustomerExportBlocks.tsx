@@ -28,10 +28,10 @@ export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): 
         <h2 className="customerCardTitle">高风险地块 Top 5</h2>
         <div className="customerEvidenceGrid customerSpacingTopSm">
           {topRisks.length ? topRisks.map((item) => (
-            <article key={item.id || item.href} className="customerEvidenceItem">
-              <strong>{item.rowText.split(" · ")[0] || "未命名地块"}</strong>
-              <div className="customerMetricLabel">{item.rowText.split(" · ")[1] || "风险待确认"}</div>
-              <div className="customerMetricLabel">{item.rowText.split(" · ").slice(2).join(" · ") || "暂无风险原因"}</div>
+            <article key={item.fieldId || item.href} className="customerEvidenceItem">
+              <strong>{item.fieldName || "未命名地块"}</strong>
+              <div className="customerMetricLabel">{item.riskLabel || "风险待确认"}</div>
+              <div className="customerMetricLabel">{item.reasons.join("；") || "暂无风险原因"}</div>
             </article>
           )) : <div className="customerMetricLabel">暂无高风险地块</div>}
         </div>

@@ -2,7 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
-import { CockpitActionList, CockpitFieldRiskPanel, DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
+import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
+import { CockpitActionList, DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
@@ -39,7 +40,7 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <CockpitKpiStrip items={kpis} />
 
       <section className="customerGrid3">
-        <CockpitFieldRiskPanel items={vm?.topRiskFields ?? []} />
+        <CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} mode="MATRIX" />
         <CockpitActionList items={vm?.actionItems ?? []} />
         <div className="customerPageGapMd">
           <DeviceHealthCard offlineDevices={offlineDevices} />

@@ -19,6 +19,15 @@ export type CustomerKpiVm = {
   disabledReason?: string;
 };
 
+export type CustomerRiskFieldVm = {
+  fieldId: string;
+  fieldName: string;
+  riskLabel: string;
+  riskTone: "neutral" | "warning" | "danger";
+  reasons: string[];
+  href: string;
+};
+
 export type CustomerDashboardVm = {
   generatedAtText: string;
   context: { title: string; subtitle: string; actorRoleText: string; scopeText: string };
@@ -29,11 +38,7 @@ export type CustomerDashboardVm = {
     exportAction: { label: string; href: string };
   };
   kpis: CustomerKpiVm[];
-  topRiskFields: Array<{
-    id: string;
-    rowText: string;
-    href: string;
-  }>;
+  topRiskFields: CustomerRiskFieldVm[];
   pendingItems: Array<{
     id: string;
     sentence: string;
@@ -110,11 +115,18 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "roi_summary.total_roi_items" },
       { key: "RECENT_OPERATIONS", label: "近期作业", value: numberFmt.format(recentOpsCount), unit: "条", tone: "neutral", sourceNote: "recent_operations.length", disabledReason: "顶部 KPI 仅展示 5 项，近期作业在列表区展示。" },
     ],
-    topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => ({
-      id: String(item.field_id ?? ""),
-      rowText: `${String(item.field_name ?? "C8-03 地块")} · ${labelRiskLevel(item.risk_level)} · ${((item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).join("、") || "-")}`,
-      href: `/customer/fields/${encodeURIComponent(String(item.field_id ?? ""))}`,
-    })),
+    topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => {
+      const fieldId = String(item.field_id ?? "");
+      const riskTone = item.risk_level === "HIGH" ? "danger" : item.risk_level === "MEDIUM" ? "warning" : "neutral";
+      return {
+        fieldId,
+        fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+        riskLabel: labelRiskLevel(item.risk_level),
+        riskTone,
+        reasons: (item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).filter(Boolean),
+        href: fieldId ? `/customer/fields/${encodeURIComponent(fieldId)}` : "/customer/dashboard",
+      };
+    }),
     pendingItems: [
       {
         id: "alerts",
