@@ -81,14 +81,7 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
 }
 
 export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): React.ReactElement {
-  const sections = [
-    { title: "为什么做", body: `${vm.why.riskLabel}；${vm.why.reasonText}` },
-    { title: "谁批准", body: `${vm.approval.actorText}｜${vm.approval.statusText}` },
-    { title: "怎么执行", body: `${vm.execution.ownerText}｜${vm.execution.statusText}` },
-    { title: "有什么证据", body: `附加工件 ${vm.evidence.artifactsText}；执行记录 ${vm.evidence.logsText}；现场媒体 ${vm.evidence.mediaText}；指标记录 ${vm.evidence.metricsText}` },
-    { title: "验收结果", body: `${vm.acceptance.statusText}；缺失证据：${vm.acceptance.missingEvidenceText}` },
-    { title: "最终结论", body: vm.conclusion.resultText },
-  ];
+  const sections = vm.sections;
   return (
     <div className="customerCompactReport">
       <section className="customerCard">
@@ -97,9 +90,11 @@ export function OperationExportBlocks({ vm }: { vm: OperationReportPageVm }): Re
       </section>
       <section className="customerFlow customerFlow6">
         {sections.map((item) => (
-          <article key={item.title} className="customerFlowStep">
+          <article key={item.key} className="customerFlowStep">
             <h2 className="customerCardTitle">{item.title}</h2>
-            <p className="customerSpacingTopSm">{item.body}</p>
+            <p className="customerSpacingTopSm">{item.summary}</p>
+            {item.items.length ? <p className="customerMetricLabel">{item.items.map((row) => `${row.label}：${row.value}`).join("；")}</p> : null}
+            {item.emptyState ? <p className="customerMetricLabel">{item.emptyState.title}：{item.emptyState.description}</p> : null}
           </article>
         ))}
       </section>

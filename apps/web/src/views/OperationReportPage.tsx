@@ -37,14 +37,21 @@ export default function OperationReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
-  const steps = [
-    { n: 1, title: "为什么做", body: <><div><strong>当前风险：</strong>{vm.why.riskLabel}</div><div><strong>主要原因：</strong>{vm.why.reasonText}</div><div className="customerSpacingTopXs">{vm.why.summary}</div></> },
-    { n: 2, title: "谁批准", body: <div className="customerGrid2"><div><strong>审批状态：</strong>{vm.approval.statusText}</div><div><strong>审批人：</strong>{vm.approval.actorText}</div><div><strong>审批时间：</strong>{vm.approval.timeText}</div><div><strong>审批备注：</strong>{vm.approval.noteText}</div></div> },
-    { n: 3, title: "怎么执行", body: <div className="customerGrid2"><div><strong>执行负责人：</strong>{vm.execution.ownerText}</div><div><strong>执行状态：</strong>{vm.execution.statusText}</div><div><strong>开始时间：</strong>{vm.execution.startedAtText}</div><div><strong>结束时间：</strong>{vm.execution.finishedAtText}</div><div><strong>执行异常：</strong>{vm.execution.invalidExecutionText}</div></div> },
-    { n: 4, title: "有什么证据", body: <div className="customerGrid2"><div><strong>执行回执：</strong>{vm.evidence.executionReceipt}</div><div><strong>实际执行记录：</strong>{vm.evidence.executionRecord}</div><div><strong>灌后监测：</strong>{vm.evidence.postIrrigationMonitoring}</div><div><strong>现场图片：</strong>{vm.evidence.onSitePhotos}</div><div><strong>验收项：</strong>{vm.evidence.acceptanceItems}</div></div> },
-    { n: 5, title: "验收结果", body: <div className="customerGrid2"><div><strong>验收状态：</strong>{vm.acceptance.statusText}</div><div><strong>验收结论：</strong>{vm.acceptance.verdictText}</div><div><strong>缺失证据：</strong>{vm.acceptance.missingEvidenceText}</div><div><strong>验收时间：</strong>{vm.acceptance.generatedAtText}</div></div> },
-    { n: 6, title: "最终结论", body: <><div><strong>{vm.conclusion.finalStatusText}</strong></div><div className="muted customerSpacingTopXs">{vm.conclusion.resultText}</div></> },
-  ];
+  const steps = vm.sections.map((section, index) => ({
+    n: index + 1,
+    title: section.title,
+    body: (
+      <>
+        <div className="customerMetricLabel">{section.summary}</div>
+        {section.items.length > 0 ? (
+          <div className="customerGrid2 customerSpacingTopXs">
+            {section.items.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{item.value}</div>)}
+          </div>
+        ) : null}
+        {section.emptyState ? <div className="customerSpacingTopXs muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+      </>
+    ),
+  }));
 
   return (
     <div className="customerReportCanvas">
