@@ -1,0 +1,127 @@
+.customerShell {
+  min-height: 100vh;
+  background: var(--color-bg-canvas);
+  color: var(--color-text-primary);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.customerTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.customerPage {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.customerSideNav {
+  padding: var(--space-4);
+  background: var(--color-bg-surface);
+  border-right: 1px solid var(--color-border-default);
+  overflow: auto;
+}
+
+.customerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.customerCard {
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.customerBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  font-size: 12px;
+  font-weight: var(--font-weight-medium);
+  line-height: 1.2;
+  border: 1px solid var(--color-border-default);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+}
+
+.customerBadge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.customerBadge.is-risk {
+  color: var(--color-status-risk-fg);
+  background: var(--color-status-risk-bg);
+  border-color: var(--color-status-risk-border);
+}
+
+.customerBadge.is-offline,
+.customerBadge.is-empty,
+.customerBadge.is-no-data {
+  color: var(--color-status-data-fg);
+  background: var(--color-status-data-bg);
+  border-color: var(--color-status-data-border);
+}
+
+.customerEmptyState {
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.customerTechnicalFoldout {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-border-default);
+  padding-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cockpitKpiStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.cockpitActionList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 1024px) {
+  .customerPage {
+    grid-template-columns: 1fr;
+  }
+
+  .customerSideNav {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border-default);
+  }
+}
