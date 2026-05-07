@@ -26,20 +26,19 @@ export default function CustomerDashboardPage(): React.ReactElement {
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
   }, []);
 
-  const fixedKpiOrder = ["pendingActions", "riskFields", "pendingAcceptance", "offlineDevices", "recentOperations", "valueRecords"] as const;
+  const fixedKpiOrder = ["OPEN_ACTIONS", "RISK_FIELDS", "PENDING_ACCEPTANCE", "OFFLINE_DEVICES", "VALUE_RECORDS"] as const;
 
   const fixedKpis = fixedKpiOrder.map((key) => {
     const found = vm?.kpis.find((kpi) => kpi.key === key);
     if (found) return found;
     const fallbackLabel: Record<(typeof fixedKpiOrder)[number], string> = {
-      pendingActions: "待处理事项",
-      riskFields: "风险地块",
-      pendingAcceptance: "待验收作业",
-      offlineDevices: "离线设备",
-      recentOperations: "近期作业",
-      valueRecords: "价值记录",
+      OPEN_ACTIONS: "待处理事项",
+      RISK_FIELDS: "风险地块",
+      PENDING_ACCEPTANCE: "待验收作业",
+      OFFLINE_DEVICES: "离线设备",
+      VALUE_RECORDS: "价值记录",
     };
-    return { key, label: fallbackLabel[key], valueText: "--", detailText: "数据更新中" };
+    return { key, label: fallbackLabel[key], value: "--", unit: undefined, tone: "neutral" as const, sourceNote: "fallback", disabledReason: "数据更新中" };
   });
 
   const cleanText = (text: string): string => String(text ?? "").trim();
@@ -69,8 +68,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
           {fixedKpis.map((kpi) => (
             <article key={kpi.key} className="customerMetricCard">
               <div className="customerMetricLabel">{kpi.label}</div>
-              <div className="customerMetricValue">{kpi.valueText}</div>
-              <div className="muted">{kpi.detailText}</div>
+              <div className="customerMetricValue">{kpi.value}{kpi.unit ?? ""}</div>
+              <div className="muted">{kpi.disabledReason ?? kpi.sourceNote}</div>
             </article>
           ))}
         </div>

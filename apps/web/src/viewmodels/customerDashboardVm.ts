@@ -8,6 +8,17 @@ function toDateTimeText(raw: string | null | undefined): string {
   return raw ? new Date(raw).toLocaleString("zh-CN", { hour12: false }) : "时间未知";
 }
 
+export type CustomerKpiVm = {
+  key: "OPEN_ACTIONS" | "RISK_FIELDS" | "PENDING_ACCEPTANCE" | "OFFLINE_DEVICES" | "RECENT_OPERATIONS" | "VALUE_RECORDS";
+  label: string;
+  value: string;
+  unit?: string;
+  tone: "neutral" | "good" | "warning" | "danger";
+  sourceNote: string;
+  href?: string;
+  disabledReason?: string;
+};
+
 export type CustomerDashboardVm = {
   generatedAtText: string;
   context: { title: string; subtitle: string; actorRoleText: string; scopeText: string };
@@ -17,13 +28,7 @@ export type CustomerDashboardVm = {
     subtitle: string;
     exportAction: { label: string; href: string };
   };
-  kpis: Array<{
-    key: "pendingActions" | "riskFields" | "pendingAcceptance" | "offlineDevices" | "recentOperations" | "valueRecords";
-    label: string;
-    valueText: string;
-    detailText: string;
-    sourceNote: string;
-  }>;
+  kpis: CustomerKpiVm[];
   topRiskFields: Array<{
     id: string;
     rowText: string;
@@ -86,12 +91,12 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       exportAction: { label: "打印导出", href: "/customer/reports" },
     },
     kpis: [
-      { key: "pendingActions", label: "待处理事项", valueText: numberFmt.format(pendingActions), detailText: "条待处理事项", sourceNote: "pending_actions_summary.total_open_alerts" },
-      { key: "riskFields", label: "风险地块", valueText: numberFmt.format(highRisk), detailText: "块需重点跟进", sourceNote: "fields.at_risk" },
-      { key: "pendingAcceptance", label: "待验收作业", valueText: numberFmt.format(pendingAcceptance), detailText: "条待回写结果", sourceNote: "pending_actions_summary.pending_acceptance" },
-      { key: "offlineDevices", label: "离线设备", valueText: numberFmt.format(offlineDevices), detailText: "台设备离线", sourceNote: "device_summary.offline_devices" },
-      { key: "recentOperations", label: "近期作业", valueText: numberFmt.format(recentOpsCount), detailText: "条近期作业", sourceNote: "recent_operations.length" },
-      { key: "valueRecords", label: "价值记录", valueText: numberFmt.format(valueRecords), detailText: "条可量化价值", sourceNote: "roi_summary.total_roi_items" },
+      { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.total_open_alerts", href: "/customer/dashboard" },
+      { key: "RISK_FIELDS", label: "风险地块", value: numberFmt.format(highRisk), unit: "块", tone: highRisk > 0 ? "danger" : "good", sourceNote: "fields.at_risk" },
+      { key: "PENDING_ACCEPTANCE", label: "待验收作业", value: numberFmt.format(pendingAcceptance), unit: "条", tone: pendingAcceptance > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.pending_acceptance" },
+      { key: "OFFLINE_DEVICES", label: "离线设备", value: numberFmt.format(offlineDevices), unit: "台", tone: offlineDevices > 0 ? "warning" : "good", sourceNote: "device_summary.offline_devices" },
+      { key: "VALUE_RECORDS", label: "价值记录", value: numberFmt.format(valueRecords), unit: "条", tone: valueRecords > 0 ? "good" : "neutral", sourceNote: "roi_summary.total_roi_items" },
+      { key: "RECENT_OPERATIONS", label: "近期作业", value: numberFmt.format(recentOpsCount), unit: "条", tone: "neutral", sourceNote: "recent_operations.length", disabledReason: "顶部 KPI 仅展示 5 项，近期作业在列表区展示。" },
     ],
     topRiskFields: (aggregate.top_risk_fields ?? []).slice(0, 5).map((item) => ({
       id: String(item.field_id ?? ""),

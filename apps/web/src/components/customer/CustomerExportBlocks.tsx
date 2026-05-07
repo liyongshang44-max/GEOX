@@ -9,10 +9,10 @@ function splitRecentOperationRow(rowText: string): { operationType: string; fiel
 }
 
 export function DashboardExportBlocks({ vm }: { vm: CustomerDashboardPageVm }): React.ReactElement {
-  const riskFields = vm.kpis.find((item) => item.key === "riskFields")?.valueText ?? "-";
-  const pendingActions = vm.kpis.find((item) => item.key === "pendingActions")?.valueText ?? "-";
-  const pendingAcceptance = vm.kpis.find((item) => item.key === "pendingAcceptance")?.valueText ?? "-";
-  const offlineDevices = vm.kpis.find((item) => item.key === "offlineDevices")?.valueText ?? "-";
+  const riskFields = vm.kpis.find((item) => item.key === "RISK_FIELDS")?.value ?? "-";
+  const pendingActions = vm.kpis.find((item) => item.key === "OPEN_ACTIONS")?.value ?? "-";
+  const pendingAcceptance = vm.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "-";
+  const offlineDevices = vm.kpis.find((item) => item.key === "OFFLINE_DEVICES")?.value ?? "-";
   const nextActionTitles = vm.nextActions.map((item) => item.title).join(" · ") || "暂无待处理事项";
   const recentOperations = (vm.recentOperations ?? []).slice(0, 5);
   const topRisks = (vm.topRiskFields ?? []).slice(0, 5);
