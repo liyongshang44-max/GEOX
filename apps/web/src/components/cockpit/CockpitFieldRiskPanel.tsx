@@ -28,7 +28,7 @@ function Matrix({ fields }: { fields: CustomerRiskFieldVm[] }): React.ReactEleme
 export default function CockpitFieldRiskPanel({ fields, mode = "LIST" }: Props): React.ReactElement {
   return (
     <article className="customerCard">
-      <h3 className="customerCardTitle">地块风险</h3>
+      <h3 className="customerCardTitle">地块风险分布</h3>
       {mode === "MATRIX" ? <Matrix fields={fields} /> : null}
       <ul className="customerList">
         {fields.map((field) => (
