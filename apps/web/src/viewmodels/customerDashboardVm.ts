@@ -5,7 +5,12 @@ import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 const numberFmt = new Intl.NumberFormat("zh-CN");
 
 function toDateTimeText(raw: string | null | undefined): string {
-  return raw ? new Date(raw).toLocaleString("zh-CN", { hour12: false }) : "时间未知";
+  if (!raw) return "暂无更新时间";
+  const ms = Date.parse(raw);
+  if (!Number.isFinite(ms) || ms <= 0) return "暂无更新时间";
+  const d = new Date(ms);
+  if (d.getUTCFullYear() <= 1970) return "暂无更新时间";
+  return d.toLocaleString("zh-CN", { hour12: false });
 }
 
 export type CustomerKpiVm = {
@@ -137,7 +142,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     const riskTone = item.risk_level === "HIGH" ? "danger" : item.risk_level === "MEDIUM" ? "warning" : "neutral";
     return {
       fieldId,
-      fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+      fieldName: sanitizeCustomerText(item.field_name ?? "地块名称待补充", "地块名称待补充"),
       riskLabel: labelRiskLevel(item.risk_level),
       riskTone,
       reasons: (item.risk_reasons ?? []).map((reason) => sanitizeCustomerText(reason)).filter(Boolean),
@@ -150,7 +155,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
     return {
       operationId,
       operationName: sanitizeCustomerText(item.customer_title ?? item.title ?? "作业"),
-      fieldName: sanitizeCustomerText(item.field_name ?? "地块"),
+      fieldName: sanitizeCustomerText(item.field_name ?? "地块名称待补充", "地块名称待补充"),
       stateText: sanitizeCustomerText((item as any).operation_state ?? labelFinalStatus(item.final_status)),
       acceptanceText: labelAcceptanceStatus(item.acceptance_status),
       evidenceText: sanitizeCustomerText((item as any).evidence_status ?? "证据待补充"),

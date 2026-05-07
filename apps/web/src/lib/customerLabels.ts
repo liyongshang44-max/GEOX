@@ -129,13 +129,16 @@ export function customerSectionStatusLabel(raw: unknown): string {
   return customerStatusLabel(raw);
 }
 
-function textOrFallback(raw: unknown, fallback = "--"): string {
+function textOrFallback(raw: unknown, fallback = "暂无记录"): string {
   if (raw === null || raw === undefined) return fallback;
   const text = String(raw).trim();
-  return text || fallback;
+  if (!text) return fallback;
+  const lowered = text.toLowerCase();
+  if (["--", "nan", "null", "undefined"].includes(lowered)) return fallback;
+  return text;
 }
 
-export function sanitizeCustomerText(raw: unknown, fallback = "--"): string {
+export function sanitizeCustomerText(raw: unknown, fallback = "暂无记录"): string {
   const text = textOrFallback(raw, fallback);
   const key = normalizeKey(text);
   if (FORBIDDEN_CUSTOMER_CODES.has(key)) {
@@ -155,7 +158,7 @@ function normalizeKey(raw: unknown): string {
   return String(raw ?? "").trim().toUpperCase();
 }
 
-export function labelRawCode(raw: unknown, fallback = "--"): string {
+export function labelRawCode(raw: unknown, fallback = "暂无记录"): string {
   const key = normalizeKey(raw);
   if (!key) return fallback;
   return RAW_CODE_LABELS[key] ?? (String(raw).trim() || fallback);
@@ -176,7 +179,7 @@ export function labelValueType(raw: unknown): string {
   return labelRawCode(raw, "估算值");
 }
 
-export function labelEmptyFallback(raw: unknown, fallback = "--"): string {
+export function labelEmptyFallback(raw: unknown, fallback = "暂无记录"): string {
   return textOrFallback(raw, fallback);
 }
 
