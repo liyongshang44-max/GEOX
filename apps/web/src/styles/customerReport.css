@@ -74,3 +74,44 @@
   color: var(--customer-muted);
   text-align: center;
 }
+.fieldReportLayout {
+  gap: 16px;
+}
+.fieldHeaderCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.fieldGrid {
+  display: grid;
+  gap: 12px;
+}
+.fieldGrid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.fieldGrid2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.customerMetaRow {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+.riskBadge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+.riskBadgeneutral { background: var(--customer-low-bg); color: var(--customer-low-text); }
+.riskBadgewarning { background: var(--customer-medium-bg); color: var(--customer-medium-text); }
+.riskBadgedanger { background: var(--customer-high-bg); color: var(--customer-high-text); }
+.mapPlaceholderCard {
+  pointer-events: none;
+}
+@media (max-width: 960px) {
+  .fieldGrid3,
+  .fieldGrid2 {
+    grid-template-columns: 1fr;
+  }
+}
