@@ -1,126 +1,53 @@
 import React from "react";
 import { useParams } from "react-router-dom";
-import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerReports";
-import ErrorState from "../components/common/ErrorState";
-import SectionSkeleton from "../components/common/SectionSkeleton";
-import "../styles/customerReport.css";
-import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
-
-function hasForbiddenFieldToken(text: string): boolean {
-  const normalized = text.toLowerCase();
-  return normalized.includes("field_id") || normalized.includes("field_c8_demo") || normalized.includes("地块id") || normalized.includes("field_");
-}
-
-function resolveReportTitle(vmTitle: string, fieldName: unknown): string {
-  const cleanVmTitle = String(vmTitle ?? "").trim();
-  if (cleanVmTitle && !hasForbiddenFieldToken(cleanVmTitle)) return cleanVmTitle;
-  const cleanFieldName = String(fieldName ?? "").trim();
-  if (cleanFieldName) return `${cleanFieldName} 地块报告`;
-  return "地块报告";
-}
-function sanitizeText(input: string): string {
-  return String(input ?? "").replace(/field_c8_demo/gi, "").replace(/地块ID/gi, "").replace(/field_/gi, "").replace(/\s{2,}/g, " ").trim();
-}
+import { fetchFieldReport } from "../api/customerReports";
+import { buildFieldReportVm, type FieldReportPageVm } from "../viewmodels/fieldReportVm";
+import { FieldExportBlocks } from "../components/customer/CustomerExportBlocks";
 
 export default function FieldReportExportPage(): React.ReactElement {
   const { fieldId = "" } = useParams();
+  const [vm, setVm] = React.useState<FieldReportPageVm | null>(null);
   const [loading, setLoading] = React.useState(true);
-  const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
     setLoading(true);
+    setError("");
     void fetchFieldReport(fieldId)
-      .then((res) => {
+      .then((report) => {
         if (!alive) return;
-        setReport(res);
-        setError("");
+        setVm(buildFieldReportVm(report));
       })
       .catch((e: unknown) => {
         if (!alive) return;
+        setVm(null);
         setError(String(e instanceof Error ? e.message : "加载失败"));
       })
       .finally(() => {
         if (!alive) return;
         setLoading(false);
       });
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, [fieldId]);
 
-  if (loading) return <SectionSkeleton kind="detail" />;
-  if (error || !report) return <ErrorState title="地块报告加载失败" message={error || "暂无地块报告"} onRetry={() => window.location.reload()} />;
-
-  const vm = buildFieldReportVm(report);
-  const reportTitle = resolveReportTitle(vm.header.title, (report as any).field_name);
+  if (loading) return <div className="customerReportCanvas"><div className="customerReportSheet">地块导出页加载中...</div></div>;
+  if (error || !vm) return <div className="customerReportCanvas"><div className="customerReportSheet">地块导出页加载失败：{error || "暂无数据"}</div></div>;
 
   return (
     <div className="customerReportCanvas">
-      <div className="customerReportSheet customerExportPage printPage">
+      <div className="customerReportSheet printPage">
         <header className="customerReportHeader">
           <div className="customerHeroTop">
             <div>
-              <div className="customerEyebrow">GEOX / 地块报告</div>
-              <h1 className="customerTitle">{sanitizeText(reportTitle)}</h1>
-              <p className="customerSubtitle">当前地块状态、风险与近期作业摘要</p>
+              <div className="customerEyebrow">GEOX</div>
+              <h1 className="customerTitle">{vm.field.fieldName || "地块报告"}</h1>
+              <p className="customerSubtitle">生成时间：{new Date().toLocaleString()}</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
           </div>
         </header>
-
-        <section className="customerCard">
-          <h2 className="customerCardTitle">地块概况</h2>
-          <div className="customerGrid2 customerSpacingTopSm">
-            <div><strong>当前风险：</strong>{vm.overview.riskText}</div>
-            <div><strong>未关闭告警数：</strong>{vm.overview.openAlertsText}</div>
-            <div><strong>待验收作业数：</strong>{vm.overview.pendingAcceptanceText}</div>
-            <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
-            <div><strong>最近作业时间：</strong>{vm.overview.latestOperationText}</div>
-            <div><strong>预计总成本：</strong>{vm.overview.estimatedCostText}</div>
-            <div><strong>实际总成本：</strong>{vm.overview.actualCostText}</div>
-          </div>
-        </section>
-
-        <section className="customerCard">
-          <h2 className="customerCardTitle">状态解释</h2>
-          <p className="customerSpacingTopSm">{sanitizeText(vm.explain.human)}</p>
-          <ul className="customerList customerSpacingTopSm">
-            {(vm.explain.topReasonsText ?? []).map((item, idx) => (<li key={`${item}-${idx}`} className="customerListItem">{item}</li>))}
-          </ul>
-        </section>
-
-        <section className="customerCard">
-          <h2 className="customerReportSectionTitle">近期作业</h2>
-          <div className="customerList customerSpacingTopSm">
-            {(vm.recentOperationsTop5 ?? []).map((item) => (
-              <article key={item.id} className="customerEvidenceItem">
-                <strong>{sanitizeText(item.title)}</strong>
-                <span className="customerMetricLabel">状态：{sanitizeText(item.statusText)}</span>
-                <span className="customerMetricLabel">验收：{sanitizeText(item.acceptanceText)}</span>
-                <span className="customerMetricLabel">生成时间：{sanitizeText(item.generatedAtText)}</span>
-              </article>
-            ))}
-            {!(vm.recentOperationsTop5 ?? []).length ? <div className="customerMetricLabel">暂无作业报告</div> : null}
-          </div>
-        </section>
-
-        <section className="customerCard">
-          <h2 className="customerReportSectionTitle">下一步建议</h2>
-          {vm.nextAction ? (
-            <div className="customerGrid2 customerSpacingTopSm">
-              <div><strong>建议标题：</strong>{vm.nextAction.title}</div>
-              <div><strong>建议说明：</strong>{vm.nextAction.explainText}</div>
-              <div><strong>建议目标：</strong>{vm.nextAction.objectiveText}</div>
-              <div><strong>优先级：</strong>{vm.nextAction.priorityText}</div>
-            </div>
-          ) : (
-            <div className="customerMetricLabel customerSpacingTopSm">暂无下一步建议</div>
-          )}
-        </section>
-
-        <footer className="customerCard"><p className="customerMetricLabel">报告由 GEOX 自动生成，仅供客户地块经营复盘使用。</p></footer>
+        <FieldExportBlocks vm={vm} />
       </div>
     </div>
   );
