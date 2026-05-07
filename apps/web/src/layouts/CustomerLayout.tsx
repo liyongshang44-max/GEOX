@@ -8,15 +8,15 @@ type CustomerLayoutProps = {
 type CustomerNavItem = {
   key: string;
   label: string;
-  to?: string;
-  disabled?: boolean;
+  to: string;
   phase?: string;
+  hint?: string;
 };
 
 const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
   { key: "dashboard", label: "总览", to: "/customer/dashboard" },
-  { key: "fields", label: "地块", disabled: true, phase: "P1" },
-  { key: "operations", label: "作业", disabled: true, phase: "P1" },
+  { key: "fields", label: "地块", to: "/customer/dashboard#top-risk-fields", phase: "P0", hint: "进入驾驶舱地块风险入口" },
+  { key: "operations", label: "作业", to: "/customer/dashboard#recent-operations", phase: "P0", hint: "进入驾驶舱近期作业入口" },
   { key: "reports", label: "报告", to: "/customer/export" },
 ];
 
@@ -35,6 +35,14 @@ function resolveSubtitle(pathname: string): string {
   return "客户报告打印视图";
 }
 
+function isItemActive(pathname: string, key: string): boolean {
+  if (key === "dashboard") return pathname === "/customer/dashboard";
+  if (key === "fields") return pathname.indexOf("/customer/fields/") >= 0;
+  if (key === "operations") return pathname.indexOf("/customer/operations/") >= 0;
+  if (key === "reports") return pathname === "/customer/export" || pathname.endsWith("/export");
+  return false;
+}
+
 export default function CustomerLayout({ children }: CustomerLayoutProps): React.ReactElement {
   const location = useLocation();
   const title = resolvePageTitle(location.pathname);
@@ -49,20 +57,16 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
       <aside className="customerShellSidebar" aria-label="客户导航">
         <div className="customerShellBrand"><span className="customerShellLogoMark">G</span><span>GEOX</span></div>
         <nav className="customerShellNav">
-          {CUSTOMER_NAV_ITEMS.map((item) => {
-            if (item.disabled) {
-              return (
-                <span key={item.key} className="customerShellNavItem customerShellNavItemDisabled" title={item.label + "列表页属于 " + (item.phase || "后续")}>
-                  <span>{item.label}</span>{item.phase ? <span className="customerShellPhase">{item.phase}</span> : null}
-                </span>
-              );
-            }
-            return (
-              <NavLink key={item.key} to={item.to || "/customer/dashboard"} className={({ isActive }) => "customerShellNavItem" + (isActive ? " isActive" : "")}>
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+          {CUSTOMER_NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.key}
+              to={item.to}
+              title={item.hint || item.label}
+              className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}
+            >
+              <span>{item.label}</span>{item.phase ? <span className="customerShellPhase">{item.phase}</span> : null}
+            </NavLink>
+          ))}
         </nav>
         <div className="customerShellMeta">
           <div>客户视图</div>
