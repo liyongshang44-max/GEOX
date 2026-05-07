@@ -19,7 +19,7 @@ function isCustomerRoute(href?: string): boolean {
 }
 
 export default function CockpitActionCard({ item }: Props): React.ReactElement {
-  const label = ACTION_LABEL_BY_SOURCE[item.source] ?? "查看详情";
+  const label = item.primaryAction.label || ACTION_LABEL_BY_SOURCE[item.source] || "查看详情";
   const canJump = isCustomerRoute(item.primaryAction.href);
   return (
     <article className="customerListItem">
