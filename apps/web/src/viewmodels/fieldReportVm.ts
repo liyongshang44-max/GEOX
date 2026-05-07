@@ -1,4 +1,4 @@
-import type { FieldReportDetailV1 } from "../api/reports";
+import type { FieldReportDetailV1 } from "../api/customerReports";
 import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
