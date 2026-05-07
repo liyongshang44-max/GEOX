@@ -38,6 +38,7 @@ export default function OperationReportPage(): React.ReactElement {
 
   const vm = buildOperationReportVm(report);
   const canExport = Boolean(operationId.trim());
+  const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const steps = vm.sections.map((section, index) => ({
     n: index + 1,
     title: section.title,
@@ -62,10 +63,21 @@ export default function OperationReportPage(): React.ReactElement {
             <div>
               <div className="customerReportLogo">GEOX / 作业闭环</div>
               <h1 className="customerTitle">{vm.operation.title}</h1>
-              <p className="customerSubtitle">{vm.operation.finalStatusLabel} · 更新时间 {vm.operation.updatedAtText}</p>
+              <p className="customerSubtitle">地块：{vm.operation.fieldName}</p>
+              <p className="customerSubtitle">最终状态：{vm.operation.finalStatusLabel} · 更新时间：{vm.operation.updatedAtText}</p>
             </div>
             <div className="customerActions">
-              <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
+              <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
+              {canBackToField ? (
+                <Link className="customerButton" to={`/customer/fields/${encodeURIComponent(vm.operation.fieldId)}`}>返回地块</Link>
+              ) : (
+                <span className="muted">返回地块不可用：缺少地块标识</span>
+              )}
+              {canExport ? (
+                <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
+              ) : (
+                <span className="muted">导出不可用：缺少作业标识</span>
+              )}
             </div>
           </div>
         </header>
@@ -97,11 +109,6 @@ export default function OperationReportPage(): React.ReactElement {
         </details>
 
         <footer className="customerFooterNote">{/* ExportCTA */}
-          {canExport ? (
-            <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
-          ) : (
-            <span className="muted">导出不可用：缺少作业标识</span>
-          )}
           <div className="customerSpacingTopXs">报告由 GEOX 生成，用于客户经营复盘与沟通。</div>
         </footer>
       </div>
