@@ -4,9 +4,9 @@ import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
 const CommercialDashboardPage = React.lazy(() => import("../../features/dashboard/pages/CommercialDashboardPage"));
 const ManualExecutionQualityAnalysisPage = React.lazy(() => import("../../features/dashboard/pages/ManualExecutionQualityAnalysisPage"));
-const CustomerDashboardPage = React.lazy(() => import("../../views/CustomerDashboardPage"));
-const CustomerDashboardExportPage = React.lazy(() => import("../../views/CustomerDashboardExportPage"));
-const CustomerReportExportPage = React.lazy(() => import("../../views/CustomerReportExportPage"));
+const CustomerDashboardPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardPage"));
+const CustomerDashboardExportPage = React.lazy(() => import("../../features/customer/pages/CustomerDashboardExportPage"));
+const CustomerReportExportPage = React.lazy(() => import("../../features/customer/pages/CustomerReportExportPage"));
 
 export function renderDashboardRoutes(expert: boolean): React.ReactElement[] {
   return [
