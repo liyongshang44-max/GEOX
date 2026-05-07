@@ -154,6 +154,14 @@ function formatRoiLine(item: any): string {
 }
 
 
+function mapAcceptanceCopy(value: unknown): string {
+  const status = String(value ?? "").trim().toUpperCase();
+  if (status === "PASS") return "验收通过";
+  if (status === "FAIL") return "未达到预期效果";
+  if (status === "PENDING") return "验收结果尚未生成";
+  return "验收结果尚未生成";
+}
+
 function mapApprovalStatusForCustomer(value: unknown): string {
   const raw = String(value ?? "").trim();
   const normalized = raw.toUpperCase();
@@ -172,7 +180,7 @@ function mapSlaQuality(value: unknown, rawMs: unknown): string {
 
 export function buildOperationReportVm(report: OperationReportV1): OperationReportPageVm {
   const finalStatusText = labelFinalStatus(report.execution.final_status);
-  const acceptanceStatusText = labelAcceptanceStatus(report.acceptance.status);
+  const acceptanceStatusText = mapAcceptanceCopy(report.acceptance.status);
   const riskLabel = labelRiskLevel(report.risk.level);
   const reasonText = joinReasonTexts(report.risk.reasons);
   const reportWhy = (report as any).why ?? null;
@@ -255,7 +263,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人客户化名称", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }, { label: "权限提示", value: kv(reportApproval?.permission_hint || reportApproval?.permission_note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
     { key: "EXECUTION", status: hasAsExecuted ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: hasAsExecuted ? mapOperationStatusToCustomerLabel(report.execution.final_status) : "暂无实际执行记录", items: hasAsExecuted ? [{ label: "执行对象", value: executionTarget }, { label: "人/设备", value: executorText }, { label: "开始时间", value: kv(report.execution.execution_started_at, "--") }, { label: "结束时间", value: kv(report.execution.execution_finished_at, "--") }, { label: "执行参数", value: executionParamsText }, { label: "As-executed 摘要", value: asExecutedSummary }, { label: "As-applied 空态或摘要", value: asAppliedSummary }] : [], emptyState: hasAsExecuted ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: hasEvidencePackSummary ? "AVAILABLE" : "MISSING", title: "证据", summary: hasEvidencePackSummary ? evidenceStatus : "暂无证据包摘要", items: hasEvidencePackSummary ? [{ label: "照片/日志/指标/轨迹摘要", value: evidenceMediaSummary }, { label: "证据状态", value: evidenceStatus }, { label: "证据不足原因", value: evidenceInsufficientReason }] : [], emptyState: hasEvidencePackSummary ? undefined : { title: "暂无证据包摘要", description: "当前没有 evidence-pack-summary。" } },
-    { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
+    { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: report.acceptance.generated_at ? [{ label: "验收结论", value: acceptanceStatusText }, { label: "验收依据", value: kv(report.acceptance.verdict, "--") }, { label: "未通过原因", value: report.acceptance.status === "FAIL" ? kv(report.execution.invalid_reason, "--") : "--" }, { label: "证据不足原因", value: Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、") : "--" }, { label: "复核提示", value: report.acceptance.missing_evidence ? "证据不足，建议补齐后复核" : "--" }] : [], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
     { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
     { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "田块记忆 / Skill trace", summary: memoryItems[0] ?? "暂无可展示的地块记忆", items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
@@ -320,7 +328,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     },
     acceptance: {
       statusText: acceptanceStatusText,
-      verdictText: labelEvidenceQuality(report.acceptance.verdict),
+      verdictText: kv(report.acceptance.verdict, "--"),
       missingEvidenceText: report.acceptance.missing_evidence ? REVIEW_NEEDED_TEXT : "无",
       generatedAtText: kv(report.acceptance.generated_at),
     },
