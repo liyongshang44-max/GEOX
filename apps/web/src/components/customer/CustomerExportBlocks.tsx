@@ -78,13 +78,13 @@ export function FieldExportBlocks({ vm }: { vm: FieldReportPageVm }): React.Reac
           <div><strong>作业总数：</strong>{vm.overview.totalOperationsText}</div>
         </div>
       </section>
-      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.overview.riskText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">风险/诊断</h2><p className="customerSpacingTopSm">{vm.explain.human}；当前风险 {vm.risk.levelLabel}</p></section>
       <section className="customerCard"><h2 className="customerCardTitle">近期作业</h2><p className="customerSpacingTopSm">待验收作业：{vm.overview.pendingAcceptanceText}</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">优先处理未关闭异常并完成待验收作业（{vm.overview.openAlertsText}）。</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">本周期暂无可量化价值记录</p></section>
-      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">地块整体可控，建议按优先级继续闭环处置。</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">下一步建议</h2><p className="customerSpacingTopSm">{vm.nextAction?.objectiveText ?? "暂无新的处理建议"}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">本次价值</h2><p className="customerSpacingTopSm">{vm.roiSummary.displayText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">证据可信度</h2><p className="customerSpacingTopSm">{vm.diagnosis.dataQualityText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">系统记忆</h2><p className="customerMetricLabel customerSpacingTopSm">{vm.fieldMemory.displayText}</p></section>
+      <section className="customerCard"><h2 className="customerCardTitle">最终结论</h2><p className="customerSpacingTopSm">{vm.currentStatus.summary}</p></section>
     </>
   );
 }

@@ -1,14 +1,16 @@
 import type { FieldReportDetailV1 } from "../api/reports";
-import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
+import { customerFieldMemoryLabel, customerRoiLabel, labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
+import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
 export type FieldReportPageVm = {
+  generatedAtText: string;
   field: { fieldId: string; fieldName: string; cropText: string; stageText: string; updatedAtText: string };
   risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
   diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string; latestObservationText: string };
   recommendations: Array<{ title: string; summary: string; href?: string }>;
   recentOperations: Array<{ operationId: string; title: string; statusText: string; acceptanceText: string; evidenceText: string; updatedAtText: string; href: string }>;
-  roiSummary: { title: string; lines: string[] } | { title: string; description: string };
-  fieldMemory: { title: string; lines: string[] } | { title: string; description: string };
+  roiSummary: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
+  fieldMemory: ({ title: string; lines: string[] } | { title: string; description: string }) & { displayText: string };
   exportHref: string;
   hero: {
     title: string;
@@ -80,6 +82,19 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   };
   const riskTone: "neutral" | "warning" | "danger" = overview.riskText.includes("高") ? "danger" : (overview.riskText.includes("中") ? "warning" : "neutral");
   const roiItems = Number(report.value_summary.total_roi_items ?? 0);
+  const roiEmptyState = getCustomerEmptyState("NO_ROI");
+  const fieldMemoryEmptyState = getCustomerEmptyState("NO_FIELD_MEMORY");
+  const roiLines = [
+    customerRoiLabel(report.value_summary.customer_value_text || `本地块已有 ${formatCount(report.value_summary.total_roi_items)} 条价值记录`),
+    `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
+    `可信度/假设：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
+  ];
+  const fieldMemoryAvailable = report.overview.total_operations_count > 0 || report.device_summary.total_devices > 0 || report.value_summary.total_roi_items > 0;
+  const fieldMemoryLines = [
+    `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
+    `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
+    `技能表现摘要：首验通过价值项 ${formatCount(report.value_summary.first_pass_acceptance_items)} 条，低置信 ${formatCount(report.value_summary.low_confidence_items)} 条`,
+  ];
 
   const deviceSummary = {
     totalText: formatCount(report.device_summary.total_devices),
@@ -89,13 +104,14 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   };
 
   const nextAction = report.next_action ? {
-    title: String(report.next_action.action_type || "建议执行下一步动作"),
-    explainText: String(report.next_action.explain_human || "暂无建议说明"),
-    objectiveText: String(report.next_action.objective_text || "暂无目标"),
-    priorityText: String(report.next_action.priority || "普通"),
+    title: labelOperationType(report.next_action.action_type || "建议执行下一步动作"),
+    explainText: sanitizeCustomerText(report.next_action.explain_human || "暂无建议说明"),
+    objectiveText: sanitizeCustomerText(report.next_action.objective_text || "暂无目标"),
+    priorityText: sanitizeCustomerText(report.next_action.priority || "普通"),
   } : null;
 
   return {
+    generatedAtText: formatDateTime(report.generated_at),
     field: {
       fieldId,
       fieldName: fieldName || "未命名地块",
@@ -132,23 +148,17 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     roiSummary: roiItems > 0
       ? {
         title: "价值记录摘要",
-        lines: [
-          String(report.value_summary.customer_value_text || `本地块已有 ${formatCount(report.value_summary.total_roi_items)} 条价值记录`),
-          `节水 ${formatCount(report.value_summary.water_saved_items)} 条、节人工 ${formatCount(report.value_summary.labor_saved_items)} 条、预警 ${formatCount(report.value_summary.early_warning_items)} 条`,
-          `Confidence / Assumption：低置信 ${formatCount(report.value_summary.low_confidence_items)} 条，假设型 ${formatCount(report.value_summary.assumption_based_items)} 条`,
-        ],
+        lines: roiLines,
+        displayText: roiLines.join("；"),
       }
-      : { title: "暂无可量化价值记录", description: "暂无可量化价值记录" },
-    fieldMemory: (report.overview.total_operations_count > 0 || report.device_summary.total_devices > 0 || report.value_summary.total_roi_items > 0)
+      : { title: customerRoiLabel("ROI_UNAVAILABLE"), description: roiEmptyState.description, displayText: `${customerRoiLabel("ROI_UNAVAILABLE")}：${roiEmptyState.description}` },
+    fieldMemory: fieldMemoryAvailable
       ? {
         title: "地块记忆摘要",
-        lines: [
-          `历史响应摘要：累计作业 ${formatCount(report.overview.total_operations_count)} 次，待验收 ${formatCount(report.overview.pending_acceptance_count)} 次`,
-          `设备可靠性摘要：在线 ${formatCount(report.device_summary.online_devices)}/${formatCount(report.device_summary.total_devices)}，离线 ${formatCount(report.device_summary.offline_devices)}`,
-          `技能表现摘要：首验通过价值项 ${formatCount(report.value_summary.first_pass_acceptance_items)} 条，低置信 ${formatCount(report.value_summary.low_confidence_items)} 条`,
-        ],
+        lines: fieldMemoryLines,
+        displayText: fieldMemoryLines.join("；"),
       }
-      : { title: "暂无可展示的地块记忆", description: "暂无可展示的地块记忆" },
+      : { title: customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE"), description: fieldMemoryEmptyState.description, displayText: `${customerFieldMemoryLabel("FIELD_MEMORY_UNAVAILABLE")}：${fieldMemoryEmptyState.description}` },
     exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {
       title,

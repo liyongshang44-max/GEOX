@@ -42,7 +42,7 @@ export default function FieldReportExportPage(): React.ReactElement {
             <div>
               <div className="customerEyebrow">GEOX</div>
               <h1 className="customerTitle">{vm.field.fieldName || "地块报告"}</h1>
-              <p className="customerSubtitle">生成时间：{new Date().toLocaleString()}</p>
+              <p className="customerSubtitle">生成时间：{vm.generatedAtText}</p>
             </div>
             <button type="button" className="customerButton noPrint" onClick={() => window.print()}>打印导出</button>
           </div>
