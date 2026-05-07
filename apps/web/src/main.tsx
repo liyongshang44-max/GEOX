@@ -6,7 +6,6 @@ import App from "./routes/App";
 import { AuthProvider } from "./auth/AuthProvider";
 import { queryClient } from "./shared/query/client";
 import "./styles.css";
-import "./styles/customerReport.css";
 
 const root = document.getElementById("root");
 
