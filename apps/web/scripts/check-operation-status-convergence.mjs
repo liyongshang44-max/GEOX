@@ -9,6 +9,7 @@ const focusDirs = [
   path.join(srcRoot, "hooks", "useDashboard.ts"),
   path.join(srcRoot, "viewmodels"),
   path.join(srcRoot, "features", "operations", "pages"),
+  path.join(srcRoot, "views", "OperationReportPage.tsx"),
 ];
 
 const forbiddenRules = [
@@ -19,6 +20,10 @@ const forbiddenRules = [
   {
     name: "hasReceipt participates in status judgement",
     regex: /hasReceipt[\s\S]{0,120}(status|stage|group|final)/gi,
+  },
+  {
+    name: "OperationReportPage raw status rendering",
+    regex: /\{item\.label\}[:：]\{item\.status\}/g,
   },
 ];
 

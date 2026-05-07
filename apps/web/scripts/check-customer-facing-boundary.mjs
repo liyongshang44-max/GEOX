@@ -6,6 +6,8 @@ const appRoot = path.resolve(scriptDir, "..");
 
 const targetFiles = [
   "src/views/CustomerDashboardPage.tsx",
+  "src/views/FieldReportPage.tsx",
+  "src/views/OperationReportPage.tsx",
   "src/features/fields/pages/FieldDetailPage.tsx",
   "src/features/operations/pages/OperationDetailPage.tsx",
 ];
@@ -18,6 +20,10 @@ const forbiddenTokens = [
   "skill_trace",
   "trace_gap",
   "/api/v1/",
+  "PageHeader",
+  "KpiStrip",
+  "ReportExportCTA",
+  "Skill trace",
 ];
 
 const highWeightLinePattern = /(title\s*=|sectionTitle|decisionItemTitle|decisionItemMeta|<h[1-6]|eyebrow\s*=|description\s*=)/;
