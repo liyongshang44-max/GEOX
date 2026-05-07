@@ -99,7 +99,7 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
 
         <details className="customerCard customerSpacingTopSm">{/* TechnicalFoldout */}
-          <summary className="customerCardTitle">技术信息（默认收起）</summary>
+          <summary className="customerCardTitle">技术详情</summary>
           <div className="customerSpacingTopXs muted">内部 ID 默认隐藏，如需排障可在此查看。</div>
           <div className="customerGrid2 customerSpacingTopXs">
             {(vm.technicalFoldout?.rows ?? []).map((row) => (
