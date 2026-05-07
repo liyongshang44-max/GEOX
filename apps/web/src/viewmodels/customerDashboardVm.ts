@@ -119,7 +119,7 @@ export function buildCustomerDashboardVm(input: CustomerDashboardAggregateV1 | {
       eyebrow: "GEOX / 客户看板",
       title: CUSTOMER_LABELS.dashboardTitle,
       subtitle: "经营结果、风险与行动摘要",
-      exportAction: { label: "打印导出", href: "/customer/reports" },
+      exportAction: { label: "总览导出", href: "/customer/export" },
     },
     kpis: [
       { key: "OPEN_ACTIONS", label: "待处理事项", value: numberFmt.format(pendingActions), unit: "条", tone: pendingActions > 0 ? "warning" : "good", sourceNote: "pending_actions_summary.total_open_alerts", href: "/customer/dashboard" },
