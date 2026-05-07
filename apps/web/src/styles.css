@@ -3,6 +3,7 @@
 @import "./styles/layout.css";
 @import "./styles/customerShell.css";
 @import "./styles/customerDashboard.css";
+@import "./styles/customerReport.css";
 @import "./shared/styles/shell.css";
 @import "./styles/cards.css";
 @import "./styles/badges.css";
