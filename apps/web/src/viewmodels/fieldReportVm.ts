@@ -2,6 +2,14 @@ import type { FieldReportDetailV1 } from "../api/reports";
 import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, labelRiskLevel, sanitizeCustomerText } from "../lib/customerLabels";
 
 export type FieldReportPageVm = {
+  field: { fieldId: string; fieldName: string; cropText: string; stageText: string; updatedAtText: string };
+  risk: { levelLabel: string; tone: "neutral" | "warning" | "danger"; reasons: string[] };
+  diagnosis: { headline: string; evidenceLines: string[]; dataQualityText: string };
+  recommendations: Array<{ title: string; summary: string; href?: string }>;
+  recentOperations: Array<{ operationId: string; rowText: string; href: string }>;
+  roiSummary: { title: string; lines: string[] } | { title: string; description: string };
+  fieldMemory: { title: string; lines: string[] } | { title: string; description: string };
+  exportHref: string;
   hero: {
     title: string;
     subtitle: string;
@@ -70,6 +78,9 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       ? ["执行异常，建议复核作业证据"]
       : ((report.explain.top_reasons ?? []).length ? (report.explain.top_reasons ?? []).map((item) => sanitizeCustomerText(item)) : ["暂无主要依据"]),
   };
+  const riskTone: "neutral" | "warning" | "danger" = overview.riskText.includes("高") ? "danger" : (overview.riskText.includes("中") ? "warning" : "neutral");
+  const roiItems = Number(report.value_summary.total_roi_items ?? 0);
+  const fieldMemoryItems = Number(report.value_summary.low_confidence_items ?? 0);
 
   const deviceSummary = {
     totalText: formatCount(report.device_summary.total_devices),
@@ -86,6 +97,29 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
   } : null;
 
   return {
+    field: {
+      fieldId,
+      fieldName: fieldName || "未命名地块",
+      cropText: sanitizeCustomerText(report.next_action?.objective_text ?? "作物信息待补充"),
+      stageText: sanitizeCustomerText(report.next_action?.priority ?? "阶段待确认"),
+      updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
+    },
+    risk: { levelLabel: overview.riskText, tone: riskTone, reasons: explain.topReasonsText },
+    diagnosis: {
+      headline: explain.human,
+      evidenceLines: explain.topReasonsText,
+      dataQualityText: report.value_summary.low_confidence_items > 0 ? "数据质量需复核" : "数据质量可用",
+    },
+    recommendations: [
+      { title: nextAction?.title ?? "优先完成待验收作业", summary: nextAction?.explainText ?? "优先关闭当前风险相关任务。", href: nextAction ? `/customer/fields/${encodeURIComponent(fieldId)}` : undefined },
+    ],
+    recentOperations: report.recent_operations.slice(0, 5).map((item) => {
+      const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
+      return { operationId, rowText: `${sanitizeCustomerText(item.customer_title || item.title || "作业")} · ${formatDateTime(item.generated_at)} · ${labelAcceptanceStatus(item.acceptance_status)}`, href: operationId ? `/customer/operations/${encodeURIComponent(operationId)}` : "/customer/dashboard" };
+    }),
+    roiSummary: roiItems > 0 ? { title: "价值摘要", lines: [`ROI 条目 ${formatCount(report.value_summary.total_roi_items)}`, `节水条目 ${formatCount(report.value_summary.water_saved_items)}`] } : { title: "暂无可量化价值记录", description: "本周期暂无可展示 ROI。" },
+    fieldMemory: fieldMemoryItems > 0 ? { title: "地块记忆摘要", lines: [`低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条，建议复核`] } : { title: "暂无可展示的地块记忆", description: "当前无可复用地块记忆。" },
+    exportHref: `/customer/fields/${encodeURIComponent(fieldId)}/export`,
     hero: {
       title,
       subtitle: "聚焦当前诊断、作业与下一步执行建议",

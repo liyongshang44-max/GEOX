@@ -26,7 +26,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
         const report = await fetchFieldReport(fieldId);
         const vm = buildFieldReportVm(report);
         if (!alive) return;
-        setReportTitle(vm.header.title || "客户报告");
+        setReportTitle(vm.field.fieldName || "客户报告");
         setContent(<FieldExportBlocks vm={vm} />);
         return;
       }
@@ -34,7 +34,7 @@ export default function CustomerReportExportPage(): React.ReactElement {
         const report = await fetchOperationReport(operationId);
         const vm = buildOperationReportVm(report);
         if (!alive) return;
-        const title = String(vm.header.title || "").trim();
+        const title = String(vm.operation.title || "").trim();
         setReportTitle(title ? (title.endsWith("报告") ? title : `${title}报告`) : "客户报告");
         setContent(<OperationExportBlocks vm={vm} />);
         return;

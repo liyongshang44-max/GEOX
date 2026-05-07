@@ -17,7 +17,11 @@ import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 const REVIEW_NEEDED_TEXT = "需复核";
 
 export type OperationReportPageVm = {
+  operation: { operationId: string; title: string; fieldName: string; fieldId: string; finalStatusLabel: string; finalStatusTone: string; updatedAtText: string };
   sections: CustomerReportSectionVm[];
+  timeline: Array<{ key: string; label: string; status: "DONE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
+  exportHref: string;
+  technicalFoldout?: { rows: Array<{ label: string; value: string }> };
   header: {
     title: string;
     subtitle: string;
@@ -194,17 +198,30 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     .every((value) => (toNum(value) ?? 0) <= 0);
   const sections: CustomerReportSectionVm[] = [
     { key: "RECOMMENDATION", status: "AVAILABLE", title: "为什么做", summary: kv(reportWhy?.objective_text, reasonText), items: [{ label: "当前风险", value: riskLabel }, { label: "主要原因", value: reasonText }] },
-    { key: "PRESCRIPTION", status: "MISSING", title: "处方", summary: getCustomerEmptyState("NO_PRESCRIPTION").title, items: [], emptyState: getCustomerEmptyState("NO_PRESCRIPTION") },
+    { key: "PRESCRIPTION", status: "MISSING", title: "处方", summary: "未形成正式处方", items: [], emptyState: { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
-    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : getCustomerEmptyState("NO_AS_EXECUTED") },
-    { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? getCustomerEmptyState("NO_EVIDENCE").title : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? getCustomerEmptyState("NO_EVIDENCE") : undefined },
-    { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : getCustomerEmptyState("NO_ACCEPTANCE") },
-    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值", summary: valueNumber == null ? getCustomerEmptyState("NO_ROI").title : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? getCustomerEmptyState("NO_ROI") : undefined },
-    { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "系统记忆", summary: memoryItems[0] ?? getCustomerEmptyState("NO_FIELD_MEMORY").title, items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : getCustomerEmptyState("NO_FIELD_MEMORY") },
+    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
+    { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? "暂无证据摘要" : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? { title: "暂无证据摘要", description: "当前没有可展示的证据汇总。" } : undefined },
+    { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
+    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
+    { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "系统记忆", summary: memoryItems[0] ?? "暂无可展示的地块记忆", items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
+  const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
 
   return {
+    operation: {
+      operationId: kv(report.identifiers.operation_id || report.identifiers.operation_plan_id),
+      title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
+      fieldName: kv((report as any).field_name, "地块"),
+      fieldId: kv((report as any).field_id, "--"),
+      finalStatusLabel: finalStatusText,
+      finalStatusTone: /异常|失败/.test(finalStatusText) ? "danger" : (/等待|进行中/.test(finalStatusText) ? "warning" : "neutral"),
+      updatedAtText: kv(report.workflow.updated_at),
+    },
     sections,
+    timeline,
+    exportHref: `/customer/operations/${encodeURIComponent(kv(report.identifiers.operation_id || report.identifiers.operation_plan_id))}/export`,
+    technicalFoldout: { rows: [{ label: "operation_id", value: kv(report.identifiers.operation_id) }, { label: "operation_plan_id", value: kv(report.identifiers.operation_plan_id) }] },
     header: {
       title: kv((report as any).customer_title || (report as any).operation_title, CUSTOMER_LABELS.operationReportTitle),
       subtitle: finalStatusText,
