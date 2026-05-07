@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import {
   CockpitActionList,
@@ -51,15 +50,6 @@ export default function CustomerDashboardPage(): React.ReactElement {
 
   return (
     <div className="customerDashboardPage">
-      <div className="customerDashboardTitleRow">
-        <div>
-          <div className="customerEyebrow">客户经营总览</div>
-          <h1 className="customerTitle">经营驾驶舱</h1>
-          <p className="customerSubtitle">P0 cockpit-lite：风险、待办、作业、设备和价值结果。</p>
-        </div>
-        <Link className="customerButton customerButtonPrimary" to="/customer/export">总览导出</Link>
-      </div>
-
       <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
 
       <section className="customerDashboardMainGrid">
