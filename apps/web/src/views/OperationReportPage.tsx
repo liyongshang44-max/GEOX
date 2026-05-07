@@ -6,6 +6,12 @@ import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel } from "../lib/customerLabels";
 
+function customerText(value: unknown, fallback = "暂无可展示信息"): string {
+  const text = String(value ?? "").trim();
+  if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
+  return text;
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -46,9 +52,9 @@ export default function OperationReportPage(): React.ReactElement {
     body: (
       <>
         <div className="customerMetricLabel">{section.summary}</div>
-        {section.items.length > 0 ? (
+        {section.items.filter((item) => !/skill|run|success/i.test(`${item.label} ${item.value}`)).length > 0 ? (
           <div className="customerGrid2 customerSpacingTopXs">
-            {section.items.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{item.value}</div>)}
+            {section.items.filter((item) => !/skill|run|success/i.test(`${item.label} ${item.value}`)).map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{item.value}</div>)}
           </div>
         ) : null}
         {section.emptyState ? <div className="customerSpacingTopXs muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
@@ -64,8 +70,8 @@ export default function OperationReportPage(): React.ReactElement {
             <div>
               <div className="customerReportLogo">GEOX / 作业闭环</div>
               <h1 className="customerTitle">{vm.operation.title}</h1>
-              <p className="customerSubtitle">地块：{vm.operation.fieldName}</p>
-              <p className="customerSubtitle">最终状态：{vm.operation.finalStatusLabel} · 更新时间：{vm.operation.updatedAtText}</p>
+              <p className="customerSubtitle">地块：{customerText(vm.operation.fieldName, "暂无地块信息")}</p>
+              <p className="customerSubtitle">最终状态：{customerText(vm.operation.finalStatusLabel, "状态待更新")} · 更新时间：{customerText(vm.operation.updatedAtText, "暂无更新时间")}</p>
             </div>
             <div className="customerActions">
               <Link className="customerButton" to="/customer/dashboard">返回总览</Link>
@@ -100,7 +106,7 @@ export default function OperationReportPage(): React.ReactElement {
         </div>
 
         <details className="customerCard customerSpacingTopSm">{/* TechnicalFoldout */}
-          <summary className="customerCardTitle">技术详情</summary>
+          <summary className="customerCardTitle">技术详情（可选）</summary>
           <div className="customerSpacingTopXs muted">内部 ID 默认隐藏，如需排障可在此查看。</div>
           <div className="customerGrid2 customerSpacingTopXs">
             {(vm.technicalFoldout?.rows ?? []).map((row) => (

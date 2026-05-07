@@ -538,7 +538,7 @@
 .customerShellNavItem.isActive { background: #111111; color: #fff; border-color: #111111; }
 .customerShellNavItemDisabled { opacity: .45; cursor: not-allowed; }
 
-.customerShellMainWrap { padding: 20px; display: grid; gap: 16px; }
+.customerShellMainWrap { padding: 20px; display: grid; gap: 16px; min-width: 0; }
 .customerShellTopbar {
   display: flex;
   justify-content: space-between;
@@ -559,3 +559,8 @@
   .customerShellSidebar { border-right: 0; border-bottom: 1px solid var(--customer-border); }
   .customerShellTopbar { flex-direction: column; }
 }
+
+.customerGrid3 > *,
+.customerGrid2 > *,
+.customerMetrics > * { min-width: 0; }
+.customerCard, .customerMetricCard { overflow-wrap: anywhere; }
