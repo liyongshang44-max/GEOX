@@ -57,39 +57,53 @@ export default function OperationReportPage(): React.ReactElement {
   return (
     <div className="customerReportCanvas">
       <div className="customerReportSheet">
-      <header className="customerHero">
-        <div className="customerHeroTop">
-          <div>
-            <div className="customerReportLogo">GEOX / 作业闭环</div>
-            <h1 className="customerTitle">{vm.operation.title}</h1>
-            <p className="customerSubtitle">{vm.operation.finalStatusLabel} · 更新时间 {vm.operation.updatedAtText}</p>
+        <header className="customerHero">{/* OperationHeader */}
+          <div className="customerHeroTop">
+            <div>
+              <div className="customerReportLogo">GEOX / 作业闭环</div>
+              <h1 className="customerTitle">{vm.operation.title}</h1>
+              <p className="customerSubtitle">{vm.operation.finalStatusLabel} · 更新时间 {vm.operation.updatedAtText}</p>
+            </div>
+            <div className="customerActions">
+              <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
+            </div>
           </div>
-          <div className="customerActions">
-            <Link className="customerButton" to="/customer/dashboard">返回客户看板</Link>
-            {canExport ? (
+        </header>
+
+        <section className="customerCard customerSpacingBottomSm">{/* OperationStatusSummary */}
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}:{item.status}</span>)}
+        </section>
+
+        <div className="customerTimeline">{/* ClosedLoopSectionList */}
+          {steps.map((step) => (
+            <section key={step.n} className="customerTimelineStep">
+              <div className="customerTimelineDot">{step.n}</div>
+              <div className="customerCard">
+                <h3 className="customerCardTitle">{step.title}</h3>
+                {step.body}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        <details className="customerCard customerSpacingTopSm">{/* TechnicalFoldout */}
+          <summary className="customerCardTitle">技术信息（默认收起）</summary>
+          <div className="customerSpacingTopXs muted">内部 ID 默认隐藏，如需排障可在此查看。</div>
+          <div className="customerGrid2 customerSpacingTopXs">
+            {(vm.technicalFoldout?.rows ?? []).map((row) => (
+              <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
+            ))}
+          </div>
+        </details>
+
+        <footer className="customerFooterNote">{/* ExportCTA */}
+          {canExport ? (
             <Link className="customerButton" to={vm.exportHref}>导出报告</Link>
           ) : (
             <span className="muted">导出不可用：缺少作业标识</span>
           )}
-          </div>
-        </div>
-      </header>
-
-      <div className="customerTimeline">
-        <div className="customerCard customerSpacingBottomSm">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}:{item.status}</span>)}
-        </div>
-        {steps.map((step) => (
-          <section key={step.n} className="customerTimelineStep">
-            <div className="customerTimelineDot">{step.n}</div>
-            <div className="customerCard">
-              <h3 className="customerCardTitle">{step.title}</h3>
-              {step.body}
-            </div>
-          </section>
-        ))}
-      </div>
-      <footer className="customerFooterNote">报告由 GEOX 生成，用于客户经营复盘与沟通。</footer>
+          <div className="customerSpacingTopXs">报告由 GEOX 生成，用于客户经营复盘与沟通。</div>
+        </footer>
       </div>
     </div>
   );

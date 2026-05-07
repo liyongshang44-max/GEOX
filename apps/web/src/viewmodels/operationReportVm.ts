@@ -197,14 +197,14 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const noEvidence = [report.evidence.artifacts_count, report.evidence.logs_count, report.evidence.media_count, report.evidence.metrics_count]
     .every((value) => (toNum(value) ?? 0) <= 0);
   const sections: CustomerReportSectionVm[] = [
-    { key: "RECOMMENDATION", status: "AVAILABLE", title: "为什么做", summary: kv(reportWhy?.objective_text, reasonText), items: [{ label: "当前风险", value: riskLabel }, { label: "主要原因", value: reasonText }] },
-    { key: "PRESCRIPTION", status: "MISSING", title: "处方", summary: "未形成正式处方", items: [], emptyState: { title: "未形成正式处方", description: "当前没有处方记录。" } },
+    { key: "RECOMMENDATION", status: "AVAILABLE", title: "建议", summary: kv(reportWhy?.objective_text, reasonText), items: [{ label: "当前风险", value: riskLabel }, { label: "主要原因", value: reasonText }] },
+    { key: "PRESCRIPTION", status: "MISSING", title: "处方合同", summary: "未形成正式处方", items: [], emptyState: { title: "未形成正式处方", description: "当前没有处方记录。" } },
     { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
-    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
+    { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? "暂无证据摘要" : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? { title: "暂无证据摘要", description: "当前没有可展示的证据汇总。" } : undefined },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
-    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "价值", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
-    { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "系统记忆", summary: memoryItems[0] ?? "暂无可展示的地块记忆", items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
+    { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : valueText, items: [{ label: "价值", value: valueText }, { label: "方法", value: methodText }, { label: "可信度", value: confidenceText }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
+    { key: "MEMORY", status: memoryItems.length ? "AVAILABLE" : "MISSING", title: "田块记忆 / Skill trace", summary: memoryItems[0] ?? "暂无可展示的地块记忆", items: memoryItems.map((line) => ({ label: "记忆", value: line })), emptyState: memoryItems.length ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
 
@@ -277,7 +277,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       resultText: finalStatusText,
     },
     fieldMemory: {
-      title: "系统记忆",
+      title: "田块记忆 / Skill trace",
       items: memoryItems.length ? memoryItems : [getCustomerEmptyState("NO_FIELD_MEMORY").title],
     },
     roiLedger: { title: "", items: [], confidenceText },
