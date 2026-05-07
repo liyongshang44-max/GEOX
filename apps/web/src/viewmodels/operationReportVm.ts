@@ -154,6 +154,14 @@ function formatRoiLine(item: any): string {
 }
 
 
+function mapApprovalStatusForCustomer(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  const normalized = raw.toUpperCase();
+  if (!raw) return "--";
+  if (normalized.includes("AUTO")) return "系统自动状态";
+  return labelApprovalStatus(raw);
+}
+
 function mapSlaQuality(value: unknown, rawMs: unknown): string {
   const quality = String(value ?? "").trim().toUpperCase();
   if (quality === "VALID") return kv(rawMs);
@@ -222,7 +230,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
   const sections: CustomerReportSectionVm[] = [
     { key: "RECOMMENDATION", status: hasRecommendationData ? "AVAILABLE" : "MISSING", title: "建议", summary: hasRecommendationData ? recommendationReason : "暂无正式建议记录", items: hasRecommendationData ? [{ label: "建议原因", value: recommendationReason }, { label: "农艺解释", value: explainText }, { label: "风险等级", value: riskLabel }, { label: "数据依据摘要", value: recommendationSummary }] : [], emptyState: hasRecommendationData ? undefined : { title: "暂无正式建议记录", description: "当前缺少 recommendation/explain/risk 字段。" } },
     { key: "PRESCRIPTION", status: hasPrescriptionData ? "AVAILABLE" : "MISSING", title: "处方合同", summary: hasPrescriptionData ? "已形成正式处方" : "未形成正式处方", items: prescriptionItems, emptyState: hasPrescriptionData ? undefined : { title: "未形成正式处方", description: "当前没有处方记录。" } },
-    { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? labelApprovalStatus(reportApproval?.status) : getCustomerEmptyState("NO_APPROVAL").title, items: [{ label: "审批状态", value: reportApproval ? labelApprovalStatus(reportApproval?.status) : "--" }, { label: "审批人", value: kv(reportApproval?.actor_name || reportApproval?.actor_id) }], emptyState: reportApproval ? undefined : getCustomerEmptyState("NO_APPROVAL") },
+    { key: "APPROVAL", status: reportApproval ? "AVAILABLE" : "MISSING", title: "审批", summary: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "审批记录暂不可用", items: reportApproval ? [{ label: "审批状态", value: mapApprovalStatusForCustomer(reportApproval?.status) }, { label: "审批人客户化名称", value: kv(reportApproval?.actor_name, "--") }, { label: "审批时间", value: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--") }, { label: "审批意见", value: kv(reportApproval?.note, "--") }, { label: "权限提示", value: kv(reportApproval?.permission_hint || reportApproval?.permission_note, "--") }] : [], emptyState: reportApproval ? undefined : { title: "审批记录暂不可用", description: "当前尚未生成可展示的审批记录。" } },
     { key: "EXECUTION", status: report.execution.execution_started_at ? "AVAILABLE" : "MISSING", title: "执行 / as-executed", summary: mapOperationStatusToCustomerLabel(report.execution.final_status), items: [{ label: "负责人", value: kv(report.workflow.owner_name || report.workflow.owner_actor_id) }, { label: "开始时间", value: kv(report.execution.execution_started_at) }, { label: "结束时间", value: kv(report.execution.execution_finished_at) }], emptyState: report.execution.execution_started_at ? undefined : { title: "暂无实际执行记录", description: "当前尚无 as-executed 记录。" } },
     { key: "EVIDENCE", status: noEvidence ? "MISSING" : "AVAILABLE", title: "证据", summary: noEvidence ? "暂无证据摘要" : "证据已采集", items: [{ label: "回执", value: mapEvidenceStatusLabel(report.evidence.artifacts_count) }, { label: "日志", value: mapEvidenceStatusLabel(report.evidence.logs_count) }, { label: "媒体", value: mapEvidenceStatusLabel(report.evidence.media_count) }], emptyState: noEvidence ? { title: "暂无证据摘要", description: "当前没有可展示的证据汇总。" } : undefined },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: [{ label: "验收状态", value: acceptanceStatusText }, { label: "验收结论", value: labelEvidenceQuality(report.acceptance.verdict) }], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
@@ -263,10 +271,10 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       reasonText: kv(reportWhy?.objective_text, reasonText),
     },
     approval: {
-      statusText: reportApproval ? labelApprovalStatus(reportApproval?.status) : "待确认",
-      actorText: kv(reportApproval?.actor_name || reportApproval?.actor_id),
-      timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at),
-      noteText: kv(reportApproval?.note),
+      statusText: reportApproval ? mapApprovalStatusForCustomer(reportApproval?.status) : "待确认",
+      actorText: kv(reportApproval?.actor_name, "--"),
+      timeText: kv(reportApproval?.approved_at || reportApproval?.generated_at, "--"),
+      noteText: kv(reportApproval?.note, "--"),
       available: Boolean(reportApproval),
     },
     execution: {
