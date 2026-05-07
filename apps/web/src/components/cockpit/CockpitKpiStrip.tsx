@@ -9,7 +9,7 @@ type Props = {
 export default function CockpitKpiStrip({ items }: Props): React.ReactElement {
   return (
     <section className="customerCard">
-      <h3 className="customerReportSectionTitle">KpiStrip</h3>
+      <h3 className="customerReportSectionTitle">经营状态摘要</h3>
       <div className="customerMetrics">
         {items.slice(0, 5).map((item) => <CockpitKpiCard key={item.key} item={item} />)}
       </div>

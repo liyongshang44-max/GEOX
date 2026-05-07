@@ -32,8 +32,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <header className="customerHero">
         <div className="customerHeroTop">
           <div>
-            <div className="customerLabel">PageHeader</div>
-            <h1 className="customerTitle">经营驾驶舱（cockpit-lite）</h1>
+            <div className="customerLabel">客户经营总览</div>
+            <h1 className="customerTitle">经营驾驶舱</h1>
           </div>
           <Link className="customerButton customerButtonPrimary" to="/customer/export">总览导出</Link>
         </div>
@@ -53,8 +53,8 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <RecentOperationsSection items={vm?.recentOperations ?? []} />
 
       <section className="customerCard noPrint">
-        <h3 className="customerCardTitle">ReportExportCTA</h3>
-        <Link className="customerButton" to="/customer/export">进入总览导出页</Link>
+        <h3 className="customerCardTitle">导出经营报告</h3>
+        <Link className="customerButton" to="/customer/export">导出总览报告</Link>
       </section>
 
       {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}

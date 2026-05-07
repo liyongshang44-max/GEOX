@@ -131,3 +131,38 @@ if (offenders.length > 0) {
 }
 
 console.log("CUSTOMER_BOUNDARY_CHECK PASS");
+
+
+const dashboardForbiddenTokens = ["PageHeader", "KpiStrip", "ReportExportCTA", "/customer/acceptance", "/customer/devices", "/customer/reports"];
+const fieldForbiddenTokens = ["天气", "weather"];
+const operationForbiddenTokens = ["DONE", "MISSING", "PENDING", "NOT_APPLICABLE", "AVAILABLE", "Skill trace"];
+
+function scanSmokeChecklist() {
+  const dashboardFile = path.join(appRoot, "src/views/CustomerDashboardPage.tsx");
+  const fieldFile = path.join(appRoot, "src/views/FieldReportPage.tsx");
+  const operationFile = path.join(appRoot, "src/views/OperationReportPage.tsx");
+
+  if (fs.existsSync(dashboardFile)) {
+    const text = fs.readFileSync(dashboardFile, "utf8");
+    for (const token of dashboardForbiddenTokens) {
+      if (text.includes(token)) addOffender("src/views/CustomerDashboardPage.tsx", 1, token, "Forbidden token/link in dashboard customer page");
+    }
+  }
+
+  if (fs.existsSync(fieldFile)) {
+    const text = fs.readFileSync(fieldFile, "utf8");
+    for (const token of fieldForbiddenTokens) {
+      if (text.includes(token)) addOffender("src/views/FieldReportPage.tsx", 1, token, "Field page should not render weather card wording");
+    }
+  }
+
+  if (fs.existsSync(operationFile)) {
+    const text = fs.readFileSync(operationFile, "utf8");
+    for (const token of operationForbiddenTokens) {
+      if (text.includes(token)) addOffender("src/views/OperationReportPage.tsx", 1, token, "Forbidden raw status or technical wording in operation customer page");
+    }
+    if (!text.includes("<details")) addOffender("src/views/OperationReportPage.tsx", 1, "<details", "Technical details should be collapsible by default");
+  }
+}
+
+scanSmokeChecklist();

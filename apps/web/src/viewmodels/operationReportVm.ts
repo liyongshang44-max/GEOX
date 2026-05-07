@@ -19,7 +19,7 @@ const REVIEW_NEEDED_TEXT = "需复核";
 export type OperationReportPageVm = {
   operation: { operationId: string; title: string; fieldName: string; fieldId: string; finalStatusLabel: string; finalStatusTone: string; updatedAtText: string };
   sections: CustomerReportSectionVm[];
-  timeline: Array<{ key: string; label: string; status: "DONE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
+  timeline: Array<{ key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
   exportHref: string;
   technicalFoldout?: { rows: Array<{ label: string; value: string }> };
   header: {
@@ -278,7 +278,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     { key: "EVIDENCE", status: hasEvidencePackSummary ? "AVAILABLE" : "MISSING", title: "证据", summary: hasEvidencePackSummary ? evidenceStatus : "暂无证据包摘要", items: hasEvidencePackSummary ? [{ label: "照片/日志/指标/轨迹摘要", value: evidenceMediaSummary }, { label: "证据状态", value: evidenceStatus }, { label: "证据不足原因", value: evidenceInsufficientReason }] : [], emptyState: hasEvidencePackSummary ? undefined : { title: "暂无证据包摘要", description: "当前没有 evidence-pack-summary。" } },
     { key: "ACCEPTANCE", status: report.acceptance.generated_at ? "AVAILABLE" : "PENDING", title: "验收", summary: acceptanceStatusText, items: report.acceptance.generated_at ? [{ label: "验收结论", value: acceptanceStatusText }, { label: "验收依据", value: kv(report.acceptance.verdict, "--") }, { label: "未通过原因", value: report.acceptance.status === "FAIL" ? kv(report.execution.invalid_reason, "--") : "--" }, { label: "证据不足原因", value: Array.isArray(report.acceptance.missing_items) && report.acceptance.missing_items.length ? report.acceptance.missing_items.map((item) => labelEmptyFallback(item)).join("、") : "--" }, { label: "复核提示", value: report.acceptance.missing_evidence ? "证据不足，建议补齐后复核" : "--" }] : [], emptyState: report.acceptance.generated_at ? undefined : { title: "验收结果尚未生成", description: "当前验收结论待生成。" } },
     { key: "ROI", status: valueNumber == null ? "MISSING" : "AVAILABLE", title: "ROI", summary: valueNumber == null ? "暂无可量化价值记录" : `${roiNatureText} · ${valueText}`, items: valueNumber == null ? [] : [{ label: "价值类型", value: roiValueType }, { label: "实测/估算/假设", value: roiNatureText }, { label: "数值摘要", value: valueText }, { label: "confidence", value: confidenceText }, { label: "evidence note", value: evidenceNote }], emptyState: valueNumber == null ? { title: "暂无可量化价值记录", description: "当前未形成可审计 ROI。" } : undefined },
-    { key: "MEMORY", status: hasMemoryData ? "AVAILABLE" : "MISSING", title: "田块记忆 / Skill trace", summary: hasMemoryData ? "已生成记忆摘要" : "暂无可展示的地块记忆", items: memoryItems, emptyState: hasMemoryData ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
+    { key: "MEMORY", status: hasMemoryData ? "AVAILABLE" : "MISSING", title: "田块记忆", summary: hasMemoryData ? "已生成记忆摘要" : "暂无可展示的地块记忆", items: memoryItems, emptyState: hasMemoryData ? undefined : { title: "暂无可展示的地块记忆", description: "当前没有可复用记忆条目。" } },
   ];
   const timeline = sections.map((s) => ({ key: s.key, label: s.title, status: s.status === "AVAILABLE" ? "DONE" as const : (s.status === "PENDING" ? "PENDING" as const : s.status === "MISSING" ? "MISSING" as const : "NOT_APPLICABLE" as const) }));
 
@@ -362,7 +362,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
       resultText: finalStatusText,
     },
     fieldMemory: {
-      title: "田块记忆 / Skill trace",
+      title: "田块记忆",
       items: hasMemoryData ? memoryItems.map((item) => item.value) : [getCustomerEmptyState("NO_FIELD_MEMORY").title],
     },
     roiLedger: { title: "", items: [], confidenceText },
