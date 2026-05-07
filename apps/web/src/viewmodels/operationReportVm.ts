@@ -19,7 +19,7 @@ const REVIEW_NEEDED_TEXT = "需复核";
 export type OperationReportPageVm = {
   operation: { operationId: string; title: string; fieldName: string; fieldId: string; finalStatusLabel: string; finalStatusTone: string; updatedAtText: string };
   sections: CustomerReportSectionVm[];
-  timeline: Array<{ key: string; label: string; status: "DONE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
+  timeline: Array<{ key: string; label: string; status: "DONE" | "AVAILABLE" | "PENDING" | "MISSING" | "NOT_APPLICABLE"; timeText?: string }>;
   exportHref: string;
   technicalFoldout?: { rows: Array<{ label: string; value: string }> };
   header: {

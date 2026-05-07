@@ -237,3 +237,20 @@ export function labelApprovalStatus(raw: unknown): string {
 export const toRiskLabel = labelRiskLevel;
 export const toOperationStatusLabel = labelFinalStatus;
 export const toAcceptanceStatusLabel = labelAcceptanceStatus;
+
+
+export function customerTimelineStatusLabel(raw: unknown): string {
+  switch (String(raw ?? "").toUpperCase()) {
+    case "DONE":
+    case "AVAILABLE":
+      return "已形成";
+    case "PENDING":
+      return "等待生成";
+    case "MISSING":
+      return "暂无记录";
+    case "NOT_APPLICABLE":
+      return "不适用";
+    default:
+      return "待确认";
+  }
+}

@@ -4,6 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
+import { customerTimelineStatusLabel } from "../lib/customerLabels";
 
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
@@ -83,7 +84,7 @@ export default function OperationReportPage(): React.ReactElement {
         </header>
 
         <section className="customerCard customerSpacingBottomSm">{/* OperationStatusSummary */}
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}:{item.status}</span>)}
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}：{customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
         <div className="customerTimeline">{/* ClosedLoopSectionList */}
