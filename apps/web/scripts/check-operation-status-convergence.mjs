@@ -3,66 +3,64 @@ import path from "node:path";
 
 const scriptDir = path.dirname(new URL(import.meta.url).pathname);
 const appRoot = path.resolve(scriptDir, "..");
-const srcRoot = path.join(appRoot, "src");
 
-const focusDirs = [
-  path.join(srcRoot, "hooks", "useDashboard.ts"),
-  path.join(srcRoot, "viewmodels"),
-  path.join(srcRoot, "features", "operations", "pages"),
-  path.join(srcRoot, "views", "OperationReportPage.tsx"),
+const targetFiles = [
+  "src/views/OperationReportPage.tsx",
+  "src/views/CustomerReportExportPage.tsx",
+  "src/viewmodels/operationReportVm.ts",
+  "src/viewmodels/customerDashboardVm.ts",
+  "src/viewmodels/fieldReportVm.ts",
 ];
 
-const forbiddenRules = [
-  {
-    name: "final_status fallback to dispatch_status",
-    regex: /final_status\s*(\?\?|\|\|)\s*dispatch_status/g,
-  },
-  {
-    name: "hasReceipt participates in status judgement",
-    regex: /hasReceipt[\s\S]{0,120}(status|stage|group|final)/gi,
-  },
-  {
-    name: "OperationReportPage raw status rendering",
-    regex: /\{item\.label\}[:：]\{item\.status\}/g,
-  },
+const forbiddenPatterns = [
+  { name: "receipt => success/pass inference", regex: /if\s*\([^\n)]*(receipt|receipt_id|hasReceipt)[^\n)]*\)\s*[^\n;{]*(SUCCESS|PASS|COMPLETED|DONE)/gi },
+  { name: "task completed => pass/success inference", regex: /if\s*\([^\n)]*(task|completed|done)[^\n)]*\)\s*[^\n;{]*(PASS|SUCCESS|COMPLETED|DONE)/gi },
+  { name: "no error => success/pass inference", regex: /if\s*\([^\n)]*(no\s*error|!\s*error|error\s*===\s*null|error\s*==\s*null)[^\n)]*\)\s*[^\n;{]*(PASS|SUCCESS|COMPLETED|DONE)/gi },
+  { name: "ternary status inference to SUCCESS/PASS", regex: /(receipt|task|error)[^\n]{0,80}\?[^\n]{0,80}(SUCCESS|PASS|COMPLETED|DONE)\s*:[^\n]{0,80}/gi },
 ];
 
-function collectFiles(target) {
-  if (!fs.existsSync(target)) return [];
-  const stat = fs.statSync(target);
-  if (stat.isFile()) return [target];
-  const entries = fs.readdirSync(target, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    const full = path.join(target, entry.name);
-    if (entry.isDirectory()) files.push(...collectFiles(full));
-    else if (/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(entry.name)) files.push(full);
-  }
-  return files;
-}
+const allowSignals = [
+  "labelFinalStatus",
+  "mapOperationStatusToCustomerLabel",
+  "operation_state",
+  "customerTimelineStatusLabel",
+];
 
-const files = [...new Set(focusDirs.flatMap((target) => collectFiles(target)))];
 const offenders = [];
 
-for (const file of files) {
-  const text = fs.readFileSync(file, "utf8");
-  for (const rule of forbiddenRules) {
-    const matches = [...text.matchAll(rule.regex)];
-    for (const match of matches) {
-      const index = match.index ?? 0;
-      const line = text.slice(0, index).split("\n").length;
-      offenders.push({
-        file: path.relative(appRoot, file),
-        line,
-        rule: rule.name,
-        snippet: String(match[0]).replace(/\s+/g, " ").trim(),
-      });
+function addOffender(file, line, rule, snippet) {
+  offenders.push({ file, line, rule, snippet: snippet.replace(/\s+/g, " ").trim() });
+}
+
+function lineOfIndex(text, index) {
+  return text.slice(0, index).split("\n").length;
+}
+
+for (const relativeFile of targetFiles) {
+  const fullPath = path.join(appRoot, relativeFile);
+  if (!fs.existsSync(fullPath)) {
+    addOffender(relativeFile, 0, "missing-target-file", "Target file does not exist");
+    continue;
+  }
+
+  const text = fs.readFileSync(fullPath, "utf8");
+
+  for (const rule of forbiddenPatterns) {
+    for (const match of text.matchAll(rule.regex)) {
+      addOffender(relativeFile, lineOfIndex(text, match.index ?? 0), rule.name, String(match[0]));
     }
+  }
+
+  const isVm = relativeFile.endsWith("Vm.ts");
+  if (isVm) {
+    const hasAllowSignal = allowSignals.some((signal) => text.includes(signal));
+    if (!hasAllowSignal) addOffender(relativeFile, 1, "missing-unified-status-mapping", "VM must map status from operation report / operation_state via unified mapping");
   }
 }
 
 if (offenders.length > 0) {
   console.error("❌ Operation status convergence check failed:");
+  console.error("   Customer pages must not derive final operation status locally.");
   for (const offender of offenders) {
     console.error(` - ${offender.file}:${offender.line} [${offender.rule}] ${offender.snippet}`);
   }

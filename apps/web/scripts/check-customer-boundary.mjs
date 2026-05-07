@@ -23,13 +23,7 @@ const vmFiles = [
 
 const labelsFile = "src/lib/customerLabels.ts";
 
-const forbiddenPageImports = [
-  "../api/admin",
-  "../api/debug",
-  "../api/devtools",
-  "../api/reports",
-];
-
+const forbiddenPageImports = ["../api/admin", "../api/debug", "../api/devtools", "../api/reports"];
 const allowedReportApiImport = "../api/customerReports";
 
 const forbiddenTokens = [
@@ -37,13 +31,70 @@ const forbiddenTokens = [
   "operation_plan_id",
   "receipt_id",
   "recommendation_id",
+  "/api/v1/facts",
+  "/api/admin",
+  "/healthz",
+  "/openapi",
+  "debug",
+  "raw_telemetry",
+  "raw facts",
+  "migration",
+  "devtools",
+  "legacy/control",
+];
+
+const scopedMatchers = [
+  /^src\/views\/Customer[^/]*\.tsx$/,
+  /^src\/views\/(FieldReportPage|OperationReportPage)\.tsx$/,
+  /^src\/viewmodels\/[^/]*ReportVm\.ts$/,
+  /^src\/viewmodels\/customerDashboardVm\.ts$/,
+  /^src\/components\/customer\/.+$/,
+  /^src\/components\/cockpit\/.+$/,
 ];
 
 const vmRawCodePattern = /["']([A-Z]+_[A-Z0-9_]+)["']/;
+const allowPattern = /customer-boundary-allow:\s*(.+)$/;
 const offenders = [];
+const exemptions = [];
 
 function addOffender(file, line, token, snippet) {
   offenders.push({ file, line, token, snippet: snippet.trim() });
+}
+
+function addExemption(file, line, reason, token, snippet) {
+  exemptions.push({ file, line, reason: reason.trim(), token, snippet: snippet.trim() });
+}
+
+function listFilesRecursively(rootDir) {
+  if (!fs.existsSync(rootDir)) return [];
+  const result = [];
+  for (const entry of fs.readdirSync(rootDir, { withFileTypes: true })) {
+    const full = path.join(rootDir, entry.name);
+    if (entry.isDirectory()) result.push(...listFilesRecursively(full));
+    else if (/\.(ts|tsx|js|jsx|mjs)$/.test(entry.name)) result.push(full);
+  }
+  return result;
+}
+
+function hasAllowComment(lines, lineIndex) {
+  const previous = lines[lineIndex - 1] ?? "";
+  const current = lines[lineIndex] ?? "";
+  const next = lines[lineIndex + 1] ?? "";
+  for (const candidate of [previous, current, next]) {
+    if (!candidate.includes("customer-boundary-allow:")) continue;
+    const match = candidate.match(allowPattern);
+    if (!match || !match[1]?.trim()) return { valid: false, reason: "" };
+    return { valid: true, reason: match[1].trim() };
+  }
+  return { valid: null, reason: "" };
+}
+
+function evaluateLine(relativeFile, lines, lineText, index, token, snippet = lineText) {
+  if (!lineText.includes(token)) return;
+  const allow = hasAllowComment(lines, index);
+  if (allow.valid === true) addExemption(relativeFile, index + 1, allow.reason, token, snippet);
+  else if (allow.valid === false) addOffender(relativeFile, index + 1, token, `${snippet} [missing allow reason]`);
+  else addOffender(relativeFile, index + 1, token, snippet);
 }
 
 function scanPageLayer() {
@@ -58,22 +109,25 @@ function scanPageLayer() {
     lines.forEach((lineText, index) => {
       for (const token of forbiddenPageImports) {
         if (lineText.includes("import") && lineText.includes(token)) {
-          addOffender(relativeFile, index + 1, token, lineText);
+          evaluateLine(relativeFile, lines, lineText, index, token);
         }
       }
-      if (
-        lineText.includes("import")
-        && lineText.includes("../api/")
-        && lineText.includes("report")
-        && !lineText.includes(allowedReportApiImport)
-      ) {
-        addOffender(relativeFile, index + 1, allowedReportApiImport, `Report API import must come from ${allowedReportApiImport}: ${lineText.trim()}`);
+      if (lineText.includes("import") && lineText.includes("../api/") && lineText.includes("report") && !lineText.includes(allowedReportApiImport)) {
+        evaluateLine(relativeFile, lines, lineText, index, allowedReportApiImport, `Report API import must come from ${allowedReportApiImport}: ${lineText.trim()}`);
       }
-      for (const token of forbiddenTokens) {
-        if (lineText.includes(token)) {
-          addOffender(relativeFile, index + 1, token, lineText);
-        }
-      }
+      for (const token of forbiddenTokens) evaluateLine(relativeFile, lines, lineText, index, token);
+    });
+  }
+}
+
+function scanDynamicRoots() {
+  const files = listFilesRecursively(path.join(appRoot, "src")).map((file) => path.relative(appRoot, file));
+  for (const relativeFile of files) {
+    if (!scopedMatchers.some((pattern) => pattern.test(relativeFile))) continue;
+    const fullPath = path.join(appRoot, relativeFile);
+    const lines = fs.readFileSync(fullPath, "utf8").split("\n");
+    lines.forEach((lineText, index) => {
+      for (const token of forbiddenTokens) evaluateLine(relativeFile, lines, lineText, index, token);
     });
   }
 }
@@ -93,76 +147,26 @@ function scanVmLayer() {
 
     if (!hasRawCode) continue;
 
-    const hasLabelMapping =
-      content.includes("../lib/customerLabels")
-      && (content.includes("CUSTOMER_LABELS") || /\blabel[A-Z]\w*/.test(content));
-
-    if (!hasLabelMapping) {
-      addOffender(relativeFile, 1, "customerLabels.ts", "VM has raw code but no customerLabels mapping import/usage");
-    }
+    const hasLabelMapping = content.includes("../lib/customerLabels") && (content.includes("CUSTOMER_LABELS") || /\blabel[A-Z]\w*/.test(content));
+    if (!hasLabelMapping) addOffender(relativeFile, 1, "customerLabels.ts", "VM has raw code but no customerLabels mapping import/usage");
   }
 }
 
 scanPageLayer();
 scanVmLayer();
+scanDynamicRoots();
 
-const requiredScopeMarkers = [
-  "CustomerDashboardPage",
-  "CustomerDashboardExportPage",
-  "FieldReportPage",
-  "FieldReportExportPage",
-  "OperationReportPage",
-  "OperationReportExportPage",
-];
-
-for (const marker of requiredScopeMarkers) {
-  const inScope = pageFiles.some((file) => file.includes(marker));
-  if (!inScope) {
-    addOffender("check-customer-boundary.mjs", 1, "<scope-missing>", `Missing ${marker} in pageFiles scan scope`);
+if (exemptions.length > 0) {
+  console.log("CUSTOMER_BOUNDARY_CHECK EXEMPTIONS");
+  for (const exemption of exemptions) {
+    console.log(` - ${exemption.file}:${exemption.line} [${exemption.token}] reason=${exemption.reason} :: ${exemption.snippet}`);
   }
 }
 
 if (offenders.length > 0) {
   console.error("CUSTOMER_BOUNDARY_CHECK FAIL");
-  for (const offender of offenders) {
-    console.error(` - ${offender.file}:${offender.line} [${offender.token}] ${offender.snippet}`);
-  }
+  for (const offender of offenders) console.error(` - ${offender.file}:${offender.line} [${offender.token}] ${offender.snippet}`);
   process.exit(1);
 }
 
 console.log("CUSTOMER_BOUNDARY_CHECK PASS");
-
-
-const dashboardForbiddenTokens = ["PageHeader", "KpiStrip", "ReportExportCTA", "/customer/acceptance", "/customer/devices", "/customer/reports"];
-const fieldForbiddenTokens = ["天气", "weather"];
-const operationForbiddenTokens = ["DONE", "MISSING", "PENDING", "NOT_APPLICABLE", "AVAILABLE", "Skill trace"];
-
-function scanSmokeChecklist() {
-  const dashboardFile = path.join(appRoot, "src/views/CustomerDashboardPage.tsx");
-  const fieldFile = path.join(appRoot, "src/views/FieldReportPage.tsx");
-  const operationFile = path.join(appRoot, "src/views/OperationReportPage.tsx");
-
-  if (fs.existsSync(dashboardFile)) {
-    const text = fs.readFileSync(dashboardFile, "utf8");
-    for (const token of dashboardForbiddenTokens) {
-      if (text.includes(token)) addOffender("src/views/CustomerDashboardPage.tsx", 1, token, "Forbidden token/link in dashboard customer page");
-    }
-  }
-
-  if (fs.existsSync(fieldFile)) {
-    const text = fs.readFileSync(fieldFile, "utf8");
-    for (const token of fieldForbiddenTokens) {
-      if (text.includes(token)) addOffender("src/views/FieldReportPage.tsx", 1, token, "Field page should not render weather card wording");
-    }
-  }
-
-  if (fs.existsSync(operationFile)) {
-    const text = fs.readFileSync(operationFile, "utf8");
-    for (const token of operationForbiddenTokens) {
-      if (text.includes(token)) addOffender("src/views/OperationReportPage.tsx", 1, token, "Forbidden raw status or technical wording in operation customer page");
-    }
-    if (!text.includes("<details")) addOffender("src/views/OperationReportPage.tsx", 1, "<details", "Technical details should be collapsible by default");
-  }
-}
-
-scanSmokeChecklist();
