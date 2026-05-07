@@ -139,6 +139,18 @@ export default function OperationReportPage(): React.ReactElement {
             );
           })}
         </section>
+
+        <section className="operationTechDetailsMuted">
+          <details>
+            <summary className="operationTechDetailsSummary">展开技术详情</summary>
+            <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
+            <div className="operationTechDetailsGrid">
+              {(vm.technicalFoldout?.rows ?? []).map((row) => (
+                <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
+              ))}
+            </div>
+          </details>
+        </section>
       </div>
     </div>
   );
