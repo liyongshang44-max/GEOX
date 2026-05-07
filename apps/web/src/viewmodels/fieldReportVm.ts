@@ -136,7 +136,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     diagnosticCards: [
       { title: "数据可信", value: report.value_summary.low_confidence_items > 0 ? "需复核" : "较可靠", detail: `低置信证据 ${formatCount(report.value_summary.low_confidence_items)} 条` },
       { title: "土壤水分", value: report.value_summary.water_saved_items > 0 ? "有节水证据" : "待补充", detail: `节水相关价值项 ${formatCount(report.value_summary.water_saved_items)} 条` },
-      { title: "天气", value: report.overview.open_alerts_count > 0 ? "存在外部扰动" : "整体平稳", detail: `当前未关闭告警 ${formatCount(report.overview.open_alerts_count)} 条` },
+      { title: "外部扰动", value: report.overview.open_alerts_count > 0 ? "存在待处理事项" : "暂无明显扰动", detail: `当前未关闭告警 ${formatCount(report.overview.open_alerts_count)} 条` },
       { title: "作物阶段", value: report.next_action?.objective_text ? "按目标推进" : "阶段信息不足", detail: String(report.next_action?.objective_text || "暂无作物阶段目标描述") },
       { title: "历史表现", value: report.overview.total_operations_count > 0 ? "有历史记录" : "暂无历史", detail: `累计作业 ${formatCount(report.overview.total_operations_count)} 次` },
     ],
