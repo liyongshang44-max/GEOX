@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import CockpitKpiStrip from "../components/cockpit/CockpitKpiStrip";
 import CockpitFieldRiskPanel from "../components/cockpit/CockpitFieldRiskPanel";
-import { CockpitActionList, DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
+import CockpitActionList from "../components/cockpit/CockpitActionList";
+import { DeviceHealthCard, ValueResultPanel } from "../components/cockpit/CockpitPanels";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {

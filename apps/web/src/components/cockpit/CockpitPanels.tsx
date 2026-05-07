@@ -1,10 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
-import type { CustomerActionItemVm } from "../../viewmodels/customerDashboardVm";
-
-export function CockpitActionList({ items }: { items: CustomerActionItemVm[] }): React.ReactElement {
-  return <article className="customerCard"><h3 className="customerCardTitle">行动清单</h3><div className="customerList">{items.slice(0, 5).map((item) => <div key={item.id} className="customerListItem"><div><strong>{item.title}</strong></div><div className="muted">{item.summary}</div>{item.primaryAction.href ? <Link className="customerButton customerSpacingTopXs" to={item.primaryAction.href}>{item.primaryAction.label}</Link> : <div className="muted customerSpacingTopXs">{item.primaryAction.disabledReason ?? "暂无可执行动作"}</div>}</div>)}</div></article>;
-}
 
 export function DeviceHealthCard({ offlineDevices }: { offlineDevices: string }): React.ReactElement {
   return <article className="customerCard"><h3 className="customerCardTitle">设备健康</h3><div className="customerMetricValue">离线设备 {offlineDevices} 台</div><div className="muted">仅展示设备在线健康，不展示天气信息。</div></article>;
