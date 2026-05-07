@@ -47,10 +47,17 @@ export default function FieldReportPage(): React.ReactElement {
         <div className="customerEyebrow">GEOX / 地块病历</div>
         <h1 className="customerTitle">{vm.field.fieldName}</h1>
         <p className="customerSubtitle">地块ID：{vm.field.fieldId}</p>
+        <div className="customerGrid customerGridCols2 customerSpacingTopXs">
+          <div><strong>作物：</strong>{vm.field.cropText}</div>
+          <div><strong>阶段：</strong>{vm.field.stageText}</div>
+          <div><strong>风险等级：</strong>{vm.risk.levelLabel}</div>
+          <div><strong>设备状态摘要：</strong>{`在线 ${vm.deviceSummary.onlineText}/${vm.deviceSummary.totalText}，离线 ${vm.deviceSummary.offlineText}`}</div>
+          <div><strong>更新时间：</strong>{vm.field.updatedAtText}</div>
+        </div>
         <div className="customerActionRow">
           <Link className="customerButton" to="/customer/dashboard">返回客户总览</Link>
           {canExport ? (
-            <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>打印导出</Link>
+            <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>导出地块报告</Link>
           ) : (
             <span className="muted">导出不可用：缺少地块标识</span>
           )}
@@ -125,7 +132,7 @@ export default function FieldReportPage(): React.ReactElement {
 
       <section className="customerCard">
         <h3 className="customerCardTitle">导出</h3>
-        {canExport ? <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>打印导出</Link> : <span className="muted">导出不可用：缺少地块标识</span>}
+        {canExport ? <Link className="customerButton customerButtonPrimary" to={vm.exportHref}>导出地块报告</Link> : <span className="muted">导出不可用：缺少地块标识</span>}
       </section>
       </div>
     </div>

@@ -100,8 +100,8 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     field: {
       fieldId,
       fieldName: fieldName || "未命名地块",
-      cropText: sanitizeCustomerText(report.next_action?.objective_text ?? "作物信息待补充"),
-      stageText: sanitizeCustomerText(report.next_action?.priority ?? "阶段待确认"),
+      cropText: "暂无作物信息",
+      stageText: "暂无阶段信息",
       updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
     },
     risk: { levelLabel: overview.riskText, tone: riskTone, reasons: explain.topReasonsText },
