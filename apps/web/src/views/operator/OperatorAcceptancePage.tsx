@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchOperatorAcceptance } from "../../api/operatorAcceptance";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
+import "../../styles/operatorAcceptance.css";
 import { buildOperatorAcceptanceVm, type OperatorAcceptanceGroupVm, type OperatorAcceptanceRowVm, type OperatorAcceptanceVm } from "../../viewmodels/operatorAcceptanceVm";
 import { OPERATOR_PAGE_META } from "./operatorPageMeta";
 
