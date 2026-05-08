@@ -4,12 +4,12 @@ import { CUSTOMER_SHELL_LABELS } from "../lib/customerLabels";
 
 type CustomerLayoutProps = { children: React.ReactNode };
 
-type CustomerNavItem = { key: string; label: string; to: string; hint?: string };
+type CustomerNavItem = { key: string; label: string; to?: string; hint?: string; disabled?: boolean };
 
 const CUSTOMER_NAV_ITEMS: CustomerNavItem[] = [
   { key: "dashboard", label: CUSTOMER_SHELL_LABELS.navDashboard, to: "/customer/dashboard" },
-  { key: "fields", label: CUSTOMER_SHELL_LABELS.navFields, to: "/customer/fields/index", hint: "查看授权地块列表" },
-  { key: "operations", label: CUSTOMER_SHELL_LABELS.navOperations, to: "/customer/operations/index", hint: "查看近期作业列表" },
+  { key: "fields", label: CUSTOMER_SHELL_LABELS.navFields, hint: "地块列表入口待正式开放", disabled: true },
+  { key: "operations", label: CUSTOMER_SHELL_LABELS.navOperations, hint: "作业列表入口待正式开放", disabled: true },
   { key: "reports", label: CUSTOMER_SHELL_LABELS.navReports, to: "/customer/export" },
 ];
 
@@ -55,7 +55,11 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
           <span>{CUSTOMER_SHELL_LABELS.brand}</span>
         </div>
         <nav className="customerShellNav">
-          {CUSTOMER_NAV_ITEMS.map((item) => (
+          {CUSTOMER_NAV_ITEMS.map((item) => item.disabled || !item.to ? (
+            <span key={item.key} title={item.hint || item.label} className="customerShellNavItem customerShellNavItemDisabled" aria-disabled="true">
+              <span>{item.label}</span>
+            </span>
+          ) : (
             <NavLink key={item.key} to={item.to} title={item.hint || item.label} className={() => "customerShellNavItem" + (isItemActive(location.pathname, item.key) ? " isActive" : "")}>
               <span>{item.label}</span>
             </NavLink>
