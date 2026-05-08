@@ -5,6 +5,7 @@ import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
 import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
+import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
 import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 
@@ -59,6 +60,7 @@ export default function OperationReportPage(): React.ReactElement {
   const [report, setReport] = React.useState<OperationReportV1 | null>(null);
   const [expandedKey, setExpandedKey] = React.useState<string | null>(null);
   const [prescriptionDrawerOpen, setPrescriptionDrawerOpen] = React.useState(false);
+  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -92,6 +94,9 @@ export default function OperationReportPage(): React.ReactElement {
   const identifiersAny = reportAny.identifiers ?? {};
   const prescriptionId = firstUsableId(identifiersAny.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
   const recommendationId = firstUsableId(identifiersAny.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
+  const drawerOperationId = firstUsableId(operationId, vm.operation.operationId, identifiersAny.operation_id, identifiersAny.operation_plan_id);
+  const drawerFieldId = firstUsableId(vm.operation.fieldId, reportAny.field_id, identifiersAny.field_id);
+  const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
 
   return (
     <div className="customerReportCanvas">
@@ -121,6 +126,7 @@ export default function OperationReportPage(): React.ReactElement {
             const isExpanded = expandedKey === section.key;
             const isEvidenceSection = section.key === "EVIDENCE";
             const isPrescriptionSection = section.key === "PRESCRIPTION";
+            const isRoiSection = section.key === "ROI";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
             const statusText = isEvidenceSection ? vm.evidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
@@ -181,6 +187,18 @@ export default function OperationReportPage(): React.ReactElement {
                       查看处方详情
                     </button>
                   ) : null}
+                  {isRoiSection ? (
+                    <button
+                      type="button"
+                      className="customerLinkButton customerSpacingTopXs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRoiDrawerOpen(true);
+                      }}
+                    >
+                      查看价值记录明细
+                    </button>
+                  ) : null}
                 </div>
               </article>
             );
@@ -204,6 +222,13 @@ export default function OperationReportPage(): React.ReactElement {
         prescriptionId={prescriptionId}
         recommendationId={recommendationId}
         onClose={() => setPrescriptionDrawerOpen(false)}
+      />
+      <RoiLedgerDrawer
+        open={roiDrawerOpen}
+        fieldId={drawerFieldId}
+        operationId={drawerOperationId}
+        embeddedRoi={embeddedRoi}
+        onClose={() => setRoiDrawerOpen(false)}
       />
     </div>
   );
