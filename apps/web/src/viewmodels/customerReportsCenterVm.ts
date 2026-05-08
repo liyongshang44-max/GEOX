@@ -34,7 +34,7 @@ const GROUP_LABELS: Record<CustomerReportGroupKey, { title: string; description:
   OVERVIEW: { title: "总览报告", description: "经营驾驶舱和整体经营结论导出入口。" },
   FIELD: { title: "地块报告", description: "按地块查看地块病历、风险和近期变化。" },
   OPERATION: { title: "作业报告", description: "按作业查看建议、审批、执行、证据、验收与价值记录。" },
-  EVIDENCE_VALUE: { title: "证据与价值报告", description: "证据包和价值账本的客户可读入口。" },
+  EVIDENCE_VALUE: { title: "证据与价值报告", description: "证据包生成能力待接入。" },
 };
 
 function toDateTimeText(raw: unknown): string {
@@ -75,6 +75,16 @@ function buildItem(item: CustomerReportCenterItem): CustomerReportsCenterItemVm 
   };
 }
 
+function evidenceValuePendingItem(generatedAt: unknown): CustomerReportsCenterItemVm {
+  return {
+    title: "证据与价值报告",
+    subtitle: "证据包生成能力待接入。",
+    statusText: "待接入",
+    updatedAtText: toDateTimeText(generatedAt),
+    disabled: true,
+  };
+}
+
 export function buildCustomerReportsCenterVm(response: CustomerReportsCenterResponse): CustomerReportsCenterVm {
   const grouped = new Map<CustomerReportGroupKey, CustomerReportsCenterItemVm[]>();
   for (const key of Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]) grouped.set(key, []);
@@ -84,14 +94,16 @@ export function buildCustomerReportsCenterVm(response: CustomerReportsCenterResp
     grouped.get(key)?.push(buildItem(report));
   }
 
+  if ((grouped.get("EVIDENCE_VALUE") ?? []).length === 0) {
+    grouped.set("EVIDENCE_VALUE", [evidenceValuePendingItem(response.generated_at)]);
+  }
+
   const groups = (Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]).map((key) => {
     const base = GROUP_LABELS[key];
     return {
       key,
       title: base.title,
-      description: key === "EVIDENCE_VALUE" && !(grouped.get(key)?.length)
-        ? "证据包生成能力待接入。"
-        : base.description,
+      description: base.description,
       items: grouped.get(key) ?? [],
     };
   });
