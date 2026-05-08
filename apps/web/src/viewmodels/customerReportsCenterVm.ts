@@ -57,7 +57,7 @@ function normalizeGroup(raw: unknown): CustomerReportGroupKey {
 
 function capabilityText(raw: unknown): { text: string; disabled: boolean } {
   const value = String(raw ?? "").trim().toUpperCase();
-  if (value === "PENDING") return { text: "待接入", disabled: true };
+  if (value === "PENDING") return { text: "待接入", disabled: true }; // no-raw-enum-customer-allow: backend capability code mapping only, converted before render
   if (value === "UNAVAILABLE") return { text: "暂不可用", disabled: true };
   return { text: "可查看", disabled: false };
 }
