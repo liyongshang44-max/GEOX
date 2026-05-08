@@ -7,21 +7,13 @@ import "../styles/customerFields.css";
 
 export default function CustomerReportsCenterPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerReportsCenterVm | null>(null);
-  const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     let alive = true;
-    void fetchCustomerReportsCenter()
-      .then((response) => {
-        if (!alive) return;
-        setVm(buildCustomerReportsCenterVm(response));
-        setError("");
-      })
-      .catch(() => {
-        if (!alive) return;
-        setVm(null);
-        setError("暂未获取到可展示的报告入口，请稍后刷新。");
-      });
+    void fetchCustomerReportsCenter().then((response) => {
+      if (!alive) return;
+      setVm(buildCustomerReportsCenterVm(response));
+    });
     return () => {
       alive = false;
     };
@@ -35,11 +27,14 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
         <div>
           <div className="customerEyebrow">GEOX / 报告中心</div>
           <h2 className="customerTitle">报告中心</h2>
-          <p className="customerSubtitle">{vm?.subtitle ?? "查看可交付报告入口。"}</p>
+          <p className="customerSubtitle">{vm?.subtitle ?? "报告中心加载中。"}</p>
           <p className="customerMetricLabel">数据更新时间：{vm?.generatedAtText ?? "暂无更新时间"}</p>
-          {vm?.isFallback ? <p className="customerScopeWarning">{vm.dataScopeNote || "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表"}</p> : null}
+          {vm?.dataScopeNote ? <p className="customerScopeWarning">{vm.dataScopeNote}</p> : null}
         </div>
-        <Link className="customerButton" to="/customer/export">导出总览报告</Link>
+        <div className="customerActions">
+          {vm ? <span className="customerPill">{vm.scopeBadgeText}</span> : null}
+          <Link className="customerButton" to="/customer/export">导出总览报告</Link>
+        </div>
       </section>
 
       {vm ? (
@@ -77,7 +72,7 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
                   ))}
                 </div>
               ) : (
-                <p className="muted customerSpacingTopMd">{group.key === "EVIDENCE_VALUE" ? "证据包生成能力待接入。" : "暂无可展示报告入口。"}</p>
+                <p className="muted customerSpacingTopMd">暂无可展示报告入口。</p>
               )}
             </article>
           ))}
@@ -85,7 +80,6 @@ export default function CustomerReportsCenterPage(): React.ReactElement {
       ) : null}
 
       {vm && !hasAnyReport ? <CustomerEmptyState vm={vm.emptyState} /> : null}
-      {error ? <p className="muted customerSpacingTopMd">{error}</p> : null}
     </div>
   );
 }
