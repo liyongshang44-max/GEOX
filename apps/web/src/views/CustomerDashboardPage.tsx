@@ -1,5 +1,5 @@
 import React from "react";
-import { fetchCustomerDashboardAggregate } from "../api/customerReports";
+import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "../api/customerReports";
 import {
   CockpitActionList,
   CockpitFieldRiskPanel,
@@ -9,20 +9,25 @@ import {
   RecentOperationsSection,
   ValueResultPanel,
 } from "../components/cockpit";
+import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildCustomerDashboardVm, type CustomerDashboardPageVm } from "../viewmodels/customerDashboardVm";
 
 export default function CustomerDashboardPage(): React.ReactElement {
   const [vm, setVm] = React.useState<CustomerDashboardPageVm | null>(null);
+  const [aggregate, setAggregate] = React.useState<CustomerDashboardAggregateV1 | null>(null);
   const [error, setError] = React.useState<string>("");
+  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     void fetchCustomerDashboardAggregate()
-      .then((aggregate) => {
-        setVm(buildCustomerDashboardVm(aggregate));
+      .then((nextAggregate) => {
+        setAggregate(nextAggregate);
+        setVm(buildCustomerDashboardVm(nextAggregate));
         setError("");
       })
       .catch(() => {
+        setAggregate(null);
         setVm(null);
         setError("暂未获取到可展示的经营数据，请稍后刷新。");
       });
@@ -38,15 +43,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
     WEATHER_UNAVAILABLE: getCustomerEmptyState("WEATHER_UNAVAILABLE"),
   };
   const kpis = vm?.kpis ?? [];
+  const pendingAcceptanceKpi = vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE"); // no-raw-enum-customer-allow: dashboard KPI key lookup only, converted to customer label before render
+  const recentOperationsKpi = vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS");
   const acceptanceSummaryVm = {
     title: "执行与验收摘要",
     subtitle: "P0 只展示 report / operation_state 已有节点",
     metrics: [
-      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0"), helperText: "未报告状态" },
-      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0"), helperText: "来自报告" },
+      { key: "pending", label: "待验收", value: String(pendingAcceptanceKpi?.value ?? "0"), helperText: "未报告状态" },
+      { key: "recent", label: "近期作业", value: String(recentOperationsKpi?.value ?? "0"), helperText: "来自报告" },
     ],
     emptyState: emptyStates.NO_PENDING_ACTIONS,
   };
+  const embeddedRoi = (aggregate as any)?.roi_ledger ?? (aggregate as any)?.roi ?? (aggregate as any)?.value_summary;
 
   return (
     <div className="customerDashboardPage">
@@ -62,11 +70,17 @@ export default function CustomerDashboardPage(): React.ReactElement {
       </section>
 
       <section className="customerDashboardBottomGrid">
-        {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
+        {vm?.roiSummary ? (
+          <div className="customerDashboardRoiEntry">
+            <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} />
+            <button type="button" className="customerButton customerSpacingTopXs" onClick={() => setRoiDrawerOpen(true)}>查看价值记录明细</button>
+          </div>
+        ) : null}
         <RecentOperationsSection items={vm?.recentOperations ?? []} emptyState={emptyStates.NO_RECENT_OPERATIONS} />
       </section>
 
       {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}
+      <RoiLedgerDrawer open={roiDrawerOpen} embeddedRoi={embeddedRoi} onClose={() => setRoiDrawerOpen(false)} />
     </div>
   );
 }
