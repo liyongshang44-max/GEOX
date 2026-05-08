@@ -76,8 +76,8 @@ function scanCustomerScopedFiles() {
   const customerFilePatterns = [
     /^src\/layouts\/CustomerLayout\.tsx$/,
     /^src\/views\/Customer.*\.tsx$/,
-    /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage|CustomerOperationsIndexPage)\.tsx$/,
-    /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|customerOperationsIndexVm|fieldReportVm|operationReportVm)\.ts$/,
+    /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage|CustomerOperationsIndexPage|CustomerReportsCenterPage)\.tsx$/,
+    /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|customerOperationsIndexVm|customerReportsCenterVm|fieldReportVm|operationReportVm)\.ts$/,
     /^src\/components\/customer\/.+$/,
     /^src\/components\/cockpit\/.+$/,
     /^src\/features\/customer\/pages\/.+$/,
