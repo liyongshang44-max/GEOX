@@ -33,6 +33,9 @@ export type OperatorRoiLedgerResponse = {
 
 type AnyRecord = Record<string, any>;
 
+const ENABLE_OPERATOR_ROI_LEDGER_API = String((import.meta as any)?.env?.VITE_ENABLE_OPERATOR_ROI_LEDGER_API ?? "").toLowerCase() === "true";
+const ENABLE_CUSTOMER_ROI_LEDGER_FALLBACK = String((import.meta as any)?.env?.VITE_ENABLE_CUSTOMER_ROI_LEDGER_FALLBACK ?? "").toLowerCase() === "true";
+
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
   if (!raw || raw === "--" || raw === "undefined" || raw === "null") return fallback;
@@ -155,29 +158,33 @@ export async function fetchOperatorRoiLedger(args: { fieldId?: unknown; operatio
   if (fieldId) query.field_id = fieldId;
   if (operationId) query.operation_id = operationId;
 
-  const official = await fetchOptional(withQuery("/api/v1/operator/roi-ledger", query));
-  const officialItems = normalizeRows(official, "operator_roi_ledger_api", filters);
-  if (officialItems.length > 0) {
-    return {
-      source: "operator_roi_ledger_api",
-      dataScope: "OFFICIAL_OPERATOR_API",
-      generated_at: new Date().toISOString(),
-      items: officialItems,
-      filters,
-    };
+  if (ENABLE_OPERATOR_ROI_LEDGER_API) {
+    const official = await fetchOptional(withQuery("/api/v1/operator/roi-ledger", query));
+    const officialItems = normalizeRows(official, "operator_roi_ledger_api", filters);
+    if (officialItems.length > 0) {
+      return {
+        source: "operator_roi_ledger_api",
+        dataScope: "OFFICIAL_OPERATOR_API",
+        generated_at: new Date().toISOString(),
+        items: officialItems,
+        filters,
+      };
+    }
   }
 
-  const customer = await fetchOptional(withQuery("/api/v1/customer/roi-ledger", query));
-  const customerItems = normalizeRows(customer, "customer_roi_ledger_api", filters);
-  if (customerItems.length > 0) {
-    return {
-      source: "fallback_existing_sources",
-      dataScope: "FALLBACK_LIMITED",
-      generated_at: new Date().toISOString(),
-      items: customerItems,
-      filters,
-      message: "当前展示 customer roi-ledger 包装后的有限运营 ROI 明细，非完整 operator roi-ledger。",
-    };
+  if (ENABLE_CUSTOMER_ROI_LEDGER_FALLBACK) {
+    const customer = await fetchOptional(withQuery("/api/v1/customer/roi-ledger", query));
+    const customerItems = normalizeRows(customer, "customer_roi_ledger_api", filters);
+    if (customerItems.length > 0) {
+      return {
+        source: "fallback_existing_sources",
+        dataScope: "FALLBACK_LIMITED",
+        generated_at: new Date().toISOString(),
+        items: customerItems,
+        filters,
+        message: "当前展示 customer roi-ledger 包装后的有限运营 ROI 明细，非完整 operator roi-ledger。",
+      };
+    }
   }
 
   if (operationId) {
@@ -205,6 +212,6 @@ export async function fetchOperatorRoiLedger(args: { fieldId?: unknown; operatio
     generated_at: new Date().toISOString(),
     items: [],
     filters,
-    message: "暂无 ROI 明细。",
+    message: ENABLE_OPERATOR_ROI_LEDGER_API || ENABLE_CUSTOMER_ROI_LEDGER_FALLBACK ? "暂无 ROI 明细。" : "ROI 明细接口未接入，当前不探测未 ready API。",
   };
 }
