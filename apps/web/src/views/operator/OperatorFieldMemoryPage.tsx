@@ -2,9 +2,22 @@ import React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { fetchOperatorFieldMemory } from "../../api/operatorFieldMemory";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
+import SkillTracePanel from "../../components/operator/SkillTracePanel";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorFieldMemory.css";
 import { buildOperatorFieldMemoryVm, type OperatorFieldMemoryGroupVm, type OperatorFieldMemoryRowVm, type OperatorFieldMemoryVm } from "../../viewmodels/operatorFieldMemoryVm";
+
+function buildTraceInput(row: OperatorFieldMemoryRowVm) {
+  const refs = row.skillRefsText === "无引用" ? [] : row.skillRefsText.split("、").map((item) => item.trim()).filter(Boolean);
+  return refs.map((skillId) => ({
+    skill_id: skillId,
+    skill_version: "版本待确认",
+    classification: row.memoryTypeText,
+    binding_scope: row.objectText,
+    last_run_status: row.confidenceText.includes("失败") ? "FAILED" : "UNKNOWN",
+    failure_reason: row.confidenceText.includes("失败") ? row.confidenceText : "",
+  }));
+}
 
 function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.ReactElement {
   return (
@@ -33,6 +46,8 @@ function FieldMemoryRow({ row }: { row: OperatorFieldMemoryRowVm }): React.React
         <div><span>updated_at</span><strong>{row.updatedAtText}</strong></div>
         <div><span>source</span><strong>{row.sourceText}</strong></div>
       </div>
+
+      <SkillTracePanel trace={buildTraceInput(row)} />
 
       <div className="operatorFieldMemoryNotice">客户层只展示摘要；运营层展示可追溯明细。敏感信息和本地路径已在 adapter 层清洗。</div>
       <div className="operatorFieldMemoryActions">
