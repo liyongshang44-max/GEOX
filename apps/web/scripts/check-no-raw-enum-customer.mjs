@@ -20,7 +20,7 @@ const RAW_ENUMS = [
 const STRICT_CUSTOMER_PATTERNS = [
   /^src\/layouts\/CustomerLayout\.tsx$/,
   /^src\/views\/Customer.*\.tsx$/,
-  /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage)\.tsx$/,
+  /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage|CustomerOperationsIndexPage)\.tsx$/,
   /^src\/components\/customer\/.+\.(ts|tsx)$/,
   /^src\/components\/cockpit\/.+\.(ts|tsx)$/,
   /^src\/features\/customer\/pages\/.+\.(ts|tsx)$/,
@@ -29,7 +29,7 @@ const STRICT_CUSTOMER_PATTERNS = [
 ];
 
 const VM_PATTERNS = [
-  /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|fieldReportVm|operationReportVm)\.ts$/,
+  /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|customerOperationsIndexVm|fieldReportVm|operationReportVm)\.ts$/,
 ];
 
 const ALLOWED_FILES = [
