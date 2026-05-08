@@ -23,15 +23,13 @@ function toDateTimeText(raw: unknown): string {
 
 function text(value: unknown, fallback = "未填写"): string {
   if (Array.isArray(value)) {
-    const joined = value.map((item) => sanitizeCustomerText(item, "")).filter(Boolean).join("、");
+    const joined = value.map((item) => text(item, "")).filter(Boolean).join("、");
     return joined || fallback;
   }
   if (value && typeof value === "object") {
     const obj = value as Record<string, unknown>;
-    const preferred = obj.summary ?? obj.text ?? obj.name ?? obj.label ?? obj.value;
-    if (preferred != null) return sanitizeCustomerText(preferred, fallback);
-    const values = Object.values(obj).filter((item) => typeof item !== "object").map((item) => sanitizeCustomerText(item, "")).filter(Boolean);
-    return values.join("、") || fallback;
+    const preferred = obj.summary ?? obj.text ?? obj.name ?? obj.label ?? obj.value ?? obj.customer_text;
+    return preferred != null ? sanitizeCustomerText(preferred, fallback) : fallback;
   }
   return sanitizeCustomerText(value, fallback);
 }
