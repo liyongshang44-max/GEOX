@@ -1,4 +1,4 @@
-import type { CustomerReportCenterItem, CustomerReportsCenterResponse } from "../api/customerReportsCenter";
+import type { CustomerReportCenterItem, CustomerReportsCenterResponse, CustomerReportsDataScope } from "../api/customerReportsCenter";
 import { sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
@@ -24,7 +24,10 @@ export type CustomerReportsCenterVm = {
   title: string;
   subtitle: string;
   generatedAtText: string;
+  dataScope: CustomerReportsDataScope;
   isFallback: boolean;
+  isPreview: boolean;
+  scopeBadgeText: string;
   dataScopeNote?: string;
   groups: CustomerReportsCenterGroupVm[];
   emptyState: { title: string; description: string; severity: "neutral" | "info" | "warning" };
@@ -85,6 +88,30 @@ function evidenceValuePendingItem(generatedAt: unknown): CustomerReportsCenterIt
   };
 }
 
+function scopeCopy(response: CustomerReportsCenterResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") {
+    return {
+      subtitle: "P1-A Preview：当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表。",
+      badge: "P1-A Preview",
+      note: response.data_scope_note || "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表",
+      isPreview: true,
+    };
+  }
+  if (response.dataScope === "ERROR_EMPTY") {
+    return {
+      subtitle: "报告中心暂不可用，请稍后刷新。",
+      badge: "暂不可用",
+      note: response.data_scope_note || "报告中心暂不可用，请稍后刷新",
+      isPreview: true,
+    };
+  }
+  return {
+    subtitle: "查看授权范围内可交付报告入口。",
+    badge: "正式列表",
+    isPreview: false,
+  };
+}
+
 export function buildCustomerReportsCenterVm(response: CustomerReportsCenterResponse): CustomerReportsCenterVm {
   const grouped = new Map<CustomerReportGroupKey, CustomerReportsCenterItemVm[]>();
   for (const key of Object.keys(GROUP_LABELS) as CustomerReportGroupKey[]) grouped.set(key, []);
@@ -107,13 +134,17 @@ export function buildCustomerReportsCenterVm(response: CustomerReportsCenterResp
       items: grouped.get(key) ?? [],
     };
   });
+  const scope = scopeCopy(response);
 
   return {
     title: "报告中心",
-    subtitle: response.is_fallback ? "P1-A Preview：当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表。" : "查看授权范围内可交付报告入口。",
+    subtitle: scope.subtitle,
     generatedAtText: toDateTimeText(response.generated_at),
-    isFallback: response.is_fallback,
-    dataScopeNote: response.data_scope_note,
+    dataScope: response.dataScope,
+    isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API",
+    isPreview: scope.isPreview,
+    scopeBadgeText: scope.badge,
+    dataScopeNote: scope.note,
     groups,
     emptyState: getCustomerEmptyState("NO_RECENT_OPERATIONS"),
   };
