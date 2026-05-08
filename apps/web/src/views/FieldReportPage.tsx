@@ -4,6 +4,7 @@ import { fetchFieldReport, type FieldReportDetailV1 } from "../api/customerRepor
 import ErrorState from "../components/common/ErrorState";
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import CustomerEmptyState from "../components/customer/CustomerEmptyState";
+import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 import { buildFieldReportVm } from "../viewmodels/fieldReportVm";
 
@@ -12,6 +13,7 @@ export default function FieldReportPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [report, setReport] = React.useState<FieldReportDetailV1 | null>(null);
   const [error, setError] = React.useState("");
+  const [roiDrawerOpen, setRoiDrawerOpen] = React.useState(false);
 
   React.useEffect(() => {
     let alive = true;
@@ -125,7 +127,10 @@ export default function FieldReportPage(): React.ReactElement {
 
         <section className="fieldGrid fieldGrid3">
           <article className="customerCard">
-            <h3 className="customerCardTitle">价值记录</h3>
+            <div className="customerCardHeaderRow">
+              <h3 className="customerCardTitle">价值记录</h3>
+              <button type="button" className="customerLinkButton" onClick={() => setRoiDrawerOpen(true)}>查看明细</button>
+            </div>
             {hasRoiSummary ? <div>{vm.roiSummary.displayText}</div> : <CustomerEmptyState vm={roiEmptyState} />}
           </article>
           <article className="customerCard">
@@ -138,6 +143,12 @@ export default function FieldReportPage(): React.ReactElement {
           </article>
         </section>
       </div>
+      <RoiLedgerDrawer
+        open={roiDrawerOpen}
+        fieldId={vm.field.fieldId}
+        embeddedRoi={(report as any).roi_ledger ?? (report as any).roi ?? (report as any).value_summary}
+        onClose={() => setRoiDrawerOpen(false)}
+      />
     </div>
   );
 }
