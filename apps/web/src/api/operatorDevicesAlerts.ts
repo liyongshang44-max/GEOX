@@ -222,14 +222,6 @@ function normalizeOfficialAlerts(payload: unknown): OperatorAlertItem[] {
   return arrayFrom(payload, ["alerts", "alert_items", "events"]).map((row, index) => normalizeAlert(row, index, "operator_devices_alerts_api"));
 }
 
-function normalizeDeviceFallback(payload: unknown): OperatorDeviceItem[] {
-  return arrayFrom(payload, ["devices", "items", "device_status", "data"]).map((row, index) => normalizeDevice(row, index, "devices_api"));
-}
-
-function normalizeAlertFallback(payload: unknown): OperatorAlertItem[] {
-  return arrayFrom(payload, ["alerts", "items", "events", "data"]).map((row, index) => normalizeAlert(row, index, "alerts_api"));
-}
-
 function normalizeReportDeviceFallback(payload: unknown): OperatorDeviceItem[] {
   const riskFields = arrayFrom(payload, ["top_risk_fields", "risk_fields"]);
   return riskFields.slice(0, 8).flatMap((row, index) => {
@@ -262,6 +254,7 @@ async function fetchOfficialDevicesAlertsOptional(): Promise<unknown | null> {
     operatorDevicesAlertsApiUnavailable = true;
     return null;
   } catch {
+    operatorDevicesAlertsApiUnavailable = true;
     return null;
   }
 }
@@ -318,17 +311,9 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
     };
   }
 
-  const [devices, alerts, aggregate] = await Promise.all([
-    fetchOptional(withQuery("/api/v1/devices")),
-    fetchOptional(withQuery("/api/v1/alerts")),
-    fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate")),
-  ]);
-
-  const fallbackDevices = [
-    ...normalizeDeviceFallback(devices),
-    ...normalizeReportDeviceFallback(aggregate),
-  ].filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index);
-  const fallbackAlerts = normalizeAlertFallback(alerts);
+  const aggregate = await fetchOptional(withQuery("/api/v1/reports/customer-dashboard/aggregate"));
+  const fallbackDevices = normalizeReportDeviceFallback(aggregate).filter((item, index, all) => all.findIndex((x) => x.deviceId === item.deviceId) === index);
+  const fallbackAlerts: OperatorAlertItem[] = [];
 
   if (fallbackDevices.length > 0 || fallbackAlerts.length > 0) {
     return {
@@ -339,7 +324,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
       alerts: fallbackAlerts,
       ackCloseReady: false,
       revokeVisible: false,
-      message: "operator devices-alerts 未接入，当前展示 devices / alerts / reports aggregate 包装后的有限设备与告警中心；ACK/close 只读。",
+      message: "operator devices-alerts 未接入，当前仅展示 reports aggregate 包装后的有限设备状态；ACK/close 只读。",
     };
   }
 
@@ -351,6 +336,6 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
     alerts: [],
     ackCloseReady: false,
     revokeVisible: false,
-    message: operatorDevicesAlertsApiUnavailable ? "operator devices-alerts 未接入，且暂无 fallback 设备或告警数据。" : "暂无设备或告警数据。",
+    message: operatorDevicesAlertsApiUnavailable ? "operator devices-alerts 未接入，且暂无安全 fallback 设备或告警数据。" : "暂无设备或告警数据。",
   };
 }
