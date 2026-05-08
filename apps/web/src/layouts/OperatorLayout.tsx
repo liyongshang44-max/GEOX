@@ -15,6 +15,7 @@ const OPERATOR_NAV = [
   { to: "/operator/acceptance", label: "验收中心", description: "执行结果复核" },
   { to: "/operator/evidence", label: "证据中心", description: "证据完整性检查" },
   { to: "/operator/devices-alerts", label: "设备与告警", description: "设备状态与告警事件" },
+  { to: "/operator/roi-ledger", label: "ROI 明细账", description: "价值记录追溯" },
 ];
 
 export default function OperatorLayout({ title, lead, children }: OperatorLayoutProps): React.ReactElement {
@@ -34,7 +35,7 @@ export default function OperatorLayout({ title, lead, children }: OperatorLayout
           ))}
         </nav>
         <div className="operatorBoundaryNote">
-          运营层用于处理审批、派发、验收、证据复核、设备与告警，不进入客户主界面。
+          运营层用于处理审批、派发、验收、证据复核、设备告警与价值记录追溯，不进入客户主界面。
         </div>
       </aside>
 
