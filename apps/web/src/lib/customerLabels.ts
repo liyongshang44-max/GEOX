@@ -1,3 +1,16 @@
+export const CUSTOMER_SHELL_LABELS = {
+  brand: "GEOX",
+  navDashboard: "总览",
+  navFields: "地块",
+  navOperations: "作业",
+  navReports: "报告",
+  shellRole: "客户视图",
+  accountFallback: "客户账户",
+  scopePending: "授权范围待确认",
+  searchPlaceholder: "搜索功能暂未开放",
+  sidebarFooter: "客户报告入口",
+} as const;
+
 export const CUSTOMER_LABELS = {
   dashboardTitle: "客户看板",
   fieldReportTitle: "地块报告",
