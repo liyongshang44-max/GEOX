@@ -1,4 +1,4 @@
-import { apiRequestOptional, withQuery } from "./client";
+import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 
 export type CustomerFieldRiskLevel = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
@@ -75,14 +75,14 @@ function toFallbackFields(aggregate: CustomerDashboardAggregateV1): CustomerFiel
 }
 
 export async function fetchCustomerFields(): Promise<CustomerFieldsListResponse> {
-  const direct = await apiRequestOptional<CustomerFieldsApiEnvelope>(
+  const direct = await apiRequestWithPolicy<CustomerFieldsApiEnvelope>(
     withQuery("/api/v1/customer/fields"),
     undefined,
     { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
   );
 
-  if (direct) {
-    const normalized = normalizeFieldsPayload(direct);
+  if (direct.ok) {
+    const normalized = normalizeFieldsPayload(direct.data);
     return {
       source: "customer_fields_api",
       is_fallback: false,
