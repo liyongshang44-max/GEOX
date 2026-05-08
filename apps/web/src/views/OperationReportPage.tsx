@@ -89,8 +89,9 @@ export default function OperationReportPage(): React.ReactElement {
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
   const reportAny = report as any;
-  const prescriptionId = firstUsableId(report.identifiers?.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
-  const recommendationId = firstUsableId(report.identifiers?.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
+  const identifiersAny = reportAny.identifiers ?? {};
+  const prescriptionId = firstUsableId(identifiersAny.prescription_id, reportAny.prescription?.prescription_id, reportAny.prescription_id);
+  const recommendationId = firstUsableId(identifiersAny.recommendation_id, reportAny.recommendation?.recommendation_id, reportAny.recommendation_id);
 
   return (
     <div className="customerReportCanvas">
