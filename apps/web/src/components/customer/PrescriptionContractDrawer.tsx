@@ -1,6 +1,7 @@
 import React from "react";
 import { fetchCustomerPrescriptionContract } from "../../api/customerPrescriptions";
 import { buildPrescriptionContractVm, type PrescriptionContractVm } from "../../viewmodels/prescriptionContractVm";
+import "../../styles/customerDrawer.css";
 
 type PrescriptionContractDrawerProps = {
   open: boolean;
