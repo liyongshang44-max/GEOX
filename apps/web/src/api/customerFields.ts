@@ -77,30 +77,41 @@ function toFallbackFields(aggregate: CustomerDashboardAggregateV1): CustomerFiel
 }
 
 export async function fetchCustomerFields(): Promise<CustomerFieldsListResponse> {
-  const direct = await apiRequestWithPolicy<CustomerFieldsApiEnvelope>(
-    withQuery("/api/v1/customer/fields"),
-    undefined,
-    { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
-  );
+  try {
+    const direct = await apiRequestWithPolicy<CustomerFieldsApiEnvelope>(
+      withQuery("/api/v1/customer/fields"),
+      undefined,
+      { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
+    );
 
-  if (direct.ok) {
-    const normalized = normalizeFieldsPayload(direct.data);
+    if (direct.ok) {
+      const normalized = normalizeFieldsPayload(direct.data);
+      return {
+        source: "customer_fields_api",
+        dataScope: "OFFICIAL_CUSTOMER_API",
+        is_fallback: false,
+        generated_at: normalized.generatedAt ?? new Date().toISOString(),
+        fields: normalized.fields,
+      };
+    }
+
+    const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
     return {
-      source: "customer_fields_api",
-      dataScope: "OFFICIAL_CUSTOMER_API",
-      is_fallback: false,
-      generated_at: normalized.generatedAt ?? new Date().toISOString(),
-      fields: normalized.fields,
+      source: "dashboard_aggregate_fallback",
+      dataScope: "FALLBACK_RECENT_ONLY",
+      is_fallback: true,
+      generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
+      fields: toFallbackFields(aggregate),
+      data_scope_note: "当前展示近期/可见地块，非完整授权列表",
+    };
+  } catch {
+    return {
+      source: "empty_error_state",
+      dataScope: "ERROR_EMPTY",
+      is_fallback: true,
+      generated_at: new Date().toISOString(),
+      fields: [],
+      data_scope_note: "地块列表暂不可用，请稍后刷新",
     };
   }
-
-  const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
-  return {
-    source: "dashboard_aggregate_fallback",
-    dataScope: "FALLBACK_RECENT_ONLY",
-    is_fallback: true,
-    generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
-    fields: toFallbackFields(aggregate),
-    data_scope_note: "当前展示近期/可见地块，非完整授权列表",
-  };
 }
