@@ -169,7 +169,8 @@
 .operatorDevicesNotice,
 .operatorDevicesWarning,
 .operatorDevicesActionSuccess,
-.operatorDevicesActionError {
+.operatorDevicesActionError,
+.operatorDevicesReadOnlyAction {
   border-radius: 12px;
   padding: 8px 10px;
   font-size: 13px;
@@ -183,7 +184,8 @@
   color: #1e40af;
 }
 
-.operatorDevicesWarning {
+.operatorDevicesWarning,
+.operatorDevicesReadOnlyAction {
   border: 1px solid #fde68a;
   background: #fffbeb;
   color: #92400e;
