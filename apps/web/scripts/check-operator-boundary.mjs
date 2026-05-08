@@ -85,6 +85,18 @@ function isAllowedOperatorAdapterRouteLine(line) {
   return ALLOWED_OPERATOR_ADAPTER_ROUTE_PREFIXES.some((pattern) => pattern.test(line));
 }
 
+function isSanitizerImplementationLine(relativeFile, line) {
+  if (!isOperatorAdapterOrVm(relativeFile)) return false;
+  return (
+    line.includes("本地路径已隐藏") ||
+    line.includes("敏感凭据已隐藏") ||
+    line.includes("下载链接已隐藏") ||
+    /raw\.startsWith\(["']\/["']\)/.test(line) ||
+    /\^\[A-Za-z\]:/.test(line) ||
+    /raw\.includes\(["']file:\/\//.test(line)
+  );
+}
+
 function scanFile(relativeFile) {
   if (!isOperatorScopedFile(relativeFile)) return;
   const fullPath = path.join(appRoot, relativeFile);
@@ -108,7 +120,10 @@ function scanFile(relativeFile) {
     }
 
     for (const rule of FORBIDDEN_RAW_CONTENT) {
-      if (rule.pattern.test(line)) addOffender(relativeFile, index + 1, rule.token, line);
+      if (rule.pattern.test(line)) {
+        if (isSanitizerImplementationLine(relativeFile, line)) continue;
+        addOffender(relativeFile, index + 1, rule.token, line);
+      }
     }
   });
 }
