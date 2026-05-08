@@ -1,6 +1,8 @@
 import React from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { Navigate, NavLink, useLocation } from "react-router-dom";
 import { CUSTOMER_SHELL_LABELS } from "../lib/customerLabels";
+
+const CustomerFieldsIndexPage = React.lazy(() => import("../views/CustomerFieldsIndexPage"));
 
 type CustomerLayoutProps = { children: React.ReactNode };
 
@@ -44,7 +46,13 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
   const location = useLocation();
   const title = resolvePageTitle(location.pathname);
   const isExportRoute = location.pathname === "/customer/export" || location.pathname.endsWith("/export");
+  const mainContent = location.pathname === "/customer/fields" ? (
+    <React.Suspense fallback={<div className="customerCard">页面加载中...</div>}>
+      <CustomerFieldsIndexPage />
+    </React.Suspense>
+  ) : children;
 
+  if (location.pathname === "/customer/fields/index") return <Navigate to="/customer/fields" replace />;
   if (isExportRoute) return <main className="customerLayoutMain customerLayoutPrintOnly">{children}</main>;
 
   return (
@@ -91,7 +99,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps): React
             </span>
           </div>
         </header>
-        <main className="customerLayoutMain">{children}</main>
+        <main className="customerLayoutMain">{mainContent}</main>
       </div>
     </div>
   );
