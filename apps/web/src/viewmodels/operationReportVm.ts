@@ -28,7 +28,9 @@ const MAIN_VIEW_BLOCK_PATTERNS = [
 const EVIDENCE_PRIVATE_TEXT_PATTERNS = [
   /\bsha256\b/i,
   /\bmanifest\b/i,
+  /\bdownload\b/i,
   /s3:\/\//i,
+  /minio:\/\//i,
   /https?:\/\//i,
   /(^|\s)\/[\w./-]+/,
   /[A-Z]:\\[\w\\.-]+/i,
@@ -42,6 +44,7 @@ export type OperationEvidenceSummaryVm = {
   summary: string;
   detail: string;
   sourceText: string;
+  privacyText: string;
   items: Array<{ label: string; value: string }>;
 };
 
@@ -122,9 +125,21 @@ function countStatus(value: unknown): string {
   return positiveCount(value) > 0 ? "已采集" : "暂无记录";
 }
 
+function evidenceObjectSummary(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const obj = value as Record<string, unknown>;
+  const candidate = obj.customer_text ?? obj.summary_text ?? obj.summary ?? obj.text ?? obj.description;
+  if (candidate != null) return sanitizeEvidenceText(candidate);
+  return "";
+}
+
 function sanitizeEvidenceText(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeEvidenceText(item)).filter(Boolean).join("；");
+  }
+  if (value && typeof value === "object") return evidenceObjectSummary(value);
   const text = String(value ?? "").trim();
-  if (!text || text === "--") return "";
+  if (!text || text === "--" || text === "[object Object]") return "";
   if (EVIDENCE_PRIVATE_TEXT_PATTERNS.some((pattern) => pattern.test(text))) {
     return "证据包摘要已形成，文件明细已隐藏。";
   }
@@ -155,6 +170,8 @@ export function buildOperationEvidenceSummaryVm(report: OperationReportV1): Oper
   const hasEvidenceRecords = recordCount > 0 || Boolean(evidence.receipt_present || evidence.acceptance_present);
   const packSummary = (report as unknown as { evidence_pack_summary?: { summary?: unknown; photos_logs_metrics_trace_summary?: unknown; status?: unknown; insufficient_reason?: unknown } }).evidence_pack_summary;
   const summaryText = sanitizeEvidenceText(packSummary?.photos_logs_metrics_trace_summary ?? packSummary?.summary);
+  const sourceText = "Operation Report 内嵌 evidence 字段";
+  const privacyText = "客户层仅展示证据摘要，不展示内部存储路径或文件校验信息。";
 
   if (!hasEvidenceRecords && !summaryText) {
     return {
@@ -162,7 +179,8 @@ export function buildOperationEvidenceSummaryVm(report: OperationReportV1): Oper
       statusText: "暂无证据",
       summary: "暂无有效证据。",
       detail: "当前未查询到可用于验收的证据记录。",
-      sourceText: "Operation Report 内嵌 evidence 字段",
+      sourceText,
+      privacyText,
       items: [],
     };
   }
@@ -172,8 +190,9 @@ export function buildOperationEvidenceSummaryVm(report: OperationReportV1): Oper
       state: "RECORDS_WITHOUT_SUMMARY",
       statusText: "证据已记录",
       summary: "已有证据记录，暂无证据包摘要。",
-      detail: "operation evidence summary 未 ready，当前只展示 Operation Report 内嵌 evidence fallback。",
-      sourceText: "Operation Report 内嵌 evidence 字段",
+      detail: "证据包摘要能力尚未接入，当前只展示报告内嵌证据记录。",
+      sourceText,
+      privacyText,
       items: [
         { label: "执行回执", value: evidence.receipt_present ? "已记录" : countStatus(evidence.artifacts_count) },
         { label: "执行记录", value: countStatus(evidence.logs_count) },
@@ -188,8 +207,9 @@ export function buildOperationEvidenceSummaryVm(report: OperationReportV1): Oper
     state: "PACK_SUMMARY",
     statusText: "证据包已形成",
     summary: "证据包已形成，可查看摘要。",
-    detail: "当前展示客户可读证据包摘要，不提供 manifest、sha256 或下载入口。",
-    sourceText: "Operation Report 内嵌 evidence 字段",
+    detail: "当前展示客户可读证据包摘要，不提供文件下载入口。",
+    sourceText,
+    privacyText,
     items: [
       { label: "证据包摘要", value: summaryText },
       { label: "证据状态", value: evidenceTextOrFallback(packSummary?.status, "已形成") },
@@ -369,7 +389,7 @@ export function buildOperationReportVm(report: OperationReportV1): OperationRepo
     technicalFoldout: { rows: [
       { label: "operation_id", value: kv(report.identifiers.operation_id) },
       { label: "recommendation_id", value: kv(report.identifiers.recommendation_id) },
-      { label: "prescription_id", value: kv(report.identifiers.prescription_id ?? prescriptionData?.prescription_id) },
+      { label: "prescription_id", value: kv((report.identifiers as any).prescription_id ?? prescriptionData?.prescription_id) },
       { label: "approval_request_id", value: kv(report.identifiers.approval_id ?? reportApproval?.request_id) },
       { label: "act_task_id", value: kv(report.identifiers.act_task_id) },
       { label: "receipt_id", value: kv(report.identifiers.receipt_id) },
