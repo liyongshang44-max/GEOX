@@ -10,7 +10,10 @@ export type OperatorDeviceRowVm = {
   boundFieldText: string;
   capabilitiesText: string;
   credentialText: string;
+  credentialIssuedText: string;
+  credentialLastUsedText: string;
   revokeText: string;
+  canRevoke: boolean;
   batteryText: string;
   delayText: string;
   sourceText: string;
@@ -134,7 +137,10 @@ function buildDeviceRow(item: OperatorDeviceItem): OperatorDeviceRowVm {
     boundFieldText: text(item.fieldName, text(item.fieldId, "绑定地块待确认")),
     capabilitiesText: item.capabilities.length ? item.capabilities.join("、") : "能力待确认",
     credentialText: credentialText(item.credentialStatus),
+    credentialIssuedText: dateText(item.credentialLastIssuedAt),
+    credentialLastUsedText: dateText(item.credentialLastUsedAt),
     revokeText: text(item.revokeStatus, "revoke 默认只读或管理员可见"),
+    canRevoke: item.canRevoke,
     batteryText: batteryText(item.batteryPercent),
     delayText: text(item.dataDelayText, "数据延迟待确认"),
     sourceText: sourceText(item.source),
