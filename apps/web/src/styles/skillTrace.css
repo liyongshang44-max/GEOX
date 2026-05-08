@@ -1,0 +1,110 @@
+.customerSkillTraceFoldout,
+.operatorSkillTracePanel {
+  border-radius: 16px;
+  border: 1px solid #e2e8d8;
+  background: #ffffff;
+  min-width: 0;
+}
+
+.customerSkillTraceFoldout > summary,
+.operatorSkillTracePanel > summary {
+  cursor: pointer;
+  padding: 12px 14px;
+  color: #132016;
+  font-weight: 900;
+  list-style-position: inside;
+}
+
+.customerSkillTraceBody,
+.operatorSkillTraceRuns,
+.operatorSkillTraceEmpty {
+  padding: 0 14px 14px;
+}
+
+.customerSkillTraceBody p {
+  margin: 0 0 10px;
+  color: #56645a;
+  line-height: 1.5;
+}
+
+.customerSkillTraceSources {
+  display: grid;
+  gap: 8px;
+}
+
+.customerSkillTraceSource,
+.customerSkillTraceEmpty {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fbfcf8;
+  border: 1px solid #edf2e5;
+}
+
+.customerSkillTraceSource strong {
+  color: #132016;
+}
+
+.customerSkillTraceSource span,
+.customerSkillTraceEmpty,
+.operatorSkillTraceEmpty {
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorSkillTracePanel > summary {
+  display: grid;
+  gap: 4px;
+}
+
+.operatorSkillTracePanel > summary small {
+  color: #64715f;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.operatorSkillTraceRuns {
+  display: grid;
+  gap: 10px;
+}
+
+.operatorSkillTraceRun {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #fbfcf8;
+  border: 1px solid #edf2e5;
+}
+
+.operatorSkillTraceRun.hasFailure {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.operatorSkillTraceRun > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.operatorSkillTraceRun span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorSkillTraceRun strong {
+  color: #132016;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .operatorSkillTraceRun {
+    grid-template-columns: 1fr;
+  }
+}
