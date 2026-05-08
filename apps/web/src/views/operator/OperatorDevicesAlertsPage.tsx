@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { fetchOperatorDevicesAlerts } from "../../api/operatorDevicesAlerts";
+import { ackOperatorAlert, closeOperatorAlert, fetchOperatorDevicesAlerts } from "../../api/operatorDevicesAlerts";
 import OperatorEmptyState from "../../components/operator/OperatorEmptyState";
 import OperatorLayout from "../../layouts/OperatorLayout";
 import "../../styles/operatorDevicesAlerts.css";
@@ -13,11 +13,20 @@ type DeviceSectionProps = {
   revokeVisible: boolean;
 };
 
+type AlertActionState = {
+  busyKey?: string;
+  message?: string;
+  tone?: "success" | "error";
+};
+
 type AlertSectionProps = {
   title: string;
   description: string;
   rows: OperatorAlertRowVm[];
   ackCloseReady: boolean;
+  actionState: AlertActionState;
+  onAck: (alertId: string) => void;
+  onClose: (alertId: string) => void;
 };
 
 function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVisible: boolean }): React.ReactElement {
@@ -68,7 +77,9 @@ function DeviceSection({ title, description, rows, revokeVisible }: DeviceSectio
   );
 }
 
-function AlertCard({ row, ackCloseReady }: { row: OperatorAlertRowVm; ackCloseReady: boolean }): React.ReactElement {
+function AlertCard({ row, ackCloseReady, actionState, onAck, onClose }: { row: OperatorAlertRowVm; ackCloseReady: boolean; actionState: AlertActionState; onAck: (alertId: string) => void; onClose: (alertId: string) => void }): React.ReactElement {
+  const ackBusy = actionState.busyKey === `${row.alertId}:ack`;
+  const closeBusy = actionState.busyKey === `${row.alertId}:close`;
   return (
     <article className="operatorAlertCard">
       <header className="operatorAlertHead">
@@ -89,20 +100,23 @@ function AlertCard({ row, ackCloseReady }: { row: OperatorAlertRowVm; ackCloseRe
         <div><span>超时</span><strong>{row.overdueText}</strong></div>
         <div><span>创建时间</span><strong>{row.createdAtText}</strong></div>
         <div><span>更新时间</span><strong>{row.updatedAtText}</strong></div>
+        <div><span>状态来源</span><strong>{row.statusSourceText}</strong></div>
+        <div><span>审计来源</span><strong>{row.auditText}</strong></div>
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      <div className="operatorDevicesNotice">ACK / close 写操作未 ready 前保持只读，不伪造处理结果。</div>
+      {row.disabledReason ? <div className="operatorDevicesWarning">{row.disabledReason}</div> : null}
+      <div className="operatorDevicesNotice">ACK / close 操作只在后端权限与审计 ready 后开放；操作成功后刷新列表。</div>
       <div className="operatorDevicesActions">
         {row.operationHref ? <Link to={row.operationHref}>查看关联作业</Link> : null}
-        <button type="button" disabled={!ackCloseReady}>ACK</button>
-        <button type="button" disabled={!ackCloseReady}>关闭</button>
+        <button type="button" disabled={!ackCloseReady || !row.canAck || Boolean(actionState.busyKey)} onClick={() => onAck(row.alertId)}>{ackBusy ? "ACK 中..." : "ACK"}</button>
+        <button type="button" disabled={!ackCloseReady || !row.canClose || Boolean(actionState.busyKey)} onClick={() => onClose(row.alertId)}>{closeBusy ? "关闭中..." : "关闭"}</button>
       </div>
     </article>
   );
 }
 
-function AlertSection({ title, description, rows, ackCloseReady }: AlertSectionProps): React.ReactElement {
+function AlertSection({ title, description, rows, ackCloseReady, actionState, onAck, onClose }: AlertSectionProps): React.ReactElement {
   return (
     <section className="operatorDevicesSection">
       <header className="operatorDevicesSectionHead">
@@ -114,7 +128,7 @@ function AlertSection({ title, description, rows, ackCloseReady }: AlertSectionP
       </header>
       {rows.length ? (
         <div className="operatorDevicesList">
-          {rows.map((row) => <AlertCard key={`${title}-${row.alertId}`} row={row} ackCloseReady={ackCloseReady} />)}
+          {rows.map((row) => <AlertCard key={`${title}-${row.alertId}`} row={row} ackCloseReady={ackCloseReady} actionState={actionState} onAck={onAck} onClose={onClose} />)}
         </div>
       ) : <div className="operatorQueueEmpty">暂无该类告警。</div>}
     </section>
@@ -124,6 +138,14 @@ function AlertSection({ title, description, rows, ackCloseReady }: AlertSectionP
 export default function OperatorDevicesAlertsPage(): React.ReactElement {
   const [loading, setLoading] = React.useState(true);
   const [vm, setVm] = React.useState<OperatorDevicesAlertsVm | null>(null);
+  const [actionState, setActionState] = React.useState<AlertActionState>({});
+
+  const reload = React.useCallback(() => {
+    setLoading(true);
+    return fetchOperatorDevicesAlerts()
+      .then((response) => setVm(buildOperatorDevicesAlertsVm(response)))
+      .finally(() => setLoading(false));
+  }, []);
 
   React.useEffect(() => {
     let alive = true;
@@ -142,6 +164,17 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
     };
   }, []);
 
+  async function runAlertAction(alertId: string, action: "ack" | "close") {
+    setActionState({ busyKey: `${alertId}:${action}` });
+    const result = action === "ack" ? await ackOperatorAlert(alertId) : await closeOperatorAlert(alertId);
+    if (!result.ok) {
+      setActionState({ message: result.message, tone: "error" });
+      return;
+    }
+    await reload();
+    setActionState({ message: result.auditText ? `${result.message} 审计来源：${result.auditText}` : result.message, tone: "success" });
+  }
+
   return (
     <OperatorLayout title="设备与告警中心" lead="查看设备在线状态、心跳、telemetry、凭证状态、告警事件、通知、ACK 与关闭状态。">
       {loading ? <div className="operatorEmptyState">设备与告警中心加载中...</div> : null}
@@ -155,7 +188,8 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
           </section>
 
           {vm.dataScopeWarning ? <div className="operatorScopeWarning">{vm.dataScopeWarning}</div> : null}
-          {!vm.ackCloseReady ? <div className="operatorScopeWarning">ACK / close 写操作未 ready，当前只读。</div> : null}
+          {!vm.ackCloseReady ? <div className="operatorScopeWarning">ACK / close 未开放或当前无可操作权限。</div> : null}
+          {actionState.message ? <div className={actionState.tone === "error" ? "operatorDevicesActionError" : "operatorDevicesActionSuccess"}>{actionState.message}</div> : null}
 
           {vm.totalDevices === 0 && vm.totalAlerts === 0 ? <OperatorEmptyState title={vm.emptyTitle} description={vm.emptyDescription} reason="没有设备或告警数据时不伪造状态、通知或 ACK/close 结果。" /> : null}
 
@@ -167,8 +201,8 @@ export default function OperatorDevicesAlertsPage(): React.ReactElement {
           </section>
 
           <section className="operatorDevicesGrid" aria-label="告警事件">
-            <AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} />
-            <AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} />
+            <AlertSection title="告警事件" description="当前可见的告警规则、事件和通知状态。" rows={vm.alerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
+            <AlertSection title="超时告警" description="超过处理窗口或已标记超时的告警。" rows={vm.overdueAlerts} ackCloseReady={vm.ackCloseReady} actionState={actionState} onAck={(alertId) => void runAlertAction(alertId, "ack")} onClose={(alertId) => void runAlertAction(alertId, "close")} />
           </section>
         </div>
       ) : null}
