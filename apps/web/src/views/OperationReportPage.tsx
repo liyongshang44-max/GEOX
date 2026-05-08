@@ -4,7 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
-import { customerTimelineStatusLabel } from "../lib/customerLabels";
+import { customerTimelineStatusLabel, labelCustomerTechnicalField } from "../lib/customerLabels";
 
 const MAIN_VIEW_BLOCK_PATTERNS = [
   /skill\s*run/i,
@@ -257,7 +257,7 @@ export default function OperationReportPage(): React.ReactElement {
             <div className="operationTechDetailsTitle">技术详情（默认关闭）</div>
             <div className="operationTechDetailsGrid">
               {(vm.technicalFoldout?.rows ?? []).map((row) => (
-                <div key={row.label}><strong>{row.label}：</strong>{row.value}</div>
+                <div key={row.label}><strong>{labelCustomerTechnicalField(row.label)}：</strong>{row.value}</div>
               ))}
             </div>
           </details>
