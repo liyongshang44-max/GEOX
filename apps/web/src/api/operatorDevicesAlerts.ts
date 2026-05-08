@@ -36,6 +36,11 @@ export type OperatorAlertItem = {
   overdue: boolean;
   createdAt?: string | null;
   updatedAt?: string | null;
+  canAck: boolean;
+  canClose: boolean;
+  permissionReason?: string | null;
+  auditText?: string | null;
+  statusSource?: string | null;
   source: "operator_devices_alerts_api" | "alerts_api" | "reports_aggregate";
 };
 
@@ -48,6 +53,12 @@ export type OperatorDevicesAlertsResponse = {
   message?: string;
   ackCloseReady: boolean;
   revokeVisible: boolean;
+};
+
+export type OperatorAlertActionResult = {
+  ok: boolean;
+  message: string;
+  auditText?: string | null;
 };
 
 type AnyRecord = Record<string, any>;
@@ -135,10 +146,26 @@ function normalizeDevice(row: AnyRecord, index: number, source: OperatorDeviceIt
   };
 }
 
+function normalizeCanAck(row: AnyRecord, status: OperatorAlertStatus, source: OperatorAlertItem["source"]): boolean {
+  if (source !== "operator_devices_alerts_api") return false;
+  if (typeof row.can_ack === "boolean") return row.can_ack;
+  if (typeof row.permissions?.can_ack === "boolean") return row.permissions.can_ack;
+  return status === "OPEN" || status === "OVERDUE";
+}
+
+function normalizeCanClose(row: AnyRecord, status: OperatorAlertStatus, source: OperatorAlertItem["source"]): boolean {
+  if (source !== "operator_devices_alerts_api") return false;
+  if (typeof row.can_close === "boolean") return row.can_close;
+  if (typeof row.permissions?.can_close === "boolean") return row.permissions.can_close;
+  return status === "ACKED" || status === "OVERDUE" || status === "OPEN";
+}
+
 function normalizeAlert(row: AnyRecord, index: number, source: OperatorAlertItem["source"]): OperatorAlertItem {
   const status = normalizeAlertStatus(row);
   const operationId = sanitizeText(row.operation_id ?? row.operationId ?? row.linked_operation_id, "");
   const prescriptionRaw = row.prescription_formed ?? row.has_prescription ?? row.prescription_id;
+  const canAck = normalizeCanAck(row, status, source);
+  const canClose = normalizeCanClose(row, status, source);
   return {
     alertId: sanitizeText(row.alert_id ?? row.id, `alert-${index}`),
     ruleName: sanitizeText(row.rule_name ?? row.rule ?? row.alert_rule, "告警规则待确认"),
@@ -154,6 +181,11 @@ function normalizeAlert(row: AnyRecord, index: number, source: OperatorAlertItem
     overdue: status === "OVERDUE",
     createdAt: text(row.created_at ?? row.generated_at, ""),
     updatedAt: text(row.updated_at ?? row.resolved_at ?? row.generated_at, ""),
+    canAck,
+    canClose,
+    permissionReason: sanitizeText(row.permission_reason ?? row.permissions?.reason ?? (!canAck && !canClose ? "当前不可操作" : ""), ""),
+    auditText: sanitizeText(row.audit_id ?? row.audit_ref ?? row.audit?.id ?? row.status_source ?? row.source_of_status, "审计来源待确认"),
+    statusSource: sanitizeText(row.status_source ?? row.source_of_status ?? row.state_source, "状态来源待确认"),
     source,
   };
 }
@@ -198,20 +230,54 @@ async function fetchOptional(path: string): Promise<unknown | null> {
   }
 }
 
+function parseActionFailure(status: number, bodyText: string): string {
+  try {
+    const parsed = JSON.parse(bodyText) as { message?: string; error?: string; reason?: string; code?: string };
+    return sanitizeText(parsed.message ?? parsed.reason ?? parsed.error ?? parsed.code, `操作失败：HTTP ${status}`);
+  } catch {
+    return sanitizeText(bodyText, `操作失败：HTTP ${status}`);
+  }
+}
+
+async function postOperatorAlertAction(alertId: string, action: "ack" | "close"): Promise<OperatorAlertActionResult> {
+  const safeAlertId = encodeURIComponent(text(alertId));
+  if (!safeAlertId) return { ok: false, message: "alertId 缺失，无法操作。" };
+  try {
+    const result = await apiRequestWithPolicy<unknown>(`/api/v1/operator/alerts/${safeAlertId}/${action}`, { method: "POST", body: JSON.stringify({}) }, { allowedStatuses: [400, 401, 403, 404, 409, 422], silent: true, timeoutMs: 10000 });
+    if (!result.ok) {
+      return { ok: false, message: parseActionFailure(result.status, result.bodyText) };
+    }
+    const payload = result.data as AnyRecord;
+    const auditText = sanitizeText(payload?.audit_id ?? payload?.audit_ref ?? payload?.audit?.id ?? payload?.status_source, "审计来源待确认");
+    return { ok: true, message: action === "ack" ? "ACK 成功，列表已刷新。" : "关闭成功，列表已刷新。", auditText };
+  } catch (error: any) {
+    return { ok: false, message: sanitizeText(error?.message, "操作失败，请查看后端错误码。") };
+  }
+}
+
+export async function ackOperatorAlert(alertId: string): Promise<OperatorAlertActionResult> {
+  return postOperatorAlertAction(alertId, "ack");
+}
+
+export async function closeOperatorAlert(alertId: string): Promise<OperatorAlertActionResult> {
+  return postOperatorAlertAction(alertId, "close");
+}
+
 export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlertsResponse> {
   const official = await fetchOptional(withQuery("/api/v1/operator/devices-alerts"));
   const officialDevices = normalizeOfficialDevices(official);
   const officialAlerts = normalizeOfficialAlerts(official);
   if (officialDevices.length > 0 || officialAlerts.length > 0) {
+    const ackCloseReady = officialAlerts.some((alert) => alert.canAck || alert.canClose);
     return {
       source: "operator_devices_alerts_api",
       dataScope: "OFFICIAL_OPERATOR_API",
       generated_at: new Date().toISOString(),
       devices: officialDevices,
       alerts: officialAlerts,
-      ackCloseReady: false,
+      ackCloseReady,
       revokeVisible: false,
-      message: "ACK/close 与 revoke 写操作需等待后端权限、审计和错误码 ready 后开放。",
+      message: ackCloseReady ? "ACK/close 操作由 operator alerts API 提供，状态变更应产生审计记录。" : "ACK/close 当前无可操作权限或后端未开放。",
     };
   }
 
@@ -236,7 +302,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
       alerts: fallbackAlerts,
       ackCloseReady: false,
       revokeVisible: false,
-      message: "当前展示 devices / alerts / reports aggregate 包装后的有限设备与告警中心，非完整 operator devices-alerts。",
+      message: "当前展示 devices / alerts / reports aggregate 包装后的有限设备与告警中心，非完整 operator devices-alerts；ACK/close 只读。",
     };
   }
 
