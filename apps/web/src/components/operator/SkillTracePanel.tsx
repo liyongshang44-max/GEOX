@@ -1,4 +1,5 @@
 import React from "react";
+import "../../styles/skillTrace.css";
 import { buildOperatorSkillTracePanelVm, type SkillTraceInput } from "../../viewmodels/skillTraceVm";
 
 type SkillTracePanelProps = {
