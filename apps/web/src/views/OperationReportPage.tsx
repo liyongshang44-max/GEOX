@@ -12,13 +12,7 @@ const MAIN_VIEW_BLOCK_PATTERNS = [
   /skill_run/i,
   /skill_trace/i,
   /irrigation_soil_moisture_threshold/i,
-  /\bSUCCESS\b/i,
-  /\bFAILED\b/i,
-  /\bPASS\b/i,
-  /\bDONE\b/i,
-  /\bMISSING\b/i,
-  /\bAVAILABLE\b/i,
-  /\bPENDING\b/i,
+  /\b[A-Z][A-Z0-9_]{3,}\b/,
 ];
 
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
