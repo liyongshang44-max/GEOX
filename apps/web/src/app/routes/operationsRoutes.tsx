@@ -1,5 +1,5 @@
 import React from "react";
-import { Route } from "react-router-dom";
+import { Navigate, Route } from "react-router-dom";
 import RouteErrorBoundary from "../errors/RouteErrorBoundary";
 
 const OperationsPage = React.lazy(() => import("../../features/operations/pages/OperationsPage"));
@@ -13,10 +13,21 @@ const HumanOpsAnalyticsPage = React.lazy(() => import("../../features/operations
 const OperationReportPage = React.lazy(() => import("../../features/operations/pages/OperationReportPage"));
 const OperationReportExportPage = React.lazy(() => import("../../features/operations/pages/OperationReportExportPage"));
 const OperationsWorkboardPage = React.lazy(() => import("../../features/operations/pages/OperationsWorkboardPage"));
+const CustomerOperationsIndexPage = React.lazy(() => import("../../views/CustomerOperationsIndexPage"));
 const AdminOperationDebugPage = React.lazy(() => import("../../features/dashboard/pages/AdminOperationDebugPage"));
+
+export function renderCustomerOperationsRoutes(): React.ReactElement[] {
+  return [
+    <Route key="customer-operations" path="/customer/operations" element={<RouteErrorBoundary><CustomerOperationsIndexPage /></RouteErrorBoundary>} />,
+    <Route key="customer-operations-index" path="/customer/operations/index" element={<Navigate to="/customer/operations" replace />} />,
+    <Route key="customer-operations-detail" path="/customer/operations/:operationId" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
+    <Route key="customer-operations-export" path="/customer/operations/:operationId/export" element={<RouteErrorBoundary><OperationReportExportPage /></RouteErrorBoundary>} />,
+  ];
+}
 
 export function renderOperationsRoutes(): React.ReactElement[] {
   return [
+    ...renderCustomerOperationsRoutes(),
     <Route key="operations" path="/operations" element={<OperationsPage />} />,
     <Route key="operations-detail" path="/operations/:operationId" element={<RouteErrorBoundary><OperationDetailPage /></RouteErrorBoundary>} />,
     <Route key="operations-report" path="/operations/:operationId/report" element={<RouteErrorBoundary><OperationReportPage /></RouteErrorBoundary>} />,
