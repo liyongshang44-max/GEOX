@@ -20,6 +20,25 @@ const MAIN_VIEW_BLOCK_PATTERNS = [
   /\bPENDING\b/i,
 ];
 
+const CUSTOMER_PATH_OR_HASH_PATTERNS = [
+  /\bsha256\b/i,
+  /\bmanifest\b/i,
+  /s3:\/\//i,
+  /https?:\/\//i,
+  /(^|\s)\/[\w./-]+/,
+  /[A-Z]:\\[\w\\.-]+/i,
+];
+
+type OperationEvidenceState = "NO_EVIDENCE" | "RECORDS_WITHOUT_SUMMARY" | "PACK_SUMMARY";
+
+type OperationEvidenceDisplayVm = {
+  state: OperationEvidenceState;
+  statusText: string;
+  summary: string;
+  detail: string;
+  items: Array<{ label: string; value: string }>;
+};
+
 function customerText(value: unknown, fallback = "暂无可展示信息"): string {
   const text = String(value ?? "").trim();
   if (!text || text === "--" || text === "0/0" || /1970\s*[\/-]/.test(text)) return fallback;
@@ -46,6 +65,74 @@ function shortOperationLabel(value: string): string {
   if (/acceptance|验收/i.test(text)) return "验收";
   if (/roi/i.test(text)) return "ROI";
   return text;
+}
+
+function toEvidenceCount(value: unknown): number {
+  const count = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(count) && count > 0 ? count : 0;
+}
+
+function evidenceCountLabel(value: unknown): string {
+  return toEvidenceCount(value) > 0 ? "已采集" : "暂无记录";
+}
+
+function sanitizeEvidenceSummary(value: unknown): string {
+  const text = String(value ?? "").trim();
+  if (!text || text === "--") return "";
+  if (CUSTOMER_PATH_OR_HASH_PATTERNS.some((pattern) => pattern.test(text))) {
+    return "证据包摘要已形成，文件明细已隐藏。";
+  }
+  return text;
+}
+
+function buildOperationEvidenceDisplay(report: OperationReportV1): OperationEvidenceDisplayVm {
+  const evidence = report.evidence ?? { artifacts_count: 0, logs_count: 0, media_count: 0, metrics_count: 0, receipt_present: false, acceptance_present: false };
+  const evidenceRecordCount =
+    toEvidenceCount(evidence.artifacts_count)
+    + toEvidenceCount(evidence.logs_count)
+    + toEvidenceCount(evidence.media_count)
+    + toEvidenceCount(evidence.metrics_count);
+  const hasEvidenceRecords = evidenceRecordCount > 0 || Boolean(evidence.receipt_present || evidence.acceptance_present);
+  const packSummary = (report as unknown as { evidence_pack_summary?: { summary?: unknown; photos_logs_metrics_trace_summary?: unknown; status?: unknown; insufficient_reason?: unknown } }).evidence_pack_summary;
+  const summaryText = sanitizeEvidenceSummary(packSummary?.photos_logs_metrics_trace_summary ?? packSummary?.summary);
+
+  if (!hasEvidenceRecords && !summaryText) {
+    return {
+      state: "NO_EVIDENCE",
+      statusText: "暂无证据",
+      summary: "暂无有效证据。",
+      detail: "当前未查询到可用于验收的证据记录。",
+      items: [],
+    };
+  }
+
+  if (!summaryText) {
+    return {
+      state: "RECORDS_WITHOUT_SUMMARY",
+      statusText: "证据已记录",
+      summary: "已有证据记录，暂无证据包摘要。",
+      detail: "当前仅展示报告内嵌证据摘要。",
+      items: [
+        { label: "执行回执", value: evidence.receipt_present ? "已记录" : evidenceCountLabel(evidence.artifacts_count) },
+        { label: "执行记录", value: evidenceCountLabel(evidence.logs_count) },
+        { label: "现场照片", value: evidenceCountLabel(evidence.media_count) },
+        { label: "监测数据", value: evidenceCountLabel(evidence.metrics_count) },
+        { label: "验收记录", value: evidence.acceptance_present ? "已记录" : "暂无记录" },
+      ],
+    };
+  }
+
+  return {
+    state: "PACK_SUMMARY",
+    statusText: "证据包已形成",
+    summary: "证据包已形成，可查看摘要。",
+    detail: "当前展示报告内嵌证据摘要，不提供证据包下载。",
+    items: [
+      { label: "证据包摘要", value: summaryText },
+      { label: "证据状态", value: customerText(packSummary?.status, "已形成") },
+      { label: "证据不足说明", value: customerText(packSummary?.insufficient_reason, "暂无补充说明") },
+    ],
+  };
 }
 
 export default function OperationReportPage(): React.ReactElement {
@@ -81,6 +168,7 @@ export default function OperationReportPage(): React.ReactElement {
   if (error || !report) return <ErrorState title="作业报告加载失败" message={error || "暂无报告"} onRetry={() => window.location.reload()} />;
 
   const vm = buildOperationReportVm(report);
+  const operationEvidence = buildOperationEvidenceDisplay(report);
   const canExport = Boolean(operationId.trim());
   const canBackToField = Boolean(vm.operation.fieldId && vm.operation.fieldId !== "--");
 
@@ -104,14 +192,18 @@ export default function OperationReportPage(): React.ReactElement {
         </header>
 
         <section className="customerCard operationTimelineStrip">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{customerTimelineStatusLabel(item.status)}</span>)}
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{item.key === "EVIDENCE" ? operationEvidence.statusText : customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
         <section className="operationClosedLoopGrid">
           {vm.sections.map((section, index) => {
             const isExpanded = expandedKey === section.key;
-            const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
+            const isEvidenceSection = section.key === "EVIDENCE";
+            const displayItems = isEvidenceSection ? operationEvidence.items : section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
+            const statusText = isEvidenceSection ? operationEvidence.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
+            const summaryText = isEvidenceSection ? operationEvidence.summary : section.summary;
+            const detailText = isEvidenceSection ? operationEvidence.detail : (section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要"));
             return (
               <article
                 key={section.key}
@@ -129,10 +221,10 @@ export default function OperationReportPage(): React.ReactElement {
                 <div className="operationClosedLoopHead">
                   <span className="operationStepNo">{index + 1}</span>
                   <h3 className="customerCardTitle">{title}</h3>
-                  <span className="operationStatusBadge">{section.statusText || customerTimelineStatusLabel(section.status)}</span>
+                  <span className="operationStatusBadge">{statusText}</span>
                 </div>
-                <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
-                <div className="operationOneLiner muted">{safeMainViewText(section.emptyState?.description || (displayItems[0] ? `${displayItems[0].label}：${displayItems[0].value}` : "暂无摘要"))}</div>
+                <div className="operationOneLiner">{safeMainViewText(summaryText)}</div>
+                <div className="operationOneLiner muted">{safeMainViewText(detailText)}</div>
                 <button
                   type="button"
                   className="customerLinkButton customerSpacingTopXs"
@@ -146,7 +238,8 @@ export default function OperationReportPage(): React.ReactElement {
                 {isExpanded ? (
                   <div className="customerGrid2 customerSpacingTopXs">
                     {displayItems.map((item) => <div key={`${section.key}-${item.label}`}><strong>{item.label}：</strong>{safeMainViewText(item.value, "--")}</div>)}
-                    {!displayItems.length && section.emptyState ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+                    {!displayItems.length && section.emptyState && !isEvidenceSection ? <div className="muted">{section.emptyState.title}：{section.emptyState.description}</div> : null}
+                    {!displayItems.length && isEvidenceSection ? <div className="muted">{operationEvidence.summary}</div> : null}
                   </div>
                 ) : null}
               </article>
