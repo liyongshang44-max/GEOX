@@ -61,7 +61,7 @@ function formatCount(value: number | null | undefined): string {
 export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPageVm {
   const fieldId = report.field.field_id;
   const fieldName = String(report.field.field_name ?? "").trim();
-  const title = fieldName || `地块 ${fieldId}`;
+  const title = fieldName || "地块名称待补充";
 
 
   const overview = {
@@ -134,7 +134,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
     generatedAtText: formatDateTime(report.generated_at),
     field: {
       fieldId,
-      fieldName: fieldName || "地块名称待补充",
+      fieldName: title,
       cropText: "暂无作物信息",
       stageText: "暂无阶段信息",
       updatedAtText: formatDateTime(report.device_summary.last_telemetry_at),
@@ -153,8 +153,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       : [],
     recentOperations: report.recent_operations.slice(0, 5).map((item) => {
       // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
-      // customer-boundary-allow: 兼容旧 operation_plan_id，确保历史数据可跳转
-    const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
+      const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       const finalStatusRaw = String(item.final_status || "").toUpperCase();
       const evidenceText = ["EVIDENCE_MISSING", "NOT_AVAILABLE"].includes(finalStatusRaw) ? "证据缺失" : "证据已回传";
       return {
@@ -176,7 +175,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       : { title: customerRoiLabel("ROI_UNAVAILABLE"), description: roiEmptyState.description, displayText: `${customerRoiLabel("ROI_UNAVAILABLE")}：${roiEmptyState.description}` },
     fieldMemory: fieldMemoryAvailable && fieldMemoryLines.length > 0
       ? {
-        title: "地块记忆摘要",
+        title: "田块记忆摘要",
         lines: fieldMemoryLines,
         displayText: fieldMemoryLines.join("；"),
       }
@@ -211,7 +210,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       const operationId = String(item.operation_plan_id || item.operation_id || "").trim();
       return {
         id: operationId || "待生成",
-        title: sanitizeCustomerText(item.customer_title || item.title || operationId || "未命名作业"),
+        title: sanitizeCustomerText(item.customer_title || item.title || "未命名作业"),
         statusText: labelFinalStatus(item.final_status),
         acceptanceText: labelAcceptanceStatus(item.acceptance_status),
         generatedAtText: formatDateTime(item.generated_at),
@@ -231,7 +230,7 @@ export function buildFieldReportVm(report: FieldReportDetailV1): FieldReportPage
       { label: "离线设备", value: formatCount(report.device_summary.offline_devices) },
       { label: "最近更新", value: formatDateTime(report.device_summary.last_telemetry_at) },
     ],
-    header: { title, subtitle: `地块ID：${fieldId}`, fieldId },
+    header: { title, subtitle: "地块病历摘要", fieldId },
     overview,
     explain,
     deviceSummary,
