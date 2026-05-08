@@ -56,6 +56,9 @@ const ALLOWED_OPERATOR_ADAPTER_ROUTE_PREFIXES = [
   /["'`]\/api\/v1\/devices["'`]/,
   /["'`]\/api\/v1\/actions\/index["'`]/,
   /["'`]\/api\/v1\/evidence\/export-jobs["'`]/,
+  /["'`]\/api\/v1\/field-memory["'`]/,
+  /["'`]\/api\/v1\/fields\/[^"'`]+\/memory/,
+  /["'`]\/api\/v1\/operations\/[^"'`]+\/field-memory/,
 ];
 
 const offenders = [];
@@ -97,6 +100,7 @@ function isSanitizerImplementationLine(relativeFile, line) {
     hidesSensitiveCredential ||
     line.includes("本地路径已隐藏") ||
     line.includes("敏感凭据已隐藏") ||
+    line.includes("敏感信息已隐藏") ||
     line.includes("下载链接已隐藏") ||
     /raw\.startsWith\(["']\/["']\)/.test(line) ||
     /^\s*\/\^\[A-Za-z\]:/.test(line) ||
