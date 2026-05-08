@@ -1,4 +1,4 @@
-import type { CustomerOperationListItem, CustomerOperationsListResponse } from "../api/customerOperations";
+import type { CustomerOperationListItem, CustomerOperationsListResponse, CustomerOperationsDataScope } from "../api/customerOperations";
 import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
@@ -21,7 +21,10 @@ export type CustomerOperationsIndexVm = {
   title: string;
   subtitle: string;
   generatedAtText: string;
+  dataScope: CustomerOperationsDataScope;
   isFallback: boolean;
+  isPreview: boolean;
+  scopeBadgeText: string;
   dataScopeNote?: string;
   filters: Array<{ key: CustomerOperationStatusFilter; label: string; count: number }>;
   rows: CustomerOperationsIndexRowVm[];
@@ -79,6 +82,30 @@ function buildRow(item: CustomerOperationListItem): CustomerOperationsIndexRowVm
   };
 }
 
+function scopeCopy(response: CustomerOperationsListResponse): { subtitle: string; badge: string; note?: string; isPreview: boolean } {
+  if (response.dataScope === "FALLBACK_RECENT_ONLY") {
+    return {
+      subtitle: "P1-A Preview：当前仅展示近期作业，非全部作业列表。",
+      badge: "P1-A Preview",
+      note: response.data_scope_note || "当前仅展示近期作业，非全部作业列表",
+      isPreview: true,
+    };
+  }
+  if (response.dataScope === "ERROR_EMPTY") {
+    return {
+      subtitle: "作业列表暂不可用，请稍后刷新。",
+      badge: "暂不可用",
+      note: response.data_scope_note || "作业列表暂不可用，请稍后刷新",
+      isPreview: true,
+    };
+  }
+  return {
+    subtitle: "查看授权范围内作业、验收进展与报告入口。",
+    badge: "正式列表",
+    isPreview: false,
+  };
+}
+
 export function filterCustomerOperations(rows: CustomerOperationsIndexRowVm[], status: CustomerOperationStatusFilter): CustomerOperationsIndexRowVm[] {
   if (status === "ALL") return rows;
   return rows.filter((row) => row.statusFilter === status);
@@ -87,13 +114,17 @@ export function filterCustomerOperations(rows: CustomerOperationsIndexRowVm[], s
 export function buildCustomerOperationsIndexVm(response: CustomerOperationsListResponse): CustomerOperationsIndexVm {
   const rows = (response.operations ?? []).map(buildRow).filter((row) => row.operationId);
   const countByStatus = (status: CustomerOperationStatusFilter) => status === "ALL" ? rows.length : rows.filter((row) => row.statusFilter === status).length;
+  const scope = scopeCopy(response);
 
   return {
     title: "作业列表",
-    subtitle: response.is_fallback ? "P1-A Preview：当前仅展示近期作业，非全部作业列表。" : "查看授权范围内作业、验收进展与报告入口。",
+    subtitle: scope.subtitle,
     generatedAtText: toDateTimeText(response.generated_at),
-    isFallback: response.is_fallback,
-    dataScopeNote: response.data_scope_note,
+    dataScope: response.dataScope,
+    isFallback: response.dataScope !== "OFFICIAL_CUSTOMER_API",
+    isPreview: scope.isPreview,
+    scopeBadgeText: scope.badge,
+    dataScopeNote: scope.note,
     filters: [
       { key: "ALL", label: "全部", count: countByStatus("ALL") },
       { key: "IN_PROGRESS", label: "执行中", count: countByStatus("IN_PROGRESS") },
