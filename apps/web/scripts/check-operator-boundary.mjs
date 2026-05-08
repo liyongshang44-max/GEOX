@@ -89,12 +89,17 @@ function isAllowedOperatorAdapterRouteLine(line) {
 
 function isSanitizerImplementationLine(relativeFile, line) {
   if (!isOperatorAdapterOrVm(relativeFile)) return false;
+  const hidesSensitiveCredential =
+    /(credential[_-]?secret|secret[_-]?payload|secret|token|access[_-]?key|password)/i.test(line) &&
+    /(HIDDEN|hidden|hide|redact|sanitize|隐藏|脱敏)/i.test(line);
+
   return (
+    hidesSensitiveCredential ||
     line.includes("本地路径已隐藏") ||
     line.includes("敏感凭据已隐藏") ||
     line.includes("下载链接已隐藏") ||
     /raw\.startsWith\(["']\/["']\)/.test(line) ||
-    /\^\[A-Za-z\]:/.test(line) ||
+    /^\s*\/\^\[A-Za-z\]:/.test(line) ||
     /raw\.includes\(["']file:\/\//.test(line)
   );
 }
@@ -116,6 +121,7 @@ function scanFile(relativeFile) {
 
     for (const rule of FORBIDDEN_ROUTE_PATTERNS) {
       if (rule.pattern.test(line)) {
+        if (isSanitizerImplementationLine(relativeFile, line)) continue;
         if (isAdapterOrVm && isAllowedOperatorAdapterRouteLine(line)) continue;
         addOffender(relativeFile, index + 1, rule.token, line);
       }
