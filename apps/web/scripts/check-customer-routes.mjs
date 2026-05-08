@@ -77,7 +77,7 @@ function scanCustomerScopedFiles() {
     /^src\/layouts\/CustomerLayout\.tsx$/,
     /^src\/views\/Customer.*\.tsx$/,
     /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage|CustomerOperationsIndexPage|CustomerReportsCenterPage)\.tsx$/,
-    /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|customerOperationsIndexVm|customerReportsCenterVm|fieldReportVm|operationReportVm)\.ts$/,
+    /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|customerOperationsIndexVm|customerReportsCenterVm|customerRoiLedgerVm|customerFieldMemoryVm|fieldReportVm|operationReportVm|prescriptionContractVm)\.ts$/,
     /^src\/components\/customer\/.+$/,
     /^src\/components\/cockpit\/.+$/,
     /^src\/features\/customer\/pages\/.+$/,
