@@ -30,6 +30,7 @@ type AlertSectionProps = {
 };
 
 function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVisible: boolean }): React.ReactElement {
+  const showRevokeButton = revokeVisible && row.canRevoke;
   return (
     <article className="operatorDeviceCard">
       <header className="operatorDeviceHead">
@@ -45,15 +46,19 @@ function DeviceCard({ row, revokeVisible }: { row: OperatorDeviceRowVm; revokeVi
         <div><span>最近 telemetry</span><strong>{row.lastTelemetryText}</strong></div>
         <div><span>绑定地块</span><strong>{row.boundFieldText}</strong></div>
         <div><span>设备能力</span><strong>{row.capabilitiesText}</strong></div>
-        <div><span>凭证状态</span><strong>{row.credentialText}</strong></div>
-        <div><span>revoke 状态</span><strong>{revokeVisible ? row.revokeText : "revoke 只读或管理员可见"}</strong></div>
+        <div><span>credential status</span><strong>{row.credentialText}</strong></div>
+        <div><span>last issued time</span><strong>{row.credentialIssuedText}</strong></div>
+        <div><span>last used time</span><strong>{row.credentialLastUsedText}</strong></div>
+        <div><span>revoke status</span><strong>{row.revokeText}</strong></div>
         <div><span>电量</span><strong>{row.batteryText}</strong></div>
         <div><span>数据延迟</span><strong>{row.delayText}</strong></div>
         <div><span>数据来源</span><strong>{row.sourceText}</strong></div>
       </div>
 
-      <div className="operatorDevicesNotice">secret / token / access key 不展示。离线设备可追溯最近心跳与绑定地块。</div>
-      <div className="operatorDevicesActions"><button type="button" disabled>revoke 只读</button></div>
+      <div className="operatorDevicesNotice">设备凭证仅展示状态与时间，不展示 token / secret / credential payload。revoke 仅在管理员权限 ready 时显示。</div>
+      <div className="operatorDevicesActions">
+        {showRevokeButton ? <button type="button" disabled>revoke 管理员操作待接入</button> : <span className="operatorDevicesReadOnlyAction">revoke 默认只读或管理员可见</span>}
+      </div>
     </article>
   );
 }
