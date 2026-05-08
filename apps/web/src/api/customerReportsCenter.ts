@@ -1,6 +1,8 @@
 import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 
+export type CustomerReportsDataScope = "OFFICIAL_CUSTOMER_API" | "FALLBACK_RECENT_ONLY" | "ERROR_EMPTY";
+
 export type CustomerReportCenterItem = {
   report_id?: string | null;
   report_type: "OVERVIEW" | "FIELD" | "OPERATION" | "EVIDENCE_VALUE" | string;
@@ -18,7 +20,8 @@ export type CustomerReportCenterItem = {
 
 export type CustomerReportsCenterResponse = {
   ok?: boolean;
-  source: "customer_reports_api" | "dashboard_aggregate_fallback";
+  source: "customer_reports_api" | "dashboard_aggregate_fallback" | "empty_error_state";
+  dataScope: CustomerReportsDataScope;
   is_fallback: boolean;
   generated_at?: string | null;
   reports: CustomerReportCenterItem[];
@@ -107,28 +110,41 @@ function toFallbackReports(aggregate: CustomerDashboardAggregateV1): CustomerRep
 }
 
 export async function fetchCustomerReportsCenter(): Promise<CustomerReportsCenterResponse> {
-  const direct = await apiRequestWithPolicy<CustomerReportsApiEnvelope>(
-    withQuery("/api/v1/customer/reports"),
-    undefined,
-    { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
-  );
+  try {
+    const direct = await apiRequestWithPolicy<CustomerReportsApiEnvelope>(
+      withQuery("/api/v1/customer/reports"),
+      undefined,
+      { allowedStatuses: [404, 405, 422], silent: true, timeoutMs: 10000 }
+    );
 
-  if (direct.ok) {
-    const normalized = normalizeReportsPayload(direct.data);
+    if (direct.ok) {
+      const normalized = normalizeReportsPayload(direct.data);
+      return {
+        source: "customer_reports_api",
+        dataScope: "OFFICIAL_CUSTOMER_API",
+        is_fallback: false,
+        generated_at: normalized.generatedAt ?? new Date().toISOString(),
+        reports: normalized.reports,
+      };
+    }
+
+    const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
     return {
-      source: "customer_reports_api",
-      is_fallback: false,
-      generated_at: normalized.generatedAt ?? new Date().toISOString(),
-      reports: normalized.reports,
+      source: "dashboard_aggregate_fallback",
+      dataScope: "FALLBACK_RECENT_ONLY",
+      is_fallback: true,
+      generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
+      reports: toFallbackReports(aggregate),
+      data_scope_note: "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表",
+    };
+  } catch {
+    return {
+      source: "empty_error_state",
+      dataScope: "ERROR_EMPTY",
+      is_fallback: true,
+      generated_at: new Date().toISOString(),
+      reports: [],
+      data_scope_note: "报告中心暂不可用，请稍后刷新",
     };
   }
-
-  const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
-  return {
-    source: "dashboard_aggregate_fallback",
-    is_fallback: true,
-    generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
-    reports: toFallbackReports(aggregate),
-    data_scope_note: "当前仅展示驾驶舱与近期可见对象对应报告入口，非全部报告列表",
-  };
 }
