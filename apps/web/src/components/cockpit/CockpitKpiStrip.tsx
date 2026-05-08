@@ -11,14 +11,17 @@ type Props = {
 export default function CockpitKpiStrip({ items, emptyState }: Props): React.ReactElement {
   const visibleItems = items.slice(0, 5);
 
+  if (!visibleItems.length) {
+    return (
+      <section className="customerDashboardKpiEmpty customerCard">
+        <CustomerEmptyState vm={emptyState} />
+      </section>
+    );
+  }
+
   return (
-    <section className="customerCard">
-      <h3 className="customerReportSectionTitle">经营状态摘要</h3>
-      {visibleItems.length ? (
-        <div className="customerMetrics">
-          {visibleItems.map((item) => <CockpitKpiCard key={item.key} item={item} />)}
-        </div>
-      ) : <CustomerEmptyState vm={emptyState} />}
+    <section className="customerDashboardKpiRow" aria-label="经营状态摘要">
+      {visibleItems.map((item) => <CockpitKpiCard key={item.key} item={item} />)}
     </section>
   );
 }

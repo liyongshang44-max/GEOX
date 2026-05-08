@@ -10,7 +10,7 @@ type Props = {
 
 export default function RecentOperationsSection({ items, emptyState }: Props): React.ReactElement {
   return (
-    <section className="customerCard">
+    <section id="recent-operations" className="customerCard">
       <h3 className="customerCardTitle">近期作业摘要</h3>
       {items.length ? (
         <div className="customerList">

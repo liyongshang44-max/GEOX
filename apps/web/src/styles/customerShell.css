@@ -1,89 +1,193 @@
 .customerShell {
   min-height: 100%;
-  background: var(--customer-bg);
+  background: #f5f7f6;
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
 }
 
 .customerShellSidebar {
-  width: 240px;
-  min-width: 240px;
+  width: 232px;
+  min-width: 232px;
   border-right: 1px solid var(--customer-border);
-  background: var(--customer-surface);
-  padding: 20px 14px;
+  background: rgba(255, 255, 255, .92);
+  padding: 26px 18px;
   display: grid;
+  grid-template-rows: auto auto 1fr auto;
   align-content: start;
-  gap: 14px;
+  gap: 20px;
 }
 
 .customerShellBrand {
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: #059669;
+}
+
+.customerShellLogoMark {
+  width: 24px;
+  height: 24px;
+  border-radius: 9px 9px 9px 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #16a34a;
+  color: transparent;
+  transform: rotate(-18deg);
 }
 
 .customerShellNav {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .customerShellNavItem {
-  padding: 8px 10px;
-  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
   color: var(--customer-text);
   text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 650;
 }
 
 .customerShellNavItem.isActive {
-  background: var(--customer-surface-muted);
-  border: 1px solid var(--customer-border);
+  background: #e9f8ef;
+  border: 1px solid #b8e6c7;
+  color: #087443;
+  box-shadow: inset 4px 0 0 #22c55e;
 }
 
 .customerShellNavItemDisabled {
-  color: var(--customer-muted);
+  color: #9aa4b2;
   cursor: not-allowed;
 }
 
+.customerShellPhase {
+  font-size: 11px;
+  color: #8b95a5;
+  font-weight: 700;
+}
+
+.customerShellMeta {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #f1f5f9;
+  color: var(--customer-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.customerShellMeta strong {
+  color: #64748b;
+}
+
+.customerShellCollapse {
+  color: var(--customer-muted);
+  font-size: 13px;
+}
+
 .customerShellMainWrap {
-  padding: 20px;
+  padding: 24px 28px;
   display: grid;
-  gap: 16px;
+  grid-template-rows: auto 1fr;
+  gap: 18px;
   min-width: 0;
 }
 
 .customerShellTopbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) auto;
+  align-items: center;
   gap: 16px;
   border: 1px solid var(--customer-border);
-  border-radius: 16px;
-  background: var(--customer-surface);
-  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .92);
+  padding: 18px 22px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .045);
+}
+
+.customerShellTitle {
+  margin: 0;
+  font-size: clamp(24px, 1.7vw, 30px);
+  line-height: 1.16;
+  letter-spacing: -0.04em;
+  white-space: nowrap;
 }
 
 .customerShellTopActions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  min-width: 0;
 }
 
 .customerShellSearch {
-  width: 280px;
-  padding: 8px 10px;
+  width: min(360px, 28vw);
+  min-width: 240px;
+  padding: 10px 14px;
   border: 1px solid var(--customer-border);
-  border-radius: 8px;
-  font-size: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--customer-muted);
+  background: #fff;
 }
 
-.customerShellIconMuted,
+.customerShellIconMuted {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  font-size: 14px;
+  flex: 0 0 auto;
+}
+
+.customerShellUserBadge {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 800;
+  flex: 0 0 auto;
+}
+
 .customerShellUserMuted,
 .customerShellContext {
   color: var(--customer-muted);
   font-size: 13px;
 }
 
+.customerShellUserMuted small {
+  color: #94a3b8;
+}
+
+.customerLayoutMain {
+  min-width: 0;
+}
+
+@media (max-width: 1120px) {
+  .customerShellTopbar { grid-template-columns: 1fr; }
+  .customerShellTitle { white-space: normal; }
+  .customerShellTopActions { flex-wrap: wrap; }
+}
+
 @media (max-width: 960px) {
   .customerShell { grid-template-columns: 1fr; }
   .customerShellSidebar { width: auto; min-width: 0; border-right: 0; border-bottom: 1px solid var(--customer-border); }
-  .customerShellTopbar { flex-direction: column; }
-  .customerShellTopActions { flex-wrap: wrap; }
   .customerShellSearch { width: 100%; }
 }

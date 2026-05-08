@@ -1,5 +1,4 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import { fetchCustomerDashboardAggregate } from "../api/customerReports";
 import {
   CockpitActionList,
@@ -40,28 +39,18 @@ export default function CustomerDashboardPage(): React.ReactElement {
   };
   const kpis = vm?.kpis ?? [];
   const acceptanceSummaryVm = {
-    title: "作业验收摘要",
-    subtitle: "待验收与闭环状态",
+    title: "执行与验收摘要",
+    subtitle: "P0 只展示 report / operation_state 已有节点",
     metrics: [
-      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0") },
-      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0") },
+      { key: "pending", label: "待验收", value: String(vm?.kpis.find((item) => item.key === "PENDING_ACCEPTANCE")?.value ?? "0"), helperText: "未报告状态" },
+      { key: "recent", label: "近期作业", value: String(vm?.kpis.find((item) => item.key === "RECENT_OPERATIONS")?.value ?? "0"), helperText: "来自报告" },
     ],
     emptyState: emptyStates.NO_PENDING_ACTIONS,
   };
 
   return (
     <div className="customerDashboardPage">
-      <header className="customerHero">
-        <div className="customerHeroTop">
-          <div>
-            <div className="customerLabel">客户经营总览</div>
-            <h1 className="customerTitle">经营驾驶舱</h1>
-          </div>
-          <Link className="customerButton customerButtonPrimary" to="/customer/export">总览导出</Link>
-        </div>
-      </header>
-
-      <section className="customerDashboardKpiRow"><CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} /></section>
+      <CockpitKpiStrip items={kpis} emptyState={emptyStates.NO_KPI_SUMMARY} />
 
       <section className="customerDashboardMainGrid">
         <div className="customerDashboardRiskPanel"><CockpitFieldRiskPanel fields={vm?.topRiskFields ?? []} emptyState={emptyStates.NO_RISK_FIELDS} mode="MATRIX" /></div>
@@ -75,11 +64,6 @@ export default function CustomerDashboardPage(): React.ReactElement {
       <section className="customerDashboardBottomGrid">
         {vm?.roiSummary ? <ValueResultPanel roi={vm.roiSummary} emptyState={emptyStates.NO_ROI} /> : null}
         <RecentOperationsSection items={vm?.recentOperations ?? []} emptyState={emptyStates.NO_RECENT_OPERATIONS} />
-      </section>
-
-      <section className="customerCard noPrint">
-        <h3 className="customerCardTitle">导出经营报告</h3>
-        <Link className="customerButton" to="/customer/export">导出总览报告</Link>
       </section>
 
       {!vm && error ? <div className="muted customerSpacingTopMd">{error}</div> : null}

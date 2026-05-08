@@ -9,44 +9,62 @@ type Props = {
   mode?: "LIST" | "MATRIX";
 };
 
-function toneColor(tone: CustomerRiskFieldVm["riskTone"]): string {
-  if (tone === "danger") return "#ef4444";
-  if (tone === "warning") return "#f59e0b";
-  return "#9ca3af";
-}
-
 function fieldKey(field: CustomerRiskFieldVm): string {
   return field.fieldId || field.href || field.fieldName;
 }
 
-function Matrix({ fields }: { fields: CustomerRiskFieldVm[] }): React.ReactElement {
-  return (
-    <svg viewBox="0 0 300 120" role="img" aria-label="风险状态矩阵" className="customerSpacingTopSm">
-      {fields.slice(0, 6).map((field, position) => {
-        const x = 10 + (position % 3) * 95;
-        const y = 10 + Math.floor(position / 3) * 50;
-        return <rect key={fieldKey(field)} x={x} y={y} width="85" height="36" rx="6" fill={toneColor(field.riskTone)} opacity="0.8" />;
-      })}
-    </svg>
+function toneClass(tone: CustomerRiskFieldVm["riskTone"]): string {
+  if (tone === "danger") return "isDanger";
+  if (tone === "warning") return "isWarning";
+  return "isNeutral";
+}
+
+function RiskTile({ field }: { field: CustomerRiskFieldVm }): React.ReactElement {
+  const className = `cockpitRiskTile ${toneClass(field.riskTone)}`;
+  const content = (
+    <>
+      <strong>{field.fieldName}</strong>
+      <span>{field.riskLabel}</span>
+      <small>{field.reasons[0] || "暂无风险原因"}</small>
+      <em>{field.fieldId ? "查看地块" : "暂无入口"}</em>
+    </>
   );
+
+  if (field.fieldId) {
+    return <Link className={className} to={`/customer/fields/${encodeURIComponent(field.fieldId)}`}>{content}</Link>;
+  }
+
+  return <span className={`${className} isDisabled`}>{content}</span>;
 }
 
 export default function CockpitFieldRiskPanel({ fields, emptyState, mode = "LIST" }: Props): React.ReactElement {
+  const visibleFields = fields.slice(0, 6);
+
   return (
-    <article className="customerCard">
-      <h3 className="customerCardTitle">地块风险分布</h3>
-      {fields.length ? (
+    <article id="top-risk-fields" className="customerCard cockpitRiskPanel">
+      <div className="customerCardHeaderRow">
+        <div>
+          <h3 className="customerCardTitle">地块风险分布面板</h3>
+          <p className="customerMetricLabel">P0 非真实地图；无 geometry 时以风险矩阵承载地块入口。</p>
+        </div>
+        <span className="customerPill">P0</span>
+      </div>
+      {visibleFields.length ? (
         <>
-          {mode === "MATRIX" ? <Matrix fields={fields} /> : null}
-          <ul className="customerList">
+          {mode === "MATRIX" ? (
+            <div className="cockpitRiskMatrix" aria-label="地块风险矩阵">
+              {visibleFields.map((field) => <RiskTile key={fieldKey(field)} field={field} />)}
+            </div>
+          ) : null}
+          <div className="customerList cockpitRiskList">
             {fields.map((field) => (
-              <li key={fieldKey(field)} className="customerListItem">
-                {field.fieldId ? <Link to={`/customer/fields/${encodeURIComponent(field.fieldId)}`}>{field.fieldName}</Link> : <span>{field.fieldName}</span>}
-                <div className="customerPill customerSpacingTopXs">{field.riskLabel}</div>
-                <div className="muted">{field.reasons.join("；")}</div>
-              </li>
+              <Link key={fieldKey(field)} className="cockpitRiskListItem" to={field.fieldId ? `/customer/fields/${encodeURIComponent(field.fieldId)}` : "/customer/dashboard"}>
+                <strong>{field.fieldName}</strong>
+                <span>{field.riskLabel}</span>
+                <small>{field.reasons.join("；") || "暂无风险原因"}</small>
+              </Link>
             ))}
-          </ul>
+          </div>
         </>
       ) : <CustomerEmptyState vm={emptyState} />}
     </article>

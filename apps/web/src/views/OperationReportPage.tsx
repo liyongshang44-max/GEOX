@@ -35,6 +35,19 @@ function safeMainViewText(value: unknown, fallback = "暂无摘要"): string {
   return shouldHideMainViewText(value) ? fallback : String(value ?? "").trim() || fallback;
 }
 
+function shortOperationLabel(value: string): string {
+  const text = value.trim();
+  if (/处方/.test(text)) return "处方";
+  if (/as-executed|执行/i.test(text)) return "执行";
+  if (/field\s*memory|田块记忆|记忆/i.test(text)) return "记忆";
+  if (/recommendation|建议/i.test(text)) return "建议";
+  if (/approval|审批/i.test(text)) return "审批";
+  if (/evidence|证据/i.test(text)) return "证据";
+  if (/acceptance|验收/i.test(text)) return "验收";
+  if (/roi/i.test(text)) return "ROI";
+  return text;
+}
+
 export default function OperationReportPage(): React.ReactElement {
   const { operationId = "" } = useParams();
   const [loading, setLoading] = React.useState(true);
@@ -73,8 +86,8 @@ export default function OperationReportPage(): React.ReactElement {
 
   return (
     <div className="customerReportCanvas">
-      <div className="customerReportSheet">
-        <header className="customerHero">
+      <div className="customerReportSheet operationReportSheet">
+        <header className="customerHero operationHero">
           <div className="customerHeroTop">
             <div>
               <div className="customerReportLogo">GEOX / 作业闭环</div>
@@ -90,14 +103,15 @@ export default function OperationReportPage(): React.ReactElement {
           </div>
         </header>
 
-        <section className="customerCard customerSpacingBottomSm">
-          {vm.timeline.map((item) => <span key={item.key} className="customerPill customerSpacingRightXs">{item.label}：{customerTimelineStatusLabel(item.status)}</span>)}
+        <section className="customerCard operationTimelineStrip">
+          {vm.timeline.map((item) => <span key={item.key} className="customerPill">{shortOperationLabel(item.label)}：{customerTimelineStatusLabel(item.status)}</span>)}
         </section>
 
         <section className="operationClosedLoopGrid">
           {vm.sections.map((section, index) => {
             const isExpanded = expandedKey === section.key;
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
+            const title = shortOperationLabel(section.title);
             return (
               <article
                 key={section.key}
@@ -114,7 +128,7 @@ export default function OperationReportPage(): React.ReactElement {
               >
                 <div className="operationClosedLoopHead">
                   <span className="operationStepNo">{index + 1}</span>
-                  <h3 className="customerCardTitle">{section.title}</h3>
+                  <h3 className="customerCardTitle">{title}</h3>
                   <span className="operationStatusBadge">{section.statusText || customerTimelineStatusLabel(section.status)}</span>
                 </div>
                 <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
