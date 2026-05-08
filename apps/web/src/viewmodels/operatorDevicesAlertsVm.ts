@@ -32,6 +32,11 @@ export type OperatorAlertRowVm = {
   createdAtText: string;
   updatedAtText: string;
   sourceText: string;
+  canAck: boolean;
+  canClose: boolean;
+  disabledReason: string;
+  auditText: string;
+  statusSourceText: string;
   operationHref?: string | null;
 };
 
@@ -141,6 +146,12 @@ function operationHref(operationId: unknown): string | null {
   return id ? `/customer/operations/${encodeURIComponent(id)}` : null;
 }
 
+function disabledReason(item: OperatorAlertItem): string {
+  if (item.canAck || item.canClose) return "";
+  if (item.source !== "operator_devices_alerts_api") return "fallback 数据只读，需 operator alerts API 才能操作。";
+  return text(item.permissionReason, "当前身份无 ACK / close 权限。") || "当前身份无 ACK / close 权限。";
+}
+
 function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
   const objectParts = [text(item.fieldName), text(item.operationId)].filter(Boolean);
   return {
@@ -159,6 +170,11 @@ function buildAlertRow(item: OperatorAlertItem): OperatorAlertRowVm {
     createdAtText: dateText(item.createdAt),
     updatedAtText: dateText(item.updatedAt),
     sourceText: sourceText(item.source),
+    canAck: item.canAck,
+    canClose: item.canClose,
+    disabledReason: disabledReason(item),
+    auditText: text(item.auditText, "审计来源待确认"),
+    statusSourceText: text(item.statusSource, "状态来源待确认"),
     operationHref: operationHref(item.operationId),
   };
 }
@@ -178,7 +194,7 @@ export function buildOperatorDevicesAlertsVm(response: OperatorDevicesAlertsResp
     lead: "查看设备在线状态、心跳、telemetry、凭证状态、告警事件、通知与 ACK/close 状态。",
     generatedAtText: dateText(response.generated_at),
     dataScopeText: dataScopeText(response),
-    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" ? response.message || "当前展示有限 fallback 设备告警数据，非完整 operator devices-alerts。" : undefined,
+    dataScopeWarning: response.dataScope === "FALLBACK_LIMITED" || response.dataScope === "OFFICIAL_OPERATOR_API" ? response.message : undefined,
     ackCloseReady: response.ackCloseReady,
     revokeVisible: response.revokeVisible,
     totalDevices: devices.length,
