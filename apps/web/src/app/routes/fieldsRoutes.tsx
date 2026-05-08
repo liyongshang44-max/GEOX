@@ -8,11 +8,13 @@ const FieldDetailPage = React.lazy(() => import("../../features/fields/pages/Fie
 const FieldReportPage = React.lazy(() => import("../../features/fields/pages/FieldReportPage"));
 const FieldReportExportPage = React.lazy(() => import("../../features/fields/pages/FieldReportExportPage"));
 const FieldPortfolioPage = React.lazy(() => import("../../features/fields/pages/FieldPortfolioPage"));
+const CustomerFieldsIndexPage = React.lazy(() => import("../../views/CustomerFieldsIndexPage"));
 
 export function renderCustomerFieldsRoutes(): React.ReactElement[] {
   return [
     <Route key="fields-redirect" path="/fields" element={<Navigate to="/customer/dashboard" replace />} />,
-    <Route key="customer-fields" path="/customer/fields" element={<Navigate to="/customer/dashboard" replace />} />,
+    <Route key="customer-fields" path="/customer/fields" element={<RouteErrorBoundary><CustomerFieldsIndexPage /></RouteErrorBoundary>} />,
+    <Route key="customer-fields-index" path="/customer/fields/index" element={<Navigate to="/customer/fields" replace />} />,
     <Route key="customer-fields-new" path="/customer/fields/new" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="customer-fields-portfolio" path="/customer/fields/portfolio" element={<Navigate to="/customer/dashboard" replace />} />,
     <Route key="customer-fields-detail" path="/customer/fields/:fieldId" element={<RouteErrorBoundary><FieldReportPage /></RouteErrorBoundary>} />,
