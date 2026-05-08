@@ -15,7 +15,10 @@ export type OperatorDeviceItem = {
   fieldId?: string | null;
   capabilities: string[];
   credentialStatus: OperatorCredentialStatus;
+  credentialLastIssuedAt?: string | null;
+  credentialLastUsedAt?: string | null;
   revokeStatus?: string | null;
+  canRevoke: boolean;
   batteryPercent?: number | null;
   dataDelayText?: string | null;
   source: "operator_devices_alerts_api" | "devices_api" | "reports_aggregate";
@@ -100,10 +103,26 @@ function normalizeOnlineStatus(row: AnyRecord): OperatorDeviceOnlineStatus {
 
 function normalizeCredentialStatus(row: AnyRecord): OperatorCredentialStatus {
   const raw = text(row.credential_status ?? row.credentials?.status ?? row.credential?.status).toUpperCase();
-  if (/secret|token|access[_-]?key|password/i.test(`${row.credential_secret ?? ""} ${row.secret ?? ""} ${row.token ?? ""}`)) return "HIDDEN";
+  if (/secret|token|access[_-]?key|password/i.test(`${row.credential_secret ?? ""} ${row.secret ?? ""} ${row.token ?? ""} ${row.credentials?.secret ?? ""} ${row.credentials?.token ?? ""}`)) return "HIDDEN";
   if (raw.includes("REVOKED")) return "REVOKED";
   if (raw.includes("ACTIVE") || raw.includes("ISSUED")) return "ACTIVE";
   return "UNKNOWN";
+}
+
+function normalizeCredentialIssuedAt(row: AnyRecord): string {
+  return text(row.credential_last_issued_at ?? row.last_issued_at ?? row.credentials?.last_issued_at ?? row.credentials?.issued_at ?? row.credential?.last_issued_at ?? row.credential?.issued_at, "");
+}
+
+function normalizeCredentialLastUsedAt(row: AnyRecord): string {
+  return text(row.credential_last_used_at ?? row.last_used_at ?? row.credentials?.last_used_at ?? row.credential?.last_used_at, "");
+}
+
+function normalizeCanRevoke(row: AnyRecord, source: OperatorDeviceItem["source"]): boolean {
+  if (source !== "operator_devices_alerts_api") return false;
+  if (typeof row.can_revoke === "boolean") return row.can_revoke;
+  if (typeof row.credentials?.can_revoke === "boolean") return row.credentials.can_revoke;
+  if (typeof row.permissions?.can_revoke_device_credential === "boolean") return row.permissions.can_revoke_device_credential;
+  return false;
 }
 
 function normalizeAlertStatus(row: AnyRecord): OperatorAlertStatus {
@@ -139,7 +158,10 @@ function normalizeDevice(row: AnyRecord, index: number, source: OperatorDeviceIt
     fieldId: sanitizeText(row.field_id ?? row.fieldId, ""),
     capabilities: capabilities(row),
     credentialStatus: normalizeCredentialStatus(row),
-    revokeStatus: sanitizeText(row.revoke_status ?? row.credentials?.revoke_status, "只读"),
+    credentialLastIssuedAt: normalizeCredentialIssuedAt(row),
+    credentialLastUsedAt: normalizeCredentialLastUsedAt(row),
+    revokeStatus: sanitizeText(row.revoke_status ?? row.credentials?.revoke_status ?? row.credential?.revoke_status, "只读或管理员可见"),
+    canRevoke: normalizeCanRevoke(row, source),
     batteryPercent: numberOrNull(row.battery_percent ?? row.battery ?? row.power_percent),
     dataDelayText: sanitizeText(row.data_delay_text ?? row.telemetry_delay ?? row.delay_text, "延迟状态待确认"),
     source,
@@ -269,6 +291,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
   const officialAlerts = normalizeOfficialAlerts(official);
   if (officialDevices.length > 0 || officialAlerts.length > 0) {
     const ackCloseReady = officialAlerts.some((alert) => alert.canAck || alert.canClose);
+    const revokeVisible = officialDevices.some((device) => device.canRevoke);
     return {
       source: "operator_devices_alerts_api",
       dataScope: "OFFICIAL_OPERATOR_API",
@@ -276,7 +299,7 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
       devices: officialDevices,
       alerts: officialAlerts,
       ackCloseReady,
-      revokeVisible: false,
+      revokeVisible,
       message: ackCloseReady ? "ACK/close 操作由 operator alerts API 提供，状态变更应产生审计记录。" : "ACK/close 当前无可操作权限或后端未开放。",
     };
   }
