@@ -9,6 +9,7 @@ const srcRoot = path.join(appRoot, "src");
 const OPERATOR_SCOPED_PATTERNS = [
   /^src\/layouts\/OperatorLayout\.tsx$/,
   /^src\/views\/operator\/.+\.(ts|tsx)$/,
+  /^src\/features\/operator\/pages\/.+\.(ts|tsx)$/,
   /^src\/components\/operator\/.+\.(ts|tsx)$/,
   /^src\/api\/operator.+\.ts$/,
   /^src\/viewmodels\/operator.+\.ts$/,
@@ -52,6 +53,7 @@ const ALLOWED_OPERATOR_ADAPTER_ROUTE_PREFIXES = [
   /["'`]\/api\/v1\/approvals\/requests["'`]/,
   /["'`]\/api\/v1\/reports\/customer-dashboard\/aggregate["'`]/,
   /["'`]\/api\/v1\/alerts["'`]/,
+  /["'`]\/api\/v1\/devices["'`]/,
   /["'`]\/api\/v1\/actions\/index["'`]/,
   /["'`]\/api\/v1\/evidence\/export-jobs["'`]/,
 ];
