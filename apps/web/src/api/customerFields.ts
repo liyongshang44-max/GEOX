@@ -1,6 +1,7 @@
 import { apiRequestWithPolicy, withQuery } from "./client";
 import { fetchCustomerDashboardAggregate, type CustomerDashboardAggregateV1 } from "./customerReports";
 
+export type CustomerDataScope = "OFFICIAL_CUSTOMER_API" | "FALLBACK_RECENT_ONLY" | "ERROR_EMPTY";
 export type CustomerFieldRiskLevel = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 
 export type CustomerFieldListItem = {
@@ -19,7 +20,8 @@ export type CustomerFieldListItem = {
 
 export type CustomerFieldsListResponse = {
   ok?: boolean;
-  source: "customer_fields_api" | "dashboard_aggregate_fallback";
+  source: "customer_fields_api" | "dashboard_aggregate_fallback" | "empty_error_state";
+  dataScope: CustomerDataScope;
   is_fallback: boolean;
   generated_at?: string | null;
   fields: CustomerFieldListItem[];
@@ -85,6 +87,7 @@ export async function fetchCustomerFields(): Promise<CustomerFieldsListResponse>
     const normalized = normalizeFieldsPayload(direct.data);
     return {
       source: "customer_fields_api",
+      dataScope: "OFFICIAL_CUSTOMER_API",
       is_fallback: false,
       generated_at: normalized.generatedAt ?? new Date().toISOString(),
       fields: normalized.fields,
@@ -94,6 +97,7 @@ export async function fetchCustomerFields(): Promise<CustomerFieldsListResponse>
   const aggregate = await fetchCustomerDashboardAggregate({ timeRange: "30d" });
   return {
     source: "dashboard_aggregate_fallback",
+    dataScope: "FALLBACK_RECENT_ONLY",
     is_fallback: true,
     generated_at: (aggregate as any).generated_at ?? new Date().toISOString(),
     fields: toFallbackFields(aggregate),
