@@ -8,6 +8,7 @@ const OperatorDispatchPage = React.lazy(() => import("../../features/operator/pa
 const OperatorAcceptancePage = React.lazy(() => import("../../features/operator/pages/OperatorAcceptancePage"));
 const OperatorEvidencePage = React.lazy(() => import("../../features/operator/pages/OperatorEvidencePage"));
 const OperatorDevicesAlertsPage = React.lazy(() => import("../../features/operator/pages/OperatorDevicesAlertsPage"));
+const OperatorRoiLedgerPage = React.lazy(() => import("../../features/operator/pages/OperatorRoiLedgerPage"));
 
 export function renderOperatorRoutes(): React.ReactElement[] {
   return [
@@ -18,5 +19,6 @@ export function renderOperatorRoutes(): React.ReactElement[] {
     <Route key="operator-acceptance" path="/operator/acceptance" element={<RouteErrorBoundary><OperatorAcceptancePage /></RouteErrorBoundary>} />,
     <Route key="operator-evidence" path="/operator/evidence" element={<RouteErrorBoundary><OperatorEvidencePage /></RouteErrorBoundary>} />,
     <Route key="operator-devices-alerts" path="/operator/devices-alerts" element={<RouteErrorBoundary><OperatorDevicesAlertsPage /></RouteErrorBoundary>} />,
+    <Route key="operator-roi-ledger" path="/operator/roi-ledger" element={<RouteErrorBoundary><OperatorRoiLedgerPage /></RouteErrorBoundary>} />,
   ];
 }
