@@ -32,6 +32,30 @@ export const CUSTOMER_LABELS = {
   offlineDevices: "离线",
 } as const;
 
+const CUSTOMER_TECHNICAL_FIELD_LABELS: Record<string, string> = {
+  operation_plan_id: "作业计划编号（技术排障）",
+  operation_id: "作业编号（技术排障）",
+  recommendation_id: "建议编号（技术排障）",
+  prescription_id: "处方编号（技术排障）",
+  approval_request_id: "审批请求编号（技术排障）",
+  approval_id: "审批编号（技术排障）",
+  act_task_id: "任务编号（技术排障）",
+  receipt_id: "回执编号（技术排障）",
+  acceptance_id: "验收编号（技术排障）",
+  roi_id: "价值记录编号（技术排障）",
+  memory_id: "田块记忆编号（技术排障）",
+  field_memory_id: "田块记忆编号（技术排障）",
+  skill_trace_id: "技能追踪编号（技术排障）",
+  skill_trace_ref: "技能追踪编号（技术排障）",
+  skill_run_id: "技能运行编号（技术排障）",
+  skill_output: "技能输出摘要（技术排障）",
+  raw_enum: "原始状态码（技术排障）",
+  status_enum: "原始状态码（技术排障）",
+  stack_trace: "错误堆栈（技术排障）",
+  stacktrace: "错误堆栈（技术排障）",
+  stack: "错误堆栈（技术排障）",
+};
+
 const CUSTOMER_STATUS_LABELS: Record<string, string> = {
   PENDING_ACCEPTANCE: "作业已完成，等待验收",
   SUCCESS: "验收通过",
@@ -140,6 +164,13 @@ export function customerSectionStatusLabel(raw: unknown): string {
   const key = normalizeKey(raw);
   if (CUSTOMER_EMPTY_STATE_LABELS[key]) return CUSTOMER_EMPTY_STATE_LABELS[key];
   return customerStatusLabel(raw);
+}
+
+export function labelCustomerTechnicalField(raw: unknown): string {
+  const original = String(raw ?? "").trim();
+  if (!original) return "技术字段（技术排障）";
+  const key = original.toLowerCase().replace(/[\s-]+/g, "_");
+  return CUSTOMER_TECHNICAL_FIELD_LABELS[key] ?? `${original}（技术排障）`;
 }
 
 function textOrFallback(raw: unknown, fallback = "暂无记录"): string {
