@@ -162,7 +162,8 @@
 }
 
 .operatorWorkbench,
-.operatorApprovalsPage {
+.operatorApprovalsPage,
+.operatorDispatchPage {
   display: grid;
   gap: 16px;
   min-width: 0;
@@ -209,7 +210,8 @@
 }
 
 .operatorQueueGrid,
-.operatorApprovalGrid {
+.operatorApprovalGrid,
+.operatorDispatchGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(320px, 1fr));
   gap: 14px;
@@ -217,7 +219,8 @@
 }
 
 .operatorQueueCard,
-.operatorApprovalSection {
+.operatorApprovalSection,
+.operatorDispatchGroup {
   display: grid;
   align-content: start;
   gap: 12px;
@@ -233,7 +236,8 @@
 }
 
 .operatorQueueHead,
-.operatorApprovalSectionHead {
+.operatorApprovalSectionHead,
+.operatorDispatchGroupHead {
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -242,21 +246,24 @@
 }
 
 .operatorQueueHead h2,
-.operatorApprovalSectionHead h2 {
+.operatorApprovalSectionHead h2,
+.operatorDispatchGroupHead h2 {
   margin: 0 0 5px;
   font-size: 20px;
   color: #132016;
 }
 
 .operatorQueueHead p,
-.operatorApprovalSectionHead p {
+.operatorApprovalSectionHead p,
+.operatorDispatchGroupHead p {
   margin: 0;
   color: #64715f;
   line-height: 1.45;
 }
 
 .operatorQueueHead > span,
-.operatorApprovalSectionHead > span {
+.operatorApprovalSectionHead > span,
+.operatorDispatchGroupHead > span {
   flex: 0 0 auto;
   min-width: 34px;
   height: 34px;
@@ -271,14 +278,16 @@
 }
 
 .operatorTodoList,
-.operatorApprovalList {
+.operatorApprovalList,
+.operatorDispatchList {
   display: grid;
   gap: 10px;
   min-width: 0;
 }
 
 .operatorTodoItem,
-.operatorApprovalCard {
+.operatorApprovalCard,
+.operatorDispatchRow {
   display: grid;
   gap: 12px;
   padding: 12px;
@@ -304,7 +313,11 @@
 .operatorApprovalCard h3,
 .operatorApprovalCard p,
 .operatorApprovalCard strong,
-.operatorApprovalCard small {
+.operatorApprovalCard small,
+.operatorDispatchRow h3,
+.operatorDispatchRow p,
+.operatorDispatchRow strong,
+.operatorDispatchRow small {
   overflow-wrap: anywhere;
 }
 
@@ -355,7 +368,8 @@
   font-size: 13px;
 }
 
-.operatorApprovalCardHead {
+.operatorApprovalCardHead,
+.operatorDispatchRowHead {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -363,19 +377,22 @@
   min-width: 0;
 }
 
-.operatorApprovalCardHead h3 {
+.operatorApprovalCardHead h3,
+.operatorDispatchRowHead h3 {
   margin: 0 0 5px;
   color: #132016;
   font-size: 17px;
 }
 
-.operatorApprovalCardHead p {
+.operatorApprovalCardHead p,
+.operatorDispatchRowHead p {
   margin: 0;
   color: #455246;
   line-height: 1.45;
 }
 
-.operatorRiskBadge {
+.operatorRiskBadge,
+.operatorDispatchStatus {
   flex: 0 0 auto;
   border-radius: 999px;
   border: 1px solid #dbeafe;
@@ -387,25 +404,36 @@
   white-space: nowrap;
 }
 
-.operatorRiskBadge.warning {
+.operatorRiskBadge.warning,
+.operatorDispatchStatus.warning {
   border-color: #fde68a;
   background: #fffbeb;
   color: #92400e;
 }
 
-.operatorRiskBadge.danger {
+.operatorRiskBadge.danger,
+.operatorDispatchStatus.danger {
   border-color: #fecaca;
   background: #fef2f2;
   color: #991b1b;
 }
 
-.operatorApprovalMetaGrid {
+.operatorDispatchStatus.success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.operatorApprovalMetaGrid,
+.operatorDispatchMeta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.operatorApprovalMetaGrid > div {
+.operatorApprovalMetaGrid > div,
+.operatorDispatchMeta > div,
+.operatorDispatchFlow > div {
   display: grid;
   gap: 3px;
   padding: 10px;
@@ -416,14 +444,18 @@
 }
 
 .operatorApprovalMetaGrid span,
-.operatorPrescriptionBox span {
+.operatorPrescriptionBox span,
+.operatorDispatchMeta span,
+.operatorDispatchFlow span {
   color: #64715f;
   font-size: 12px;
   font-weight: 900;
 }
 
 .operatorApprovalMetaGrid strong,
-.operatorPrescriptionBox strong {
+.operatorPrescriptionBox strong,
+.operatorDispatchMeta strong,
+.operatorDispatchFlow strong {
   color: #132016;
   font-size: 13px;
   line-height: 1.4;
@@ -452,7 +484,8 @@
 }
 
 .operatorPrescriptionBox button,
-.operatorApprovalDecisionActions button {
+.operatorApprovalDecisionActions button,
+.operatorDispatchActions button {
   border-radius: 999px;
   border: 1px solid #132016;
   background: #132016;
@@ -463,7 +496,8 @@
 }
 
 .operatorPrescriptionBox button:disabled,
-.operatorApprovalDecisionActions button:disabled {
+.operatorApprovalDecisionActions button:disabled,
+.operatorDispatchActions button:disabled {
   cursor: not-allowed;
   border-color: #d6ddcf;
   background: #eef2e8;
@@ -490,7 +524,8 @@
   line-height: 1.45;
 }
 
-.operatorApprovalDecisionActions {
+.operatorApprovalDecisionActions,
+.operatorDispatchActions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -501,10 +536,49 @@
   line-height: 1.45;
 }
 
+.operatorDispatchFlow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.operatorDispatchNotice {
+  border-radius: 12px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.operatorDispatchActions a {
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.operatorDispatchActions a + a {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
 @media (max-width: 1100px) {
   .operatorQueueGrid,
-  .operatorApprovalGrid {
+  .operatorApprovalGrid,
+  .operatorDispatchGrid {
     grid-template-columns: 1fr;
+  }
+
+  .operatorDispatchFlow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -522,7 +596,9 @@
   }
 
   .operatorWorkbenchSummary,
-  .operatorApprovalMetaGrid {
+  .operatorApprovalMetaGrid,
+  .operatorDispatchMeta,
+  .operatorDispatchFlow {
     grid-template-columns: 1fr;
   }
 
