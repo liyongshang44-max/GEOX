@@ -66,7 +66,8 @@ export type OperatorAlertActionResult = {
 
 type AnyRecord = Record<string, any>;
 
-let operatorDevicesAlertsApiUnavailable = false;
+const ENABLE_OPERATOR_DEVICES_ALERTS_API = String((import.meta as any)?.env?.VITE_ENABLE_OPERATOR_DEVICES_ALERTS_API ?? "").toLowerCase() === "true";
+let operatorDevicesAlertsApiUnavailable = !ENABLE_OPERATOR_DEVICES_ALERTS_API;
 
 function text(value: unknown, fallback = ""): string {
   const raw = String(value ?? "").trim();
@@ -336,6 +337,6 @@ export async function fetchOperatorDevicesAlerts(): Promise<OperatorDevicesAlert
     alerts: [],
     ackCloseReady: false,
     revokeVisible: false,
-    message: operatorDevicesAlertsApiUnavailable ? "operator devices-alerts 未接入，且暂无安全 fallback 设备或告警数据。" : "暂无设备或告警数据。",
+    message: ENABLE_OPERATOR_DEVICES_ALERTS_API ? "operator devices-alerts 未接入，且暂无安全 fallback 设备或告警数据。" : "operator devices-alerts 未接入，当前不探测未 ready API；暂无安全 fallback 设备或告警数据。",
   };
 }
