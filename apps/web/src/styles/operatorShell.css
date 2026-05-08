@@ -161,6 +161,190 @@
   font-weight: 800;
 }
 
+.operatorWorkbench {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.operatorWorkbenchSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.operatorWorkbenchSummary > div {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorWorkbenchSummary span {
+  color: #64715f;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.operatorWorkbenchSummary strong {
+  font-size: 22px;
+  line-height: 1.1;
+  color: #132016;
+  overflow-wrap: anywhere;
+}
+
+.operatorScopeWarning {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.operatorQueueGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+
+.operatorQueueCard {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e2e8d8;
+  min-width: 0;
+}
+
+.operatorQueueCard.hasItems {
+  border-color: #bbf7d0;
+}
+
+.operatorQueueHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.operatorQueueHead h2 {
+  margin: 0 0 5px;
+  font-size: 20px;
+  color: #132016;
+}
+
+.operatorQueueHead p {
+  margin: 0;
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorQueueHead > span {
+  flex: 0 0 auto;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.operatorTodoList {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.operatorTodoItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid #edf2e5;
+  background: #fbfcf8;
+  min-width: 0;
+}
+
+.operatorTodoMain {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.operatorTodoMain strong,
+.operatorTodoMain p,
+.operatorTodoMain small {
+  overflow-wrap: anywhere;
+}
+
+.operatorTodoMain strong {
+  color: #132016;
+}
+
+.operatorTodoMain p {
+  margin: 0;
+  color: #455246;
+  line-height: 1.45;
+}
+
+.operatorTodoMain small {
+  color: #64715f;
+  line-height: 1.45;
+}
+
+.operatorTodoActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.operatorTodoActions a {
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #132016;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.operatorTodoActions a + a {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #bbf7d0;
+}
+
+.operatorQueueEmpty {
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8faf5;
+  color: #64715f;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .operatorQueueGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 900px) {
   .operatorShell {
     grid-template-columns: 1fr;
@@ -172,5 +356,19 @@
 
   .operatorHeader {
     flex-direction: column;
+  }
+
+  .operatorWorkbenchSummary {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorTodoItem {
+    grid-template-columns: 1fr;
+  }
+
+  .operatorTodoActions {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 }
