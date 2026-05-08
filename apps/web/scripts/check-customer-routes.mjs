@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appRoot = path.resolve(scriptDir, "..");
+const repoRoot = path.resolve(appRoot, "..", "..");
 
 const offenders = [];
 
@@ -93,9 +94,9 @@ function scanCustomerScopedFiles() {
 
 function scanExportRoutes() {
   const appFile = "src/app/App.tsx";
-  const routeMapFile = "../docs/frontend/CUSTOMER_FRONTEND_ROUTE_MAP_V1.md";
+  const routeMapFullPath = path.join(repoRoot, "docs", "frontend", "CUSTOMER_FRONTEND_ROUTE_MAP_V1.md");
   const appText = read(appFile);
-  const routeMapText = fs.existsSync(path.resolve(appRoot, routeMapFile)) ? fs.readFileSync(path.resolve(appRoot, routeMapFile), "utf8") : "";
+  const routeMapText = fs.existsSync(routeMapFullPath) ? fs.readFileSync(routeMapFullPath, "utf8") : "";
 
   if (!appText) addOffender(appFile, 0, "missing-file", "App.tsx does not exist");
   if (!routeMapText) addOffender("docs/frontend/CUSTOMER_FRONTEND_ROUTE_MAP_V1.md", 0, "missing-file", "Route map document does not exist");
