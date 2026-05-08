@@ -2,7 +2,7 @@ import type { CustomerOperationListItem, CustomerOperationsListResponse } from "
 import { labelAcceptanceStatus, labelFinalStatus, labelOperationType, sanitizeCustomerText } from "../lib/customerLabels";
 import { getCustomerEmptyState } from "../lib/customerEmptyStates";
 
-export type CustomerOperationStatusFilter = "ALL" | "IN_PROGRESS" | "WAIT_ACCEPTANCE" | "ACCEPTANCE_PASS" | "ACCEPTANCE_FAIL" | "EVIDENCE_MISSING";
+export type CustomerOperationStatusFilter = "ALL" | "IN_PROGRESS" | "WAIT_ACCEPTANCE" | "ACCEPTANCE_PASS" | "ACCEPTANCE_FAIL" | "EVIDENCE_INSUFFICIENT";
 
 export type CustomerOperationsIndexRowVm = {
   operationId: string;
@@ -47,7 +47,7 @@ function mapStatusFilter(item: CustomerOperationListItem): Exclude<CustomerOpera
   const acceptanceStatus = normalizeStatus(item.acceptance_status);
   const evidenceStatus = normalizeStatus(item.evidence_status ?? item.evidence_summary_status);
 
-  if (["EVIDENCE_MISSING", "INSUFFICIENT_EVIDENCE", "NO_EVIDENCE"].includes(evidenceStatus) || finalStatus === "EVIDENCE_MISSING") return "EVIDENCE_MISSING";
+  if (["EVIDENCE_MISSING", "INSUFFICIENT_EVIDENCE", "NO_EVIDENCE"].includes(evidenceStatus) || finalStatus === "EVIDENCE_MISSING") return "EVIDENCE_INSUFFICIENT";
   if (["FAIL", "FAILED", "REJECTED"].includes(acceptanceStatus)) return "ACCEPTANCE_FAIL";
   if (["PASS", "SUCCESS", "SUCCEEDED", "APPROVED"].includes(acceptanceStatus)) return "ACCEPTANCE_PASS";
   if (["PENDING_ACCEPTANCE", "PENDING", "WAITING"].includes(acceptanceStatus) || finalStatus === "PENDING_ACCEPTANCE") return "WAIT_ACCEPTANCE";
@@ -100,7 +100,7 @@ export function buildCustomerOperationsIndexVm(response: CustomerOperationsListR
       { key: "WAIT_ACCEPTANCE", label: "待验收", count: countByStatus("WAIT_ACCEPTANCE") },
       { key: "ACCEPTANCE_PASS", label: "验收通过", count: countByStatus("ACCEPTANCE_PASS") },
       { key: "ACCEPTANCE_FAIL", label: "验收失败", count: countByStatus("ACCEPTANCE_FAIL") },
-      { key: "EVIDENCE_MISSING", label: "证据不足", count: countByStatus("EVIDENCE_MISSING") },
+      { key: "EVIDENCE_INSUFFICIENT", label: "证据不足", count: countByStatus("EVIDENCE_INSUFFICIENT") },
     ],
     rows,
     emptyState: getCustomerEmptyState("NO_RECENT_OPERATIONS"),
