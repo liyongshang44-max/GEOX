@@ -47,7 +47,7 @@ const CUSTOMER_STATUS_LABELS: Record<string, string> = {
 
 const CUSTOMER_EMPTY_STATE_LABELS: Record<string, string> = {
   ROI_UNAVAILABLE: "暂无可量化价值记录",
-  FIELD_MEMORY_UNAVAILABLE: "暂无可展示的地块记忆",
+  FIELD_MEMORY_UNAVAILABLE: "暂无可展示的田块记忆",
   PRESCRIPTION_MISSING: "未形成正式处方",
   AS_EXECUTED_MISSING: "暂无实际执行记录",
   AS_APPLIED_MISSING: "暂无覆盖记录",
@@ -179,9 +179,9 @@ export function labelRawCode(raw: unknown, fallback = "暂无记录"): string {
 
 export function labelMemoryCode(raw: unknown): string {
   const key = normalizeKey(raw);
-  if (!key) return "地块记忆待补充";
+  if (!key) return "田块记忆待补充";
   if (key.startsWith("FIELD_MEMORY_")) return labelEvidenceQuality(key);
-  return labelRawCode(raw, labelEmptyFallback(raw, "地块记忆待补充"));
+  return labelRawCode(raw, labelEmptyFallback(raw, "田块记忆待补充"));
 }
 
 export function labelValueType(raw: unknown): string {
