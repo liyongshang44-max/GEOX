@@ -53,7 +53,7 @@ function scanCustomerNavigation() {
   }
 
   const lines = text.split("\n");
-  const forbiddenNavTargets = ["/customer/fields/index", "/customer/operations/index"];
+  const forbiddenNavTargets = ["/customer/fields/index", "/customer/operations/index", "/operator", "/operator/workbench"];
   lines.forEach((line, index) => {
     for (const token of forbiddenNavTargets) {
       if (linePointsNavigationTo(line, token)) addOffender(file, index + 1, token, line);
@@ -84,7 +84,7 @@ function scanCustomerScopedFiles() {
     /^src\/features\/fields\/pages\/(FieldReportPage|FieldReportExportPage)\.tsx$/,
     /^src\/features\/operations\/pages\/(OperationReportPage|CustomerReportExportPage)\.tsx$/,
   ];
-  const forbiddenRouteTokens = ["/admin", "/debug", "/legacy", "healthz", "/healthz"];
+  const forbiddenRouteTokens = ["/admin", "/debug", "/legacy", "/operator", "healthz", "/healthz"];
 
   for (const file of scopedFiles) {
     if (!customerFilePatterns.some((pattern) => pattern.test(file))) continue;
