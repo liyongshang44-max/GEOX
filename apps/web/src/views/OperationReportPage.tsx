@@ -85,6 +85,10 @@ function sanitizeEvidenceSummary(value: unknown): string {
   return text;
 }
 
+function sanitizedEvidenceDetail(value: unknown, fallback: string): string {
+  return sanitizeEvidenceSummary(value) || fallback;
+}
+
 function buildOperationEvidenceDisplay(report: OperationReportV1): OperationEvidenceDisplayVm {
   const evidence = report.evidence ?? { artifacts_count: 0, logs_count: 0, media_count: 0, metrics_count: 0, receipt_present: false, acceptance_present: false };
   const evidenceRecordCount =
@@ -129,8 +133,8 @@ function buildOperationEvidenceDisplay(report: OperationReportV1): OperationEvid
     detail: "当前展示报告内嵌证据摘要，不提供证据包下载。",
     items: [
       { label: "证据包摘要", value: summaryText },
-      { label: "证据状态", value: customerText(packSummary?.status, "已形成") },
-      { label: "证据不足说明", value: customerText(packSummary?.insufficient_reason, "暂无补充说明") },
+      { label: "证据状态", value: sanitizedEvidenceDetail(packSummary?.status, "已形成") },
+      { label: "证据不足说明", value: sanitizedEvidenceDetail(packSummary?.insufficient_reason, "暂无补充说明") },
     ],
   };
 }
