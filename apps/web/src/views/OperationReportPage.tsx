@@ -4,6 +4,7 @@ import { fetchOperationReport, type OperationReportV1 } from "../api/customerRep
 import SectionSkeleton from "../components/common/SectionSkeleton";
 import ErrorState from "../components/common/ErrorState";
 import EvidencePackSummaryPanel from "../components/customer/EvidencePackSummaryPanel";
+import FieldMemoryPanel from "../components/customer/FieldMemoryPanel";
 import PrescriptionContractDrawer from "../components/customer/PrescriptionContractDrawer";
 import RoiLedgerDrawer from "../components/customer/RoiLedgerDrawer";
 import { buildOperationReportVm } from "../viewmodels/operationReportVm";
@@ -97,6 +98,7 @@ export default function OperationReportPage(): React.ReactElement {
   const drawerOperationId = firstUsableId(operationId, vm.operation.operationId, identifiersAny.operation_id, identifiersAny.operation_plan_id);
   const drawerFieldId = firstUsableId(vm.operation.fieldId, reportAny.field_id, identifiersAny.field_id);
   const embeddedRoi = reportAny.roi_ledger ?? reportAny.roi ?? reportAny.value_summary;
+  const embeddedMemory = reportAny.field_memory ?? reportAny.field_memory_summary ?? reportAny.memory;
 
   return (
     <div className="customerReportCanvas">
@@ -127,6 +129,7 @@ export default function OperationReportPage(): React.ReactElement {
             const isEvidenceSection = section.key === "EVIDENCE";
             const isPrescriptionSection = section.key === "PRESCRIPTION";
             const isRoiSection = section.key === "ROI";
+            const isMemorySection = section.key === "MEMORY";
             const displayItems = section.items.filter((item) => !shouldHideMainViewText(`${item.label} ${item.value}`));
             const title = shortOperationLabel(section.title);
             const statusText = isEvidenceSection ? vm.evidenceSummary.statusText : (section.statusText || customerTimelineStatusLabel(section.status));
@@ -152,6 +155,8 @@ export default function OperationReportPage(): React.ReactElement {
                 </div>
                 {isEvidenceSection ? (
                   <EvidencePackSummaryPanel vm={vm.evidenceSummary} expanded={isExpanded} />
+                ) : isMemorySection && isExpanded ? (
+                  <FieldMemoryPanel fieldId={drawerFieldId} operationId={drawerOperationId} embeddedMemory={embeddedMemory} compact />
                 ) : (
                   <>
                     <div className="operationOneLiner">{safeMainViewText(section.summary)}</div>
