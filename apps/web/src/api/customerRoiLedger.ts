@@ -50,6 +50,31 @@ function cleanId(value: unknown): string {
   return text;
 }
 
+function toNum(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function summaryItemFromValueSummary(obj: Record<string, unknown>): CustomerRoiLedgerItem | null {
+  const total = toNum(obj.total_roi_items);
+  const customerText = String(obj.customer_value_text ?? "").trim();
+  if (total <= 0 && !customerText) return null;
+  const lowConfidence = toNum(obj.low_confidence_items);
+  const assumptions = toNum(obj.assumption_based_items);
+  return {
+    title: "价值记录摘要",
+    value_type: assumptions > 0 ? "assumption_summary" : "estimate_summary",
+    metric_name: "ROI 摘要",
+    delta_value: total > 0 ? total : null,
+    unit: total > 0 ? "条" : null,
+    baseline_value: null,
+    customer_text: customerText || `当前报告包含 ${total} 条价值记录摘要。`,
+    evidence_text: `节水 ${toNum(obj.water_saved_items)} 条、节人工 ${toNum(obj.labor_saved_items)} 条、预警 ${toNum(obj.early_warning_items)} 条。`,
+    confidence: { label: lowConfidence > 0 ? `低置信记录 ${lowConfidence} 条` : "可信度待补充" },
+    generated_at: String(obj.generated_at ?? obj.updated_at ?? "") || null,
+  };
+}
+
 function collectEmbeddedRoiItems(embeddedRoi: unknown): CustomerRoiLedgerItem[] {
   if (!embeddedRoi || typeof embeddedRoi !== "object") return [];
   const obj = embeddedRoi as Record<string, unknown>;
@@ -62,7 +87,9 @@ function collectEmbeddedRoiItems(embeddedRoi: unknown): CustomerRoiLedgerItem[] 
     obj.roi_items,
     obj.ledger,
   ];
-  return buckets.flatMap((bucket) => Array.isArray(bucket) ? bucket : []).filter((item): item is CustomerRoiLedgerItem => Boolean(item && typeof item === "object"));
+  const rows = buckets.flatMap((bucket) => Array.isArray(bucket) ? bucket : []).filter((item): item is CustomerRoiLedgerItem => Boolean(item && typeof item === "object"));
+  const summaryItem = summaryItemFromValueSummary(obj);
+  return rows.length ? rows : (summaryItem ? [summaryItem] : []);
 }
 
 export async function fetchCustomerRoiLedger(args: { fieldId?: unknown; operationId?: unknown; embeddedRoi?: unknown }): Promise<CustomerRoiLedgerResponse> {
