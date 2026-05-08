@@ -35,6 +35,15 @@ function lineNumberFor(text, token) {
   return text.slice(0, index).split("\n").length;
 }
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function linePointsNavigationTo(line, token) {
+  const escaped = escapeRegExp(token);
+  return new RegExp(`\\bto\\s*[:=]\\s*["']${escaped}["']`).test(line);
+}
+
 function scanCustomerNavigation() {
   const file = "src/layouts/CustomerLayout.tsx";
   const text = read(file);
@@ -46,10 +55,8 @@ function scanCustomerNavigation() {
   const lines = text.split("\n");
   const forbiddenNavTargets = ["/customer/fields/index", "/customer/operations/index"];
   lines.forEach((line, index) => {
-    const looksLikeNavTarget = /\bto\s*[:=]/.test(line) || line.includes("<NavLink") || line.includes("CUSTOMER_NAV_ITEMS");
-    if (!looksLikeNavTarget) return;
     for (const token of forbiddenNavTargets) {
-      if (line.includes(token)) addOffender(file, index + 1, token, line);
+      if (linePointsNavigationTo(line, token)) addOffender(file, index + 1, token, line);
     }
   });
 }
@@ -70,7 +77,7 @@ function scanCustomerScopedFiles() {
     /^src\/layouts\/CustomerLayout\.tsx$/,
     /^src\/views\/Customer.*\.tsx$/,
     /^src\/views\/(FieldReportPage|FieldReportExportPage|OperationReportPage|OperationReportExportPage|CustomerReportExportPage|CustomerWorkIndexPage|CustomerFieldsIndexPage)\.tsx$/,
-    /^src\/viewmodels\/(customerDashboardVm|fieldReportVm|operationReportVm)\.ts$/,
+    /^src\/viewmodels\/(customerDashboardVm|customerFieldsIndexVm|fieldReportVm|operationReportVm)\.ts$/,
     /^src\/components\/customer\/.+$/,
     /^src\/components\/cockpit\/.+$/,
     /^src\/features\/customer\/pages\/.+$/,
