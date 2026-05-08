@@ -130,7 +130,7 @@ function buildOperationEvidenceDisplay(report: OperationReportV1): OperationEvid
     state: "PACK_SUMMARY",
     statusText: "证据包已形成",
     summary: "证据包已形成，可查看摘要。",
-    detail: "当前展示报告内嵌证据摘要，不提供证据包下载。",
+    detail: "当前仅展示报告内嵌证据摘要。",
     items: [
       { label: "证据包摘要", value: summaryText },
       { label: "证据状态", value: sanitizedEvidenceDetail(packSummary?.status, "已形成") },
